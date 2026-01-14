@@ -1,0 +1,206 @@
+# Projection Diff Guard — State Transition Invariants v1
+#
+# Status: ACTIVE (Constitutional)
+# Created: 2026-01-14
+# Authority: docs/contracts/UI_AS_CONSTRAINT_V1.md
+# Reference: PIN-422 (to be created)
+#
+# Purpose:
+#   Defines legal and illegal state transitions for panels.
+#   PDG enforces these invariants on every projection update.
+
+version: "1.0.0"
+created_at: "2026-01-14T14:30:00Z"
+authority: "docs/contracts/UI_AS_CONSTRAINT_V1.md"
+
+# Panel states (canonical)
+states:
+  - EMPTY      # UI planned, intent YAML missing
+  - UNBOUND    # Intent exists, capability missing
+  - DRAFT      # Capability declared, SDSR not observed
+  - BOUND      # Capability observed (or trusted)
+  - DEFERRED   # Explicit governance decision
+
+# State transition rules
+transitions:
+  # Forward progress (allowed)
+  allowed:
+    - from: EMPTY
+      to: UNBOUND
+      trigger: "Intent YAML created"
+      automated: true
+
+    - from: UNBOUND
+      to: DRAFT
+      trigger: "Capability declared in registry"
+      automated: true
+
+    - from: DRAFT
+      to: BOUND
+      trigger: "Capability status changed to OBSERVED or TRUSTED"
+      automated: true
+
+    - from: EMPTY
+      to: DEFERRED
+      trigger: "Governance decision to defer"
+      automated: false
+      requires: "deferred_reason in ui_plan.yaml"
+
+    - from: UNBOUND
+      to: DEFERRED
+      trigger: "Governance decision to defer"
+      automated: false
+      requires: "deferred_reason in ui_plan.yaml"
+
+    - from: DRAFT
+      to: DEFERRED
+      trigger: "Governance decision to defer"
+      automated: false
+      requires: "deferred_reason in ui_plan.yaml"
+
+    - from: DEFERRED
+      to: EMPTY
+      trigger: "Governance decision to reactivate"
+      automated: false
+      requires: "removal of deferred_reason from ui_plan.yaml"
+
+  # Backward transitions (generally forbidden)
+  forbidden:
+    - from: BOUND
+      to: DRAFT
+      reason: "Capability observation is permanent"
+      exception: "Only if capability status reverted (requires investigation)"
+
+    - from: BOUND
+      to: UNBOUND
+      reason: "Cannot un-bind observed capability"
+      exception: "None"
+
+    - from: BOUND
+      to: EMPTY
+      reason: "Cannot remove intent from bound panel"
+      exception: "None"
+
+    - from: DRAFT
+      to: EMPTY
+      reason: "Cannot remove intent from panel with capability"
+      exception: "Capability must be removed first"
+
+    - from: UNBOUND
+      to: EMPTY
+      reason: "Intent removal is destructive"
+      exception: "Only via explicit governance decision (convert to DEFERRED)"
+
+  # Neutral transitions (require governance)
+  governance_required:
+    - from: BOUND
+      to: DEFERRED
+      reason: "Hiding bound panel needs explicit decision"
+      requires: "PIN reference in deferred_reason"
+
+# Structural invariants
+structural_invariants:
+  panel_id:
+    rule: IMMUTABLE
+    description: "Panel IDs cannot change once declared"
+    enforcement: "PDG blocks any panel_id modification"
+
+  domain_assignment:
+    rule: STABLE
+    description: "Panels cannot move between domains"
+    exception: "Only when ALL panels in source domain are BOUND or DEFERRED"
+    enforcement: "PDG blocks reparenting unless gate condition met"
+
+  subdomain_assignment:
+    rule: STABLE
+    description: "Panels cannot move between subdomains"
+    exception: "Same as domain_assignment"
+    enforcement: "PDG blocks reparenting unless gate condition met"
+
+  topic_assignment:
+    rule: STABLE
+    description: "Panels cannot move between topics"
+    exception: "Same as domain_assignment"
+    enforcement: "PDG blocks reparenting unless gate condition met"
+
+  panel_existence:
+    rule: ADDITIVE_ONLY
+    description: "Panels cannot be removed from ui_plan.yaml"
+    exception: "Use DEFERRED state instead"
+    enforcement: "PDG blocks panel removal from projection"
+
+# Count invariants
+count_invariants:
+  total_panels:
+    rule: MONOTONIC_INCREASING
+    description: "Total panel count can only increase"
+    exception: "None (removal uses DEFERRED, not deletion)"
+
+  bound_panels:
+    rule: MONOTONIC_INCREASING
+    description: "BOUND panel count can only increase"
+    exception: "Capability revocation (requires incident investigation)"
+
+  deferred_panels:
+    rule: GOVERNANCE_CONTROLLED
+    description: "DEFERRED count changes require human decision"
+
+# PDG enforcement actions
+enforcement:
+  on_violation:
+    - action: BLOCK
+      message: "Projection update blocked: {violation_type}"
+      log_level: ERROR
+
+    - action: REPORT
+      format: "pdg_violation_{timestamp}.json"
+      location: "reports/pdg/"
+
+  on_warning:
+    - action: WARN
+      message: "Projection change requires review: {change_type}"
+      log_level: WARNING
+
+    - action: CONTINUE
+      note: "Warning does not block, but is logged"
+
+# Validation rules
+validation:
+  pre_commit:
+    - check: "All panels in ui_plan.yaml exist in projection"
+      failure: BLOCK
+
+    - check: "No panels in projection missing from ui_plan.yaml"
+      failure: BLOCK
+
+    - check: "All state values are valid enum members"
+      failure: BLOCK
+
+    - check: "All DEFERRED panels have deferred_reason"
+      failure: BLOCK
+
+  post_compile:
+    - check: "Panel count matches ui_plan.yaml total"
+      failure: BLOCK
+
+    - check: "State distribution is consistent"
+      failure: WARN
+
+# Related documents
+related_documents:
+  - path: "docs/contracts/UI_AS_CONSTRAINT_V1.md"
+    role: "Authority"
+
+  - path: "design/l2_1/ui_plan.yaml"
+    role: "Source of truth for panel universe"
+
+  - path: "docs/contracts/COMPILER_UI_FIRST_SPEC_V1.md"
+    role: "Compiler behavior specification"
+
+  - path: "docs/contracts/EMPTY_STATE_UI_CONTRACT_V1.md"
+    role: "Frontend rendering rules"
+
+# Changelog
+changelog:
+  - date: "2026-01-14"
+    change: "Initial PDG state invariants created"

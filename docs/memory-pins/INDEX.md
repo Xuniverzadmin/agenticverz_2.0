@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-13 (PIN-414 Customer Console v1 Implementation Freeze)
+**Last Updated:** 2026-01-14 (PIN-418 UI-as-Constraint Implementation (Priority-1 to 3A))
 
 ---
 
@@ -406,6 +406,10 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-412](PIN-412-domain-design-incidents-policies.md) | **Domain Design — Incidents & Policies (O1-O5)** | Architecture / Domain Design / Aurora Runtime | **V1_FROZEN** | 2026-01-13 |
 | [PIN-413](PIN-413-overview-logs-domain-design.md) | **Domain Design — Overview & Logs (v1 Complete)** | Architecture / Domain Design / Aurora Runtime | **BACKEND_COMPLETE** | 2026-01-13 |
 | [PIN-414](PIN-414-customer-console-v1-implementation-freeze.md) | **Customer Console v1 Implementation Freeze** | Governance / Milestone | **🏗️ FROZEN** | 2026-01-13 |
+| [PIN-415](PIN-415-frontend-simulation-removal---realcontrol-migration.md) | **Frontend Simulation Removal - RealControl Migration** | Frontend / Architecture | **✅ COMPLETE** | 2026-01-14 |
+| [PIN-416](PIN-416-hil-v1-phase-1-schema-extension.md) | **HIL v1 Phase 1 — Schema Extension** | UI Pipeline / Human Interpretation Layer | **✅ COMPLETE** | 2026-01-14 |
+| [PIN-417](PIN-417-hil-v1-implementation-tracker.md) | **HIL v1 Implementation Tracker** | UI Pipeline / Human Interpretation Layer | **🔄 IN_PROGRESS** | 2026-01-14 |
+| [PIN-418](PIN-418-ui-as-constraint-implementation-priority-1-to-3a.md) | **UI-as-Constraint Implementation (Priority-1 to 3A)** | Architecture / UI Governance | **✅ COMPLETE** | 2026-01-14 |
 
 ---
 
@@ -1175,6 +1179,11 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-14 | **PIN-418 UI-as-Constraint Implementation (Priority-1 to 3A)** - Created via memory_trail. |
+| 2026-01-14 | **PIN-417 HIL v1 Implementation Tracker** - Created. Comprehensive tracker for all 4 phases of HIL v1 implementation. Phase 1 complete (25%). |
+| 2026-01-14 | **PIN-416 HIL v1 Phase 1 Schema Extension** - Created. panel_class and provenance schema extension. Activity Summary interpretation panel spec. Domain Intent Registry created. |
+| 2026-01-14 | **PIN-415 Frontend Simulation Removal - RealControl Migration** - Updated: Updates |
+| 2026-01-14 | **PIN-415 Frontend Simulation Removal - RealControl Migration** - Created via memory_trail. |
 | 2026-01-13 | **PIN-414 Customer Console v1 Implementation Freeze** - Created via memory_trail. |
 | 2026-01-13 | **PIN-413 Domain Design — Overview & Logs (BACKEND_COMPLETE)** - Migration 091 applied. decisions + audit_ledger tables created. Overview O2 APIs (highlights, costs, decisions) implemented. Logs O2 APIs (llm-runs, system, audit) implemented. SQLModel definitions complete. |
 | 2026-01-13 | **PIN-413 Domain Design — Overview & Logs** - New PIN created. Completing v1 five-domain set. New primitives: decisions table, audit_ledger table. Overview is decision-centric. Logs includes Audit Ledger for governance accountability. |

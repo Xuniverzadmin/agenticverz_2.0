@@ -1,0 +1,88 @@
+{
+  "scenario_id": "SDSR-HIL-INC-SUM-001",
+  "status": "PASSED",
+  "observation_class": "EFFECT",
+  "observed_at": "2026-01-14T11:23:31Z",
+  "environment": "preflight",
+  "observed_effects": [
+    {
+      "entity": "http_response",
+      "field": "schema_validation",
+      "from": null,
+      "to": "PASSED"
+    }
+  ],
+
+  "capabilities_observed": [
+    {
+      "capability_id": "summary.incidents",
+      "ui_panel": "INC-AI-SUM-O1",
+      "ui_action": "Summary",
+      "endpoint": "/api/v1/incidents/summary",
+      "method": "GET",
+      "response_status": 200,
+      "request_sample": {
+        "window": "24h",
+        "include_synthetic": true
+      },
+      "observed_effects": [
+        {
+          "entity": "http_response",
+          "field": "invariants_validation",
+          "from": null,
+          "to": "ALL_PASSED"
+        }
+      ],
+      "invariants_validated": [
+        {
+          "id": "INV-001",
+          "name": "lifecycle_sum_reconciliation",
+          "passed": true,
+          "expression": "incidents.by_lifecycle_state.active + incidents.by_lifecycle_state.acked + incidents.by_lifecycle_state.resolved == incidents.total"
+        },
+        {
+          "id": "INV-002",
+          "name": "attention_count_matches_active",
+          "passed": true,
+          "expression": "attention.count == incidents.by_lifecycle_state.active"
+        },
+        {
+          "id": "INV-003",
+          "name": "window_echo",
+          "passed": true,
+          "expression": "window == expected.window"
+        },
+        {
+          "id": "INV-004",
+          "name": "attention_reasons_imply_count",
+          "passed": true,
+          "expression": "len(attention.reasons) > 0 implies attention.count > 0"
+        },
+        {
+          "id": "INV-004b",
+          "name": "attention_zero_count_zero_reasons",
+          "passed": true,
+          "expression": "attention.count == 0 implies len(attention.reasons) == 0"
+        },
+        {
+          "id": "INV-005",
+          "name": "provenance_present",
+          "passed": true,
+          "expression": "len(provenance.derived_from) > 0"
+        },
+        {
+          "id": "INV-007",
+          "name": "aggregation_type_locked",
+          "passed": true,
+          "expression": "provenance.aggregation == 'STATUS_BREAKDOWN'"
+        }
+      ]
+    }
+  ],
+
+  "metadata": {
+    "run_id": "sdsr-hil-inc-sum-001-20260114T112331Z",
+    "runner_version": "manual_http_validation v1.0",
+    "notes": "HIL v1 Incidents Summary endpoint validation. All 7 invariants passed. Capability ready for OBSERVED status."
+  }
+}

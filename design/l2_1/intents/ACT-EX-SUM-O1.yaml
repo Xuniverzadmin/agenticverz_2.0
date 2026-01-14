@@ -1,0 +1,95 @@
+# AURORA_L2 Intent Spec: ACT-EX-SUM-O1
+# HIL v1 Interpretation Panel (First Implementation)
+# Created: 2026-01-14
+# Updated: 2026-01-14 (Phase 3 implementation)
+# Status: IMPLEMENTED (backend ready, awaiting SDSR observation)
+#
+# This is the first INTERPRETATION panel in the system.
+# It aggregates data from execution panels to provide a human-readable summary.
+
+panel_id: ACT-EX-SUM-O1
+version: 1.0.0
+panel_class: interpretation    # HIL v1: This is an interpretation panel
+
+metadata:
+  domain: Activity
+  subdomain: EXECUTIONS
+  topic: EXECUTION_SUMMARY
+  topic_id: ACTIVITY.EXECUTIONS.EXECUTION_SUMMARY
+  order: O1
+  action_layer: L2_1
+  migrated_from: MANUAL
+  migration_date: '2026-01-14'
+  migration_status: IMPLEMENTED
+  hil_version: v1
+  hil_phase: 3  # Implementation phase
+
+display:
+  name: Activity Summary
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+
+# HIL v1: Provenance declaration (required for interpretation panels)
+# Uses capability IDs, not panel IDs (stable across UI refactors)
+provenance:
+  derived_from:
+    - activity.runs.list    # Active and completed runs
+    - incidents.list        # Related incidents
+  aggregation: STATUS_BREAKDOWN
+  endpoint: /api/v1/activity/summary
+  capability: summary.activity
+
+data:
+  read: true
+  download: false
+  write: false
+  replay: false    # Interpretation panels don't support replay
+
+controls:
+  filtering: false    # Summary panels don't filter
+  activate: false
+  confirmation_required: false
+
+# What this panel displays
+interpretation:
+  headline: "Activity at a Glance"
+  metrics:
+    - name: total_runs_today
+      label: "Runs Today"
+      aggregation: COUNT
+      source: [ACT-EX-AR-O2, ACT-EX-CR-O2]
+      filter: "created_at >= today"
+
+    - name: by_status
+      label: "By Status"
+      aggregation: STATUS_BREAKDOWN
+      source: [ACT-EX-AR-O2, ACT-EX-CR-O2]
+      breakdown_field: status
+      values: [running, success, failed, pending]
+
+    - name: failure_rate
+      label: "Failure Rate"
+      aggregation: TREND
+      source: [ACT-EX-CR-O2]
+      formula: "failed / total * 100"
+      unit: "%"
+      comparison: "vs yesterday"
+
+notes: |
+  HIL v1 Interpretation Panel - Activity Domain Pilot
+
+  Purpose: Provide a human-readable summary of activity without requiring
+  the user to scan raw execution lists.
+
+  Backend Contract:
+  - GET /api/v1/activity/summary must return pre-computed aggregations
+  - Response must include provenance metadata
+  - No frontend computation allowed
+
+  Navigation:
+  - Clicking any metric navigates to the source execution panel
+  - "12 runs today" → ACT-EX-CR-O2 filtered to today
+  - "3 failed" → ACT-EX-CR-O2 filtered to status=failed
+
+  Implementation: Phase 3 of HIL v1 rollout

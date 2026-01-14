@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "aurora_l2_intent_spec_v1",
+  "$id": "aurora_l2_intent_spec_v1.1",
   "title": "AURORA_L2 Intent Spec Schema",
-  "description": "JSON Schema for validating AURORA_L2 intent YAML files. Enforces STRUCTURAL validity only, NOT semantic correctness.",
+  "description": "JSON Schema for validating AURORA_L2 intent YAML files. Enforces STRUCTURAL validity only, NOT semantic correctness. Includes HIL v1 extensions (panel_class, provenance).",
   "type": "object",
   "required": ["panel_id", "version", "metadata", "display", "data", "controls"],
   "properties": {
@@ -169,7 +169,59 @@
     "notes": {
       "type": "string",
       "description": "Free-form notes from CSV migration"
+    },
+    "panel_class": {
+      "type": "string",
+      "enum": ["execution", "interpretation"],
+      "default": "execution",
+      "description": "HIL v1: Classification of panel behavior. 'execution' for raw data panels, 'interpretation' for summary/aggregation panels"
+    },
+    "provenance": {
+      "type": "object",
+      "description": "HIL v1: Data provenance declaration (required for interpretation panels, forbidden for execution panels)",
+      "required": ["source_panels", "aggregation", "endpoint"],
+      "properties": {
+        "source_panels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z]{2,4}-[A-Z]{2}-[A-Z]{2,3}-O[1-5]$"
+          },
+          "minItems": 1,
+          "description": "Panel IDs this interpretation derives from"
+        },
+        "aggregation": {
+          "type": "string",
+          "enum": ["COUNT", "SUM", "TREND", "STATUS_BREAKDOWN", "TOP_N", "LATEST"],
+          "description": "How source data is aggregated"
+        },
+        "endpoint": {
+          "type": "string",
+          "pattern": "^/api/v1/",
+          "description": "Backend endpoint for aggregated data"
+        }
+      },
+      "additionalProperties": false
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": { "panel_class": { "const": "interpretation" } },
+        "required": ["panel_class"]
+      },
+      "then": {
+        "required": ["provenance"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "panel_class": { "const": "execution" } }
+      },
+      "then": {
+        "not": { "required": ["provenance"] }
+      }
+    }
+  ]
 }

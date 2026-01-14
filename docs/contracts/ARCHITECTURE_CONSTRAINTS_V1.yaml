@@ -1,0 +1,402 @@
+# ARCHITECTURE CONSTRAINTS — UI-LED, SDSR-FILLED
+#
+# Version: v1.0
+# Status: ACTIVE
+# Authority: HUMAN (UI as Constraint)
+# Applies To: All agents, scripts, pipelines, CI
+#
+# This is a MACHINE-CHECKABLE policy. CI enforces it.
+
+version: "1.0.0"
+created_at: "2026-01-14"
+status: ACTIVE
+authority: HUMAN
+
+# =============================================================================
+# 0. PRIME DIRECTIVE
+# =============================================================================
+prime_directive:
+  statement: "UI expresses human intent. Backend earns the right to fill it."
+  invariants:
+    - "System must behave correctly when backend is incomplete"
+    - "System must behave correctly when SDSR fails"
+    - "System must behave correctly when capabilities are missing"
+    - "System must behave correctly when data is empty"
+  violations:
+    - "Silence (hiding errors)"
+    - "Bypasses (skipping automation)"
+    - "Inferred truth (guessing data)"
+
+# =============================================================================
+# 1. AUTHORITY STACK
+# =============================================================================
+authority_stack:
+  order:
+    1: { name: "ui_plan.yaml", role: "HUMAN CONSTRAINT" }
+    2: { name: "Intent YAML", role: "DECLARATIVE BINDING" }
+    3: { name: "Capability Registry", role: "OBSERVABILITY STATE" }
+    4: { name: "SDSR Scenarios", role: "SYSTEM REVELATION" }
+    5: { name: "Backend Endpoints", role: "IMPLEMENTATION" }
+    6: { name: "Compiler / Projection", role: "MIRROR ONLY" }
+    7: { name: "Frontend Renderer", role: "DUMB CONSUMER" }
+
+  rule: "Any action that inverts this order is ILLEGAL"
+
+  checks:
+    - id: AUTH-001
+      name: "No UI changes to satisfy backend"
+      check: "ui_plan.yaml must not be modified to unblock backend work"
+      enforcement: BLOCKING
+
+    - id: AUTH-002
+      name: "No projection invention"
+      check: "Projection must not contain panels absent from ui_plan.yaml"
+      enforcement: BLOCKING
+
+    - id: AUTH-003
+      name: "No frontend inference"
+      check: "Frontend must not derive meaning beyond projection"
+      enforcement: BLOCKING
+
+# =============================================================================
+# 2. PANEL STATE MODEL
+# =============================================================================
+panel_states:
+  exhaustive: true
+  states:
+    EMPTY:
+      meaning: "UI planned, intent missing"
+      rendering: MUST_RENDER
+      empty_state_ux: true
+    UNBOUND:
+      meaning: "Intent exists, capability missing"
+      rendering: MUST_RENDER
+      empty_state_ux: true
+    DRAFT:
+      meaning: "Capability declared, SDSR not observed"
+      rendering: MUST_RENDER
+      controls_disabled: true
+    BOUND:
+      meaning: "Capability observed via SDSR"
+      rendering: MUST_RENDER
+      full_functionality: true
+    DEFERRED:
+      meaning: "Explicit governance decision"
+      rendering: CONFIGURABLE
+      requires_human_approval: true
+
+  rules:
+    - id: PANEL-001
+      rule: "EMPTY and UNBOUND panels MUST render"
+      enforcement: BLOCKING
+
+    - id: PANEL-002
+      rule: "DEFERRED requires human approval"
+      enforcement: BLOCKING
+
+    - id: PANEL-003
+      rule: "No hidden or skipped panels"
+      enforcement: BLOCKING
+
+# =============================================================================
+# 3. AUTONOMOUS FIX ZONES (Claude may fix without asking)
+# =============================================================================
+autonomous_fix_zones:
+
+  backend_gaps:
+    id: AUTO-A
+    description: "Backend implementation gaps"
+    examples:
+      - "Endpoint returns wrong shape vs schema"
+      - "Invariant fails in SDSR"
+      - "Registry validation fails"
+      - "Capability status incorrect"
+      - "Query logic incorrect"
+    trigger: "SDSR failure, schema violation, or invariant failure"
+    allowed: true
+
+  automation_breakage:
+    id: AUTO-B
+    description: "Automation breakage"
+    examples:
+      - "Script errors"
+      - "CI failures"
+      - "PDG failures due to missing allowlist"
+      - "Pipeline ordering bugs"
+      - "Naming mismatches (file names, capability IDs)"
+    trigger: "Fix restores automation without altering semantics"
+    allowed: true
+
+  mechanical_renames:
+    id: AUTO-C
+    description: "Mechanical renames with evidence"
+    examples:
+      - "Terminology drift already identified (e.g., LLM_RUNS vs EXECUTIONS)"
+      - "Rename applied globally and consistently"
+    trigger: "Rename reduces semantic inconsistency, not cosmetic preference"
+    allowed: true
+
+  rendering_bugs:
+    id: AUTO-D
+    description: "Rendering bugs"
+    examples:
+      - "Panel fails to render"
+      - "Empty state not shown"
+      - "Wrong state label displayed"
+    trigger: "UI behavior contradicts declared panel state"
+    allowed: true
+
+# =============================================================================
+# 4. HARD STOP ZONES (Claude must ask before proceeding)
+# =============================================================================
+hard_stop_zones:
+
+  ui_plan_changes:
+    id: STOP-A
+    description: "UI plan changes"
+    examples:
+      - "Adding/removing domains"
+      - "Adding/removing subdomains"
+      - "Adding/removing topics"
+      - "Adding/removing panels"
+      - "Marking panels DEFERRED"
+    rule: "UI plan is human intent. Machines do not modify intent."
+    requires: HUMAN_APPROVAL
+    enforcement: BLOCKING
+
+  semantic_expansion:
+    id: STOP-B
+    description: "Semantic expansion"
+    examples:
+      - "Adding new attention reasons"
+      - "Adding new lifecycle states"
+      - "Adding new aggregation types"
+      - "Introducing narratives or judgments"
+    rule: "Semantics change human meaning. Requires human approval."
+    requires: HUMAN_APPROVAL
+    enforcement: BLOCKING
+
+  authority_inversion:
+    id: STOP-C
+    description: "Authority inversion"
+    examples:
+      - "Bypassing PDG"
+      - "Manually copying projections"
+      - "Skipping SDSR"
+      - "Making UI depend on backend readiness"
+    rule: "If automation blocks progress, report the block. Do not bypass."
+    requires: AUTOMATION_FIX
+    enforcement: BLOCKING
+
+  interpretation_scope:
+    id: STOP-D
+    description: "Interpretation scope changes"
+    examples:
+      - "Adding interpretation panels"
+      - "Expanding interpretation logic"
+      - "Cross-domain summaries"
+    rule: "Interpretation defines human understanding. Requires review."
+    requires: HUMAN_APPROVAL
+    enforcement: BLOCKING
+
+# =============================================================================
+# 5. SDSR EXECUTION RULES
+# =============================================================================
+sdsr_rules:
+  principles:
+    - "SDSR does not assume backend completeness"
+    - "SDSR failure = architectural signal, not a bug"
+    - "Backend must move toward SDSR, not vice versa"
+
+  forbidden:
+    - id: SDSR-F1
+      action: "Modifying SDSR to make it pass"
+      enforcement: BLOCKING
+
+    - id: SDSR-F2
+      action: "Softening invariants"
+      enforcement: BLOCKING
+
+    - id: SDSR-F3
+      action: "Removing checks for convenience"
+      enforcement: BLOCKING
+
+# =============================================================================
+# 6. PROJECTION RULES
+# =============================================================================
+projection_rules:
+  principle: "Projection mirrors truth"
+
+  must_include:
+    - "ALL panels from ui_plan.yaml"
+    - "Correct state per panel"
+
+  must_not:
+    - id: PROJ-F1
+      action: "Invent panels"
+      enforcement: BLOCKING
+
+    - id: PROJ-F2
+      action: "Hide panels"
+      enforcement: BLOCKING
+
+    - id: PROJ-F3
+      action: "Reorder semantics"
+      enforcement: BLOCKING
+
+# =============================================================================
+# 7. FRONTEND RULES
+# =============================================================================
+frontend_rules:
+  authority: NON_AUTHORITATIVE
+
+  allowed:
+    - "Render states"
+    - "Display data"
+    - "Navigate between domains"
+
+  forbidden:
+    - id: FE-F1
+      action: "Deriving meaning"
+      enforcement: BLOCKING
+
+    - id: FE-F2
+      action: "Guessing intent"
+      enforcement: BLOCKING
+
+    - id: FE-F3
+      action: "Suppressing EMPTY/UNBOUND panels"
+      enforcement: BLOCKING
+
+    - id: FE-F4
+      action: "Inferring readiness"
+      enforcement: BLOCKING
+
+# =============================================================================
+# 8. FAILURE HANDLING
+# =============================================================================
+failure_handling:
+  mandatory: true
+  format: |
+    BLOCKED AT: <layer>
+    REASON: <exact invariant / rule violated>
+    REQUIRES: <human decision | automation fix>
+    NO WORKAROUND APPLIED
+
+  rules:
+    - "No silent fixes"
+    - "No bypasses"
+    - "All blocks must be reported"
+
+# =============================================================================
+# 9. CORE INVARIANTS
+# =============================================================================
+core_invariants:
+  - condition: "UI is wrong"
+    resolution: "Human fixes UI"
+
+  - condition: "Backend is wrong"
+    resolution: "SDSR reveals it"
+
+  - condition: "Automation fails"
+    resolution: "Automation is fixed"
+
+  - condition: "Semantics change"
+    resolution: "Human decides"
+
+# =============================================================================
+# 10. ENFORCEMENT PRIORITY
+# =============================================================================
+enforcement:
+  this_document_overrides:
+    - "convenience"
+    - "speed"
+    - "local correctness"
+    - "agent initiative"
+
+  violations_are: "architectural defects"
+
+  ci_integration:
+    job_name: "architecture-constraints"
+    blocking: true
+    runs_on: ["push", "pull_request"]
+
+# =============================================================================
+# CI CHECK DEFINITIONS
+# =============================================================================
+ci_checks:
+
+  - id: CI-001
+    name: "UI Plan Completeness"
+    script: "scripts/ci/check_ui_plan_completeness.py"
+    checks:
+      - "All panels in ui_plan.yaml"
+      - "All panels have valid state"
+      - "No orphan panels in projection"
+    blocking: true
+
+  - id: CI-002
+    name: "Projection Integrity"
+    script: "scripts/ci/check_projection_integrity.py"
+    checks:
+      - "Projection contains all ui_plan panels"
+      - "Projection states match computed states"
+      - "No invented panels"
+    blocking: true
+
+  - id: CI-003
+    name: "Authority Stack Compliance"
+    script: "scripts/ci/check_authority_compliance.py"
+    checks:
+      - "No ui_plan.yaml modifications in backend PRs"
+      - "No projection-first changes"
+      - "Intent precedes capability"
+    blocking: true
+
+  - id: CI-004
+    name: "SDSR Invariant Integrity"
+    script: "scripts/ci/check_sdsr_invariants.py"
+    checks:
+      - "No weakened invariants"
+      - "No removed checks"
+      - "All scenarios have expectations"
+    blocking: true
+
+  - id: CI-005
+    name: "Terminology Consistency"
+    script: "scripts/ci/check_terminology_consistency.py"
+    checks:
+      - "Consistent naming across ui_plan, intents, capabilities, APIs"
+      - "No LLM_RUNS vs EXECUTIONS drift"
+    blocking: true
+
+  - id: CI-006
+    name: "Panel Rendering Guarantee"
+    script: "scripts/ci/check_panel_rendering.py"
+    checks:
+      - "EMPTY panels have empty-state component"
+      - "UNBOUND panels have coming-soon component"
+      - "No suppressed panels"
+    blocking: true
+
+# =============================================================================
+# RELATED DOCUMENTS
+# =============================================================================
+related_documents:
+  - path: "docs/contracts/UI_AS_CONSTRAINT_V1.md"
+    role: "Doctrine"
+
+  - path: "design/l2_1/ui_plan.yaml"
+    role: "Canonical constraint"
+
+  - path: "docs/contracts/PDG_STATE_INVARIANTS_V1.yaml"
+    role: "State transitions"
+
+  - path: "docs/contracts/COMPILER_UI_FIRST_SPEC_V1.md"
+    role: "Compiler rules"
+
+  - path: "docs/contracts/EMPTY_STATE_UI_CONTRACT_V1.md"
+    role: "Frontend rendering"
+
+  - path: "docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md"
+    role: "Constitutional authority"

@@ -505,3 +505,13 @@ intents:
     subdomain: EXECUTION_TRACES
     topic: TRACE_DETAILS
     order: O5
+  # HIL v1 Phase 4: Incidents Summary (PIN-417)
+  INC-AI-SUM-O1:
+    status: UNREVIEWED
+    spec_path: design/l2_1/intents/INC-AI-SUM-O1.yaml
+    added_at: '2026-01-14'
+    reviewed_by: null
+    domain: Incidents
+    subdomain: ACTIVE_INCIDENTS
+    topic: SUMMARY
+    order: O1

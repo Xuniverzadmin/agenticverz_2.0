@@ -31,6 +31,8 @@ import {
   FileText,
   Loader2,
   AlertCircle,
+  User,
+  Plug,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
@@ -52,6 +54,8 @@ const DOMAIN_ICONS: Record<DomainName, React.ElementType> = {
   Incidents: AlertTriangle,
   Policies: Shield,
   Logs: FileText,
+  Account: User,
+  Connectivity: Plug,
 };
 
 // ============================================================================

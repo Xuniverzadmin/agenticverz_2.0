@@ -54,6 +54,8 @@ import {
   Table,
   Layers,
   CreditCard,
+  User,
+  Plug,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -64,15 +66,17 @@ import {
   getPanelsForSubdomain,
   getNormalizedDomain,
   getNormalizedPanelsForSubdomain,
+  getTopicsForSubdomain as getScaffoldingTopicsForSubdomain,
+  isDomainFromProjection,
   type NormalizedPanel,
   type NormalizedDomain,
+  type ScaffoldingTopic,
 } from '@/contracts/ui_projection_loader';
+import type { PanelClass } from '@/contracts/ui_projection_types';
 import type { Domain, Panel, DomainName, RenderMode } from '@/contracts/ui_projection_types';
 import { preflightLogger } from '@/lib/preflightLogger';
 import { useRenderer, InspectorOnly } from '@/contexts/RendererContext';
-import { SimulatedControl } from '@/components/simulation/SimulatedControl';
-import { useSimulation } from '@/contexts/SimulationContext';
-import { Beaker } from 'lucide-react';
+import { RealControl } from '@/components/controls/RealControl';
 import { PanelContent, hasPanelContent } from '@/components/panels/PanelContentRegistry';
 
 // ============================================================================
@@ -85,6 +89,8 @@ const DOMAIN_ICONS: Record<DomainName, React.ElementType> = {
   Incidents: AlertTriangle,
   Policies: Shield,
   Logs: FileText,
+  Account: User,
+  Connectivity: Plug,
 };
 
 const RENDER_MODE_ICONS: Record<RenderMode, React.ElementType> = {
@@ -165,17 +171,18 @@ function formatLabel(str: string): string {
 // NO inference, NO card mode, NO click-to-expand inside topic context.
 // ============================================================================
 //
-// BINDING STATUS GATE (LOCKED - PIN-386)
+// UI-AS-CONSTRAINT DOCTRINE (LOCKED - PIN-418)
 // ============================================================================
-// | binding_status | Meaning                          | UI Behavior              |
-// |----------------|----------------------------------|--------------------------|
-// | INFO           | Display only (no actions)        | No controls rendered     |
-// | DRAFT          | Actions exist but unverified     | Controls DISABLED        |
-// | BOUND          | SDSR verified (OBSERVED/TRUSTED) | Controls ENABLED         |
-// | UNBOUND        | Capability deprecated/missing    | Panel hidden             |
+// | State    | Label            | Dim Header? | Show Controls? | Message                                  |
+// |----------|------------------|-------------|----------------|------------------------------------------|
+// | EMPTY    | Empty            | yes         | no             | "This panel is planned but not yet defined" |
+// | UNBOUND  | Awaiting Backend | yes         | no             | "Backend capability not connected"       |
+// | DRAFT    | Preview          | no          | yes (disabled) | "Data not yet observed"                  |
+// | BOUND    | (none)           | no          | yes            | (normal rendering)                       |
+// | DEFERRED | On Hold          | yes         | no             | "This feature is deferred by governance" |
 // ============================================================================
-// This is the SOLE authority for enabling controls. No exceptions.
-// If binding_status !== "BOUND", action controls MUST be disabled.
+// ALL panels MUST render (enabled: true). State controls UX appearance.
+// Panels MUST NOT be hidden. Empty state is a signal, not a failure.
 // ============================================================================
 
 interface FullPanelSurfaceProps {
@@ -185,20 +192,36 @@ interface FullPanelSurfaceProps {
 function FullPanelSurface({ panel }: FullPanelSurfaceProps) {
   const RenderIcon = RENDER_MODE_ICONS[panel.render_mode] || List;
   const isAutoDescription = panel._normalization?.auto_description;
-  const simulation = useSimulation();
   const renderer = useRenderer();
 
+  // HIL v1: Visual distinction for interpretation panels
+  const isInterpretation = panel.panel_class === 'interpretation';
+
   // ============================================================================
-  // BINDING AUTHORITY GATE (LOCKED - PIN-386)
-  // This is the centralized, sole authority for enabling/disabling controls.
-  // No exceptions. No overrides. No feature flags.
-  // Default: "INFO" (safe - display only, no controls enabled)
+  // UI-as-Constraint STATE → UX CONTRACT (LOCKED)
+  // | State    | Label            | Dim Header? | Show Controls? | Message                                  |
+  // |----------|------------------|-------------|----------------|------------------------------------------|
+  // | EMPTY    | Empty            | yes         | no             | "This panel is planned but not yet defined" |
+  // | UNBOUND  | Awaiting Backend | yes         | no             | "Backend capability not connected"       |
+  // | DRAFT    | Preview          | no          | yes (disabled) | "Data not yet observed"                  |
+  // | BOUND    | (none)           | no          | yes            | (normal)                                 |
+  // | DEFERRED | On Hold          | yes         | no             | "This feature is deferred by governance" |
   // ============================================================================
-  const bindingStatus = panel.binding_status ?? 'INFO';
+  const bindingStatus = panel.binding_status ?? 'UNBOUND';
   const controlsEnabled = bindingStatus === 'BOUND';
   const isDraft = bindingStatus === 'DRAFT';
+  const isEmptyState = ['EMPTY', 'UNBOUND', 'DEFERRED'].includes(bindingStatus);
+  const shouldDimHeader = isEmptyState;
 
-  // Get action controls for simulation
+  // State label mapping
+  const stateLabels: Record<string, string> = {
+    EMPTY: 'Empty',
+    UNBOUND: 'Awaiting Backend',
+    DRAFT: 'Preview',
+    DEFERRED: 'On Hold',
+  };
+
+  // Get action controls
   const actionControls = panel.controls?.filter(c => c.category === 'action') || [];
 
   // ============================================================================
@@ -217,18 +240,67 @@ function FullPanelSurface({ panel }: FullPanelSurfaceProps) {
   }
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+    <div className={cn(
+      "bg-gray-800 border rounded-lg overflow-hidden",
+      // HIL v1: Interpretation panels have subtle visual distinction
+      isInterpretation
+        ? "border-blue-700/50 border-l-2 border-l-blue-500"
+        : "border-gray-700",
+      // UI-as-Constraint: EMPTY/UNBOUND/DEFERRED states get subtle opacity
+      isEmptyState && "opacity-75"
+    )}>
       {/* Panel Header - NO button, NO click handler, NO menu */}
-      <div className="px-5 py-4 border-b border-gray-700 flex items-center justify-between">
+      <div className={cn(
+        "px-5 py-4 border-b border-gray-700 flex items-center justify-between",
+        // UI-as-Constraint: Dim header for EMPTY/UNBOUND/DEFERRED
+        shouldDimHeader && "bg-gray-800/50"
+      )}>
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary-900/30 rounded-lg">
-            <RenderIcon size={20} className="text-primary-400" />
+          <div className={cn(
+            "p-2 rounded-lg",
+            // HIL v1: Interpretation panels have blue-tinted icon background
+            isInterpretation
+              ? "bg-blue-900/30"
+              : "bg-primary-900/30",
+            // UI-as-Constraint: Dim icon for empty states
+            shouldDimHeader && "opacity-60"
+          )}>
+            <RenderIcon size={20} className={cn(
+              isInterpretation ? "text-blue-400" : "text-primary-400",
+              shouldDimHeader && "opacity-60"
+            )} />
           </div>
           <div>
-            <h3 className="font-medium text-gray-100">{panel.panel_name}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className={cn(
+                "font-medium",
+                shouldDimHeader ? "text-gray-400" : "text-gray-100"
+              )}>{panel.panel_name}</h3>
+              {/* UI-as-Constraint: State label badge */}
+              {stateLabels[bindingStatus] && (
+                <span className={cn(
+                  "text-xs px-1.5 py-0.5 rounded font-medium",
+                  bindingStatus === 'EMPTY' && "bg-gray-700/50 text-gray-500",
+                  bindingStatus === 'UNBOUND' && "bg-amber-900/30 text-amber-500/70",
+                  bindingStatus === 'DRAFT' && "bg-yellow-900/30 text-yellow-500",
+                  bindingStatus === 'DEFERRED' && "bg-gray-700/50 text-gray-500"
+                )}>
+                  {stateLabels[bindingStatus]}
+                </span>
+              )}
+              {/* HIL v1: Derived badge for interpretation panels */}
+              {isInterpretation && !isEmptyState && (
+                <span className="text-xs px-1.5 py-0.5 bg-blue-900/30 text-blue-400 rounded font-medium">
+                  Derived
+                </span>
+              )}
+            </div>
             {panel.short_description && (
               <div className="flex items-center gap-2 mt-0.5">
-                <p className="text-sm text-gray-400">{panel.short_description}</p>
+                <p className={cn(
+                  "text-sm",
+                  shouldDimHeader ? "text-gray-500" : "text-gray-400"
+                )}>{panel.short_description}</p>
                 {isAutoDescription && (
                   <InspectorOnly>
                     <span className="text-xs px-1 py-0.5 bg-amber-900/30 text-amber-500 rounded font-mono">
@@ -248,19 +320,13 @@ function FullPanelSurface({ panel }: FullPanelSurfaceProps) {
         </InspectorOnly>
       </div>
 
-      {/* Controls Section - Phase-2A.2 Simulation */}
-      {/* BINDING GATE: Only render controls if binding_status !== UNBOUND */}
-      {actionControls.length > 0 && bindingStatus !== 'UNBOUND' && (
+      {/* Controls Section - Real Actions (AURORA-bound) */}
+      {/* UI-as-Constraint: No controls for EMPTY/UNBOUND/DEFERRED states */}
+      {actionControls.length > 0 && !isEmptyState && (
         <div className="px-5 py-4 border-b border-gray-700 bg-gray-800/50">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-medium text-gray-300 flex items-center gap-2">
               Actions
-              {simulation.isSimulationEnabled && controlsEnabled && (
-                <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-amber-900/50 text-amber-400 border border-amber-700/50">
-                  <Beaker size={12} />
-                  SIMULATION
-                </span>
-              )}
               {/* DRAFT indicator: Controls exist but unverified by SDSR */}
               {isDraft && (
                 <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-gray-700/50 text-gray-400 border border-gray-600/50">
@@ -295,7 +361,7 @@ function FullPanelSurface({ panel }: FullPanelSurfaceProps) {
           </div>
           <div className="space-y-2">
             {actionControls.map((control, idx) => (
-              <SimulatedControl
+              <RealControl
                 key={`${control.type}-${idx}`}
                 control={control}
                 panelId={panel.panel_id}
@@ -309,7 +375,29 @@ function FullPanelSurface({ panel }: FullPanelSurfaceProps) {
 
       {/* Panel Content - SDSR data binding via PanelContentRegistry */}
       <div className="p-5">
-        {hasPanelContent(panel.panel_id) ? (
+        {/* UI-as-Constraint: Show state-specific message for non-BOUND panels */}
+        {isEmptyState ? (
+          <div className={cn(
+            "border border-dashed rounded-lg p-8 text-center",
+            bindingStatus === 'EMPTY' && "bg-gray-900/30 border-gray-700",
+            bindingStatus === 'UNBOUND' && "bg-amber-900/10 border-amber-700/30",
+            bindingStatus === 'DEFERRED' && "bg-gray-900/30 border-gray-700"
+          )}>
+            <p className={cn(
+              "text-sm",
+              bindingStatus === 'EMPTY' && "text-gray-500",
+              bindingStatus === 'UNBOUND' && "text-amber-500/70",
+              bindingStatus === 'DEFERRED' && "text-gray-500"
+            )}>
+              {panel.disabled_reason || 'Panel unavailable'}
+            </p>
+            <InspectorOnly>
+              <p className="text-gray-600 text-xs mt-2 font-mono">
+                state: {bindingStatus} | render_mode: {panel.render_mode}
+              </p>
+            </InspectorOnly>
+          </div>
+        ) : hasPanelContent(panel.panel_id) ? (
           <>
             <PanelContent panel={panel} />
             <InspectorOnly>
@@ -323,11 +411,11 @@ function FullPanelSurface({ panel }: FullPanelSurfaceProps) {
         ) : (
           <div className="bg-gray-900/50 border border-dashed border-gray-600 rounded-lg p-8 text-center">
             <p className="text-gray-500 text-sm">
-              Content surface — awaiting backend binding
+              {panel.disabled_reason || 'Content surface — awaiting backend binding'}
             </p>
             <InspectorOnly>
               <p className="text-gray-600 text-xs mt-2 font-mono">
-                render_mode: {panel.render_mode} | controls: {panel.control_count}
+                state: {bindingStatus} | render_mode: {panel.render_mode} | controls: {panel.control_count}
               </p>
             </InspectorOnly>
           </div>
@@ -379,6 +467,12 @@ function TopicTabs({ topics, activeTopic, onSelectTopic }: TopicTabsProps) {
 // PIN-359: ALL panels render as FULL_PANEL_SURFACE inside topic context.
 // NO card mode. NO click-to-expand. NO inference.
 // Topic tabs are content contexts - panels are already selected by topic.
+//
+// HIL v1 (PIN-416, PIN-417): Panels are split by panel_class:
+// - interpretation panels render first (Summary section)
+// - execution panels render after (standard panels)
+// - No reordering within each group
+// - No hiding of execution panels
 // ============================================================================
 
 interface PanelsGridProps {
@@ -394,13 +488,50 @@ function PanelsGrid({ panels }: PanelsGridProps) {
     );
   }
 
-  // PIN-359: ALL panels render as full surfaces - no O1 vs O2-O5 distinction
-  // Topic context = surface mode. Panel inference is KILLED.
+  // HIL v1: Split panels by class
+  // interpretation panels are summaries/aggregations (render first)
+  // execution panels are raw data/lists (render after)
+  const interpretationPanels = panels.filter(
+    (p) => p.panel_class === 'interpretation'
+  );
+  const executionPanels = panels.filter(
+    (p) => (p.panel_class || 'execution') === 'execution'
+  );
+
   return (
-    <div className="space-y-4">
-      {panels.map((panel) => (
-        <FullPanelSurface key={panel.panel_id} panel={panel} />
-      ))}
+    <div className="space-y-6">
+      {/* HIL v1: Interpretation Section (Summaries) */}
+      {/* Renders above execution panels in visually distinct section */}
+      {/* Empty section renders nothing (no conditional message) */}
+      {interpretationPanels.length > 0 && (
+        <div className="space-y-4">
+          {/* Section label - subtle, not dominant */}
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span className="font-medium">Summary</span>
+            <InspectorOnly>
+              <span className="text-xs px-1.5 py-0.5 bg-blue-900/30 text-blue-400 rounded font-mono">
+                HIL
+              </span>
+            </InspectorOnly>
+          </div>
+          {/* Interpretation panels - same rendering as execution */}
+          <div className="space-y-4">
+            {interpretationPanels.map((panel) => (
+              <FullPanelSurface key={panel.panel_id} panel={panel} />
+            ))}
+          </div>
+          {/* Divider between sections */}
+          <div className="border-t border-gray-700/50" />
+        </div>
+      )}
+
+      {/* Execution panels - standard rendering */}
+      {/* Always renders (no conditional hiding) */}
+      <div className="space-y-4">
+        {executionPanels.map((panel) => (
+          <FullPanelSurface key={panel.panel_id} panel={panel} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -529,9 +660,24 @@ export function DomainPage({ domainName }: DomainPageProps) {
   }, [domainName, activeSubdomain]);
 
   // Get topics for current subdomain
-  const topics = useMemo(() => {
-    return getTopicsForSubdomain(subdomainPanels);
-  }, [subdomainPanels]);
+  // Falls back to scaffolding topics when panels are empty (UI-as-Constraint doctrine)
+  const topics = useMemo((): TopicWithOrder[] => {
+    // If we have panels, derive topics from them
+    if (subdomainPanels.length > 0) {
+      return getTopicsForSubdomain(subdomainPanels);
+    }
+
+    // Fallback: get topics from scaffolding (ui_plan authority)
+    if (activeSubdomain) {
+      const scaffoldingTopics = getScaffoldingTopicsForSubdomain(domainName, activeSubdomain);
+      return scaffoldingTopics.map(t => ({
+        topic: t.id,
+        display_order: t.display_order,
+      }));
+    }
+
+    return [];
+  }, [subdomainPanels, activeSubdomain, domainName]);
 
   // Auto-select first topic when topics change (by display_order)
   useEffect(() => {
@@ -647,4 +793,12 @@ export function PoliciesPage() {
 
 export function LogsPage() {
   return <DomainPage domainName="Logs" />;
+}
+
+export function AccountPage() {
+  return <DomainPage domainName="Account" />;
+}
+
+export function ConnectivityPage() {
+  return <DomainPage domainName="Connectivity" />;
 }

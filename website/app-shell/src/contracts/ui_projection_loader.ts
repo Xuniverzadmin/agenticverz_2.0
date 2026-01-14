@@ -31,6 +31,15 @@ import {
   type ValidationResult,
 } from "./projection_assertions";
 import { CONSOLE_ROOT } from "@/routing/consoleRoots";
+import {
+  getScaffoldingDomain,
+  getAllScaffoldingDomains,
+  getScaffoldingSubdomains,
+  getScaffoldingTopics,
+  hasScaffoldingDomain,
+  type ScaffoldingDomain,
+  type ScaffoldingTopic,
+} from "./ui_plan_scaffolding";
 
 // ============================================================================
 // Route Resolution (Single Source of Truth)
@@ -168,23 +177,83 @@ export function isProjectionLoaded(): boolean {
 }
 
 // ============================================================================
-// Domain Accessors
+// Scaffolding Fallback (UI-as-Constraint Doctrine)
+// ============================================================================
+// When projection is incomplete, the UI must still render structural scaffolding
+// using ui_plan.yaml as fallback authority.
+//
+// RULE (CONSTITUTIONAL):
+// If a domain/subdomain/topic exists in ui_plan.yaml but not in projection,
+// the UI MUST render structural scaffolding, NOT fail or show placeholders.
+//
+// Reference: ARCHITECTURE_CONSTRAINTS_V1.yaml, UI_AS_CONSTRAINT_V1.md
+// ============================================================================
+
+/**
+ * Convert scaffolding domain to Domain type with EMPTY structure.
+ * Panels array is empty (panels require projection).
+ * This is used when projection doesn't have the domain but ui_plan does.
+ */
+function scaffoldingToDomain(scaffolding: ScaffoldingDomain): Domain {
+  return {
+    domain: scaffolding.id,
+    order: scaffolding.order,
+    route: scaffolding.route,
+    panels: [], // No panels without projection
+    panel_count: 0,
+    total_controls: 0,
+    short_description: scaffolding.question, // Use the domain question
+  };
+}
+
+/**
+ * Check if projection has a domain.
+ */
+function projectionHasDomain(name: DomainName): boolean {
+  if (!cachedProjection) return false;
+  return cachedProjection.domains.some((d) => d.domain === name);
+}
+
+// ============================================================================
+// Domain Accessors (with Scaffolding Fallback)
 // ============================================================================
 
 /**
  * Get all domains in display order.
+ * Merges projection domains with scaffolding domains.
+ * Scaffolding domains appear if not in projection.
  */
 export function getDomains(): Domain[] {
-  const projection = getProjection();
-  return [...projection.domains].sort((a, b) => a.order - b.order);
+  const projection = cachedProjection;
+  const projectionDomains = projection ? [...projection.domains] : [];
+
+  // Get all scaffolding domains not in projection
+  const scaffoldingDomains = getAllScaffoldingDomains()
+    .filter(s => !projectionDomains.some(p => p.domain === s.id))
+    .map(scaffoldingToDomain);
+
+  // Merge and sort by order
+  return [...projectionDomains, ...scaffoldingDomains].sort((a, b) => a.order - b.order);
 }
 
 /**
  * Get a single domain by name.
+ * Falls back to scaffolding if not in projection.
  */
 export function getDomain(name: DomainName): Domain | undefined {
-  const projection = getProjection();
-  return projection.domains.find((d) => d.domain === name);
+  // Try projection first
+  if (cachedProjection) {
+    const projDomain = cachedProjection.domains.find((d) => d.domain === name);
+    if (projDomain) return projDomain;
+  }
+
+  // Fallback to scaffolding
+  const scaffolding = getScaffoldingDomain(name);
+  if (scaffolding) {
+    return scaffoldingToDomain(scaffolding);
+  }
+
+  return undefined;
 }
 
 /**
@@ -226,6 +295,45 @@ export function getPanel(panelId: string): Panel | undefined {
  */
 export function getEnabledPanels(domain: DomainName): Panel[] {
   return getPanels(domain).filter((p) => p.enabled);
+}
+
+// ============================================================================
+// HIL v1: Panel Classification Accessors
+// ============================================================================
+
+/**
+ * Get execution panels for a domain (raw data, lists, details).
+ * These are panels with panel_class="execution" (default).
+ */
+export function getExecutionPanels(domain: DomainName): Panel[] {
+  return getEnabledPanels(domain).filter(
+    (p) => (p.panel_class || "execution") === "execution"
+  );
+}
+
+/**
+ * Get interpretation panels for a domain (summaries, aggregations).
+ * These are panels with panel_class="interpretation".
+ */
+export function getInterpretationPanels(domain: DomainName): Panel[] {
+  return getEnabledPanels(domain).filter(
+    (p) => p.panel_class === "interpretation"
+  );
+}
+
+/**
+ * Get panels grouped by class for a domain.
+ * Returns { interpretation: Panel[], execution: Panel[] }
+ */
+export function getPanelsByClass(domain: DomainName): {
+  interpretation: Panel[];
+  execution: Panel[];
+} {
+  const panels = getEnabledPanels(domain);
+  return {
+    interpretation: panels.filter((p) => p.panel_class === "interpretation"),
+    execution: panels.filter((p) => (p.panel_class || "execution") === "execution"),
+  };
 }
 
 // ============================================================================
@@ -456,18 +564,52 @@ export function getDomainContextForRoute(pathname: string): DomainContext {
 
 /**
  * Get all unique subdomains for a domain.
+ * Falls back to scaffolding if projection doesn't have the domain or subdomains.
  */
 export function getSubdomainsForDomain(domainName: DomainName): string[] {
-  const domain = getDomain(domainName);
-  if (!domain) return [];
-
-  const subdomains = new Set<string>();
-  for (const panel of domain.panels) {
-    if (panel.subdomain) {
-      subdomains.add(panel.subdomain);
+  // Try projection first
+  if (projectionHasDomain(domainName)) {
+    const domain = cachedProjection!.domains.find((d) => d.domain === domainName);
+    if (domain && domain.panels.length > 0) {
+      const subdomains = new Set<string>();
+      for (const panel of domain.panels) {
+        if (panel.subdomain) {
+          subdomains.add(panel.subdomain);
+        }
+      }
+      if (subdomains.size > 0) {
+        return Array.from(subdomains);
+      }
     }
   }
-  return Array.from(subdomains);
+
+  // Fallback to scaffolding
+  return getScaffoldingSubdomains(domainName);
+}
+
+/**
+ * Get all topics for a subdomain within a domain.
+ * Uses scaffolding as the source (topics are structural, not data).
+ */
+export function getTopicsForSubdomain(
+  domainName: DomainName,
+  subdomain: string
+): ScaffoldingTopic[] {
+  return getScaffoldingTopics(domainName, subdomain);
+}
+
+/**
+ * Check if a domain has scaffolding (exists in ui_plan).
+ */
+export function domainHasScaffolding(domainName: DomainName): boolean {
+  return hasScaffoldingDomain(domainName);
+}
+
+/**
+ * Check if domain is from projection (has actual panels) or scaffolding only.
+ */
+export function isDomainFromProjection(domainName: DomainName): boolean {
+  return projectionHasDomain(domainName);
 }
 
 /**
@@ -486,105 +628,71 @@ export function getPanelsForSubdomain(
 }
 
 // ============================================================================
-// Preflight Normalizer (TODO-1: Temporary Description Injection)
-// Only active in PREFLIGHT mode. Never in production.
+// Panel/Domain Accessors (No Placeholder Generation - PIN-415)
+// ============================================================================
+// DELETED: generatePlaceholderDescription() - violated truth-grade principles
+// DELETED: normalizePanel() with fake descriptions - simulation removed
+// DELETED: normalizeDomain() with fake descriptions - simulation removed
+//
+// If short_description is missing in projection, it is MISSING.
+// The UI must show the truth, not fabricate descriptions.
+// Reference: PIN-415 (Hard Delete Order)
 // ============================================================================
 
-const IS_PREFLIGHT = import.meta.env.VITE_PREFLIGHT_MODE === 'true';
-
-export interface NormalizedPanel extends Panel {
-  _normalization?: {
-    auto_description: boolean;
-  };
-}
-
-export interface NormalizedDomain extends Omit<Domain, 'panels'> {
-  panels: NormalizedPanel[];
-  _normalization?: {
-    auto_description: boolean;
-  };
-}
+// Type aliases for backward compatibility (no transformation)
+export type NormalizedPanel = Panel;
+export type NormalizedDomain = Domain;
 
 /**
- * Generate a placeholder description for preflight validation.
- * RULE: Only in preflight. Never in production.
+ * Get panel as-is. No description injection.
+ * If short_description is missing, it remains missing.
  */
-function generatePlaceholderDescription(label: string, type: 'domain' | 'subdomain' | 'panel'): string {
-  const cleanLabel = label.replace(/_/g, ' ').toLowerCase();
-  switch (type) {
-    case 'domain':
-      return `Provides an overview of ${cleanLabel} across your system.`;
-    case 'subdomain':
-      return `Manages ${cleanLabel} configuration and monitoring.`;
-    case 'panel':
-      return `Displays ${cleanLabel} data and controls.`;
-    default:
-      return `Overview of ${cleanLabel}.`;
-  }
+export function normalizePanel(panel: Panel): Panel {
+  // NO FAKE DATA - return panel unchanged
+  return panel;
 }
 
 /**
- * Normalize a panel with placeholder description if missing (preflight only).
+ * Get domain as-is. No description injection.
+ * If short_description is missing, it remains missing.
  */
-export function normalizePanel(panel: Panel): NormalizedPanel {
-  if (!IS_PREFLIGHT || panel.short_description) {
-    return panel;
-  }
-
-  return {
-    ...panel,
-    short_description: generatePlaceholderDescription(panel.panel_name, 'panel'),
-    _normalization: {
-      auto_description: true,
-    },
-  };
+export function normalizeDomain(domain: Domain): Domain {
+  // NO FAKE DATA - return domain unchanged
+  return domain;
 }
 
 /**
- * Normalize a domain with placeholder description if missing (preflight only).
- */
-export function normalizeDomain(domain: Domain): NormalizedDomain {
-  const normalizedPanels = domain.panels.map(normalizePanel);
-
-  if (!IS_PREFLIGHT || domain.short_description) {
-    return {
-      ...domain,
-      panels: normalizedPanels,
-    };
-  }
-
-  return {
-    ...domain,
-    panels: normalizedPanels,
-    short_description: generatePlaceholderDescription(domain.domain, 'domain'),
-    _normalization: {
-      auto_description: true,
-    },
-  };
-}
-
-/**
- * Get normalized panels for a subdomain (with placeholder descriptions in preflight).
+ * Get panels for a subdomain as-is.
  */
 export function getNormalizedPanelsForSubdomain(
   domainName: DomainName,
   subdomain: string
-): NormalizedPanel[] {
-  const panels = getPanelsForSubdomain(domainName, subdomain);
-  return panels.map(normalizePanel);
+): Panel[] {
+  return getPanelsForSubdomain(domainName, subdomain);
 }
 
 /**
- * Get normalized domain (with placeholder descriptions in preflight).
+ * Get domain as-is.
  */
-export function getNormalizedDomain(name: DomainName): NormalizedDomain | undefined {
-  const domain = getDomain(name);
-  if (!domain) return undefined;
-  return normalizeDomain(domain);
+export function getNormalizedDomain(name: DomainName): Domain | undefined {
+  return getDomain(name);
 }
 
 // ============================================================================
 // Exports
 // ============================================================================
 
-export type { UIProjectionLock, Domain, Panel, Control, BindingStatus } from "./ui_projection_types";
+export type {
+  UIProjectionLock,
+  Domain,
+  Panel,
+  Control,
+  BindingStatus,
+  // HIL v1 types
+  PanelClass,
+  AggregationType,
+  Provenance,
+} from "./ui_projection_types";
+
+// Re-export scaffolding types for DomainPage topic rendering
+export type { ScaffoldingTopic, ScaffoldingDomain } from "./ui_plan_scaffolding";

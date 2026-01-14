@@ -1,11 +1,16 @@
 /**
  * Account Page - Customer Account Management
  *
- * Essential customer lifecycle features:
- * - Organization details
- * - Environment info (Demo/Prod)
- * - Plan & limits
- * - Team members (read-only for now)
+ * Layer: L1 — Product Experience (UI)
+ * Product: ai-console
+ * Role: Account and organization management
+ *
+ * STATUS: PARTIAL - Some APIs not implemented.
+ * Required endpoints for full functionality:
+ *   GET /api/v1/organization - Organization details
+ *   GET /api/v1/team - Team members
+ *
+ * NO FAKE DATA. NO SIMULATED RESPONSES.
  */
 
 import React, { useEffect } from 'react';
@@ -15,45 +20,55 @@ import { logger } from '@/lib/consoleLogger';
 import { useAuthStore } from '@/stores/authStore';
 
 export function AccountPage() {
-  const tenantId = useAuthStore((state) => state.tenantId) || 'demo-tenant';
+  const tenantId = useAuthStore((state) => state.tenantId);
 
   useEffect(() => {
     logger.componentMount('AccountPage');
     return () => logger.componentUnmount('AccountPage');
   }, []);
 
-  // Fetch settings for plan info
+  // NO FALLBACK - missing tenant is a hard error
+  if (!tenantId) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="bg-red-500/10 border border-red-400/40 rounded-xl p-6">
+          <h3 className="font-bold text-red-400">Authentication Required</h3>
+          <p className="text-sm text-slate-300 mt-1">No tenant ID available. Please sign in.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Fetch settings from real API
   const { data: settings, isLoading, error } = useQuery({
     queryKey: ['guard', 'settings'],
     queryFn: guardApi.getSettings,
-    retry: 1,
+    retry: false,
   });
 
-  // Demo organization data
-  const orgData = {
-    name: 'Acme Corp',
-    environment: 'demo',
-    region: 'us-west-2',
-    created: '2024-11-15',
-    plan: settings?.plan || 'starter',
-    owner: 'admin@company.com',
-  };
+  if (isLoading) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="text-slate-400">Loading account...</div>
+      </div>
+    );
+  }
 
-  const teamMembers = [
-    { email: 'admin@company.com', role: 'Owner', lastActive: '2 hours ago' },
-    { email: 'ops@company.com', role: 'Admin', lastActive: '1 day ago' },
-    { email: 'dev@company.com', role: 'Viewer', lastActive: '3 days ago' },
-  ];
+  if (error) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="bg-red-500/10 border border-red-400/40 rounded-xl p-6">
+          <h3 className="font-bold text-red-400">Failed to Load Account</h3>
+          <p className="text-sm text-slate-300 mt-1">
+            {error instanceof Error ? error.message : 'Unknown error'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
-      {/* Demo Mode Banner */}
-      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-4 py-2 text-center">
-        <span className="text-amber-400 text-sm">
-          ⚠️ You are viewing <strong>Demo mode</strong> — settings are read-only.
-        </span>
-      </div>
-
       {/* Organization Card */}
       <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
         <div className="p-4 border-b border-slate-700">
@@ -63,141 +78,75 @@ export function AccountPage() {
         </div>
         <div className="p-4">
           <div className="grid grid-cols-2 gap-6">
-            <InfoItem label="Organization Name" value={orgData.name} />
-            <InfoItem label="Environment" value={orgData.environment.toUpperCase()} badge />
-            <InfoItem label="Region" value={orgData.region} />
-            <InfoItem label="Created" value={new Date(orgData.created).toLocaleDateString()} />
-            <InfoItem label="Plan" value={orgData.plan.charAt(0).toUpperCase() + orgData.plan.slice(1)} />
-            <InfoItem label="Owner" value={orgData.owner} />
+            <InfoItem label="Tenant ID" value={tenantId} />
+            <InfoItem label="Plan" value={settings?.plan || 'Unknown'} />
+          </div>
+          <div className="mt-4 pt-4 border-t border-slate-700">
+            <p className="text-sm text-slate-500">
+              Organization API not implemented. Contact support for account changes.
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Plan & Limits */}
+      {/* Plan & Limits - Real data from settings API */}
+      {settings && (
+        <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+          <div className="p-4 border-b border-slate-700">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <span>📊</span> Plan & Limits
+            </h2>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-2 gap-4">
+              {settings.budget_limit_cents && (
+                <div className="bg-slate-700/50 rounded-lg p-4">
+                  <span className="text-sm text-slate-400">Monthly Budget</span>
+                  <div className="text-2xl font-bold mt-1">
+                    ${(settings.budget_limit_cents / 100).toFixed(2)}
+                  </div>
+                </div>
+              )}
+              {settings.guardrails && (
+                <div className="bg-slate-700/50 rounded-lg p-4">
+                  <span className="text-sm text-slate-400">Active Guardrails</span>
+                  <div className="text-2xl font-bold mt-1">
+                    {settings.guardrails.length}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Team Members - API not implemented */}
       <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
         <div className="p-4 border-b border-slate-700">
           <h2 className="text-lg font-bold flex items-center gap-2">
-            <span>📊</span> Plan & Limits
-          </h2>
-        </div>
-        <div className="p-4">
-          <div className="grid grid-cols-3 gap-4">
-            <LimitCard
-              label="Monthly Budget"
-              current={settings?.budget_limit_cents ? settings.budget_limit_cents / 100 : 100}
-              max={500}
-              unit="$"
-            />
-            <LimitCard
-              label="API Keys"
-              current={3}
-              max={10}
-              unit="keys"
-            />
-            <LimitCard
-              label="Guardrails"
-              current={settings?.guardrails?.length || 5}
-              max={20}
-              unit="rules"
-            />
-          </div>
-          <div className="mt-4 pt-4 border-t border-slate-700">
-            <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors">
-              Upgrade Plan
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Team Members */}
-      <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-        <div className="p-4 border-b border-slate-700 flex items-center justify-between">
-          <h2 className="text-lg font-bold flex items-center gap-2">
             <span>👥</span> Team Members
           </h2>
-          <span className="text-xs bg-slate-700 px-2 py-1 rounded">Read-only in demo</span>
-        </div>
-        <div className="divide-y divide-slate-700">
-          {teamMembers.map((member, idx) => (
-            <div key={idx} className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center">
-                  <span className="text-lg">👤</span>
-                </div>
-                <div>
-                  <span className="font-medium">{member.email}</span>
-                  <span className="block text-sm text-slate-400">Last active: {member.lastActive}</span>
-                </div>
-              </div>
-              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                member.role === 'Owner' ? 'bg-purple-500/20 text-purple-400' :
-                member.role === 'Admin' ? 'bg-blue-500/20 text-blue-400' :
-                'bg-slate-600 text-slate-300'
-              }`}>
-                {member.role}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="p-4 border-t border-slate-700 bg-slate-700/30">
-          <button className="text-sm text-slate-400 hover:text-white transition-colors" disabled>
-            + Invite team member (upgrade required)
-          </button>
-        </div>
-      </div>
-
-      {/* Danger Zone */}
-      <div className="bg-slate-800 rounded-xl border border-red-500/30 overflow-hidden">
-        <div className="p-4 border-b border-red-500/30">
-          <h2 className="text-lg font-bold text-red-400 flex items-center gap-2">
-            <span>⚠️</span> Danger Zone
-          </h2>
         </div>
         <div className="p-4">
-          <p className="text-sm text-slate-400 mb-4">
-            Permanently delete your organization and all associated data. This action cannot be undone.
-          </p>
-          <button className="px-4 py-2 border border-red-500 text-red-400 hover:bg-red-500/20 rounded-lg text-sm font-medium transition-colors" disabled>
-            Delete Organization (disabled in demo)
-          </button>
+          <div className="bg-amber-500/10 border border-amber-400/30 rounded-lg p-4">
+            <p className="text-sm text-amber-400">
+              Team management API not implemented.
+            </p>
+            <p className="text-xs text-slate-500 mt-1 font-mono">
+              Required: GET /api/v1/team
+            </p>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function InfoItem({ label, value, badge }: { label: string; value: string; badge?: boolean }) {
+function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <span className="text-sm text-slate-400">{label}</span>
-      {badge ? (
-        <span className="block mt-1">
-          <span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded text-sm font-medium">
-            {value}
-          </span>
-        </span>
-      ) : (
-        <span className="block font-medium text-white mt-1">{value}</span>
-      )}
-    </div>
-  );
-}
-
-function LimitCard({ label, current, max, unit }: { label: string; current: number; max: number; unit: string }) {
-  const percentage = (current / max) * 100;
-  return (
-    <div className="bg-slate-700/50 rounded-lg p-4">
-      <span className="text-sm text-slate-400">{label}</span>
-      <div className="flex items-end gap-1 mt-1">
-        <span className="text-2xl font-bold">{unit === '$' ? `$${current}` : current}</span>
-        <span className="text-slate-400 text-sm mb-0.5">/ {unit === '$' ? `$${max}` : `${max} ${unit}`}</span>
-      </div>
-      <div className="mt-2 h-2 bg-slate-600 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full ${percentage > 80 ? 'bg-red-500' : percentage > 50 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
+      <span className="block font-medium text-white mt-1">{value}</span>
     </div>
   );
 }

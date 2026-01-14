@@ -42,7 +42,8 @@ import {
   CheckCircle,
   XCircle,
   Info,
-  Beaker,
+  User,
+  Plug,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -52,8 +53,7 @@ import {
 import type { Panel, Control, DomainName, RenderMode } from '@/contracts/ui_projection_types';
 import { preflightLogger } from '@/lib/preflightLogger';
 import { useRenderer, InspectorOnly } from '@/contexts/RendererContext';
-import { SimulatedControl } from '@/components/simulation/SimulatedControl';
-import { useSimulation } from '@/contexts/SimulationContext';
+import { RealControl } from '@/components/controls/RealControl';
 
 // ============================================================================
 // Constants
@@ -65,6 +65,8 @@ const DOMAIN_ICONS: Record<DomainName, React.ElementType> = {
   Incidents: AlertTriangle,
   Policies: Shield,
   Logs: FileText,
+  Account: User,
+  Connectivity: Plug,
 };
 
 const RENDER_MODE_ICONS: Record<RenderMode, React.ElementType> = {
@@ -113,9 +115,9 @@ function findDomainByPanelRoute(route: string): DomainName | undefined {
 }
 
 // ============================================================================
-// Control Item Component - REPLACED BY SimulatedControl (PIN-368)
+// Control Item Component - Uses RealControl (projection-driven, no simulation)
 // ============================================================================
-// See: @/components/simulation/SimulatedControl.tsx
+// See: @/components/controls/RealControl.tsx
 
 // ============================================================================
 // Permissions Display (Inspector Only)
@@ -216,7 +218,6 @@ function PanelNotFound({ route, domainRoute }: { route: string; domainRoute: str
 export default function PanelView() {
   const { domain: domainSlug, panelSlug } = useParams<{ domain: string; panelSlug: string }>();
   const renderer = useRenderer();
-  const simulation = useSimulation();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -427,13 +428,6 @@ export default function PanelView() {
         <div className="flex items-center justify-between">
           <h3 className="font-medium text-gray-200 flex items-center gap-2">
             Controls {renderer.showMetadata && `(${panel.control_count})`}
-            {/* Simulation mode indicator */}
-            {simulation.isSimulationEnabled && (
-              <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-amber-900/50 text-amber-400 border border-amber-700/50">
-                <Beaker size={12} />
-                SIMULATION
-              </span>
-            )}
           </h3>
           {renderer.showMetadata && (
             <span className="text-xs text-gray-500">
@@ -452,7 +446,7 @@ export default function PanelView() {
         ) : (
           <div className="space-y-2">
             {panel.controls.map((control, idx) => (
-              <SimulatedControl
+              <RealControl
                 key={`${control.type}-${idx}`}
                 control={control}
                 panelId={panel.panel_id}

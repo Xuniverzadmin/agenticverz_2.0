@@ -11,9 +11,13 @@ import { apiClient } from './client';
 import { useAuthStore } from '@/stores/authStore';
 
 // Helper to get tenant_id for guard API calls
+// NO FALLBACK - missing tenant is a hard error
 const getTenantId = (): string => {
   const tenantId = useAuthStore.getState().tenantId;
-  return tenantId || 'demo-tenant'; // Fallback for demo mode
+  if (!tenantId) {
+    throw new Error('[Guard API] No tenant ID available. User must be authenticated.');
+  }
+  return tenantId;
 };
 
 // Safe API wrapper with error logging

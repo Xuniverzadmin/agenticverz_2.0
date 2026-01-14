@@ -1,0 +1,48 @@
+# Layer: L4 — Domain Engines
+# Product: system-wide
+# Temporal:
+#   Trigger: build-time
+#   Execution: static
+# Role: Governed registry of attention reasons for HIL interpretation panels
+# Reference: PIN-417 (HIL v1 Implementation Tracker)
+#
+# GOVERNANCE RULES (LOCKED):
+# - Endpoint may only emit reasons present in this registry
+# - Unknown reason in response => 500 (fail fast)
+# - Registry changes require a PIN
+# - One registry per domain (do not make global)
+#
+# SEMANTIC RULE:
+# - A single HIL panel should not mix temporal semantics
+# - This registry covers IN-FLIGHT RISK only
+# - Post-fact outcomes (recent_failure) belong to separate panels
+# - Governance signals (policy_violation) belong to Incidents domain
+
+version: 1
+domain: Activity
+scope: interpretation.attention
+registry_type: domain_specific  # Explicit: not shared with Incidents
+
+# Reasons for "What needs attention now?" (in-flight risk only)
+reasons:
+  long_running:
+    description: Run exceeds expected duration
+    semantic_class: in_flight_risk
+    routes_to:
+      domain: Activity
+      subdomain: LLM Runs
+      topic: Active
+      filter: long_running=true
+
+  near_budget_threshold:
+    description: Run approaching budget limit
+    semantic_class: in_flight_risk
+    routes_to:
+      domain: Activity
+      subdomain: LLM Runs
+      topic: Active
+      filter: near_budget_threshold=true
+
+# Deferred reasons (DO NOT ADD HERE - separate panels)
+# - recent_failure: Belongs to Completed narrative (v1.1)
+# - policy_violation: Belongs to Incidents domain HIL

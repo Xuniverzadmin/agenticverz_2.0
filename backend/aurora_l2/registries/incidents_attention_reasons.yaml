@@ -1,0 +1,53 @@
+# Layer: L8 — Catalyst / Meta
+# Product: system-wide
+# Temporal:
+#   Trigger: compile-time validation
+#   Execution: sync
+# Role: Governed registry for Incidents attention reasons
+# Reference: PIN-417 (HIL v1 Phase 4)
+#
+# PURPOSE:
+# Define the ONLY valid attention reasons for Incidents Summary.
+# No free strings. Registry-backed semantics only.
+#
+# REGISTRY SCOPING (INTENTIONAL):
+# This file is DOMAIN-SPECIFIC to Incidents.
+# Activity has its own registry: attention_reasons.yaml
+# Reason: Attention semantics differ by domain:
+#   - Activity: "in-flight risk" (long_running, near_budget_threshold)
+#   - Incidents: "unhandled events" (unresolved, high_severity)
+# Merging would create false semantic equivalence.
+#
+# v1 SCOPE (LOCKED):
+# - unresolved: lifecycle_state = ACTIVE
+# - high_severity: severity IN (HIGH, CRITICAL)
+#
+# DEFERRED TO v2:
+# - unacknowledged: requires event table join
+# - recurring: requires aggregation logic
+
+version: 1
+domain: Incidents
+scope: interpretation.attention
+registry_type: domain_specific  # Explicit: not shared with Activity
+
+reasons:
+  unresolved:
+    description: Incident is in ACTIVE lifecycle state
+    semantic_class: action_required
+    query_predicate: "lifecycle_state = 'ACTIVE'"
+
+  high_severity:
+    description: Incident has HIGH or CRITICAL severity
+    semantic_class: urgency_signal
+    query_predicate: "severity IN ('HIGH', 'CRITICAL')"
+
+# Explicitly NOT in v1 (documented for governance)
+deferred:
+  unacknowledged:
+    reason: Requires event table join
+    target_version: v2
+
+  recurring:
+    reason: Requires aggregation logic
+    target_version: v2

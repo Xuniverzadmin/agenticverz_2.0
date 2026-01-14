@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agenticverz.com/schemas/incidents_summary.schema.json",
+  "title": "Incidents Summary Response",
+  "description": "HIL v1 interpretation endpoint response. Machine-validated shape contract.",
+  "type": "object",
+  "required": ["window", "incidents", "attention", "provenance"],
+  "additionalProperties": false,
+  "properties": {
+    "window": {
+      "type": "string",
+      "pattern": "^[0-9]+(h|d)$",
+      "description": "Time window echoed exactly as requested"
+    },
+    "incidents": {
+      "type": "object",
+      "required": ["total", "by_lifecycle_state"],
+      "additionalProperties": false,
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total incident count in window"
+        },
+        "by_lifecycle_state": {
+          "type": "object",
+          "required": ["active", "acked", "resolved"],
+          "additionalProperties": false,
+          "properties": {
+            "active": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "acked": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "resolved": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "attention": {
+      "type": "object",
+      "required": ["count", "reasons"],
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of distinct incidents needing attention"
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attention_reason"
+          },
+          "uniqueItems": true,
+          "description": "Registry-backed reason codes only"
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["derived_from", "aggregation", "generated_at"],
+      "additionalProperties": false,
+      "properties": {
+        "derived_from": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+\\.[a-z]+\\.[a-z]+$",
+            "description": "Capability ID format: domain.entity.verb"
+          },
+          "minItems": 1,
+          "description": "Source capability IDs (never panel IDs)"
+        },
+        "aggregation": {
+          "type": "string",
+          "enum": ["STATUS_BREAKDOWN"],
+          "description": "Aggregation type - locked to STATUS_BREAKDOWN for v1"
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp, must be <= now"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "attention_reason": {
+      "type": "string",
+      "enum": ["unresolved", "high_severity"],
+      "description": "Must match incidents_attention_reasons.yaml registry"
+    },
+    "invariants": {
+      "description": "Machine-checkable semantic invariants (enforced by SDSR)",
+      "rules": [
+        "incidents.by_lifecycle_state.active + incidents.by_lifecycle_state.acked + incidents.by_lifecycle_state.resolved == incidents.total",
+        "attention.count >= 0",
+        "attention.reasons.length > 0 implies attention.count > 0",
+        "generated_at <= now",
+        "window matches request parameter"
+      ]
+    },
+    "forbidden_patterns": {
+      "description": "Patterns that must NEVER appear in response",
+      "patterns": [
+        "No adjectives: good, bad, healthy, critical, excellent, poor",
+        "No judgments: should, must, needs to, ought to",
+        "No implied urgency: urgent, immediately, ASAP, critical",
+        "No legacy status field: open, acknowledged, closed",
+        "No severity breakdowns in v1",
+        "No prevention statistics in v1"
+      ]
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Claude Context File - AOS / Agenticverz 2.0
 
-**Last Updated:** 2026-01-10
+**Last Updated:** 2026-01-14
 
 ---
 
@@ -8,7 +8,7 @@
 
 **Status:** ACTIVE
 **Effective:** 2026-01-02
-**Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`, `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`, `docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md`, `docs/governance/RBAC_AUTHORITY_SEPARATION_DESIGN.md`, `docs/governance/PERMISSION_TAXONOMY_V1.md`, `docs/governance/SDSR_E2E_TESTING_PROTOCOL.md`
+**Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`, `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`, `docs/contracts/ARCHITECTURE_CONSTRAINTS_V1.yaml`, `docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md`, `docs/governance/RBAC_AUTHORITY_SEPARATION_DESIGN.md`, `docs/governance/PERMISSION_TAXONOMY_V1.md`, `docs/governance/SDSR_E2E_TESTING_PROTOCOL.md`
 
 ### Session Playbook Bootstrap (REQUIRED - BL-BOOT-001, BL-BOOT-002)
 
@@ -46,6 +46,9 @@ SESSION_BOOTSTRAP_CONFIRMATION
   - SDSR_E2E_TESTING_PROTOCOL.md
   - DB_AUTHORITY.md
   - DB_AUTH_001_INVARIANT.md
+  - UI_AS_CONSTRAINT_V1.md
+  - ARCHITECTURE_CONSTRAINTS_V1.yaml
+  - CLAUDE_ARCHITECTURE_CHECKLIST.md
   - behavior_library.yaml
   - visibility_contract.yaml
   - visibility_lifecycle.yaml
@@ -71,6 +74,8 @@ SESSION_BOOTSTRAP_CONFIRMATION
 - sdsr_contract_loaded: YES
 - sdsr_e2e_protocol_loaded: YES
 - db_authority_contract_loaded: YES
+- ui_as_constraint_loaded: YES
+- architecture_constraints_loaded: YES
 - forbidden_assumptions_acknowledged: YES
 - restrictions_acknowledged: YES
 - execution_discipline_loaded: YES
@@ -121,6 +126,7 @@ SESSION_CONTINUATION_ACKNOWLEDGMENT
 | **ARCH-CANON-001** | **Canonical-First Fix** | **BLOCKING** |
 | **ARCH-FRAG-ESCALATE-001** | **Fragmentation Escalation** | **BLOCKING** |
 | **SDSR-CONTRACT-001 to 003** | **SDSR System Contract** | **BLOCKING** |
+| **BL-ARCH-CONSTRAINT-001** | **Architecture Constraints** | **BLOCKING** |
 
 ### SDSR System Contract (SESSION-INVARIANT - HARD BLOCK)
 
@@ -614,57 +620,78 @@ If blocked → REPORT, do NOT bypass.
 
 **Reference:** `docs/governance/SDSR_E2E_TESTING_PROTOCOL.md`
 
-### UI Pipeline Pre-Check (BL-UI-PIPELINE-001) — HARD BLOCK
+### AURORA L2 UI Pipeline (BL-UI-PIPELINE-001) — HARD BLOCK
 
 **Status:** BLOCKING
-**Effective:** 2026-01-09
+**Effective:** 2026-01-14 (Updated - CSV pipeline DEPRECATED)
 **Trigger:** Any request to add/modify UI panels, subdomains, or domain data
+
+> **DEPRECATED:** The old CSV-based pipeline (`L2_1_UI_INTENT_SUPERTABLE.csv`, `l2_pipeline.py`,
+> `l2_raw_intent_parser.py`, etc.) is NO LONGER USED. The current pipeline is AURORA L2 with
+> SDSR-driven capability observation. See below for the canonical flow.
 
 **STOP. Before writing ANY UI code for panels:**
 
 ```
-UI PIPELINE PRE-CHECK
+AURORA L2 PIPELINE PRE-CHECK
 
 1. Does the panel_id exist in the projection?
    → Check: design/l2_1/ui_contract/ui_projection_lock.json
-   → If NO → STOP, run pipeline first
+   → If NO → Panel intent YAML must exist first
 
-2. Does the intent row exist in the source CSV?
-   → Check: design/l2_1/supertable/L2_1_UI_INTENT_SUPERTABLE.csv
-   → If NO → Add rows there FIRST
+2. Does the intent YAML exist?
+   → Check: design/l2_1/intents/{panel_id}.yaml
+   → If NO → Create intent YAML with required fields
 
-3. Has the pipeline been run after CSV changes?
-   → Run: python3 scripts/tools/l2_pipeline.py generate v{N}
-   → Then: python3 scripts/tools/l2_raw_intent_parser.py --input design/l2_1/supertable/l2_supertable_v{N}_cap_expanded.xlsx
-   → Then: ./scripts/tools/run_l2_pipeline.sh (remaining steps)
+3. Is the capability OBSERVED?
+   → Check: backend/AURORA_L2_CAPABILITY_REGISTRY/AURORA_L2_CAPABILITY_{capability}.yaml
+   → Status must be OBSERVED or TRUSTED (not just DECLARED)
+   → If DECLARED → Run SDSR scenario to observe the capability
 
-4. Is projection copied to public/?
-   → Copy: cp design/l2_1/ui_contract/ui_projection_lock.json website/app-shell/public/projection/
+4. Has the pipeline been run after changes?
+   → Run: ./scripts/tools/run_aurora_l2_pipeline.sh
+   → Requires: DB_AUTHORITY=neon (HARD FAIL if missing)
 
-5. ONLY THEN add to PanelContentRegistry
+5. Is projection copied to public/?
+   → Pipeline does this automatically
+   → Verify: website/app-shell/public/projection/ui_projection_lock.json
+
+6. ONLY THEN add to PanelContentRegistry
 ```
 
-**Canonical Pipeline Flow:**
+**Canonical Pipeline Flow (AURORA L2):**
 
 ```
-L2_1_UI_INTENT_SUPERTABLE.csv  ← EDIT HERE (source of truth)
+SDSR Scenario YAML (Human Intent Entry)
         ↓
-l2_pipeline.py generate v{N}   ← generates Excel supertable
+inject_synthetic.py --wait         ← Executes real system behavior
         ↓
-l2_raw_intent_parser.py        ← Excel → ui_intent_ir_raw.json
+SDSR_OBSERVATION_*.json            ← Observation emitted
         ↓
-intent_normalizer.py           ← → ui_intent_ir_normalized.json
+AURORA_L2_apply_sdsr_observations.py  ← Updates capability status
         ↓
-surface_to_slot_resolver.py    ← → ui_intent_ir_slotted.json
+backend/AURORA_L2_CAPABILITY_REGISTRY/*.yaml  (DECLARED → OBSERVED)
+design/l2_1/intents/*.yaml                     (appends observation_trace)
         ↓
-intent_compiler.py             ← → ui_intent_ir_compiled.json
+backend/aurora_l2/compiler.py      ← Reads capabilities + intents
         ↓
-ui_projection_builder.py       ← → ui_projection_lock.json
+design/l2_1/ui_contract/ui_projection_lock.json  (CANONICAL OUTPUT)
         ↓
-Copy to public/projection/     ← Frontend reads from here
+cp → website/app-shell/public/projection/
         ↓
-PanelContentRegistry.tsx       ← ONLY NOW add renderers
+Frontend renderer (consumes verbatim, NO inference)
+        ↓
+PanelContentRegistry.tsx           ← ONLY NOW add renderers
 ```
+
+**Capability Binding Status:**
+
+| Capability Status | Binding Status | Panel State |
+|-------------------|----------------|-------------|
+| DECLARED | DRAFT | Disabled (claim ≠ truth) |
+| OBSERVED | BOUND | Enabled (demonstrated) |
+| TRUSTED | BOUND | Enabled (stable) |
+| DEPRECATED | UNBOUND | Hidden |
 
 **Hard Failure Response:**
 
@@ -673,32 +700,238 @@ If Claude is about to add UI panels without verifying the pipeline:
 BL-UI-PIPELINE-001 VIOLATION: Cannot add UI panels without projection backing.
 
 Required steps:
-1. Add intent rows to: design/l2_1/supertable/L2_1_UI_INTENT_SUPERTABLE.csv
-2. Run: python3 scripts/tools/l2_pipeline.py generate v{N}
-3. Parse: python3 scripts/tools/l2_raw_intent_parser.py --input <new_xlsx>
-4. Run: ./scripts/tools/run_l2_pipeline.sh
-5. Copy projection to public/
-6. THEN add to PanelContentRegistry
+1. Create intent YAML: design/l2_1/intents/{panel_id}.yaml
+2. Create capability YAML: backend/AURORA_L2_CAPABILITY_REGISTRY/AURORA_L2_CAPABILITY_{cap}.yaml
+3. Run SDSR scenario to observe capability: python inject_synthetic.py --scenario <yaml> --wait
+4. Apply observation: python AURORA_L2_apply_sdsr_observations.py --observation <json>
+5. Run pipeline: ./scripts/tools/run_aurora_l2_pipeline.sh (requires DB_AUTHORITY=neon)
+6. Verify projection updated
+7. THEN add to PanelContentRegistry
 
-Reference: PIN-352, PIN-370
+Reference: PIN-370, PIN-379
 ```
 
 **Key Artifacts:**
 
 | Artifact | Location | Role |
 |----------|----------|------|
-| Intent CSV (SOURCE) | `design/l2_1/supertable/L2_1_UI_INTENT_SUPERTABLE.csv` | Human/Claude edits here |
-| Pipeline Script | `scripts/tools/l2_pipeline.py` | Generates Excel versions |
-| Full Pipeline | `scripts/tools/run_l2_pipeline.sh` | Runs all stages |
-| Projection Lock | `design/l2_1/ui_contract/ui_projection_lock.json` | Generated output |
+| Intent YAMLs (SOURCE) | `design/l2_1/intents/*.yaml` | Panel definitions |
+| Capability Registry | `backend/AURORA_L2_CAPABILITY_REGISTRY/*.yaml` | Capability status (4-state model) |
+| Semantic Registry | `design/l2_1/AURORA_L2_SEMANTIC_REGISTRY.yaml` | Valid verbs/modes |
+| Intent Registry | `design/l2_1/AURORA_L2_INTENT_REGISTRY.yaml` | Intent index |
+| SDSR Scenarios | `backend/scripts/sdsr/scenarios/*.yaml` | Capability observation |
+| Compiler | `backend/aurora_l2/compiler.py` | Generates projection |
+| Pipeline Script | `scripts/tools/run_aurora_l2_pipeline.sh` | Orchestrates compilation |
+| Projection Lock | `design/l2_1/ui_contract/ui_projection_lock.json` | Canonical output |
 | Public Projection | `website/app-shell/public/projection/ui_projection_lock.json` | Frontend reads |
-| Panel Registry | `src/components/panels/PanelContentRegistry.tsx` | Data binding (LAST step) |
+| Panel Registry | `src/components/panels/PanelContentRegistry.tsx` | Panel → Renderer binding |
 
-**Memory PIN:** PIN-352 (L2.1 UI Projection Pipeline)
+**DEPRECATED Artifacts (DO NOT USE):**
 
-**Reference:** `docs/playbooks/SESSION_PLAYBOOK.yaml` (forbidden_assumptions section)
+| Artifact | Status | Replacement |
+|----------|--------|-------------|
+| `L2_1_UI_INTENT_SUPERTABLE.csv` | DEPRECATED | `design/l2_1/intents/*.yaml` |
+| `scripts/tools/l2_pipeline.py` | DEPRECATED | `run_aurora_l2_pipeline.sh` |
+| `scripts/tools/l2_raw_intent_parser.py` | DEPRECATED | `aurora_l2/compiler.py` |
+| `scripts/tools/intent_normalizer.py` | DEPRECATED | Compiler handles |
+| `scripts/tools/surface_to_slot_resolver.py` | DEPRECATED | Compiler handles |
+| `scripts/tools/run_l2_pipeline.sh` | DEPRECATED | `run_aurora_l2_pipeline.sh` |
+| `design/l2_1/supertable/` | DEPRECATED | `design/l2_1/intents/` |
+
+**Memory PIN:** PIN-370 (SDSR System Contract), PIN-379 (E2E Pipeline)
+
+**Reference:** `docs/governance/SDSR_SYSTEM_CONTRACT.md`
 **Reference:** `docs/contracts/database_contract.yaml`
-**PIN:** PIN-209 (Claude Assumption Elimination)
+
+### UI-as-Constraint Doctrine (BL-UI-CONSTRAINT-001) — HARD BLOCK
+
+**Status:** BLOCKING
+**Effective:** 2026-01-14
+**Trigger:** Any UI work, panel additions, or requests to "fix" UI for backend gaps
+**Reference:** `docs/contracts/UI_AS_CONSTRAINT_V1.md`
+
+**Prime Directive:**
+
+> **The UI plan defines the surface. Backend and SDSR exist only to fill declared gaps. Automation failures are system defects, never reasons to bypass.**
+
+**Authority Source:**
+
+```
+design/l2_1/ui_plan.yaml  ← CANONICAL UI CONSTRAINT
+```
+
+This file declares:
+- All panels that must exist
+- Domain → Subdomain → Topic → Panel hierarchy
+- Panel states (EMPTY, UNBOUND, DRAFT, BOUND, DEFERRED)
+
+**Authority Stack (Non-Negotiable Order):**
+
+| Priority | Authority | Role |
+|----------|-----------|------|
+| 1 | `ui_plan.yaml` | Human constraint |
+| 2 | Intent registry | Declarative bindings |
+| 3 | Capability registry | Observability state |
+| 4 | SDSR scenarios | System revelation |
+| 5 | Backend endpoints | Implementation |
+| 6 | Compiler / projection | Mirror only |
+| 7 | Frontend renderer | Dumb consumer |
+
+If anything lower contradicts something higher → **lower is wrong**.
+
+**Panel States (System-Wide):**
+
+| State | Meaning | Who Fixes It | Rendering |
+|-------|---------|--------------|-----------|
+| EMPTY | UI planned, intent YAML missing | Design | Empty state UX |
+| UNBOUND | Intent exists, capability missing | Backend | Empty state UX |
+| DRAFT | Capability declared, SDSR not observed | SDSR | Disabled controls |
+| BOUND | Capability observed (or trusted) | Done | Full functionality |
+| DEFERRED | Explicit governance decision | Human | Hidden or disabled |
+
+**Critical Rule:** EMPTY and UNBOUND panels **MUST render** with empty state UX. They are signals, not failures.
+
+**Claude Automation Rules:**
+
+| Forbidden Actions | Reason |
+|-------------------|--------|
+| Manually copying projection files | Bypasses pipeline |
+| Skipping pipeline stages | Creates invisible drift |
+| Writing ad-hoc fix scripts | Untracked mutations |
+| Running steps out of declared order | Violates authority stack |
+| Editing UI structure to satisfy backend | Inverts authority |
+| Patching state to "get past" guards | Hides real problems |
+
+| Allowed Actions | Reason |
+|-----------------|--------|
+| Use declared automation entrypoints | Tracked, reproducible |
+| Extend automation when blocked | Fixes root cause |
+| Treat automation gaps as P1 deliverables | System debt, not heroics |
+| Report pipeline failures as system defects | Not reasons to bypass |
+
+**Declared Automation Entrypoints:**
+
+| Primitive | Script |
+|-----------|--------|
+| UI Plan Validator | `scripts/tools/validate_ui_plan.py` |
+| Projection Skeleton Generator | `scripts/tools/generate_projection_skeleton.py` |
+| SDSR Gap Detector | `scripts/tools/discover_missing_sdsr.py` |
+| Capability-Panel Guard | `scripts/tools/check_capability_panel_consistency.py` |
+| PDG (UI-Aware) | `backend/aurora_l2/tools/projection_diff_guard.py` |
+
+**Hard Failure Response:**
+
+If Claude is about to bypass automation or invert authority:
+```
+BL-UI-CONSTRAINT-001 VIOLATION: UI plan is the constraint, not backend.
+
+You attempted to: [action]
+This violates: [authority level X overriding authority level Y]
+
+Correct approach:
+1. Check ui_plan.yaml for the panel
+2. Use declared automation entrypoints
+3. If automation fails → fix automation, not bypass
+4. If UI plan needs change → request human decision
+
+Reference: docs/contracts/UI_AS_CONSTRAINT_V1.md
+```
+
+**Mutation Rules:**
+
+| Action | Status |
+|--------|--------|
+| Adding new panels | ALLOWED |
+| Removing panels | FORBIDDEN (use DEFERRED state) |
+| Renaming panels | FORBIDDEN (panel_id is immutable) |
+| Reparenting panels | REQUIRES_ALL_BOUND_OR_DEFERRED |
+
+**Key Artifacts:**
+
+| Artifact | Location | Role |
+|----------|----------|------|
+| UI Plan | `design/l2_1/ui_plan.yaml` | Canonical surface constraint |
+| UI Constraint Contract | `docs/contracts/UI_AS_CONSTRAINT_V1.md` | Governance rules |
+| Bootstrap Script | `scripts/tools/generate_ui_plan_from_registries.py` | One-time generation |
+
+### Architecture Constraints (BL-ARCH-CONSTRAINT-001) — HARD BLOCK
+
+**Status:** BLOCKING
+**Effective:** 2026-01-14
+**Trigger:** Any code change, UI work, or automation modification
+**Reference:** `docs/contracts/ARCHITECTURE_CONSTRAINTS_V1.yaml`, `docs/contracts/CLAUDE_ARCHITECTURE_CHECKLIST.md`
+
+**Prime Directive:**
+
+> **UI expresses human intent. Backend earns the right to fill it.**
+
+The system MUST behave correctly even when backend is incomplete, SDSR fails, capabilities are missing, or data is empty. Silence, bypasses, or inferred truth are violations.
+
+**Autonomous Fix Zones (Claude may fix without asking):**
+
+| Zone | Trigger | Examples |
+|------|---------|----------|
+| AUTO-A | SDSR failure, schema violation | Fix endpoint shape, query logic, capability status |
+| AUTO-B | Script error, CI failure | Fix pipeline, PDG allowlist, naming mismatch |
+| AUTO-C | Terminology drift identified | Global rename (LLM_RUNS → EXECUTIONS) |
+| AUTO-D | Panel render failure | Fix empty state, state label, rendering bug |
+
+**Hard Stop Zones (Claude MUST ask before proceeding):**
+
+| Zone | Examples | Rule |
+|------|----------|------|
+| STOP-A | Add/remove panels, domains, mark DEFERRED | UI plan is human intent |
+| STOP-B | New attention reasons, lifecycle states | Semantics change meaning |
+| STOP-C | Bypass PDG, copy projection manually | Authority inversion |
+| STOP-D | Add interpretation panels, cross-domain summary | Interpretation is human |
+
+**SDSR Execution Rules:**
+
+- SDSR does not assume backend completeness
+- SDSR failure = architectural signal, not a bug
+- Backend must move toward SDSR, not vice versa
+
+**Forbidden SDSR Actions:**
+
+| Action | Enforcement |
+|--------|-------------|
+| Modifying SDSR to "make it pass" | BLOCKING |
+| Softening invariants | BLOCKING |
+| Removing checks for convenience | BLOCKING |
+
+**When Blocked (Mandatory Format):**
+
+```
+BLOCKED AT: <layer>
+REASON: <exact rule ID or invariant violated>
+REQUIRES: <human decision | automation fix>
+NO WORKAROUND APPLIED
+```
+
+**Core Invariants:**
+
+| Condition | Resolution |
+|-----------|------------|
+| UI is wrong | Human fixes UI |
+| Backend is wrong | SDSR reveals it |
+| Automation fails | Automation is fixed |
+| Semantics change | Human decides |
+
+**CI Enforcement:**
+
+The `.github/workflows/architecture-constraints.yml` workflow enforces:
+- UI Plan Completeness (CI-001)
+- Projection Integrity (CI-002)
+- Authority Stack Compliance (CI-003)
+- Terminology Consistency (CI-005)
+
+**Key Artifacts:**
+
+| Artifact | Location | Role |
+|----------|----------|------|
+| Constraints YAML | `docs/contracts/ARCHITECTURE_CONSTRAINTS_V1.yaml` | Machine-checkable rules |
+| Execution Checklist | `docs/contracts/CLAUDE_ARCHITECTURE_CHECKLIST.md` | Quick reference |
+| CI Workflow | `.github/workflows/architecture-constraints.yml` | Enforcement |
 
 ### Database Authority Enforcement (DB-AUTH-001) — HARD BLOCK
 

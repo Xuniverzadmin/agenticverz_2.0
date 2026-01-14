@@ -29,9 +29,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
-import { Activity, CheckCircle, AlertTriangle, AlertOctagon, History, FileCheck, Shield, FilePlus, Archive, DollarSign, Gauge, SlidersHorizontal } from 'lucide-react';
-import { fetchActivityRuns, type RunSummary } from '@/api/activity';
-import { fetchIncidents, fetchIncidentsMetrics, type IncidentSummary } from '@/api/incidents';
+import { Activity, CheckCircle, AlertTriangle, AlertOctagon, History, FileCheck, Shield, FilePlus, Archive, DollarSign, Gauge, SlidersHorizontal, Clock, TrendingUp, Info } from 'lucide-react';
+import { fetchActivityRuns, fetchActivitySummary, type RunSummary, type ActivitySummaryResponse } from '@/api/activity';
+import { fetchIncidents, fetchIncidentsMetrics, fetchIncidentsSummary, type IncidentSummary, type IncidentsSummaryResponse } from '@/api/incidents';
 import { fetchProposals, approveProposal, rejectProposal, type ProposalSummary } from '@/api/proposals';
 import { getTraces, getTrace, type Trace, type TraceStep, type LogLevel } from '@/api/traces';
 import {
@@ -268,6 +268,139 @@ function RunListItem({ run }: { run: RunSummary }) {
           hour: '2-digit',
           minute: '2-digit',
         })}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// Activity Domain - INTERPRETATION PANELS (HIL v1 - PIN-417)
+// =============================================================================
+
+/**
+ * Activity Summary Briefing (O1) - HIL v1 Interpretation Panel
+ *
+ * PIN-417 HIL v1 RULES:
+ * - This is an INTERPRETATION panel (panel_class: interpretation)
+ * - Displays aggregated summary derived from execution data
+ * - Read-only: No controls, no mutations
+ * - Shows provenance: Where data came from (capability IDs)
+ * - Attention reasons are registry-backed (no free strings)
+ */
+function ActivitySummaryBriefing({ panel }: PanelContentProps) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['activity', 'summary', '24h'],
+    queryFn: () => fetchActivitySummary({ window: '24h', include_synthetic: true }),
+    refetchInterval: 30000,
+    staleTime: 15000,
+  });
+
+  if (isLoading) {
+    return <div className="text-slate-400 text-sm">Loading activity summary...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-400 text-sm">Failed to load activity summary</div>;
+  }
+
+  if (!data) {
+    return <div className="text-slate-500 text-sm">No summary data available</div>;
+  }
+
+  const { runs, attention, provenance } = data;
+  const hasAttention = attention.at_risk_count > 0;
+
+  // Map reason codes to human-readable labels (registry-backed)
+  const reasonLabels: Record<string, string> = {
+    long_running: 'Long running',
+    near_budget_threshold: 'Near budget threshold',
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Run Status Summary */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="p-3 bg-gray-900/50 rounded-lg border border-gray-700/50">
+          <div className="text-xs text-slate-400 font-medium">Total</div>
+          <div className="text-2xl font-bold text-white">{runs.total}</div>
+          <div className="text-xs text-slate-500 mt-1">runs in {data.window}</div>
+        </div>
+        <div className="p-3 bg-gray-900/50 rounded-lg border border-blue-400/30">
+          <div className="flex items-center gap-1.5">
+            <Activity size={12} className="text-blue-400" />
+            <span className="text-xs text-blue-400 font-medium">Running</span>
+          </div>
+          <div className="text-2xl font-bold text-blue-400">{runs.by_status.running}</div>
+        </div>
+        <div className="p-3 bg-gray-900/50 rounded-lg border border-green-400/30">
+          <div className="flex items-center gap-1.5">
+            <CheckCircle size={12} className="text-green-400" />
+            <span className="text-xs text-green-400 font-medium">Completed</span>
+          </div>
+          <div className="text-2xl font-bold text-green-400">{runs.by_status.completed}</div>
+          {runs.by_status.failed > 0 && (
+            <div className="text-xs text-red-400 mt-1">
+              {runs.by_status.failed} failed
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Attention Section */}
+      {hasAttention && (
+        <div className="p-3 bg-yellow-500/10 rounded-lg border border-yellow-400/30">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={16} className="text-yellow-400" />
+            <span className="text-sm font-medium text-yellow-400">
+              {attention.at_risk_count} run{attention.at_risk_count !== 1 ? 's' : ''} need attention
+            </span>
+          </div>
+          {attention.reasons.length > 0 && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {attention.reasons.map((reason) => (
+                <span
+                  key={reason}
+                  className="px-2 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-300 border border-yellow-400/30"
+                >
+                  {reasonLabels[reason] || reason}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* No Attention - All Clear */}
+      {!hasAttention && (
+        <div className="p-3 bg-green-500/10 rounded-lg border border-green-400/30">
+          <div className="flex items-center gap-2">
+            <CheckCircle size={16} className="text-green-400" />
+            <span className="text-sm font-medium text-green-400">
+              All runs operating normally
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Provenance Section (HIL v1 requirement) */}
+      <div className="pt-3 border-t border-gray-700/50">
+        <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-2">
+          <Info size={12} />
+          <span>Derived from</span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {provenance.derived_from.map((capabilityId) => (
+            <span
+              key={capabilityId}
+              className="px-2 py-0.5 rounded text-xs bg-blue-500/10 text-blue-400 border border-blue-400/20 font-mono"
+            >
+              {capabilityId}
+            </span>
+          ))}
+        </div>
+        <div className="text-xs text-slate-600 mt-2">
+          Aggregation: {provenance.aggregation} · Generated: {new Date(provenance.generated_at).toLocaleTimeString()}
+        </div>
       </div>
     </div>
   );
@@ -615,6 +748,140 @@ function LimitStatusBar({ limit }: { limit: LimitCostItem }) {
 // =============================================================================
 // Incidents Domain Content Renderers
 // =============================================================================
+
+// =============================================================================
+// Incidents Domain - INTERPRETATION PANELS (HIL v1 - PIN-417)
+// =============================================================================
+
+/**
+ * Incidents Summary Briefing (O1) - HIL v1 Interpretation Panel
+ *
+ * PIN-417 HIL v1 RULES:
+ * - This is an INTERPRETATION panel (panel_class: interpretation)
+ * - Displays aggregated summary derived from incident data
+ * - Uses lifecycle_state (ACTIVE, ACKED, RESOLVED) not legacy status
+ * - Read-only: No controls, no mutations
+ * - Shows provenance: Where data came from (capability IDs)
+ * - Attention reasons are registry-backed (no free strings)
+ */
+function IncidentsSummaryBriefing({ panel }: PanelContentProps) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['incidents', 'summary', '24h'],
+    queryFn: () => fetchIncidentsSummary({ window: '24h', include_synthetic: true }),
+    refetchInterval: 30000,
+    staleTime: 15000,
+  });
+
+  if (isLoading) {
+    return <div className="text-slate-400 text-sm">Loading incidents summary...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-400 text-sm">Failed to load incidents summary</div>;
+  }
+
+  if (!data) {
+    return <div className="text-slate-500 text-sm">No summary data available</div>;
+  }
+
+  const { incidents, attention, provenance } = data;
+  const hasAttention = attention.count > 0;
+
+  // Map reason codes to human-readable labels (registry-backed)
+  const reasonLabels: Record<string, string> = {
+    unresolved: 'Unresolved incidents',
+    high_severity: 'High/Critical severity',
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Incident Status Summary */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="p-3 bg-gray-900/50 rounded-lg border border-gray-700/50">
+          <div className="text-xs text-slate-400 font-medium">Total</div>
+          <div className="text-2xl font-bold text-white">{incidents.total}</div>
+          <div className="text-xs text-slate-500 mt-1">in {data.window}</div>
+        </div>
+        <div className="p-3 bg-gray-900/50 rounded-lg border border-orange-400/30">
+          <div className="flex items-center gap-1.5">
+            <AlertOctagon size={12} className="text-orange-400" />
+            <span className="text-xs text-orange-400 font-medium">Active</span>
+          </div>
+          <div className="text-2xl font-bold text-orange-400">{incidents.by_lifecycle_state.active}</div>
+        </div>
+        <div className="p-3 bg-gray-900/50 rounded-lg border border-green-400/30">
+          <div className="flex items-center gap-1.5">
+            <CheckCircle size={12} className="text-green-400" />
+            <span className="text-xs text-green-400 font-medium">Resolved</span>
+          </div>
+          <div className="text-2xl font-bold text-green-400">{incidents.by_lifecycle_state.resolved}</div>
+          {incidents.by_lifecycle_state.acked > 0 && (
+            <div className="text-xs text-blue-400 mt-1">
+              {incidents.by_lifecycle_state.acked} acknowledged
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Attention Section */}
+      {hasAttention && (
+        <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-400/30">
+          <div className="flex items-center gap-2">
+            <AlertOctagon size={16} className="text-orange-400" />
+            <span className="text-sm font-medium text-orange-400">
+              {attention.count} incident{attention.count !== 1 ? 's' : ''} need attention
+            </span>
+          </div>
+          {attention.reasons.length > 0 && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {attention.reasons.map((reason) => (
+                <span
+                  key={reason}
+                  className="px-2 py-0.5 rounded text-xs bg-orange-500/20 text-orange-300 border border-orange-400/30"
+                >
+                  {reasonLabels[reason] || reason}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* No Attention - All Clear */}
+      {!hasAttention && (
+        <div className="p-3 bg-green-500/10 rounded-lg border border-green-400/30">
+          <div className="flex items-center gap-2">
+            <CheckCircle size={16} className="text-green-400" />
+            <span className="text-sm font-medium text-green-400">
+              No active incidents
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Provenance Section (HIL v1 requirement) */}
+      <div className="pt-3 border-t border-gray-700/50">
+        <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-2">
+          <Info size={12} />
+          <span>Derived from</span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {provenance.derived_from.map((capabilityId) => (
+            <span
+              key={capabilityId}
+              className="px-2 py-0.5 rounded text-xs bg-blue-500/10 text-blue-400 border border-blue-400/20 font-mono"
+            >
+              {capabilityId}
+            </span>
+          ))}
+        </div>
+        <div className="text-xs text-slate-600 mt-2">
+          Aggregation: {provenance.aggregation} · Generated: {new Date(provenance.generated_at).toLocaleTimeString()}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Active Incidents Navigation (O1) - Navigation-only panel for Active Incidents
@@ -1960,6 +2227,14 @@ const PANEL_CONTENT_REGISTRY: Record<string, ContentRenderer> = {
   // Topic: RUN_DETAILS (Risk Signals)
   // O1: Navigation-only (instant render, no data fetch) - PIN-411
   'ACT-EX-RD-O1': RiskSignalsNavigation,
+
+  // Activity Domain - INTERPRETATION PANELS (HIL v1 - PIN-417)
+  // Topic: SUMMARY (Interpretation panel - derived from execution data)
+  'ACT-EX-SUM-O1': ActivitySummaryBriefing,
+
+  // Incidents Domain - INTERPRETATION PANELS (HIL v1 - PIN-417)
+  // Topic: SUMMARY (Interpretation panel - derived from incident data)
+  'INC-AI-SUM-O1': IncidentsSummaryBriefing,
 
   // Incidents Domain - EVENTS Subdomain (PIN-412)
   // Topic: ACTIVE (Unresolved, may require attention)

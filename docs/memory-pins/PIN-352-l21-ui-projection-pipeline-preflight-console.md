@@ -1,9 +1,28 @@
 # PIN-352: L2.1 UI Projection Pipeline & Preflight Console
 
-**Status:** ACTIVE
+**Status:** SUPERSEDED
 **Created:** 2026-01-07
+**Superseded:** 2026-01-14
 **Category:** UI Pipeline / Governance
 **Milestone:** L2.1 UI Contract System
+
+---
+
+> **SUPERSEDED NOTICE (2026-01-14)**
+>
+> The CSV-based pipeline documented in this PIN has been replaced by the **AURORA L2
+> SDSR-driven pipeline**. The architecture diagrams and scripts referenced here are
+> now DEPRECATED.
+>
+> **Current Pipeline:** See `design/l2_1/AURORA_L2.md`, PIN-370, PIN-379
+>
+> **Key Changes:**
+> - Source of truth: Intent YAMLs (`design/l2_1/intents/*.yaml`) instead of CSV
+> - Capability observation: SDSR-driven (not manual)
+> - Compiler: `backend/aurora_l2/compiler.py` instead of multi-stage scripts
+> - Run script: `run_aurora_l2_pipeline.sh` instead of `run_l2_pipeline.sh`
+>
+> This PIN is preserved for historical reference only.
 
 ---
 
@@ -11,6 +30,8 @@
 
 Complete implementation of the L2.1 UI Projection Pipeline with a governance-gated
 preflight console for testing before production promotion.
+
+**NOTE:** This describes the LEGACY pipeline. See AURORA L2 for current architecture.
 
 ---
 

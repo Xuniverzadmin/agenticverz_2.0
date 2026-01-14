@@ -1,0 +1,344 @@
+# Architecture Constraints CI Guard
+#
+# Enforces UI-as-Constraint doctrine and ARCHITECTURE_CONSTRAINTS_V1.yaml
+# This job BLOCKS merges that violate architectural rules.
+#
+# Reference: docs/contracts/ARCHITECTURE_CONSTRAINTS_V1.yaml
+
+name: Architecture Constraints
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'design/l2_1/**'
+      - 'backend/AURORA_L2_CAPABILITY_REGISTRY/**'
+      - 'backend/aurora_l2/**'
+      - 'website/app-shell/src/**'
+      - 'docs/contracts/**'
+
+jobs:
+  ui-plan-completeness:
+    name: CI-001 UI Plan Completeness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Check UI Plan Completeness
+        run: |
+          python3 << 'EOF'
+          import yaml
+          import sys
+          from pathlib import Path
+
+          UI_PLAN = Path("design/l2_1/ui_plan.yaml")
+          VALID_STATES = {"EMPTY", "UNBOUND", "DRAFT", "BOUND", "DEFERRED"}
+
+          if not UI_PLAN.exists():
+              print("BLOCKED AT: ui_plan.yaml")
+              print("REASON: UI plan file not found")
+              print("REQUIRES: Create ui_plan.yaml")
+              print("NO WORKAROUND APPLIED")
+              sys.exit(1)
+
+          with open(UI_PLAN) as f:
+              plan = yaml.safe_load(f)
+
+          errors = []
+          panel_count = 0
+
+          for domain in plan.get("domains", []):
+              for subdomain in domain.get("subdomains", []):
+                  for topic in subdomain.get("topics", []):
+                      for panel in topic.get("panels", []):
+                          panel_count += 1
+                          panel_id = panel.get("panel_id", "UNKNOWN")
+                          state = panel.get("state")
+
+                          if not panel_id:
+                              errors.append(f"Panel missing panel_id in {domain['id']}/{subdomain['id']}/{topic['id']}")
+
+                          if state not in VALID_STATES:
+                              errors.append(f"Panel {panel_id} has invalid state: {state}")
+
+          if errors:
+              print("BLOCKED AT: ui_plan.yaml")
+              print(f"REASON: {len(errors)} validation errors")
+              for e in errors:
+                  print(f"  - {e}")
+              print("REQUIRES: Fix ui_plan.yaml structure")
+              print("NO WORKAROUND APPLIED")
+              sys.exit(1)
+
+          print(f"✓ UI Plan valid: {panel_count} panels, all states valid")
+          EOF
+
+  projection-integrity:
+    name: CI-002 Projection Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Check Projection Integrity
+        run: |
+          python3 << 'EOF'
+          import yaml
+          import json
+          import sys
+          from pathlib import Path
+
+          UI_PLAN = Path("design/l2_1/ui_plan.yaml")
+          PROJECTION = Path("design/l2_1/ui_contract/ui_projection_lock.json")
+
+          if not UI_PLAN.exists():
+              print("BLOCKED AT: ui_plan.yaml")
+              print("REASON: UI plan not found")
+              sys.exit(1)
+
+          if not PROJECTION.exists():
+              print("⚠ Projection file not found (may not be generated yet)")
+              print("SKIP: Run pipeline first")
+              sys.exit(0)
+
+          with open(UI_PLAN) as f:
+              plan = yaml.safe_load(f)
+
+          with open(PROJECTION) as f:
+              proj = json.load(f)
+
+          # Collect all panel IDs from ui_plan
+          plan_panels = set()
+          for domain in plan.get("domains", []):
+              for subdomain in domain.get("subdomains", []):
+                  for topic in subdomain.get("topics", []):
+                      for panel in topic.get("panels", []):
+                          plan_panels.add(panel.get("panel_id"))
+
+          # Collect all panel IDs from projection
+          proj_panels = set()
+          for domain in proj.get("domains", []):
+              for subdomain in domain.get("subdomains", []):
+                  for topic in subdomain.get("topics", []):
+                      for panel in topic.get("panels", []):
+                          proj_panels.add(panel.get("panel_id"))
+
+          # Check for missing panels (in plan but not in projection)
+          missing = plan_panels - proj_panels
+          if missing:
+              print("BLOCKED AT: Projection")
+              print(f"REASON: {len(missing)} panels in ui_plan.yaml missing from projection")
+              for p in sorted(missing):
+                  print(f"  - {p}")
+              print("REQUIRES: Run compiler to regenerate projection")
+              print("NO WORKAROUND APPLIED")
+              sys.exit(1)
+
+          # Check for invented panels (in projection but not in plan)
+          invented = proj_panels - plan_panels
+          if invented:
+              print("BLOCKED AT: Projection")
+              print(f"REASON: {len(invented)} panels in projection not declared in ui_plan.yaml")
+              for p in sorted(invented):
+                  print(f"  - {p}")
+              print("REQUIRES: Remove invented panels or add to ui_plan.yaml (human decision)")
+              print("NO WORKAROUND APPLIED")
+              sys.exit(1)
+
+          print(f"✓ Projection integrity: {len(plan_panels)} panels match")
+          EOF
+
+  authority-compliance:
+    name: CI-003 Authority Stack Compliance
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for UI Plan modifications in backend PRs
+        run: |
+          # Get changed files
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+
+          # Check if ui_plan.yaml was modified
+          UI_PLAN_CHANGED=$(echo "$CHANGED" | grep -c "design/l2_1/ui_plan.yaml" || true)
+
+          # Check if backend files were changed
+          BACKEND_CHANGED=$(echo "$CHANGED" | grep -c "backend/" || true)
+
+          # If both UI plan and backend changed in same PR, flag for review
+          if [ "$UI_PLAN_CHANGED" -gt 0 ] && [ "$BACKEND_CHANGED" -gt 0 ]; then
+            echo "⚠ WARNING: UI plan and backend modified in same PR"
+            echo "This may indicate authority inversion."
+            echo "Ensure UI changes are intentional, not to satisfy backend."
+            echo ""
+            echo "Changed files:"
+            echo "$CHANGED"
+            # Don't fail, but flag for human review
+          fi
+
+          echo "✓ Authority stack check complete"
+
+  terminology-consistency:
+    name: CI-005 Terminology Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for terminology drift
+        run: |
+          # Known terminology conflicts to check
+          CONFLICTS=(
+            "LLM_RUNS:EXECUTIONS"
+            "llm_runs:executions"
+          )
+
+          ERRORS=0
+
+          for CONFLICT in "${CONFLICTS[@]}"; do
+            OLD=$(echo $CONFLICT | cut -d: -f1)
+            NEW=$(echo $CONFLICT | cut -d: -f2)
+
+            # Check if old terminology exists in key files
+            OLD_COUNT=$(grep -r "$OLD" design/l2_1/ backend/AURORA_L2_CAPABILITY_REGISTRY/ --include="*.yaml" --include="*.json" 2>/dev/null | wc -l || echo 0)
+            NEW_COUNT=$(grep -r "$NEW" design/l2_1/ backend/AURORA_L2_CAPABILITY_REGISTRY/ --include="*.yaml" --include="*.json" 2>/dev/null | wc -l || echo 0)
+
+            if [ "$OLD_COUNT" -gt 0 ] && [ "$NEW_COUNT" -gt 0 ]; then
+              echo "⚠ Terminology drift detected: $OLD vs $NEW"
+              echo "  $OLD appears $OLD_COUNT times"
+              echo "  $NEW appears $NEW_COUNT times"
+              echo "  This must be resolved globally."
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo ""
+            echo "BLOCKED AT: Terminology"
+            echo "REASON: Inconsistent terminology detected"
+            echo "REQUIRES: Global rename to resolve drift"
+            echo "NO WORKAROUND APPLIED"
+            exit 1
+          fi
+
+          echo "✓ Terminology consistency check passed"
+
+  panel-state-distribution:
+    name: Panel State Distribution Report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Generate state distribution report
+        run: |
+          python3 << 'EOF'
+          import yaml
+          from pathlib import Path
+          from collections import defaultdict
+
+          UI_PLAN = Path("design/l2_1/ui_plan.yaml")
+
+          if not UI_PLAN.exists():
+              print("UI plan not found")
+              exit(0)
+
+          with open(UI_PLAN) as f:
+              plan = yaml.safe_load(f)
+
+          states = defaultdict(int)
+          domains = defaultdict(lambda: defaultdict(int))
+
+          for domain in plan.get("domains", []):
+              domain_id = domain.get("id")
+              for subdomain in domain.get("subdomains", []):
+                  for topic in subdomain.get("topics", []):
+                      for panel in topic.get("panels", []):
+                          state = panel.get("state", "UNKNOWN")
+                          states[state] += 1
+                          domains[domain_id][state] += 1
+
+          total = sum(states.values())
+
+          print("=" * 60)
+          print("UI PLAN STATE DISTRIBUTION REPORT")
+          print("=" * 60)
+          print(f"\nTotal Panels: {total}")
+          print("\nBy State:")
+          for state in ["BOUND", "DRAFT", "UNBOUND", "EMPTY", "DEFERRED"]:
+              count = states.get(state, 0)
+              pct = (count / total * 100) if total > 0 else 0
+              bar = "█" * int(pct / 2)
+              print(f"  {state:10} {count:4} ({pct:5.1f}%) {bar}")
+
+          print("\nBy Domain:")
+          for domain_id, domain_states in sorted(domains.items()):
+              domain_total = sum(domain_states.values())
+              bound = domain_states.get("BOUND", 0)
+              pct = (bound / domain_total * 100) if domain_total > 0 else 0
+              print(f"  {domain_id:15} {domain_total:3} panels, {bound:3} BOUND ({pct:5.1f}%)")
+
+          # Exit condition check
+          empty_count = states.get("EMPTY", 0)
+          unbound_count = states.get("UNBOUND", 0)
+          bound_count = states.get("BOUND", 0)
+
+          print("\n" + "=" * 60)
+          print("EXIT CONDITION CHECK (for re-freeze)")
+          print("=" * 60)
+          print(f"  All panels exist (no EMPTY): {'✓' if empty_count == 0 else '✗'} ({empty_count} EMPTY)")
+          print(f"  Majority UNBOUND+: {'✓' if (bound_count + unbound_count) > total/2 else '✗'}")
+          EOF
+
+  summary:
+    name: Architecture Constraints Summary
+    runs-on: ubuntu-latest
+    needs: [ui-plan-completeness, projection-integrity, terminology-consistency]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "Architecture Constraints Check Complete"
+          echo ""
+          echo "Results:"
+          echo "  UI Plan Completeness: ${{ needs.ui-plan-completeness.result }}"
+          echo "  Projection Integrity: ${{ needs.projection-integrity.result }}"
+          echo "  Terminology Consistency: ${{ needs.terminology-consistency.result }}"
+
+          if [ "${{ needs.ui-plan-completeness.result }}" != "success" ] || \
+             [ "${{ needs.projection-integrity.result }}" != "success" ] || \
+             [ "${{ needs.terminology-consistency.result }}" != "success" ]; then
+            echo ""
+            echo "BLOCKED: One or more architecture constraints failed"
+            echo "Reference: docs/contracts/ARCHITECTURE_CONSTRAINTS_V1.yaml"
+            exit 1
+          fi
+
+          echo ""
+          echo "✓ All architecture constraints satisfied"

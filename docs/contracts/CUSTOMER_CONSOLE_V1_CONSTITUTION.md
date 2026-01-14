@@ -1,9 +1,32 @@
 # Customer Console v1 Constitution
 
-**Status:** FROZEN
+**Status:** IN_PROGRESS
 **Effective:** 2025-12-29
 **Scope:** Customer Console only (console.agenticverz.com)
 **Authority:** Human-approved, not AI-derived
+**Amendment:** CC-AMEND-002 (2026-01-14) — UI Filling Phase
+
+---
+
+## 0. Constitutional Status
+
+### Current Status
+
+```
+STATUS: IN_PROGRESS
+SCOPE: UI SURFACE COMPLETION
+FREEZE LIFTED FOR: UI plan alignment and surface filling only
+```
+
+**Meaning:**
+The constitution remains authoritative, but **UI surface completion is explicitly allowed** without reopening foundational architecture decisions.
+
+### Previous Status (Historical)
+
+```
+STATUS: FROZEN
+FREEZE TAG: v1.0.0-customer-console
+```
 
 ---
 
@@ -17,7 +40,66 @@ All playbooks, behavior rules, and implementation decisions must align to this c
 
 ---
 
-## 2. Frozen Domains
+## 1.1 UI As Constraint (Primary Principle)
+
+> The Customer Console UI is a declaration of **human intent**, not a reflection of backend readiness.
+
+**Implications:**
+
+* UI may exist in EMPTY or UNBOUND states for extended periods
+* Backend completeness is **not** a prerequisite for UI existence
+* UI must never be reshaped to accommodate backend gaps
+
+This principle supersedes any earlier implicit backend-first interpretation.
+
+**Authority Source:** `docs/contracts/UI_AS_CONSTRAINT_V1.md`
+
+---
+
+## 1.2 Authority Stack (Canonical Order)
+
+```
+1. UI Plan (ui_plan.yaml)            ← Human Intent (Authoritative)
+2. Intent Specifications             ← Declarative Binding
+3. Capability Registry               ← Observability State
+4. SDSR Scenarios                    ← System Revelation
+5. Backend Endpoints                 ← Implementation
+6. AURORA Compiler / Projection      ← Truth Mirror
+7. Frontend Renderer                 ← Passive Consumer
+```
+
+**Invariant:**
+No lower layer may constrain or reshape a higher layer.
+
+---
+
+## 1.3 Panel State Model (Constitutional)
+
+The following panel states are constitutionally recognized:
+
+| State | Constitutional Meaning | Rendering |
+|-------|------------------------|-----------|
+| EMPTY | Planned UI surface; intent not yet declared | Must render (empty state UX) |
+| UNBOUND | Intent exists; system capability missing | Must render (coming soon UX) |
+| DRAFT | Capability declared; SDSR not observed | Must render (disabled controls) |
+| BOUND | Capability observed via SDSR | Full functionality |
+| DEFERRED | Explicit governance decision (human-only) | Hidden or explanation |
+
+**Rule:**
+EMPTY and UNBOUND states **must render**. Silence is a violation.
+
+---
+
+## 2. Domain Model
+
+### 2.1 Domains Are Human Constructs
+
+Domains represent **how humans reason about responsibility**, not backend ownership.
+
+Adding backend-facing features does **not** create domains.
+Removing backend features does **not** remove domains.
+
+### 2.2 Core Lenses (Original Five — Frozen)
 
 The following five domains are frozen for v1 and must appear exactly as written:
 
@@ -29,7 +111,16 @@ Policies
 Logs
 ```
 
-### Domain Definitions
+### 2.3 Extended Domains (CC-AMEND-002)
+
+The following domains are now constitutionally recognized:
+
+| Domain | Question | Primary Object Family | Amendment |
+|--------|----------|----------------------|-----------|
+| **Account** | "Who am I and what do I own?" | Profile, Billing, Plans, Subusers | CC-AMEND-002 |
+| **Connectivity** | "How does the system connect?" | Integrations, API Keys, Webhooks | CC-AMEND-002 |
+
+### 2.4 Domain Definitions (Complete)
 
 | Domain | Fundamental Question | Primary Object Family |
 |--------|---------------------|----------------------|
@@ -38,10 +129,13 @@ Logs
 | **Incidents** | "What went wrong?" | Incidents, Violations, Failures |
 | **Policies** | "How is behavior defined?" | Rules, Limits, Constraints, Approvals |
 | **Logs** | "What is the raw truth?" | Traces, Audit, Proof |
+| **Account** | "Who am I and what do I own?" | Profile, Billing, Plans, Subusers |
+| **Connectivity** | "How does the system connect?" | Integrations, API, Webhooks |
 
-### Domain Rules
+### 2.5 Domain Rules
 
-- These are the **only** core value lenses
+- Core lenses (5) are the **primary value lenses**
+- Extended domains (Account, Connectivity) are **supporting infrastructure**
 - They represent **different views of the same tenant**
 - They must **not** be duplicated, merged, or renamed
 - All system truth must surface through one of these domains
@@ -375,10 +469,80 @@ To amend this constitution:
 
 ---
 
-## 10. Version History
+## 10. Amendment CC-AMEND-002 — UI Filling Phase
+
+### 10.1 Interpretation Panels (Confirmed In-Scope)
+
+All interpretation panels declared in the UI plan are **in scope** for v1.
+
+* None are deferred
+* All may exist empty
+* All must be filled only via SDSR + AURORA pipeline
+
+Interpretation is not optional polish; it is part of the human contract.
+
+### 10.2 Real-Time Expectation
+
+For any **live execution surface**:
+
+* UI must acknowledge temporality (even if empty)
+* Real-time or streaming panels may exist UNBOUND
+* Absence of streaming backend is **not** a reason to remove UI affordance
+
+Humans expect time truth where execution is live.
+
+### 10.3 Terminology Invariant
+
+Terminology must be consistent across:
+
+* UI plan
+* Intent YAML
+* Capability IDs
+* APIs
+* Projection
+
+Identified drift (e.g., `LLM_RUNS` vs `EXECUTIONS`) must be resolved **globally**, not locally.
+
+Terminology inconsistency is a constitutional defect.
+
+### 10.4 What Remains Frozen (During IN_PROGRESS)
+
+The following remain frozen and must not be revisited during IN_PROGRESS:
+
+* SDSR philosophy
+* AURORA lifecycle model
+* Capability state machine
+* Projection truth rules
+* No-frontend-inference rule
+* Domain semantics (what each domain answers)
+* Order semantics (O1-O5 definitions)
+
+Only **UI surface filling and alignment** is permitted.
+
+### 10.5 Exit Condition (For Re-Freeze)
+
+The constitution may be re-frozen when:
+
+1. All panels in `ui_plan.yaml` exist (no EMPTY)
+2. Majority of panels are at least UNBOUND
+3. SDSR automation runs end-to-end without manual bypass
+4. No UI changes are required to unblock backend work
+
+At that point, a new freeze tag may be issued.
+
+### 10.6 Summary Statement
+
+> This amendment corrects an authority inversion.
+> The UI now leads by design, and the system earns its way into it.
+> Progress is measured by **closing declared gaps**, not inventing surface area.
+
+---
+
+## 11. Version History
 
 | Version | Date | Change | Author |
 |---------|------|--------|--------|
+| 2.1.0 | 2026-01-14 | **CC-AMEND-002** — UI Filling Phase unfreeze, UI-as-Constraint principle, Account/Connectivity as domains, panel state model | Human-approved |
 | 2.0.0 | 2026-01-13 | **v1 IMPLEMENTATION FREEZE** — All domains wired O1-O3, immutability verified | Human-approved |
 | 1.3.0 | 2026-01-06 | Added Section 6.4 (GC_L) and 6.5 (FACILITATION) per PIN-339 | Human-approved |
 | 1.2.0 | 2025-12-29 | Renamed Administration → Account (secondary nav), clarified Account rules | Human-approved |
@@ -387,7 +551,7 @@ To amend this constitution:
 
 ---
 
-## 11. v1 Implementation Freeze
+## 12. v1 Implementation Freeze (Historical)
 
 **Freeze Date:** 2026-01-13
 **Tag:** `v1.0.0-customer-console`
@@ -480,7 +644,7 @@ ERROR:  system_records is immutable: DELETE not allowed
 
 ---
 
-## 12. References
+## 13. References
 
 | Document | Purpose |
 |----------|---------|
@@ -488,6 +652,11 @@ ERROR:  system_records is immutable: DELETE not allowed
 | `CLAUDE.md` | Quick reference for contributors |
 | `CLAUDE_BEHAVIOR_LIBRARY.md` | Deviation detection rules |
 | `docs/memory-pins/INDEX.md` | Project memory |
+| `docs/contracts/UI_AS_CONSTRAINT_V1.md` | UI-as-Constraint doctrine (CC-AMEND-002) |
+| `design/l2_1/ui_plan.yaml` | Canonical UI surface constraint |
+| `docs/contracts/COMPILER_UI_FIRST_SPEC_V1.md` | Compiler UI-first specification |
+| `docs/contracts/PDG_STATE_INVARIANTS_V1.yaml` | Panel state transition rules |
+| `docs/contracts/EMPTY_STATE_UI_CONTRACT_V1.md` | Frontend empty-state rendering |
 
 ---
 

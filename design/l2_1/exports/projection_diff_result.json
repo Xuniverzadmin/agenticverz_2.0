@@ -1,0 +1,94 @@
+{
+  "status": "FAILED",
+  "violation_count": 11,
+  "violations": [
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-AI-SUM-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-AI-SUM-O1",
+      "message": "Panel 'INC-AI-SUM-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-002",
+      "panel_id": "ACT-EX-AR-O1",
+      "field": "subdomain",
+      "old": "LLM_RUNS",
+      "new": "EXECUTIONS",
+      "message": "Panel 'ACT-EX-AR-O1' subdomain changed"
+    },
+    {
+      "rule": "PDG-002",
+      "panel_id": "ACT-EX-CR-O2",
+      "field": "subdomain",
+      "old": "LLM_RUNS",
+      "new": "EXECUTIONS",
+      "message": "Panel 'ACT-EX-CR-O2' subdomain changed"
+    },
+    {
+      "rule": "PDG-002",
+      "panel_id": "ACT-EX-RD-O2",
+      "field": "subdomain",
+      "old": "LLM_RUNS",
+      "new": "EXECUTIONS",
+      "message": "Panel 'ACT-EX-RD-O2' subdomain changed"
+    },
+    {
+      "rule": "PDG-002",
+      "panel_id": "ACT-EX-AR-O2",
+      "field": "subdomain",
+      "old": "LLM_RUNS",
+      "new": "EXECUTIONS",
+      "message": "Panel 'ACT-EX-AR-O2' subdomain changed"
+    },
+    {
+      "rule": "PDG-002",
+      "panel_id": "ACT-EX-RD-O1",
+      "field": "subdomain",
+      "old": "LLM_RUNS",
+      "new": "EXECUTIONS",
+      "message": "Panel 'ACT-EX-RD-O1' subdomain changed"
+    },
+    {
+      "rule": "PDG-002",
+      "panel_id": "ACT-EX-RD-O3",
+      "field": "subdomain",
+      "old": "LLM_RUNS",
+      "new": "EXECUTIONS",
+      "message": "Panel 'ACT-EX-RD-O3' subdomain changed"
+    },
+    {
+      "rule": "PDG-002",
+      "panel_id": "ACT-EX-RD-O4",
+      "field": "subdomain",
+      "old": "LLM_RUNS",
+      "new": "EXECUTIONS",
+      "message": "Panel 'ACT-EX-RD-O4' subdomain changed"
+    },
+    {
+      "rule": "PDG-002",
+      "panel_id": "ACT-EX-RD-O5",
+      "field": "subdomain",
+      "old": "LLM_RUNS",
+      "new": "EXECUTIONS",
+      "message": "Panel 'ACT-EX-RD-O5' subdomain changed"
+    },
+    {
+      "rule": "PDG-002",
+      "panel_id": "ACT-EX-CR-O1",
+      "field": "subdomain",
+      "old": "LLM_RUNS",
+      "new": "EXECUTIONS",
+      "message": "Panel 'ACT-EX-CR-O1' subdomain changed"
+    },
+    {
+      "rule": "PDG-002",
+      "panel_id": "ACT-EX-CR-O3",
+      "field": "subdomain",
+      "old": "LLM_RUNS",
+      "new": "EXECUTIONS",
+      "message": "Panel 'ACT-EX-CR-O3' subdomain changed"
+    }
+  ]
+}

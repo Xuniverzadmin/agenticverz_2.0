@@ -3,22 +3,28 @@
 # Temporal:
 #   Trigger: HTTP request
 #   Execution: async
-# Role: Activity domain API - runs list and details
+# Role: Activity domain API - runs list, details, and summary (HIL v1)
 # Callers: Customer Console Activity page
-# Reference: PIN-370 (SDSR), Customer Console v1 Constitution
+# Reference: PIN-370 (SDSR), PIN-417 (HIL v1), Customer Console v1 Constitution
 
 """
-Activity API - Runs List for Customer Console
+Activity API - Runs List and Summary for Customer Console
 
 Queries the `runs` table (not worker_runs) for SDSR pipeline validation.
 Returns data compatible with ActivityPage component.
+
+HIL v1 (PIN-417):
+- /summary endpoint provides interpretation layer over execution data
+- No adjectives, pure counts and routing hints
+- Provenance always present
 """
 
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlmodel import Session
 
 from app.db import Run, get_session as get_db_session
@@ -53,6 +59,66 @@ class ActivityResponse(BaseModel):
     total: int
     page: int
     per_page: int
+
+
+# =============================================================================
+# HIL v1: Summary Response Models (PIN-417)
+# =============================================================================
+
+
+class RunsByStatus(BaseModel):
+    """Run counts by status."""
+    running: int
+    completed: int  # succeeded + failed
+    failed: int
+
+
+class AttentionSummary(BaseModel):
+    """Attention flags for runs needing review."""
+    at_risk_count: int
+    reasons: List[str]  # Enum strings from attention_reasons registry
+
+
+class Provenance(BaseModel):
+    """Provenance metadata for interpretation traceability."""
+    derived_from: List[str]  # Capability IDs, not panel IDs
+    aggregation: str
+    generated_at: str  # ISO timestamp
+
+
+class ActivitySummaryResponse(BaseModel):
+    """
+    Activity summary response (HIL v1).
+
+    Rules (locked):
+    - No adjectives (good, bad, healthy, critical)
+    - Counts must reconcile: sum(by_status) == total
+    - Reasons must be from registry (fail fast on unknown)
+    - Provenance always present
+    """
+    window: str
+    runs: dict  # {"total": int, "by_status": RunsByStatus}
+    attention: AttentionSummary
+    provenance: Provenance
+
+
+# =============================================================================
+# HIL v1: Configuration (thresholds as config, not constants)
+# =============================================================================
+
+# Attention reason registry keys (must match attention_reasons.yaml)
+VALID_ATTENTION_REASONS = frozenset(["long_running", "near_budget_threshold"])
+
+
+def parse_window(window: str) -> timedelta:
+    """Parse window string to timedelta."""
+    if window == "24h":
+        return timedelta(hours=24)
+    elif window == "7d":
+        return timedelta(days=7)
+    else:
+        # Default to 24h for unknown values
+        return timedelta(hours=24)
 
 
 # =============================================================================
@@ -154,4 +220,106 @@ def get_run_detail(
         completed_at=run.completed_at.isoformat() if run.completed_at else None,
         is_synthetic=run.is_synthetic,
         synthetic_scenario_id=run.synthetic_scenario_id,
+    )
+
+
+# =============================================================================
+# HIL v1: Summary Endpoint (PIN-417)
+# =============================================================================
+
+
+@router.get("/summary", response_model=ActivitySummaryResponse)
+def get_activity_summary(
+    window: str = Query(default="24h", description="Time window: 24h or 7d"),
+    include_synthetic: bool = Query(default=True, description="Include synthetic SDSR data"),
+    session: Session = Depends(get_db_session),
+):
+    """
+    Activity summary for HIL v1 interpretation panel.
+
+    Returns:
+    - Run counts by status
+    - Attention flags (runs needing review)
+    - Provenance metadata
+
+    Rules (locked per PIN-417):
+    - No adjectives in response
+    - Counts must reconcile
+    - Reasons must be from registry
+    - Provenance always present
+
+    Capabilities derived from: activity.runs.list, incidents.list
+    """
+    # Parse time window
+    window_delta = parse_window(window)
+    window_start = datetime.now(timezone.utc) - window_delta
+
+    # Base query: runs within time window
+    base_query = select(Run).where(Run.created_at >= window_start)
+
+    if not include_synthetic:
+        base_query = base_query.where(Run.is_synthetic.is_(False))
+
+    # Execute query to get all runs in window
+    result = session.execute(base_query)
+    runs = result.scalars().all()
+
+    # Count by status
+    running_count = sum(1 for r in runs if r.status == "running")
+    succeeded_count = sum(1 for r in runs if r.status == "succeeded")
+    failed_count = sum(1 for r in runs if r.status == "failed")
+    total_count = len(runs)
+
+    # Attention detection using pre-computed fields
+    # long_running: latency_bucket in (SLOW, STALLED)
+    # near_budget_threshold: risk_level in (NEAR_THRESHOLD, AT_RISK)
+    long_running_runs = [
+        r for r in runs
+        if r.status == "running" and r.latency_bucket in ("SLOW", "STALLED")
+    ]
+    near_budget_runs = [
+        r for r in runs
+        if r.status == "running" and r.risk_level in ("NEAR_THRESHOLD", "AT_RISK")
+    ]
+
+    # Build attention reasons list
+    attention_reasons: List[str] = []
+    if long_running_runs:
+        attention_reasons.append("long_running")
+    if near_budget_runs:
+        attention_reasons.append("near_budget_threshold")
+
+    # Validate reasons against registry (fail fast on unknown)
+    for reason in attention_reasons:
+        if reason not in VALID_ATTENTION_REASONS:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Unknown attention reason: {reason}. Must be in registry."
+            )
+
+    at_risk_count = len(set(
+        [r.id for r in long_running_runs] +
+        [r.id for r in near_budget_runs]
+    ))
+
+    # Build response
+    return ActivitySummaryResponse(
+        window=window,
+        runs={
+            "total": total_count,
+            "by_status": RunsByStatus(
+                running=running_count,
+                completed=succeeded_count + failed_count,
+                failed=failed_count,
+            ),
+        },
+        attention=AttentionSummary(
+            at_risk_count=at_risk_count,
+            reasons=attention_reasons,
+        ),
+        provenance=Provenance(
+            derived_from=["activity.runs.list", "incidents.list"],
+            aggregation="STATUS_BREAKDOWN",
+            generated_at=datetime.now(timezone.utc).isoformat(),
+        ),
     )

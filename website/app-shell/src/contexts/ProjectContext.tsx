@@ -12,28 +12,15 @@
  * GOVERNANCE RULES (Constitution v1.1.0):
  * - Projects are global scope selectors (in header, NOT sidebar)
  * - Projects are NOT domains and must not appear in primary sidebar
- * - Switching Projects changes data scope only, not:
- *   - Domains
- *   - Sidebar structure
- *   - Topics
- *   - Order semantics
+ * - Switching Projects changes data scope only
  * - Cross-project aggregation is FORBIDDEN in Customer Console
  *
- * NOT L2.1 — This is Global Context, not Projection
+ * STATUS: DISABLED - No backend API exists.
+ * When /api/v1/projects is implemented, wire it here.
+ * Until then, this context returns empty state.
  */
 
-/**
- * ProjectContext - Global Project Scope Selector
- *
- * RULE-AUTH-UI-001: Clerk is the auth store
- * - Use useAuth() for authentication state
- * - Keep tenantId in authStore (app-specific state)
- *
- * Reference: PIN-407, docs/architecture/FRONTEND_AUTH_CONTRACT.md
- */
-import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { useAuth } from '@clerk/clerk-react';
-import { useAuthStore } from '@/stores/authStore';
+import React, { createContext, useContext, ReactNode } from 'react';
 
 // ============================================================================
 // Types
@@ -60,111 +47,36 @@ export interface ProjectContextValue {
 }
 
 // ============================================================================
-// Demo Projects (Replace with API call in production)
-// ============================================================================
-
-const DEMO_PROJECTS: Project[] = [
-  {
-    id: 'proj_default',
-    name: 'Default Project',
-    description: 'Main project workspace',
-    isDefault: true,
-  },
-  {
-    id: 'proj_staging',
-    name: 'Staging',
-    description: 'Pre-production testing',
-  },
-  {
-    id: 'proj_experiments',
-    name: 'Experiments',
-    description: 'Experimental agents',
-  },
-];
-
-// ============================================================================
 // Context
 // ============================================================================
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
 
 // ============================================================================
-// Storage Keys
-// ============================================================================
-
-const PROJECT_STORAGE_KEY = 'aos-selected-project';
-
-// ============================================================================
-// Provider
+// Provider — DISABLED (No Backend API)
 // ============================================================================
 
 interface ProjectProviderProps {
   children: ReactNode;
 }
 
+/**
+ * ProjectProvider is currently DISABLED.
+ *
+ * No demo data. No fake projects. No simulated network.
+ * When /api/v1/projects exists, implement real fetching here.
+ */
 export function ProjectProvider({ children }: ProjectProviderProps) {
-  // Use Clerk for auth status, authStore for tenantId (app-specific)
-  const { isSignedIn } = useAuth();
-  const { tenantId } = useAuthStore();
-
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [currentProject, setCurrentProject] = useState<Project | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Load projects on mount / auth change
-  useEffect(() => {
-    async function loadProjects() {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        // TODO: Replace with actual API call
-        // const response = await fetch(`/api/v1/projects?tenant_id=${tenantId}`);
-        // const data = await response.json();
-        // setProjects(data.projects);
-
-        // For now, use demo projects
-        await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network
-        setProjects(DEMO_PROJECTS);
-
-        // Restore selected project from storage
-        const storedProjectId = localStorage.getItem(PROJECT_STORAGE_KEY);
-        const storedProject = DEMO_PROJECTS.find(p => p.id === storedProjectId);
-        const defaultProject = DEMO_PROJECTS.find(p => p.isDefault) || DEMO_PROJECTS[0];
-
-        setCurrentProject(storedProject || defaultProject || null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load projects');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    if (isSignedIn) {
-      loadProjects();
-    } else {
-      setProjects([]);
-      setCurrentProject(null);
-      setIsLoading(false);
-    }
-  }, [isSignedIn, tenantId]);
-
-  // Select project handler
-  const selectProject = useCallback((projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
-    if (project) {
-      setCurrentProject(project);
-      localStorage.setItem(PROJECT_STORAGE_KEY, projectId);
-    }
-  }, [projects]);
-
+  // DISABLED: No backend API exists for projects.
+  // Returns empty state until real API is wired.
   const value: ProjectContextValue = {
-    currentProject,
-    projects,
-    selectProject,
-    isLoading,
-    error,
+    currentProject: null,
+    projects: [],
+    selectProject: () => {
+      console.warn('[ProjectContext] Projects API not implemented. Cannot select project.');
+    },
+    isLoading: false,
+    error: 'Projects API not implemented',
   };
 
   return (
@@ -182,13 +94,14 @@ export function useProject(): ProjectContextValue {
   const context = useContext(ProjectContext);
 
   if (!context) {
-    // Return safe defaults if no provider (e.g., during SSR or tests)
     return {
       currentProject: null,
       projects: [],
-      selectProject: () => {},
+      selectProject: () => {
+        console.warn('[ProjectContext] No ProjectProvider. Cannot select project.');
+      },
       isLoading: false,
-      error: null,
+      error: 'No ProjectProvider',
     };
   }
 

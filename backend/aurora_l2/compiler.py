@@ -68,6 +68,11 @@ EXPORTS_DIR = REPO_ROOT / "design/l2_1/exports"
 SCHEMA_PATH = SCRIPT_DIR / "schema/intent_spec_schema.json"
 CAPABILITY_REGISTRY_DIR = REPO_ROOT / "backend/AURORA_L2_CAPABILITY_REGISTRY"
 
+# UI Plan Authority (CANONICAL SOURCE OF TRUTH)
+# ui_plan.yaml is the HIGHEST authority per UI-as-Constraint doctrine
+# Compiler reads this FIRST, then derives state mechanically
+UI_PLAN_PATH = REPO_ROOT / "design/l2_1/ui_plan.yaml"
+
 # CANONICAL PROJECTION OUTPUT (single source of truth)
 # This is the ONLY projection file. No others should exist.
 UI_CONTRACT_DIR = REPO_ROOT / "design/l2_1/ui_contract"
@@ -190,6 +195,113 @@ def load_registry() -> dict:
         return yaml.safe_load(f)
 
 
+def load_ui_plan() -> dict:
+    """
+    Load the canonical UI plan (HIGHEST AUTHORITY).
+
+    Per UI-as-Constraint doctrine:
+    - ui_plan.yaml is human intent
+    - Compiler reads this FIRST
+    - State is derived mechanically from:
+      1. Intent YAML existence
+      2. Capability registry status
+
+    Returns:
+        dict containing domains, panels, and metadata from ui_plan.yaml
+    """
+    if not UI_PLAN_PATH.exists():
+        print(f"[FATAL] UI Plan not found: {UI_PLAN_PATH}", file=sys.stderr)
+        print("        UI Plan is the canonical authority. Cannot proceed without it.", file=sys.stderr)
+        sys.exit(1)
+
+    with open(UI_PLAN_PATH) as f:
+        return yaml.safe_load(f)
+
+
+def derive_panel_state(
+    panel_def: dict,
+    intent_exists: bool,
+    capabilities: dict[str, str],
+    compiled_intent: dict | None = None
+) -> str:
+    """
+    Derive panel binding state mechanically from inputs.
+
+    State Derivation Rules (from UI-as-Constraint doctrine):
+    - EMPTY: UI planned, intent YAML missing (intent_spec is null)
+    - UNBOUND: Intent exists, capability missing or actions not registered
+    - DRAFT: Capability DECLARED but SDSR not observed
+    - BOUND: Capability OBSERVED or TRUSTED
+    - DEFERRED: Explicit governance decision (from ui_plan.yaml)
+
+    Args:
+        panel_def: Panel definition from ui_plan.yaml
+        intent_exists: Whether the intent YAML file exists
+        capabilities: Map of capability_id → status from registry
+        compiled_intent: Optional compiled intent (for action checking)
+
+    Returns:
+        One of: EMPTY, UNBOUND, DRAFT, BOUND, DEFERRED
+    """
+    # Check for explicit DEFERRED state in ui_plan
+    ui_plan_state = panel_def.get("state", "")
+    if ui_plan_state == "DEFERRED":
+        return "DEFERRED"
+
+    # If intent_spec is null in ui_plan, it's EMPTY
+    intent_spec = panel_def.get("intent_spec")
+    if not intent_spec:
+        return "EMPTY"
+
+    # If intent YAML doesn't exist on disk, it's EMPTY
+    if not intent_exists:
+        return "EMPTY"
+
+    # Intent exists - check capabilities
+    # First, check expected_capability from ui_plan.yaml (for interpretation panels)
+    expected_capability = panel_def.get("expected_capability")
+    if expected_capability:
+        cap_status = capabilities.get(expected_capability)
+        if cap_status is None:
+            return "UNBOUND"
+        if cap_status in ("OBSERVED", "TRUSTED"):
+            return "BOUND"
+        if cap_status == "DECLARED":
+            return "DRAFT"
+        if cap_status == "DEPRECATED":
+            return "UNBOUND"
+        return "UNBOUND"
+
+    # Second, check activate_actions from compiled intent (for execution panels)
+    if compiled_intent:
+        actions = compiled_intent.get("activate_actions", [])
+        write_action = compiled_intent.get("write_action")
+        if write_action:
+            actions = actions + [write_action]
+
+        if actions:
+            # Check all actions against capability registry
+            statuses = []
+            for action in actions:
+                cap_status = capabilities.get(action)
+                if cap_status is None:
+                    return "UNBOUND"  # Missing action = UNBOUND
+                statuses.append(cap_status)
+
+            # Determine overall state using weakest-link principle
+            if "DEPRECATED" in statuses:
+                return "UNBOUND"
+            if "DISCOVERED" in statuses or "DECLARED" in statuses:
+                return "DRAFT"
+            if all(s in ("OBSERVED", "TRUSTED") for s in statuses):
+                return "BOUND"
+            return "UNBOUND"
+
+    # No expected_capability and no actions = INFO panel (data only)
+    # Default to UNBOUND until we have a better signal
+    return "UNBOUND"
+
+
 def load_intent(path: Path) -> dict:
     """Load a single intent YAML file."""
     with open(path) as f:
@@ -273,6 +385,13 @@ def compile_intent(intent: dict, capabilities: dict[str, str]) -> dict:
 
         # SDSR observation trace (Phase 4)
         "observation_trace": intent.get("observation_trace", []),
+
+        # HIL v1: Panel classification (Phase 2)
+        # Default to "execution" if not specified
+        "panel_class": intent.get("panel_class", "execution"),
+
+        # HIL v1: Provenance (only for interpretation panels)
+        "provenance": intent.get("provenance"),
     }
 
 
@@ -316,194 +435,181 @@ def generate_sql_insert(compiled: dict) -> str:
 # Output includes: _meta, _statistics, _contract, domains[]
 # No merge scripts. No adapters. No dual formats.
 
-# Domain display order (LOCKED - from CUSTOMER_CONSOLE_V1_CONSTITUTION.md)
+# Domain display order (LOCKED - from ui_plan.yaml / CUSTOMER_CONSOLE_V1_CONSTITUTION.md)
+# All 7 domains must be present per UI-as-Constraint doctrine
 DOMAIN_DISPLAY_ORDER = {
     "Overview": 0,
     "Activity": 1,
     "Incidents": 2,
     "Policies": 3,
     "Logs": 4,
+    "Account": 5,
+    "Connectivity": 6,
 }
 
 
-def generate_canonical_projection(compiled_intents: list[dict]) -> dict:
+def generate_canonical_projection(
+    ui_plan: dict,
+    compiled_intents_map: dict[str, dict],
+    capabilities: dict[str, str]
+) -> dict:
     """
-    Generate the canonical UI projection from compiled intents.
+    Generate the canonical UI projection from ui_plan.yaml (HIGHEST AUTHORITY).
 
-    This is the SINGLE authoritative projection schema.
-    UI consumes this verbatim - no inference, no fallbacks.
+    Per UI-as-Constraint doctrine:
+    - ui_plan.yaml defines the FULL surface (86 panels)
+    - Compiler derives state mechanically
+    - EMPTY panels MUST be emitted (they are signals, not failures)
+    - UI consumes this verbatim (no inference, no fallbacks)
+
+    Args:
+        ui_plan: The loaded ui_plan.yaml data
+        compiled_intents_map: Map of panel_id → compiled intent (may be partial)
+        capabilities: Map of capability_id → status from registry
 
     Returns:
         dict with _meta, _statistics, _contract, domains[]
     """
     generated_at = datetime.now(timezone.utc).isoformat()
 
-    # Build domain → subdomain → topic → panel hierarchy
-    domains_map: dict[str, dict] = {}
-
-    for intent in compiled_intents:
-        domain = intent["domain"]
-        subdomain = intent["subdomain"]
-        topic = intent["topic"]
-        topic_id = intent["topic_id"]
-
-        # Initialize domain if needed
-        if domain not in domains_map:
-            domains_map[domain] = {
-                "domain": domain,
-                "order": DOMAIN_DISPLAY_ORDER.get(domain, 99),
-                "short_description": None,  # Populated from registry if available
-                "route": f"/{domain.lower()}",  # Relative route, root resolved by frontend
-                "subdomains": {},
-            }
-
-        # Initialize subdomain if needed
-        if subdomain not in domains_map[domain]["subdomains"]:
-            domains_map[domain]["subdomains"][subdomain] = {
-                "subdomain": subdomain,
-                "topics": {},
-            }
-
-        # Initialize topic if needed
-        if topic not in domains_map[domain]["subdomains"][subdomain]["topics"]:
-            domains_map[domain]["subdomains"][subdomain]["topics"][topic] = {
-                "topic": topic,
-                "topic_id": topic_id,
-                "topic_display_order": 0,  # Default, can be overridden per-intent
-                "panels": [],
-            }
-
-        # Get binding status
-        binding_status = intent.get("binding_status", "INFO")
-
-        # Build panel entry
-        panel = {
-            "panel_id": intent["panel_id"],
-            "panel_name": intent["panel_name"],
-            "order": f"O{intent['order_level']}",
-            "render_mode": "TABLE",  # Default
-            "visibility": "ALWAYS" if intent["visible_by_default"] else "CONDITIONAL",
-            "enabled": True,
-            "disabled_reason": None,
-            "content_blocks": _build_content_blocks(intent, binding_status),
-            "controls": _build_panel_controls(intent, binding_status),
-            "control_count": len(intent.get("control_set", [])),
-            "topic": topic,
-            "topic_id": topic_id,
-            "subdomain": subdomain,
-            "topic_display_order": 0,  # Populated in post-processing with proper ordering
-            "short_description": None,  # Group D - placeholder
-            "permissions": {
-                "nav_required": intent.get("nav_required", False),
-                "filtering": intent.get("filtering_enabled", False),
-                "read": intent.get("read_enabled", True),
-                "write": intent.get("write_enabled", False),
-                "activate": intent.get("activate_enabled", False),
-            },
-            "route": f"/{domain.lower()}/{intent['panel_id'].lower()}",  # Relative route
-            "view_type": "PANEL_VIEW",
-            "binding_status": binding_status,
-            "review_status": intent.get("review_status", "UNREVIEWED"),
-        }
-
-        # Add binding metadata from SDSR observation trace (Phase 4)
-        observation_trace = intent.get("observation_trace", [])
-        if binding_status == "BOUND" and observation_trace:
-            # Extract trace info from observations
-            scenario_ids = list(set(t.get("scenario_id") for t in observation_trace if t.get("scenario_id")))
-            observed_timestamps = [t.get("observed_on") for t in observation_trace if t.get("observed_on")]
-            observed_at = max(observed_timestamps) if observed_timestamps else None
-            capability_ids = list(set(t.get("capability_id") for t in observation_trace if t.get("capability_id")))
-
-            panel["binding_metadata"] = {
-                "scenario_ids": scenario_ids,
-                "observed_at": observed_at,
-                "capability_ids": capability_ids or intent.get("activate_actions", []),
-                "trace_count": len(observation_trace),
-                "observed_effects": [
-                    effect
-                    for trace in observation_trace
-                    for effect in trace.get("observed_effects", [])
-                ],
-            }
-        elif binding_status == "BOUND":
-            # BOUND but no trace yet (edge case)
-            panel["binding_metadata"] = {
-                "scenario_ids": [],
-                "observed_at": None,
-                "capability_ids": intent.get("activate_actions", []),
-                "trace_count": 0,
-                "observed_effects": [],
-            }
-
-        domains_map[domain]["subdomains"][subdomain]["topics"][topic]["panels"].append(panel)
-
-    # Convert to list structure and compute statistics
+    # Build domain list from ui_plan (CANONICAL ORDER)
     domains_list = []
     total_panels = 0
     total_controls = 0
-    binding_counts = {"INFO": 0, "DRAFT": 0, "BOUND": 0, "UNBOUND": 0}
 
-    # SDSR trace statistics (Phase 4)
+    # State counts for statistics
+    state_counts = {"EMPTY": 0, "UNBOUND": 0, "DRAFT": 0, "BOUND": 0, "DEFERRED": 0, "INFO": 0}
+    binding_counts = {"INFO": 0, "DRAFT": 0, "BOUND": 0, "UNBOUND": 0}  # Legacy compat
+    panel_class_counts = {"execution": 0, "interpretation": 0}
+
+    # SDSR trace statistics
     total_traces = 0
     panels_with_traces = 0
     unique_scenarios: set[str] = set()
 
-    # Global panel display order counter (across all domains)
+    # Global panel display order counter
     global_panel_order = 0
 
-    for domain_data in sorted(domains_map.values(), key=lambda d: d["order"]):
+    # Iterate over domains from ui_plan (THE AUTHORITY)
+    for domain_idx, domain_def in enumerate(ui_plan.get("domains", [])):
+        domain_name = domain_def["id"]
         domain_panels = []
 
         # Track topic display order within domain
         topic_order_counter = 0
         seen_topics: set[str] = set()
 
-        # Collect all panels and sort by order_level (O1=1, O2=2, etc.)
-        all_domain_panels = []
-        for subdomain_data in domain_data["subdomains"].values():
-            for topic_data in subdomain_data["topics"].values():
-                for panel in topic_data["panels"]:
-                    all_domain_panels.append(panel)
+        # Iterate over subdomains from ui_plan
+        for subdomain_def in domain_def.get("subdomains", []):
+            subdomain_id = subdomain_def["id"]
 
-        # Sort panels by order_level (extracted from "O1" → 1)
-        all_domain_panels.sort(key=lambda p: int(p["order"][1]) if p["order"].startswith("O") else 99)
+            # Iterate over topics from ui_plan
+            for topic_def in subdomain_def.get("topics", []):
+                topic_id = topic_def["id"]
 
-        # Assign panel_display_order and topic_display_order
-        for panel in all_domain_panels:
-            # Assign global panel_display_order
-            panel["panel_display_order"] = global_panel_order
-            global_panel_order += 1
+                # Iterate over panels from ui_plan (CANONICAL LOOP)
+                for panel_def in topic_def.get("panels", []):
+                    panel_id = panel_def["panel_id"]
+                    order = panel_def.get("order", "O1")
+                    panel_class = panel_def.get("panel_class", "execution")
 
-            # Assign topic_display_order (first occurrence of topic in domain)
-            topic_key = f"{panel['subdomain']}::{panel['topic']}"
-            if topic_key not in seen_topics:
-                seen_topics.add(topic_key)
-                topic_order_counter += 1
-            panel["topic_display_order"] = topic_order_counter
+                    # Check if intent YAML exists
+                    intent_spec = panel_def.get("intent_spec")
+                    intent_path = REPO_ROOT / intent_spec if intent_spec else None
+                    intent_exists = intent_path.exists() if intent_path else False
 
-            domain_panels.append(panel)
-            total_panels += 1
-            total_controls += panel["control_count"]
-            binding_counts[panel["binding_status"]] = binding_counts.get(panel["binding_status"], 0) + 1
+                    # Get compiled intent data if available
+                    compiled_intent = compiled_intents_map.get(panel_id)
 
-            # Count SDSR traces (Phase 4)
-            if panel.get("binding_metadata"):
-                trace_count = panel["binding_metadata"].get("trace_count", 0)
-                if trace_count > 0:
-                    total_traces += trace_count
-                    panels_with_traces += 1
-                    for scenario_id in panel["binding_metadata"].get("scenario_ids", []):
-                        unique_scenarios.add(scenario_id)
+                    # Derive state mechanically (pass compiled_intent for action checking)
+                    panel_state = derive_panel_state(
+                        panel_def, intent_exists, capabilities, compiled_intent
+                    )
 
+                    # Build panel entry
+                    if compiled_intent:
+                        # Use data from compiled intent
+                        panel = _build_panel_from_intent(
+                            compiled_intent,
+                            domain_name,
+                            subdomain_id,
+                            topic_id,
+                            panel_state,
+                            global_panel_order
+                        )
+                    else:
+                        # EMPTY panel - create minimal entry (THIS IS CRITICAL)
+                        panel = _build_empty_panel(
+                            panel_id,
+                            domain_name,
+                            subdomain_id,
+                            topic_id,
+                            order,
+                            panel_class,
+                            panel_state,
+                            global_panel_order
+                        )
+
+                    # Assign topic_display_order
+                    topic_key = f"{subdomain_id}::{topic_id}"
+                    if topic_key not in seen_topics:
+                        seen_topics.add(topic_key)
+                        topic_order_counter += 1
+                    panel["topic_display_order"] = topic_order_counter
+
+                    # Add panel to domain
+                    domain_panels.append(panel)
+
+                    # Update statistics
+                    total_panels += 1
+                    total_controls += panel.get("control_count", 0)
+                    global_panel_order += 1
+
+                    # State statistics
+                    state_counts[panel_state] = state_counts.get(panel_state, 0) + 1
+
+                    # Legacy binding counts (map new states to old)
+                    if panel_state == "EMPTY":
+                        binding_counts["UNBOUND"] = binding_counts.get("UNBOUND", 0) + 1
+                    elif panel_state in ("UNBOUND", "DEFERRED"):
+                        binding_counts["UNBOUND"] = binding_counts.get("UNBOUND", 0) + 1
+                    elif panel_state == "DRAFT":
+                        binding_counts["DRAFT"] = binding_counts.get("DRAFT", 0) + 1
+                    elif panel_state == "BOUND":
+                        binding_counts["BOUND"] = binding_counts.get("BOUND", 0) + 1
+                    else:
+                        binding_counts["INFO"] = binding_counts.get("INFO", 0) + 1
+
+                    # Panel class statistics
+                    panel_class_counts[panel_class] = panel_class_counts.get(panel_class, 0) + 1
+
+                    # SDSR trace statistics (only for panels with binding_metadata)
+                    if panel.get("binding_metadata"):
+                        trace_count = panel["binding_metadata"].get("trace_count", 0)
+                        if trace_count > 0:
+                            total_traces += trace_count
+                            panels_with_traces += 1
+                            for scenario_id in panel["binding_metadata"].get("scenario_ids", []):
+                                unique_scenarios.add(scenario_id)
+
+        # Panel order is LOCKED to ui_plan.yaml traversal order:
+        # Domain → Subdomain → Topic → Panel (within topic, by O-order as defined in YAML)
+        # NO RUNTIME SORTING - the YAML order IS the order.
+        # Re-assign panel_display_order (sequential within domain)
+        for i, panel in enumerate(domain_panels):
+            panel["panel_display_order"] = sum(
+                len(d["panels"]) for d in domains_list
+            ) + i
+
+        # Add domain to list
         domains_list.append({
-            "domain": domain_data["domain"],
-            "order": domain_data["order"],
+            "domain": domain_name,
+            "order": DOMAIN_DISPLAY_ORDER.get(domain_name, domain_idx),
             "panels": domain_panels,
             "panel_count": len(domain_panels),
-            "total_controls": sum(p["control_count"] for p in domain_panels),
-            "short_description": domain_data["short_description"],
-            "route": domain_data["route"],
+            "total_controls": sum(p.get("control_count", 0) for p in domain_panels),
+            "short_description": domain_def.get("question"),
+            "route": f"/{domain_name.lower()}",
         })
 
     # Build canonical projection
@@ -531,14 +637,23 @@ def generate_canonical_projection(compiled_intents: list[dict]) -> dict:
             "domain_count": len(domains_list),
             "panel_count": total_panels,
             "control_count": total_controls,
-            "bound_panels": binding_counts.get("BOUND", 0),
-            "draft_panels": binding_counts.get("DRAFT", 0),
+            # Panel state counts (UI-as-Constraint states)
+            "empty_panels": state_counts.get("EMPTY", 0),
+            "unbound_panels": state_counts.get("UNBOUND", 0),
+            "draft_panels": state_counts.get("DRAFT", 0),
+            "bound_panels": state_counts.get("BOUND", 0),
+            "deferred_panels": state_counts.get("DEFERRED", 0),
+            # Legacy binding counts (for backward compatibility)
             "info_panels": binding_counts.get("INFO", 0),
-            "unbound_panels": binding_counts.get("UNBOUND", 0),
             # SDSR trace statistics (Phase 4)
             "sdsr_trace_count": total_traces,
             "panels_with_traces": panels_with_traces,
             "unique_scenario_count": len(unique_scenarios),
+            # HIL v1 statistics
+            "execution_panels": panel_class_counts.get("execution", 0),
+            "interpretation_panels": panel_class_counts.get("interpretation", 0),
+            # UI Plan authority reference
+            "ui_plan_source": str(UI_PLAN_PATH.name),
         },
         "_contract": {
             "renderer_must_consume_only_this_file": True,
@@ -555,11 +670,209 @@ def generate_canonical_projection(compiled_intents: list[dict]) -> dict:
             "binding_metadata_on_bound_panels": True,
             "sdsr_trace_provenance": True,
             "ui_must_not_infer": True,
+            # HIL v1 contract extensions
+            "panel_class_required": True,
+            "provenance_on_interpretation_panels": True,
         },
         "domains": domains_list,
     }
 
     return projection
+
+
+def _build_panel_from_intent(
+    intent: dict,
+    domain_name: str,
+    subdomain_id: str,
+    topic_id: str,
+    panel_state: str,
+    display_order: int
+) -> dict:
+    """
+    Build a panel entry from a compiled intent.
+
+    This is used when the intent YAML exists and has been compiled.
+    The panel_state is derived mechanically, not from the intent.
+    """
+    panel_id = intent["panel_id"]
+    binding_status = panel_state  # Use derived state, not intent's
+
+    panel = {
+        "panel_id": panel_id,
+        "panel_name": intent.get("panel_name", panel_id),
+        "order": f"O{intent.get('order_level', 1)}",
+        "render_mode": "TABLE",  # Default
+        "visibility": "ALWAYS" if intent.get("visible_by_default", True) else "CONDITIONAL",
+        # UI-as-Constraint: ALL panels must render (enabled=True)
+        # The binding_status controls UX (dim header, disabled controls, messages)
+        "enabled": True,
+        "disabled_reason": _get_disabled_reason(panel_state),
+        "content_blocks": _build_content_blocks(intent, binding_status),
+        "controls": _build_panel_controls(intent, binding_status),
+        "control_count": len(intent.get("control_set", [])),
+        "topic": topic_id,
+        "topic_id": intent.get("topic_id", topic_id),
+        "subdomain": subdomain_id,
+        "topic_display_order": 0,  # Set by caller
+        "short_description": None,
+        "permissions": {
+            "nav_required": intent.get("nav_required", False),
+            "filtering": intent.get("filtering_enabled", False),
+            "read": intent.get("read_enabled", True),
+            "write": intent.get("write_enabled", False),
+            "activate": intent.get("activate_enabled", False),
+        },
+        "route": f"/{domain_name.lower()}/{panel_id.lower()}",
+        "view_type": "PANEL_VIEW",
+        "binding_status": binding_status,
+        "panel_state": panel_state,  # UI-as-Constraint state
+        "review_status": intent.get("review_status", "UNREVIEWED"),
+        "panel_class": intent.get("panel_class", "execution"),
+        "panel_display_order": display_order,
+    }
+
+    # Include provenance for interpretation panels
+    provenance = intent.get("provenance")
+    if provenance and panel["panel_class"] == "interpretation":
+        panel["provenance"] = provenance
+
+    # Add binding metadata for BOUND panels
+    observation_trace = intent.get("observation_trace", [])
+    if panel_state == "BOUND" and observation_trace:
+        scenario_ids = list(set(t.get("scenario_id") for t in observation_trace if t.get("scenario_id")))
+        observed_timestamps = [t.get("observed_on") for t in observation_trace if t.get("observed_on")]
+        observed_at = max(observed_timestamps) if observed_timestamps else None
+        capability_ids = list(set(t.get("capability_id") for t in observation_trace if t.get("capability_id")))
+
+        panel["binding_metadata"] = {
+            "scenario_ids": scenario_ids,
+            "observed_at": observed_at,
+            "capability_ids": capability_ids or intent.get("activate_actions", []),
+            "trace_count": len(observation_trace),
+            "observed_effects": [
+                effect
+                for trace in observation_trace
+                for effect in trace.get("observed_effects", [])
+            ],
+        }
+    elif panel_state == "BOUND":
+        # BOUND but no trace yet
+        panel["binding_metadata"] = {
+            "scenario_ids": [],
+            "observed_at": None,
+            "capability_ids": intent.get("activate_actions", []),
+            "trace_count": 0,
+            "observed_effects": [],
+        }
+
+    return panel
+
+
+def _build_empty_panel(
+    panel_id: str,
+    domain_name: str,
+    subdomain_id: str,
+    topic_id: str,
+    order: str,
+    panel_class: str,
+    panel_state: str,
+    display_order: int
+) -> dict:
+    """
+    Build an EMPTY panel entry when no intent YAML exists.
+
+    Per UI-as-Constraint doctrine:
+    - EMPTY panels MUST be emitted (they are signals, not failures)
+    - The panel exists in ui_plan but has no intent definition yet
+    - UI renders empty state UX for these panels
+    """
+    return {
+        "panel_id": panel_id,
+        "panel_name": panel_id,  # Use ID as name for empty panels
+        "order": order,
+        "render_mode": "TABLE",
+        "visibility": "ALWAYS",
+        # UI-as-Constraint: ALL panels must render (enabled=True)
+        # EMPTY/UNBOUND/DEFERRED panels show empty state UX, not hidden
+        "enabled": True,
+        "disabled_reason": _get_disabled_reason(panel_state),
+        "content_blocks": _build_empty_content_blocks(panel_state),
+        "controls": [],  # No controls for EMPTY panels
+        "control_count": 0,
+        "topic": topic_id,
+        "topic_id": topic_id,
+        "subdomain": subdomain_id,
+        "topic_display_order": 0,  # Set by caller
+        "short_description": None,
+        "permissions": {
+            "nav_required": False,
+            "filtering": False,
+            "read": False,
+            "write": False,
+            "activate": False,
+        },
+        "route": f"/{domain_name.lower()}/{panel_id.lower()}",
+        "view_type": "PANEL_VIEW",
+        "binding_status": panel_state,
+        "panel_state": panel_state,  # UI-as-Constraint state (EMPTY)
+        "review_status": "UNREVIEWED",
+        "panel_class": panel_class,
+        "panel_display_order": display_order,
+    }
+
+
+def _get_disabled_reason(panel_state: str) -> str | None:
+    """
+    Get the disabled reason for a panel based on its state.
+
+    UI-as-Constraint State → UX Contract:
+    | State    | Label            | Message                                  |
+    |----------|------------------|------------------------------------------|
+    | EMPTY    | Empty            | "This panel is planned but not yet defined" |
+    | UNBOUND  | Awaiting Backend | "Backend capability not connected"       |
+    | DRAFT    | Preview          | "Data not yet observed"                  |
+    | BOUND    | (none)           | (normal - no message)                    |
+    | DEFERRED | On Hold          | "This feature is deferred by governance" |
+    """
+    if panel_state == "EMPTY":
+        return "This panel is planned but not yet defined"
+    elif panel_state == "UNBOUND":
+        return "Backend capability not connected"
+    elif panel_state == "DRAFT":
+        return "Data not yet observed"
+    elif panel_state == "DEFERRED":
+        return "This feature is deferred by governance"
+    return None
+
+
+def _build_empty_content_blocks(panel_state: str) -> list[dict]:
+    """
+    Build minimal content blocks for EMPTY/UNBOUND/DEFERRED panels.
+
+    These panels still render (UI-as-Constraint doctrine) but with
+    empty state UX instead of data. The panel_state determines the message.
+    """
+    visibility = "ALWAYS"
+    # UI-as-Constraint: All panels render, including EMPTY/UNBOUND/DEFERRED
+    enabled = True
+
+    return [
+        {
+            "type": "HEADER",
+            "order": 0,
+            "visibility": visibility,
+            "enabled": enabled,
+            "components": ["title", "status_badge", "binding_indicator"],
+        },
+        {
+            "type": "DATA",
+            "order": 1,
+            "visibility": visibility,
+            "enabled": enabled,
+            "render_mode": "EMPTY_STATE",  # Special render mode for empty state panels
+            "components": ["empty_state_message"],
+        },
+    ]
 
 
 def _build_content_blocks(intent: dict, binding_status: str) -> list[dict]:
@@ -581,13 +894,11 @@ def _build_content_blocks(intent: dict, binding_status: str) -> list[dict]:
     blocks = []
     block_order = 0
 
-    # Determine visibility based on binding status
-    if binding_status == "UNBOUND":
-        base_visibility = "HIDDEN"
-        base_enabled = False
-    else:
-        base_visibility = "ALWAYS"
-        base_enabled = True
+    # UI-as-Constraint: ALL panels are visible (ALWAYS)
+    # The binding_status controls UX appearance (dim header, disabled controls)
+    # but does NOT control visibility. Panels MUST NOT be hidden.
+    base_visibility = "ALWAYS"
+    base_enabled = True
 
     # 1. HEADER block - always present
     blocks.append({
@@ -622,22 +933,24 @@ def _build_content_blocks(intent: dict, binding_status: str) -> list[dict]:
     })
     block_order += 1
 
-    # 3. CONTROLS block - only if panel has controls
+    # 3. CONTROLS block - only if panel has controls AND state allows it
     control_set = intent.get("control_set", [])
-    if control_set:
+    # UI-as-Constraint: No controls for UNBOUND panels (they don't have backend capability)
+    # But the panel itself is still visible with empty state message
+    if control_set and binding_status not in ("UNBOUND",):
         # Determine control block enabled state based on binding
         if binding_status == "BOUND":
             controls_enabled = True
         elif binding_status == "DRAFT":
-            # DRAFT: data controls enabled, action controls disabled (handled per-control)
-            controls_enabled = True
+            # DRAFT: controls visible but disabled (data not yet observed)
+            controls_enabled = False
         else:
             controls_enabled = False
 
         blocks.append({
             "type": "CONTROLS",
             "order": block_order,
-            "visibility": base_visibility if binding_status != "UNBOUND" else "HIDDEN",
+            "visibility": "ALWAYS",
             "enabled": controls_enabled,
             "components": ["action_bar", "bulk_actions"] if len(control_set) > 1 else ["action_bar"],
         })
@@ -750,9 +1063,10 @@ def main():
         output_sql = True         # Legacy support
 
     print("=" * 60)
-    print("AURORA_L2 Intent Compiler (Canonical)")
+    print("AURORA_L2 Intent Compiler (UI-as-Constraint)")
     print("=" * 60)
-    print(f"Source: {INTENTS_DIR}")
+    print(f"UI Plan Authority: {UI_PLAN_PATH}")
+    print(f"Intents Source: {INTENTS_DIR}")
     print(f"Mode: {'VALIDATE ONLY' if validate_only else 'COMPILE'}")
     print(f"DB Authority: {DB_AUTHORITY}")
     print(f"Outputs: {', '.join(filter(None, [
@@ -761,6 +1075,14 @@ def main():
         'sql' if output_sql else None
     ]))}")
     print("=" * 60)
+
+    # ==========================================================================
+    # PHASE 1: LOAD UI PLAN (CANONICAL AUTHORITY)
+    # ==========================================================================
+    # ui_plan.yaml is the HIGHEST authority per UI-as-Constraint doctrine
+    ui_plan = load_ui_plan()
+    ui_plan_panel_count = ui_plan.get("summary", {}).get("total_panels", 0)
+    print(f"UI Plan loaded: {ui_plan_panel_count} canonical panels")
 
     # Ensure paths exist
     if not INTENTS_DIR.exists():
@@ -806,6 +1128,12 @@ def main():
     print(f"Compiled: {len(compiled_intents)}")
     print(f"Errors: {len(errors)}")
 
+    # Build compiled_intents_map for lookup
+    compiled_intents_map: dict[str, dict] = {
+        intent["panel_id"]: intent for intent in compiled_intents
+    }
+    print(f"Intent map built: {len(compiled_intents_map)} entries")
+
     if validate_only:
         print("Validation complete (no output generated)")
         sys.exit(0 if not errors else 1)
@@ -837,11 +1165,16 @@ def main():
         print(f"[OUTPUT] {sql_path}")
 
     # ==========================================================================
-    # CANONICAL PROJECTION OUTPUT (Phase 1.1)
+    # CANONICAL PROJECTION OUTPUT (UI-as-Constraint)
     # ==========================================================================
-    # This is the SINGLE canonical projection. No dual formats.
+    # ui_plan.yaml is the authority. Compiler derives state mechanically.
+    # All 86 panels are emitted, including EMPTY panels.
     if output_projection:
-        projection = generate_canonical_projection(compiled_intents)
+        projection = generate_canonical_projection(
+            ui_plan=ui_plan,
+            compiled_intents_map=compiled_intents_map,
+            capabilities=capabilities
+        )
 
         # Write to canonical location
         with open(CANONICAL_PROJECTION_PATH, "w") as f:
@@ -851,9 +1184,12 @@ def main():
         print(f"  Domains: {projection['_statistics']['domain_count']}")
         print(f"  Panels: {projection['_statistics']['panel_count']}")
         print(f"  Controls: {projection['_statistics']['control_count']}")
-        print(f"  BOUND: {projection['_statistics']['bound_panels']}")
-        print(f"  DRAFT: {projection['_statistics']['draft_panels']}")
-        print(f"  INFO: {projection['_statistics']['info_panels']}")
+        print(f"  States:")
+        print(f"    EMPTY: {projection['_statistics']['empty_panels']}")
+        print(f"    UNBOUND: {projection['_statistics']['unbound_panels']}")
+        print(f"    DRAFT: {projection['_statistics']['draft_panels']}")
+        print(f"    BOUND: {projection['_statistics']['bound_panels']}")
+        print(f"    DEFERRED: {projection['_statistics']['deferred_panels']}")
 
     # Summary
     print("\n" + "=" * 60)

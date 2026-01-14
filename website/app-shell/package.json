@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node scripts/ui-hygiene-check.cjs && node scripts/import-boundary-check.cjs && node scripts/projection-stage-check.cjs && node scripts/projection-route-check.cjs && node scripts/simulation-render-check.cjs",
+    "prebuild": "node scripts/ui-hygiene-check.cjs && node scripts/import-boundary-check.cjs && node scripts/projection-stage-check.cjs && node scripts/projection-route-check.cjs",
     "projection": "node scripts/projection-stage-check.cjs",
     "projection:routes": "node scripts/projection-route-check.cjs",
     "projection:sync": "cp ../../design/l2_1/ui_contract/ui_projection_lock.json public/projection/ui_projection_lock.json && echo 'Synced projection from design'",

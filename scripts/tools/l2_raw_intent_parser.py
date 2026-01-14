@@ -1,19 +1,31 @@
 #!/usr/bin/env python3
+"""
+================================================================================
+DEPRECATED — DO NOT USE
+================================================================================
+
+This script is part of the LEGACY L2.1 CSV-based pipeline.
+It has been replaced by the AURORA L2 SDSR-driven pipeline.
+
+REPLACEMENT: backend/aurora_l2/compiler.py (reads YAML intents directly)
+REFERENCE: design/l2_1/AURORA_L2.md, PIN-370, PIN-379
+
+This file is preserved for historical reference only.
+================================================================================
+"""
 # Layer: L8 — Catalyst / Meta
 # Product: system-wide
-# Temporal:
-#   Trigger: developer (pipeline step 1)
-#   Execution: sync
-# Role: Parse L2.1 supertable to raw UI intent IR (NO validation, NO defaults)
-# Callers: UI projection pipeline
-# Allowed Imports: pandas, json
-# Forbidden Imports: None
-# Reference: L2.1 UI Projection Pipeline
+# Status: DEPRECATED (2026-01-14)
+# Replacement: backend/aurora_l2/compiler.py
+# Reference: L2.1 UI Projection Pipeline - SUPERSEDED by AURORA L2
 
 """
 A1: Parse L2.1 Table to Raw Intent IR
 
-RULES:
+DEPRECATED: This script is no longer used.
+The AURORA L2 compiler reads intent YAMLs directly.
+
+RULES (HISTORICAL):
 - Do NOT validate
 - Do NOT default
 - Do NOT infer

@@ -1,0 +1,140 @@
+# AURORA_L2 Domain Intent Registry
+# HIL v1 Extension
+# Created: 2026-01-14
+#
+# This registry defines the core intent/question each domain exists to answer.
+# Domain intents are frozen per Customer Console Constitution v1.
+#
+# Reference: HIL_V1_CONTRACT.md, CUSTOMER_CONSOLE_V1_CONSTITUTION.md
+
+version: 1.0.0
+created_at: '2026-01-14'
+status: ACTIVE
+
+# Domain intent defines the core question each domain answers.
+# These are frozen and must not be modified without amendment.
+
+domains:
+  Overview:
+    intent: system_health
+    question: "Is the system okay right now?"
+    primary_object: Health
+    secondary_objects:
+      - Status
+      - Pulse
+      - Metrics
+    interpretation_panels:
+      - OVW-SH-CS-O1  # System Status Summary (interpretation candidate)
+      - OVW-SH-HM-O1  # Health Metrics Summary (interpretation candidate)
+
+  Activity:
+    intent: execution_visibility
+    question: "What ran / is running?"
+    primary_object: Run
+    secondary_objects:
+      - Trace
+      - Job
+      - Execution
+    interpretation_panels:
+      - ACT-EX-SUM-O1  # Activity Summary (to be created)
+    execution_panels:
+      - ACT-EX-AR-O1  # Active Runs Summary
+      - ACT-EX-AR-O2  # Active Runs List
+      - ACT-EX-CR-O1  # Completed Runs Summary
+      - ACT-EX-CR-O2  # Completed Runs List
+      - ACT-EX-CR-O3  # Completed Run Details
+      - ACT-EX-RD-O1  # Run Details Summary
+      - ACT-EX-RD-O2  # Run Details List
+      - ACT-EX-RD-O3  # Run Step Details
+      - ACT-EX-RD-O4  # Run Trace
+      - ACT-EX-RD-O5  # Run Evidence
+
+  Incidents:
+    intent: failure_understanding
+    question: "What went wrong?"
+    primary_object: Incident
+    secondary_objects:
+      - Violation
+      - Failure
+      - Alert
+    interpretation_panels:
+      - INC-AI-SUM-O1  # Incident Summary (to be created)
+    execution_panels:
+      - INC-AI-OI-O1  # Open Incidents Summary
+      - INC-AI-OI-O2  # Open Incidents List
+      - INC-AI-ID-O1  # Incident Details Summary
+      - INC-AI-ID-O2  # Incident Details List
+      - INC-AI-ID-O3  # Incident Step Details
+      - INC-AI-ID-O4  # Incident Impact
+      - INC-HI-RI-O1  # Resolved Incidents Summary
+      - INC-HI-RI-O2  # Resolved Incidents List
+      - INC-HI-RI-O3  # Resolution Details
+      - INC-HI-RI-O4  # Resolution Timeline
+      - INC-HI-RI-O5  # Resolution Evidence
+
+  Policies:
+    intent: behavior_governance
+    question: "How is behavior defined?"
+    primary_object: Policy
+    secondary_objects:
+      - Rule
+      - Limit
+      - Constraint
+      - Approval
+    interpretation_panels:
+      - POL-AP-SUM-O1  # Policy Summary (to be created)
+    execution_panels:
+      - POL-AP-BP-O1  # Budget Policies Summary
+      - POL-AP-BP-O2  # Budget Policies List
+      - POL-AP-BP-O3  # Budget Policy Details
+      - POL-AP-RL-O1  # Rate Limits Summary
+      - POL-AP-RL-O2  # Rate Limits List
+      - POL-AP-RL-O3  # Rate Limit Details
+      - POL-AP-AR-O1  # Approval Rules Summary
+      - POL-AP-AR-O2  # Approval Rules List
+      - POL-AP-AR-O3  # Approval Rule Details
+      - POL-AP-AR-O4  # Approval History
+      - POL-PA-PC-O1  # Policy Changes Summary
+      - POL-PA-PC-O2  # Policy Changes List
+      - POL-PA-PC-O3  # Policy Change Details
+      - POL-PA-PC-O4  # Change Timeline
+      - POL-PA-PC-O5  # Change Evidence
+      - POL-PR-PP-O1  # Pending Proposals Summary
+      - POL-PR-PP-O2  # Pending Proposals List
+
+  Logs:
+    intent: evidence_trail
+    question: "What is the raw truth?"
+    primary_object: Trace
+    secondary_objects:
+      - Audit
+      - Proof
+      - Record
+    interpretation_panels:
+      - LOG-AL-SUM-O1  # Logs Summary (to be created)
+    execution_panels:
+      - LOG-AL-SA-O1  # System Audit Summary
+      - LOG-AL-SA-O2  # System Audit List
+      - LOG-AL-SA-O3  # Audit Entry Details
+      - LOG-AL-SA-O5  # Audit Evidence
+      - LOG-AL-UA-O1  # User Audit Summary
+      - LOG-AL-UA-O2  # User Audit List
+      - LOG-AL-UA-O3  # User Audit Details
+      - LOG-AL-UA-O5  # User Audit Evidence
+      - LOG-ET-TD-O1  # Trace Details Summary
+      - LOG-ET-TD-O2  # Trace Details List
+      - LOG-ET-TD-O3  # Trace Step Details
+      - LOG-ET-TD-O4  # Trace Timeline
+      - LOG-ET-TD-O5  # Trace Evidence
+
+# Panel classification summary
+panel_classification:
+  execution_panels: 54    # All existing migrated panels
+  interpretation_panels: 0  # None yet (HIL v1 Phase 3 will add first)
+  total_panels: 54
+
+# Migration status
+hil_migration:
+  phase: 1  # Schema extension (documentation only)
+  next_phase: 2  # Runtime support (compiler + frontend)
+  activity_domain_first: true  # Activity domain is pilot for HIL

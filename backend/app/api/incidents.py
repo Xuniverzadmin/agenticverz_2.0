@@ -3,12 +3,12 @@
 # Temporal:
 #   Trigger: HTTP request
 #   Execution: async
-# Role: Incidents domain API - incidents list, details, and propagation trigger
+# Role: Incidents domain API - incidents list, details, summary (HIL v1), and propagation trigger
 # Callers: Customer Console Incidents page
-# Reference: PIN-370 (SDSR), Customer Console v1 Constitution
+# Reference: PIN-370 (SDSR), PIN-417 (HIL v1), Customer Console v1 Constitution
 
 """
-Incidents API - Incidents List for Customer Console
+Incidents API - Incidents List and Summary for Customer Console
 
 Queries the `incidents` table for SDSR pipeline validation.
 Returns data compatible with IncidentsPage component.
@@ -17,8 +17,15 @@ SDSR Contract (PIN-370):
 - Incidents are created by the Incident Engine, not by direct writes
 - This API observes incidents, never creates them directly
 - POST /trigger endpoint invokes Incident Engine for a failed run
+
+HIL v1 (PIN-417):
+- /summary endpoint provides interpretation layer over incident data
+- No adjectives, pure counts and routing hints
+- Uses lifecycle_state (ACTIVE, ACKED, RESOLVED) not legacy status
+- Provenance always present
 """
 
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -26,7 +33,7 @@ from pydantic import BaseModel
 from sqlalchemy import select, text
 from sqlmodel import Session
 
-from app.models.killswitch import Incident
+from app.models.killswitch import Incident, IncidentLifecycleState
 from app.db import Run, get_session as get_db_session
 from app.services.incident_engine import get_incident_engine
 
@@ -95,8 +102,192 @@ class TriggerIncidentResponse(BaseModel):
 
 
 # =============================================================================
+# HIL v1: Summary Response Models (PIN-417)
+# =============================================================================
+
+
+class IncidentsByLifecycleState(BaseModel):
+    """Incident counts by lifecycle state (PIN-412 canonical states)."""
+    active: int
+    acked: int
+    resolved: int
+
+
+class IncidentsCount(BaseModel):
+    """Incident count structure."""
+    total: int
+    by_lifecycle_state: IncidentsByLifecycleState
+
+
+class AttentionSummary(BaseModel):
+    """Attention flags for incidents needing review."""
+    count: int
+    reasons: List[str]  # Enum strings from incidents_attention_reasons.yaml registry
+
+
+class Provenance(BaseModel):
+    """Provenance metadata for interpretation traceability."""
+    derived_from: List[str]  # Capability IDs, not panel IDs
+    aggregation: str
+    generated_at: str  # ISO timestamp
+
+
+class IncidentsSummaryResponse(BaseModel):
+    """
+    Incidents summary response (HIL v1).
+
+    Rules (locked):
+    - No adjectives (good, bad, healthy, critical)
+    - Counts must reconcile: sum(by_lifecycle_state) == total
+    - Reasons must be from registry (fail fast on unknown)
+    - attention.count == incidents.by_lifecycle_state.active
+    - Provenance always present
+    """
+    window: str
+    incidents: IncidentsCount
+    attention: AttentionSummary
+    provenance: Provenance
+
+
+# =============================================================================
+# HIL v1: Configuration (registries and helpers)
+# =============================================================================
+
+# Attention reason registry keys (must match incidents_attention_reasons.yaml)
+VALID_INCIDENTS_ATTENTION_REASONS = frozenset(["unresolved", "high_severity"])
+
+
+def parse_window(window: str) -> timedelta:
+    """Parse window string to timedelta."""
+    if window == "24h":
+        return timedelta(hours=24)
+    elif window == "7d":
+        return timedelta(days=7)
+    else:
+        # Default to 24h for unknown values
+        return timedelta(hours=24)
+
+
+# =============================================================================
 # Endpoints
 # =============================================================================
+
+
+# =============================================================================
+# HIL v1: Summary Endpoint (PIN-417)
+# IMPORTANT: Must be defined BEFORE /{incident_id} to avoid route shadowing
+# =============================================================================
+
+
+@router.get("/summary", response_model=IncidentsSummaryResponse)
+def get_incidents_summary(
+    window: str = Query(default="24h", description="Time window: 24h or 7d"),
+    include_synthetic: bool = Query(default=True, description="Include synthetic SDSR data"),
+    session: Session = Depends(get_db_session),
+):
+    """
+    Incidents summary for HIL v1 interpretation panel.
+
+    Returns:
+    - Incident counts by lifecycle_state (ACTIVE, ACKED, RESOLVED)
+    - Attention flags (incidents needing review)
+    - Provenance metadata
+
+    Rules (locked per PIN-417):
+    - No adjectives in response
+    - Counts must reconcile: active + acked + resolved == total
+    - attention.count == active count (INV-002)
+    - Reasons must be from registry (fail fast on unknown)
+    - Provenance always present
+
+    Capabilities derived from: activity.runs.list, incidents.list
+    """
+    # Parse time window
+    window_delta = parse_window(window)
+    window_start = datetime.now(timezone.utc) - window_delta
+
+    # Base query: incidents within time window
+    base_query = select(Incident).where(Incident.created_at >= window_start)
+
+    if not include_synthetic:
+        base_query = base_query.where(
+            (Incident.is_synthetic == False) | (Incident.is_synthetic.is_(None))
+        )
+
+    # Execute query to get all incidents in window
+    result = session.execute(base_query)
+    incidents = result.scalars().all()
+
+    # Count by lifecycle_state (PIN-412 canonical states)
+    # Use lifecycle_state field, NOT legacy status field
+    active_count = sum(
+        1 for i in incidents
+        if i.lifecycle_state == IncidentLifecycleState.ACTIVE.value
+    )
+    acked_count = sum(
+        1 for i in incidents
+        if i.lifecycle_state == IncidentLifecycleState.ACKED.value
+    )
+    resolved_count = sum(
+        1 for i in incidents
+        if i.lifecycle_state == IncidentLifecycleState.RESOLVED.value
+    )
+    total_count = len(incidents)
+
+    # Attention detection
+    # - "unresolved" reason: if any incidents are ACTIVE
+    # - "high_severity" reason: if any ACTIVE incidents have HIGH or CRITICAL severity
+    attention_reasons: List[str] = []
+
+    # Get ACTIVE incidents for attention analysis
+    active_incidents = [
+        i for i in incidents
+        if i.lifecycle_state == IncidentLifecycleState.ACTIVE.value
+    ]
+
+    if active_incidents:
+        attention_reasons.append("unresolved")
+
+        # Check for high severity among active incidents
+        high_severity_active = [
+            i for i in active_incidents
+            if i.severity and i.severity.upper() in ("HIGH", "CRITICAL")
+        ]
+        if high_severity_active:
+            attention_reasons.append("high_severity")
+
+    # Validate reasons against registry (fail fast on unknown)
+    for reason in attention_reasons:
+        if reason not in VALID_INCIDENTS_ATTENTION_REASONS:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Unknown attention reason: {reason}. Must be in registry."
+            )
+
+    # attention.count == active count (INV-002: attention = unresolved incidents)
+    attention_count = active_count
+
+    # Build response
+    return IncidentsSummaryResponse(
+        window=window,
+        incidents=IncidentsCount(
+            total=total_count,
+            by_lifecycle_state=IncidentsByLifecycleState(
+                active=active_count,
+                acked=acked_count,
+                resolved=resolved_count,
+            ),
+        ),
+        attention=AttentionSummary(
+            count=attention_count,
+            reasons=attention_reasons,
+        ),
+        provenance=Provenance(
+            derived_from=["activity.runs.list", "incidents.list"],
+            aggregation="STATUS_BREAKDOWN",
+            generated_at=datetime.now(timezone.utc).isoformat(),
+        ),
+    )
 
 
 @router.get("", response_model=IncidentsResponse)

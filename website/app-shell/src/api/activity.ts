@@ -68,3 +68,64 @@ export async function fetchRunDetail(runId: string): Promise<RunSummary> {
   const response = await apiClient.get<RunSummary>(`/api/v1/activity/runs/${runId}`);
   return response.data;
 }
+
+// =============================================================================
+// Activity Summary (HIL v1 Interpretation - PIN-417)
+// =============================================================================
+
+/**
+ * Activity Summary Response - HIL v1 interpretation endpoint
+ * Reference: backend/contracts/activity_summary.schema.json
+ */
+export interface RunsByStatus {
+  running: number;
+  completed: number;
+  failed: number;
+}
+
+export interface AttentionSummary {
+  at_risk_count: number;
+  reasons: ('long_running' | 'near_budget_threshold')[];
+}
+
+export interface ActivityProvenance {
+  derived_from: string[];
+  aggregation: 'COUNT' | 'SUM' | 'TREND' | 'STATUS_BREAKDOWN' | 'TOP_N' | 'LATEST';
+  generated_at: string;
+}
+
+export interface ActivitySummaryResponse {
+  window: '24h' | '7d';
+  runs: {
+    total: number;
+    by_status: RunsByStatus;
+  };
+  attention: AttentionSummary;
+  provenance: ActivityProvenance;
+}
+
+export interface ActivitySummaryParams {
+  window?: '24h' | '7d';
+  include_synthetic?: boolean;
+}
+
+/**
+ * Fetch activity summary from the backend (HIL v1 interpretation endpoint)
+ * Reference: PIN-417 Phase 3
+ */
+export async function fetchActivitySummary(
+  params: ActivitySummaryParams = {}
+): Promise<ActivitySummaryResponse> {
+  const queryParams = new URLSearchParams();
+
+  if (params.window !== undefined) {
+    queryParams.set('window', params.window);
+  }
+  if (params.include_synthetic !== undefined) {
+    queryParams.set('include_synthetic', params.include_synthetic.toString());
+  }
+
+  const url = `/api/v1/activity/summary${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+  const response = await apiClient.get<ActivitySummaryResponse>(url);
+  return response.data;
+}

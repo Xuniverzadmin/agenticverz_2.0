@@ -214,9 +214,15 @@ export function AIConsoleApp() {
         localStorage.setItem(STORAGE_KEY, key);
 
         // Set auth store for guard API calls
-        const tenantId = localStorage.getItem(TENANT_STORAGE_KEY) || 'demo-tenant';
+        // NO FALLBACK - tenant ID must come from API validation response or be stored
+        const tenantId = localStorage.getItem(TENANT_STORAGE_KEY);
+        if (!tenantId) {
+          console.warn('[AIConsoleApp] No tenant ID stored. API key mode requires tenant.');
+        }
         useAuthStore.getState().setTokens(key, '');
-        useAuthStore.getState().setTenant(tenantId);
+        if (tenantId) {
+          useAuthStore.getState().setTenant(tenantId);
+        }
 
         // Remove key from URL for security
         if (searchParams.get('key')) {
@@ -227,14 +233,10 @@ export function AIConsoleApp() {
         localStorage.removeItem(STORAGE_KEY);
       }
     } catch (err) {
-      // Allow demo mode even if validation fails
-      setApiKey(key);
-      setIsApiKeyAuthenticated(true);
-      setAuthMode('apikey');
-      localStorage.setItem(STORAGE_KEY, key);
-      const tenantId = localStorage.getItem(TENANT_STORAGE_KEY) || 'demo-tenant';
-      useAuthStore.getState().setTokens(key, '');
-      useAuthStore.getState().setTenant(tenantId);
+      // NO FALLBACK - if validation fails, reject authentication
+      // Demo mode was removed per PIN-415 (hard delete order)
+      setError('API validation failed. Cannot authenticate.');
+      localStorage.removeItem(STORAGE_KEY);
     } finally {
       setIsValidating(false);
     }

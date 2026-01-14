@@ -1,0 +1,178 @@
+# Layer: L8 — Catalyst / Meta
+# Product: system-wide
+# Temporal:
+#   Trigger: manual | CI
+#   Execution: async
+# Role: SDSR scenario to observe Activity Summary capability
+# Reference: PIN-417 (HIL v1 Phase 3)
+#
+# PURPOSE:
+# Prove the /api/v1/activity/summary endpoint works correctly
+# and advances summary.activity capability to OBSERVED.
+#
+# SDSR observes CAPABILITIES, not panels.
+# Panels light up later via AURORA compilation.
+#
+# MACHINE QUALITY LAYERS:
+# 1. Schema validation (contract shape)
+# 2. Semantic invariants (self-consistency)
+# 3. Registry validation (no free strings)
+# 4. Failure taxonomy (structured diagnostics)
+
+scenario_id: SDSR-HIL-ACT-SUM-001
+name: Observe Activity Summary Capability
+domain: Activity
+version: "1.1"
+
+capabilities:
+  - summary.activity
+
+# Layer 1: Schema contract (pre-check)
+schema_validation:
+  response_schema: backend/contracts/activity_summary.schema.json
+  fail_fast: true  # Schema failure = immediate abort
+
+steps:
+  - step_id: call_activity_summary
+    action: http_call
+    request:
+      method: GET
+      endpoint: /api/v1/activity/summary
+      params:
+        window: "24h"
+
+    # Layer 1: Shape validation
+    expect:
+      http_status: 200
+      fields_exist:
+        - window
+        - runs.total
+        - runs.by_status.running
+        - runs.by_status.completed
+        - runs.by_status.failed
+        - attention.at_risk_count
+        - attention.reasons
+        - provenance.derived_from
+        - provenance.aggregation
+        - provenance.generated_at
+
+    # Layer 2: Semantic invariants
+    invariants:
+      # Reconciliation: completed = running + completed (note: completed includes succeeded+failed)
+      - id: INV-001
+        name: status_sum_reconciliation
+        expression: "runs.by_status.running + runs.by_status.completed == runs.total"
+        failure_type: INVARIANT_VIOLATION
+        severity: BLOCKING
+
+      # Failed must be subset of completed
+      - id: INV-002
+        name: failed_subset_completed
+        expression: "runs.by_status.failed <= runs.by_status.completed"
+        failure_type: INVARIANT_VIOLATION
+        severity: BLOCKING
+
+      # Window echoed correctly
+      - id: INV-003
+        name: window_echo
+        expression: "window == '24h'"
+        failure_type: CONTRACT_VIOLATION
+        severity: BLOCKING
+
+      # Attention consistency
+      - id: INV-004
+        name: attention_consistency
+        expression: "len(attention.reasons) > 0 implies attention.at_risk_count > 0"
+        failure_type: SEMANTIC_VIOLATION
+        severity: BLOCKING
+
+      # Provenance always present
+      - id: INV-005
+        name: provenance_present
+        expression: "len(provenance.derived_from) > 0"
+        failure_type: CONTRACT_VIOLATION
+        severity: BLOCKING
+
+      # Timestamp sanity
+      - id: INV-006
+        name: timestamp_not_future
+        expression: "parse_iso(provenance.generated_at) <= now()"
+        failure_type: TEMPORAL_VIOLATION
+        severity: WARNING
+
+    # Layer 3: Registry validation
+    registry_checks:
+      - id: REG-001
+        name: attention_reasons_registry
+        field: attention.reasons
+        registry: backend/aurora_l2/registries/attention_reasons.yaml
+        registry_path: reasons
+        rule: subset
+        failure_type: REGISTRY_VIOLATION
+        severity: BLOCKING
+
+      - id: REG-002
+        name: aggregation_type_registry
+        field: provenance.aggregation
+        allowed_values:
+          - COUNT
+          - SUM
+          - TREND
+          - STATUS_BREAKDOWN
+          - TOP_N
+          - LATEST
+        failure_type: REGISTRY_VIOLATION
+        severity: BLOCKING
+
+# Layer 4: Failure taxonomy
+failure_taxonomy:
+  categories:
+    SCHEMA_VIOLATION:
+      description: Response shape does not match contract
+      action: Fix backend serialization
+      blocks_advancement: true
+
+    INVARIANT_VIOLATION:
+      description: Response is internally inconsistent
+      action: Fix backend computation logic
+      blocks_advancement: true
+
+    CONTRACT_VIOLATION:
+      description: Response violates API contract
+      action: Fix endpoint implementation
+      blocks_advancement: true
+
+    SEMANTIC_VIOLATION:
+      description: Response has illogical meaning
+      action: Review business logic
+      blocks_advancement: true
+
+    REGISTRY_VIOLATION:
+      description: Response contains unregistered values
+      action: Update registry or fix emission
+      blocks_advancement: true
+
+    TEMPORAL_VIOLATION:
+      description: Timestamp constraints violated
+      action: Review clock/timezone handling
+      blocks_advancement: false  # Warning only
+
+  output_format:
+    type: structured_json
+    fields:
+      - failure_id
+      - failure_type
+      - field_path
+      - expected
+      - observed
+      - severity
+      - action
+
+on_success:
+  advance_capabilities:
+    summary.activity: OBSERVED
+
+on_failure:
+  emit_diagnostics: true
+  block_advancement: true
+  log_structured_failure: true

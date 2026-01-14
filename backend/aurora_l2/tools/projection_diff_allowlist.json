@@ -1,0 +1,25 @@
+{
+  "$schema": "projection_diff_allowlist.schema.json",
+  "description": "Allowlist for Projection Diff Guard - Phase 3 HIL v1",
+  "version": "1.0",
+  "updated": "2026-01-14",
+  "reference": "PIN-417",
+
+  "panels": [
+    "ACT-EX-SUM-O1"
+  ],
+
+  "rules": {
+    "PDG-001": [
+      "ACT-EX-SUM-O1"
+    ],
+    "PDG-002": [],
+    "PDG-003": [],
+    "PDG-004": [],
+    "PDG-005": []
+  },
+
+  "notes": {
+    "ACT-EX-SUM-O1": "HIL v1 Phase 3 - first interpretation panel, expected to be added"
+  }
+}

@@ -1,0 +1,39 @@
+# Layer: L8 — Catalyst / Meta
+# Product: system-wide
+# Temporal:
+#   Trigger: projection compilation
+#   Execution: sync
+# Role: HIL v1 interpretation panel intent - Incidents Summary
+# Reference: PIN-417 (HIL v1 Phase 4)
+
+panel_id: INC-AI-SUM-O1
+
+metadata:
+  domain: Incidents
+  subdomain: ACTIVE_INCIDENTS
+  topic: SUMMARY
+  order: O1
+  status: IMPLEMENTED
+  panel_class: interpretation
+
+display:
+  name: Incidents Summary
+  expansion_mode: INLINE
+  render_mode: CARD
+
+data:
+  source_type: backend_api
+  endpoint: /api/v1/incidents/summary
+  refresh_interval: 30000
+
+provenance:
+  derived_from:
+    - activity.runs.list
+    - incidents.list
+  aggregation: STATUS_BREAKDOWN
+  endpoint: /api/v1/incidents/summary
+  capability: summary.incidents
+
+controls:
+  control_set: []
+  control_count: 0

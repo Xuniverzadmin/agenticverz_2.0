@@ -120,7 +120,7 @@ export const FOUNDER_ROOT = IS_PREFLIGHT
 
 /**
  * L2.1 Domain roots for Preflight Customer Console (/precus).
- * These are the five frozen domains from Customer Console v1 Constitution.
+ * These are the seven domains from Customer Console v2.1 Constitution.
  *
  * In preflight: /precus/overview, /precus/activity, etc.
  * In production: /cus/overview, /cus/activity, etc.
@@ -131,6 +131,8 @@ export const DOMAIN_ROOTS = {
   incidents: IS_PREFLIGHT ? '/precus/incidents' : '/cus/incidents',
   policies: IS_PREFLIGHT ? '/precus/policies' : '/cus/policies',
   logs: IS_PREFLIGHT ? '/precus/logs' : '/cus/logs',
+  account: IS_PREFLIGHT ? '/precus/account' : '/cus/account',
+  connectivity: IS_PREFLIGHT ? '/precus/connectivity' : '/cus/connectivity',
 } as const;
 
 /**

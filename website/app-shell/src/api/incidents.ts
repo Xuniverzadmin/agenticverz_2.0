@@ -56,6 +56,44 @@ export interface IncidentsQueryParams {
   include_synthetic?: boolean;
 }
 
+// =============================================================================
+// HIL v1: Incidents Summary Response (PIN-417)
+// =============================================================================
+
+export interface IncidentsByLifecycleState {
+  active: number;
+  acked: number;
+  resolved: number;
+}
+
+export interface IncidentsCountData {
+  total: number;
+  by_lifecycle_state: IncidentsByLifecycleState;
+}
+
+export interface IncidentsAttentionSummary {
+  count: number;
+  reasons: string[];  // Registry-backed: 'unresolved', 'high_severity'
+}
+
+export interface IncidentsProvenance {
+  derived_from: string[];  // Capability IDs
+  aggregation: string;
+  generated_at: string;
+}
+
+export interface IncidentsSummaryResponse {
+  window: string;
+  incidents: IncidentsCountData;
+  attention: IncidentsAttentionSummary;
+  provenance: IncidentsProvenance;
+}
+
+export interface IncidentsSummaryParams {
+  window?: string;  // '24h' or '7d'
+  include_synthetic?: boolean;
+}
+
 /**
  * Fetch incidents from the backend
  * This uses the real /api/v1/incidents endpoint
@@ -109,5 +147,32 @@ export async function fetchIncidentDetail(incidentId: string): Promise<IncidentS
  */
 export async function fetchIncidentsForRun(runId: string): Promise<{ run_id: string; incidents: IncidentSummary[]; total: number }> {
   const response = await apiClient.get<{ run_id: string; incidents: IncidentSummary[]; total: number }>(`/api/v1/incidents/by-run/${runId}`);
+  return response.data;
+}
+
+// =============================================================================
+// HIL v1: Incidents Summary (PIN-417)
+// =============================================================================
+
+/**
+ * Fetch incidents summary for HIL v1 interpretation panel
+ *
+ * Returns aggregated incident counts by lifecycle_state (ACTIVE, ACKED, RESOLVED)
+ * plus attention signals and provenance metadata.
+ *
+ * Reference: PIN-417 (HIL v1 Phase 4), incidents_summary.schema.json
+ */
+export async function fetchIncidentsSummary(params: IncidentsSummaryParams = {}): Promise<IncidentsSummaryResponse> {
+  const queryParams = new URLSearchParams();
+
+  if (params.window !== undefined) {
+    queryParams.set('window', params.window);
+  }
+  if (params.include_synthetic !== undefined) {
+    queryParams.set('include_synthetic', params.include_synthetic.toString());
+  }
+
+  const url = `/api/v1/incidents/summary${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+  const response = await apiClient.get<IncidentsSummaryResponse>(url);
   return response.data;
 }

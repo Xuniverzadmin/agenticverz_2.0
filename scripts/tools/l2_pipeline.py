@@ -1,24 +1,41 @@
 #!/usr/bin/env python3
+"""
+================================================================================
+DEPRECATED — DO NOT USE
+================================================================================
+
+This script is part of the LEGACY L2.1 CSV-based pipeline.
+It has been replaced by the AURORA L2 SDSR-driven pipeline.
+
+REPLACEMENT: scripts/tools/run_aurora_l2_pipeline.sh
+REFERENCE: design/l2_1/AURORA_L2.md, PIN-370, PIN-379
+
+The new pipeline uses:
+- Intent YAMLs (design/l2_1/intents/*.yaml) instead of CSV
+- SDSR-driven capability observation
+- backend/aurora_l2/compiler.py for projection generation
+
+This file is preserved for historical reference only.
+================================================================================
+"""
 # Layer: L8 — Catalyst / Meta
 # Product: system-wide
-# Temporal:
-#   Trigger: developer
-#   Execution: sync
-# Role: Governed pipeline for L2.1 supertable → UI contract with approval gate
-# Callers: Claude, developer CLI
-# Allowed Imports: L6 (subprocess, json, pathlib)
-# Forbidden Imports: None
-# Reference: PIN-349 (UI Contract Generation)
+# Status: DEPRECATED (2026-01-14)
+# Replacement: scripts/tools/run_aurora_l2_pipeline.sh
+# Reference: PIN-349 (UI Contract Generation) - SUPERSEDED by PIN-370
 """
 L2 Pipeline — Governed Supertable → UI Contract Pipeline
 
-This script provides a governed workflow for:
+DEPRECATED: This script is no longer used.
+Use run_aurora_l2_pipeline.sh instead.
+
+This script provided a governed workflow for:
 1. GENERATE: Create new supertable versions (fast, no approval)
 2. LIST: Show all versions with approval status
 3. PROMOTE: Human approves a version → regenerates UI contract
 4. STATUS: Check current approved version
 
-GOVERNANCE RULES:
+GOVERNANCE RULES (HISTORICAL):
 - Multiple XLSX versions can be generated for distillation
 - Only ONE version can be approved at a time
 - UI contract is ONLY regenerated on explicit promotion

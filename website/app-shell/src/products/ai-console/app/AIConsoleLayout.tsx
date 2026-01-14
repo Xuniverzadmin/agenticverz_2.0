@@ -117,12 +117,13 @@ export function AIConsoleLayout({ children, activeTab, onTabChange, onLogout, us
   const isAccountTabActive = ACCOUNT_NAV_ITEMS.some(item => item.id === activeTab);
 
   // Initialize health monitoring only after authentication
+  // NO FALLBACK - requires real tenant ID
   useEffect(() => {
-    if (!isSignedIn) return;
+    if (!isSignedIn || !tenantId) return;
 
     // Small delay to ensure auth headers are ready
     const timer = setTimeout(() => {
-      healthMonitor.startPeriodicCheck(30000, tenantId || 'demo-tenant');
+      healthMonitor.startPeriodicCheck(30000, tenantId);
     }, 500);
 
     return () => {
@@ -155,8 +156,9 @@ export function AIConsoleLayout({ children, activeTab, onTabChange, onLogout, us
       : 'protected';
 
   const statusConfig = STATUS_CONFIG[protectionStatus];
-  const mode: ConsoleMode = (status as any)?.mode || 'demo';
-  const modeConfig = MODE_CONFIG[mode];
+  // NO FALLBACK - mode must come from backend (PIN-415)
+  const mode: ConsoleMode | null = (status as any)?.mode || null;
+  const modeConfig = mode ? MODE_CONFIG[mode] : null;
 
   return (
     <ErrorBoundary>
@@ -237,13 +239,15 @@ export function AIConsoleLayout({ children, activeTab, onTabChange, onLogout, us
             </div>
 
             <div className="flex items-center gap-4">
-              {/* Mode Badge */}
-              <div className={`flex items-center gap-2 px-3 py-1 rounded-full border border-current/30 ${modeConfig.color}`}>
-                {modeConfig.pulse && (
-                  <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
-                )}
-                <span className="text-sm font-medium">{modeConfig.label}</span>
-              </div>
+              {/* Mode Badge - only show if mode returned from backend */}
+              {modeConfig && (
+                <div className={`flex items-center gap-2 px-3 py-1 rounded-full border border-current/30 ${modeConfig.color}`}>
+                  {modeConfig.pulse && (
+                    <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
+                  )}
+                  <span className="text-sm font-medium">{modeConfig.label}</span>
+                </div>
+              )}
 
               {/* Quick Actions - text-only buttons with accent borders */}
               {status?.is_frozen ? (

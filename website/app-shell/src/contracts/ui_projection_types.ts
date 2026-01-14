@@ -69,6 +69,39 @@ export type ControlCategory =
 
 export type BindingStatus = "INFO" | "DRAFT" | "BOUND" | "UNBOUND";
 
+// ============================================================================
+// HIL v1 Types (Human Interpretation Layer)
+// ============================================================================
+// LOCKED: This defines panel classification and provenance for interpretation.
+// See PIN-416, PIN-417: HIL v1 Schema Extension
+//
+// | Class          | Meaning                          | Provenance Required |
+// |----------------|----------------------------------|---------------------|
+// | execution      | Raw data, lists, details         | NO                  |
+// | interpretation | Summaries, aggregations          | YES                 |
+// ============================================================================
+
+export type PanelClass = "execution" | "interpretation";
+
+export type AggregationType =
+  | "COUNT"
+  | "SUM"
+  | "TREND"
+  | "STATUS_BREAKDOWN"
+  | "TOP_N"
+  | "LATEST";
+
+/**
+ * Provenance declaration for interpretation panels.
+ * Required when panel_class is "interpretation".
+ * Defines where the aggregated data derives from.
+ */
+export interface Provenance {
+  source_panels: string[];       // Panel IDs this interpretation derives from
+  aggregation: AggregationType;  // How source data is aggregated
+  endpoint: string;              // Backend endpoint for aggregated data
+}
+
 export interface Control {
   type: ControlType;
   order: number;
@@ -170,6 +203,12 @@ export interface Panel {
   // SDSR observation metadata (Phase 4 - populated when binding_status = BOUND)
   // Makes truth inspectable: which SDSR scenario verified this panel's capabilities
   binding_metadata?: BindingMetadata;
+  // HIL v1: Panel classification (default: "execution")
+  // "execution" = raw data panels, "interpretation" = summary/aggregation panels
+  panel_class: PanelClass;
+  // HIL v1: Provenance (only present on interpretation panels)
+  // Declares what execution panels this interpretation derives from
+  provenance?: Provenance;
 }
 
 // ============================================================================
@@ -181,7 +220,9 @@ export type DomainName =
   | "Activity"
   | "Incidents"
   | "Policies"
-  | "Logs";
+  | "Logs"
+  | "Account"
+  | "Connectivity";
 
 export interface Domain {
   domain: DomainName;
@@ -233,6 +274,9 @@ export interface ProjectionStatistics {
   sdsr_trace_count: number;
   panels_with_traces: number;
   unique_scenario_count: number;
+  // HIL v1 statistics (PIN-416, PIN-417)
+  execution_panels: number;
+  interpretation_panels: number;
 }
 
 export interface ProjectionContract {
@@ -254,6 +298,9 @@ export interface ProjectionContract {
   binding_metadata_on_bound_panels: true;
   sdsr_trace_provenance: true;
   ui_must_not_infer: true;
+  // HIL v1 additions (PIN-416, PIN-417)
+  panel_class_required: true;
+  provenance_on_interpretation_panels: true;
 }
 
 export interface UIProjectionLock {
@@ -326,6 +373,8 @@ export function isValidDomain(domain: string): domain is DomainName {
     "Incidents",
     "Policies",
     "Logs",
+    "Account",
+    "Connectivity",
   ];
   return validDomains.includes(domain as DomainName);
 }

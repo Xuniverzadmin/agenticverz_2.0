@@ -58,19 +58,52 @@ Any system violating these principles is **invalid**.
 
 ## 4. Pipeline Overview
 
+### 4.1 Canonical Flow (Current - SDSR-Driven)
+
 ```
-Human Intent (Natural Language)
+SDSR Scenario YAML (Human Intent Entry)
         ↓
-AURORA_L2_INTENT_SPEC (YAML, registry-gated)
+inject_synthetic.py --wait              ← Executes real system behavior
         ↓
-AURORA_L2_COMPILER (deterministic Python)
+SDSR_OBSERVATION_*.json                 ← Observation emitted
         ↓
-AURORA_L2_UI_INTENT_STORE (SQL)
+AURORA_L2_apply_sdsr_observations.py    ← Updates capability status
         ↓
-AURORA_L2_PROJECTION_BUILDER (shock absorber)
+backend/AURORA_L2_CAPABILITY_REGISTRY/*.yaml  (DECLARED → OBSERVED)
+design/l2_1/intents/*.yaml                     (appends observation_trace)
         ↓
-AURORA_L2_UI_RENDERER
+backend/aurora_l2/compiler.py           ← Reads capabilities + intents
+        ↓
+design/l2_1/ui_contract/ui_projection_lock.json  (CANONICAL OUTPUT)
+        ↓
+cp → website/app-shell/public/projection/
+        ↓
+Frontend renderer (consumes verbatim, NO inference)
 ```
+
+### 4.2 Orchestration Script
+
+```bash
+./scripts/tools/run_aurora_l2_pipeline.sh
+```
+
+**Requires:** `DB_AUTHORITY=neon` (HARD FAIL if missing)
+
+### 4.3 Legacy Flow (DEPRECATED)
+
+```
+L2_1_UI_INTENT_SUPERTABLE.csv  ← DEPRECATED
+        ↓
+l2_pipeline.py generate        ← DEPRECATED
+        ↓
+l2_raw_intent_parser.py        ← DEPRECATED
+        ↓
+[intermediate JSON stages]     ← DEPRECATED
+        ↓
+ui_projection_builder.py       ← DEPRECATED
+```
+
+**DO NOT USE legacy flow. See Section 13 for full deprecation list.**
 
 ---
 
@@ -195,16 +228,40 @@ backend/AURORA_L2_CAPABILITY_REGISTRY/
 
 ## 9. Binding Gate (Safety Layer)
 
-Binding status is determined during compilation:
+### 9.1 Capability Lifecycle (4-State Model)
 
-| Status | Meaning |
-|--------|---------|
-| BOUND | Backend capability exists and is wired |
-| DRAFT | Capability declared but not implemented |
-| UNBOUND | No capability declared |
+Capabilities advance through a 4-state lifecycle driven by **SDSR observation**:
+
+| Capability Status | Binding Status | Panel State | Meaning |
+|-------------------|----------------|-------------|---------|
+| DECLARED | DRAFT | Disabled | Claim exists, not proven |
+| OBSERVED | BOUND | Enabled | SDSR proved it works |
+| TRUSTED | BOUND | Enabled | Multiple successful observations |
+| DEPRECATED | UNBOUND | Hidden | Capability removed |
+
+**Key Invariant:**
+> Capabilities are not real because backend says so. They are real only when the system demonstrates them (SDSR observation).
+
+### 9.2 SDSR-Driven Capability Observation
+
+The capability registry is updated by SDSR observations, not manual editing:
+
+```
+SDSR Scenario YAML
+        ↓
+inject_synthetic.py --wait          ← Executes real system behavior
+        ↓
+SDSR_OBSERVATION_*.json             ← Observation emitted
+        ↓
+AURORA_L2_apply_sdsr_observations.py
+        ↓
+AURORA_L2_CAPABILITY_*.yaml         ← Status: DECLARED → OBSERVED
+design/l2_1/intents/*.yaml          ← Appends observation_trace
+```
 
 **Rule:**
 > No ACTION may reach UI without an explicit binding_status.
+> No capability may advance to OBSERVED without SDSR evidence.
 
 ---
 
@@ -385,3 +442,53 @@ AURORA_L2 is the only sanctioned UI intent pipeline.
 | Capability Registry | `backend/AURORA_L2_CAPABILITY_REGISTRY/` | ⏳ PLACEHOLDER |
 | Projection Builder | `frontend/aurora_l2/projection_builder.ts` | ✅ COMPLETE |
 | Projection Rules | `frontend/aurora_l2/projection_rules.ts` | ✅ COMPLETE |
+| HIL v1 Contract | `design/l2_1/HIL_V1_CONTRACT.md` | ✅ COMPLETE (Phase 1) |
+| Domain Intent Registry | `design/l2_1/AURORA_L2_DOMAIN_INTENT_REGISTRY.yaml` | ✅ COMPLETE |
+
+---
+
+## 18. Human Interpretation Layer (HIL v1)
+
+**Status:** Phase 1 Complete (Schema Extension)
+**Reference:** `design/l2_1/HIL_V1_CONTRACT.md`
+
+HIL provides a narrative layer over execution truth, enabling humans to understand
+what happened through summaries and aggregations while maintaining full traceability.
+
+### 18.1 Panel Classification
+
+All panels are classified as either:
+
+| Class | Purpose | Example |
+|-------|---------|---------|
+| `execution` | Raw facts, lists, details | Run List, Incident Details |
+| `interpretation` | Summaries, aggregations | Activity Summary, Incident Trends |
+
+### 18.2 Provenance
+
+Interpretation panels MUST declare provenance:
+
+```yaml
+provenance:
+  source_panels: [ACT-EX-AR-O2, ACT-EX-CR-O2]
+  aggregation: STATUS_BREAKDOWN
+  endpoint: /api/v1/activity/summary
+```
+
+### 18.3 Key Invariants
+
+| Invariant | Enforcement |
+|-----------|-------------|
+| No frontend aggregation | BLOCKING |
+| Interpretation requires provenance | BLOCKING |
+| Provenance must reference valid panels | BLOCKING |
+| Backend owns all computation | BLOCKING |
+
+### 18.4 HIL Execution Plan
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| Phase 1 | ✅ COMPLETE | Schema extension (panel_class, provenance) |
+| Phase 2 | ⏳ PENDING | Runtime support (compiler, frontend grouping) |
+| Phase 3 | ⏳ PENDING | First implementation (Activity domain) |
+| Phase 4 | ⏳ PENDING | Expand to other domains |

@@ -179,7 +179,11 @@ class HealthMonitor {
     });
   }
 
-  async checkEndpoint(path: string, tenantId: string = 'demo-tenant'): Promise<EndpointHealth> {
+  async checkEndpoint(path: string, tenantId: string): Promise<EndpointHealth> {
+    // NO FALLBACK - tenant ID is required
+    if (!tenantId) {
+      throw new Error('[HealthMonitor] tenant ID is required. Cannot check endpoint without valid tenant.');
+    }
     const health = this.health.get(path) || {
       endpoint: path,
       status: 'healthy' as const,
@@ -227,7 +231,11 @@ class HealthMonitor {
     return health;
   }
 
-  async checkAll(tenantId: string = 'demo-tenant'): Promise<SystemHealth> {
+  async checkAll(tenantId: string): Promise<SystemHealth> {
+    // NO FALLBACK - tenant ID is required
+    if (!tenantId) {
+      throw new Error('[HealthMonitor] tenant ID is required. Cannot check endpoints without valid tenant.');
+    }
     const results = await Promise.all(
       GUARD_ENDPOINTS.map(ep => this.checkEndpoint(ep.path, tenantId))
     );
@@ -265,7 +273,12 @@ class HealthMonitor {
     return systemHealth;
   }
 
-  startPeriodicCheck(intervalMs: number = 30000, tenantId: string = 'demo-tenant'): void {
+  startPeriodicCheck(intervalMs: number = 30000, tenantId: string): void {
+    // NO FALLBACK - tenant ID is required
+    if (!tenantId) {
+      console.warn('[HealthMonitor] Cannot start periodic check without tenant ID');
+      return;
+    }
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
     }

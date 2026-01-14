@@ -1,0 +1,71 @@
+capability_id: summary.incidents
+status: OBSERVED
+implementation:
+  endpoint: /api/v1/incidents/summary
+  method: GET
+  handler: app.api.incidents.get_incidents_summary
+auth:
+  roles: []
+  permissions: []
+side_effects: []
+domain: Incidents
+scope: interpretation
+derived_from:
+- activity.runs.list
+- incidents.list
+panels:
+- INC-AI-SUM-O1
+metadata:
+  generated_by: Claude (HIL v1 Phase 4)
+  generated_on: 2026-01-14
+  reviewed: false
+  promoted_on: null
+  promoted_by: null
+  sdsr_scenario: SDSR-HIL-INC-SUM-001
+  observed_by: SDSR-HIL-INC-SUM-001
+  observed_on: '2026-01-14T11:23:31Z'
+  observed_effects:
+  - 'http_response.invariants_validation: None → ALL_PASSED'
+  observed_ui_panel: INC-AI-SUM-O1
+  observed_endpoint: /api/v1/incidents/summary
+notes: 'HIL v1 Incidents Summary capability.
+
+
+  This is a domain-level capability that unlocks all Incidents interpretation panels.
+
+  One capability per domain, not per panel.
+
+
+  Lifecycle:
+
+  - DECLARED: Endpoint implemented (current)
+
+  - OBSERVED: SDSR scenario verified endpoint works
+
+  - TRUSTED: Stable after multiple observations
+
+
+  Key Invariants (enforced by SDSR scenario):
+
+  - lifecycle_sum_reconciliation: active + acked + resolved == total
+
+  - attention_count_matches_active: attention.count == active
+
+  - window_echo: window echoed correctly from request
+
+  - attention_reasons_imply_count: reasons present implies count > 0
+
+  - provenance_present: derived_from never empty
+
+  - aggregation_type_locked: aggregation == "STATUS_BREAKDOWN"
+
+
+  To advance to OBSERVED:
+
+  1. Run SDSR scenario: SDSR-HIL-INC-SUM-001
+
+  2. Apply observation via AURORA_L2_apply_sdsr_observations.py
+
+  3. Status will automatically advance to OBSERVED
+
+  '

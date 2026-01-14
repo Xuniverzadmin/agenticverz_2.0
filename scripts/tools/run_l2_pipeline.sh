@@ -1,14 +1,43 @@
 #!/usr/bin/env bash
+# ================================================================================
+# DEPRECATED — DO NOT USE
+# ================================================================================
+#
+# This script is part of the LEGACY L2.1 CSV-based pipeline.
+# It has been replaced by the AURORA L2 SDSR-driven pipeline.
+#
+# REPLACEMENT: scripts/tools/run_aurora_l2_pipeline.sh
+# REFERENCE: design/l2_1/AURORA_L2.md, PIN-370, PIN-379
+#
+# This file is preserved for historical reference only.
+# ================================================================================
+
 # Layer: L8 — Catalyst / Meta
 # Product: system-wide
-# Temporal:
-#   Trigger: developer (manual)
-#   Execution: sync
-# Role: Run full L2.1 UI projection pipeline
-# Reference: L2.1 UI Projection Pipeline, PIN-365 (STEP 2A)
+# Status: DEPRECATED (2026-01-14)
+# Replacement: scripts/tools/run_aurora_l2_pipeline.sh
+# Reference: PIN-365 (STEP 2A) - SUPERSEDED by PIN-370
 
 set -euo pipefail
 
+echo "=========================================="
+echo "WARNING: DEPRECATED SCRIPT"
+echo "Use run_aurora_l2_pipeline.sh instead"
+echo "=========================================="
+echo ""
+echo "This legacy pipeline is no longer maintained."
+echo "The current AURORA L2 pipeline uses:"
+echo "  - SDSR scenario YAML files for intent entry"
+echo "  - backend/aurora_l2/compiler.py for compilation"
+echo "  - Capability observation for binding status"
+echo ""
+echo "To run the current pipeline:"
+echo "  ./scripts/tools/run_aurora_l2_pipeline.sh"
+echo ""
+exit 1
+
+# Legacy code below (disabled)
+: '
 echo "=========================================="
 echo "L2.1 UI Projection Pipeline"
 echo "Reference: PIN-365 (STEP 2A)"

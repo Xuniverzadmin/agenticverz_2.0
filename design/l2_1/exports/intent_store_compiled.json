@@ -27,9 +27,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.651264+00:00",
+    "compiled_at": "2026-01-14T15:42:33.071985+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "ACT-EX-AR-O2",
@@ -64,9 +66,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.655151+00:00",
+    "compiled_at": "2026-01-14T15:42:33.075673+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "ACT-EX-CR-O1",
@@ -96,9 +100,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.658103+00:00",
+    "compiled_at": "2026-01-14T15:42:33.079021+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "ACT-EX-CR-O2",
@@ -134,9 +140,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.662201+00:00",
+    "compiled_at": "2026-01-14T15:42:33.082606+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "ACT-EX-CR-O3",
@@ -169,9 +177,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.670970+00:00",
+    "compiled_at": "2026-01-14T15:42:33.085541+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "ACT-EX-RD-O1",
@@ -201,9 +211,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.673882+00:00",
+    "compiled_at": "2026-01-14T15:42:33.088546+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "ACT-EX-RD-O2",
@@ -238,9 +250,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.677332+00:00",
+    "compiled_at": "2026-01-14T15:42:33.092147+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "ACT-EX-RD-O3",
@@ -273,9 +287,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.681303+00:00",
+    "compiled_at": "2026-01-14T15:42:33.095560+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "ACT-EX-RD-O4",
@@ -307,9 +323,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.684492+00:00",
+    "compiled_at": "2026-01-14T15:42:33.098310+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "ACT-EX-RD-O5",
@@ -341,9 +359,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.687773+00:00",
+    "compiled_at": "2026-01-14T15:42:33.101366+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "INC-AI-ID-O1",
@@ -373,9 +393,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.690916+00:00",
+    "compiled_at": "2026-01-14T15:42:33.103858+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "INC-AI-ID-O2",
@@ -409,9 +431,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.694676+00:00",
+    "compiled_at": "2026-01-14T15:42:33.106469+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "INC-AI-ID-O3",
@@ -449,9 +473,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.698313+00:00",
+    "compiled_at": "2026-01-14T15:42:33.109177+00:00",
     "binding_status": "DRAFT",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "INC-AI-ID-O4",
@@ -483,9 +509,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.701651+00:00",
+    "compiled_at": "2026-01-14T15:42:33.111605+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "INC-AI-OI-O1",
@@ -515,9 +543,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.705143+00:00",
+    "compiled_at": "2026-01-14T15:42:33.114017+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "INC-AI-OI-O2",
@@ -555,9 +585,53 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.708931+00:00",
+    "compiled_at": "2026-01-14T15:42:33.117401+00:00",
     "binding_status": "DRAFT",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
+  },
+  {
+    "panel_id": "INC-AI-SUM-O1",
+    "domain": "Incidents",
+    "subdomain": "ACTIVE_INCIDENTS",
+    "topic": "SUMMARY",
+    "topic_id": "",
+    "order_level": 1,
+    "action_layer": "L2_1",
+    "panel_name": "Incidents Summary",
+    "ranking_dimension": null,
+    "visible_by_default": true,
+    "nav_required": false,
+    "expansion_mode": "INLINE",
+    "read_enabled": true,
+    "download_enabled": false,
+    "write_enabled": false,
+    "write_action": null,
+    "replay_enabled": true,
+    "filtering_enabled": false,
+    "selection_mode": null,
+    "activate_enabled": false,
+    "activate_actions": [],
+    "confirmation_required": false,
+    "control_set": [],
+    "notes": null,
+    "review_status": "UNREVIEWED",
+    "migrated_from": "CSV",
+    "migration_date": "",
+    "compiled_at": "2026-01-14T15:42:33.120306+00:00",
+    "binding_status": "INFO",
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": {
+      "derived_from": [
+        "activity.runs.list",
+        "incidents.list"
+      ],
+      "aggregation": "STATUS_BREAKDOWN",
+      "endpoint": "/api/v1/incidents/summary",
+      "capability": "summary.incidents"
+    }
   },
   {
     "panel_id": "INC-HI-RI-O1",
@@ -587,9 +661,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.712200+00:00",
+    "compiled_at": "2026-01-14T15:42:33.123009+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "INC-HI-RI-O2",
@@ -625,9 +701,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.715739+00:00",
+    "compiled_at": "2026-01-14T15:42:33.125651+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "INC-HI-RI-O3",
@@ -660,9 +738,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.719571+00:00",
+    "compiled_at": "2026-01-14T15:42:33.128458+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "INC-HI-RI-O4",
@@ -694,9 +774,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.722481+00:00",
+    "compiled_at": "2026-01-14T15:42:33.131237+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "INC-HI-RI-O5",
@@ -728,9 +810,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.725224+00:00",
+    "compiled_at": "2026-01-14T15:42:33.133378+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "LOG-AL-SA-O1",
@@ -760,9 +844,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.727942+00:00",
+    "compiled_at": "2026-01-14T15:42:33.135786+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "LOG-AL-SA-O2",
@@ -798,9 +884,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.731509+00:00",
+    "compiled_at": "2026-01-14T15:42:33.139086+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "LOG-AL-SA-O3",
@@ -833,9 +921,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.734417+00:00",
+    "compiled_at": "2026-01-14T15:42:33.141927+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "LOG-AL-SA-O5",
@@ -867,9 +957,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.737330+00:00",
+    "compiled_at": "2026-01-14T15:42:33.144995+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "LOG-AL-UA-O1",
@@ -899,9 +991,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.740026+00:00",
+    "compiled_at": "2026-01-14T15:42:33.147739+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "LOG-AL-UA-O2",
@@ -937,9 +1031,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.743094+00:00",
+    "compiled_at": "2026-01-14T15:42:33.151021+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "LOG-AL-UA-O3",
@@ -972,9 +1068,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.745948+00:00",
+    "compiled_at": "2026-01-14T15:42:33.153861+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "LOG-AL-UA-O5",
@@ -1006,9 +1104,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.748650+00:00",
+    "compiled_at": "2026-01-14T15:42:33.156588+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "LOG-ET-TD-O1",
@@ -1038,9 +1138,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.751364+00:00",
+    "compiled_at": "2026-01-14T15:42:33.159260+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "LOG-ET-TD-O2",
@@ -1076,9 +1178,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.754485+00:00",
+    "compiled_at": "2026-01-14T15:42:33.162340+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "LOG-ET-TD-O3",
@@ -1111,9 +1215,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.757928+00:00",
+    "compiled_at": "2026-01-14T15:42:33.165242+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "LOG-ET-TD-O4",
@@ -1145,9 +1251,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.762409+00:00",
+    "compiled_at": "2026-01-14T15:42:33.168135+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "LOG-ET-TD-O5",
@@ -1179,9 +1287,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.766134+00:00",
+    "compiled_at": "2026-01-14T15:42:33.171085+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "OVW-SH-CS-O1",
@@ -1211,9 +1321,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.768871+00:00",
+    "compiled_at": "2026-01-14T15:42:33.173717+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "OVW-SH-HM-O1",
@@ -1243,9 +1355,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.771310+00:00",
+    "compiled_at": "2026-01-14T15:42:33.176321+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "OVW-SH-HM-O2",
@@ -1280,9 +1394,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.775115+00:00",
+    "compiled_at": "2026-01-14T15:42:33.179133+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-AP-AR-O1",
@@ -1312,9 +1428,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.778240+00:00",
+    "compiled_at": "2026-01-14T15:42:33.181320+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-AP-AR-O2",
@@ -1349,9 +1467,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.781912+00:00",
+    "compiled_at": "2026-01-14T15:42:33.184348+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-AP-AR-O3",
@@ -1386,9 +1506,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.785207+00:00",
+    "compiled_at": "2026-01-14T15:42:33.187588+00:00",
     "binding_status": "DRAFT",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-AP-AR-O4",
@@ -1420,9 +1542,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.788336+00:00",
+    "compiled_at": "2026-01-14T15:42:33.190343+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-AP-BP-O1",
@@ -1452,9 +1576,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.791037+00:00",
+    "compiled_at": "2026-01-14T15:42:33.193018+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-AP-BP-O2",
@@ -1489,9 +1615,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.794230+00:00",
+    "compiled_at": "2026-01-14T15:42:33.196204+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-AP-BP-O3",
@@ -1526,9 +1654,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.797648+00:00",
+    "compiled_at": "2026-01-14T15:42:33.199563+00:00",
     "binding_status": "DRAFT",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-AP-RL-O1",
@@ -1558,9 +1688,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.800474+00:00",
+    "compiled_at": "2026-01-14T15:42:33.202156+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-AP-RL-O2",
@@ -1595,9 +1727,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.804043+00:00",
+    "compiled_at": "2026-01-14T15:42:33.205425+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-AP-RL-O3",
@@ -1632,9 +1766,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.807742+00:00",
+    "compiled_at": "2026-01-14T15:42:33.208523+00:00",
     "binding_status": "DRAFT",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-PA-PC-O1",
@@ -1664,9 +1800,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.810650+00:00",
+    "compiled_at": "2026-01-14T15:42:33.211079+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-PA-PC-O2",
@@ -1702,9 +1840,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.814076+00:00",
+    "compiled_at": "2026-01-14T15:42:33.214545+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-PA-PC-O3",
@@ -1737,9 +1877,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.817186+00:00",
+    "compiled_at": "2026-01-14T15:42:33.217726+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-PA-PC-O4",
@@ -1771,9 +1913,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.821047+00:00",
+    "compiled_at": "2026-01-14T15:42:33.220639+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-PA-PC-O5",
@@ -1805,9 +1949,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.824204+00:00",
+    "compiled_at": "2026-01-14T15:42:33.223795+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-PR-PP-O1",
@@ -1837,9 +1983,11 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.827343+00:00",
+    "compiled_at": "2026-01-14T15:42:33.226613+00:00",
     "binding_status": "INFO",
-    "observation_trace": []
+    "observation_trace": [],
+    "panel_class": "execution",
+    "provenance": null
   },
   {
     "panel_id": "POL-PR-PP-O2",
@@ -1879,7 +2027,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-11T17:23:39.834518+00:00",
+    "compiled_at": "2026-01-14T15:42:33.232437+00:00",
     "binding_status": "BOUND",
     "observation_trace": [
       {
@@ -1908,6 +2056,8 @@
           }
         ]
       }
-    ]
+    ],
+    "panel_class": "execution",
+    "provenance": null
   }
 ]

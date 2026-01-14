@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agenticverz.com/schemas/activity_summary.schema.json",
+  "title": "Activity Summary Response",
+  "description": "HIL v1 interpretation endpoint response. Machine-validated shape contract.",
+  "type": "object",
+  "required": ["window", "runs", "attention", "provenance"],
+  "additionalProperties": false,
+  "properties": {
+    "window": {
+      "type": "string",
+      "enum": ["24h", "7d"],
+      "description": "Time window echoed exactly as requested"
+    },
+    "runs": {
+      "type": "object",
+      "required": ["total", "by_status"],
+      "additionalProperties": false,
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total run count in window"
+        },
+        "by_status": {
+          "type": "object",
+          "required": ["running", "completed", "failed"],
+          "additionalProperties": false,
+          "properties": {
+            "running": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "completed": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "succeeded + failed"
+            },
+            "failed": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "attention": {
+      "type": "object",
+      "required": ["at_risk_count", "reasons"],
+      "additionalProperties": false,
+      "properties": {
+        "at_risk_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of distinct runs needing attention"
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["long_running", "near_budget_threshold"],
+            "description": "Must match attention_reasons.yaml registry"
+          },
+          "uniqueItems": true,
+          "description": "Registry-backed reason codes only"
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["derived_from", "aggregation", "generated_at"],
+      "additionalProperties": false,
+      "properties": {
+        "derived_from": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+\\.[a-z]+\\.[a-z]+$",
+            "description": "Capability ID format: domain.entity.verb"
+          },
+          "minItems": 1,
+          "description": "Source capability IDs (never panel IDs)"
+        },
+        "aggregation": {
+          "type": "string",
+          "enum": ["COUNT", "SUM", "TREND", "STATUS_BREAKDOWN", "TOP_N", "LATEST"],
+          "description": "Aggregation type from HIL v1 contract"
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp, must be <= now"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "invariants": {
+      "description": "Machine-checkable semantic invariants (not enforced by JSON Schema, enforced by SDSR)",
+      "rules": [
+        "runs.by_status.running + runs.by_status.completed == runs.total",
+        "runs.by_status.failed <= runs.by_status.completed",
+        "attention.at_risk_count >= 0",
+        "attention.reasons.length > 0 implies attention.at_risk_count > 0",
+        "generated_at <= now"
+      ]
+    },
+    "forbidden_patterns": {
+      "description": "Patterns that must NEVER appear in response",
+      "patterns": [
+        "No adjectives: good, bad, healthy, critical, excellent, poor",
+        "No judgments: should, must, needs to, ought to",
+        "No implied urgency: urgent, immediately, ASAP, critical"
+      ]
+    }
+  }
+}

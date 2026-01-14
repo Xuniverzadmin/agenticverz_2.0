@@ -1,0 +1,60 @@
+# AURORA_L2 Capability Entry
+# Status: DECLARED (endpoint implemented, awaiting SDSR observation)
+# Reference: PIN-417 (HIL v1 Phase 3)
+# Date: 2026-01-14
+
+capability_id: summary.activity
+status: DECLARED
+
+# Implementation details
+implementation:
+  endpoint: /api/v1/activity/summary
+  method: GET
+  handler: app.api.activity.get_activity_summary
+
+# Auth requirements
+auth:
+  roles: []  # Public for SDSR preflight validation
+  permissions: []
+
+# Side effects
+side_effects: []  # Read-only endpoint, no state mutations
+
+# Domain-level capability (unlocks all Activity interpretation panels)
+domain: Activity
+scope: interpretation
+
+# Source capabilities this interpretation is derived from
+derived_from:
+  - activity.runs.list
+  - incidents.list
+
+# Panels that use this capability
+panels:
+  - ACT-EX-SUM-O1
+
+# Metadata
+metadata:
+  generated_by: Claude (HIL v1 Phase 3)
+  generated_on: 2026-01-14
+  reviewed: false
+  promoted_on: null
+  promoted_by: null
+  sdsr_scenario: SDSR-HIL-ACT-SUM-001
+
+# Notes
+notes: |
+  HIL v1 Activity Summary capability.
+
+  This is a domain-level capability that unlocks all Activity interpretation panels.
+  One capability per domain, not per panel.
+
+  Lifecycle:
+  - DECLARED: Endpoint implemented (current)
+  - OBSERVED: SDSR scenario verified endpoint works
+  - TRUSTED: Stable after multiple observations
+
+  To advance to OBSERVED:
+  1. Run SDSR scenario: SDSR-HIL-ACT-SUM-001
+  2. Apply observation via AURORA_L2_apply_sdsr_observations.py
+  3. Status will automatically advance to OBSERVED

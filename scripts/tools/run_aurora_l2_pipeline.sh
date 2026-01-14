@@ -16,8 +16,10 @@
 #   2. Validate intent YAML structure
 #   3. Validate semantics against registry
 #   4. Run compiler → canonical projection
-#   5. Copy projection to frontend public/
-#   6. Emit compile report
+#   5. Verify canonical projection
+#   5.5. Projection Diff Guard (HIL v1 - PIN-417)
+#   6. Deploy to frontend public/
+#   7. Emit compile report
 # =============================================================================
 
 set -euo pipefail
@@ -118,7 +120,7 @@ log_info() {
 # STAGE 1: Validate Prerequisites
 # =============================================================================
 stage_1_prerequisites() {
-    log_step "1/6" "Validate Prerequisites"
+    log_step "1/7" "Validate Prerequisites"
 
     # Check intent registry exists
     if [[ -f "$REGISTRY_PATH" ]]; then
@@ -182,7 +184,7 @@ stage_1_prerequisites() {
 # STAGE 2: Validate Intent YAMLs (Structural)
 # =============================================================================
 stage_2_validate_structure() {
-    log_step "2/6" "Validate Intent YAML Structure"
+    log_step "2/7" "Validate Intent YAML Structure"
 
     local valid=0
     local invalid=0
@@ -227,7 +229,7 @@ with open('$yaml_file') as f:
 # STAGE 3: Validate Semantics
 # =============================================================================
 stage_3_validate_semantics() {
-    log_step "3/6" "Validate Semantics Against Registry"
+    log_step "3/7" "Validate Semantics Against Registry"
 
     # Create a Python validation script inline
     python3 << 'PYEOF'
@@ -314,7 +316,7 @@ PYEOF
 # STAGE 4: Run Compiler (CANONICAL PROJECTION)
 # =============================================================================
 stage_4_compile() {
-    log_step "4/6" "Run AURORA_L2 Compiler (Canonical)"
+    log_step "4/7" "Run AURORA_L2 Compiler (Canonical)"
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "[DRY RUN] Would run: DB_AUTHORITY=$DB_AUTHORITY python3 -m backend.aurora_l2.compiler"
@@ -358,7 +360,7 @@ stage_4_compile() {
 # STAGE 5: Verify Projection (Already built by compiler)
 # =============================================================================
 stage_5_build_projection() {
-    log_step "5/6" "Verify Canonical Projection"
+    log_step "5/7" "Verify Canonical Projection"
 
     # CANONICAL DESIGN: Compiler already generated the projection
     # This stage just verifies it exists and is valid
@@ -407,10 +409,83 @@ print('Canonical projection validated')
 }
 
 # =============================================================================
+# STAGE 5.5: Projection Diff Guard (HIL v1 - PIN-417)
+# =============================================================================
+# PURPOSE: Prevent silent UI drift by detecting unauthorized changes
+# PLACEMENT: After compile, before deploy
+# RULES ENFORCED:
+#   PDG-001: No silent panel creation/deletion
+#   PDG-002: No domain/subdomain drift
+#   PDG-003: Binding status changes are explicit
+#   PDG-004: panel_class is immutable post-declaration
+#   PDG-005: Provenance cannot be removed
+# =============================================================================
+stage_5_5_diff_guard() {
+    log_step "5.5/7" "Projection Diff Guard"
+
+    local diff_guard="$REPO_ROOT/backend/aurora_l2/tools/projection_diff_guard.py"
+    local allowlist="$REPO_ROOT/backend/aurora_l2/tools/projection_diff_allowlist.json"
+    local prev_projection="$PUBLIC_PROJECTION/ui_projection_lock.json"
+    local new_projection="$CANONICAL_PROJECTION"
+    local diff_result="$EXPORTS_DIR/projection_diff_result.json"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY RUN] Would run projection diff guard"
+        log_ok "Diff guard dry-run complete"
+        return 0
+    fi
+
+    # Check if diff guard exists
+    if [[ ! -f "$diff_guard" ]]; then
+        log_warn "Diff guard not found: $diff_guard (skipping)"
+        return 0
+    fi
+
+    # Check if previous projection exists (first run = no diff)
+    if [[ ! -f "$prev_projection" ]]; then
+        log_info "No previous projection found (first run)"
+        log_ok "Diff guard passed (no baseline)"
+        return 0
+    fi
+
+    # Run diff guard
+    log_info "Comparing projections..."
+    log_info "  Previous: $prev_projection"
+    log_info "  New:      $new_projection"
+
+    if python3 "$diff_guard" \
+        --old "$prev_projection" \
+        --new "$new_projection" \
+        --allowlist "$allowlist" \
+        --output "$diff_result"; then
+        log_ok "Diff guard passed: No unauthorized changes"
+    else
+        log_error "Diff guard FAILED: Unauthorized changes detected"
+        log_error "See details: $diff_result"
+
+        # Show violations
+        if [[ -f "$diff_result" ]]; then
+            echo ""
+            echo -e "${RED}Violations:${NC}"
+            python3 -c "
+import json
+with open('$diff_result') as f:
+    result = json.load(f)
+for v in result.get('violations', []):
+    print(f\"  [{v['rule']}] {v['panel_id']}: {v['message']}\")
+"
+            echo ""
+        fi
+
+        return 1
+    fi
+}
+
+# =============================================================================
 # STAGE 6: Deploy to Frontend (Verbatim Copy)
 # =============================================================================
 stage_6_deploy() {
-    log_step "6/6" "Deploy to Frontend"
+    log_step "6/7" "Deploy to Frontend"
 
     # CANONICAL DESIGN: Copy verbatim from ui_contract/ to public/
     local projection_src="$CANONICAL_PROJECTION"
@@ -451,6 +526,7 @@ report = {
         'semantic_validation': 'PASS',
         'compilation': 'PASS',
         'projection_validation': 'PASS',
+        'diff_guard': 'PASS',
         'deployment': 'PASS'
     },
     'canonical_design': {
@@ -504,6 +580,7 @@ main() {
 
     stage_4_compile || { echo -e "${RED}Pipeline failed at stage 4${NC}"; exit 1; }
     stage_5_build_projection || { echo -e "${RED}Pipeline failed at stage 5${NC}"; exit 1; }
+    stage_5_5_diff_guard || { echo -e "${RED}Pipeline failed at stage 5.5 (Diff Guard)${NC}"; exit 1; }
     stage_6_deploy || { echo -e "${RED}Pipeline failed at stage 6${NC}"; exit 1; }
 
     # Summary

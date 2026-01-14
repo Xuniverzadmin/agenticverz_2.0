@@ -95,23 +95,24 @@ export const CUSTOMER_ROUTES = {
   precusRoot: PRECUS_ROOT,    // /precus
   cusRoot: CUS_ROOT,          // /cus
 
-  // L2.1 Domain routes
+  // L2.1 Domain routes (7 domains)
   overview: DOMAIN_ROOTS.overview,
   activity: DOMAIN_ROOTS.activity,
   incidents: DOMAIN_ROOTS.incidents,
   policies: DOMAIN_ROOTS.policies,
   logs: DOMAIN_ROOTS.logs,
+  account: DOMAIN_ROOTS.account,
+  connectivity: DOMAIN_ROOTS.connectivity,
 
   // Dynamic routes (with ID parameters)
   incidentDetail: (id: string) => `${DOMAIN_ROOTS.incidents}/${id}`,
   activityDetail: (id: string) => `${DOMAIN_ROOTS.activity}/${id}`,
   policyDetail: (id: string) => `${DOMAIN_ROOTS.policies}/${id}`,
 
-  // Secondary navigation
+  // Secondary navigation (non-domain pages)
   keys: SECONDARY_ROOTS.keys,
   integrations: SECONDARY_ROOTS.integrations,
   settings: SECONDARY_ROOTS.settings,
-  account: SECONDARY_ROOTS.account,
 
   // Billing
   credits: IS_PREFLIGHT ? '/credits' : '/cus/credits',
