@@ -16,7 +16,7 @@ These files are the **source of truth** for the AURORA L2 pipeline.
 ```
 design/l2_1/intents/*.yaml                 ← YOU ARE HERE (source of truth)
         ↓
-backend/aurora_l2/compiler.py              ← Reads intents + capabilities
+backend/aurora_l2/SDSR_UI_AURORA_compiler.py              ← Reads intents + capabilities
         ↓
 design/l2_1/ui_contract/ui_projection_lock.json
         ↓

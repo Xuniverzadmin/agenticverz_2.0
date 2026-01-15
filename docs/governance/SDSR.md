@@ -399,6 +399,23 @@ If any answer is NO → STOP and resolve before proceeding.
 
 ## Files & Locations
 
+### Source of Truth
+
+| Component | Location | Notes |
+|-----------|----------|-------|
+| **Intent Ledger** | `design/l2_1/INTENT_LEDGER.md` | **SINGLE SOURCE OF TRUTH** |
+| Ledger Sync | `scripts/tools/sync_from_intent_ledger.py` | Generates all intent YAMLs |
+
+### Generated Artifacts (from Intent Ledger)
+
+| Artifact | Location | Naming Convention |
+|----------|----------|-------------------|
+| Intent YAMLs | `design/l2_1/intents/` | `AURORA_L2_INTENT_{panel_id}.yaml` |
+| UI Plan | `design/l2_1/ui_plan.yaml` | Single file |
+| Capability YAMLs | `backend/AURORA_L2_CAPABILITY_REGISTRY/` | `AURORA_L2_CAPABILITY_{cap_id}.yaml` |
+
+### SDSR Components
+
 | Component | Location |
 |-----------|----------|
 | Scenario specs | `scripts/sdsr/scenarios/*.yaml` |
@@ -406,6 +423,11 @@ If any answer is NO → STOP and resolve before proceeding.
 | **Observation watcher** | `scripts/tools/sdsr_observation_watcher.sh` |
 | Aurora applier | `scripts/tools/AURORA_L2_apply_sdsr_observations.py` |
 | Preflight pipeline | `scripts/tools/run_aurora_l2_pipeline_preflight.sh` |
+
+### UI Components
+
+| Component | Location |
+|-----------|----------|
 | Panel content registry | `website/app-shell/src/components/panels/PanelContentRegistry.tsx` |
 | DomainPage | `website/app-shell/src/pages/domains/DomainPage.tsx` |
 | Projection lock | `website/app-shell/public/projection/ui_projection_lock.json` |
@@ -538,15 +560,160 @@ Logs (evidence) ← PENDING
 
 ---
 
+## Observation Scope Semantics (Addendum)
+
+**Added:** 2026-01-15
+**Reference:** PIN-407 (observation_scope architecture)
+
+### The Problem
+
+Not all panels observe the same scope of data:
+
+- Some panels observe **system-wide** data (e.g., global health, infrastructure metrics)
+- Some panels observe **tenant-specific** data (e.g., cost by feature, user activity)
+- Some panels observe **user-specific** data (e.g., personal preferences, user session)
+
+Without explicit scope declaration, SDSR scenarios cannot correctly inject context for verification.
+
+### The Solution: observation_scope
+
+Every intent YAML declares an `observation_scope` block:
+
+```yaml
+observation_scope:
+  type: SYSTEM | TENANT | USER
+  semantic_alias: <optional vocabulary mapping>
+  source: SERVICE_CONTEXT | USER_SESSION | SYSTEM_GLOBAL
+```
+
+### Scope Types
+
+| Type | Description | SDSR Context Injection |
+|------|-------------|------------------------|
+| **SYSTEM** | Global/infrastructure data | No tenant context needed |
+| **TENANT** | Tenant-specific data | `tenant_id` added to query params |
+| **USER** | User-specific data | `user_id` added to query params |
+
+### Vocabulary Mapping: TENANT = CUSTOMER
+
+> **Critical Semantic Rule:** TENANT and CUSTOMER are the **same entity**, different vocabularies.
+
+| Layer | Vocabulary | Example |
+|-------|------------|---------|
+| Infrastructure | TENANT | tenant_id, multi-tenant, tenant isolation |
+| UX/Console | CUSTOMER | customer dashboard, customer data |
+| Database | TENANT | tenant_id column, tenant scope |
+| API Headers | TENANT | X-Tenant-ID header |
+
+When a panel is scoped to TENANT, the `semantic_alias: CUSTOMER` notation clarifies that this is customer-facing data using infrastructure vocabulary.
+
+```yaml
+observation_scope:
+  type: TENANT
+  semantic_alias: CUSTOMER  # This is customer data, tenant vocabulary
+  source: SERVICE_CONTEXT
+```
+
+### SDSR Runner Behavior
+
+The SDSR runner reads `observation_scope` from the intent YAML and injects appropriate context:
+
+```python
+def inject_scope_context(params, observation_scope):
+    scope_type = observation_scope.get('type', 'SYSTEM')
+
+    if scope_type == 'TENANT':
+        tenant_id = os.environ.get('SDSR_TENANT_ID', 'demo-tenant')
+        params['tenant_id'] = tenant_id
+    elif scope_type == 'USER':
+        user_id = os.environ.get('SDSR_USER_ID')
+        params['user_id'] = user_id
+
+    return params
+```
+
+### Example: Cost Intelligence Panels
+
+The Cost Intelligence subdomain (OVR-SUM-CI) panels are all TENANT-scoped:
+
+| Panel | Capability | Scope | Reason |
+|-------|------------|-------|--------|
+| OVR-SUM-CI-O1 | overview.cost_summary | TENANT | Costs are per-tenant |
+| OVR-SUM-CI-O2 | overview.cost_by_feature | TENANT | Features are tenant-configured |
+| OVR-SUM-CI-O3 | overview.cost_by_model | TENANT | Model usage is per-tenant |
+| OVR-SUM-CI-O4 | overview.cost_anomalies | TENANT | Anomaly detection per-tenant |
+
+### Panel Class and Provenance
+
+For **interpretation panels** (panel_class: interpretation), the response must include `provenance` metadata:
+
+```yaml
+provenance:
+  aggregation: "sum"       # How data was aggregated
+  data_source: "cost_records"  # Source table
+  computed_at: "2026-01-15T08:00:00Z"
+  period_description: "Last 24 hours"
+```
+
+**Evidence panels** (panel_class: evidence) return raw lists without provenance.
+
+### Auth Mode Mapping
+
+| Scope Type | Auth Mode | Context Source |
+|------------|-----------|----------------|
+| SYSTEM | OBSERVER | No additional context |
+| TENANT | SERVICE | Tenant context from headers/env |
+| USER | SESSION | User context from session |
+
+### Adding New Scoped Panels
+
+1. **Declare scope in intent YAML:**
+   ```yaml
+   observation_scope:
+     type: TENANT
+     semantic_alias: CUSTOMER
+     source: SERVICE_CONTEXT
+   ```
+
+2. **Set auth_mode accordingly:**
+   ```yaml
+   sdsr:
+     auth_mode: SERVICE  # For TENANT scope
+   ```
+
+3. **SDSR runner auto-injects** the appropriate context parameters
+
+4. **Backend endpoint** must accept `tenant_id` as query parameter
+
+---
+
 ## Related Documents
+
+### Core Governance (SDSR/HISAR/Aurora)
+
+- [HISAR.md](HISAR.md) - **Execution doctrine** (Human Intent → SDSR → Aurora → Rendering)
+- [SDSR_SYSTEM_CONTRACT.md](SDSR_SYSTEM_CONTRACT.md) - System contract
+- [SDSR_PIPELINE_CONTRACT.md](SDSR_PIPELINE_CONTRACT.md) - Pipeline contract
+- [SDSR_E2E_TESTING_PROTOCOL.md](SDSR_E2E_TESTING_PROTOCOL.md) - E2E testing protocol
+- [WHY_SDSR_EXECUTION_WORKS.md](WHY_SDSR_EXECUTION_WORKS.md) - Rationale
+
+### Scenario & Capability
+
+- [SDSR_SCENARIO_TAXONOMY.md](SDSR_SCENARIO_TAXONOMY.md) - 13 Scenario Classes
+- [SDSR_CAPABILITY_COVERAGE_MATRIX.md](SDSR_CAPABILITY_COVERAGE_MATRIX.md) - Capability → Scenario Mapping
+- [SDSR_SCENARIO_COVERAGE_MATRIX.md](SDSR_SCENARIO_COVERAGE_MATRIX.md) - Scenario coverage
+- [SDSR_EXECUTION_PLAN.md](SDSR_EXECUTION_PLAN.md) - Concrete Execution Plan
+- [SDSR_UI_VALIDATION_SPEC.md](SDSR_UI_VALIDATION_SPEC.md) - UI validation spec
+
+### Memory PINs
 
 - [PIN-370](../memory-pins/PIN-370-sdsr-scenario-driven-system-realization.md) - Full implementation details
 - [PIN-394](../memory-pins/PIN-394-sdsr-aurora-one-way-causality-pipeline.md) - One-Way Causality Pipeline
 - [PIN-395](../memory-pins/PIN-395-sdsr-scenario-taxonomy-and-capability-court-of-law.md) - Scenario Taxonomy
-- [SDSR_SCENARIO_TAXONOMY.md](SDSR_SCENARIO_TAXONOMY.md) - 13 Scenario Classes
-- [SDSR_CAPABILITY_COVERAGE_MATRIX.md](SDSR_CAPABILITY_COVERAGE_MATRIX.md) - Capability → Scenario Mapping
-- [SDSR_EXECUTION_PLAN.md](SDSR_EXECUTION_PLAN.md) - Concrete Execution Plan
-- [SDSR_PIPELINE_CONTRACT.md](SDSR_PIPELINE_CONTRACT.md) - Detailed pipeline contract
+- [PIN-422](../memory-pins/PIN-422-hisar-execution-doctrine.md) - HISAR Execution Doctrine
+
+### Playbooks & Authority
+
 - [SESSION_PLAYBOOK.yaml](../playbooks/SESSION_PLAYBOOK.yaml) - Governance rules
 - [CLAUDE_ENGINEERING_AUTHORITY.md](CLAUDE_ENGINEERING_AUTHORITY.md) - Engineering constraints
 
@@ -556,6 +723,10 @@ Logs (evidence) ← PENDING
 
 | Date | Change |
 |------|--------|
+| 2026-01-15 | Updated Files & Locations to reflect INTENT_LEDGER.md as single source of truth |
+| 2026-01-15 | Intent YAMLs now generated from INTENT_LEDGER.md via sync_from_intent_ledger.py |
+| 2026-01-15 | New naming convention: `AURORA_L2_INTENT_{panel_id}.yaml` |
+| 2026-01-15 | Added Observation Scope Semantics addendum (TENANT=CUSTOMER, provenance) |
 | 2026-01-11 | Added Scenario Taxonomy (13 classes), Capability Coverage Matrix, Execution Plan (PIN-395) |
 | 2026-01-11 | Added Pipeline Automation section, sdsr_observation_watcher.sh (PIN-394) |
 | 2026-01-09 | Initial creation - SDSR governance document |

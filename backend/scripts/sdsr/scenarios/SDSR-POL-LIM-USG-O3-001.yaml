@@ -1,0 +1,71 @@
+# SDSR Verification Scenario
+# Scenario: SDSR-POL-LIM-USG-O3-001
+# Generated: 2026-01-15T06:42:57.506210+00:00
+# Generator: aurora_sdsr_synth.py
+#
+# PURPOSE:
+#   This scenario verifies the capability by:
+#   1. Injecting an API call (cause)
+#   2. Observing the response (effect)
+#   3. Checking invariants (verification)
+#
+# EXECUTION:
+#   python aurora_sdsr_runner.py --scenario SDSR-POL-LIM-USG-O3-001
+#
+# HUMAN MAY OPTIONALLY:
+#   - Add domain-specific invariants
+#   - Tighten response expectations
+#   - Add custom checks
+#
+scenario_id: SDSR-POL-LIM-USG-O3-001
+version: 1.0.0
+name: Observe POL-LIM-USG-O3 capability
+description: SDSR verification scenario for policies.cost_by_user
+capability: policies.cost_by_user
+panel_id: POL-LIM-USG-O3
+domain: POLICIES
+metadata:
+  generated_by: aurora_sdsr_synth.py
+  generated_at: '2026-01-15T06:42:57.506090+00:00'
+  panel_class: evidence
+inject:
+  type: api_call
+  endpoint: /cost/by-user
+  method: GET
+  headers:
+    Authorization: Bearer ${AUTH_TOKEN}
+    Content-Type: application/json
+  params:
+    window: 24h
+expect:
+  status_code: 200
+  response_type: json
+  response_shape:
+    _note: Define expected response structure here
+invariants:
+- id: INV-001
+  name: response_shape
+  description: Response has expected top-level structure
+  assertion: response is dict and response is not empty
+- id: INV-002
+  name: status_code
+  description: API returns 200 OK
+  assertion: status_code == 200
+- id: INV-003
+  name: auth_works
+  description: Authenticated request succeeds
+  assertion: status_code != 401 and status_code != 403
+cleanup:
+  required: false
+  note: Read-only observation, no cleanup needed
+on_success:
+  update_capability_status: OBSERVED
+  emit_observation: true
+on_failure:
+  update_capability_status: null
+  emit_observation: true
+  failure_taxonomy:
+    endpoint_missing: Backend route does not exist
+    auth_failed: Authentication/authorization issue
+    schema_mismatch: Response shape does not match contract
+    invariant_violated: One or more invariants failed

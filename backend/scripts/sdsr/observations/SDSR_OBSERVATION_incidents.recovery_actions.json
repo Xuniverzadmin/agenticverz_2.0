@@ -1,0 +1,20 @@
+{
+  "observation_id": "OBS-SDSR-INC-EV-RES-O2-001-20260115072936",
+  "scenario_id": "SDSR-INC-EV-RES-O2-001",
+  "capability_id": "incidents.recovery_actions",
+  "panel_id": "INC-EV-RES-O2",
+  "status": "PASS",
+  "observed_at": "2026-01-15T07:29:36.232975+00:00",
+  "endpoint": "/api/v1/recovery/actions",
+  "method": "GET",
+  "response_status_code": 401,
+  "response_time_ms": 15.497922897338867,
+  "invariants_total": 3,
+  "invariants_passed": 0,
+  "invariants_failed": 0,
+  "invariant_results": [],
+  "failure_reason": "Access restricted (HTTP 401) - visibility limited but endpoint exists",
+  "failure_taxonomy": "VISIBILITY_RESTRICTED",
+  "coherency_verified": true,
+  "trace_id": null
+}

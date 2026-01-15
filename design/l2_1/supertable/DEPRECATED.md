@@ -40,7 +40,7 @@ AURORA_L2_apply_sdsr_observations.py
 backend/AURORA_L2_CAPABILITY_REGISTRY/*.yaml
 design/l2_1/intents/*.yaml
         ↓
-backend/aurora_l2/compiler.py
+backend/aurora_l2/SDSR_UI_AURORA_compiler.py
         ↓
 design/l2_1/ui_contract/ui_projection_lock.json
 ```

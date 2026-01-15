@@ -34,4 +34,5 @@ USER nova
 EXPOSE 8000
 
 # Use shell form to allow env var substitution for HOST binding
-CMD uvicorn app.main:app --host ${HOST:-127.0.0.1} --port ${PORT:-8000} --proxy-headers
+# Note: Using 2 workers to prevent CPU starvation from concurrent requests (health checks, OpenAPI, etc.)
+CMD uvicorn app.main:app --host ${HOST:-127.0.0.1} --port ${PORT:-8000} --proxy-headers --workers 2

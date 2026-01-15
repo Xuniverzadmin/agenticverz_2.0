@@ -81,7 +81,7 @@ REGISTRY_PATH="$REPO_ROOT/design/l2_1/AURORA_L2_INTENT_REGISTRY.yaml"
 SEMANTIC_REGISTRY="$REPO_ROOT/design/l2_1/AURORA_L2_SEMANTIC_REGISTRY.yaml"
 EXPANSION_REGISTRY="$REPO_ROOT/design/l2_1/AURORA_L2_EXPANSION_MODE_REGISTRY.yaml"
 EXPORTS_DIR="$REPO_ROOT/design/l2_1/exports"
-COMPILER="$REPO_ROOT/backend/aurora_l2/compiler.py"
+COMPILER="$REPO_ROOT/backend/aurora_l2/SDSR_UI_AURORA_compiler.py"
 PUBLIC_PROJECTION="$REPO_ROOT/website/app-shell/public/projection"
 
 # CANONICAL PROJECTION PATH (single source of truth)
@@ -319,7 +319,7 @@ stage_4_compile() {
     log_step "4/7" "Run AURORA_L2 Compiler (Canonical)"
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "[DRY RUN] Would run: DB_AUTHORITY=$DB_AUTHORITY python3 -m backend.aurora_l2.compiler"
+        log_info "[DRY RUN] Would run: DB_AUTHORITY=$DB_AUTHORITY python3 -m backend.aurora_l2.SDSR_UI_AURORA_compiler"
         log_ok "Compiler dry-run complete"
         return 0
     fi
@@ -327,7 +327,7 @@ stage_4_compile() {
     cd "$REPO_ROOT"
 
     # Run compiler with DB_AUTHORITY - generates canonical projection
-    if python3 -m backend.aurora_l2.compiler; then
+    if python3 -m backend.aurora_l2.SDSR_UI_AURORA_compiler; then
         log_ok "Compiler succeeded"
 
         # Verify canonical projection was generated

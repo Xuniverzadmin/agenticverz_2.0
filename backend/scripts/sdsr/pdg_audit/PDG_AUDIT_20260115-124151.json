@@ -1,0 +1,552 @@
+{
+  "log_id": "20260115-124151",
+  "timestamp": "2026-01-15T12:41:51.868241+00:00",
+  "inputs": {
+    "old_projection": "/root/agenticverz2.0/website/app-shell/public/projection/ui_projection_lock.json",
+    "new_projection": "/root/agenticverz2.0/design/l2_1/ui_contract/ui_projection_lock.json",
+    "allowlist_path": null
+  },
+  "allowlist": {
+    "panels": [],
+    "rules": []
+  },
+  "result": {
+    "status": "FAILED",
+    "violation_count": 66
+  },
+  "violations": [
+    {
+      "rule": "PDG-001",
+      "panel_id": "ANL-USG-SUM-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "ANL-USG-SUM-O1",
+      "message": "Panel 'ANL-USG-SUM-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ANL-CST-ACT-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "ANL-CST-ACT-O1",
+      "message": "Panel 'ANL-CST-ACT-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ANL-CST-ANM-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "ANL-CST-ANM-O1",
+      "message": "Panel 'ANL-CST-ANM-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ANL-CST-MOD-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "ANL-CST-MOD-O1",
+      "message": "Panel 'ANL-CST-MOD-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ANL-CST-SUM-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "ANL-CST-SUM-O1",
+      "message": "Panel 'ANL-CST-SUM-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "ACT-LLM-COMP-O3",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "ACT-LLM-COMP-O5",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-LIM-VIO-O3",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-LIM-THR-O2",
+      "field": "panel_class",
+      "old": "execution",
+      "new": "evidence",
+      "message": "Panel class changed from 'execution' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "INC-EV-HIST-O5",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "LOG-REC-SYS-O5",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-GOV-LIB-O4",
+      "field": "panel_class",
+      "old": "execution",
+      "new": "evidence",
+      "message": "Panel class changed from 'execution' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-LIM-USG-O4",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "INC-EV-HIST-O3",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-GOV-LIB-O3",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "ACT-LLM-SIG-O2",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-GOV-ACT-O4",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-GOV-DFT-O3",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-GOV-ACT-O5",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "OVR-SUM-CI-O4",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-LIM-VIO-O5",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-GOV-DFT-O2",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-GOV-DFT-O5",
+      "field": "panel_class",
+      "old": "execution",
+      "new": "evidence",
+      "message": "Panel class changed from 'execution' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "ACT-LLM-LIVE-O5",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "ACT-LLM-LIVE-O3",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "ACT-LLM-SIG-O5",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-LIM-USG-O3",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "INC-EV-ACT-O5",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "INC-EV-ACT-O2",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-LIM-THR-O5",
+      "field": "panel_class",
+      "old": "execution",
+      "new": "evidence",
+      "message": "Panel class changed from 'execution' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "OVR-SUM-DC-O1",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "INC-EV-HIST-O1",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-GOV-LIB-O5",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "INC-EV-HIST-O2",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "INC-EV-RES-O3",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-LIM-USG-O2",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "ACT-LLM-LIVE-O1",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "OVR-SUM-DC-O3",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-LIM-VIO-O2",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "INC-EV-HIST-O4",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "ACT-LLM-SIG-O1",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "ACT-LLM-COMP-O1",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "ACT-LLM-SIG-O3",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-GOV-ACT-O3",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "INC-EV-RES-O5",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "OVR-SUM-DC-O2",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "ACT-LLM-LIVE-O2",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-GOV-DFT-O4",
+      "field": "panel_class",
+      "old": "execution",
+      "new": "evidence",
+      "message": "Panel class changed from 'execution' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "ACT-LLM-COMP-O2",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "ACT-LLM-LIVE-O4",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-LIM-USG-O1",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-LIM-VIO-O4",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "OVR-SUM-CI-O2",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "INC-EV-ACT-O4",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "INC-EV-RES-O2",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "OVR-SUM-DC-O4",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-LIM-THR-O4",
+      "field": "panel_class",
+      "old": "execution",
+      "new": "evidence",
+      "message": "Panel class changed from 'execution' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "INC-EV-ACT-O3",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "ACT-LLM-SIG-O4",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-GOV-LIB-O2",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-LIM-THR-O3",
+      "field": "panel_class",
+      "old": "execution",
+      "new": "evidence",
+      "message": "Panel class changed from 'execution' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "ACT-LLM-COMP-O4",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "OVR-SUM-CI-O3",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-GOV-ACT-O2",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "POL-LIM-USG-O5",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    },
+    {
+      "rule": "PDG-004",
+      "panel_id": "INC-EV-RES-O4",
+      "field": "panel_class",
+      "old": "interpretation",
+      "new": "evidence",
+      "message": "Panel class changed from 'interpretation' to 'evidence' (immutable)"
+    }
+  ],
+  "auto_allowed": [],
+  "provenance": {
+    "guard_version": "1.1.0",
+    "logged_by": "projection_diff_guard.py"
+  }
+}

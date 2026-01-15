@@ -1,0 +1,155 @@
+name: AURORA L2 SDSR Nightly
+
+on:
+  schedule:
+    # Run at 03:00 UTC daily
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      capability:
+        description: 'Specific capability to verify (leave empty for all)'
+        required: false
+        type: string
+      promote:
+        description: 'Auto-promote eligible capabilities to TRUSTED'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  sdsr-verification:
+    name: SDSR Verification Run
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml requests
+
+      - name: Run SDSR for all OBSERVED capabilities
+        id: sdsr-run
+        env:
+          AOS_API_KEY: ${{ secrets.AOS_API_KEY }}
+          SDSR_BASE_URL: ${{ secrets.SDSR_BASE_URL || 'http://localhost:8000' }}
+        run: |
+          echo "AURORA L2 SDSR Nightly Run"
+          echo "=========================="
+          echo "Time: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo ""
+
+          cd backend/aurora_l2/tools
+
+          # Run SDSR for specific capability or all
+          if [ -n "${{ inputs.capability }}" ]; then
+            echo "Running SDSR for: ${{ inputs.capability }}"
+            python aurora_sdsr_runner.py --panel "${{ inputs.capability }}" || true
+          else
+            echo "Running SDSR for all capabilities with scenarios..."
+
+            # Find all scenario files and run them
+            for scenario in ../../scripts/sdsr/scenarios/SDSR-*.yaml; do
+              if [ -f "$scenario" ]; then
+                scenario_id=$(basename "$scenario" .yaml)
+                echo ""
+                echo ">>> Running: $scenario_id"
+                python aurora_sdsr_runner.py --scenario "$scenario_id" --skip-coherency || true
+              fi
+            done
+          fi
+
+      - name: Evaluate Trust Eligibility
+        id: trust-eval
+        run: |
+          echo ""
+          echo "Trust Evaluation"
+          echo "================"
+
+          cd backend/aurora_l2/tools
+
+          # Evaluate all OBSERVED capabilities
+          python aurora_trust_evaluator.py --all || true
+
+      - name: Auto-Promote (if enabled)
+        if: ${{ inputs.promote == true }}
+        run: |
+          echo ""
+          echo "Auto-Promotion"
+          echo "=============="
+
+          cd backend/aurora_l2/tools
+
+          # Promote all eligible
+          python aurora_trust_evaluator.py --all --promote || true
+
+      - name: Check for Intent Staleness
+        run: |
+          echo ""
+          echo "Intent Staleness Check"
+          echo "======================"
+
+          cd backend/aurora_l2/tools
+          python aurora_intent_registry_sync.py --verify || true
+
+      - name: Generate Summary
+        run: |
+          echo "## AURORA L2 SDSR Nightly Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Run Time:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Count observations
+          OBS_COUNT=$(ls backend/scripts/sdsr/observations/*.json 2>/dev/null | wc -l || echo "0")
+          echo "**Observations:** $OBS_COUNT" >> $GITHUB_STEP_SUMMARY
+
+          # List OBSERVED capabilities
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Capability Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          for cap in backend/AURORA_L2_CAPABILITY_REGISTRY/*.yaml; do
+            if [ -f "$cap" ]; then
+              cap_id=$(basename "$cap" .yaml | sed 's/AURORA_L2_CAPABILITY_//')
+              status=$(grep "^status:" "$cap" | head -1 | awk '{print $2}')
+              echo "- \`$cap_id\`: $status" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+  trust-demotion-check:
+    name: Trust Demotion Check
+    runs-on: ubuntu-latest
+    needs: sdsr-verification
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Check for Demotions
+        run: |
+          echo "Checking for trust demotions..."
+
+          cd backend/aurora_l2/tools
+
+          # This would check recent observations for demotion triggers
+          # For now, just report TRUSTED capabilities
+          echo ""
+          echo "TRUSTED capabilities:"
+          grep -l "status: TRUSTED" ../../AURORA_L2_CAPABILITY_REGISTRY/*.yaml 2>/dev/null || echo "  (none)"

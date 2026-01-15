@@ -1,0 +1,1003 @@
+{
+  "sweep_date": "2026-01-15T09:56:49.540218",
+  "total_panels": 87,
+  "panels": {
+    "OVR-SUM-CI-O1": {
+      "panel_id": "OVR-SUM-CI-O1",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "PASS",
+        "apply_obs": "PASS",
+        "bind": "PASS"
+      },
+      "status": "BOUND",
+      "gap": null,
+      "invariants": "5/5"
+    },
+    "OVR-SUM-CI-O2": {
+      "panel_id": "OVR-SUM-CI-O2",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "PASS",
+        "apply_obs": "PASS",
+        "bind": "PASS"
+      },
+      "status": "BOUND",
+      "gap": null,
+      "invariants": "3/3"
+    },
+    "OVR-SUM-CI-O3": {
+      "panel_id": "OVR-SUM-CI-O3",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "PASS",
+        "apply_obs": "PASS",
+        "bind": "PASS"
+      },
+      "status": "BOUND",
+      "gap": null,
+      "invariants": "3/3"
+    },
+    "OVR-SUM-CI-O4": {
+      "panel_id": "OVR-SUM-CI-O4",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "PASS",
+        "apply_obs": "PASS",
+        "bind": "PASS"
+      },
+      "status": "BOUND",
+      "gap": null,
+      "invariants": "3/3"
+    },
+    "OVR-SUM-DC-O1": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "OVR-SUM-DC-O2": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "OVR-SUM-DC-O3": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "OVR-SUM-DC-O4": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "OVR-SUM-HL-O1": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "OVR-SUM-HL-O2": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "OVR-SUM-HL-O3": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "OVR-SUM-HL-O4": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "ACT-LLM-COMP-O1": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "ACT-LLM-COMP-O2": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "ACT-LLM-COMP-O3": {
+      "panel_id": "ACT-LLM-COMP-O3",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "ACT-LLM-COMP-O4": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "ACT-LLM-COMP-O5": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "ACT-LLM-LIVE-O1": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "ACT-LLM-LIVE-O2": {
+      "panel_id": "ACT-LLM-LIVE-O2",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "ACT-LLM-LIVE-O3": {
+      "panel_id": "ACT-LLM-LIVE-O3",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "PASS",
+        "apply_obs": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "OBSERVATION_APPLY_FAILED",
+      "invariants": "3/3"
+    },
+    "ACT-LLM-LIVE-O4": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "ACT-LLM-LIVE-O5": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "ACT-LLM-SIG-O1": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "ACT-LLM-SIG-O2": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "ACT-LLM-SIG-O3": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "ACT-LLM-SIG-O4": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "ACT-LLM-SIG-O5": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "INC-EV-ACT-O1": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "INC-EV-ACT-O2": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "INC-EV-ACT-O3": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "INC-EV-ACT-O4": {
+      "panel_id": "INC-EV-ACT-O4",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "INC-EV-ACT-O5": {
+      "panel_id": "INC-EV-ACT-O5",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "INC-EV-HIST-O1": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "INC-EV-HIST-O2": {
+      "panel_id": "INC-EV-HIST-O2",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "INC-EV-HIST-O3": {
+      "panel_id": "INC-EV-HIST-O3",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    },
+    "INC-EV-HIST-O4": {
+      "panel_id": "INC-EV-HIST-O4",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "INC-EV-HIST-O5": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "INC-EV-RES-O1": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "INC-EV-RES-O2": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "INC-EV-RES-O3": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "INC-EV-RES-O4": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "INC-EV-RES-O5": {
+      "panel_id": "INC-EV-RES-O5",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    },
+    "POL-GOV-ACT-O1": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "POL-GOV-ACT-O2": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "POL-GOV-ACT-O3": {
+      "panel_id": "POL-GOV-ACT-O3",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    },
+    "POL-GOV-ACT-O4": {
+      "panel_id": "POL-GOV-ACT-O4",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-GOV-ACT-O5": {
+      "panel_id": "POL-GOV-ACT-O5",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-GOV-DFT-O1": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "POL-GOV-DFT-O2": {
+      "panel_id": "POL-GOV-DFT-O2",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-GOV-DFT-O3": {
+      "panel_id": "POL-GOV-DFT-O3",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-GOV-DFT-O4": {
+      "panel_id": "POL-GOV-DFT-O4",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-GOV-DFT-O5": {
+      "panel_id": "POL-GOV-DFT-O5",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-GOV-LIB-O1": {
+      "panel_id": "POL-GOV-LIB-O1",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-GOV-LIB-O2": {
+      "panel_id": "POL-GOV-LIB-O2",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-GOV-LIB-O3": {
+      "panel_id": "POL-GOV-LIB-O3",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    },
+    "POL-GOV-LIB-O4": {
+      "panel_id": "POL-GOV-LIB-O4",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    },
+    "POL-GOV-LIB-O5": {
+      "panel_id": "POL-GOV-LIB-O5",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-LIM-THR-O1": {
+      "panel_id": "POL-LIM-THR-O1",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-LIM-THR-O2": {
+      "panel_id": "POL-LIM-THR-O2",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    },
+    "POL-LIM-THR-O3": {
+      "panel_id": "POL-LIM-THR-O3",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-LIM-THR-O4": {
+      "panel_id": "POL-LIM-THR-O4",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-LIM-THR-O5": {
+      "panel_id": "POL-LIM-THR-O5",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-LIM-USG-O1": {
+      "panel_id": "POL-LIM-USG-O1",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-LIM-USG-O2": {
+      "panel_id": "POL-LIM-USG-O2",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    },
+    "POL-LIM-USG-O3": {
+      "panel_id": "POL-LIM-USG-O3",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    },
+    "POL-LIM-USG-O4": {
+      "panel_id": "POL-LIM-USG-O4",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    },
+    "POL-LIM-USG-O5": {
+      "panel_id": "POL-LIM-USG-O5",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-LIM-VIO-O1": {
+      "panel_id": "POL-LIM-VIO-O1",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "POL-LIM-VIO-O2": {
+      "panel_id": "POL-LIM-VIO-O2",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    },
+    "POL-LIM-VIO-O3": {
+      "panel_id": "POL-LIM-VIO-O3",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    },
+    "POL-LIM-VIO-O4": {
+      "panel_id": "POL-LIM-VIO-O4",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    },
+    "POL-LIM-VIO-O5": {
+      "panel_id": "POL-LIM-VIO-O5",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    },
+    "LOG-REC-AUD-O1": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "LOG-REC-AUD-O2": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "LOG-REC-AUD-O3": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "LOG-REC-AUD-O4": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "LOG-REC-AUD-O5": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "LOG-REC-LLM-O1": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "LOG-REC-LLM-O2": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "LOG-REC-LLM-O3": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "LOG-REC-LLM-O4": {
+      "panel_id": "LOG-REC-LLM-O4",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "ENDPOINT_MISSING",
+      "invariants": "2/3"
+    },
+    "LOG-REC-LLM-O5": {
+      "panel_id": "LOG-REC-LLM-O5",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "PASS",
+        "apply_obs": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "OBSERVATION_APPLY_FAILED",
+      "invariants": "3/3"
+    },
+    "LOG-REC-SYS-O1": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "LOG-REC-SYS-O2": {
+      "status": "BOUND",
+      "gap": null
+    },
+    "LOG-REC-SYS-O3": {
+      "panel_id": "LOG-REC-SYS-O3",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    },
+    "LOG-REC-SYS-O4": {
+      "panel_id": "LOG-REC-SYS-O4",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    },
+    "LOG-REC-SYS-O5": {
+      "panel_id": "LOG-REC-SYS-O5",
+      "phases": {
+        "intent": "CREATED",
+        "registry_sync": "PASS",
+        "approve": "PASS",
+        "capability": "EXISTS",
+        "coherency": "PASS",
+        "sdsr_synth": "EXISTS",
+        "sdsr_run": "FAILED"
+      },
+      "status": "BLOCKED",
+      "gap": "SDSR_FAILED",
+      "invariants": "2/3"
+    }
+  },
+  "summary": {
+    "BOUND": [
+      "OVR-SUM-CI-O1",
+      "OVR-SUM-CI-O2",
+      "OVR-SUM-CI-O3",
+      "OVR-SUM-CI-O4",
+      "OVR-SUM-DC-O1",
+      "OVR-SUM-DC-O2",
+      "OVR-SUM-DC-O3",
+      "OVR-SUM-DC-O4",
+      "OVR-SUM-HL-O1",
+      "OVR-SUM-HL-O2",
+      "OVR-SUM-HL-O3",
+      "OVR-SUM-HL-O4",
+      "ACT-LLM-COMP-O1",
+      "ACT-LLM-COMP-O2",
+      "ACT-LLM-COMP-O4",
+      "ACT-LLM-COMP-O5",
+      "ACT-LLM-LIVE-O1",
+      "ACT-LLM-LIVE-O4",
+      "ACT-LLM-LIVE-O5",
+      "ACT-LLM-SIG-O1",
+      "ACT-LLM-SIG-O2",
+      "ACT-LLM-SIG-O3",
+      "ACT-LLM-SIG-O4",
+      "ACT-LLM-SIG-O5",
+      "INC-EV-ACT-O1",
+      "INC-EV-ACT-O2",
+      "INC-EV-ACT-O3",
+      "INC-EV-HIST-O1",
+      "INC-EV-HIST-O5",
+      "INC-EV-RES-O1",
+      "INC-EV-RES-O2",
+      "INC-EV-RES-O3",
+      "INC-EV-RES-O4",
+      "POL-GOV-ACT-O1",
+      "POL-GOV-ACT-O2",
+      "POL-GOV-DFT-O1",
+      "LOG-REC-AUD-O1",
+      "LOG-REC-AUD-O2",
+      "LOG-REC-AUD-O3",
+      "LOG-REC-AUD-O4",
+      "LOG-REC-AUD-O5",
+      "LOG-REC-LLM-O1",
+      "LOG-REC-LLM-O2",
+      "LOG-REC-LLM-O3",
+      "LOG-REC-SYS-O1",
+      "LOG-REC-SYS-O2"
+    ],
+    "BLOCKED": [
+      "ACT-LLM-COMP-O3",
+      "ACT-LLM-LIVE-O2",
+      "ACT-LLM-LIVE-O3",
+      "INC-EV-ACT-O4",
+      "INC-EV-ACT-O5",
+      "INC-EV-HIST-O2",
+      "INC-EV-HIST-O3",
+      "INC-EV-HIST-O4",
+      "INC-EV-RES-O5",
+      "POL-GOV-ACT-O3",
+      "POL-GOV-ACT-O4",
+      "POL-GOV-ACT-O5",
+      "POL-GOV-DFT-O2",
+      "POL-GOV-DFT-O3",
+      "POL-GOV-DFT-O4",
+      "POL-GOV-DFT-O5",
+      "POL-GOV-LIB-O1",
+      "POL-GOV-LIB-O2",
+      "POL-GOV-LIB-O3",
+      "POL-GOV-LIB-O4",
+      "POL-GOV-LIB-O5",
+      "POL-LIM-THR-O1",
+      "POL-LIM-THR-O2",
+      "POL-LIM-THR-O3",
+      "POL-LIM-THR-O4",
+      "POL-LIM-THR-O5",
+      "POL-LIM-USG-O1",
+      "POL-LIM-USG-O2",
+      "POL-LIM-USG-O3",
+      "POL-LIM-USG-O4",
+      "POL-LIM-USG-O5",
+      "POL-LIM-VIO-O1",
+      "POL-LIM-VIO-O2",
+      "POL-LIM-VIO-O3",
+      "POL-LIM-VIO-O4",
+      "POL-LIM-VIO-O5",
+      "LOG-REC-LLM-O4",
+      "LOG-REC-LLM-O5",
+      "LOG-REC-SYS-O3",
+      "LOG-REC-SYS-O4",
+      "LOG-REC-SYS-O5"
+    ],
+    "SKIPPED": [],
+    "FAILED": []
+  },
+  "gaps": {
+    "ENDPOINT_MISSING": [
+      "ACT-LLM-COMP-O3",
+      "ACT-LLM-LIVE-O2",
+      "INC-EV-ACT-O4",
+      "INC-EV-ACT-O5",
+      "INC-EV-HIST-O2",
+      "INC-EV-HIST-O4",
+      "POL-GOV-ACT-O4",
+      "POL-GOV-ACT-O5",
+      "POL-GOV-DFT-O2",
+      "POL-GOV-DFT-O3",
+      "POL-GOV-DFT-O4",
+      "POL-GOV-DFT-O5",
+      "POL-GOV-LIB-O1",
+      "POL-GOV-LIB-O2",
+      "POL-GOV-LIB-O5",
+      "POL-LIM-THR-O1",
+      "POL-LIM-THR-O3",
+      "POL-LIM-THR-O4",
+      "POL-LIM-THR-O5",
+      "POL-LIM-USG-O1",
+      "POL-LIM-USG-O5",
+      "POL-LIM-VIO-O1",
+      "LOG-REC-LLM-O4"
+    ],
+    "OBSERVATION_APPLY_FAILED": [
+      "ACT-LLM-LIVE-O3",
+      "LOG-REC-LLM-O5"
+    ],
+    "SDSR_FAILED": [
+      "INC-EV-HIST-O3",
+      "INC-EV-RES-O5",
+      "POL-GOV-ACT-O3",
+      "POL-GOV-LIB-O3",
+      "POL-GOV-LIB-O4",
+      "POL-LIM-THR-O2",
+      "POL-LIM-USG-O2",
+      "POL-LIM-USG-O3",
+      "POL-LIM-USG-O4",
+      "POL-LIM-VIO-O2",
+      "POL-LIM-VIO-O3",
+      "POL-LIM-VIO-O4",
+      "POL-LIM-VIO-O5",
+      "LOG-REC-SYS-O3",
+      "LOG-REC-SYS-O4",
+      "LOG-REC-SYS-O5"
+    ]
+  }
+}

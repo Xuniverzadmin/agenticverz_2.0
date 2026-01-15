@@ -124,7 +124,7 @@ Added Section 18 "Human Interpretation Layer (HIL v1)" with:
 
 ## Next Steps (Phase 2)
 
-1. Update `backend/aurora_l2/compiler.py` to propagate `panel_class` to projection
+1. Update `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` to propagate `panel_class` to projection
 2. Update frontend projection loader to read `panel_class`
 3. Add visual grouping/styling for interpretation panels
 4. Add provenance badge component

@@ -130,7 +130,7 @@ jobs:
 
       - name: Regenerate projection
         run: |
-          DB_AUTHORITY=neon python3 -m backend.aurora_l2.compiler --output-projection
+          DB_AUTHORITY=neon python3 -m backend.aurora_l2.SDSR_UI_AURORA_compiler --output-projection
         env:
           DB_AUTHORITY: neon
 

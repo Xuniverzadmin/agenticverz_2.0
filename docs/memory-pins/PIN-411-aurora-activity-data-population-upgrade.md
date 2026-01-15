@@ -944,7 +944,7 @@ def runtime_cache(ttl: int, key_builder: Callable):
 
 ## Compiler Enforcement Rules
 
-The Aurora compiler (`backend/aurora_l2/compiler.py`) MUST enforce:
+The Aurora compiler (`backend/aurora_l2/SDSR_UI_AURORA_compiler.py`) MUST enforce:
 
 ```python
 # Compiler validation rules
@@ -2388,7 +2388,7 @@ backend/
 
 - `design/l2_1/AURORA_L2.md` - Aurora pipeline documentation
 - `design/l2_1/ui_contract/ui_projection_lock.json` - Current projection lock
-- `backend/aurora_l2/compiler.py` - Aurora compiler
+- `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` - Aurora compiler
 - `backend/app/api/activity.py` - Legacy activity API
 - `docs/governance/SDSR_SYSTEM_CONTRACT.md` - SDSR compatibility rules
 - PIN-370 (SDSR), PIN-352 (L2.1 Pipeline), PIN-408 (Aurora Fix)

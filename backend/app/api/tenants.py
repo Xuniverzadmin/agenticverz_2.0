@@ -9,6 +9,7 @@ Provides:
 """
 
 import logging
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -16,6 +17,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from ..auth.tenant_auth import TenantContext, get_tenant_context
+from ..db import utc_now
 from ..services.tenant_service import (
     QuotaExceededError,
     TenantService,
@@ -146,13 +148,27 @@ class APIKeyCreatedResponse(APIKeyResponse):
     key: str = Field(..., description="The full API key. Store this securely - it won't be shown again!")
 
 
+class AnalyticsProvenance(BaseModel):
+    """Provenance envelope for analytics interpretation panels.
+
+    SDSR requires provenance metadata on all interpretation panels to ensure
+    the UI can correctly display how data was derived.
+    """
+
+    sources: List[str] = Field(..., description="Data sources used")
+    window: str = Field(..., description="Time window (e.g., '24h', '7d', '30d')")
+    aggregation: str = Field(..., description="Aggregation method")
+    generated_at: datetime = Field(..., description="When this data was computed")
+
+
 class UsageSummaryResponse(BaseModel):
-    """Usage summary for a tenant."""
+    """Usage summary for a tenant with provenance for SDSR ANALYTICS domain."""
 
     tenant_id: str
     period: dict
     meters: dict
     total_records: int
+    provenance: AnalyticsProvenance = Field(..., description="Provenance metadata for interpretation")
 
 
 class WorkerSummaryResponse(BaseModel):
@@ -260,14 +276,30 @@ async def get_current_tenant(
 
 @router.get("/tenant/usage", response_model=UsageSummaryResponse)
 async def get_tenant_usage(
+    period: str = Query("24h", regex="^(24h|7d|30d)$"),
     ctx: TenantContext = Depends(get_tenant_context),
     services: dict = Depends(get_services),
 ):
     """
     Get usage summary for the current tenant.
+
+    Returns envelope with provenance for SDSR ANALYTICS domain compliance.
     """
     summary = services["tenant"].get_usage_summary(ctx.tenant_id)
-    return UsageSummaryResponse(**summary)
+    now = utc_now()
+
+    return UsageSummaryResponse(
+        tenant_id=summary.get("tenant_id", ctx.tenant_id),
+        period=summary.get("period", {"type": period}),
+        meters=summary.get("meters", {}),
+        total_records=summary.get("total_records", 0),
+        provenance=AnalyticsProvenance(
+            sources=["usage_records", "runs", "cost_records"],
+            window=period,
+            aggregation="SUM",
+            generated_at=now,
+        ),
+    )
 
 
 @router.get("/tenant/quota/runs", response_model=QuotaCheckResponse)

@@ -35,6 +35,7 @@ Enforces 5 rules to prevent silent UI drift:
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -340,6 +341,99 @@ class ProjectionDiffGuard:
 
 
 # =============================================================================
+# Audit Logging (Phase 5.5 Hardening)
+# =============================================================================
+
+class PDGAuditLog:
+    """
+    Provenance logging for PDG decisions.
+
+    Every PDG run is logged with:
+    - Timestamp
+    - Input files (old/new projection paths)
+    - Allowlist used
+    - Violations found
+    - Auto-allow decisions
+    - Final status
+
+    This provides traceability for UI drift investigations.
+    """
+
+    def __init__(self, log_dir: Path | None = None):
+        if log_dir is None:
+            log_dir = Path(__file__).parent.parent.parent.parent / "backend/scripts/sdsr/pdg_audit"
+        self.log_dir = log_dir
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+
+    def log_run(
+        self,
+        old_path: str,
+        new_path: str,
+        allowlist_path: str | None,
+        allowlist: dict,
+        result: dict,
+        auto_allowed: list[str] | None = None,
+    ) -> Path:
+        """
+        Log a PDG run for audit.
+
+        Args:
+            old_path: Path to old projection
+            new_path: Path to new projection
+            allowlist_path: Path to allowlist config (if any)
+            allowlist: Resolved allowlist dict
+            result: PDG result dict
+            auto_allowed: Panel IDs that were auto-allowed
+
+        Returns:
+            Path to audit log file
+        """
+        timestamp = datetime.now(timezone.utc)
+        log_id = timestamp.strftime("%Y%m%d-%H%M%S")
+
+        audit_entry = {
+            "log_id": log_id,
+            "timestamp": timestamp.isoformat(),
+            "inputs": {
+                "old_projection": old_path,
+                "new_projection": new_path,
+                "allowlist_path": allowlist_path,
+            },
+            "allowlist": {
+                "panels": allowlist.get("panels", []),
+                "rules": list(allowlist.get("rules", {}).keys()),
+            },
+            "result": {
+                "status": result.get("status"),
+                "violation_count": result.get("violation_count", 0),
+            },
+            "violations": result.get("violations", []),
+            "auto_allowed": auto_allowed or [],
+            "provenance": {
+                "guard_version": "1.1.0",  # Bump for audit logging
+                "logged_by": "projection_diff_guard.py",
+            },
+        }
+
+        log_file = self.log_dir / f"PDG_AUDIT_{log_id}.json"
+        with open(log_file, "w") as f:
+            json.dump(audit_entry, f, indent=2)
+
+        return log_file
+
+    def get_recent_logs(self, count: int = 10) -> list[dict]:
+        """Get most recent audit logs."""
+        logs = []
+        log_files = sorted(self.log_dir.glob("PDG_AUDIT_*.json"), reverse=True)
+
+        for log_file in log_files[:count]:
+            with open(log_file) as f:
+                logs.append(json.load(f))
+
+        return logs
+
+
+# =============================================================================
 # CLI Interface
 # =============================================================================
 
@@ -378,6 +472,15 @@ def main():
         "--output",
         help="Output file for results (default: stdout)",
     )
+    parser.add_argument(
+        "--audit",
+        action="store_true",
+        help="Enable audit logging (Phase 5.5 hardening)",
+    )
+    parser.add_argument(
+        "--audit-dir",
+        help="Directory for audit logs (default: backend/scripts/sdsr/pdg_audit)",
+    )
 
     args = parser.parse_args()
 
@@ -395,6 +498,24 @@ def main():
     guard = ProjectionDiffGuard(allowlist=allowlist)
     guard.check(old_projection, new_projection)
     result = guard.get_result()
+
+    # Audit logging (Phase 5.5 hardening)
+    if args.audit:
+        audit_dir = Path(args.audit_dir) if args.audit_dir else None
+        audit_log = PDGAuditLog(log_dir=audit_dir)
+
+        # Collect auto-allowed panels for logging
+        auto_allowed = allowlist.get("panels", [])
+
+        log_file = audit_log.log_run(
+            old_path=args.old,
+            new_path=args.new,
+            allowlist_path=args.allowlist,
+            allowlist=allowlist,
+            result=result,
+            auto_allowed=auto_allowed,
+        )
+        result["audit_log"] = str(log_file)
 
     # Output
     output = json.dumps(result, indent=2)

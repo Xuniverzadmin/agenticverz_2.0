@@ -1,0 +1,20 @@
+{
+  "observation_id": "OBS-SDSR-OVR-SUM-DC-O2-001-20260115072904",
+  "scenario_id": "SDSR-OVR-SUM-DC-O2-001",
+  "capability_id": "overview.decisions_count",
+  "panel_id": "OVR-SUM-DC-O2",
+  "status": "PASS",
+  "observed_at": "2026-01-15T07:29:04.268565+00:00",
+  "endpoint": "/founder/timeline/count",
+  "method": "GET",
+  "response_status_code": 401,
+  "response_time_ms": 14.027833938598633,
+  "invariants_total": 3,
+  "invariants_passed": 0,
+  "invariants_failed": 0,
+  "invariant_results": [],
+  "failure_reason": "Access restricted (HTTP 401) - visibility limited but endpoint exists",
+  "failure_taxonomy": "VISIBILITY_RESTRICTED",
+  "coherency_verified": true,
+  "trace_id": null
+}

@@ -1,0 +1,39 @@
+# AURORA L2 Capability Registry Entry
+# Capability: logs.status_stats
+# Last Updated: 2026-01-15T07:00:06.213027+00:00
+# Updated By: aurora_apply_observation.py
+#
+# STATUS: OBSERVED
+#
+# WARNING: Status transitions are MACHINE-OWNED.
+#          Do NOT manually edit the status field.
+#
+capability_id: logs.status_stats
+status: OBSERVED
+source_panels:
+- LOG-REC-AUD-O5
+domain: LOGS
+endpoint: /status_history/stats
+method: GET
+metadata:
+  generated_by: aurora_capability_scaffold.py
+  generated_on: '2026-01-15'
+  declared_by: AURORA_AUTOMATION
+  declared_on: '2026-01-15'
+  observed_by: SDSR-LOG-REC-AUD-O5-001
+  observed_on: '2026-01-15'
+coherency:
+  last_checked: '2026-01-15T07:00:06.018348+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py
+observation:
+  scenario_id: SDSR-LOG-REC-AUD-O5-001
+  observed_at: '2026-01-15T07:00:06.018348+00:00'
+  trace_id: null
+  invariants_passed: 3
+  invariants_total: 3
+acceptance_criteria:
+- Endpoint exists and responds
+- Response schema matches contract
+- Auth works correctly
+- Data is real (not mock)

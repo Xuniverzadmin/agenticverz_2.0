@@ -40,7 +40,7 @@ Deployment            →  which root is active
 
 ## Implementation
 
-### 1. Compiler Changes (`backend/aurora_l2/compiler.py`)
+### 1. Compiler Changes (`backend/aurora_l2/SDSR_UI_AURORA_compiler.py`)
 
 **Routes now relative (no `/cus` prefix):**
 
@@ -213,7 +213,7 @@ export interface ProjectionMeta {
 
 | File | Purpose |
 |------|---------|
-| `backend/aurora_l2/compiler.py` | Emits relative routes, adds env metadata |
+| `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` | Emits relative routes, adds env metadata |
 | `website/app-shell/src/contracts/ui_projection_loader.ts` | Resolves routes at load time |
 | `website/app-shell/src/contracts/ui_projection_types.ts` | TypeScript types with env fields |
 | `website/app-shell/src/routing/consoleRoots.ts` | CONSOLE_ROOT definition |

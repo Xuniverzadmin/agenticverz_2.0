@@ -1,0 +1,40 @@
+# AURORA L2 Capability Registry Entry
+# Capability: policies.violations_list
+# Generated: 2026-01-15T06:43:03.125092+00:00
+# Generator: aurora_capability_scaffold.py
+#
+# STATUS LIFECYCLE (Machine-Owned):
+#   DECLARED → ASSUMED → OBSERVED → TRUSTED
+#
+# RULES:
+#   - Status transitions are MACHINE-ONLY
+#   - Humans must NOT edit status field
+#   - DECLARED → OBSERVED requires SDSR verification
+#   - CI blocks manual status changes
+#
+capability_id: policies.violations_list
+status: DECLARED
+source_panels:
+- POL-LIM-VIO-O1
+domain: POLICIES
+endpoint: /policy-layer/violations
+method: GET
+metadata:
+  generated_by: aurora_capability_scaffold.py
+  generated_on: '2026-01-15'
+  declared_by: AURORA_AUTOMATION
+  declared_on: '2026-01-15'
+coherency:
+  last_checked: null
+  status: UNVERIFIED
+  checked_by: null
+observation:
+  scenario_id: null
+  observed_at: null
+  trace_id: null
+  invariants_passed: null
+acceptance_criteria:
+- Endpoint exists and responds
+- Response schema matches contract
+- Auth works correctly
+- Data is real (not mock)

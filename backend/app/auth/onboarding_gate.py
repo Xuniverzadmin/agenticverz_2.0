@@ -141,6 +141,9 @@ ENDPOINT_PATTERN_REQUIREMENTS: list[Tuple[re.Pattern, OnboardingState]] = [
     (re.compile(r"^/api/v1/memory(/.*)?$"), OnboardingState.SDK_CONNECTED),
     (re.compile(r"^/api/v1/tenant/usage$"), OnboardingState.SDK_CONNECTED),
     (re.compile(r"^/api/v1/tenant/quota(/.*)?$"), OnboardingState.SDK_CONNECTED),
+    # Cost Intelligence endpoints - OBSERVER READ (HISAR-AUTH-001)
+    # Note: Router is at /cost/* not /api/v1/cost/*
+    (re.compile(r"^/cost(/.*)?$"), OnboardingState.SDK_CONNECTED),
 
     # -------------------------------------------------------------------------
     # Section 6: Complete (COMPLETE)

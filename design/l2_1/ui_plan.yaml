@@ -5,8 +5,8 @@
 # To modify: Edit INTENT_LEDGER.md and re-run generator
 #
 version: 1.0.0
-created_at: '2026-01-14T21:00:29Z'
-amended_at: '2026-01-14T21:00:29Z'
+created_at: '2026-01-15T14:58:02Z'
+amended_at: '2026-01-15T14:58:02Z'
 status: LOCKED_UNTIL_TERMINAL_STATE
 authority: design/l2_1/INTENT_LEDGER.md
 topology: design/l2_1/UI_TOPOLOGY_TEMPLATE.yaml
@@ -85,7 +85,7 @@ domains:
         slot: 1
         panel_class: interpretation
         state: BOUND
-        intent_spec: design/l2_1/intents/OVR-SUM-HL-O1.yaml
+        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_OVR-SUM-HL-O1.yaml
         expected_capability: overview.activity_snapshot
       - panel_id: OVR-SUM-HL-O2
         slot: 2

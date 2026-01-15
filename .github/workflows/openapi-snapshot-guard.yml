@@ -1,0 +1,46 @@
+# OpenAPI Snapshot Guard
+# Reference: HISAR Phase 0 Contract
+#
+# This workflow ensures the OpenAPI snapshot is valid before merge.
+# Prevents regressions when:
+#   - someone deletes the snapshot
+#   - someone forgets to refresh after API changes
+#   - someone reintroduces live introspection
+
+name: OpenAPI Snapshot Guard
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'scripts/tools/hisar_snapshot_backend.sh'
+      - '.github/workflows/openapi-snapshot-guard.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+
+jobs:
+  snapshot-guard:
+    name: Validate OpenAPI Snapshot
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check OpenAPI Snapshot
+        run: python scripts/ci/check_openapi_snapshot.py
+
+      - name: Report on failure
+        if: failure()
+        run: |
+          echo "::error::OpenAPI snapshot is missing or invalid"
+          echo "::error::Run: ./scripts/tools/hisar_snapshot_backend.sh"
+          echo "::error::Then commit the updated snapshot"

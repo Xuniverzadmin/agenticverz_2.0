@@ -66,7 +66,7 @@ what happened through summaries and aggregations while maintaining full traceabi
 
 | Task | Status | Owner | Notes |
 |------|--------|-------|-------|
-| Update compiler to propagate `panel_class` | ✅ DONE | Claude | `backend/aurora_l2/compiler.py:279,416` |
+| Update compiler to propagate `panel_class` | ✅ DONE | Claude | `backend/aurora_l2/SDSR_UI_AURORA_compiler.py:279,416` |
 | Update projection types with `panel_class` | ✅ DONE | Claude | `ui_projection_types.ts:208` |
 | Update frontend projection loader | ✅ DONE | Claude | `ui_projection_loader.ts:237-268` |
 | Add panel grouping by class in DomainPage | ✅ DONE | Claude | `DomainPage.tsx:398-440` |
@@ -320,7 +320,7 @@ Response:
 | First Panel | `design/l2_1/intents/ACT-EX-SUM-O1.yaml` | Activity Summary spec |
 | Main Doc | `design/l2_1/AURORA_L2.md` | Section 18 |
 | **Phase 2** | | |
-| Compiler | `backend/aurora_l2/compiler.py` | panel_class propagation |
+| Compiler | `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` | panel_class propagation |
 | Types | `website/app-shell/src/contracts/ui_projection_types.ts` | PanelClass type |
 | Loader | `website/app-shell/src/contracts/ui_projection_loader.ts` | HIL accessors |
 | DomainPage | `website/app-shell/src/pages/domains/DomainPage.tsx` | Panel grouping + styling |

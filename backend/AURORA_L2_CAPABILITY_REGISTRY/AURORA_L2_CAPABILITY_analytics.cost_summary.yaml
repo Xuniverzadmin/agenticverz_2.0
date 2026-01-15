@@ -1,0 +1,46 @@
+# AURORA L2 Capability Registry Entry
+# Capability: analytics.cost_summary
+# Last Updated: 2026-01-15T12:41:50.121020+00:00
+# Updated By: aurora_apply_observation.py
+#
+# STATUS: OBSERVED
+#
+# WARNING: Status transitions are MACHINE-OWNED.
+#          Do NOT manually edit the status field.
+#
+capability_id: analytics.cost_summary
+status: OBSERVED
+source_panels:
+- ANL-CST-SUM-O1
+domain: ANALYTICS
+endpoint: /cost/dashboard
+method: GET
+metadata:
+  generated_by: manual
+  generated_on: '2026-01-15'
+  declared_by: ANALYTICS_DOMAIN_MIGRATION
+  declared_on: '2026-01-15'
+  observed_by: SDSR-ANL-CST-SUM-O1-001
+  observed_on: '2026-01-15'
+acceptance_criteria:
+- Endpoint exists and responds
+- Response includes CostSummary with provenance
+- Provenance has sources, window, aggregation, generated_at
+- Data is aggregated from cost_records
+provenance_requirements:
+  required: true
+  fields:
+  - sources
+  - window
+  - aggregation
+  - generated_at
+observation:
+  scenario_id: SDSR-ANL-CST-SUM-O1-001
+  observed_at: '2026-01-15T12:41:49.913890+00:00'
+  trace_id: null
+  invariants_passed: 5
+  invariants_total: 5
+coherency:
+  last_checked: '2026-01-15T12:41:49.913890+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py

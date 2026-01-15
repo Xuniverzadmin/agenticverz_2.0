@@ -1,13 +1,37 @@
 #!/usr/bin/env python3
 """
-AURORA_L2 CSV → YAML Migration Script
+██████████████████████████████████████████████████████████████████████████████
+██  DEPRECATED - DO NOT USE                                                  ██
+██████████████████████████████████████████████████████████████████████████████
+
+This script has been DEPRECATED as of 2026-01-15.
+
+REASON:
+    Intent YAMLs are now generated from INTENT_LEDGER.md (single source of truth).
+    The CSV → YAML migration path is no longer the canonical flow.
+
+REPLACEMENT:
+    Use: scripts/tools/sync_from_intent_ledger.py
+
+    This generates:
+      - design/l2_1/ui_plan.yaml
+      - design/l2_1/intents/AURORA_L2_INTENT_*.yaml
+      - backend/AURORA_L2_CAPABILITY_REGISTRY/*.yaml
+
+AUTHORITY:
+    INTENT_LEDGER.md is now the authoritative human intent source.
+    All YAMLs (ui_plan, intents, capabilities) are compiled artifacts.
+
+██████████████████████████████████████████████████████████████████████████████
+
+AURORA_L2 CSV → YAML Migration Script (DEPRECATED)
 
 Purpose: Migrate L2_1_UI_INTENT_SUPERTABLE.csv to AURORA_L2 YAML intent specs
-Status: Migration tool
+Status: DEPRECATED - DO NOT USE
 Reference: L2.1 Pipeline Study Report, PIN-385
 
 Usage:
-    python3 scripts/tools/aurora_l2_migrate_csv_to_yaml.py [--dry-run]
+    DO NOT USE - Use sync_from_intent_ledger.py instead
 
 Output:
     - design/l2_1/intents/{panel_id}.yaml (one per row)
@@ -189,10 +213,32 @@ def update_registry(specs: list[dict], dry_run: bool = False) -> None:
 
 
 def main():
+    # DEPRECATION BLOCK - Prevent execution
+    print("=" * 70)
+    print("██  DEPRECATED SCRIPT - EXECUTION BLOCKED  ██")
+    print("=" * 70)
+    print()
+    print("This script has been DEPRECATED as of 2026-01-15.")
+    print()
+    print("REASON:")
+    print("  Intent YAMLs are now generated from INTENT_LEDGER.md")
+    print("  (single source of truth), not from CSV.")
+    print()
+    print("USE INSTEAD:")
+    print("  python scripts/tools/sync_from_intent_ledger.py")
+    print()
+    print("If you REALLY need to run this (migration only), use:")
+    print("  python scripts/tools/aurora_l2_migrate_csv_to_yaml.py --force")
+    print()
+    print("=" * 70)
+
+    if "--force" not in sys.argv:
+        sys.exit(1)
+
     dry_run = "--dry-run" in sys.argv
 
     print("=" * 60)
-    print("AURORA_L2 CSV → YAML Migration")
+    print("AURORA_L2 CSV → YAML Migration (DEPRECATED - FORCED)")
     print("=" * 60)
     print(f"Source: {CSV_PATH}")
     print(f"Output: {INTENTS_DIR}")

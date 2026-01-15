@@ -1,0 +1,67 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: OVR-SUM-HL-O1
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: OVR-SUM-HL-O1
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: OVERVIEW
+  subdomain: SUMMARY
+  topic: HIGHLIGHTS
+  topic_id: OVERVIEW.SUMMARY.HIGHLIGHTS
+  order: O1
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+display:
+  name: OVR-SUM-HL-O1
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: overview.activity_snapshot
+  status: OBSERVED
+  endpoint: null
+  method: GET
+sdsr:
+  scenario: observe_overview_activity_snapshot
+  verified: false
+notes: 'Provide a single, glanceable snapshot of current system activity so the user
+
+  can immediately understand whether the system is calm, active, or stressed.
+
+
+  What it shows:
+
+  - Count of currently running LLM executions
+
+  - Count of executions completed in the last window (e.g. 15 min)
+
+  - Count of executions currently in near-threshold or risk state
+
+  - Timestamp of last successful observation update
+
+
+  What it explicitly does NOT show:
+
+  - No logs
+
+  - No configuration
+
+  - No historical charts
+
+  - No per-run drilldown
+
+  - No policy or cost breakdown'

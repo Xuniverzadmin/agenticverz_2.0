@@ -1,0 +1,46 @@
+# AURORA L2 Capability Registry Entry
+# Capability: analytics.tenant_usage
+# Last Updated: 2026-01-15T12:01:22.791210+00:00
+# Updated By: aurora_apply_observation.py
+#
+# STATUS: OBSERVED
+#
+# WARNING: Status transitions are MACHINE-OWNED.
+#          Do NOT manually edit the status field.
+#
+capability_id: analytics.tenant_usage
+status: OBSERVED
+source_panels:
+- ANL-USG-SUM-O1
+domain: ANALYTICS
+endpoint: /api/v1/tenant/usage
+method: GET
+metadata:
+  generated_by: manual
+  generated_on: '2026-01-15'
+  declared_by: ANALYTICS_DOMAIN_MIGRATION
+  declared_on: '2026-01-15'
+  observed_by: SDSR-ANL-USG-SUM-O1-001
+  observed_on: '2026-01-15'
+acceptance_criteria:
+- Endpoint exists and responds
+- Response includes provenance envelope
+- Provenance has sources, window, aggregation, generated_at
+- Data is aggregated from usage_records, runs, cost_records
+provenance_requirements:
+  required: true
+  fields:
+  - sources
+  - window
+  - aggregation
+  - generated_at
+observation:
+  scenario_id: SDSR-ANL-USG-SUM-O1-001
+  observed_at: '2026-01-15T12:00:07.553757+00:00'
+  trace_id: null
+  invariants_passed: 5
+  invariants_total: 5
+coherency:
+  last_checked: '2026-01-15T12:00:07.553757+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py

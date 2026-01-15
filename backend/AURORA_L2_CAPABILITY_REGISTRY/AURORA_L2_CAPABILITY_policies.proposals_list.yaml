@@ -1,0 +1,39 @@
+# AURORA L2 Capability Registry Entry
+# Capability: policies.proposals_list
+# Last Updated: 2026-01-15T06:32:20.286153+00:00
+# Updated By: aurora_apply_observation.py
+#
+# STATUS: OBSERVED
+#
+# WARNING: Status transitions are MACHINE-OWNED.
+#          Do NOT manually edit the status field.
+#
+capability_id: policies.proposals_list
+status: OBSERVED
+source_panels:
+- POL-GOV-ACT-O1
+domain: POLICIES
+endpoint: /api/v1/policy-proposals
+method: GET
+metadata:
+  generated_by: aurora_capability_scaffold.py
+  generated_on: '2026-01-15'
+  declared_by: AURORA_AUTOMATION
+  declared_on: '2026-01-15'
+  observed_by: SDSR-POL-GOV-ACT-O1-001
+  observed_on: '2026-01-15'
+coherency:
+  last_checked: '2026-01-15T06:32:15.333869+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py
+observation:
+  scenario_id: SDSR-POL-GOV-ACT-O1-001
+  observed_at: '2026-01-15T06:32:15.333869+00:00'
+  trace_id: null
+  invariants_passed: 3
+  invariants_total: 3
+acceptance_criteria:
+- Endpoint exists and responds
+- Response schema matches contract
+- Auth works correctly
+- Data is real (not mock)

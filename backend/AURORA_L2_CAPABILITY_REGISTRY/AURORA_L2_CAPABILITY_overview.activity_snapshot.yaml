@@ -8,9 +8,9 @@ source_panels:
 - OVR-SUM-HL-O1
 metadata:
   generated_by: sync_from_intent_ledger.py
-  generated_on: '2026-01-14'
+  generated_on: '2026-01-15'
   declared_by: intent-ledger
-  declared_on: '2026-01-14'
+  declared_on: '2026-01-15'
   observed_by: observe_overview_activity_snapshot
 acceptance_criteria:
 - Capability behavior verified

@@ -60,8 +60,18 @@ Any system violating these principles is **invalid**.
 
 ### 4.1 Canonical Flow (Current - SDSR-Driven)
 
+**Single Source of Truth:** `design/l2_1/INTENT_LEDGER.md`
+
 ```
-SDSR Scenario YAML (Human Intent Entry)
+INTENT_LEDGER.md (Human Intent - Single Source of Truth)
+        ↓
+sync_from_intent_ledger.py              ← Generates all downstream artifacts
+        ↓
+├── design/l2_1/ui_plan.yaml                    (UI structure)
+├── design/l2_1/intents/AURORA_L2_INTENT_*.yaml (Intent YAMLs)
+└── backend/AURORA_L2_CAPABILITY_REGISTRY/*.yaml (Capabilities)
+        ↓
+SDSR Scenario YAML (Capability Observation)
         ↓
 inject_synthetic.py --wait              ← Executes real system behavior
         ↓
@@ -70,9 +80,9 @@ SDSR_OBSERVATION_*.json                 ← Observation emitted
 AURORA_L2_apply_sdsr_observations.py    ← Updates capability status
         ↓
 backend/AURORA_L2_CAPABILITY_REGISTRY/*.yaml  (DECLARED → OBSERVED)
-design/l2_1/intents/*.yaml                     (appends observation_trace)
+design/l2_1/intents/AURORA_L2_INTENT_*.yaml   (appends observation_trace)
         ↓
-backend/aurora_l2/compiler.py           ← Reads capabilities + intents
+backend/aurora_l2/SDSR_UI_AURORA_compiler.py           ← Reads capabilities + intents
         ↓
 design/l2_1/ui_contract/ui_projection_lock.json  (CANONICAL OUTPUT)
         ↓
@@ -111,22 +121,33 @@ ui_projection_builder.py       ← DEPRECATED
 
 ### 5.1 Intent Governance
 
+**Source of Truth:** `design/l2_1/INTENT_LEDGER.md`
+
+**Generated Artifacts:**
 ```
 design/l2_1/
+├─ INTENT_LEDGER.md                     # SOURCE OF TRUTH (human-edited)
 ├─ AURORA_L2_INTENT_REGISTRY.yaml       # Allow-list gate
+├─ ui_plan.yaml                         # UI structure (generated)
 └─ intents/
-   └─ *.yaml                            # 54 intent specs
+   └─ AURORA_L2_INTENT_*.yaml           # Intent specs (generated)
 ```
+
+**Naming Convention:** `AURORA_L2_INTENT_{panel_id}.yaml`
+
+**Generator Script:** `scripts/tools/sync_from_intent_ledger.py`
 
 **Responsibilities:**
 - Declare panels, orders, info, controls, actions
 - Declare semantics (verb / object / effect)
 - Declare topology (order, section, role, expansion)
+- Declare panel_class (evidence | interpretation | execution)
 
 **Must NOT:**
 - Define UI widgets
 - Define backend APIs
 - Infer behavior
+- Be manually edited (generated artifacts)
 
 ### 5.2 Semantic & Topology Registries
 
@@ -158,7 +179,7 @@ design/l2_1/
 ### 6.1 Entry Point
 
 ```
-backend/aurora_l2/compiler.py
+backend/aurora_l2/SDSR_UI_AURORA_compiler.py
 ```
 
 **This is the ONLY writer to the UI intent store.**
@@ -361,6 +382,7 @@ Used for:
 
 The following are deprecated and frozen:
 
+### 13.1 Legacy Pipeline Scripts
 ```
 scripts/tools/l2_pipeline.py
 scripts/tools/l2_cap_expander.py
@@ -369,14 +391,29 @@ scripts/tools/intent_normalizer.py
 scripts/tools/surface_to_slot_resolver.py
 scripts/tools/intent_compiler.py
 scripts/tools/ui_projection_builder.py
+```
+
+### 13.2 Legacy Intermediate Artifacts
+```
 design/l2_1/ui_contract/ui_intent_ir_raw.json
 design/l2_1/ui_contract/ui_intent_ir_normalized.json
 design/l2_1/ui_contract/ui_intent_ir_slotted.json
 design/l2_1/ui_contract/ui_intent_ir_compiled.json
+```
+
+### 13.3 Legacy CSV Source (DEPRECATED 2026-01-15)
+```
 design/l2_1/supertable/L2_1_UI_INTENT_SUPERTABLE.csv
 design/l2_1/supertable/l2_supertable_manifest.json
 design/l2_1/supertable/l2_supertable_v*_cap_expanded.xlsx
+scripts/tools/aurora_l2_migrate_csv_to_yaml.py   ← DEPRECATED
 ```
+
+**Reason:** Intent YAMLs are now generated from `INTENT_LEDGER.md` (single source of truth).
+
+**Replacement:** Use `scripts/tools/sync_from_intent_ledger.py`
+
+The CSV migration script (`aurora_l2_migrate_csv_to_yaml.py`) is blocked from execution unless `--force` flag is used.
 
 They may be deleted **only after** AURORA_L2 validation passes.
 
@@ -384,10 +421,34 @@ They may be deleted **only after** AURORA_L2 validation passes.
 
 ## 14. Migration Rules
 
-- Migration occurs on branch: `aurora-l2-migration`
-- Existing CSV intents are mechanically migrated to YAML
-- Migrated intents are marked `UNREVIEWED`
+### 14.1 Current State (Post-Migration)
+
+- **Source of Truth:** `design/l2_1/INTENT_LEDGER.md`
+- **Generator:** `scripts/tools/sync_from_intent_ledger.py`
+- **Generated Artifacts:**
+  - `design/l2_1/ui_plan.yaml`
+  - `design/l2_1/intents/AURORA_L2_INTENT_*.yaml`
+  - `backend/AURORA_L2_CAPABILITY_REGISTRY/*.yaml`
+
+### 14.2 Authority Stack (Non-Negotiable Order)
+
+| Priority | Authority | Role |
+|----------|-----------|------|
+| 1 | `INTENT_LEDGER.md` | Human intent (SOURCE) |
+| 2 | Intent YAMLs | Compiled specs |
+| 3 | Capability registry | Observability state |
+| 4 | ui_plan.yaml | UI structure |
+| 5 | Projection lock | Compiler output |
+
+**Rule:** If lower priority artifacts contradict higher priority, the lower is regenerated.
+
+### 14.3 Legacy Migration (Historical)
+
+- Migration occurred on branch: `aurora-l2-migration`
+- Existing CSV intents were mechanically migrated to YAML
+- Migrated intents were marked `UNREVIEWED`
 - No semantic enrichment during migration
+- **CSV path is now DEPRECATED** (see Section 13.3)
 
 ### Accepted Debt (Explicit)
 
@@ -437,7 +498,7 @@ AURORA_L2 is the only sanctioned UI intent pipeline.
 | Semantic Registry | `design/l2_1/AURORA_L2_SEMANTIC_REGISTRY.yaml` | ✅ LOCKED (14 verbs, 14 objects, 7 effects) |
 | Expansion Modes | `design/l2_1/AURORA_L2_EXPANSION_MODE_REGISTRY.yaml` | ✅ LOCKED (5 modes) |
 | JSON Schemas | `backend/aurora_l2/schema/` | ✅ COMPLETE |
-| Compiler | `backend/aurora_l2/compiler.py` | ✅ COMPLETE |
+| Compiler | `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` | ✅ COMPLETE |
 | SQL Exports | `design/l2_1/exports/` | ✅ COMPLETE |
 | Capability Registry | `backend/AURORA_L2_CAPABILITY_REGISTRY/` | ⏳ PLACEHOLDER |
 | Projection Builder | `frontend/aurora_l2/projection_builder.ts` | ✅ COMPLETE |

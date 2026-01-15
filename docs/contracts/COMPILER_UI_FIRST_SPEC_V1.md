@@ -253,7 +253,7 @@ python scripts/tools/validate_ui_plan.py
 ### 7.2 Compilation Command
 
 ```bash
-python backend/aurora_l2/compiler/compile.py \
+python backend/aurora_l2/SDSR_UI_AURORA_compiler.py \
     --ui-plan design/l2_1/ui_plan.yaml \
     --intents design/l2_1/intents/ \
     --capabilities backend/AURORA_L2_CAPABILITY_REGISTRY/ \

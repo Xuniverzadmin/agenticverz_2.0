@@ -333,6 +333,114 @@ async def store_trace(
     }
 
 
+# =============================================================================
+# Static routes MUST come before parameter routes
+# =============================================================================
+
+
+@router.get("/mismatches")
+async def list_all_mismatches(
+    window: Optional[str] = Query(None, description="Time window (e.g., 24h, 7d)"),
+    status: Optional[str] = Query(None, regex="^(open|resolved)$", description="Filter by status"),
+    limit: int = Query(100, le=500, description="Max results"),
+):
+    """
+    List all trace mismatches across the system.
+
+    READ-ONLY endpoint for observability. No side effects.
+    Returns mismatches with summary counts.
+
+    Auth: OBSERVER-safe (SDSR compatible)
+    """
+    if not USE_POSTGRES:
+        raise HTTPException(status_code=501, detail="Requires PostgreSQL store")
+
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import text
+
+    from app.db_async import async_session_context
+
+    # Build query conditions and params
+    conditions = []
+    params: dict = {"limit": limit}
+
+    if window:
+        # Parse window (24h, 7d, etc.)
+        if window.endswith("h"):
+            hours = int(window.rstrip("h"))
+            since = datetime.now(timezone.utc) - timedelta(hours=hours)
+        elif window.endswith("d"):
+            days = int(window.rstrip("d"))
+            since = datetime.now(timezone.utc) - timedelta(days=days)
+        else:
+            since = datetime.now(timezone.utc) - timedelta(hours=24)  # Default 24h
+        conditions.append("created_at >= :since")
+        params["since"] = since
+
+    if status:
+        conditions.append("resolved = :resolved")
+        params["resolved"] = status == "resolved"
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    async with async_session_context() as session:
+        # Get mismatches
+        result = await session.execute(
+            text(f"""
+                SELECT id, trace_id, step_index, reason, expected_hash, actual_hash,
+                       details, resolved, resolved_at, created_at
+                FROM aos_trace_mismatches
+                {where_clause}
+                ORDER BY created_at DESC
+                LIMIT :limit
+            """),
+            params,
+        )
+        rows = result.fetchall()
+
+        # Get summary counts
+        count_sql_base = "SELECT COUNT(*) FROM aos_trace_mismatches"
+        count_where = f"WHERE {conditions[0]}" if window and conditions else ""
+        count_params = {"since": params.get("since")} if window else {}
+
+        open_result = await session.execute(
+            text(f"{count_sql_base} {count_where} {'AND' if count_where else 'WHERE'} resolved = FALSE"),
+            count_params,
+        )
+        open_count = open_result.scalar() or 0
+
+        resolved_result = await session.execute(
+            text(f"{count_sql_base} {count_where} {'AND' if count_where else 'WHERE'} resolved = TRUE"),
+            count_params,
+        )
+        resolved_count = resolved_result.scalar() or 0
+
+    return {
+        "mismatches": [
+            {
+                "id": str(r[0]),
+                "trace_id": r[1],
+                "step_index": r[2],
+                "reason": r[3],
+                "expected_hash": r[4],
+                "actual_hash": r[5],
+                "details": r[6],
+                "status": "resolved" if r[7] else "open",
+                "resolved_at": r[8].isoformat() if r[8] else None,
+                "detected_at": r[9].isoformat() if r[9] else None,
+            }
+            for r in rows
+        ],
+        "summary": {
+            "open": open_count,
+            "resolved": resolved_count,
+        },
+        "window": window,
+        "total": len(rows),
+    }
+
+
 @router.get("/{run_id}", response_model=TraceDetailResponse)
 async def get_trace(
     run_id: str,

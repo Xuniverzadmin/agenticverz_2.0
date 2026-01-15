@@ -22,6 +22,7 @@ Inputs:
 
 Outputs:
   - design/l2_1/ui_plan.yaml (structure)
+  - design/l2_1/intents/*.yaml (intent specifications) [NEW]
   - backend/AURORA_L2_CAPABILITY_REGISTRY/*.yaml (capabilities)
   - SDSR scenario stubs (if missing)
 
@@ -48,6 +49,7 @@ REPO_ROOT = Path(__file__).parent.parent.parent
 TOPOLOGY_PATH = REPO_ROOT / "design" / "l2_1" / "UI_TOPOLOGY_TEMPLATE.yaml"
 LEDGER_PATH = REPO_ROOT / "design" / "l2_1" / "INTENT_LEDGER.md"
 UI_PLAN_PATH = REPO_ROOT / "design" / "l2_1" / "ui_plan.yaml"
+INTENTS_DIR = REPO_ROOT / "design" / "l2_1" / "intents"
 CAPABILITY_REGISTRY_PATH = REPO_ROOT / "backend" / "AURORA_L2_CAPABILITY_REGISTRY"
 SDSR_SCENARIOS_PATH = REPO_ROOT / "backend" / "scripts" / "sdsr" / "scenarios"
 
@@ -456,7 +458,7 @@ def generate_ui_plan(
                 sorted_panels = sorted(topic_panels, key=lambda p: p.slot)
 
                 for panel in sorted_panels:
-                    intent_spec = f"design/l2_1/intents/{panel.panel_id}.yaml"
+                    intent_spec = f"design/l2_1/intents/AURORA_L2_INTENT_{panel.panel_id}.yaml"
                     if panel.state == "EMPTY":
                         intent_spec = None
 
@@ -501,6 +503,117 @@ def generate_capability_yaml(cap: CapabilityEntry) -> Dict:
         yaml_content["metadata"]["observed_on"] = cap.observed
 
     return yaml_content
+
+
+def generate_intent_yaml(panel: PanelEntry, capabilities: List[CapabilityEntry]) -> Dict:
+    """Generate a single intent YAML from a PanelEntry."""
+    # Find matching capability if any
+    cap_entry = None
+    if panel.capability:
+        for cap in capabilities:
+            if cap.capability_id == panel.capability:
+                cap_entry = cap
+                break
+
+    # Build topic_id
+    topic_id = f"{panel.domain}.{panel.subdomain}.{panel.topic}"
+
+    # Extract order from panel_id (e.g., "O1" from "OVR-SUM-HL-O1")
+    order = panel.panel_id.split("-")[-1] if "-" in panel.panel_id else "O1"
+
+    intent = {
+        "panel_id": panel.panel_id,
+        "version": "1.0.0",
+        "panel_class": panel.panel_class,
+        "metadata": {
+            "domain": panel.domain,
+            "subdomain": panel.subdomain,
+            "topic": panel.topic,
+            "topic_id": topic_id,
+            "order": order,
+            "action_layer": "L2_1",
+            "source": "INTENT_LEDGER",
+            "review_status": "UNREVIEWED",
+        },
+        "display": {
+            "name": panel.panel_id,  # Default to panel_id, human can improve
+            "visible_by_default": True,
+            "nav_required": False,
+            "expansion_mode": "INLINE",
+        },
+        "data": {
+            "read": True,
+            "download": False,
+            "write": False,
+            "replay": True,
+        },
+        "controls": {
+            "filtering": False,
+            "activate": False,
+            "confirmation_required": False,
+        },
+    }
+
+    # Add capability block if present
+    if panel.capability:
+        intent["capability"] = {
+            "id": panel.capability,
+            "status": cap_entry.status if cap_entry else "DECLARED",
+            "endpoint": None,  # Human must fill
+            "method": "GET",
+        }
+        # Add SDSR block if capability has scenario
+        if cap_entry and cap_entry.scenario:
+            intent["sdsr"] = {
+                "scenario": cap_entry.scenario,
+                "verified": cap_entry.observed is not None,
+            }
+    else:
+        intent["capability"] = None
+        intent["sdsr"] = None
+
+    # Add notes from purpose
+    if panel.purpose:
+        intent["notes"] = panel.purpose
+
+    return intent
+
+
+def write_intent_yamls(panels: List[PanelEntry], capabilities: List[CapabilityEntry], path: Path):
+    """Write intent YAML files for all panels."""
+    path.mkdir(parents=True, exist_ok=True)
+
+    written = 0
+    skipped = 0
+
+    for panel in panels:
+        # Skip EMPTY state panels (no intent YAML needed)
+        if panel.state == "EMPTY":
+            skipped += 1
+            continue
+
+        filepath = path / f"AURORA_L2_INTENT_{panel.panel_id}.yaml"
+        intent = generate_intent_yaml(panel, capabilities)
+
+        header = f"""# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: {panel.panel_id}
+# Naming: AURORA_L2_INTENT_{{panel_id}}.yaml
+#
+"""
+        with open(filepath, "w") as f:
+            f.write(header)
+            yaml.dump(
+                intent,
+                f,
+                default_flow_style=False,
+                sort_keys=False,
+                allow_unicode=True,
+            )
+        written += 1
+
+    return written, skipped
 
 
 def write_ui_plan(ui_plan: Dict, path: Path):
@@ -597,6 +710,12 @@ def main():
     write_ui_plan(ui_plan, UI_PLAN_PATH)
     print(f"  Written to: {UI_PLAN_PATH}")
 
+    # Generate intent YAMLs
+    print("\nGenerating intent YAMLs...")
+    written, skipped = write_intent_yamls(panels, capabilities, INTENTS_DIR)
+    print(f"  Written {written} intent YAMLs to: {INTENTS_DIR}")
+    print(f"  Skipped {skipped} EMPTY state panels")
+
     # Generate capability registry
     print("\nGenerating capability registry...")
     write_capability_registry(capabilities, CAPABILITY_REGISTRY_PATH)
@@ -620,11 +739,12 @@ def main():
     print()
     print("Generated artifacts:")
     print(f"  - {UI_PLAN_PATH}")
+    print(f"  - {INTENTS_DIR}/AURORA_L2_INTENT_*.yaml")
     print(f"  - {CAPABILITY_REGISTRY_PATH}/*.yaml")
     print()
     print("Next steps:")
     print("  1. Validate: python scripts/tools/coherency_gate.py")
-    print("  2. Compile: python backend/aurora_l2/compiler.py")
+    print("  2. Compile: python backend/aurora_l2/SDSR_UI_AURORA_compiler.py")
     print()
 
 

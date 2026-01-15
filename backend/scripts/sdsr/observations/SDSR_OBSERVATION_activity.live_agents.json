@@ -1,0 +1,39 @@
+{
+  "observation_id": "OBS-SDSR-ACT-LLM-LIVE-O2-001-20260115085710",
+  "scenario_id": "SDSR-ACT-LLM-LIVE-O2-001",
+  "capability_id": "activity.live_agents",
+  "panel_id": "ACT-LLM-LIVE-O2",
+  "status": "FAIL",
+  "observed_at": "2026-01-15T08:57:14.673470+00:00",
+  "endpoint": "/api/v1/agents/agents",
+  "method": "GET",
+  "response_status_code": 404,
+  "response_time_ms": 4442.960739135742,
+  "invariants_total": 3,
+  "invariants_passed": 2,
+  "invariants_failed": 1,
+  "invariant_results": [
+    {
+      "id": "INV-001",
+      "name": "response_shape",
+      "status": "PASS",
+      "message": "Assertion passed: response is dict and response is not empty"
+    },
+    {
+      "id": "INV-002",
+      "name": "status_code",
+      "status": "FAIL",
+      "message": "Assertion failed: status_code == 200"
+    },
+    {
+      "id": "INV-003",
+      "name": "auth_works",
+      "status": "PASS",
+      "message": "Assertion passed: status_code != 401 and status_code != 403"
+    }
+  ],
+  "failure_reason": "1 invariant(s) failed",
+  "failure_taxonomy": "INVARIANT_VIOLATED",
+  "coherency_verified": true,
+  "trace_id": null
+}

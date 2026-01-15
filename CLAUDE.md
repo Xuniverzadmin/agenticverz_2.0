@@ -673,7 +673,7 @@ AURORA_L2_apply_sdsr_observations.py  ← Updates capability status
 backend/AURORA_L2_CAPABILITY_REGISTRY/*.yaml  (DECLARED → OBSERVED)
 design/l2_1/intents/*.yaml                     (appends observation_trace)
         ↓
-backend/aurora_l2/compiler.py      ← Reads capabilities + intents
+backend/aurora_l2/SDSR_UI_AURORA_compiler.py      ← Reads capabilities + intents
         ↓
 design/l2_1/ui_contract/ui_projection_lock.json  (CANONICAL OUTPUT)
         ↓
@@ -720,7 +720,7 @@ Reference: PIN-370, PIN-379
 | Semantic Registry | `design/l2_1/AURORA_L2_SEMANTIC_REGISTRY.yaml` | Valid verbs/modes |
 | Intent Registry | `design/l2_1/AURORA_L2_INTENT_REGISTRY.yaml` | Intent index |
 | SDSR Scenarios | `backend/scripts/sdsr/scenarios/*.yaml` | Capability observation |
-| Compiler | `backend/aurora_l2/compiler.py` | Generates projection |
+| Compiler | `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` | Generates projection |
 | Pipeline Script | `scripts/tools/run_aurora_l2_pipeline.sh` | Orchestrates compilation |
 | Projection Lock | `design/l2_1/ui_contract/ui_projection_lock.json` | Canonical output |
 | Public Projection | `website/app-shell/public/projection/ui_projection_lock.json` | Frontend reads |
@@ -732,7 +732,7 @@ Reference: PIN-370, PIN-379
 |----------|--------|-------------|
 | `L2_1_UI_INTENT_SUPERTABLE.csv` | DEPRECATED | `design/l2_1/intents/*.yaml` |
 | `scripts/tools/l2_pipeline.py` | DEPRECATED | `run_aurora_l2_pipeline.sh` |
-| `scripts/tools/l2_raw_intent_parser.py` | DEPRECATED | `aurora_l2/compiler.py` |
+| `scripts/tools/l2_raw_intent_parser.py` | DEPRECATED | `aurora_l2/SDSR_UI_AURORA_compiler.py` |
 | `scripts/tools/intent_normalizer.py` | DEPRECATED | Compiler handles |
 | `scripts/tools/surface_to_slot_resolver.py` | DEPRECATED | Compiler handles |
 | `scripts/tools/run_l2_pipeline.sh` | DEPRECATED | `run_aurora_l2_pipeline.sh` |

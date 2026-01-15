@@ -7,7 +7,7 @@ DEPRECATED — DO NOT USE
 This script is part of the LEGACY L2.1 CSV-based pipeline.
 It has been replaced by the AURORA L2 SDSR-driven pipeline.
 
-REPLACEMENT: backend/aurora_l2/compiler.py (reads YAML intents directly)
+REPLACEMENT: backend/aurora_l2/SDSR_UI_AURORA_compiler.py (reads YAML intents directly)
 REFERENCE: design/l2_1/AURORA_L2.md, PIN-370, PIN-379
 
 This file is preserved for historical reference only.
@@ -16,7 +16,7 @@ This file is preserved for historical reference only.
 # Layer: L8 — Catalyst / Meta
 # Product: system-wide
 # Status: DEPRECATED (2026-01-14)
-# Replacement: backend/aurora_l2/compiler.py
+# Replacement: backend/aurora_l2/SDSR_UI_AURORA_compiler.py
 # Reference: L2.1 UI Projection Pipeline - SUPERSEDED by AURORA L2
 
 """

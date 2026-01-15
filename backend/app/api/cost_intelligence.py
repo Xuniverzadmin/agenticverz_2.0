@@ -92,6 +92,15 @@ class CostRecordCreate(BaseModel):
     cost_cents: float
 
 
+class CostProvenance(BaseModel):
+    """Provenance metadata for cost interpretation panels."""
+
+    aggregation: str = Field(..., description="Aggregation type (e.g., 'sum', 'count')")
+    data_source: str = Field(..., description="Data source table/entity")
+    computed_at: datetime = Field(..., description="When the data was computed")
+    period_description: str = Field(..., description="Human-readable period description")
+
+
 class CostSummary(BaseModel):
     """Cost summary for a period."""
 
@@ -105,6 +114,7 @@ class CostSummary(BaseModel):
     budget_cents: Optional[int]
     budget_used_pct: Optional[float]
     days_remaining_at_current_rate: Optional[float]
+    provenance: CostProvenance = Field(..., description="Provenance metadata for interpretation")
 
 
 class CostByFeature(BaseModel):
@@ -172,6 +182,52 @@ class CostAnomalyResponse(BaseModel):
     action_taken: Optional[str]
     resolved: bool
     detected_at: datetime
+
+
+# =============================================================================
+# Provenance Envelope Response Models (ANALYTICS domain SDSR compliance)
+# =============================================================================
+
+
+class AnalyticsProvenance(BaseModel):
+    """Provenance envelope for analytics interpretation panels.
+
+    SDSR requires provenance metadata on all interpretation panels to ensure
+    the UI can correctly display how data was derived.
+    """
+
+    sources: List[str] = Field(..., description="Data sources used (e.g., ['cost_records', 'feature_tags'])")
+    window: str = Field(..., description="Time window (e.g., '24h', '7d', '30d')")
+    aggregation: str = Field(..., description="Aggregation method (e.g., 'GROUP_BY:user', 'SUM')")
+    generated_at: datetime = Field(..., description="When this data was computed")
+
+
+class CostByUserEnvelope(BaseModel):
+    """Envelope response for cost by user with provenance."""
+
+    data: List[CostByUser]
+    provenance: AnalyticsProvenance
+
+
+class CostByModelEnvelope(BaseModel):
+    """Envelope response for cost by model with provenance."""
+
+    data: List[CostByModel]
+    provenance: AnalyticsProvenance
+
+
+class CostByFeatureEnvelope(BaseModel):
+    """Envelope response for cost by feature with provenance."""
+
+    data: List[CostByFeature]
+    provenance: AnalyticsProvenance
+
+
+class CostAnomaliesEnvelope(BaseModel):
+    """Envelope response for cost anomalies with provenance."""
+
+    data: List[CostAnomalyResponse]
+    provenance: AnalyticsProvenance
 
 
 class CostDashboard(BaseModel):
@@ -470,13 +526,16 @@ async def get_cost_summary(
     return await _get_cost_summary(session, tenant_id, period_start, now, days)
 
 
-@router.get("/by-feature", response_model=List[CostByFeature])
+@router.get("/by-feature", response_model=CostByFeatureEnvelope)
 async def get_costs_by_feature(
     period: str = Query("24h", regex="^(24h|7d|30d)$"),
     tenant_id: str = Depends(get_tenant_id),
     session: Session = Depends(get_session),
-) -> List[CostByFeature]:
-    """Get cost breakdown by feature tag."""
+) -> CostByFeatureEnvelope:
+    """Get cost breakdown by feature tag.
+
+    Returns envelope with provenance for SDSR ANALYTICS domain compliance.
+    """
     now = utc_now()
     period_start = (
         now - timedelta(hours=24)
@@ -498,16 +557,29 @@ async def get_costs_by_feature(
     ).first()
     total_cost = total_result[0] if total_result else 0
 
-    return await _get_costs_by_feature(session, tenant_id, period_start, total_cost)
+    data = await _get_costs_by_feature(session, tenant_id, period_start, total_cost)
+
+    return CostByFeatureEnvelope(
+        data=data,
+        provenance=AnalyticsProvenance(
+            sources=["cost_records", "feature_tags"],
+            window=period,
+            aggregation="GROUP_BY:feature_tag",
+            generated_at=now,
+        ),
+    )
 
 
-@router.get("/by-user", response_model=List[CostByUser])
+@router.get("/by-user", response_model=CostByUserEnvelope)
 async def get_costs_by_user(
     period: str = Query("24h", regex="^(24h|7d|30d)$"),
     tenant_id: str = Depends(get_tenant_id),
     session: Session = Depends(get_session),
-) -> List[CostByUser]:
-    """Get cost breakdown by user with anomaly detection."""
+) -> CostByUserEnvelope:
+    """Get cost breakdown by user with anomaly detection.
+
+    Returns envelope with provenance for SDSR ANALYTICS domain compliance.
+    """
     now = utc_now()
     period_start = (
         now - timedelta(hours=24)
@@ -529,16 +601,29 @@ async def get_costs_by_user(
     ).first()
     total_cost = total_result[0] if total_result else 0
 
-    return await _get_costs_by_user(session, tenant_id, period_start, total_cost)
+    data = await _get_costs_by_user(session, tenant_id, period_start, total_cost)
+
+    return CostByUserEnvelope(
+        data=data,
+        provenance=AnalyticsProvenance(
+            sources=["cost_records"],
+            window=period,
+            aggregation="GROUP_BY:user",
+            generated_at=now,
+        ),
+    )
 
 
-@router.get("/by-model", response_model=List[CostByModel])
+@router.get("/by-model", response_model=CostByModelEnvelope)
 async def get_costs_by_model(
     period: str = Query("24h", regex="^(24h|7d|30d)$"),
     tenant_id: str = Depends(get_tenant_id),
     session: Session = Depends(get_session),
-) -> List[CostByModel]:
-    """Get cost breakdown by model."""
+) -> CostByModelEnvelope:
+    """Get cost breakdown by model.
+
+    Returns envelope with provenance for SDSR ANALYTICS domain compliance.
+    """
     now = utc_now()
     period_start = (
         now - timedelta(hours=24)
@@ -559,18 +644,45 @@ async def get_costs_by_model(
     ).first()
     total_cost = total_result[0] if total_result else 0
 
-    return await _get_costs_by_model(session, tenant_id, period_start, total_cost)
+    data = await _get_costs_by_model(session, tenant_id, period_start, total_cost)
+
+    return CostByModelEnvelope(
+        data=data,
+        provenance=AnalyticsProvenance(
+            sources=["cost_records"],
+            window=period,
+            aggregation="GROUP_BY:model",
+            generated_at=now,
+        ),
+    )
 
 
-@router.get("/anomalies", response_model=List[CostAnomalyResponse])
+@router.get("/anomalies", response_model=CostAnomaliesEnvelope)
 async def get_anomalies(
     days: int = Query(7, ge=1, le=90),
     include_resolved: bool = False,
     tenant_id: str = Depends(get_tenant_id),
     session: Session = Depends(get_session),
-) -> List[CostAnomalyResponse]:
-    """Get detected cost anomalies."""
-    return await _get_recent_anomalies(session, tenant_id, days, include_resolved)
+) -> CostAnomaliesEnvelope:
+    """Get detected cost anomalies.
+
+    Returns envelope with provenance for SDSR ANALYTICS domain compliance.
+    """
+    now = utc_now()
+    data = await _get_recent_anomalies(session, tenant_id, days, include_resolved)
+
+    # Build window description
+    window = f"{days}d" if days != 1 else "24h"
+
+    return CostAnomaliesEnvelope(
+        data=data,
+        provenance=AnalyticsProvenance(
+            sources=["cost_anomalies", "cost_records"],
+            window=window,
+            aggregation="DETECT:anomaly",
+            generated_at=now,
+        ),
+    )
 
 
 @router.get("/projection", response_model=CostProjection)
@@ -732,6 +844,14 @@ async def _get_cost_summary(
         remaining = budget.monthly_limit_cents - total_cost
         days_remaining = remaining / daily_avg if remaining > 0 else 0
 
+    # Build period description for provenance
+    if days == 1:
+        period_desc = "Last 24 hours"
+    elif days == 7:
+        period_desc = "Last 7 days"
+    else:
+        period_desc = f"Last {days} days"
+
     return CostSummary(
         tenant_id=tenant_id,
         period_start=period_start,
@@ -743,6 +863,12 @@ async def _get_cost_summary(
         budget_cents=budget_cents,
         budget_used_pct=budget_used_pct,
         days_remaining_at_current_rate=days_remaining,
+        provenance=CostProvenance(
+            aggregation="sum",
+            data_source="cost_records",
+            computed_at=utc_now(),
+            period_description=period_desc,
+        ),
     )
 
 

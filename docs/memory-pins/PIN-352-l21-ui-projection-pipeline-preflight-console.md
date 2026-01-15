@@ -19,7 +19,7 @@
 > **Key Changes:**
 > - Source of truth: Intent YAMLs (`design/l2_1/intents/*.yaml`) instead of CSV
 > - Capability observation: SDSR-driven (not manual)
-> - Compiler: `backend/aurora_l2/compiler.py` instead of multi-stage scripts
+> - Compiler: `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` instead of multi-stage scripts
 > - Run script: `run_aurora_l2_pipeline.sh` instead of `run_l2_pipeline.sh`
 >
 > This PIN is preserved for historical reference only.

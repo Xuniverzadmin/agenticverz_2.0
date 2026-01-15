@@ -1,0 +1,51 @@
+{
+  "observation_id": "OBS-SDSR-ANL-CST-SUM-O1-001-20260115124142",
+  "scenario_id": "SDSR-ANL-CST-SUM-O1-001",
+  "capability_id": "analytics.cost_summary",
+  "panel_id": "ANL-CST-SUM-O1",
+  "status": "PASS",
+  "observed_at": "2026-01-15T12:41:49.913890+00:00",
+  "endpoint": "/cost/dashboard",
+  "method": "GET",
+  "response_status_code": 200,
+  "response_time_ms": 7091.66955947876,
+  "invariants_total": 5,
+  "invariants_passed": 5,
+  "invariants_failed": 0,
+  "invariant_results": [
+    {
+      "id": "INV-001",
+      "name": "response_shape",
+      "status": "PASS",
+      "message": "Assertion passed: response is dict and response is not empty"
+    },
+    {
+      "id": "INV-002",
+      "name": "status_code",
+      "status": "PASS",
+      "message": "Assertion passed: status_code == 200"
+    },
+    {
+      "id": "INV-003",
+      "name": "auth_works",
+      "status": "PASS",
+      "message": "Assertion passed: status_code != 401 and status_code != 403"
+    },
+    {
+      "id": "INV-004",
+      "name": "provenance_present",
+      "status": "PASS",
+      "message": "Assertion passed: \"summary\" in response and \"provenance\" in response.get(\"summary\", {})"
+    },
+    {
+      "id": "INV-005",
+      "name": "aggregation_type_present",
+      "status": "PASS",
+      "message": "Assertion passed: \"aggregation\" in response.get(\"summary\", {}).get(\"provenance\", {})"
+    }
+  ],
+  "failure_reason": null,
+  "failure_taxonomy": null,
+  "coherency_verified": true,
+  "trace_id": null
+}

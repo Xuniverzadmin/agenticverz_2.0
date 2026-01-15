@@ -1,0 +1,39 @@
+# AURORA L2 Capability Registry Entry
+# Capability: overview.incident_snapshot
+# Last Updated: 2026-01-15T05:37:37.585909+00:00
+# Updated By: aurora_apply_observation.py
+#
+# STATUS: OBSERVED
+#
+# WARNING: Status transitions are MACHINE-OWNED.
+#          Do NOT manually edit the status field.
+#
+capability_id: overview.incident_snapshot
+status: OBSERVED
+source_panels:
+- OVR-SUM-HL-O2
+domain: OVERVIEW
+endpoint: /api/v1/incidents/summary
+method: GET
+metadata:
+  generated_by: aurora_capability_scaffold.py
+  generated_on: '2026-01-15'
+  declared_by: AURORA_AUTOMATION
+  declared_on: '2026-01-15'
+  observed_by: SDSR-OVR-SUM-HL-O2-001
+  observed_on: '2026-01-15'
+coherency:
+  last_checked: '2026-01-15T05:37:29.653762+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py
+observation:
+  scenario_id: SDSR-OVR-SUM-HL-O2-001
+  observed_at: '2026-01-15T05:37:29.653762+00:00'
+  trace_id: null
+  invariants_passed: 5
+  invariants_total: 5
+acceptance_criteria:
+- Endpoint exists and responds
+- Response schema matches contract
+- Auth works correctly
+- Data is real (not mock)

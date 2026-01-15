@@ -13,7 +13,7 @@ REFERENCE: design/l2_1/AURORA_L2.md, PIN-370, PIN-379
 The new pipeline uses:
 - Intent YAMLs (design/l2_1/intents/*.yaml) instead of CSV
 - SDSR-driven capability observation
-- backend/aurora_l2/compiler.py for projection generation
+- backend/aurora_l2/SDSR_UI_AURORA_compiler.py for projection generation
 
 This file is preserved for historical reference only.
 ================================================================================

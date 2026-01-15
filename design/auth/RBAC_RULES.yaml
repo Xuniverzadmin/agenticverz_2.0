@@ -260,6 +260,338 @@ rules:
       TEMPORARY - must be SESSION tier in production.
 
   # ===========================================================================
+  # SDSR FULL SWEEP RULES (PIN-427)
+  # ===========================================================================
+  #
+  # These rules enable HISAR/SDSR full sweep capability verification.
+  # They allow unauthenticated reads in preflight environment only.
+  #
+  # ===========================================================================
+
+  - rule_id: COST_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /cost/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Cost Intelligence API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: POLICY_LAYER_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /policy-layer/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Policy Layer API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: FEEDBACK_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /api/v1/feedback/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Feedback API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: PREDICTIONS_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /api/v1/predictions/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Predictions API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: RECOVERY_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /api/v1/recovery/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Recovery API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: DISCOVERY_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /api/v1/discovery/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Discovery API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: TENANTS_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /api/v1/tenants/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Tenants API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: TRACES_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /api/v1/traces/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Traces API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: RUNTIME_TRACES_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /api/v1/runtime/traces/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Runtime Traces API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: GUARD_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /api/v1/guard/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Guard API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: GUARD_LOGS_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /guard/logs/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Guard Logs API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: AGENTS_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /api/v1/agents/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Agents API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: OPS_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /api/v1/ops/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Ops API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: OPS_ACTIONS_AUDIT_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /ops/actions/audit/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Ops Audit API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: STATUS_HISTORY_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /status_history/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Status History API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: INTEGRATION_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /integration/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Integration API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: BILLING_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /billing/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Billing API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: RBAC_AUDIT_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /api/v1/rbac/audit/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR RBAC Audit API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: CUSTOMER_READ_PREFLIGHT
+    pin: PIN-427
+    path_prefix: /api/v1/customer/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      aggregation: "BASIC"
+    description: >
+      SDSR Customer API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  # ===========================================================================
   # FOUNDER CONSOLE
   # ===========================================================================
 

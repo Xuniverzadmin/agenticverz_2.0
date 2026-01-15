@@ -1,94 +1,1390 @@
 {
   "status": "FAILED",
-  "violation_count": 11,
+  "violation_count": 173,
   "violations": [
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-PA-PC-O4",
+      "field": "panel_id",
+      "old": "POL-PA-PC-O4",
+      "new": null,
+      "message": "Panel 'POL-PA-PC-O4' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "CON-AP-AU-O1",
+      "field": "panel_id",
+      "old": "CON-AP-AU-O1",
+      "new": null,
+      "message": "Panel 'CON-AP-AU-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "CON-IN-IH-O1",
+      "field": "panel_id",
+      "old": "CON-IN-IH-O1",
+      "new": null,
+      "message": "Panel 'CON-IN-IH-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-ET-TD-O3",
+      "field": "panel_id",
+      "old": "LOG-ET-TD-O3",
+      "new": null,
+      "message": "Panel 'LOG-ET-TD-O3' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-EX-LR-O1",
+      "field": "panel_id",
+      "old": "ACT-EX-LR-O1",
+      "new": null,
+      "message": "Panel 'ACT-EX-LR-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACC-PS-UO-O1",
+      "field": "panel_id",
+      "old": "ACC-PS-UO-O1",
+      "new": null,
+      "message": "Panel 'ACC-PS-UO-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-HI-RI-O4",
+      "field": "panel_id",
+      "old": "INC-HI-RI-O4",
+      "new": null,
+      "message": "Panel 'INC-HI-RI-O4' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACC-PR-AI-O1",
+      "field": "panel_id",
+      "old": "ACC-PR-AI-O1",
+      "new": null,
+      "message": "Panel 'ACC-PR-AI-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "CON-AP-WH-O2",
+      "field": "panel_id",
+      "old": "CON-AP-WH-O2",
+      "new": null,
+      "message": "Panel 'CON-AP-WH-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-PR-PP-O2",
+      "field": "panel_id",
+      "old": "POL-PR-PP-O2",
+      "new": null,
+      "message": "Panel 'POL-PR-PP-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-AI-ID-O2",
+      "field": "panel_id",
+      "old": "INC-AI-ID-O2",
+      "new": null,
+      "message": "Panel 'INC-AI-ID-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "OVW-SH-HM-O2",
+      "field": "panel_id",
+      "old": "OVW-SH-HM-O2",
+      "new": null,
+      "message": "Panel 'OVW-SH-HM-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-EX-RD-O3",
+      "field": "panel_id",
+      "old": "ACT-EX-RD-O3",
+      "new": null,
+      "message": "Panel 'ACT-EX-RD-O3' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACC-BL-PM-O1",
+      "field": "panel_id",
+      "old": "ACC-BL-PM-O1",
+      "new": null,
+      "message": "Panel 'ACC-BL-PM-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACC-PR-AI-O2",
+      "field": "panel_id",
+      "old": "ACC-PR-AI-O2",
+      "new": null,
+      "message": "Panel 'ACC-PR-AI-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-AP-AR-O2",
+      "field": "panel_id",
+      "old": "POL-AP-AR-O2",
+      "new": null,
+      "message": "Panel 'POL-AP-AR-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "OVW-SH-HM-O1",
+      "field": "panel_id",
+      "old": "OVW-SH-HM-O1",
+      "new": null,
+      "message": "Panel 'OVW-SH-HM-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-AI-ID-O4",
+      "field": "panel_id",
+      "old": "INC-AI-ID-O4",
+      "new": null,
+      "message": "Panel 'INC-AI-ID-O4' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACC-PS-PL-O1",
+      "field": "panel_id",
+      "old": "ACC-PS-PL-O1",
+      "new": null,
+      "message": "Panel 'ACC-PS-PL-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-EX-RD-O5",
+      "field": "panel_id",
+      "old": "ACT-EX-RD-O5",
+      "new": null,
+      "message": "Panel 'ACT-EX-RD-O5' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "OVW-SH-CS-O1",
+      "field": "panel_id",
+      "old": "OVW-SH-CS-O1",
+      "new": null,
+      "message": "Panel 'OVW-SH-CS-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-AI-OI-O1",
+      "field": "panel_id",
+      "old": "INC-AI-OI-O1",
+      "new": null,
+      "message": "Panel 'INC-AI-OI-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACC-SU-SL-O2",
+      "field": "panel_id",
+      "old": "ACC-SU-SL-O2",
+      "new": null,
+      "message": "Panel 'ACC-SU-SL-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-AI-ID-O1",
+      "field": "panel_id",
+      "old": "INC-AI-ID-O1",
+      "new": null,
+      "message": "Panel 'INC-AI-ID-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-AL-SA-O2",
+      "field": "panel_id",
+      "old": "LOG-AL-SA-O2",
+      "new": null,
+      "message": "Panel 'LOG-AL-SA-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACC-PS-CP-O1",
+      "field": "panel_id",
+      "old": "ACC-PS-CP-O1",
+      "new": null,
+      "message": "Panel 'ACC-PS-CP-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-AL-UA-O1",
+      "field": "panel_id",
+      "old": "LOG-AL-UA-O1",
+      "new": null,
+      "message": "Panel 'LOG-AL-UA-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-AL-SA-O1",
+      "field": "panel_id",
+      "old": "LOG-AL-SA-O1",
+      "new": null,
+      "message": "Panel 'LOG-AL-SA-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "CON-IN-CS-O1",
+      "field": "panel_id",
+      "old": "CON-IN-CS-O1",
+      "new": null,
+      "message": "Panel 'CON-IN-CS-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-AL-UA-O5",
+      "field": "panel_id",
+      "old": "LOG-AL-UA-O5",
+      "new": null,
+      "message": "Panel 'LOG-AL-UA-O5' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACC-SU-PM-O1",
+      "field": "panel_id",
+      "old": "ACC-SU-PM-O1",
+      "new": null,
+      "message": "Panel 'ACC-SU-PM-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-ET-LS-O1",
+      "field": "panel_id",
+      "old": "LOG-ET-LS-O1",
+      "new": null,
+      "message": "Panel 'LOG-ET-LS-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-PA-PC-O5",
+      "field": "panel_id",
+      "old": "POL-PA-PC-O5",
+      "new": null,
+      "message": "Panel 'POL-PA-PC-O5' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-AI-ID-O3",
+      "field": "panel_id",
+      "old": "INC-AI-ID-O3",
+      "new": null,
+      "message": "Panel 'INC-AI-ID-O3' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-HI-RI-O5",
+      "field": "panel_id",
+      "old": "INC-HI-RI-O5",
+      "new": null,
+      "message": "Panel 'INC-HI-RI-O5' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-AP-RL-O3",
+      "field": "panel_id",
+      "old": "POL-AP-RL-O3",
+      "new": null,
+      "message": "Panel 'POL-AP-RL-O3' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-AL-SA-O5",
+      "field": "panel_id",
+      "old": "LOG-AL-SA-O5",
+      "new": null,
+      "message": "Panel 'LOG-AL-SA-O5' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-EX-RD-O4",
+      "field": "panel_id",
+      "old": "ACT-EX-RD-O4",
+      "new": null,
+      "message": "Panel 'ACT-EX-RD-O4' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACC-PS-CP-O2",
+      "field": "panel_id",
+      "old": "ACC-PS-CP-O2",
+      "new": null,
+      "message": "Panel 'ACC-PS-CP-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-AL-UA-O2",
+      "field": "panel_id",
+      "old": "LOG-AL-UA-O2",
+      "new": null,
+      "message": "Panel 'LOG-AL-UA-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "CON-IN-AI-O1",
+      "field": "panel_id",
+      "old": "CON-IN-AI-O1",
+      "new": null,
+      "message": "Panel 'CON-IN-AI-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "CON-AP-AK-O1",
+      "field": "panel_id",
+      "old": "CON-AP-AK-O1",
+      "new": null,
+      "message": "Panel 'CON-AP-AK-O1' was deleted without allowlist"
+    },
     {
       "rule": "PDG-001",
       "panel_id": "INC-AI-SUM-O1",
       "field": "panel_id",
-      "old": null,
-      "new": "INC-AI-SUM-O1",
-      "message": "Panel 'INC-AI-SUM-O1' was added without allowlist"
+      "old": "INC-AI-SUM-O1",
+      "new": null,
+      "message": "Panel 'INC-AI-SUM-O1' was deleted without allowlist"
     },
     {
-      "rule": "PDG-002",
-      "panel_id": "ACT-EX-AR-O1",
-      "field": "subdomain",
-      "old": "LLM_RUNS",
-      "new": "EXECUTIONS",
-      "message": "Panel 'ACT-EX-AR-O1' subdomain changed"
+      "rule": "PDG-001",
+      "panel_id": "LOG-ET-TD-O2",
+      "field": "panel_id",
+      "old": "LOG-ET-TD-O2",
+      "new": null,
+      "message": "Panel 'LOG-ET-TD-O2' was deleted without allowlist"
     },
     {
-      "rule": "PDG-002",
-      "panel_id": "ACT-EX-CR-O2",
-      "field": "subdomain",
-      "old": "LLM_RUNS",
-      "new": "EXECUTIONS",
-      "message": "Panel 'ACT-EX-CR-O2' subdomain changed"
+      "rule": "PDG-001",
+      "panel_id": "ACC-BL-IV-O2",
+      "field": "panel_id",
+      "old": "ACC-BL-IV-O2",
+      "new": null,
+      "message": "Panel 'ACC-BL-IV-O2' was deleted without allowlist"
     },
     {
-      "rule": "PDG-002",
+      "rule": "PDG-001",
+      "panel_id": "POL-PR-PP-O1",
+      "field": "panel_id",
+      "old": "POL-PR-PP-O1",
+      "new": null,
+      "message": "Panel 'POL-PR-PP-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
       "panel_id": "ACT-EX-RD-O2",
-      "field": "subdomain",
-      "old": "LLM_RUNS",
-      "new": "EXECUTIONS",
-      "message": "Panel 'ACT-EX-RD-O2' subdomain changed"
+      "field": "panel_id",
+      "old": "ACT-EX-RD-O2",
+      "new": null,
+      "message": "Panel 'ACT-EX-RD-O2' was deleted without allowlist"
     },
     {
-      "rule": "PDG-002",
-      "panel_id": "ACT-EX-AR-O2",
-      "field": "subdomain",
-      "old": "LLM_RUNS",
-      "new": "EXECUTIONS",
-      "message": "Panel 'ACT-EX-AR-O2' subdomain changed"
+      "rule": "PDG-001",
+      "panel_id": "LOG-AL-SA-O3",
+      "field": "panel_id",
+      "old": "LOG-AL-SA-O3",
+      "new": null,
+      "message": "Panel 'LOG-AL-SA-O3' was deleted without allowlist"
     },
     {
-      "rule": "PDG-002",
-      "panel_id": "ACT-EX-RD-O1",
-      "field": "subdomain",
-      "old": "LLM_RUNS",
-      "new": "EXECUTIONS",
-      "message": "Panel 'ACT-EX-RD-O1' subdomain changed"
+      "rule": "PDG-001",
+      "panel_id": "ACC-SU-IS-O1",
+      "field": "panel_id",
+      "old": "ACC-SU-IS-O1",
+      "new": null,
+      "message": "Panel 'ACC-SU-IS-O1' was deleted without allowlist"
     },
     {
-      "rule": "PDG-002",
-      "panel_id": "ACT-EX-RD-O3",
-      "field": "subdomain",
-      "old": "LLM_RUNS",
-      "new": "EXECUTIONS",
-      "message": "Panel 'ACT-EX-RD-O3' subdomain changed"
+      "rule": "PDG-001",
+      "panel_id": "CON-AP-AU-O2",
+      "field": "panel_id",
+      "old": "CON-AP-AU-O2",
+      "new": null,
+      "message": "Panel 'CON-AP-AU-O2' was deleted without allowlist"
     },
     {
-      "rule": "PDG-002",
-      "panel_id": "ACT-EX-RD-O4",
-      "field": "subdomain",
-      "old": "LLM_RUNS",
-      "new": "EXECUTIONS",
-      "message": "Panel 'ACT-EX-RD-O4' subdomain changed"
+      "rule": "PDG-001",
+      "panel_id": "POL-AP-RL-O1",
+      "field": "panel_id",
+      "old": "POL-AP-RL-O1",
+      "new": null,
+      "message": "Panel 'POL-AP-RL-O1' was deleted without allowlist"
     },
     {
-      "rule": "PDG-002",
-      "panel_id": "ACT-EX-RD-O5",
-      "field": "subdomain",
-      "old": "LLM_RUNS",
-      "new": "EXECUTIONS",
-      "message": "Panel 'ACT-EX-RD-O5' subdomain changed"
+      "rule": "PDG-001",
+      "panel_id": "ACT-EX-AR-O1",
+      "field": "panel_id",
+      "old": "ACT-EX-AR-O1",
+      "new": null,
+      "message": "Panel 'ACT-EX-AR-O1' was deleted without allowlist"
     },
     {
-      "rule": "PDG-002",
-      "panel_id": "ACT-EX-CR-O1",
-      "field": "subdomain",
-      "old": "LLM_RUNS",
-      "new": "EXECUTIONS",
-      "message": "Panel 'ACT-EX-CR-O1' subdomain changed"
+      "rule": "PDG-001",
+      "panel_id": "ACC-BL-PM-O2",
+      "field": "panel_id",
+      "old": "ACC-BL-PM-O2",
+      "new": null,
+      "message": "Panel 'ACC-BL-PM-O2' was deleted without allowlist"
     },
     {
-      "rule": "PDG-002",
+      "rule": "PDG-001",
+      "panel_id": "ACC-PR-SS-O1",
+      "field": "panel_id",
+      "old": "ACC-PR-SS-O1",
+      "new": null,
+      "message": "Panel 'ACC-PR-SS-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACC-PR-SS-O2",
+      "field": "panel_id",
+      "old": "ACC-PR-SS-O2",
+      "new": null,
+      "message": "Panel 'ACC-PR-SS-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-AP-BP-O1",
+      "field": "panel_id",
+      "old": "POL-AP-BP-O1",
+      "new": null,
+      "message": "Panel 'POL-AP-BP-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-AP-BP-O3",
+      "field": "panel_id",
+      "old": "POL-AP-BP-O3",
+      "new": null,
+      "message": "Panel 'POL-AP-BP-O3' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACC-SU-SL-O1",
+      "field": "panel_id",
+      "old": "ACC-SU-SL-O1",
+      "new": null,
+      "message": "Panel 'ACC-SU-SL-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
       "panel_id": "ACT-EX-CR-O3",
-      "field": "subdomain",
-      "old": "LLM_RUNS",
-      "new": "EXECUTIONS",
-      "message": "Panel 'ACT-EX-CR-O3' subdomain changed"
+      "field": "panel_id",
+      "old": "ACT-EX-CR-O3",
+      "new": null,
+      "message": "Panel 'ACT-EX-CR-O3' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-AL-UA-O3",
+      "field": "panel_id",
+      "old": "LOG-AL-UA-O3",
+      "new": null,
+      "message": "Panel 'LOG-AL-UA-O3' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-EX-CR-O1",
+      "field": "panel_id",
+      "old": "ACT-EX-CR-O1",
+      "new": null,
+      "message": "Panel 'ACT-EX-CR-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACC-BL-IV-O1",
+      "field": "panel_id",
+      "old": "ACC-BL-IV-O1",
+      "new": null,
+      "message": "Panel 'ACC-BL-IV-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACC-BL-US-O1",
+      "field": "panel_id",
+      "old": "ACC-BL-US-O1",
+      "new": null,
+      "message": "Panel 'ACC-BL-US-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-PA-PC-O2",
+      "field": "panel_id",
+      "old": "POL-PA-PC-O2",
+      "new": null,
+      "message": "Panel 'POL-PA-PC-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-EX-AR-O2",
+      "field": "panel_id",
+      "old": "ACT-EX-AR-O2",
+      "new": null,
+      "message": "Panel 'ACT-EX-AR-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-AP-BP-O2",
+      "field": "panel_id",
+      "old": "POL-AP-BP-O2",
+      "new": null,
+      "message": "Panel 'POL-AP-BP-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-EX-RD-O1",
+      "field": "panel_id",
+      "old": "ACT-EX-RD-O1",
+      "new": null,
+      "message": "Panel 'ACT-EX-RD-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "CON-AP-AK-O2",
+      "field": "panel_id",
+      "old": "CON-AP-AK-O2",
+      "new": null,
+      "message": "Panel 'CON-AP-AK-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-AP-AR-O1",
+      "field": "panel_id",
+      "old": "POL-AP-AR-O1",
+      "new": null,
+      "message": "Panel 'POL-AP-AR-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-HI-RI-O1",
+      "field": "panel_id",
+      "old": "INC-HI-RI-O1",
+      "new": null,
+      "message": "Panel 'INC-HI-RI-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-AP-SUM-O1",
+      "field": "panel_id",
+      "old": "POL-AP-SUM-O1",
+      "new": null,
+      "message": "Panel 'POL-AP-SUM-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-AI-OI-O2",
+      "field": "panel_id",
+      "old": "INC-AI-OI-O2",
+      "new": null,
+      "message": "Panel 'INC-AI-OI-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-PA-PC-O3",
+      "field": "panel_id",
+      "old": "POL-PA-PC-O3",
+      "new": null,
+      "message": "Panel 'POL-PA-PC-O3' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-ET-TD-O5",
+      "field": "panel_id",
+      "old": "LOG-ET-TD-O5",
+      "new": null,
+      "message": "Panel 'LOG-ET-TD-O5' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-EX-CR-O2",
+      "field": "panel_id",
+      "old": "ACT-EX-CR-O2",
+      "new": null,
+      "message": "Panel 'ACT-EX-CR-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "CON-IN-CS-O2",
+      "field": "panel_id",
+      "old": "CON-IN-CS-O2",
+      "new": null,
+      "message": "Panel 'CON-IN-CS-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-ET-TD-O1",
+      "field": "panel_id",
+      "old": "LOG-ET-TD-O1",
+      "new": null,
+      "message": "Panel 'LOG-ET-TD-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-HI-RI-O3",
+      "field": "panel_id",
+      "old": "INC-HI-RI-O3",
+      "new": null,
+      "message": "Panel 'INC-HI-RI-O3' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-AP-AR-O3",
+      "field": "panel_id",
+      "old": "POL-AP-AR-O3",
+      "new": null,
+      "message": "Panel 'POL-AP-AR-O3' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-AP-RL-O2",
+      "field": "panel_id",
+      "old": "POL-AP-RL-O2",
+      "new": null,
+      "message": "Panel 'POL-AP-RL-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-HI-RI-O2",
+      "field": "panel_id",
+      "old": "INC-HI-RI-O2",
+      "new": null,
+      "message": "Panel 'INC-HI-RI-O2' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-ET-TD-O4",
+      "field": "panel_id",
+      "old": "LOG-ET-TD-O4",
+      "new": null,
+      "message": "Panel 'LOG-ET-TD-O4' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-AP-AR-O4",
+      "field": "panel_id",
+      "old": "POL-AP-AR-O4",
+      "new": null,
+      "message": "Panel 'POL-AP-AR-O4' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-PA-PC-O1",
+      "field": "panel_id",
+      "old": "POL-PA-PC-O1",
+      "new": null,
+      "message": "Panel 'POL-PA-PC-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "CON-AP-WH-O1",
+      "field": "panel_id",
+      "old": "CON-AP-WH-O1",
+      "new": null,
+      "message": "Panel 'CON-AP-WH-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-AL-SUM-O1",
+      "field": "panel_id",
+      "old": "LOG-AL-SUM-O1",
+      "new": null,
+      "message": "Panel 'LOG-AL-SUM-O1' was deleted without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-GOV-ACT-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-GOV-ACT-O2",
+      "message": "Panel 'POL-GOV-ACT-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-LLM-SIG-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "ACT-LLM-SIG-O1",
+      "message": "Panel 'ACT-LLM-SIG-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-LIM-VIO-O5",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-LIM-VIO-O5",
+      "message": "Panel 'POL-LIM-VIO-O5' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-REC-AUD-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "LOG-REC-AUD-O1",
+      "message": "Panel 'LOG-REC-AUD-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-REC-SYS-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "LOG-REC-SYS-O2",
+      "message": "Panel 'LOG-REC-SYS-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-EV-HIST-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-EV-HIST-O3",
+      "message": "Panel 'INC-EV-HIST-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-LIM-THR-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-LIM-THR-O2",
+      "message": "Panel 'POL-LIM-THR-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-LIM-THR-O5",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-LIM-THR-O5",
+      "message": "Panel 'POL-LIM-THR-O5' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "OVR-SUM-HL-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "OVR-SUM-HL-O3",
+      "message": "Panel 'OVR-SUM-HL-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-GOV-ACT-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-GOV-ACT-O4",
+      "message": "Panel 'POL-GOV-ACT-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-LLM-COMP-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "ACT-LLM-COMP-O4",
+      "message": "Panel 'ACT-LLM-COMP-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-EV-RES-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-EV-RES-O1",
+      "message": "Panel 'INC-EV-RES-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-GOV-LIB-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-GOV-LIB-O3",
+      "message": "Panel 'POL-GOV-LIB-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-REC-SYS-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "LOG-REC-SYS-O3",
+      "message": "Panel 'LOG-REC-SYS-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-REC-LLM-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "LOG-REC-LLM-O2",
+      "message": "Panel 'LOG-REC-LLM-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-REC-AUD-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "LOG-REC-AUD-O3",
+      "message": "Panel 'LOG-REC-AUD-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "OVR-SUM-DC-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "OVR-SUM-DC-O3",
+      "message": "Panel 'OVR-SUM-DC-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "OVR-SUM-HL-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "OVR-SUM-HL-O4",
+      "message": "Panel 'OVR-SUM-HL-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-EV-RES-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-EV-RES-O3",
+      "message": "Panel 'INC-EV-RES-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-EV-ACT-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-EV-ACT-O3",
+      "message": "Panel 'INC-EV-ACT-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-REC-AUD-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "LOG-REC-AUD-O4",
+      "message": "Panel 'LOG-REC-AUD-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-LLM-COMP-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "ACT-LLM-COMP-O2",
+      "message": "Panel 'ACT-LLM-COMP-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "OVR-SUM-HL-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "OVR-SUM-HL-O1",
+      "message": "Panel 'OVR-SUM-HL-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-REC-SYS-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "LOG-REC-SYS-O4",
+      "message": "Panel 'LOG-REC-SYS-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-REC-LLM-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "LOG-REC-LLM-O4",
+      "message": "Panel 'LOG-REC-LLM-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-REC-LLM-O5",
+      "field": "panel_id",
+      "old": null,
+      "new": "LOG-REC-LLM-O5",
+      "message": "Panel 'LOG-REC-LLM-O5' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-REC-LLM-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "LOG-REC-LLM-O3",
+      "message": "Panel 'LOG-REC-LLM-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-EV-HIST-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-EV-HIST-O2",
+      "message": "Panel 'INC-EV-HIST-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-EV-ACT-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-EV-ACT-O1",
+      "message": "Panel 'INC-EV-ACT-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-LLM-LIVE-O5",
+      "field": "panel_id",
+      "old": null,
+      "new": "ACT-LLM-LIVE-O5",
+      "message": "Panel 'ACT-LLM-LIVE-O5' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-LLM-LIVE-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "ACT-LLM-LIVE-O2",
+      "message": "Panel 'ACT-LLM-LIVE-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-EV-RES-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-EV-RES-O4",
+      "message": "Panel 'INC-EV-RES-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "OVR-SUM-DC-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "OVR-SUM-DC-O1",
+      "message": "Panel 'OVR-SUM-DC-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-REC-LLM-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "LOG-REC-LLM-O1",
+      "message": "Panel 'LOG-REC-LLM-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-EV-ACT-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-EV-ACT-O4",
+      "message": "Panel 'INC-EV-ACT-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-GOV-ACT-O5",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-GOV-ACT-O5",
+      "message": "Panel 'POL-GOV-ACT-O5' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "OVR-SUM-DC-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "OVR-SUM-DC-O2",
+      "message": "Panel 'OVR-SUM-DC-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-LIM-VIO-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-LIM-VIO-O1",
+      "message": "Panel 'POL-LIM-VIO-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-GOV-DFT-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-GOV-DFT-O3",
+      "message": "Panel 'POL-GOV-DFT-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-EV-ACT-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-EV-ACT-O2",
+      "message": "Panel 'INC-EV-ACT-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "OVR-SUM-CI-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "OVR-SUM-CI-O1",
+      "message": "Panel 'OVR-SUM-CI-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "OVR-SUM-DC-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "OVR-SUM-DC-O4",
+      "message": "Panel 'OVR-SUM-DC-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-LIM-THR-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-LIM-THR-O1",
+      "message": "Panel 'POL-LIM-THR-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-LLM-COMP-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "ACT-LLM-COMP-O1",
+      "message": "Panel 'ACT-LLM-COMP-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-LLM-LIVE-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "ACT-LLM-LIVE-O3",
+      "message": "Panel 'ACT-LLM-LIVE-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-REC-SYS-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "LOG-REC-SYS-O1",
+      "message": "Panel 'LOG-REC-SYS-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-LIM-USG-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-LIM-USG-O2",
+      "message": "Panel 'POL-LIM-USG-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-EV-HIST-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-EV-HIST-O1",
+      "message": "Panel 'INC-EV-HIST-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-GOV-LIB-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-GOV-LIB-O4",
+      "message": "Panel 'POL-GOV-LIB-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-LIM-VIO-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-LIM-VIO-O4",
+      "message": "Panel 'POL-LIM-VIO-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-LLM-COMP-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "ACT-LLM-COMP-O3",
+      "message": "Panel 'ACT-LLM-COMP-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-REC-AUD-O5",
+      "field": "panel_id",
+      "old": null,
+      "new": "LOG-REC-AUD-O5",
+      "message": "Panel 'LOG-REC-AUD-O5' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "OVR-SUM-HL-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "OVR-SUM-HL-O2",
+      "message": "Panel 'OVR-SUM-HL-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "OVR-SUM-CI-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "OVR-SUM-CI-O3",
+      "message": "Panel 'OVR-SUM-CI-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-LLM-SIG-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "ACT-LLM-SIG-O3",
+      "message": "Panel 'ACT-LLM-SIG-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-EV-RES-O5",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-EV-RES-O5",
+      "message": "Panel 'INC-EV-RES-O5' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "OVR-SUM-CI-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "OVR-SUM-CI-O2",
+      "message": "Panel 'OVR-SUM-CI-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-LIM-VIO-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-LIM-VIO-O2",
+      "message": "Panel 'POL-LIM-VIO-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-REC-SYS-O5",
+      "field": "panel_id",
+      "old": null,
+      "new": "LOG-REC-SYS-O5",
+      "message": "Panel 'LOG-REC-SYS-O5' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-LIM-USG-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-LIM-USG-O4",
+      "message": "Panel 'POL-LIM-USG-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-LIM-USG-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-LIM-USG-O1",
+      "message": "Panel 'POL-LIM-USG-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-LIM-THR-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-LIM-THR-O3",
+      "message": "Panel 'POL-LIM-THR-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-EV-HIST-O5",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-EV-HIST-O5",
+      "message": "Panel 'INC-EV-HIST-O5' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "LOG-REC-AUD-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "LOG-REC-AUD-O2",
+      "message": "Panel 'LOG-REC-AUD-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-LLM-SIG-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "ACT-LLM-SIG-O2",
+      "message": "Panel 'ACT-LLM-SIG-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-GOV-DFT-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-GOV-DFT-O4",
+      "message": "Panel 'POL-GOV-DFT-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-LLM-SIG-O5",
+      "field": "panel_id",
+      "old": null,
+      "new": "ACT-LLM-SIG-O5",
+      "message": "Panel 'ACT-LLM-SIG-O5' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-GOV-ACT-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-GOV-ACT-O1",
+      "message": "Panel 'POL-GOV-ACT-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "OVR-SUM-CI-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "OVR-SUM-CI-O4",
+      "message": "Panel 'OVR-SUM-CI-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-LLM-COMP-O5",
+      "field": "panel_id",
+      "old": null,
+      "new": "ACT-LLM-COMP-O5",
+      "message": "Panel 'ACT-LLM-COMP-O5' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-GOV-LIB-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-GOV-LIB-O1",
+      "message": "Panel 'POL-GOV-LIB-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-LIM-THR-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-LIM-THR-O4",
+      "message": "Panel 'POL-LIM-THR-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-LIM-USG-O5",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-LIM-USG-O5",
+      "message": "Panel 'POL-LIM-USG-O5' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-LLM-LIVE-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "ACT-LLM-LIVE-O4",
+      "message": "Panel 'ACT-LLM-LIVE-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-GOV-DFT-O5",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-GOV-DFT-O5",
+      "message": "Panel 'POL-GOV-DFT-O5' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-GOV-DFT-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-GOV-DFT-O1",
+      "message": "Panel 'POL-GOV-DFT-O1' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-LLM-SIG-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "ACT-LLM-SIG-O4",
+      "message": "Panel 'ACT-LLM-SIG-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-EV-ACT-O5",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-EV-ACT-O5",
+      "message": "Panel 'INC-EV-ACT-O5' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-EV-HIST-O4",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-EV-HIST-O4",
+      "message": "Panel 'INC-EV-HIST-O4' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-GOV-ACT-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-GOV-ACT-O3",
+      "message": "Panel 'POL-GOV-ACT-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-GOV-DFT-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-GOV-DFT-O2",
+      "message": "Panel 'POL-GOV-DFT-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-GOV-LIB-O5",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-GOV-LIB-O5",
+      "message": "Panel 'POL-GOV-LIB-O5' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-GOV-LIB-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-GOV-LIB-O2",
+      "message": "Panel 'POL-GOV-LIB-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-LIM-VIO-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-LIM-VIO-O3",
+      "message": "Panel 'POL-LIM-VIO-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "INC-EV-RES-O2",
+      "field": "panel_id",
+      "old": null,
+      "new": "INC-EV-RES-O2",
+      "message": "Panel 'INC-EV-RES-O2' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "POL-LIM-USG-O3",
+      "field": "panel_id",
+      "old": null,
+      "new": "POL-LIM-USG-O3",
+      "message": "Panel 'POL-LIM-USG-O3' was added without allowlist"
+    },
+    {
+      "rule": "PDG-001",
+      "panel_id": "ACT-LLM-LIVE-O1",
+      "field": "panel_id",
+      "old": null,
+      "new": "ACT-LLM-LIVE-O1",
+      "message": "Panel 'ACT-LLM-LIVE-O1' was added without allowlist"
     }
   ]
 }

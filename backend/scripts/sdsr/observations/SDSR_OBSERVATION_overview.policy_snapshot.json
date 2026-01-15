@@ -1,0 +1,51 @@
+{
+  "observation_id": "OBS-SDSR-OVR-SUM-HL-O4-001-20260115055834",
+  "scenario_id": "SDSR-OVR-SUM-HL-O4-001",
+  "capability_id": "overview.policy_snapshot",
+  "panel_id": "OVR-SUM-HL-O4",
+  "status": "PASS",
+  "observed_at": "2026-01-15T05:58:35.640778+00:00",
+  "endpoint": "/api/v1/policy-proposals/stats/summary",
+  "method": "GET",
+  "response_status_code": 200,
+  "response_time_ms": 756.0334205627441,
+  "invariants_total": 5,
+  "invariants_passed": 5,
+  "invariants_failed": 0,
+  "invariant_results": [
+    {
+      "id": "INV-001",
+      "name": "response_shape",
+      "status": "PASS",
+      "message": "Assertion passed: response is dict and response is not empty"
+    },
+    {
+      "id": "INV-002",
+      "name": "status_code",
+      "status": "PASS",
+      "message": "Assertion passed: status_code == 200"
+    },
+    {
+      "id": "INV-003",
+      "name": "auth_works",
+      "status": "PASS",
+      "message": "Assertion passed: status_code != 401 and status_code != 403"
+    },
+    {
+      "id": "INV-004",
+      "name": "total_present",
+      "status": "PASS",
+      "message": "Assertion passed: \"total\" in response"
+    },
+    {
+      "id": "INV-005",
+      "name": "by_status_present",
+      "status": "PASS",
+      "message": "Assertion passed: \"by_status\" in response"
+    }
+  ],
+  "failure_reason": null,
+  "failure_taxonomy": null,
+  "coherency_verified": true,
+  "trace_id": null
+}

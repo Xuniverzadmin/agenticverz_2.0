@@ -1,0 +1,20 @@
+{
+  "observation_id": "OBS-SDSR-ACT-LLM-SIG-O2-001-20260115072922",
+  "scenario_id": "SDSR-ACT-LLM-SIG-O2-001",
+  "capability_id": "activity.predictions_list",
+  "panel_id": "ACT-LLM-SIG-O2",
+  "status": "PASS",
+  "observed_at": "2026-01-15T07:29:22.634332+00:00",
+  "endpoint": "/api/v1/predictions",
+  "method": "GET",
+  "response_status_code": 403,
+  "response_time_ms": 15.304088592529297,
+  "invariants_total": 3,
+  "invariants_passed": 0,
+  "invariants_failed": 0,
+  "invariant_results": [],
+  "failure_reason": "Access restricted (HTTP 403) - visibility limited but endpoint exists",
+  "failure_taxonomy": "VISIBILITY_RESTRICTED",
+  "coherency_verified": true,
+  "trace_id": null
+}

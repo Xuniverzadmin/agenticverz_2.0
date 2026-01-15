@@ -21,7 +21,7 @@ Complete implementation of the canonical UI projection design for the AURORA_L2 
 ### Phase 0: DB_AUTHORITY Enforcement ✓
 
 **Files Modified:**
-- `backend/aurora_l2/compiler.py` (lines 47-60)
+- `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` (lines 47-60)
 - `scripts/tools/run_aurora_l2_pipeline.sh`
 
 **Changes:**
@@ -72,7 +72,7 @@ Result: Exactly **one** projection file in the system.
 ### Phase 2: Panel Display Order ✓
 
 **Files Modified:**
-- `backend/aurora_l2/compiler.py` (lines 441-507)
+- `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` (lines 441-507)
 
 **New Fields:**
 - `panel_display_order`: Global sequential ordering (0-53)
@@ -97,7 +97,7 @@ Result: Exactly **one** projection file in the system.
 ### Phase 3: Content Blocks ✓
 
 **Files Modified:**
-- `backend/aurora_l2/compiler.py` (lines 513-610)
+- `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` (lines 513-610)
 
 **New Structure:**
 Each panel now has `content_blocks[]` defining in-panel layout:
@@ -127,7 +127,7 @@ Each panel now has `content_blocks[]` defining in-panel layout:
 ### Phase 4: SDSR Trace Finalization ✓
 
 **Files Modified:**
-- `backend/aurora_l2/compiler.py` (lines 274-275, 409-437, 490-497, 533-536, 550-551)
+- `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` (lines 274-275, 409-437, 490-497, 533-536, 550-551)
 
 **New Fields in Compiled Intents:**
 - `observation_trace`: Array from intent YAML (SDSR observation provenance)
@@ -249,7 +249,7 @@ Each panel now has `content_blocks[]` defining in-panel layout:
 
 | File | Purpose |
 |------|---------|
-| `backend/aurora_l2/compiler.py` | Canonical projection generator |
+| `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` | Canonical projection generator |
 | `scripts/tools/run_aurora_l2_pipeline.sh` | Pipeline orchestration |
 | `design/l2_1/ui_contract/ui_projection_lock.json` | Canonical projection (source of truth) |
 | `website/app-shell/public/projection/ui_projection_lock.json` | Frontend copy (verbatim) |

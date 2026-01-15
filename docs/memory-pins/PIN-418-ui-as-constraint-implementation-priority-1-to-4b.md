@@ -77,7 +77,7 @@ export function isDomainFromProjection(domainName: DomainName): boolean
 
 **Goal:** Make projection structurally complete with all 87 panels from ui_plan.yaml using mechanical state derivation.
 
-### Compiler Changes (`backend/aurora_l2/compiler.py`)
+### Compiler Changes (`backend/aurora_l2/SDSR_UI_AURORA_compiler.py`)
 
 | Change | Location | Description |
 |--------|----------|-------------|
@@ -179,7 +179,7 @@ States:
 
 | File | Change |
 |------|--------|
-| `backend/aurora_l2/compiler.py` | Removed runtime sort that collapsed topic structure |
+| `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` | Removed runtime sort that collapsed topic structure |
 
 ### Before (Wrong)
 ```
@@ -214,9 +214,9 @@ ACT-EX-RD-O1, ACT-EX-RD-O2, ACT-EX-RD-O3, ACT-EX-RD-O4, ACT-EX-RD-O5 (RUN_DETAIL
 
 | File | Change |
 |------|--------|
-| `backend/aurora_l2/compiler.py` | All panels now `enabled: True` (MUST render) |
-| `backend/aurora_l2/compiler.py` | `_get_disabled_reason()` returns state-specific messages |
-| `backend/aurora_l2/compiler.py` | Content blocks visible for all states (not HIDDEN) |
+| `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` | All panels now `enabled: True` (MUST render) |
+| `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` | `_get_disabled_reason()` returns state-specific messages |
+| `backend/aurora_l2/SDSR_UI_AURORA_compiler.py` | Content blocks visible for all states (not HIDDEN) |
 
 ### Frontend Changes
 

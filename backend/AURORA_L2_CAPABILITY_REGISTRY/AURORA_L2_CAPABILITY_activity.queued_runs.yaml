@@ -1,0 +1,42 @@
+# AURORA L2 Capability Registry Entry
+# Capability: activity.queued_runs
+# Last Updated: 2026-01-15T07:48:42.849133+00:00
+# Updated By: aurora_apply_observation.py
+#
+# STATUS: OBSERVED
+#
+# WARNING: Status transitions are MACHINE-OWNED.
+#          Do NOT manually edit the status field.
+#
+capability_id: activity.queued_runs
+status: OBSERVED
+source_panels:
+- ACT-LLM-LIVE-O3
+domain: ACTIVITY
+endpoint: /api/v1/activity/runs
+method: GET
+params:
+  status: running
+metadata:
+  generated_by: manual_domain_correction
+  generated_on: '2026-01-15'
+  declared_by: CLAUDE_GOVERNANCE
+  declared_on: '2026-01-15'
+  observed_by: SDSR-ACT-LLM-LIVE-O3-001
+  observed_on: '2026-01-15'
+coherency:
+  last_checked: '2026-01-15T07:48:36.680062+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py
+observation:
+  scenario_id: SDSR-ACT-LLM-LIVE-O3-001
+  observed_at: '2026-01-15T07:48:36.680062+00:00'
+  trace_id: null
+  invariants_passed: 3
+  invariants_total: 3
+acceptance_criteria:
+- Endpoint exists and responds
+- Response schema matches contract (runs list)
+- Response contains only status=running runs
+- Auth works correctly
+- Data is real (not mock)

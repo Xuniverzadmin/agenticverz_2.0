@@ -151,6 +151,94 @@ def get_gateway_middleware_config() -> dict:
             "/api/v1/policy-proposals",
             "/api/v1/policy-proposals/",
             # =================================================================
+            # SDSR Cost Intelligence API (PIN-427)
+            # Used for preflight SDSR validation of cost panels.
+            # =================================================================
+            "/cost/",
+            "/cost/summary",
+            "/cost/by-feature",
+            "/cost/by-model",
+            "/cost/anomalies",
+            "/cost/dashboard",
+            "/cost/by-user",
+            "/cost/projection",
+            "/cost/budgets",
+            # =================================================================
+            # SDSR Policy Layer API (PIN-427)
+            # Used for preflight SDSR validation of policy panels.
+            # =================================================================
+            "/policy-layer/",
+            # =================================================================
+            # SDSR Feedback/Predictions API (PIN-427)
+            # Used for preflight SDSR validation of signal panels.
+            # =================================================================
+            "/api/v1/feedback",
+            "/api/v1/feedback/",
+            "/api/v1/predictions",
+            "/api/v1/predictions/",
+            # =================================================================
+            # SDSR Recovery API (PIN-427)
+            # Used for preflight SDSR validation of recovery panels.
+            # =================================================================
+            "/api/v1/recovery/",
+            # =================================================================
+            # SDSR Discovery API (PIN-427)
+            # Used for preflight SDSR validation of discovery panels.
+            # =================================================================
+            "/api/v1/discovery",
+            "/api/v1/discovery/",
+            # =================================================================
+            # SDSR Tenant API (PIN-427)
+            # Used for preflight SDSR validation of tenant panels.
+            # =================================================================
+            "/api/v1/tenants/",
+            # =================================================================
+            # SDSR Traces API (PIN-427)
+            # Used for preflight SDSR validation of logs panels.
+            # =================================================================
+            "/api/v1/traces",
+            "/api/v1/traces/",
+            "/api/v1/runtime/traces",
+            "/api/v1/runtime/traces/",
+            # =================================================================
+            # SDSR Guard API (PIN-427)
+            # Used for preflight SDSR validation of guard panels.
+            # =================================================================
+            "/api/v1/guard/",
+            "/guard/logs",
+            "/guard/logs/",
+            # =================================================================
+            # SDSR Agents API (PIN-427)
+            # Used for preflight SDSR validation of agent panels.
+            # =================================================================
+            "/api/v1/agents/",
+            # =================================================================
+            # SDSR Ops API (PIN-427)
+            # Used for preflight SDSR validation of ops panels.
+            # =================================================================
+            "/api/v1/ops/",
+            "/ops/actions/audit",
+            "/ops/actions/audit/",
+            # =================================================================
+            # SDSR Status/Integration API (PIN-427)
+            # Used for preflight SDSR validation of status panels.
+            # =================================================================
+            "/status_history",
+            "/status_history/",
+            "/integration/",
+            "/billing/status",
+            # =================================================================
+            # SDSR RBAC Audit API (PIN-427)
+            # Used for preflight SDSR validation of audit panels.
+            # =================================================================
+            "/api/v1/rbac/audit",
+            "/api/v1/rbac/audit/",
+            # =================================================================
+            # SDSR Customer Activity API (PIN-427)
+            # Used for preflight SDSR validation of customer panels.
+            # =================================================================
+            "/api/v1/customer/",
+            # =================================================================
             # FOUNDER ROUTES (PIN-336, PIN-398)
             # PIN-398: Founder routes now go through the gateway for FOPS auth.
             # Gateway routes FOPS tokens (iss=agenticverz-fops) to FounderAuthContext.

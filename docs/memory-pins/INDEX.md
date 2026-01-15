@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-14 (PIN-420 Intent Ledger Pipeline and First SDSR Binding)
+**Last Updated:** 2026-01-15 (PIN-428 ANALYTICS Domain Promoted to OBSERVED via SDSR)
 
 ---
 
@@ -412,6 +412,14 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-418](PIN-418-ui-as-constraint-implementation-priority-1-to-3a.md) | **UI-as-Constraint Implementation (Priority-1 to 3A)** | Architecture / UI Governance | **✅ COMPLETE** | 2026-01-14 |
 | [PIN-419](PIN-419-intent-manifest-coherency-architecture.md) | **Intent Ledger & Coherency Gate Architecture** | Architecture / UI Pipeline | **⏳ AWAITING APPROVAL** | 2026-01-14 |
 | [PIN-420](PIN-420-intent-ledger-pipeline-and-first-sdsr-binding.md) | **Intent Ledger Pipeline and First SDSR Binding** | Architecture / UI Pipeline | **🏗️ ACTIVE** | 2026-01-14 |
+| [PIN-421](PIN-421-aurora-l2-automation-suite.md) | **AURORA L2 Automation Suite** | UI Pipeline / Automation | **✅ COMPLETE** | 2026-01-15 |
+| [PIN-422](PIN-422-hisar-execution-doctrine.md) | **HISAR Execution Doctrine** | UI Pipeline / Governance | **RATIFIED** | 2026-01-15 |
+| [PIN-423](PIN-423-hisar-ovr-sum-hl-o3-activity-snapshot.md) | **HISAR OVR-SUM-HL-O3 Activity Snapshot** | UI Pipeline / HISAR Execution | **✅ COMPLETE** | 2026-01-15 |
+| [PIN-424](PIN-424-hisar-ovr-sum-hl-o4-policy-snapshot.md) | **HISAR OVR-SUM-HL-O4 Policy Snapshot** | UI Pipeline / HISAR Execution | **✅ COMPLETE** | 2026-01-15 |
+| [PIN-425](PIN-425-ui-plan-sync-closure.md) | **UI Plan Sync Closure** | UI Pipeline / Automation | **✅ COMPLETE** | 2026-01-15 |
+| [PIN-426](PIN-426-hisar-ovr-sum-ci-o1-cost-summary.md) | **HISAR OVR-SUM-CI-O1 Cost Summary** | UI Pipeline / HISAR Execution | **🚫 BLOCKED** | 2026-01-15 |
+| [PIN-427](PIN-427-hisar-backend-gaps-tracker.md) | **HISAR Backend Gaps Tracker** | UI Pipeline / Backend Gaps | **📋 TRACKING** | 2026-01-15 |
+| [PIN-428](PIN-428-analytics-domain-promoted-to-observed-via-sdsr.md) | **ANALYTICS Domain Promoted to OBSERVED via SDSR** | AURORA L2 / Capability Observation | **✅ COMPLETE** | 2026-01-15 |
 
 ---
 
@@ -1181,6 +1189,14 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-15 | **PIN-428 ANALYTICS Domain Promoted to OBSERVED via SDSR** - Created via memory_trail. |
+| 2026-01-15 | **PIN-427 HISAR Backend Gaps Tracker** - Consolidated tracker for all HISAR/SDSR backend gaps. Activity domain: ACT-LLM-COMP-O1 blocked on PROVENANCE_MISSING. Tracks gap taxonomy, resolution process, HIL v1 standard. |
+| 2026-01-15 | **PIN-426 HISAR OVR-SUM-CI-O1 Cost Summary** - BLOCKED. SDSR revealed AUTH_FAILURE (401) for `/cost/summary` endpoint. Documented Invariant Immutability Law: SDSR reveals gaps, does not hide them. Backend fix required. |
+| 2026-01-15 | **PIN-425 UI Plan Sync Closure** - Added Phase 6.5 to HISAR pipeline (`aurora_ui_plan_bind.py`). Closes sync gap between SDSR observation and ui_plan.yaml. Updated run_hisar.sh and PIN-422 documentation. |
+| 2026-01-15 | **PIN-424 HISAR OVR-SUM-HL-O4 Policy Snapshot** - Executed HISAR for O4 panel. New capability `overview.policy_snapshot` created and observed via SDSR. Fixed bug in `aurora_sdsr_runner.py` (missing `assertion ==`). Overview → Summary → Highlights now 100% complete (4/4 BOUND). |
+| 2026-01-15 | **PIN-423 HISAR OVR-SUM-HL-O3 Activity Snapshot** - Executed HISAR pipeline for O3 panel. Created intent YAML, synced to registry, reused existing `overview.activity_snapshot` capability (OBSERVED). Fixed ui_plan.yaml drift (O2+O3 → BOUND). Projection now shows 3 BOUND panels in OVERVIEW domain. |
+| 2026-01-15 | **PIN-422 HISAR Execution Doctrine** - Canonical execution doctrine: Human Intent → SDSR → Aurora → Rendering. 8 phases (H-Phase 1-2, S-Phase 3.5-5.5, A-Phase 3,6-7, R-Phase 8). Execution contract, state transitions, golden failure tests, SDSR scheduling. run_hisar.sh canonical runner. |
+| 2026-01-15 | **PIN-421 AURORA L2 Automation Suite** - Complete automation suite: coherency gate (COH-001 to COH-010), intent scaffolder, registry sync, capability scaffolder, SDSR synth, SDSR runner, observation applier, aurora_bind.py orchestrator. CI ownership guard workflow. |
 | 2026-01-14 | **PIN-420 Intent Ledger Pipeline and First SDSR Binding** - Created via memory_trail. |
 | 2026-01-14 | **PIN-419 Intent Ledger & Coherency Gate Architecture** - Evolved design where human intent is expressed in natural language (INTENT_LEDGER.md), and AI/scripts generate YAMLs (ui_plan.yaml, capability registry, SDSR scenarios) as compiled artifacts. Key insight: YAMLs are machine format, not human intent format. Frontend scaffolding to be deleted. Awaiting human approval. |
 | 2026-01-14 | **PIN-418 UI-as-Constraint Implementation (Priority-1 to 3A)** - Created via memory_trail. |

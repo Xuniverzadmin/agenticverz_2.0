@@ -1,0 +1,1133 @@
+{
+  "/guard/costs/summary": [
+    "GET"
+  ],
+  "/guard/costs/explained": [
+    "GET"
+  ],
+  "/guard/costs/incidents": [
+    "GET"
+  ],
+  "/explorer/summary": [
+    "GET"
+  ],
+  "/explorer/tenants": [
+    "GET"
+  ],
+  "/explorer/tenant/{tenant_id}/diagnostics": [
+    "GET"
+  ],
+  "/explorer/system/health": [
+    "GET"
+  ],
+  "/explorer/patterns": [
+    "GET"
+  ],
+  "/explorer/info": [
+    "GET"
+  ],
+  "/dashboard": [
+    "GET",
+    "POST",
+    "PUT",
+    "DELETE"
+  ],
+  "/operator": [
+    "GET",
+    "POST",
+    "PUT",
+    "DELETE"
+  ],
+  "/operator/{path:path}": [
+    "GET",
+    "POST",
+    "PUT",
+    "DELETE"
+  ],
+  "/demo": [
+    "GET",
+    "POST"
+  ],
+  "/demo/{path:path}": [
+    "GET",
+    "POST"
+  ],
+  "/simulation": [
+    "GET",
+    "POST"
+  ],
+  "/simulation/{path:path}": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/operator": [
+    "GET"
+  ],
+  "/api/v1/operator/{path:path}": [
+    "GET",
+    "POST"
+  ],
+  "/founder/contracts/review-queue": [
+    "GET"
+  ],
+  "/founder/contracts/{contract_id}": [
+    "GET"
+  ],
+  "/founder/contracts/{contract_id}/review": [
+    "POST"
+  ],
+  "/guard/logs": [
+    "GET"
+  ],
+  "/guard/logs/export": [
+    "GET"
+  ],
+  "/guard/logs/{log_id}": [
+    "GET"
+  ],
+  "/api/v1/incidents/summary": [
+    "GET"
+  ],
+  "/api/v1/incidents": [
+    "GET"
+  ],
+  "/api/v1/incidents/metrics": [
+    "GET"
+  ],
+  "/api/v1/incidents/{incident_id}": [
+    "GET"
+  ],
+  "/api/v1/incidents/by-run/{run_id}": [
+    "GET"
+  ],
+  "/api/v1/incidents/trigger": [
+    "POST"
+  ],
+  "/api/v1/predictions": [
+    "GET"
+  ],
+  "/api/v1/predictions/{prediction_id}": [
+    "GET"
+  ],
+  "/api/v1/predictions/subject/{subject_type}/{subject_id}": [
+    "GET"
+  ],
+  "/api/v1/predictions/stats/summary": [
+    "GET"
+  ],
+  "/internal/authz/status": [
+    "GET"
+  ],
+  "/internal/authz/mappings": [
+    "GET"
+  ],
+  "/internal/authz/phase-info": [
+    "GET"
+  ],
+  "/internal/authz/metrics-info": [
+    "GET"
+  ],
+  "/internal/authz/alert-rules": [
+    "GET"
+  ],
+  "/api/v1/customer/activity": [
+    "GET"
+  ],
+  "/api/v1/customer/activity/{run_id}": [
+    "GET"
+  ],
+  "/api/v1/onboarding/status": [
+    "GET"
+  ],
+  "/api/v1/onboarding/verify": [
+    "POST"
+  ],
+  "/api/v1/onboarding/advance/api-key": [
+    "POST"
+  ],
+  "/api/v1/activity/runs": [
+    "GET"
+  ],
+  "/api/v1/activity/runs/{run_id}": [
+    "GET"
+  ],
+  "/api/v1/activity/summary": [
+    "GET"
+  ],
+  "/costsim/v2/status": [
+    "GET"
+  ],
+  "/costsim/v2/simulate": [
+    "POST"
+  ],
+  "/costsim/v2/reset": [
+    "POST"
+  ],
+  "/costsim/v2/incidents": [
+    "GET"
+  ],
+  "/costsim/divergence": [
+    "GET"
+  ],
+  "/costsim/canary/run": [
+    "POST"
+  ],
+  "/costsim/canary/reports": [
+    "GET"
+  ],
+  "/costsim/datasets": [
+    "GET"
+  ],
+  "/costsim/datasets/{dataset_id}": [
+    "GET"
+  ],
+  "/costsim/datasets/{dataset_id}/validate": [
+    "POST"
+  ],
+  "/costsim/datasets/validate-all": [
+    "POST"
+  ],
+  "/customer/pre-run": [
+    "POST"
+  ],
+  "/customer/acknowledge": [
+    "POST"
+  ],
+  "/customer/outcome/{run_id}": [
+    "GET"
+  ],
+  "/customer/declaration/{declaration_id}": [
+    "GET"
+  ],
+  "/founder/onboarding/force-complete": [
+    "POST"
+  ],
+  "/founder/onboarding/stalled": [
+    "GET"
+  ],
+  "/api/v1/guard/status": [
+    "GET"
+  ],
+  "/api/v1/guard/snapshot/today": [
+    "GET"
+  ],
+  "/api/v1/guard/killswitch/activate": [
+    "POST"
+  ],
+  "/api/v1/guard/killswitch/deactivate": [
+    "POST"
+  ],
+  "/api/v1/guard/incidents": [
+    "GET"
+  ],
+  "/api/v1/guard/incidents/{incident_id}": [
+    "GET"
+  ],
+  "/api/v1/guard/incidents/{incident_id}/acknowledge": [
+    "POST"
+  ],
+  "/api/v1/guard/incidents/{incident_id}/resolve": [
+    "POST"
+  ],
+  "/api/v1/guard/incidents/{incident_id}/narrative": [
+    "GET"
+  ],
+  "/api/v1/guard/replay/{call_id}": [
+    "POST"
+  ],
+  "/api/v1/guard/keys": [
+    "GET"
+  ],
+  "/api/v1/guard/keys/{key_id}/freeze": [
+    "POST"
+  ],
+  "/api/v1/guard/keys/{key_id}/unfreeze": [
+    "POST"
+  ],
+  "/api/v1/guard/settings": [
+    "GET"
+  ],
+  "/api/v1/guard/incidents/search": [
+    "POST"
+  ],
+  "/api/v1/guard/incidents/{incident_id}/timeline": [
+    "GET"
+  ],
+  "/api/v1/guard/incidents/{incident_id}/export": [
+    "POST"
+  ],
+  "/api/v1/guard/onboarding/verify": [
+    "POST"
+  ],
+  "/api/v1/tenant": [
+    "GET"
+  ],
+  "/api/v1/tenant/usage": [
+    "GET"
+  ],
+  "/api/v1/tenant/quota/runs": [
+    "GET"
+  ],
+  "/api/v1/tenant/quota/tokens": [
+    "GET"
+  ],
+  "/api/v1/api-keys": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/api-keys/{key_id}": [
+    "DELETE"
+  ],
+  "/api/v1/workers": [
+    "GET"
+  ],
+  "/api/v1/workers/available": [
+    "GET"
+  ],
+  "/api/v1/workers/{worker_id}": [
+    "GET"
+  ],
+  "/api/v1/workers/{worker_id}/config": [
+    "GET",
+    "PUT"
+  ],
+  "/api/v1/runs": [
+    "GET"
+  ],
+  "/api/v1/tenant/health": [
+    "GET"
+  ],
+  "/api/v1/traces": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/traces/mismatches": [
+    "GET"
+  ],
+  "/api/v1/traces/{run_id}": [
+    "GET",
+    "DELETE"
+  ],
+  "/api/v1/traces/by-hash/{root_hash}": [
+    "GET"
+  ],
+  "/api/v1/traces/compare/{run_id1}/{run_id2}": [
+    "GET"
+  ],
+  "/api/v1/traces/cleanup": [
+    "POST"
+  ],
+  "/api/v1/traces/idempotency/{idempotency_key}": [
+    "GET"
+  ],
+  "/api/v1/traces/mismatches/bulk-report": [
+    "POST"
+  ],
+  "/api/v1/traces/{trace_id}/mismatch": [
+    "POST"
+  ],
+  "/api/v1/traces/{trace_id}/mismatches": [
+    "GET"
+  ],
+  "/api/v1/traces/{trace_id}/mismatches/{mismatch_id}/resolve": [
+    "POST"
+  ],
+  "/health": [
+    "GET"
+  ],
+  "/health/ready": [
+    "GET"
+  ],
+  "/health/determinism": [
+    "GET"
+  ],
+  "/health/adapters": [
+    "GET"
+  ],
+  "/health/skills": [
+    "GET"
+  ],
+  "/cost/features": [
+    "POST",
+    "GET"
+  ],
+  "/cost/features/{tag}": [
+    "PUT"
+  ],
+  "/cost/record": [
+    "POST"
+  ],
+  "/cost/dashboard": [
+    "GET"
+  ],
+  "/cost/summary": [
+    "GET"
+  ],
+  "/cost/by-feature": [
+    "GET"
+  ],
+  "/cost/by-user": [
+    "GET"
+  ],
+  "/cost/by-model": [
+    "GET"
+  ],
+  "/cost/anomalies": [
+    "GET"
+  ],
+  "/cost/projection": [
+    "GET"
+  ],
+  "/cost/budgets": [
+    "POST",
+    "GET"
+  ],
+  "/cost/anomalies/detect": [
+    "POST"
+  ],
+  "/status_history": [
+    "GET"
+  ],
+  "/status_history/entity/{entity_type}/{entity_id}": [
+    "GET"
+  ],
+  "/status_history/export": [
+    "POST"
+  ],
+  "/status_history/download/{export_id}": [
+    "GET"
+  ],
+  "/status_history/stats": [
+    "GET"
+  ],
+  "/api/v1/feedback": [
+    "GET"
+  ],
+  "/api/v1/feedback/{feedback_id}": [
+    "GET"
+  ],
+  "/api/v1/feedback/stats/summary": [
+    "GET"
+  ],
+  "/founder/timeline/run/{run_id}": [
+    "GET"
+  ],
+  "/founder/timeline/decisions": [
+    "GET"
+  ],
+  "/founder/timeline/decisions/{decision_id}": [
+    "GET"
+  ],
+  "/founder/timeline/count": [
+    "GET"
+  ],
+  "/ops/cost/overview": [
+    "GET"
+  ],
+  "/ops/cost/anomalies": [
+    "GET"
+  ],
+  "/ops/cost/tenants": [
+    "GET"
+  ],
+  "/ops/cost/customers/{tenant_id}": [
+    "GET"
+  ],
+  "/sdk/handshake": [
+    "POST"
+  ],
+  "/sdk/instructions": [
+    "GET"
+  ],
+  "/api/v1/recovery/suggest": [
+    "POST"
+  ],
+  "/api/v1/recovery/candidates": [
+    "GET"
+  ],
+  "/api/v1/recovery/approve": [
+    "POST"
+  ],
+  "/api/v1/recovery/candidates/{candidate_id}": [
+    "DELETE",
+    "GET",
+    "PATCH"
+  ],
+  "/api/v1/recovery/stats": [
+    "GET"
+  ],
+  "/api/v1/recovery/actions": [
+    "GET"
+  ],
+  "/api/v1/recovery/evaluate": [
+    "POST"
+  ],
+  "/api/v1/recovery/candidates/{candidate_id}/scope-test": [
+    "POST"
+  ],
+  "/api/v1/recovery/scope": [
+    "POST"
+  ],
+  "/api/v1/recovery/execute": [
+    "POST"
+  ],
+  "/api/v1/recovery/scopes/{incident_id}": [
+    "GET"
+  ],
+  "/api/v1/recovery/scopes/{scope_id}": [
+    "DELETE"
+  ],
+  "/v1/chat/completions": [
+    "POST"
+  ],
+  "/v1/embeddings": [
+    "POST"
+  ],
+  "/v1/status": [
+    "GET"
+  ],
+  "/platform/health": [
+    "GET"
+  ],
+  "/platform/capabilities": [
+    "GET"
+  ],
+  "/platform/domains/{domain_name}": [
+    "GET"
+  ],
+  "/platform/capabilities/{capability_name}": [
+    "GET"
+  ],
+  "/platform/eligibility/{capability_name}": [
+    "GET"
+  ],
+  "/status": [
+    "GET"
+  ],
+  "/policy-layer/evaluate": [
+    "POST"
+  ],
+  "/policy-layer/simulate": [
+    "POST"
+  ],
+  "/policy-layer/state": [
+    "GET"
+  ],
+  "/policy-layer/reload": [
+    "POST"
+  ],
+  "/policy-layer/violations": [
+    "GET"
+  ],
+  "/policy-layer/violations/{violation_id}": [
+    "GET"
+  ],
+  "/policy-layer/violations/{violation_id}/acknowledge": [
+    "POST"
+  ],
+  "/policy-layer/risk-ceilings": [
+    "GET"
+  ],
+  "/policy-layer/risk-ceilings/{ceiling_id}": [
+    "GET",
+    "PATCH"
+  ],
+  "/policy-layer/risk-ceilings/{ceiling_id}/reset": [
+    "POST"
+  ],
+  "/policy-layer/safety-rules": [
+    "GET"
+  ],
+  "/policy-layer/safety-rules/{rule_id}": [
+    "PATCH"
+  ],
+  "/policy-layer/ethical-constraints": [
+    "GET"
+  ],
+  "/policy-layer/cooldowns": [
+    "GET"
+  ],
+  "/policy-layer/cooldowns/{agent_id}": [
+    "DELETE"
+  ],
+  "/policy-layer/metrics": [
+    "GET"
+  ],
+  "/policy-layer/evaluate/batch": [
+    "POST"
+  ],
+  "/policy-layer/versions": [
+    "GET",
+    "POST"
+  ],
+  "/policy-layer/versions/current": [
+    "GET"
+  ],
+  "/policy-layer/versions/rollback": [
+    "POST"
+  ],
+  "/policy-layer/versions/{version_id}/provenance": [
+    "GET"
+  ],
+  "/policy-layer/dependencies": [
+    "GET"
+  ],
+  "/policy-layer/conflicts": [
+    "GET"
+  ],
+  "/policy-layer/conflicts/{conflict_id}/resolve": [
+    "POST"
+  ],
+  "/policy-layer/temporal-policies": [
+    "GET",
+    "POST"
+  ],
+  "/policy-layer/temporal-policies/{policy_id}/utilization": [
+    "GET"
+  ],
+  "/policy-layer/evaluate/context-aware": [
+    "POST"
+  ],
+  "/policy-layer/dependencies/dag/validate": [
+    "GET"
+  ],
+  "/policy-layer/dependencies/add": [
+    "POST"
+  ],
+  "/policy-layer/dependencies/evaluation-order": [
+    "GET"
+  ],
+  "/policy-layer/temporal-metrics/prune": [
+    "POST"
+  ],
+  "/policy-layer/temporal-metrics/storage-stats": [
+    "GET"
+  ],
+  "/policy-layer/versions/activate": [
+    "POST"
+  ],
+  "/policy-layer/versions/{version_id}/check": [
+    "POST"
+  ],
+  "/api/v1/runtime/simulate": [
+    "POST"
+  ],
+  "/api/v1/runtime/query": [
+    "POST"
+  ],
+  "/api/v1/runtime/skills": [
+    "GET"
+  ],
+  "/api/v1/runtime/skills/{skill_id}": [
+    "GET"
+  ],
+  "/api/v1/runtime/capabilities": [
+    "GET"
+  ],
+  "/api/v1/runtime/resource-contract/{resource_id}": [
+    "GET"
+  ],
+  "/api/v1/runtime/replay/{run_id}": [
+    "POST"
+  ],
+  "/api/v1/runtime/traces": [
+    "GET"
+  ],
+  "/api/v1/runtime/traces/{run_id}": [
+    "GET"
+  ],
+  "/embedding/quota": [
+    "GET"
+  ],
+  "/embedding/config": [
+    "GET"
+  ],
+  "/embedding/health": [
+    "GET"
+  ],
+  "/embedding/cache/stats": [
+    "GET"
+  ],
+  "/embedding/cache": [
+    "DELETE"
+  ],
+  "/embedding/compose": [
+    "POST"
+  ],
+  "/embedding/decompose": [
+    "POST"
+  ],
+  "/embedding/iaec/instructions": [
+    "GET"
+  ],
+  "/embedding/iaec/segment-info": [
+    "GET"
+  ],
+  "/embedding/iaec/check-mismatch": [
+    "POST"
+  ],
+  "/api/v1/policy-proposals": [
+    "GET"
+  ],
+  "/api/v1/policy-proposals/stats/summary": [
+    "GET"
+  ],
+  "/api/v1/policy-proposals/{proposal_id}": [
+    "GET"
+  ],
+  "/api/v1/policy-proposals/{proposal_id}/versions": [
+    "GET"
+  ],
+  "/api/v1/policy-proposals/{proposal_id}/approve": [
+    "POST"
+  ],
+  "/api/v1/policy-proposals/{proposal_id}/reject": [
+    "POST"
+  ],
+  "/runs": [
+    "POST"
+  ],
+  "/api/v1/ops/pulse": [
+    "GET"
+  ],
+  "/api/v1/ops/customers": [
+    "GET"
+  ],
+  "/api/v1/ops/customers/at-risk": [
+    "GET"
+  ],
+  "/api/v1/ops/customers/{tenant_id}": [
+    "GET"
+  ],
+  "/api/v1/ops/playbooks": [
+    "GET"
+  ],
+  "/api/v1/ops/playbooks/{playbook_id}": [
+    "GET"
+  ],
+  "/api/v1/ops/incidents/patterns": [
+    "GET"
+  ],
+  "/api/v1/ops/incidents/infra-summary": [
+    "GET"
+  ],
+  "/api/v1/ops/incidents/{incident_id}": [
+    "GET"
+  ],
+  "/api/v1/ops/incidents": [
+    "GET"
+  ],
+  "/api/v1/ops/stickiness": [
+    "GET"
+  ],
+  "/api/v1/ops/revenue": [
+    "GET"
+  ],
+  "/api/v1/ops/infra": [
+    "GET"
+  ],
+  "/api/v1/ops/events": [
+    "GET"
+  ],
+  "/api/v1/recovery/ingest": [
+    "POST"
+  ],
+  "/billing/status": [
+    "GET"
+  ],
+  "/v1/killswitch/tenant": [
+    "POST",
+    "DELETE"
+  ],
+  "/v1/killswitch/key": [
+    "POST",
+    "DELETE"
+  ],
+  "/v1/killswitch/status": [
+    "GET"
+  ],
+  "/v1/policies/active": [
+    "GET"
+  ],
+  "/v1/incidents": [
+    "GET"
+  ],
+  "/v1/incidents/{incident_id}": [
+    "GET"
+  ],
+  "/v1/replay/{call_id}": [
+    "POST"
+  ],
+  "/v1/calls/{call_id}": [
+    "GET"
+  ],
+  "/api/v1/memory/pins": [
+    "POST",
+    "GET"
+  ],
+  "/api/v1/memory/pins/{key}": [
+    "GET",
+    "DELETE"
+  ],
+  "/api/v1/memory/pins/cleanup": [
+    "POST"
+  ],
+  "/api/v1/policies/eval": [
+    "POST"
+  ],
+  "/api/v1/policies/requests": [
+    "POST",
+    "GET"
+  ],
+  "/api/v1/policies/requests/{request_id}": [
+    "GET"
+  ],
+  "/api/v1/policies/requests/{request_id}/approve": [
+    "POST"
+  ],
+  "/api/v1/policies/requests/{request_id}/reject": [
+    "POST"
+  ],
+  "/api/v1/discovery": [
+    "GET"
+  ],
+  "/api/v1/discovery/stats": [
+    "GET"
+  ],
+  "/ops/actions/freeze-tenant": [
+    "POST"
+  ],
+  "/ops/actions/throttle-tenant": [
+    "POST"
+  ],
+  "/ops/actions/freeze-api-key": [
+    "POST"
+  ],
+  "/ops/actions/override-incident": [
+    "POST"
+  ],
+  "/ops/actions/unfreeze-tenant": [
+    "POST"
+  ],
+  "/ops/actions/unthrottle-tenant": [
+    "POST"
+  ],
+  "/ops/actions/unfreeze-api-key": [
+    "POST"
+  ],
+  "/ops/actions/audit": [
+    "GET"
+  ],
+  "/ops/actions/audit/{action_id}": [
+    "GET"
+  ],
+  "/integration/loop/{incident_id}": [
+    "GET"
+  ],
+  "/integration/loop/{incident_id}/stages": [
+    "GET"
+  ],
+  "/integration/loop/{incident_id}/stream": [
+    "GET"
+  ],
+  "/integration/loop/{incident_id}/retry": [
+    "POST"
+  ],
+  "/integration/loop/{incident_id}/revert": [
+    "POST"
+  ],
+  "/integration/checkpoints": [
+    "GET"
+  ],
+  "/integration/checkpoints/{checkpoint_id}": [
+    "GET"
+  ],
+  "/integration/checkpoints/{checkpoint_id}/resolve": [
+    "POST"
+  ],
+  "/integration/stats": [
+    "GET"
+  ],
+  "/integration/loop/{incident_id}/narrative": [
+    "GET"
+  ],
+  "/integration/graduation": [
+    "GET"
+  ],
+  "/integration/graduation/simulate/prevention": [
+    "POST"
+  ],
+  "/integration/graduation/simulate/regret": [
+    "POST"
+  ],
+  "/integration/graduation/simulate/timeline-view": [
+    "POST"
+  ],
+  "/integration/graduation/record-view": [
+    "POST"
+  ],
+  "/integration/graduation/re-evaluate": [
+    "POST"
+  ],
+  "/integration/timeline/{incident_id}": [
+    "GET"
+  ],
+  "/api/v1/agents/jobs/simulate": [
+    "POST"
+  ],
+  "/api/v1/agents/jobs": [
+    "POST"
+  ],
+  "/api/v1/agents/jobs/{job_id}": [
+    "GET"
+  ],
+  "/api/v1/agents/jobs/{job_id}/cancel": [
+    "POST"
+  ],
+  "/api/v1/agents/jobs/{job_id}/claim": [
+    "POST"
+  ],
+  "/api/v1/agents/jobs/{job_id}/items/{item_id}/complete": [
+    "POST"
+  ],
+  "/api/v1/agents/jobs/{job_id}/items/{item_id}/fail": [
+    "POST"
+  ],
+  "/api/v1/agents/blackboard/{key}": [
+    "GET",
+    "PUT"
+  ],
+  "/api/v1/agents/blackboard/{key}/increment": [
+    "POST"
+  ],
+  "/api/v1/agents/blackboard/{key}/lock": [
+    "POST"
+  ],
+  "/api/v1/agents/agents/register": [
+    "POST"
+  ],
+  "/api/v1/agents/agents/{instance_id}/heartbeat": [
+    "POST"
+  ],
+  "/api/v1/agents/agents/{instance_id}": [
+    "DELETE",
+    "GET"
+  ],
+  "/api/v1/agents/agents": [
+    "GET"
+  ],
+  "/api/v1/agents/agents/{instance_id}/messages": [
+    "POST",
+    "GET"
+  ],
+  "/api/v1/agents/agents/{instance_id}/messages/{message_id}/read": [
+    "POST"
+  ],
+  "/api/v1/agents/invocations/respond": [
+    "POST"
+  ],
+  "/api/v1/agents/sba/validate": [
+    "POST"
+  ],
+  "/api/v1/agents/sba/register": [
+    "POST"
+  ],
+  "/api/v1/agents/sba/generate": [
+    "POST"
+  ],
+  "/api/v1/agents/sba/version": [
+    "GET"
+  ],
+  "/api/v1/agents/sba/version/negotiate": [
+    "POST"
+  ],
+  "/api/v1/agents/sba/health": [
+    "GET"
+  ],
+  "/api/v1/agents/sba/{agent_id}": [
+    "GET"
+  ],
+  "/api/v1/agents/sba": [
+    "GET"
+  ],
+  "/api/v1/agents/sba/check-spawn": [
+    "POST"
+  ],
+  "/api/v1/agents/sba/fulfillment/aggregated": [
+    "GET"
+  ],
+  "/api/v1/agents/agents/{agent_id}/activity/costs": [
+    "GET"
+  ],
+  "/api/v1/agents/agents/{agent_id}/activity/spending": [
+    "GET"
+  ],
+  "/api/v1/agents/agents/{agent_id}/activity/retries": [
+    "GET"
+  ],
+  "/api/v1/agents/agents/{agent_id}/activity/blockers": [
+    "GET"
+  ],
+  "/api/v1/agents/agents/{agent_id}/health/check": [
+    "POST"
+  ],
+  "/api/v1/agents/routing/cascade-evaluate": [
+    "POST"
+  ],
+  "/api/v1/agents/routing/dispatch": [
+    "POST"
+  ],
+  "/api/v1/agents/agents/{agent_id}/strategy": [
+    "GET"
+  ],
+  "/api/v1/agents/agents/{agent_id}/strategy/update": [
+    "POST"
+  ],
+  "/api/v1/agents/routing/stats": [
+    "GET"
+  ],
+  "/api/v1/agents/routing/explain/{request_id}": [
+    "POST"
+  ],
+  "/api/v1/agents/agents/{agent_id}/evolution": [
+    "GET"
+  ],
+  "/api/v1/agents/routing/stability": [
+    "GET"
+  ],
+  "/api/v1/agents/routing/stability/freeze": [
+    "POST"
+  ],
+  "/api/v1/agents/routing/stability/unfreeze": [
+    "POST"
+  ],
+  "/api/v1/agents/routing/batch-learning": [
+    "POST"
+  ],
+  "/api/v1/agents/agents/{agent_id}/reputation": [
+    "GET"
+  ],
+  "/api/v1/agents/agents/{agent_id}/sla": [
+    "GET"
+  ],
+  "/api/v1/agents/agents/{agent_id}/successors": [
+    "GET"
+  ],
+  "/replay/{incident_id}/slice": [
+    "GET"
+  ],
+  "/replay/{incident_id}/summary": [
+    "GET"
+  ],
+  "/replay/{incident_id}/timeline": [
+    "GET"
+  ],
+  "/replay/{incident_id}/explain/{item_id}": [
+    "GET"
+  ],
+  "/api/v1/workers/business-builder/run": [
+    "POST"
+  ],
+  "/api/v1/workers/business-builder/replay": [
+    "POST"
+  ],
+  "/api/v1/workers/business-builder/runs/{run_id}": [
+    "GET",
+    "DELETE"
+  ],
+  "/api/v1/workers/business-builder/runs": [
+    "GET"
+  ],
+  "/api/v1/workers/business-builder/runs/{run_id}/retry": [
+    "POST"
+  ],
+  "/api/v1/workers/business-builder/validate-brand": [
+    "POST"
+  ],
+  "/api/v1/workers/business-builder/health": [
+    "GET"
+  ],
+  "/api/v1/workers/business-builder/schema/brand": [
+    "GET"
+  ],
+  "/api/v1/workers/business-builder/schema/run": [
+    "GET"
+  ],
+  "/api/v1/workers/business-builder/stream/{run_id}": [
+    "GET"
+  ],
+  "/api/v1/workers/business-builder/events/{run_id}": [
+    "GET"
+  ],
+  "/api/v1/workers/business-builder/run-streaming": [
+    "POST"
+  ],
+  "/founder/lifecycle/{tenant_id}": [
+    "GET"
+  ],
+  "/founder/lifecycle/{tenant_id}/history": [
+    "GET"
+  ],
+  "/founder/lifecycle/suspend": [
+    "POST"
+  ],
+  "/founder/lifecycle/resume": [
+    "POST"
+  ],
+  "/founder/lifecycle/terminate": [
+    "POST"
+  ],
+  "/founder/lifecycle/archive": [
+    "POST"
+  ],
+  "/guard/policies": [
+    "GET"
+  ],
+  "/guard/policies/guardrails/{guardrail_id}": [
+    "GET"
+  ],
+  "/api/v1/session/context": [
+    "GET"
+  ],
+  "/founder/review/auto-execute": [
+    "GET"
+  ],
+  "/founder/review/auto-execute/stats": [
+    "GET"
+  ],
+  "/founder/review/auto-execute/{invocation_id}": [
+    "GET"
+  ],
+  "/api/v1/rbac/info": [
+    "GET"
+  ],
+  "/api/v1/rbac/reload": [
+    "POST"
+  ],
+  "/api/v1/rbac/matrix": [
+    "GET"
+  ],
+  "/api/v1/rbac/audit": [
+    "GET"
+  ],
+  "/api/v1/rbac/audit/cleanup": [
+    "POST"
+  ],
+  "/api/v1/scenarios": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/scenarios/{scenario_id}": [
+    "GET",
+    "DELETE"
+  ],
+  "/api/v1/scenarios/{scenario_id}/simulate": [
+    "POST"
+  ],
+  "/api/v1/scenarios/simulate-adhoc": [
+    "POST"
+  ],
+  "/api/v1/scenarios/info/immutability": [
+    "GET"
+  ]
+}
