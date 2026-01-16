@@ -1,0 +1,406 @@
+Layer,File,HTTP Method,Full Path,Function Name,Path Parameters (Input),Query Parameters (Input),Request Body Model (Input),Response Model (Output),Tags,Description
+L2 (Product APIs),activity.py,GET,/activity/runs,list_activity_runs,,,Optional[str],ActivityResponse,Activity,List runs for Activity domain.
+L2 (Product APIs),activity.py,GET,/activity/runs/{run_id},get_run_detail,run_id,,,RunSummary,Activity,Get details of a specific run.
+L2 (Product APIs),activity.py,GET,/activity/summary,get_activity_summary,,,,ActivitySummaryResponse,Activity,Activity summary for HIL v1 interpretation panel.
+L2 (Product APIs),main.py,GET,/admin/failed-runs,list_failed_runs,,limit,,,,List recent failed runs for review.
+L2 (Product APIs),main.py,POST,/admin/rerun,rerun_failed_run,,,,RerunResponse,,REMOVED: This endpoint has been disabled to enforce PB-S1 truth guarantees.
+L2 (Product APIs),main.py,POST,/admin/retry,retry_failed_run,,,,RetryResponse,,Retry a failed worker run by creating a NEW execution (PB-S1 compliant).
+L2 (Product APIs),main.py,POST,/agents,create_agent,,,,CreateAgentResponse,,Create a new agent.
+L2 (Product APIs),main.py,GET,/agents/{agent_id},get_agent,agent_id,,,,,Get agent by ID.
+L2 (Product APIs),main.py,POST,/agents/{agent_id}/goals,post_goal,agent_id,,BackgroundTasks,GoalResponse,,Submit a goal to an agent.
+L2 (Product APIs),main.py,GET,/agents/{agent_id}/provenance,get_provenance,agent_id,limit,,List[ProvenanceResponse],,Get provenance records for an agent.
+L2 (Product APIs),main.py,GET,/agents/{agent_id}/provenance/{prov_id},get_provenance_by_id,"agent_id, prov_id",,,ProvenanceResponse,,Get a specific provenance record.
+L2 (Product APIs),main.py,GET,/agents/{agent_id}/recall,recall_memory,agent_id,,,List[MemoryResponse],,Recall memories for an agent.
+L2 (Product APIs),main.py,GET,/agents/{agent_id}/runs,list_runs,agent_id,limit,,List[RunResponse],,List runs for an agent.
+L2 (Product APIs),main.py,GET,/agents/{agent_id}/runs/{run_id},get_run,"agent_id, run_id",,,RunResponse,,Get run status and results.
+L2,agents.py,GET,/api/v1/agents,list_agents,,,Optional[str],,agents,List agent instances.
+L2,agents.py,POST,/api/v1/agents/register,register_agent,,,,,agents,Register an agent instance.
+L2,agents.py,GET,/api/v1/agents/{agent_id}/activity/blockers,get_agent_activity_blockers,agent_id,,,ActivityBlockersResponse,agents,M16: Get current blockers for an agent.
+L2,agents.py,GET,/api/v1/agents/{agent_id}/activity/costs,get_agent_activity_costs,agent_id,,,ActivityCostsResponse,agents,M16: Get worker cost and risk metrics for an agent.
+L2,agents.py,GET,/api/v1/agents/{agent_id}/activity/retries,get_agent_activity_retries,agent_id,limit,,ActivityRetriesResponse,agents,M16: Get retry log for an agent.
+L2,agents.py,GET,/api/v1/agents/{agent_id}/activity/spending,get_agent_activity_spending,agent_id,,,SpendingDataResponse,agents,M16: Get spending data for budget burn chart.
+L2,agents.py,GET,/api/v1/agents/{agent_id}/evolution,get_agent_evolution,agent_id,limit,,EvolutionReportResponse,agents,M18: Get agent evolution history and current state.
+L2,agents.py,POST,/api/v1/agents/{agent_id}/health/check,check_agent_health,agent_id,,,HealthCheckResponse,agents,M16: Run comprehensive health check for an agent.
+L2,agents.py,GET,/api/v1/agents/{agent_id}/reputation,get_agent_reputation,agent_id,,,,agents,M18: Get agent reputation details.
+L2,agents.py,GET,/api/v1/agents/{agent_id}/sla,get_agent_sla,agent_id,,,,agents,M18: Get agent SLA score details.
+L2,agents.py,GET,/api/v1/agents/{agent_id}/strategy,get_agent_strategy,agent_id,,,,agents,M17: Get agent's Strategy Cascade.
+L2,agents.py,POST,/api/v1/agents/{agent_id}/strategy/update,update_agent_strategy,agent_id,,RoutingConfigUpdate,,agents,M17: Hot-swap agent's routing configuration.
+L2,agents.py,GET,/api/v1/agents/{agent_id}/successors,get_agent_successors,agent_id,,,,agents,M18: Get successor mapping for agent failover.
+L2,agents.py,DELETE,/api/v1/agents/{instance_id},deregister_agent,instance_id,,,,agents,Deregister an agent instance.
+L2,agents.py,GET,/api/v1/agents/{instance_id},get_agent,instance_id,,,,agents,Get agent instance details.
+L2,agents.py,POST,/api/v1/agents/{instance_id}/heartbeat,agent_heartbeat,instance_id,,,,agents,Update agent heartbeat.
+L2,agents.py,GET,/api/v1/agents/{instance_id}/messages,get_messages,instance_id,limit,Optional[str],,agents,Get messages for an agent.
+L2,agents.py,POST,/api/v1/agents/{instance_id}/messages,send_message,instance_id,,,,agents,Send a message to an agent.
+L2,agents.py,POST,/api/v1/agents/{instance_id}/messages/{message_id}/read,mark_message_read,"instance_id, message_id",,,,agents,Mark message as read.
+L2,tenants.py,GET,/api/v1/api-keys,list_api_keys,,,,List[APIKeyResponse],Tenants & API Keys,List all API keys for the current tenant.
+L2,tenants.py,POST,/api/v1/api-keys,create_api_key,,,,APIKeyCreatedResponse,Tenants & API Keys,Create a new API key for the current tenant.
+L2,tenants.py,DELETE,/api/v1/api-keys/{key_id},revoke_api_key,key_id,,,,Tenants & API Keys,Revoke an API key.
+L2,agents.py,GET,/api/v1/blackboard/{key},get_blackboard,key,,,,agents,Read value from blackboard.
+L2,agents.py,PUT,/api/v1/blackboard/{key},put_blackboard,key,,,,agents,Write value to blackboard.
+L2,agents.py,POST,/api/v1/blackboard/{key}/increment,increment_blackboard,key,,,,agents,Atomically increment a counter.
+L2,agents.py,POST,/api/v1/blackboard/{key}/lock,lock_blackboard,key,,,,agents,Lock operation on blackboard.
+L2 (Product APIs),customer_activity.py,GET,/api/v1/customer/activity,list_activities,,"limit, offset",Optional[str],CustomerActivityListResponse,customer-activity,List activities for the current tenant.
+L2 (Product APIs),customer_activity.py,GET,/api/v1/customer/activity/{run_id},get_activity,run_id,,,CustomerActivityDetail,customer-activity,Get activity detail for a specific run.
+L2,discovery.py,GET,/api/v1/discovery/,list_signals,,limit,Optional[str],,discovery,List discovery signals from the ledger.
+L2,discovery.py,GET,/api/v1/discovery/stats,signal_stats,,,,,discovery,Get summary statistics of discovery signals.
+L2,feedback.py,GET,/api/v1/feedback/stats/summary,get_feedback_stats,,tenant_id,,,"feedback, pb-s3, read-only",Get feedback statistics summary (PB-S3).
+L2,feedback.py,GET,/api/v1/feedback/{feedback_id},get_feedback,feedback_id,,,FeedbackDetailResponse,"feedback, pb-s3, read-only",Get detailed feedback record by ID (PB-S3).
+L2,agents.py,POST,/api/v1/invocations/respond,respond_to_invocation,,,,,agents,Respond to an agent invocation.
+L2,agents.py,POST,/api/v1/jobs,create_job,,,,JobResponse,agents,Create a new parallel job.
+L2,agents.py,POST,/api/v1/jobs/simulate,simulate_job,,,,SimulateJobResponse,agents,Simulate job execution before committing resources.
+L2,agents.py,GET,/api/v1/jobs/{job_id},get_job,job_id,,,JobResponse,agents,Get job status by ID.
+L2,agents.py,POST,/api/v1/jobs/{job_id}/cancel,cancel_job,job_id,,,,agents,Cancel a running job.
+L2,agents.py,POST,/api/v1/jobs/{job_id}/claim,claim_item,job_id,,,ClaimItemResponse,agents,Worker claims next available item.
+L2,agents.py,POST,/api/v1/jobs/{job_id}/items/{item_id}/complete,complete_item,"job_id, item_id",,,,agents,Mark item as completed with output.
+L2,agents.py,POST,/api/v1/jobs/{job_id}/items/{item_id}/fail,fail_item,"job_id, item_id",,,,agents,Mark item as failed.
+L2,memory_pins.py,GET,/api/v1/memory/pins,list_pins,,"tenant_id, limit, offset",Optional[str],MemoryPinListResponse,memory,List memory pins for a tenant.
+L2,memory_pins.py,POST,/api/v1/memory/pins,create_or_upsert_pin,,,MemoryPinCreate,MemoryPinResponse,memory,Create or upsert a memory pin.
+L2,memory_pins.py,POST,/api/v1/memory/pins/cleanup,cleanup_expired_pins,,tenant_id,,,memory,Clean up expired memory pins.
+L2,memory_pins.py,DELETE,/api/v1/memory/pins/{key},delete_pin,key,tenant_id,,MemoryPinDeleteResponse,memory,Delete a memory pin by key.
+L2,memory_pins.py,GET,/api/v1/memory/pins/{key},get_pin,key,tenant_id,,MemoryPinResponse,memory,Get a memory pin by key.
+L2 (Product APIs),onboarding.py,POST,/api/v1/onboarding/advance/api-key,advance_api_key_created,,,,,Onboarding,Advance to API_KEY_CREATED state.
+L2 (Product APIs),onboarding.py,GET,/api/v1/onboarding/status,get_onboarding_status,,,,OnboardingStatusResponse,Onboarding,Get current onboarding status for the authenticated tenant.
+L2 (Product APIs),onboarding.py,POST,/api/v1/onboarding/verify,verify_identity,,,,OnboardingVerifyResponse,Onboarding,Verify identity and advance to IDENTITY_VERIFIED state.
+L2,legacy_routes.py,GET,/api/v1/operator,legacy_api_operator,,,,,Legacy (Deprecated),410 Gone - /api/v1/operator/* merged into /ops/*.
+L2,legacy_routes.py,GET,/api/v1/operator/{path:path},legacy_api_operator,path:path,,,,Legacy (Deprecated),410 Gone - /api/v1/operator/* merged into /ops/*.
+L2,legacy_routes.py,POST,/api/v1/operator/{path:path},legacy_api_operator,path:path,,,,Legacy (Deprecated),410 Gone - /api/v1/operator/* merged into /ops/*.
+L2,policy_proposals.py,GET,/api/v1/policy-proposals/stats/summary,get_proposal_stats,,tenant_id,,,"policy-proposals, pb-s4",Get policy proposal statistics (PB-S4).
+L2,policy_proposals.py,GET,/api/v1/policy-proposals/{proposal_id},get_proposal,proposal_id,,,ProposalDetailResponse,"policy-proposals, pb-s4",Get detailed policy proposal by ID (PB-S4).
+L2,policy_proposals.py,POST,/api/v1/policy-proposals/{proposal_id}/approve,approve_proposal,proposal_id,,TenantRole,ApprovalResponse,"policy-proposals, pb-s4",Approve a policy proposal (PIN-373).
+L2,policy_proposals.py,POST,/api/v1/policy-proposals/{proposal_id}/reject,reject_proposal,proposal_id,,TenantRole,ApprovalResponse,"policy-proposals, pb-s4",Reject a policy proposal (PIN-373).
+L2,policy_proposals.py,GET,/api/v1/policy-proposals/{proposal_id}/versions,list_proposal_versions,proposal_id,,,list[VersionResponse],"policy-proposals, pb-s4",List all versions of a policy proposal (PB-S4).
+L2 (Product APIs),policy.py,POST,/api/v1/policy/eval,evaluate_policy,,,,PolicyEvalResponse,policy,Sandbox evaluation of policy for a skill execution.
+L2 (Product APIs),policy.py,GET,/api/v1/policy/requests,list_approval_requests,,"tenant_id, limit, offset",Optional[ApprovalStatus],List[ApprovalStatusResponse],policy,List approval requests with optional filtering.
+L2 (Product APIs),policy.py,POST,/api/v1/policy/requests,create_approval_request,,,BackgroundTasks,ApprovalRequestResponse,policy,Create a new approval request (persisted to DB).
+L2 (Product APIs),policy.py,GET,/api/v1/policy/requests/{request_id},get_approval_request,request_id,,,ApprovalStatusResponse,policy,Get the current status of an approval request.
+L2 (Product APIs),policy.py,POST,/api/v1/policy/requests/{request_id}/approve,approve_request,request_id,,BackgroundTasks,ApprovalStatusResponse,policy,Approve an approval request.
+L2 (Product APIs),policy.py,POST,/api/v1/policy/requests/{request_id}/reject,reject_request,request_id,,BackgroundTasks,ApprovalStatusResponse,policy,Reject an approval request.
+L2,predictions.py,GET,/api/v1/predictions/stats/summary,get_prediction_stats,,tenant_id,,,"predictions, pb-s5, read-only",Get prediction statistics (PB-S5).
+L2,predictions.py,GET,/api/v1/predictions/subject/{subject_type}/{subject_id},get_predictions_for_subject,"subject_type, subject_id",limit,,,"predictions, pb-s5, read-only",Get all predictions for a specific subject (PB-S5).
+L2,predictions.py,GET,/api/v1/predictions/{prediction_id},get_prediction,prediction_id,,,PredictionDetailResponse,"predictions, pb-s5, read-only",Get detailed prediction by ID (PB-S5).
+L2,rbac_api.py,GET,/api/v1/rbac/audit,query_audit_logs,,"tenant_id, limit, offset",Optional[datetime],AuditResponse,rbac,Query RBAC audit logs.
+L2,rbac_api.py,POST,/api/v1/rbac/audit/cleanup,cleanup_audit_logs,,,,,rbac,Clean up old audit logs.
+L2,rbac_api.py,GET,/api/v1/rbac/info,get_policy_info,,,,PolicyInfoResponse,rbac,Get current RBAC policy information.
+L2,rbac_api.py,GET,/api/v1/rbac/matrix,get_permission_matrix,,,,,rbac,Get current permission matrix.
+L2,rbac_api.py,POST,/api/v1/rbac/reload,reload_policies,,,,ReloadResponse,rbac,Hot-reload RBAC policies from file.
+L2,recovery.py,GET,/api/v1/recovery/actions,list_actions,,limit,Optional[str],ActionListResponse,recovery,List available recovery actions from the catalog.
+L2,recovery.py,POST,/api/v1/recovery/approve,approve_candidate,,,RecoveryMatcher,CandidateResponse,recovery,Approve or reject a recovery candidate.
+L2,recovery.py,GET,/api/v1/recovery/candidates,list_candidates,,"limit, offset",RecoveryMatcher,CandidateListResponse,recovery,List recovery candidates with optional status filter.
+L2,recovery.py,DELETE,/api/v1/recovery/candidates/{candidate_id},delete_candidate,candidate_id,,RecoveryMatcher,,recovery,Delete/revoke a recovery candidate (admin only).
+L2,recovery.py,GET,/api/v1/recovery/candidates/{candidate_id},get_candidate_detail,candidate_id,,RecoveryMatcher,CandidateDetailResponse,recovery,Get detailed information about a specific candidate.
+L2,recovery.py,PATCH,/api/v1/recovery/candidates/{candidate_id},update_candidate,candidate_id,,RecoveryMatcher,,recovery,Update a candidate's execution status or selected action.
+L2,recovery.py,POST,/api/v1/recovery/candidates/{candidate_id}/scope-test,test_recovery_scope,candidate_id,,,ScopeTestResponse,recovery,M6: Test a recovery action in scoped execution before global rollout.
+L2,recovery.py,POST,/api/v1/recovery/evaluate,evaluate_rules,,,,EvaluateResponse,recovery,Evaluate rules against error context without persisting.
+L2,recovery.py,POST,/api/v1/recovery/execute,execute_recovery,,,,ExecuteResponse,recovery,P2FC-4: Execute a recovery action (REQUIRES valid scope).
+L2,recovery_ingest.py,POST,/api/v1/recovery/ingest,ingest_failure,,,,IngestResponse,recovery-ingest,Ingest a failure for recovery suggestion evaluation.
+L2,recovery.py,POST,/api/v1/recovery/scope,create_scope,,,,CreateScopeResponse,recovery,P2FC-4: Create a bound execution scope for recovery action.
+L2,recovery.py,GET,/api/v1/recovery/scopes/{incident_id},list_scopes,incident_id,,,ScopeListResponse,recovery,List all execution scopes for an incident.
+L2,recovery.py,DELETE,/api/v1/recovery/scopes/{scope_id},revoke_scope,scope_id,,,,recovery,Revoke an execution scope (admin action).
+L2,recovery.py,GET,/api/v1/recovery/stats,get_recovery_stats,,,RecoveryMatcher,,recovery,Get recovery suggestion statistics.
+L2,recovery.py,POST,/api/v1/recovery/suggest,suggest_recovery,,,RecoveryMatcher,SuggestResponse,recovery,Generate recovery suggestion for a failure.
+L2,agents.py,POST,/api/v1/routing/batch-learning,trigger_batch_learning,,,,,agents,M18: Trigger batch learning process.
+L2,agents.py,POST,/api/v1/routing/cascade-evaluate,cascade_evaluate,,,,,agents,M17: Evaluate agents through CARE pipeline without routing.
+L2,agents.py,POST,/api/v1/routing/dispatch,routing_dispatch,,,,,agents,M17: Execute full CARE routing pipeline and select best agent.
+L2,agents.py,POST,/api/v1/routing/explain/{request_id},explain_routing_decision,request_id,,,ExplainRoutingResponse,agents,M18: Explain why a routing decision was made.
+L2,agents.py,GET,/api/v1/routing/stability,get_system_stability,,,,SystemStabilityResponse,agents,M18: Get system-wide stability metrics.
+L2,agents.py,POST,/api/v1/routing/stability/freeze,freeze_system,,,,,agents,M18: Manually freeze the learning system.
+L2,agents.py,POST,/api/v1/routing/stability/unfreeze,unfreeze_system,,,,,agents,M18: Manually unfreeze the learning system.
+L2,agents.py,GET,/api/v1/routing/stats,get_routing_stats,,,,,agents,M17: Get routing statistics.
+L2,tenants.py,GET,/api/v1/runs,list_runs,,"limit, offset",Optional[str],List[RunHistoryItem],Tenants & API Keys,List runs for the current tenant.
+L2 (Product APIs),runtime.py,GET,/api/v1/runtime/capabilities,get_capabilities,,tenant_id,Optional[str],CapabilitiesResponse,runtime,Get available capabilities for an agent/tenant.
+L2 (Product APIs),runtime.py,POST,/api/v1/runtime/query,query_runtime,,,,QueryResponse,runtime,Query runtime state.
+L2 (Product APIs),runtime.py,POST,/api/v1/runtime/replay/{run_id},replay_run,run_id,,,ReplayResponse,runtime,Replay a stored plan and optionally verify determinism parity.
+L2 (Product APIs),runtime.py,GET,/api/v1/runtime/resource-contract/{resource_id},get_resource_contract,resource_id,,,,runtime,Get resource contract for a specific resource.
+L2 (Product APIs),runtime.py,POST,/api/v1/runtime/simulate,simulate_plan,,,,SimulateResponse,runtime,Simulate a plan before execution.
+L2 (Product APIs),runtime.py,GET,/api/v1/runtime/skills,list_available_skills,,,,SkillListResponse,runtime,List all available skills.
+L2 (Product APIs),runtime.py,GET,/api/v1/runtime/skills/{skill_id},describe_skill,skill_id,,,SkillDescriptorResponse,runtime,Get detailed descriptor for a skill.
+L2 (Product APIs),runtime.py,GET,/api/v1/runtime/traces,list_traces,,"tenant_id, limit, offset",,,runtime,List stored traces for a tenant.
+L2 (Product APIs),runtime.py,GET,/api/v1/runtime/traces/{run_id},get_trace,run_id,,,,runtime,Get a specific trace by run ID.
+L2,agents.py,GET,/api/v1/sba,list_agents_sba,,,Optional[bool],,agents,List agents with their SBA status.
+L2,agents.py,POST,/api/v1/sba/check-spawn,check_spawn_allowed,,,Optional[str],,agents,Check if agent is allowed to spawn.
+L2,agents.py,GET,/api/v1/sba/fulfillment/aggregated,get_fulfillment_aggregated,,,Optional[float],,agents,M15.1.1: Get aggregated fulfillment metrics for heatmap visualization.
+L2,agents.py,POST,/api/v1/sba/generate,generate_sba_for_agent,,,,,agents,Auto-generate SBA for an agent.
+L2,agents.py,GET,/api/v1/sba/health,get_sba_health,,,,,agents,M16: Get aggregated strategy health for Guard Console.
+L2,agents.py,POST,/api/v1/sba/register,register_agent_with_sba,,,,,agents,Register an agent with its SBA schema.
+L2,agents.py,POST,/api/v1/sba/validate,validate_sba_endpoint,,,,,agents,Validate an SBA schema.
+L2,agents.py,GET,/api/v1/sba/version,get_sba_version_info,,,,,agents,M15.1.1: Get SBA version negotiation info.
+L2,agents.py,POST,/api/v1/sba/version/negotiate,negotiate_sba_version,,,,,agents,M15.1.1: Negotiate SBA version.
+L2,agents.py,GET,/api/v1/sba/{agent_id},get_agent_sba,agent_id,,,,agents,Get SBA schema for an agent.
+L2 (Product APIs),session_context.py,GET,/api/v1/session/context,get_session_context,,,,,Session,Get verified session context for the current authenticated user.
+L2,tenants.py,GET,/api/v1/tenant,get_current_tenant,,,,TenantResponse,Tenants & API Keys,Get information about the current tenant (from API key).
+L2,tenants.py,GET,/api/v1/tenant/health,tenant_health,,,,,Tenants & API Keys,Health check for tenant system.
+L2,tenants.py,GET,/api/v1/tenant/quota/runs,check_run_quota,,,,QuotaCheckResponse,Tenants & API Keys,Check if the tenant can create a new run.
+L2,tenants.py,GET,/api/v1/tenant/quota/tokens,check_token_quota,,,,QuotaCheckResponse,Tenants & API Keys,Check if the tenant has token budget for an operation.
+L2,tenants.py,GET,/api/v1/tenant/usage,get_tenant_usage,,,,UsageSummaryResponse,Tenants & API Keys,Get usage summary for the current tenant.
+L2,tenants.py,GET,/api/v1/workers,list_workers,,,Optional[str],List[WorkerSummaryResponse],Tenants & API Keys,List all available workers.
+L2,tenants.py,GET,/api/v1/workers/available,list_available_workers_for_tenant,,,,List[dict],Tenants & API Keys,List workers available to the current tenant with their configurations.
+L2 (Product APIs),workers.py,GET,/api/v1/workers/business-builder/events/{run_id},get_run_events,run_id,,,,Workers,Get all events for a run (non-streaming).
+L2 (Product APIs),workers.py,GET,/api/v1/workers/business-builder/health,worker_health,,,,,Workers,Health check for Business Builder Worker.
+L2 (Product APIs),workers.py,POST,/api/v1/workers/business-builder/replay,replay_execution_endpoint,,,,WorkerRunResponse,Workers,Replay a previous execution using Golden Replay (M4).
+L2 (Product APIs),workers.py,POST,/api/v1/workers/business-builder/run,run_worker,,,BackgroundTasks,WorkerRunResponse,Workers,Execute the Business Builder Worker.
+L2 (Product APIs),workers.py,POST,/api/v1/workers/business-builder/run-streaming,run_worker_streaming,,,BackgroundTasks,WorkerRunResponse,Workers,Execute the Business Builder Worker with real-time event streaming.
+L2 (Product APIs),workers.py,GET,/api/v1/workers/business-builder/runs,list_runs,,"limit, tenant_id",,RunListResponse,Workers,List recent worker runs.
+L2 (Product APIs),workers.py,DELETE,/api/v1/workers/business-builder/runs/{run_id},delete_run,run_id,,,,Workers,Delete a run from storage.
+L2 (Product APIs),workers.py,GET,/api/v1/workers/business-builder/runs/{run_id},get_run,run_id,,,WorkerRunResponse,Workers,Get details of a worker run.
+L2 (Product APIs),workers.py,POST,/api/v1/workers/business-builder/runs/{run_id}/retry,retry_run,run_id,,,RunRetryResponse,Workers,Retry a completed or failed run - Phase-2.5.
+L2 (Product APIs),workers.py,GET,/api/v1/workers/business-builder/schema/brand,get_brand_schema,,,,,Workers,Get the JSON schema for BrandRequest.
+L2 (Product APIs),workers.py,GET,/api/v1/workers/business-builder/schema/run,get_run_schema,,,,,Workers,Get the JSON schema for WorkerRunRequest.
+L2 (Product APIs),workers.py,GET,/api/v1/workers/business-builder/stream/{run_id},stream_run_events,run_id,,,,Workers,Stream real-time events for a worker run via Server-Sent Events (SSE).
+L2 (Product APIs),workers.py,POST,/api/v1/workers/business-builder/validate-brand,validate_brand,,,,BrandValidationResponse,Workers,Validate a brand schema without executing the worker.
+L2,tenants.py,GET,/api/v1/workers/{worker_id},get_worker_details,worker_id,,,WorkerDetailResponse,Tenants & API Keys,Get detailed information about a specific worker.
+L2,tenants.py,GET,/api/v1/workers/{worker_id}/config,get_worker_config,worker_id,,,WorkerConfigResponse,Tenants & API Keys,Get the effective configuration for a worker (tenant overrides merged with defaults).
+L2,tenants.py,PUT,/api/v1/workers/{worker_id}/config,set_worker_config,worker_id,,,WorkerConfigResponse,Tenants & API Keys,Set tenant-specific configuration for a worker.
+L2,cost_intelligence.py,GET,/cost/anomalies,get_anomalies,,tenant_id,,CostAnomaliesEnvelope,Cost Intelligence,Get detected cost anomalies.
+L2,cost_intelligence.py,POST,/cost/anomalies/detect,trigger_anomaly_detection,,tenant_id,,AnomalyDetectionResponse,Cost Intelligence,Trigger anomaly detection for this tenant.
+L2,cost_intelligence.py,GET,/cost/budgets,list_budgets,,tenant_id,,List[BudgetResponse],Cost Intelligence,List all budgets for the tenant.
+L2,cost_intelligence.py,POST,/cost/budgets,create_or_update_budget,,tenant_id,BudgetCreate,BudgetResponse,Cost Intelligence,Create or update a budget.
+L2,cost_intelligence.py,GET,/cost/by-feature,get_costs_by_feature,,tenant_id,,CostByFeatureEnvelope,Cost Intelligence,Get cost breakdown by feature tag.
+L2,cost_intelligence.py,GET,/cost/by-model,get_costs_by_model,,tenant_id,,CostByModelEnvelope,Cost Intelligence,Get cost breakdown by model.
+L2,cost_intelligence.py,GET,/cost/by-user,get_costs_by_user,,tenant_id,,CostByUserEnvelope,Cost Intelligence,Get cost breakdown by user with anomaly detection.
+L2,cost_intelligence.py,GET,/cost/dashboard,get_cost_dashboard,,tenant_id,,CostDashboard,Cost Intelligence,Get complete cost dashboard.
+L2,cost_intelligence.py,GET,/cost/features,list_feature_tags,,tenant_id,,List[FeatureTagResponse],Cost Intelligence,List all feature tags for the tenant.
+L2,cost_intelligence.py,POST,/cost/features,create_feature_tag,,tenant_id,FeatureTagCreate,FeatureTagResponse,Cost Intelligence,Register a new feature tag.
+L2,cost_intelligence.py,PUT,/cost/features/{tag},update_feature_tag,tag,tenant_id,FeatureTagUpdate,FeatureTagResponse,Cost Intelligence,Update a feature tag.
+L2,cost_intelligence.py,GET,/cost/projection,get_projection,,tenant_id,,CostProjection,Cost Intelligence,Get cost projection based on historical data.
+L2,cost_intelligence.py,POST,/cost/record,record_cost,,tenant_id,CostRecordCreate,,Cost Intelligence,Record a cost entry.
+L2,cost_intelligence.py,GET,/cost/summary,get_cost_summary,,tenant_id,,CostSummary,Cost Intelligence,Get cost summary for the period.
+L2,costsim.py,GET,/costsim/canary/reports,get_canary_reports,,limit,,,costsim,Get recent canary run reports.
+L2,costsim.py,POST,/costsim/canary/run,trigger_canary_run,,,,CanaryRunResponse,costsim,Trigger a canary run on-demand.
+L2,costsim.py,GET,/costsim/datasets,list_datasets,,,,List[DatasetInfo],costsim,List all available reference datasets.
+L2,costsim.py,POST,/costsim/datasets/validate-all,validate_all,,,,,costsim,Validate V2 against ALL reference datasets.
+L2,costsim.py,GET,/costsim/datasets/{dataset_id},get_dataset_info,dataset_id,,,,costsim,Get information about a specific dataset.
+L2,costsim.py,POST,/costsim/datasets/{dataset_id}/validate,validate_against_dataset,dataset_id,,,ValidationResultResponse,costsim,Validate V2 against a specific reference dataset.
+L2,costsim.py,GET,/costsim/divergence,get_divergence_report,,tenant_id,Optional[datetime],DivergenceReportResponse,costsim,Get cost divergence report between V1 and V2.
+L2,costsim.py,GET,/costsim/v2/incidents,get_incidents,,limit,,,costsim,Get circuit breaker incidents.
+L2,costsim.py,POST,/costsim/v2/reset,reset_circuit_breaker,,,Optional[str],,costsim,Reset the V2 circuit breaker.
+L2,costsim.py,POST,/costsim/v2/simulate,simulate_v2,,,,SandboxSimulateResponse,costsim,Run simulation through V2 sandbox.
+L2,costsim.py,GET,/costsim/v2/status,get_sandbox_status,,,,SandboxStatusResponse,costsim,Get current V2 sandbox status.
+L2a (Console-scoped),customer_visibility.py,POST,/customer/acknowledge,acknowledge_declaration,,,,AcknowledgementResponse,customer-visibility,Acknowledge PRE-RUN declaration.
+L2a (Console-scoped),customer_visibility.py,GET,/customer/declaration/{declaration_id},get_declaration,declaration_id,,,PreRunDeclaration,customer-visibility,Retrieve a previously created PRE-RUN declaration.
+L2a (Console-scoped),customer_visibility.py,GET,/customer/outcome/{run_id},get_outcome_reconciliation,run_id,,,OutcomeReconciliation,customer-visibility,Get outcome reconciliation after execution.
+L2a (Console-scoped),customer_visibility.py,POST,/customer/pre-run,get_pre_run_declaration,,,,PreRunDeclaration,customer-visibility,Get PRE-RUN declaration before execution.
+L2,legacy_routes.py,DELETE,/dashboard,legacy_dashboard,,,,,Legacy (Deprecated),410 Gone - Dashboard is not available for MVP customers.
+L2,legacy_routes.py,GET,/dashboard,legacy_dashboard,,,,,Legacy (Deprecated),410 Gone - Dashboard is not available for MVP customers.
+L2,legacy_routes.py,POST,/dashboard,legacy_dashboard,,,,,Legacy (Deprecated),410 Gone - Dashboard is not available for MVP customers.
+L2,legacy_routes.py,PUT,/dashboard,legacy_dashboard,,,,,Legacy (Deprecated),410 Gone - Dashboard is not available for MVP customers.
+L2,legacy_routes.py,GET,/demo,legacy_demo,,,,,Legacy (Deprecated),410 Gone - Demo/simulation endpoints removed.
+L2,legacy_routes.py,POST,/demo,legacy_demo,,,,,Legacy (Deprecated),410 Gone - Demo/simulation endpoints removed.
+L2,legacy_routes.py,GET,/demo/{path:path},legacy_demo,path:path,,,,Legacy (Deprecated),410 Gone - Demo/simulation endpoints removed.
+L2,legacy_routes.py,POST,/demo/{path:path},legacy_demo,path:path,,,,Legacy (Deprecated),410 Gone - Demo/simulation endpoints removed.
+L2,embedding.py,DELETE,/embedding/cache,clear_embedding_cache,,,,,embedding,Clear all embedding cache entries.
+L2,embedding.py,GET,/embedding/cache/stats,embedding_cache_stats,,,,,embedding,Get embedding cache statistics.
+L2,embedding.py,POST,/embedding/compose,compose_embedding,,,,IAECComposeResponse,embedding,Compose an instruction-aware embedding using IAEC v3.0.
+L2,embedding.py,GET,/embedding/config,get_embedding_config,,,,EmbeddingConfigResponse,embedding,Get embedding configuration.
+L2,embedding.py,POST,/embedding/decompose,decompose_embedding,,,,IAECDecomposeResponse,embedding,Decompose an IAEC embedding back into its constituent slots (v3.0).
+L2,embedding.py,GET,/embedding/health,embedding_health,,,,,embedding,Quick health check for embedding subsystem.
+L2,embedding.py,POST,/embedding/iaec/check-mismatch,check_mismatch,,,,,embedding,Check instruction-query semantic compatibility (v3.1).
+L2,embedding.py,GET,/embedding/iaec/instructions,get_iaec_instructions,,,,,embedding,Get available IAEC instruction types and their weights.
+L2,embedding.py,GET,/embedding/iaec/segment-info,get_iaec_segment_info,,,,,embedding,Get IAEC v3.0 segmentation configuration.
+L2,embedding.py,GET,/embedding/quota,get_embedding_quota,,,,EmbeddingQuotaResponse,embedding,Get current embedding quota status.
+L2 (Product APIs),founder_explorer.py,GET,/explorer/info,get_explorer_info,,,,,explorer,Get information about the explorer endpoints.
+L2 (Product APIs),founder_explorer.py,GET,/explorer/patterns,get_usage_patterns,,,,PatternsResponse,explorer,Get usage pattern analysis.
+L2 (Product APIs),founder_explorer.py,GET,/explorer/summary,get_system_summary,,,,SystemSummary,explorer,Get cross-tenant system summary.
+L2 (Product APIs),founder_explorer.py,GET,/explorer/system/health,get_system_health,,,,SystemHealthResponse,explorer,Get overall system health indicators.
+L2 (Product APIs),founder_explorer.py,GET,/explorer/tenant/{tenant_id}/diagnostics,get_tenant_diagnostics,tenant_id,tenant_id,,TenantDiagnostics,explorer,Get deep diagnostics for a specific tenant.
+L2 (Product APIs),founder_explorer.py,GET,/explorer/tenants,list_tenants,,limit,,List[TenantSummary],explorer,List all tenants with summary metrics.
+L2 (Product APIs),founder_contract_review.py,GET,/founder/contracts/review-queue,get_review_queue,,,FounderReviewAdapter,None,founder-review,Get the Founder Review Queue.
+L2 (Product APIs),founder_contract_review.py,GET,/founder/contracts/{contract_id},get_contract_detail,contract_id,,FounderReviewAdapter,None,founder-review,Get contract details for review.
+L2 (Product APIs),founder_contract_review.py,POST,/founder/contracts/{contract_id}/review,submit_review,contract_id,,FounderReviewAdapter,None,founder-review,Submit a review decision for a contract.
+L2,founder_lifecycle.py,POST,/founder/lifecycle/archive,archive_tenant,,,,LifecycleTransitionResponse,"founder, lifecycle",Archive a terminated tenant.
+L2,founder_lifecycle.py,POST,/founder/lifecycle/resume,resume_tenant,,,,LifecycleTransitionResponse,"founder, lifecycle",Resume a suspended tenant.
+L2,founder_lifecycle.py,POST,/founder/lifecycle/suspend,suspend_tenant,,,,LifecycleTransitionResponse,"founder, lifecycle",Suspend a tenant.
+L2,founder_lifecycle.py,POST,/founder/lifecycle/terminate,terminate_tenant,,,,LifecycleTransitionResponse,"founder, lifecycle",Terminate a tenant.
+L2,founder_lifecycle.py,GET,/founder/lifecycle/{tenant_id},get_lifecycle_state,tenant_id,tenant_id,,LifecycleStateResponse,"founder, lifecycle",Get lifecycle state for a tenant.
+L2,founder_lifecycle.py,GET,/founder/lifecycle/{tenant_id}/history,get_lifecycle_history,tenant_id,tenant_id,,LifecycleHistoryResponse,"founder, lifecycle",Get lifecycle transition history for a tenant.
+L2 (Product APIs),founder_onboarding.py,POST,/founder/onboarding/force-complete,force_complete_onboarding,,,,ForceCompleteResponse,Founder Onboarding,Force-complete onboarding for a tenant.
+L2 (Product APIs),founder_onboarding.py,GET,/founder/onboarding/stalled,get_stalled_tenants,,,,,Founder Onboarding,Get list of stalled onboarding tenants.
+L2 (Product APIs),founder_review.py,GET,/founder/review/auto-execute,list_auto_execute_decisions,,tenant_id,Optional[bool],AutoExecuteReviewListDTO,founder-review,List AUTO_EXECUTE decisions with filtering and pagination.
+L2 (Product APIs),founder_review.py,GET,/founder/review/auto-execute/stats,get_auto_execute_stats,,tenant_id,,AutoExecuteReviewStatsDTO,founder-review,Get aggregate statistics for AUTO_EXECUTE decisions.
+L2 (Product APIs),founder_review.py,GET,/founder/review/auto-execute/{invocation_id},get_auto_execute_decision,invocation_id,,,AutoExecuteReviewItemDTO,founder-review,Get detailed evidence for a single AUTO_EXECUTE decision.
+L2,founder_timeline.py,GET,/founder/timeline/count,count_decision_records,,tenant_id,Optional[str],,founder-timeline,Count decision records.
+L2,founder_timeline.py,GET,/founder/timeline/decisions,list_decision_records,,"limit, offset, tenant_id",Optional[str],List[DecisionRecordView],founder-timeline,List all decision records.
+L2,founder_timeline.py,GET,/founder/timeline/decisions/{decision_id},get_decision_record,decision_id,,,DecisionRecordView,founder-timeline,Get a single decision record by ID.
+L2,founder_timeline.py,GET,/founder/timeline/run/{run_id},get_run_timeline,run_id,,,RunTimeline,founder-timeline,Get complete timeline for a run.
+L2,cost_guard.py,GET,/guard/costs/explained,get_cost_explained,,tenant_id,"Literal['today', '7d', '30d']",CustomerCostExplainedDTO,Guard Cost Visibility,GET /guard/costs/explained
+L2,cost_guard.py,GET,/guard/costs/incidents,get_cost_incidents,,"tenant_id, limit",,CustomerCostIncidentListDTO,Guard Cost Visibility,GET /guard/costs/incidents
+L2,cost_guard.py,GET,/guard/costs/summary,get_cost_summary,,tenant_id,,CustomerCostSummaryDTO,Guard Cost Visibility,GET /guard/costs/summary
+L2a (Console-scoped),guard.py,GET,/guard/incidents,list_incidents,,"tenant_id, limit, offset",,,Guard Console,List incidents - 'What did you stop for me?'
+L2a (Console-scoped),guard.py,POST,/guard/incidents/search,search_incidents,,tenant_id,,IncidentSearchResponse,Guard Console,Search incidents with filters - M23 component map spec.
+L2a (Console-scoped),guard.py,GET,/guard/incidents/{incident_id},get_incident_detail,incident_id,tenant_id,,IncidentDetailResponse,Guard Console,Get incident detail with timeline.
+L2a (Console-scoped),guard.py,POST,/guard/incidents/{incident_id}/acknowledge,acknowledge_incident,incident_id,tenant_id,,,Guard Console,Acknowledge an incident.
+L2a (Console-scoped),guard.py,POST,/guard/incidents/{incident_id}/export,export_incident_evidence,incident_id,tenant_id,,,Guard Console,Export incident as a legal-grade PDF evidence report.
+L2a (Console-scoped),guard.py,GET,/guard/incidents/{incident_id}/narrative,get_customer_incident_narrative,incident_id,,,CustomerIncidentNarrativeDTO,Guard Console,GET /guard/incidents/{id}/narrative
+L2a (Console-scoped),guard.py,POST,/guard/incidents/{incident_id}/resolve,resolve_incident,incident_id,tenant_id,,,Guard Console,Resolve an incident.
+L2a (Console-scoped),guard.py,GET,/guard/incidents/{incident_id}/timeline,get_decision_timeline,incident_id,,,DecisionTimelineResponse,Guard Console,Get decision timeline - M23 component map spec.
+L2a (Console-scoped),guard.py,GET,/guard/keys,list_api_keys,,tenant_id,,,Guard Console,List API keys with status.
+L2a (Console-scoped),guard.py,POST,/guard/keys/{key_id}/freeze,freeze_api_key,key_id,tenant_id,,,Guard Console,Freeze an API key.
+L2a (Console-scoped),guard.py,POST,/guard/keys/{key_id}/unfreeze,unfreeze_api_key,key_id,tenant_id,,,Guard Console,Unfreeze an API key.
+L2a (Console-scoped),guard.py,POST,/guard/killswitch/activate,activate_killswitch,,tenant_id,,,Guard Console,Stop all traffic - Emergency kill switch.
+L2a (Console-scoped),guard.py,POST,/guard/killswitch/deactivate,deactivate_killswitch,,tenant_id,,,Guard Console,Resume traffic - Deactivate kill switch.
+L2a (Console-scoped),guard_logs.py,GET,/guard/logs/export,export_logs,,"tenant_id, limit",Optional[str],,Guard Console - Logs,Export logs for customer.
+L2a (Console-scoped),guard_logs.py,GET,/guard/logs/{log_id},get_log,log_id,tenant_id,,CustomerLogDetail,Guard Console - Logs,Get log detail with execution steps.
+L2a (Console-scoped),guard.py,POST,/guard/onboarding/verify,onboarding_verify,,tenant_id,,OnboardingVerifyResponse,Guard Console,REAL safety verification for onboarding.
+L2a (Console-scoped),guard_policies.py,GET,/guard/policies/guardrails/{guardrail_id},get_guardrail_detail,guardrail_id,tenant_id,,CustomerGuardrail,Guard Console - Policies,Get guardrail detail.
+L2a (Console-scoped),guard.py,POST,/guard/replay/{call_id},replay_call,call_id,level,,ReplayResult,Guard Console,Replay a call - Trust builder.
+L2a (Console-scoped),guard.py,GET,/guard/settings,get_settings,,tenant_id,,TenantSettings,Guard Console,Get read-only settings.
+L2a (Console-scoped),guard.py,GET,/guard/snapshot/today,get_today_snapshot,,tenant_id,,TodaySnapshot,Guard Console,Get today's metrics - 'What did it cost/save me?'
+L2a (Console-scoped),guard.py,GET,/guard/status,get_guard_status,,tenant_id,,GuardStatus,Guard Console,Get protection status - 'Am I safe right now?'
+L2,health.py,GET,/health,health_check,,,,,health,Basic health check endpoint.
+L2 (Product APIs),main.py,GET,/health,health_check,,,,,,Health check with DB validation.
+L2,health.py,GET,/health/adapters,adapter_status,,,,,health,LLM adapter availability status.
+L2,health.py,GET,/health/determinism,determinism_status,,,,,health,Determinism status endpoint.
+L2,health.py,GET,/health/ready,readiness_check,,,,,health,Kubernetes readiness probe.
+L2,health.py,GET,/health/skills,skills_status,,,,,health,Skill registry status.
+L2 (Product APIs),main.py,GET,/healthz,healthz,,,,,,Kubernetes-style health check.
+L2 (Product APIs),main.py,GET,/healthz/worker_pool,worker_pool_health,,,,,,Worker pool health probe endpoint.
+L2 (Product APIs),incidents.py,GET,/incidents/by-run/{run_id},get_incidents_for_run,run_id,,,,Incidents,Get all incidents linked to a specific run.
+L2 (Product APIs),incidents.py,GET,/incidents/metrics,get_incidents_metrics,,,,IncidentsMetricsResponse,Incidents,Get summary metrics for incidents dashboard.
+L2 (Product APIs),incidents.py,GET,/incidents/summary,get_incidents_summary,,,,IncidentsSummaryResponse,Incidents,Incidents summary for HIL v1 interpretation panel.
+L2 (Product APIs),incidents.py,POST,/incidents/trigger,trigger_incident_for_run,,,,TriggerIncidentResponse,Incidents,[DEPRECATED] Trigger incident creation for a failed run.
+L2 (Product APIs),incidents.py,GET,/incidents/{incident_id},get_incident_detail,incident_id,,,IncidentSummary,Incidents,Get details of a specific incident.
+L2 (Product APIs),integration.py,GET,/integration/checkpoints,list_pending_checkpoints,,tenant_id,,list[CheckpointResponse],integration,List all pending human checkpoints for the tenant.
+L2 (Product APIs),integration.py,GET,/integration/checkpoints/{checkpoint_id},get_checkpoint,checkpoint_id,tenant_id,,CheckpointResponse,integration,Get details of a specific checkpoint.
+L2 (Product APIs),integration.py,POST,/integration/checkpoints/{checkpoint_id}/resolve,resolve_checkpoint,checkpoint_id,tenant_id,,,integration,Resolve a pending checkpoint.
+L2 (Product APIs),integration.py,GET,/integration/graduation,get_graduation_status,,tenant_id,,HardenedGraduationResponse,integration,Get M25 graduation status (HARDENED).
+L2 (Product APIs),integration.py,POST,/integration/graduation/re-evaluate,trigger_graduation_re_evaluation,,tenant_id,,,integration,Trigger a re-evaluation of graduation status.
+L2 (Product APIs),integration.py,POST,/integration/graduation/record-view,record_timeline_view,,tenant_id,,,integration,Record a REAL timeline view for Gate 3 graduation.
+L2 (Product APIs),integration.py,POST,/integration/graduation/simulate/prevention,simulate_prevention,,tenant_id,,,integration,Simulate a prevention event for demo/testing purposes.
+L2 (Product APIs),integration.py,POST,/integration/graduation/simulate/regret,simulate_regret,,tenant_id,,,integration,Simulate a regret event for demo/testing purposes.
+L2 (Product APIs),integration.py,POST,/integration/graduation/simulate/timeline-view,simulate_timeline_view,,tenant_id,,,integration,Simulate viewing a prevention timeline for Gate 3.
+L2 (Product APIs),integration.py,GET,/integration/loop/{incident_id},get_loop_status,incident_id,tenant_id,,LoopStatusResponse,integration,Get current loop status for an incident.
+L2 (Product APIs),integration.py,GET,/integration/loop/{incident_id}/narrative,get_loop_narrative,incident_id,tenant_id,,,integration,Get narrative artifacts for an incident loop.
+L2 (Product APIs),integration.py,POST,/integration/loop/{incident_id}/retry,retry_loop_stage,incident_id,tenant_id,,LoopStatusResponse,integration,Retry a failed loop stage.
+L2 (Product APIs),integration.py,POST,/integration/loop/{incident_id}/revert,revert_loop,incident_id,tenant_id,,,integration,Revert all changes made by a loop.
+L2 (Product APIs),integration.py,GET,/integration/loop/{incident_id}/stages,get_loop_stages,incident_id,tenant_id,,list[StageDetail],integration,Get detailed stage information for a loop.
+L2 (Product APIs),integration.py,GET,/integration/loop/{incident_id}/stream,stream_loop_status,incident_id,tenant_id,,,integration,SSE endpoint for live loop status updates.
+L2 (Product APIs),integration.py,GET,/integration/stats,get_integration_stats,,tenant_id,,IntegrationStatsResponse,integration,Get integration loop statistics for the specified period.
+L2 (Product APIs),integration.py,GET,/integration/timeline/{incident_id},get_prevention_timeline,incident_id,tenant_id,,PreventionTimelineResponse,integration,Get the prevention timeline for an incident.
+L2 (Product APIs),authz_status.py,GET,/internal/authz/alert-rules,get_alert_rules_endpoint,,,,,Internal - Authorization,Get Prometheus alert rules for authorization monitoring.
+L2 (Product APIs),authz_status.py,GET,/internal/authz/mappings,get_authz_mappings,,,,,Internal - Authorization,Get all M7→M28 mappings for inspection.
+L2 (Product APIs),authz_status.py,GET,/internal/authz/metrics-info,get_metrics_info,,,,,Internal - Authorization,Get metrics information for authorization monitoring.
+L2 (Product APIs),authz_status.py,GET,/internal/authz/phase-info,get_phase_info,,,,,Internal - Authorization,Get detailed information about authorization phases.
+L2 (Product APIs),authz_status.py,GET,/internal/authz/status,get_authz_status,,,,,Internal - Authorization,Get current authorization system status.
+L2 (Product APIs),main.py,GET,/metrics,metrics,,,,,,Prometheus metrics endpoint (multiprocess-aware).
+L2 (Product APIs),main.py,GET,/openapi-download,download_openapi,,,,,,Download OpenAPI spec as JSON file.
+L2,legacy_routes.py,DELETE,/operator,legacy_operator,,,,,Legacy (Deprecated),410 Gone - Operator console merged into /ops/*.
+L2,legacy_routes.py,GET,/operator,legacy_operator,,,,,Legacy (Deprecated),410 Gone - Operator console merged into /ops/*.
+L2,legacy_routes.py,POST,/operator,legacy_operator,,,,,Legacy (Deprecated),410 Gone - Operator console merged into /ops/*.
+L2,legacy_routes.py,PUT,/operator,legacy_operator,,,,,Legacy (Deprecated),410 Gone - Operator console merged into /ops/*.
+L2,legacy_routes.py,DELETE,/operator/{path:path},legacy_operator,path:path,,,,Legacy (Deprecated),410 Gone - Operator console merged into /ops/*.
+L2,legacy_routes.py,GET,/operator/{path:path},legacy_operator,path:path,,,,Legacy (Deprecated),410 Gone - Operator console merged into /ops/*.
+L2,legacy_routes.py,POST,/operator/{path:path},legacy_operator,path:path,,,,Legacy (Deprecated),410 Gone - Operator console merged into /ops/*.
+L2,legacy_routes.py,PUT,/operator/{path:path},legacy_operator,path:path,,,,Legacy (Deprecated),410 Gone - Operator console merged into /ops/*.
+L2,founder_actions.py,GET,/ops/actions/audit,get_audit_trail,,,Optional[str],FounderActionListDTO,founder-actions,Get founder action audit trail.
+L2,founder_actions.py,GET,/ops/actions/audit/{action_id},get_audit_record,action_id,,,FounderAuditRecordDTO,founder-actions,Get single audit record.
+L2,founder_actions.py,POST,/ops/actions/freeze-api-key,freeze_api_key,,,,FounderActionResponseDTO,founder-actions,Freeze API key - immediately revoke.
+L2,founder_actions.py,POST,/ops/actions/freeze-tenant,freeze_tenant,,,,FounderActionResponseDTO,founder-actions,Freeze tenant - immediately block all API calls.
+L2,founder_actions.py,POST,/ops/actions/override-incident,override_incident,,,,FounderActionResponseDTO,founder-actions,Override incident - mark as false positive. NOT REVERSIBLE.
+L2,founder_actions.py,POST,/ops/actions/throttle-tenant,throttle_tenant,,,,FounderActionResponseDTO,founder-actions,Throttle tenant - reduce rate limit to 10%.
+L2,founder_actions.py,POST,/ops/actions/unfreeze-api-key,unfreeze_api_key,,,,FounderActionResponseDTO,founder-actions,Unfreeze API key - restore access.
+L2,founder_actions.py,POST,/ops/actions/unfreeze-tenant,unfreeze_tenant,,,,FounderActionResponseDTO,founder-actions,Unfreeze tenant - restore access.
+L2,founder_actions.py,POST,/ops/actions/unthrottle-tenant,unthrottle_tenant,,,,FounderActionResponseDTO,founder-actions,Unthrottle tenant - restore rate limit.
+L2,cost_ops.py,GET,/ops/cost/anomalies,get_cost_anomalies,,limit,,FounderCostAnomalyListDTO,Ops Cost Intelligence,GET /ops/cost/anomalies
+L2,cost_ops.py,GET,/ops/cost/customers/{tenant_id},get_customer_cost_drilldown,tenant_id,tenant_id,,FounderCustomerCostDrilldownDTO,Ops Cost Intelligence,GET /ops/cost/customers/{tenant_id}
+L2,cost_ops.py,GET,/ops/cost/overview,get_cost_overview,,,,FounderCostOverviewDTO,Ops Cost Intelligence,GET /ops/cost/overview
+L2,cost_ops.py,GET,/ops/cost/tenants,get_cost_tenants,,,,FounderCostTenantListDTO,Ops Cost Intelligence,GET /ops/cost/tenants
+L2,ops.py,GET,/ops/customers,get_customer_segments,,limit,Optional[str],List[CustomerSegment],Ops Console,Customer Intelligence - All tenant profiles with stickiness and risk.
+L2,ops.py,GET,/ops/customers/at-risk,get_customers_at_risk,,limit,,List[CustomerAtRisk],Ops Console,Customers At Risk - Phase-2 Founder Intelligence.
+L2,ops.py,GET,/ops/customers/{tenant_id},get_customer_detail,tenant_id,tenant_id,,CustomerSegment,Ops Console,Get detailed customer profile for a specific tenant.
+L2,ops.py,GET,/ops/events,get_event_stream,,"tenant_id, limit",Optional[str],OpsEventListResponse,Ops Console,Event Stream - Raw events for debugging and analysis.
+L2,ops.py,GET,/ops/incidents,get_founder_incidents,,,Optional[str],FounderIncidentListDTO,Ops Console,GET /ops/incidents
+L2,ops.py,GET,/ops/incidents/infra-summary,get_infra_incident_summary,,,,,Ops Console,GET /ops/incidents/infra-summary
+L2,ops.py,GET,/ops/incidents/patterns,get_incident_patterns,,,,List[IncidentPattern],Ops Console,Incident Intelligence - What's breaking and is it systemic?
+L2,ops.py,GET,/ops/incidents/{incident_id},get_founder_incident_detail,incident_id,,,FounderIncidentDetailDTO,Ops Console,GET /ops/incidents/{incident_id}
+L2,ops.py,GET,/ops/infra,get_infra_limits,,,,InfraLimits,Ops Console,Infra & Limits - What breaks first if I grow?
+L2,ops.py,GET,/ops/playbooks,get_founder_playbooks,,,,List[PlaybookDetail],Ops Console,Founder Playbooks - Signal → Action Matrix.
+L2,ops.py,GET,/ops/playbooks/{playbook_id},get_playbook_detail,playbook_id,,,PlaybookDetail,Ops Console,Get a specific founder playbook by ID.
+L2,ops.py,GET,/ops/pulse,get_system_pulse,,,,SystemPulse,Ops Console,System Pulse - 'Is my business healthy right now?'
+L2,ops.py,GET,/ops/revenue,get_revenue_risk,,,,RevenueRisk,Ops Console,Revenue & Risk - Am I making money safely?
+L2,ops.py,GET,/ops/stickiness,get_stickiness_by_feature,,,,List[StickinessByFeature],Ops Console,Product Stickiness - Which feature actually keeps users?
+L2 (Product APIs),platform.py,GET,/platform/capabilities,get_capabilities_eligibility,,,,None,platform,Get capability eligibility list (lightweight version).
+L2 (Product APIs),platform.py,GET,/platform/capabilities/{capability_name},get_capability_health,capability_name,,,None,platform,Get health for a specific capability (lightweight version).
+L2 (Product APIs),platform.py,GET,/platform/domains/{domain_name},get_domain_health,domain_name,,,None,platform,Get health for a specific domain (lightweight version).
+L2 (Product APIs),platform.py,GET,/platform/eligibility/{capability_name},check_capability_eligibility,capability_name,,,,platform,Quick eligibility check for a capability (lightweight version).
+L2 (Product APIs),platform.py,GET,/platform/health,get_platform_health,,,,None,platform,Get platform system health (lightweight version).
+L2,policy_layer.py,GET,/policy-layer/conflicts,list_conflicts,,,,,policy-layer,List policy conflicts.
+L2,policy_layer.py,POST,/policy-layer/conflicts/{conflict_id}/resolve,resolve_conflict,conflict_id,,,,policy-layer,Resolve a policy conflict.
+L2,policy_layer.py,GET,/policy-layer/cooldowns,list_active_cooldowns,,,Optional[str],List[CooldownInfo],policy-layer,List all active cooldowns.
+L2,policy_layer.py,DELETE,/policy-layer/cooldowns/{agent_id},clear_cooldowns,agent_id,,Optional[str],,policy-layer,Clear cooldowns for an agent.
+L2,policy_layer.py,GET,/policy-layer/dependencies,get_dependency_graph,,,,,policy-layer,Get the policy dependency graph.
+L2,policy_layer.py,POST,/policy-layer/dependencies/add,add_dependency_with_dag_check,,,,,policy-layer,Add a policy dependency with DAG validation.
+L2,policy_layer.py,GET,/policy-layer/dependencies/dag/validate,validate_dependency_dag,,,,,policy-layer,Validate that policy dependencies form a valid DAG.
+L2,policy_layer.py,GET,/policy-layer/dependencies/evaluation-order,get_evaluation_order,,,,,policy-layer,Get the topological evaluation order for policies.
+L2,policy_layer.py,GET,/policy-layer/ethical-constraints,list_ethical_constraints,,,,,policy-layer,List all ethical constraints.
+L2,policy_layer.py,POST,/policy-layer/evaluate,evaluate_action,,,,PolicyEvaluationResult,policy-layer,Evaluate a proposed action against all applicable policies.
+L2,policy_layer.py,POST,/policy-layer/evaluate/batch,evaluate_batch,,,,,policy-layer,Evaluate multiple actions in a single call.
+L2,policy_layer.py,POST,/policy-layer/evaluate/context-aware,evaluate_with_context,,,,,policy-layer,Context-aware policy evaluation (GAP 4).
+L2,policy_layer.py,GET,/policy-layer/metrics,get_policy_metrics,,,,PolicyMetrics,policy-layer,Get policy engine metrics for the specified time window.
+L2,policy_layer.py,POST,/policy-layer/reload,reload_policies,,,,,policy-layer,Hot-reload policies from database.
+L2,policy_layer.py,GET,/policy-layer/risk-ceilings,list_risk_ceilings,,tenant_id,,,policy-layer,List all risk ceilings with current values.
+L2,policy_layer.py,GET,/policy-layer/risk-ceilings/{ceiling_id},get_risk_ceiling,ceiling_id,,,,policy-layer,Get a specific risk ceiling with current utilization.
+L2,policy_layer.py,PATCH,/policy-layer/risk-ceilings/{ceiling_id},update_risk_ceiling,ceiling_id,,RiskCeilingUpdate,,policy-layer,Update a risk ceiling configuration.
+L2,policy_layer.py,POST,/policy-layer/risk-ceilings/{ceiling_id}/reset,reset_risk_ceiling,ceiling_id,,,,policy-layer,Reset a risk ceiling's current value to 0.
+L2,policy_layer.py,GET,/policy-layer/safety-rules,list_safety_rules,,tenant_id,,,policy-layer,List all safety rules.
+L2,policy_layer.py,PATCH,/policy-layer/safety-rules/{rule_id},update_safety_rule,rule_id,,SafetyRuleUpdate,,policy-layer,Update a safety rule configuration.
+L2,policy_layer.py,POST,/policy-layer/simulate,simulate_evaluation,,,,PolicyEvaluationResult,policy-layer,Simulate policy evaluation without side effects.
+L2,policy_layer.py,GET,/policy-layer/state,get_policy_state,,,,PolicyState,policy-layer,Get the current state of the policy layer.
+L2,policy_layer.py,POST,/policy-layer/temporal-metrics/prune,prune_temporal_metrics,,,,,policy-layer,Prune and compact temporal metric events.
+L2,policy_layer.py,GET,/policy-layer/temporal-metrics/storage-stats,get_temporal_storage_stats,,,,,policy-layer,Get storage statistics for temporal metrics.
+L2,policy_layer.py,GET,/policy-layer/temporal-policies,list_temporal_policies,,,Optional[str],,policy-layer,List temporal (sliding window) policies.
+L2,policy_layer.py,POST,/policy-layer/temporal-policies,create_temporal_policy,,,,,policy-layer,Create a new temporal policy.
+L2,policy_layer.py,GET,/policy-layer/temporal-policies/{policy_id}/utilization,get_temporal_utilization,policy_id,,Optional[str],,policy-layer,Get current utilization for a temporal policy.
+L2,policy_layer.py,GET,/policy-layer/versions,list_policy_versions,,limit,,,policy-layer,List all policy versions.
+L2,policy_layer.py,POST,/policy-layer/versions,create_policy_version,,,,,policy-layer,Create a new policy version snapshot.
+L2,policy_layer.py,POST,/policy-layer/versions/activate,activate_policy_version,,,,,policy-layer,Activate a policy version with pre-activation integrity checks.
+L2,policy_layer.py,GET,/policy-layer/versions/current,get_current_version,,,,,policy-layer,Get the currently active policy version.
+L2,policy_layer.py,POST,/policy-layer/versions/rollback,rollback_to_version,,,,,policy-layer,Rollback to a previous policy version.
+L2,policy_layer.py,POST,/policy-layer/versions/{version_id}/check,check_version_integrity,version_id,,,,policy-layer,Run integrity checks on a version without activating.
+L2,policy_layer.py,GET,/policy-layer/versions/{version_id}/provenance,get_version_provenance,version_id,,,,policy-layer,Get the provenance (change history) for a policy version.
+L2,policy_layer.py,GET,/policy-layer/violations,list_violations,,"tenant_id, limit",Optional[float],List[PolicyViolation],policy-layer,List policy violations with filtering.
+L2,policy_layer.py,GET,/policy-layer/violations/{violation_id},get_violation,violation_id,,,PolicyViolation,policy-layer,Get a specific violation by ID.
+L2,policy_layer.py,POST,/policy-layer/violations/{violation_id}/acknowledge,acknowledge_violation,violation_id,,Optional[str],,policy-layer,Acknowledge a violation (mark as reviewed).
+L2 (Product APIs),replay.py,GET,/replay/{incident_id}/explain/{item_id},explain_replay_item,"incident_id, item_id",,,,replay,Get detailed explanation for a single replay item.
+L2 (Product APIs),replay.py,GET,/replay/{incident_id}/slice,get_replay_slice,incident_id,,Optional[str],ReplaySliceResponse,replay,Get time-windowed replay slice of an incident.
+L2 (Product APIs),replay.py,GET,/replay/{incident_id}/summary,get_incident_summary,incident_id,,,IncidentSummaryResponse,replay,Get incident summary for replay context.
+L2 (Product APIs),replay.py,GET,/replay/{incident_id}/timeline,get_replay_timeline,incident_id,limit,,,replay,Get full timeline for an incident (unpaginated for scrubbing UI).
+L2 (Product APIs),scenarios.py,GET,/scenarios/info/immutability,get_immutability_info,,,,,scenarios,Get information about the immutability guarantees.
+L2 (Product APIs),scenarios.py,POST,/scenarios/simulate-adhoc,simulate_adhoc,,,,SimulationResult,scenarios,Run ad-hoc simulation without saving scenario.
+L2 (Product APIs),scenarios.py,DELETE,/scenarios/{scenario_id},delete_scenario,scenario_id,,,,scenarios,Delete a scenario.
+L2 (Product APIs),scenarios.py,GET,/scenarios/{scenario_id},get_scenario,scenario_id,,,ScenarioResponse,scenarios,Get a specific scenario by ID.
+L2 (Product APIs),scenarios.py,POST,/scenarios/{scenario_id}/simulate,simulate_scenario,scenario_id,,Optional[int],SimulationResult,scenarios,Run simulation for a saved scenario.
+L2 (Product APIs),sdk.py,POST,/sdk/handshake,sdk_handshake,,,,HandshakeResponse,SDK,SDK handshake endpoint.
+L2 (Product APIs),sdk.py,GET,/sdk/instructions,get_sdk_instructions,,,,InstructionsResponse,SDK,Get SDK setup instructions.
+L2,legacy_routes.py,GET,/simulation,legacy_simulation,,,,,Legacy (Deprecated),410 Gone - Simulation endpoints removed.
+L2,legacy_routes.py,POST,/simulation,legacy_simulation,,,,,Legacy (Deprecated),410 Gone - Simulation endpoints removed.
+L2,legacy_routes.py,GET,/simulation/{path:path},legacy_simulation,path:path,,,,Legacy (Deprecated),410 Gone - Simulation endpoints removed.
+L2,legacy_routes.py,POST,/simulation/{path:path},legacy_simulation,path:path,,,,Legacy (Deprecated),410 Gone - Simulation endpoints removed.
+L2 (Product APIs),main.py,GET,/skills,get_skills,,,,,,List all registered skills.
+L2,status_history.py,GET,/status_history/download/{export_id},download_export,export_id,,,,status_history,Download an exported file using signed URL.
+L2,status_history.py,GET,/status_history/entity/{entity_type}/{entity_id},get_entity_history,"entity_type, entity_id",limit,,StatusHistoryListResponse,status_history,Get complete status history for a specific entity.
+L2,status_history.py,POST,/status_history/export,create_export,,,,ExportResponse,status_history,Create an export of status history records.
+L2,status_history.py,GET,/status_history/stats,get_stats,,tenant_id,,StatsResponse,status_history,Get statistics about status history records.
+L2 (Product APIs),traces.py,GET,/traces/by-hash/{root_hash},get_trace_by_hash,root_hash,,User,TraceDetailResponse,traces,Get a trace by its deterministic root hash.
+L2 (Product APIs),traces.py,POST,/traces/cleanup,cleanup_old_traces,,,User,,traces,Delete traces older than specified number of days.
+L2 (Product APIs),traces.py,GET,/traces/compare/{run_id1}/{run_id2},compare_traces,"run_id1, run_id2",,User,TraceCompareResponse,traces,Compare two traces for deterministic equality.
+L2 (Product APIs),traces.py,GET,/traces/idempotency/{idempotency_key},check_idempotency,idempotency_key,,User,,traces,Check if an idempotency key has been executed.
+L2 (Product APIs),traces.py,GET,/traces/mismatches,list_all_mismatches,,limit,Optional[str],,traces,List all trace mismatches across the system.
+L2 (Product APIs),traces.py,POST,/traces/mismatches/bulk-report,bulk_report_mismatches,,,User,,traces,Create a single GitHub issue for multiple mismatches.
+L2 (Product APIs),traces.py,DELETE,/traces/{run_id},delete_trace,run_id,,User,,traces,Delete a trace by run ID.
+L2 (Product APIs),traces.py,GET,/traces/{run_id},get_trace,run_id,,User,TraceDetailResponse,traces,Get a complete trace by run ID.
+L2 (Product APIs),traces.py,POST,/traces/{trace_id}/mismatch,report_mismatch,trace_id,,User,MismatchResponse,traces,Report a replay mismatch for operator review.
+L2 (Product APIs),traces.py,GET,/traces/{trace_id}/mismatches,list_trace_mismatches,trace_id,,User,,traces,List all mismatches reported for a trace.
+L2 (Product APIs),traces.py,POST,/traces/{trace_id}/mismatches/{mismatch_id}/resolve,resolve_mismatch,"trace_id, mismatch_id",,User,,traces,Mark a mismatch as resolved.
+L2 (Product APIs),v1_killswitch.py,GET,/v1/calls/{call_id},get_call,call_id,,,ProxyCallDetail,KillSwitch,Get single call truth.
+L2 (Product APIs),v1_proxy.py,POST,/v1/chat/completions,chat_completions,,,,ChatCompletionResponse,OpenAI Proxy,OpenAI-compatible chat completions endpoint.
+L2 (Product APIs),v1_proxy.py,POST,/v1/embeddings,embeddings,,,,EmbeddingResponse,OpenAI Proxy,OpenAI-compatible embeddings endpoint.
+L2 (Product APIs),v1_killswitch.py,GET,/v1/incidents,list_incidents,,"tenant_id, limit, offset",Optional[str],List[IncidentSummary],KillSwitch,List incidents (auto-grouped failures).
+L2 (Product APIs),v1_killswitch.py,GET,/v1/incidents/{incident_id},get_incident,incident_id,,,IncidentDetail,KillSwitch,Get incident detail with timeline.
+L2 (Product APIs),v1_killswitch.py,DELETE,/v1/killswitch/key,unfreeze_key,,,,KillSwitchStatus,KillSwitch,Unfreeze an API key.
+L2 (Product APIs),v1_killswitch.py,POST,/v1/killswitch/key,freeze_key,,,KillSwitchAction,KillSwitchStatus,KillSwitch,Kill a single API key.
+L2 (Product APIs),v1_killswitch.py,GET,/v1/killswitch/status,get_killswitch_status,,tenant_id,,"Dict[str, Any]",KillSwitch,Get complete kill switch status for a tenant.
+L2 (Product APIs),v1_killswitch.py,DELETE,/v1/killswitch/tenant,unfreeze_tenant,,tenant_id,,KillSwitchStatus,KillSwitch,Unfreeze a tenant.
+L2 (Product APIs),v1_killswitch.py,POST,/v1/killswitch/tenant,freeze_tenant,,tenant_id,KillSwitchAction,KillSwitchStatus,KillSwitch,Hard stop everything for a tenant.
+L2 (Product APIs),v1_killswitch.py,GET,/v1/policies/active,get_active_policies,,,,List[GuardrailSummary],KillSwitch,Get active guardrails - 'What's protecting me right now?'
+L2 (Product APIs),v1_killswitch.py,POST,/v1/replay/{call_id},replay_call,call_id,,,ReplayResult,KillSwitch,REPLAY PROVES ENFORCEMENT
+L2 (Product APIs),v1_proxy.py,GET,/v1/status,proxy_status,,,Optional[str],,OpenAI Proxy,Protection status endpoint - the pulse of your safety net.
+L2 (Product APIs),main.py,GET,/version,version,,,,,,Version info.
