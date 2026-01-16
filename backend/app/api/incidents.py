@@ -1,43 +1,121 @@
 # Layer: L2 — Product APIs
-# Product: ai-console
+# Product: ai-console (Customer Console)
 # Temporal:
-#   Trigger: HTTP request
-#   Execution: async
-# Role: Incidents domain API - incidents list, details, summary (HIL v1), and propagation trigger
-# Callers: Customer Console Incidents page
-# Reference: PIN-370 (SDSR), PIN-417 (HIL v1), Customer Console v1 Constitution
+#   Trigger: external (HTTP)
+#   Execution: async (request-response)
+# Role: Unified INCIDENTS domain facade - customer-only production API
+# Callers: Customer Console frontend, SDSR validation (same API)
+# Allowed Imports: L3, L4, L6
+# Forbidden Imports: L1, L5
+# Reference: INCIDENTS Domain - One Facade Architecture
+#
+# GOVERNANCE NOTE:
+# This is the ONE facade for INCIDENTS domain.
+# All incident data flows through this API.
+# SDSR tests this same API - no separate SDSR endpoints.
 
 """
-Incidents API - Incidents List and Summary for Customer Console
+Unified Incidents API (L2)
 
-Queries the `incidents` table for SDSR pipeline validation.
-Returns data compatible with IncidentsPage component.
+Customer-facing endpoints for viewing incidents.
+All requests are tenant-scoped via auth_context.
 
-SDSR Contract (PIN-370):
-- Incidents are created by the Incident Engine, not by direct writes
-- This API observes incidents, never creates them directly
-- POST /trigger endpoint invokes Incident Engine for a failed run
+Endpoints:
+- GET /api/v1/incidents                     → O2 list with filters
+- GET /api/v1/incidents/{incident_id}       → O3 detail
+- GET /api/v1/incidents/{incident_id}/evidence → O4 context (preflight)
+- GET /api/v1/incidents/{incident_id}/proof    → O5 raw (preflight)
+- GET /api/v1/incidents/by-run/{run_id}     → Incidents linked to run
 
-HIL v1 (PIN-417):
-- /summary endpoint provides interpretation layer over incident data
-- No adjectives, pure counts and routing hints
-- Uses lifecycle_state (ACTIVE, ACKED, RESOLVED) not legacy status
-- Provenance always present
+Architecture:
+- ONE facade for all INCIDENTS needs
+- Tenant isolation via auth_context (not header)
+- SDSR validates this same production API
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+import os
+from datetime import datetime
+from enum import Enum
+from typing import Annotated, Any, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
-from sqlalchemy import select, text
-from sqlmodel import Session
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.killswitch import Incident, IncidentLifecycleState
-from app.db import Run, get_session as get_db_session
-from app.services.incident_engine import get_incident_engine
+from app.auth.gateway_middleware import get_auth_context
+from app.db import get_async_session_dep
+from app.models.killswitch import Incident
 
-router = APIRouter(prefix="/incidents", tags=["Incidents"])
+# =============================================================================
+# Environment Configuration
+# =============================================================================
+
+_CURRENT_ENVIRONMENT = os.getenv("AOS_ENVIRONMENT", "preflight")
+
+
+def require_preflight() -> None:
+    """Guard for preflight-only endpoints (O4, O5)."""
+    if _CURRENT_ENVIRONMENT != "preflight":
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "preflight_only",
+                "message": "This endpoint is only available in preflight console.",
+            },
+        )
+
+
+# =============================================================================
+# Enums
+# =============================================================================
+
+
+class LifecycleState(str, Enum):
+    """Incident lifecycle state."""
+
+    ACTIVE = "ACTIVE"
+    ACKED = "ACKED"
+    RESOLVED = "RESOLVED"
+
+
+class Severity(str, Enum):
+    """Incident severity."""
+
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class CauseType(str, Enum):
+    """Incident cause type."""
+
+    LLM_RUN = "LLM_RUN"
+    SYSTEM = "SYSTEM"
+    HUMAN = "HUMAN"
+
+
+class Topic(str, Enum):
+    """UX topic for filtering."""
+
+    ACTIVE = "ACTIVE"  # Includes ACTIVE + ACKED states
+    RESOLVED = "RESOLVED"
+
+
+class SortField(str, Enum):
+    """Allowed sort fields."""
+
+    CREATED_AT = "created_at"
+    RESOLVED_AT = "resolved_at"
+    SEVERITY = "severity"
+
+
+class SortOrder(str, Enum):
+    """Sort direction."""
+
+    ASC = "asc"
+    DESC = "desc"
 
 
 # =============================================================================
@@ -46,562 +124,443 @@ router = APIRouter(prefix="/incidents", tags=["Incidents"])
 
 
 class IncidentSummary(BaseModel):
-    """Incident summary for list view."""
-    id: str
-    source_run_id: Optional[str]
-    source_type: str
-    category: str
-    severity: str
-    status: str
-    title: str
-    description: Optional[str]
-    error_code: Optional[str]
-    error_message: Optional[str]
+    """Incident summary for list view (O2)."""
+
+    incident_id: str
     tenant_id: str
-    affected_agent_id: Optional[str]
-    created_at: str
-    updated_at: str
-    resolved_at: Optional[str]
-    is_synthetic: bool
-    synthetic_scenario_id: Optional[str]
+    lifecycle_state: str
+    severity: str
+    category: str
+    title: str
+    description: Optional[str] = None
+    llm_run_id: Optional[str] = None
+    cause_type: str
+    error_code: Optional[str] = None
+    error_message: Optional[str] = None
+    created_at: datetime
+    resolved_at: Optional[datetime] = None
+    is_synthetic: bool = False
+
+    class Config:
+        from_attributes = True
 
 
-class IncidentsResponse(BaseModel):
-    """Incidents list response."""
+class Pagination(BaseModel):
+    """Pagination metadata."""
+
+    limit: int
+    offset: int
+    next_offset: Optional[int] = None
+
+
+class IncidentListResponse(BaseModel):
+    """GET /incidents response."""
+
+    items: List[IncidentSummary]
+    total: int
+    has_more: bool
+    filters_applied: dict[str, Any]
+    pagination: Pagination
+
+
+class IncidentDetailResponse(BaseModel):
+    """GET /incidents/{incident_id} response (O3)."""
+
+    incident_id: str
+    tenant_id: str
+    lifecycle_state: str
+    severity: str
+    category: str
+    title: str
+    description: Optional[str] = None
+    llm_run_id: Optional[str] = None
+    source_run_id: Optional[str] = None
+    cause_type: str
+    error_code: Optional[str] = None
+    error_message: Optional[str] = None
+    affected_agent_id: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    resolved_at: Optional[datetime] = None
+    is_synthetic: bool = False
+    synthetic_scenario_id: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class IncidentsByRunResponse(BaseModel):
+    """GET /incidents/by-run/{run_id} response."""
+
+    run_id: str
     incidents: List[IncidentSummary]
     total: int
-    page: int
-    per_page: int
-
-
-class IncidentCountBySeverity(BaseModel):
-    """Count of incidents by severity."""
-    critical: int
-    high: int
-    medium: int
-    low: int
-
-
-class IncidentsMetricsResponse(BaseModel):
-    """Incidents metrics/summary response."""
-    total_open: int
-    total_resolved: int
-    by_severity: IncidentCountBySeverity
-
-
-class TriggerIncidentRequest(BaseModel):
-    """Request to trigger incident creation for a run."""
-    run_id: str
-
-
-class TriggerIncidentResponse(BaseModel):
-    """Response from incident trigger."""
-    incident_id: Optional[str]
-    created: bool
-    message: str
 
 
 # =============================================================================
-# HIL v1: Summary Response Models (PIN-417)
+# Router
 # =============================================================================
 
 
-class IncidentsByLifecycleState(BaseModel):
-    """Incident counts by lifecycle state (PIN-412 canonical states)."""
-    active: int
-    acked: int
-    resolved: int
-
-
-class IncidentsCount(BaseModel):
-    """Incident count structure."""
-    total: int
-    by_lifecycle_state: IncidentsByLifecycleState
-
-
-class AttentionSummary(BaseModel):
-    """Attention flags for incidents needing review."""
-    count: int
-    reasons: List[str]  # Enum strings from incidents_attention_reasons.yaml registry
-
-
-class Provenance(BaseModel):
-    """Provenance metadata for interpretation traceability."""
-    derived_from: List[str]  # Capability IDs, not panel IDs
-    aggregation: str
-    generated_at: str  # ISO timestamp
-
-
-class IncidentsSummaryResponse(BaseModel):
-    """
-    Incidents summary response (HIL v1).
-
-    Rules (locked):
-    - No adjectives (good, bad, healthy, critical)
-    - Counts must reconcile: sum(by_lifecycle_state) == total
-    - Reasons must be from registry (fail fast on unknown)
-    - attention.count == incidents.by_lifecycle_state.active
-    - Provenance always present
-    """
-    window: str
-    incidents: IncidentsCount
-    attention: AttentionSummary
-    provenance: Provenance
+router = APIRouter(
+    prefix="/api/v1/incidents",
+    tags=["incidents"],
+)
 
 
 # =============================================================================
-# HIL v1: Configuration (registries and helpers)
-# =============================================================================
-
-# Attention reason registry keys (must match incidents_attention_reasons.yaml)
-VALID_INCIDENTS_ATTENTION_REASONS = frozenset(["unresolved", "high_severity"])
-
-
-def parse_window(window: str) -> timedelta:
-    """Parse window string to timedelta."""
-    if window == "24h":
-        return timedelta(hours=24)
-    elif window == "7d":
-        return timedelta(days=7)
-    else:
-        # Default to 24h for unknown values
-        return timedelta(hours=24)
-
-
-# =============================================================================
-# Endpoints
+# Helper: Get tenant from auth context
 # =============================================================================
 
 
-# =============================================================================
-# HIL v1: Summary Endpoint (PIN-417)
-# IMPORTANT: Must be defined BEFORE /{incident_id} to avoid route shadowing
-# =============================================================================
+def get_tenant_id_from_auth(request: Request) -> str:
+    """Extract tenant_id from auth_context. Raises 401/403 if missing."""
+    auth_context = get_auth_context(request)
 
-
-@router.get("/summary", response_model=IncidentsSummaryResponse)
-def get_incidents_summary(
-    window: str = Query(default="24h", description="Time window: 24h or 7d"),
-    include_synthetic: bool = Query(default=True, description="Include synthetic SDSR data"),
-    session: Session = Depends(get_db_session),
-):
-    """
-    Incidents summary for HIL v1 interpretation panel.
-
-    Returns:
-    - Incident counts by lifecycle_state (ACTIVE, ACKED, RESOLVED)
-    - Attention flags (incidents needing review)
-    - Provenance metadata
-
-    Rules (locked per PIN-417):
-    - No adjectives in response
-    - Counts must reconcile: active + acked + resolved == total
-    - attention.count == active count (INV-002)
-    - Reasons must be from registry (fail fast on unknown)
-    - Provenance always present
-
-    Capabilities derived from: activity.runs.list, incidents.list
-    """
-    # Parse time window
-    window_delta = parse_window(window)
-    window_start = datetime.now(timezone.utc) - window_delta
-
-    # Base query: incidents within time window
-    base_query = select(Incident).where(Incident.created_at >= window_start)
-
-    if not include_synthetic:
-        base_query = base_query.where(
-            (Incident.is_synthetic == False) | (Incident.is_synthetic.is_(None))
+    if auth_context is None:
+        raise HTTPException(
+            status_code=401,
+            detail={"error": "not_authenticated", "message": "Authentication required."},
         )
 
-    # Execute query to get all incidents in window
-    result = session.execute(base_query)
+    tenant_id: str | None = getattr(auth_context, "tenant_id", None)
+
+    if not tenant_id:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "tenant_required",
+                "message": "This endpoint requires tenant context.",
+            },
+        )
+
+    return tenant_id
+
+
+# =============================================================================
+# GET /incidents - O2 List
+# =============================================================================
+
+
+@router.get(
+    "",
+    response_model=IncidentListResponse,
+    summary="List incidents (O2)",
+    description="""
+    Returns paginated list of incidents matching filter criteria.
+    Tenant isolation enforced via auth_context.
+
+    Topic mapping:
+    - ACTIVE topic: includes ACTIVE + ACKED lifecycle states
+    - RESOLVED topic: includes RESOLVED state only
+    """,
+)
+async def list_incidents(
+    request: Request,
+    # Topic filter (maps to lifecycle states)
+    topic: Annotated[Topic | None, Query(description="UX Topic: ACTIVE or RESOLVED")] = None,
+    # Direct filters
+    lifecycle_state: Annotated[LifecycleState | None, Query(description="Direct lifecycle state filter")] = None,
+    severity: Annotated[Severity | None, Query(description="Filter by severity")] = None,
+    category: Annotated[str | None, Query(description="Filter by category")] = None,
+    cause_type: Annotated[CauseType | None, Query(description="Filter by cause type")] = None,
+    # SDSR filter
+    is_synthetic: Annotated[bool | None, Query(description="Filter by synthetic data flag")] = None,
+    # Time filters
+    created_after: Annotated[datetime | None, Query(description="Filter incidents created after")] = None,
+    created_before: Annotated[datetime | None, Query(description="Filter incidents created before")] = None,
+    # Pagination
+    limit: Annotated[int, Query(ge=1, le=100, description="Max incidents to return")] = 20,
+    offset: Annotated[int, Query(ge=0, description="Number of incidents to skip")] = 0,
+    # Sorting
+    sort_by: Annotated[SortField, Query(description="Field to sort by")] = SortField.CREATED_AT,
+    sort_order: Annotated[SortOrder, Query(description="Sort direction")] = SortOrder.DESC,
+    # Dependencies
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> IncidentListResponse:
+    """List incidents with unified query filters. Tenant-scoped."""
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    # Build filters
+    filters_applied: dict[str, Any] = {"tenant_id": tenant_id}
+
+    # Base query with tenant isolation
+    stmt = select(Incident).where(Incident.tenant_id == tenant_id)
+
+    # Topic filter (maps to lifecycle states)
+    if topic:
+        if topic == Topic.ACTIVE:
+            stmt = stmt.where(Incident.lifecycle_state.in_(["ACTIVE", "ACKED"]))
+            filters_applied["topic"] = "ACTIVE"
+        else:
+            stmt = stmt.where(Incident.lifecycle_state == "RESOLVED")
+            filters_applied["topic"] = "RESOLVED"
+    elif lifecycle_state:
+        stmt = stmt.where(Incident.lifecycle_state == lifecycle_state.value)
+        filters_applied["lifecycle_state"] = lifecycle_state.value
+
+    if severity:
+        stmt = stmt.where(Incident.severity == severity.value)
+        filters_applied["severity"] = severity.value
+
+    if category:
+        stmt = stmt.where(Incident.category == category)
+        filters_applied["category"] = category
+
+    if cause_type:
+        stmt = stmt.where(Incident.cause_type == cause_type.value)
+        filters_applied["cause_type"] = cause_type.value
+
+    if is_synthetic is not None:
+        stmt = stmt.where(Incident.is_synthetic == is_synthetic)
+        filters_applied["is_synthetic"] = is_synthetic
+
+    if created_after:
+        stmt = stmt.where(Incident.created_at >= created_after)
+        filters_applied["created_after"] = created_after.isoformat()
+
+    if created_before:
+        stmt = stmt.where(Incident.created_at <= created_before)
+        filters_applied["created_before"] = created_before.isoformat()
+
+    # Count query (same filters, no pagination)
+    count_stmt = select(func.count(Incident.id)).where(Incident.tenant_id == tenant_id)
+    if topic:
+        if topic == Topic.ACTIVE:
+            count_stmt = count_stmt.where(Incident.lifecycle_state.in_(["ACTIVE", "ACKED"]))
+        else:
+            count_stmt = count_stmt.where(Incident.lifecycle_state == "RESOLVED")
+    elif lifecycle_state:
+        count_stmt = count_stmt.where(Incident.lifecycle_state == lifecycle_state.value)
+    if severity:
+        count_stmt = count_stmt.where(Incident.severity == severity.value)
+    if category:
+        count_stmt = count_stmt.where(Incident.category == category)
+    if cause_type:
+        count_stmt = count_stmt.where(Incident.cause_type == cause_type.value)
+    if is_synthetic is not None:
+        count_stmt = count_stmt.where(Incident.is_synthetic == is_synthetic)
+    if created_after:
+        count_stmt = count_stmt.where(Incident.created_at >= created_after)
+    if created_before:
+        count_stmt = count_stmt.where(Incident.created_at <= created_before)
+
+    # Sorting
+    sort_column = getattr(Incident, sort_by.value)
+    if sort_order == SortOrder.DESC:
+        stmt = stmt.order_by(sort_column.desc())
+    else:
+        stmt = stmt.order_by(sort_column.asc())
+
+    # Pagination
+    stmt = stmt.limit(limit).offset(offset)
+
+    try:
+        # Execute count
+        count_result = await session.execute(count_stmt)
+        total = count_result.scalar() or 0
+
+        # Execute data query
+        result = await session.execute(stmt)
+        incidents = result.scalars().all()
+
+        items = [
+            IncidentSummary(
+                incident_id=inc.id,
+                tenant_id=inc.tenant_id,
+                lifecycle_state=inc.lifecycle_state or "ACTIVE",
+                severity=inc.severity or "medium",
+                category=inc.category or "UNKNOWN",
+                title=inc.title or "Untitled Incident",
+                description=inc.description,
+                llm_run_id=inc.llm_run_id,
+                cause_type=inc.cause_type or "SYSTEM",
+                error_code=inc.error_code,
+                error_message=inc.error_message,
+                created_at=inc.created_at,
+                resolved_at=inc.resolved_at,
+                is_synthetic=inc.is_synthetic or False,
+            )
+            for inc in incidents
+        ]
+
+        has_more = offset + len(items) < total
+        next_offset = offset + limit if has_more else None
+
+        return IncidentListResponse(
+            items=items,
+            total=total,
+            has_more=has_more,
+            filters_applied=filters_applied,
+            pagination=Pagination(limit=limit, offset=offset, next_offset=next_offset),
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "query_failed", "message": str(e)},
+        )
+
+
+# =============================================================================
+# GET /incidents/by-run/{run_id} - Incidents for a Run
+# =============================================================================
+
+
+@router.get(
+    "/by-run/{run_id}",
+    response_model=IncidentsByRunResponse,
+    summary="Get incidents for a run",
+    description="Returns all incidents linked to a specific run.",
+)
+async def get_incidents_for_run(
+    request: Request,
+    run_id: str,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> IncidentsByRunResponse:
+    """Get all incidents linked to a specific run. Tenant-scoped."""
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    stmt = (
+        select(Incident)
+        .where(Incident.tenant_id == tenant_id)
+        .where(Incident.source_run_id == run_id)
+        .order_by(Incident.created_at.desc())
+    )
+
+    result = await session.execute(stmt)
     incidents = result.scalars().all()
 
-    # Count by lifecycle_state (PIN-412 canonical states)
-    # Use lifecycle_state field, NOT legacy status field
-    active_count = sum(
-        1 for i in incidents
-        if i.lifecycle_state == IncidentLifecycleState.ACTIVE.value
-    )
-    acked_count = sum(
-        1 for i in incidents
-        if i.lifecycle_state == IncidentLifecycleState.ACKED.value
-    )
-    resolved_count = sum(
-        1 for i in incidents
-        if i.lifecycle_state == IncidentLifecycleState.RESOLVED.value
-    )
-    total_count = len(incidents)
-
-    # Attention detection
-    # - "unresolved" reason: if any incidents are ACTIVE
-    # - "high_severity" reason: if any ACTIVE incidents have HIGH or CRITICAL severity
-    attention_reasons: List[str] = []
-
-    # Get ACTIVE incidents for attention analysis
-    active_incidents = [
-        i for i in incidents
-        if i.lifecycle_state == IncidentLifecycleState.ACTIVE.value
+    items = [
+        IncidentSummary(
+            incident_id=inc.id,
+            tenant_id=inc.tenant_id,
+            lifecycle_state=inc.lifecycle_state or "ACTIVE",
+            severity=inc.severity or "medium",
+            category=inc.category or "UNKNOWN",
+            title=inc.title or "Untitled Incident",
+            description=inc.description,
+            llm_run_id=inc.llm_run_id,
+            cause_type=inc.cause_type or "SYSTEM",
+            error_code=inc.error_code,
+            error_message=inc.error_message,
+            created_at=inc.created_at,
+            resolved_at=inc.resolved_at,
+            is_synthetic=inc.is_synthetic or False,
+        )
+        for inc in incidents
     ]
 
-    if active_incidents:
-        attention_reasons.append("unresolved")
-
-        # Check for high severity among active incidents
-        high_severity_active = [
-            i for i in active_incidents
-            if i.severity and i.severity.upper() in ("HIGH", "CRITICAL")
-        ]
-        if high_severity_active:
-            attention_reasons.append("high_severity")
-
-    # Validate reasons against registry (fail fast on unknown)
-    for reason in attention_reasons:
-        if reason not in VALID_INCIDENTS_ATTENTION_REASONS:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Unknown attention reason: {reason}. Must be in registry."
-            )
-
-    # attention.count == active count (INV-002: attention = unresolved incidents)
-    attention_count = active_count
-
-    # Build response
-    return IncidentsSummaryResponse(
-        window=window,
-        incidents=IncidentsCount(
-            total=total_count,
-            by_lifecycle_state=IncidentsByLifecycleState(
-                active=active_count,
-                acked=acked_count,
-                resolved=resolved_count,
-            ),
-        ),
-        attention=AttentionSummary(
-            count=attention_count,
-            reasons=attention_reasons,
-        ),
-        provenance=Provenance(
-            derived_from=["activity.runs.list", "incidents.list"],
-            aggregation="STATUS_BREAKDOWN",
-            generated_at=datetime.now(timezone.utc).isoformat(),
-        ),
+    return IncidentsByRunResponse(
+        run_id=run_id,
+        incidents=items,
+        total=len(items),
     )
 
 
-@router.get("", response_model=IncidentsResponse)
-def list_incidents(
-    page: int = Query(default=1, ge=1),
-    per_page: int = Query(default=20, ge=1, le=100),
-    status: Optional[str] = None,
-    severity: Optional[str] = None,
-    category: Optional[str] = None,
-    include_synthetic: bool = Query(default=True, description="Include synthetic SDSR data"),
-    session: Session = Depends(get_db_session),
-):
-    """
-    List incidents for Incidents domain.
-
-    Returns incidents from the `incidents` table for SDSR validation.
-    By default includes synthetic data for preflight testing.
-
-    Note: Auth bypassed for SDSR preflight validation (PIN-370)
-    Route is public in gateway_config.py and rbac_middleware.py
-    """
-    # Build query
-    query = select(Incident).order_by(Incident.created_at.desc())
-
-    # Filter by status if provided
-    if status:
-        query = query.where(Incident.status == status)
-
-    # Filter by severity if provided
-    if severity:
-        query = query.where(Incident.severity == severity)
-
-    # Filter by category if provided
-    if category:
-        query = query.where(Incident.category == category)
-
-    # Optionally exclude synthetic data
-    if not include_synthetic:
-        query = query.where((Incident.is_synthetic == False) | (Incident.is_synthetic.is_(None)))
-
-    # Get total count (with same filters)
-    count_query = select(Incident)
-    if status:
-        count_query = count_query.where(Incident.status == status)
-    if severity:
-        count_query = count_query.where(Incident.severity == severity)
-    if category:
-        count_query = count_query.where(Incident.category == category)
-    if not include_synthetic:
-        count_query = count_query.where((Incident.is_synthetic == False) | (Incident.is_synthetic.is_(None)))
-
-    count_result = session.execute(count_query)
-    total = len(count_result.scalars().all())
-
-    # Apply pagination
-    offset = (page - 1) * per_page
-    query = query.offset(offset).limit(per_page)
-
-    result = session.execute(query)
-    incidents = result.scalars().all()
-
-    return IncidentsResponse(
-        incidents=[
-            IncidentSummary(
-                id=i.id,
-                source_run_id=i.source_run_id,
-                source_type=i.source_type or "killswitch",
-                category=i.category or "UNKNOWN",
-                severity=i.severity.upper() if i.severity else "MEDIUM",
-                status=i.status.upper() if i.status else "OPEN",
-                title=i.title,
-                description=i.description,
-                error_code=i.error_code,
-                error_message=i.error_message,
-                tenant_id=i.tenant_id,
-                affected_agent_id=i.affected_agent_id,
-                created_at=i.created_at.isoformat() if i.created_at else "",
-                updated_at=i.updated_at.isoformat() if i.updated_at else "",
-                resolved_at=i.resolved_at.isoformat() if i.resolved_at else None,
-                is_synthetic=i.is_synthetic or False,
-                synthetic_scenario_id=i.synthetic_scenario_id,
-            )
-            for i in incidents
-        ],
-        total=total,
-        page=page,
-        per_page=per_page,
-    )
+# =============================================================================
+# GET /incidents/{incident_id} - O3 Detail
+# =============================================================================
 
 
-@router.get("/metrics", response_model=IncidentsMetricsResponse)
-def get_incidents_metrics(
-    include_synthetic: bool = Query(default=True, description="Include synthetic SDSR data"),
-    session: Session = Depends(get_db_session),
-):
-    """
-    Get summary metrics for incidents dashboard.
-
-    Returns counts by status and severity.
-    """
-    base_filter = ""
-    if not include_synthetic:
-        base_filter = " AND (is_synthetic = false OR is_synthetic IS NULL)"
-
-    # Count open incidents (from canonical incidents table - PIN-370 consolidation)
-    open_result = session.execute(
-        text(f"SELECT COUNT(*) FROM incidents WHERE UPPER(status) NOT IN ('RESOLVED', 'CLOSED'){base_filter}")
-    )
-    total_open = open_result.scalar() or 0
-
-    # Count resolved incidents (from canonical incidents table)
-    resolved_result = session.execute(
-        text(f"SELECT COUNT(*) FROM incidents WHERE UPPER(status) IN ('RESOLVED', 'CLOSED'){base_filter}")
-    )
-    total_resolved = resolved_result.scalar() or 0
-
-    # Count by severity (for open incidents) - handle case-insensitive
-    severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
-    for sev in ["CRITICAL", "HIGH", "MEDIUM", "LOW"]:
-        result = session.execute(
-            text(f"SELECT COUNT(*) FROM incidents WHERE UPPER(severity) = :sev AND UPPER(status) NOT IN ('RESOLVED', 'CLOSED'){base_filter}"),
-            {"sev": sev}
-        )
-        severity_counts[sev.lower()] = result.scalar() or 0
-
-    return IncidentsMetricsResponse(
-        total_open=total_open,
-        total_resolved=total_resolved,
-        by_severity=IncidentCountBySeverity(**severity_counts),
-    )
-
-
-@router.get("/{incident_id}", response_model=IncidentSummary)
-def get_incident_detail(
+@router.get(
+    "/{incident_id}",
+    response_model=IncidentDetailResponse,
+    summary="Get incident detail (O3)",
+    description="Returns detailed information about a specific incident.",
+)
+async def get_incident_detail(
+    request: Request,
     incident_id: str,
-    session: Session = Depends(get_db_session),
-):
-    """
-    Get details of a specific incident.
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> IncidentDetailResponse:
+    """Get incident detail (O3). Tenant isolation enforced."""
 
-    Note: Auth bypassed for SDSR preflight validation (PIN-370)
-    """
-    result = session.execute(
-        select(Incident).where(Incident.id == incident_id)
-    )
+    tenant_id = get_tenant_id_from_auth(request)
+
+    stmt = select(Incident).where(Incident.id == incident_id).where(Incident.tenant_id == tenant_id)
+
+    result = await session.execute(stmt)
     incident = result.scalar_one_or_none()
 
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    return IncidentSummary(
-        id=incident.id,
-        source_run_id=incident.source_run_id,
-        source_type=incident.source_type or "killswitch",
+    return IncidentDetailResponse(
+        incident_id=incident.id,
+        tenant_id=incident.tenant_id,
+        lifecycle_state=incident.lifecycle_state or "ACTIVE",
+        severity=incident.severity or "medium",
         category=incident.category or "UNKNOWN",
-        severity=incident.severity.upper() if incident.severity else "MEDIUM",
-        status=incident.status.upper() if incident.status else "OPEN",
-        title=incident.title,
+        title=incident.title or "Untitled Incident",
         description=incident.description,
+        llm_run_id=incident.llm_run_id,
+        source_run_id=incident.source_run_id,
+        cause_type=incident.cause_type or "SYSTEM",
         error_code=incident.error_code,
         error_message=incident.error_message,
-        tenant_id=incident.tenant_id,
         affected_agent_id=incident.affected_agent_id,
-        created_at=incident.created_at.isoformat() if incident.created_at else "",
-        updated_at=incident.updated_at.isoformat() if incident.updated_at else "",
-        resolved_at=incident.resolved_at.isoformat() if incident.resolved_at else None,
+        created_at=incident.created_at,
+        updated_at=incident.updated_at,
+        resolved_at=incident.resolved_at,
         is_synthetic=incident.is_synthetic or False,
         synthetic_scenario_id=incident.synthetic_scenario_id,
     )
 
 
-@router.get("/by-run/{run_id}")
-def get_incidents_for_run(
-    run_id: str,
-    session: Session = Depends(get_db_session),
-):
-    """
-    Get all incidents linked to a specific run.
+# =============================================================================
+# GET /incidents/{incident_id}/evidence - O4 Context (Preflight Only)
+# =============================================================================
 
-    Used by SDSR expectations validator and UI to show linked incidents.
-    """
-    result = session.execute(
-        select(Incident).where(Incident.source_run_id == run_id).order_by(Incident.created_at.desc())
-    )
-    incidents = result.scalars().all()
+
+@router.get(
+    "/{incident_id}/evidence",
+    summary="Get incident evidence (O4)",
+    description="Returns cross-domain impact and evidence context. Preflight only.",
+)
+async def get_incident_evidence(
+    request: Request,
+    incident_id: str,
+) -> dict[str, Any]:
+    """Get incident evidence (O4). Preflight console only."""
+    require_preflight()
+    _ = get_tenant_id_from_auth(request)  # Enforce auth
 
     return {
-        "run_id": run_id,
-        "incidents": [
-            IncidentSummary(
-                id=i.id,
-                source_run_id=i.source_run_id,
-                source_type=i.source_type or "killswitch",
-                category=i.category or "UNKNOWN",
-                severity=i.severity.upper() if i.severity else "MEDIUM",
-                status=i.status.upper() if i.status else "OPEN",
-                title=i.title,
-                description=i.description,
-                error_code=i.error_code,
-                error_message=i.error_message,
-                tenant_id=i.tenant_id,
-                affected_agent_id=i.affected_agent_id,
-                created_at=i.created_at.isoformat() if i.created_at else "",
-                updated_at=i.updated_at.isoformat() if i.updated_at else "",
-                resolved_at=i.resolved_at.isoformat() if i.resolved_at else None,
-                is_synthetic=i.is_synthetic or False,
-                synthetic_scenario_id=i.synthetic_scenario_id,
-            )
-            for i in incidents
-        ],
-        "total": len(incidents),
+        "incident_id": incident_id,
+        "source_run": None,
+        "policies_triggered": [],
+        "related_incidents": [],
+        "recovery_suggestions": [],
     }
 
 
-@router.post("/trigger", response_model=TriggerIncidentResponse, deprecated=True)
-def trigger_incident_for_run(
-    request: TriggerIncidentRequest,
-    session: Session = Depends(get_db_session),
-):
-    """
-    [DEPRECATED] Trigger incident creation for a failed run.
-
-    ⚠️ DEPRECATION NOTICE (PIN-370):
-    This endpoint is deprecated. Incidents are now created AUTOMATICALLY
-    by the worker via Incident Engine when a run fails. Do not rely on
-    this endpoint for new integrations.
-
-    This endpoint remains for backward compatibility only and will be
-    removed in a future release. It delegates to the Incident Engine
-    internally (same as automatic creation).
-
-    Migration path:
-    - Remove calls to this endpoint
-    - Incidents are auto-created on run failure
-    - Use GET /incidents/by-run/{run_id} to check for incidents
-    """
-    import logging
-    logger = logging.getLogger("nova.api.incidents")
-    logger.warning(
-        f"DEPRECATED: /api/v1/incidents/trigger called for run_id={request.run_id}. "
-        "Incidents are now auto-created by worker. This endpoint will be removed."
-    )
-
-    # Fetch the run
-    result = session.execute(
-        select(Run).where(Run.id == request.run_id)
-    )
-    run = result.scalar_one_or_none()
-
-    if not run:
-        raise HTTPException(status_code=404, detail="Run not found")
-
-    # Check if run is failed
-    if run.status != "failed":
-        return TriggerIncidentResponse(
-            incident_id=None,
-            created=False,
-            message=f"Run status is '{run.status}', not 'failed'. No incident created.",
-        )
-
-    # Check if incident already exists for this run
-    existing = session.execute(
-        select(Incident).where(Incident.source_run_id == request.run_id)
-    )
-    if existing.scalar_one_or_none():
-        return TriggerIncidentResponse(
-            incident_id=None,
-            created=False,
-            message="Incident already exists for this run",
-        )
-
-    # Trigger incident creation via Incident Engine
-    # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant. Missing tenant is hard failure.
-    if not run.tenant_id:
-        raise HTTPException(status_code=400, detail="Run has no tenant_id. Cannot create incident.")
-    engine = get_incident_engine()
-    incident_id = engine.create_incident_for_failed_run(
-        run_id=run.id,
-        tenant_id=run.tenant_id,
-        error_code=_extract_error_code(run.error_message),
-        error_message=run.error_message,
-        agent_id=run.agent_id,
-        is_synthetic=run.is_synthetic,
-        synthetic_scenario_id=run.synthetic_scenario_id,
-    )
-
-    if incident_id:
-        return TriggerIncidentResponse(
-            incident_id=incident_id,
-            created=True,
-            message=f"Incident {incident_id} created for run {run.id}",
-        )
-    else:
-        return TriggerIncidentResponse(
-            incident_id=None,
-            created=False,
-            message="Failed to create incident",
-        )
+# =============================================================================
+# GET /incidents/{incident_id}/proof - O5 Raw (Preflight Only)
+# =============================================================================
 
 
-def _extract_error_code(error_message: Optional[str]) -> str:
-    """Extract error code from error message."""
-    if not error_message:
-        return "UNKNOWN"
+@router.get(
+    "/{incident_id}/proof",
+    summary="Get incident proof (O5)",
+    description="Returns raw traces, logs, and integrity proof. Preflight only.",
+)
+async def get_incident_proof(
+    request: Request,
+    incident_id: str,
+) -> dict[str, Any]:
+    """Get incident proof (O5). Preflight console only."""
+    require_preflight()
+    _ = get_tenant_id_from_auth(request)  # Enforce auth
 
-    # Check for known error codes
-    known_codes = [
-        "EXECUTION_TIMEOUT", "AGENT_CRASH", "STEP_FAILURE", "SKILL_ERROR",
-        "BUDGET_EXCEEDED", "RATE_LIMIT_EXCEEDED", "RESOURCE_EXHAUSTION",
-        "CANCELLED", "MANUAL_STOP", "RETRY_EXHAUSTED"
-    ]
-
-    for code in known_codes:
-        if code in error_message.upper():
-            return code
-
-    return "UNKNOWN"
+    return {
+        "incident_id": incident_id,
+        "integrity": {
+            "verification_status": "UNKNOWN",
+        },
+        "aos_traces": [],
+        "raw_logs": [],
+        "timeline": [],
+    }

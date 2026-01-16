@@ -27,13 +27,6 @@ from .auth import verify_api_key
 from .auth.rbac_middleware import RBACMiddleware
 from .contracts.decisions import backfill_run_id_for_request
 from .db import Agent, Memory, Provenance, Run, engine, init_db
-from .models.logs_records import (
-    SystemCausedBy,
-    SystemComponent,
-    SystemEventType,
-    SystemRecord,
-    SystemSeverity,
-)
 from .logging_config import log_provenance, log_request, setup_logging
 from .metrics import (
     generate_metrics,
@@ -46,6 +39,13 @@ from .metrics import (
     nova_worker_pool_size,
 )
 from .middleware.tenant import TenantMiddleware
+from .models.logs_records import (
+    SystemCausedBy,
+    SystemComponent,
+    SystemEventType,
+    SystemRecord,
+    SystemSeverity,
+)
 from .planners import PlannerProtocol, get_planner
 from .skills import get_skill, get_skill_manifest, list_skills
 from .utils.budget_tracker import BudgetTracker, enforce_budget
@@ -537,8 +537,11 @@ app = FastAPI(
 )
 
 # Include API routers
+from .api.accounts import router as accounts_router  # ACCOUNTS: Unified facade (/api/v1/accounts/*)
+from .api.activity import router as activity_router  # ACTIVITY Domain: Unified facade (/api/v1/activity/*)
 from .api.agents import router as agents_router  # M12 Multi-Agent System
 from .api.authz_status import router as authz_status_router  # T5: Internal authz status
+from .api.connectivity import router as connectivity_router  # CONNECTIVITY: Unified facade (/api/v1/connectivity/*)
 from .api.cost_guard import router as cost_guard_router  # /guard/costs/* - Customer cost visibility
 
 # M26 Cost Intelligence - Token attribution, anomaly detection, budget enforcement
@@ -547,9 +550,6 @@ from .api.cost_intelligence import router as cost_intelligence_router
 # M29 Category 4: Cost Intelligence Completion
 from .api.cost_ops import router as cost_ops_router  # /ops/cost/* - Founder cost visibility
 from .api.costsim import router as costsim_router
-from .api.activity import router as activity_router  # SDSR Activity API (/activity/runs)
-from .api.incidents import router as incidents_router  # SDSR Incidents API (/incidents/*)
-from .api.customer_activity import router as customer_activity_router  # ACTIVITY Domain Qualification (L2→L3→L4)
 from .api.customer_visibility import router as customer_visibility_router  # Phase 4C-2 Customer Visibility
 from .api.embedding import router as embedding_router  # PIN-047 Embedding Quota API
 
@@ -562,36 +562,34 @@ from .api.founder_contract_review import (
 )
 from .api.founder_explorer import router as explorer_router  # H3 Founder Explorer (cross-tenant READ-ONLY)
 
+# PIN-399 Phase-4: Founder onboarding recovery (force-complete)
+from .api.founder_onboarding import router as founder_onboarding_router
+
 # PIN-333: Founder AUTO_EXECUTE Review (evidence-only, read-only)
 from .api.founder_review import router as founder_review_router  # /founder/review/* - Evidence review
 from .api.founder_timeline import router as founder_timeline_router  # Phase 4C-1 Founder Timeline
-
-# PIN-399 Phase-4: Founder onboarding recovery (force-complete)
-from .api.founder_onboarding import router as founder_onboarding_router
 
 # M22.1 UI Console - Dual-console architecture (Customer + Operator)
 from .api.guard import router as guard_router  # Customer Console (/guard/*)
 from .api.guard_logs import router as guard_logs_router  # PIN-281: Customer Logs (/guard/logs/*)
 from .api.guard_policies import router as guard_policies_router  # PIN-281: Customer Policies (/guard/policies/*)
 from .api.health import router as health_router
-
-# PIN-399: SDK handshake and registration endpoints
-from .api.sdk import router as sdk_router
-
-# PIN-409: Session context for frontend auth state
-from .api.session_context import router as session_context_router
+from .api.incidents import router as incidents_router  # INCIDENTS Domain: Unified facade (/api/v1/incidents/*)
 
 # M28: failures_router removed (PIN-145) - duplicates /ops/incidents/patterns
 from .api.integration import router as integration_router  # M25 Pillar Integration Loop
 
 # M29 Category 7: Legacy Route Handlers (410 Gone)
 from .api.legacy_routes import router as legacy_routes_router  # 410 Gone for deprecated paths
+from .api.logs import router as logs_router  # LOGS Domain: Unified facade (/api/v1/logs/*)
 from .api.memory_pins import router as memory_pins_router
 from .api.onboarding import router as onboarding_router  # M24 Customer Onboarding
 
 # M28: operator_router removed (PIN-145) - redundant with /ops/*
 from .api.ops import router as ops_router  # M24 Ops Console (founder intelligence)
+from .api.overview import router as overview_router  # OVERVIEW Domain: Unified facade (/api/v1/overview/*)
 from .api.platform import router as platform_router  # PIN-284 Platform Health (founder-only)
+from .api.policies import router as policies_router  # POLICIES Domain: Unified facade (/api/v1/policies/*)
 from .api.policy import router as policy_router
 from .api.policy_layer import router as policy_layer_router  # M19 Policy Layer
 from .api.rbac_api import router as rbac_router
@@ -600,18 +598,25 @@ from .api.recovery_ingest import router as recovery_ingest_router
 from .api.replay import router as replay_router  # H1 Replay UX (READ-ONLY slice/timeline)
 from .api.runtime import router as runtime_router
 from .api.scenarios import router as scenarios_router  # H2 Scenario-based Cost Simulation (advisory)
+
+# PIN-399: SDK handshake and registration endpoints
+from .api.sdk import router as sdk_router
+
+# PIN-409: Session context for frontend auth state
+from .api.session_context import router as session_context_router
 from .api.status_history import router as status_history_router
+from .api.tenants import router as tenants_router  # M21 - RE-ENABLED: PIN-399 Onboarding State Machine
 from .api.traces import router as traces_router
 from .api.v1_killswitch import router as v1_killswitch_router  # Kill switch, incidents, replay
 
-from .api.tenants import router as tenants_router  # M21 - RE-ENABLED: PIN-399 Onboarding State Machine
 # M22 KillSwitch MVP - OpenAI-compatible proxy with safety controls
 from .api.v1_proxy import router as v1_proxy_router  # Drop-in OpenAI replacement
 from .api.workers import router as workers_router  # Business Builder Worker v0.2
 from .predictions.api import router as c2_predictions_router  # C2 Predictions (advisory only)
 
-# PIN-411: Aurora Runtime Projections (READ-ONLY O2-O5)
-from .runtime_projections import runtime_projections_router
+# PIN-411: Aurora Runtime Projections - REMOVED (all domains now have unified facades)
+# Activity → /api/v1/activity/*, Incidents → /api/v1/incidents/*, Overview → /api/v1/overview/*
+# Policies → /api/v1/policies/*, Logs → /api/v1/logs/*
 
 app.include_router(health_router)
 app.include_router(policy_router)
@@ -643,9 +648,13 @@ app.include_router(v1_killswitch_router)  # /v1/killswitch/*, /v1/policies/*, /v
 app.include_router(guard_router)  # /guard/* - Customer Console (trust + control)
 app.include_router(guard_logs_router)  # PIN-281: /guard/logs/* - Customer Logs (L4→L3→L2)
 app.include_router(guard_policies_router)  # PIN-281: /guard/policies/* - Customer Policy Constraints
-app.include_router(customer_activity_router)  # ACTIVITY Domain Qualification: /api/v1/customer/activity/* (L2→L3→L4)
-app.include_router(activity_router, prefix="/api/v1")  # SDSR Activity API: /api/v1/activity/runs
-app.include_router(incidents_router, prefix="/api/v1")  # SDSR Incidents API: /api/v1/incidents/*
+app.include_router(activity_router)  # ACTIVITY Domain: /api/v1/activity/* (unified facade)
+app.include_router(incidents_router)  # INCIDENTS Domain: /api/v1/incidents/* (unified facade)
+app.include_router(overview_router)  # OVERVIEW Domain: /api/v1/overview/* (unified facade)
+app.include_router(policies_router)  # POLICIES Domain: /api/v1/policies/* (unified facade)
+app.include_router(logs_router)  # LOGS Domain: /api/v1/logs/* (unified facade)
+app.include_router(connectivity_router)  # CONNECTIVITY: /api/v1/connectivity/* (unified facade)
+app.include_router(accounts_router)  # ACCOUNTS: /api/v1/accounts/* (unified facade)
 # M28: operator_router removed (PIN-145) - merged into /ops/*
 app.include_router(ops_router)  # /ops/* - M24 Founder Intelligence Console
 app.include_router(platform_router)  # /platform/* - PIN-284 Platform Health (founder-only)
@@ -688,8 +697,9 @@ from .api.discovery import router as discovery_router
 
 app.include_router(discovery_router)  # /api/v1/discovery - Discovery Ledger (read-only)
 
-# PIN-411: Aurora Runtime Projections (READ-ONLY O2-O5)
-app.include_router(runtime_projections_router)  # /api/v1/runtime/activity/runs
+# PIN-411: Aurora Runtime Projections - REMOVED (all domains now have unified facades)
+# See unified facades: /api/v1/activity/*, /api/v1/incidents/*, /api/v1/overview/*,
+# /api/v1/policies/*, /api/v1/logs/*, /api/v1/connectivity/*, /api/v1/accounts/*
 
 # CORS middleware
 app.add_middleware(
