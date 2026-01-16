@@ -1,7 +1,6 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-15 (PIN-428 ANALYTICS Domain Promoted to OBSERVED via SDSR)
 
 ---
 
@@ -420,6 +419,13 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-426](PIN-426-hisar-ovr-sum-ci-o1-cost-summary.md) | **HISAR OVR-SUM-CI-O1 Cost Summary** | UI Pipeline / HISAR Execution | **🚫 BLOCKED** | 2026-01-15 |
 | [PIN-427](PIN-427-hisar-backend-gaps-tracker.md) | **HISAR Backend Gaps Tracker** | UI Pipeline / Backend Gaps | **📋 TRACKING** | 2026-01-15 |
 | [PIN-428](PIN-428-analytics-domain-promoted-to-observed-via-sdsr.md) | **ANALYTICS Domain Promoted to OBSERVED via SDSR** | AURORA L2 / Capability Observation | **✅ COMPLETE** | 2026-01-15 |
+| [PIN-429](PIN-429-hisar-schema-split-and-activity-domain-sdsr-verification.md) | **HISAR Schema Split and Activity Domain SDSR Verification** | HISAR / Schema Architecture | **✅ COMPLETE** | 2026-01-15 |
+| [PIN-430](PIN-430-incidents-domain-hisar-pipeline---partial-verification.md) | **INCIDENTS Domain HISAR Pipeline - Partial Verification** | HISAR / Domain Verification | **🏗️ IN_PROGRESS** | 2026-01-15 |
+| [PIN-432](PIN-432-logs-domain-hisar-verification.md) | **Logs Domain HISAR Verification** | HISAR / Schema Architecture | **✅ COMPLETE** | 2026-01-15 |
+| [PIN-433](PIN-433-activity-domain-sdsr-gap-semantic-invariants-missing.md) | **ACTIVITY Domain SDSR Gap — Semantic Invariants Missing** | HISAR / SDSR Verification | **🏗️ ACTIVE** | 2026-01-15 |
+| [PIN-434](PIN-434-l21-panel-adapter-layer-implementation.md) | **L2.1 Panel Adapter Layer Implementation** | Architecture / Panel Adapter | **✅ COMPLETE** | 2026-01-16 |
+| [PIN-435](PIN-435-panel-structure-pipeline---phase-1-2-complete.md) | **Panel Structure Pipeline - Phase 1 & 2 Complete** | Architecture / Pipeline | **✅ COMPLETE** | 2026-01-16 |
+| [PIN-436](PIN-436-guardrail-violations-baseline.md) | **Guardrail Violations Baseline** | Governance / Architecture Enforcement | **ACTIVE** | 2026-01-16 |
 
 ---
 
@@ -1189,6 +1195,13 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-16 | **PIN-436 Guardrail Violations Baseline** - Captured 41 violations across 10 guardrails. 17 enforcement scripts + 3-layer hook system installed. |
+| 2026-01-16 | **PIN-435 Panel Structure Pipeline - Phase 1 & 2 Complete** - Created via memory_trail. |
+| 2026-01-16 | **PIN-434 L2.1 Panel Adapter Layer Implementation** - Created via memory_trail. |
+| 2026-01-15 | **PIN-433 ACTIVITY Domain SDSR Gap — Semantic Invariants Missing** - Created via memory_trail. |
+| 2026-01-15 | **PIN-432 Logs Domain HISAR Verification** - Completed HISAR pipeline for Logs domain (15 panels, 12 BOUND). Fixed PDG-003 allowlist support. |
+| 2026-01-15 | **PIN-430 INCIDENTS Domain HISAR Pipeline - Partial Verification** - Created via memory_trail. |
+| 2026-01-15 | **PIN-429 HISAR Schema Split and Activity Domain SDSR Verification** - Created via memory_trail. |
 | 2026-01-15 | **PIN-428 ANALYTICS Domain Promoted to OBSERVED via SDSR** - Created via memory_trail. |
 | 2026-01-15 | **PIN-427 HISAR Backend Gaps Tracker** - Consolidated tracker for all HISAR/SDSR backend gaps. Activity domain: ACT-LLM-COMP-O1 blocked on PROVENANCE_MISSING. Tracks gap taxonomy, resolution process, HIL v1 standard. |
 | 2026-01-15 | **PIN-426 HISAR OVR-SUM-CI-O1 Cost Summary** - BLOCKED. SDSR revealed AUTH_FAILURE (401) for `/cost/summary` endpoint. Documented Invariant Immutability Law: SDSR reveals gaps, does not hide them. Backend fix required. |
