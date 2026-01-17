@@ -272,6 +272,13 @@ async def list_policy_rules(
             pattern="^(MANUAL|SYSTEM|LEARNED)$",
         ),
     ] = None,
+    rule_type: Annotated[
+        Optional[str],
+        Query(
+            description="Filter by rule type: SYSTEM, SAFETY, ETHICAL, TEMPORAL (PIN-411 Gap Closure)",
+            pattern="^(SYSTEM|SAFETY|ETHICAL|TEMPORAL)$",
+        ),
+    ] = None,
     created_after: Annotated[Optional[datetime], Query(description="Filter by created_at >= value")] = None,
     created_before: Annotated[Optional[datetime], Query(description="Filter by created_at <= value")] = None,
     # Pagination
@@ -350,6 +357,10 @@ async def list_policy_rules(
             stmt = stmt.where(PolicyRule.source == source)
             filters_applied["source"] = source
 
+        if rule_type is not None:
+            stmt = stmt.where(PolicyRule.rule_type == rule_type)
+            filters_applied["rule_type"] = rule_type
+
         if created_after is not None:
             stmt = stmt.where(PolicyRule.created_at >= created_after)
             filters_applied["created_after"] = created_after.isoformat()
@@ -370,6 +381,8 @@ async def list_policy_rules(
             count_stmt = count_stmt.where(PolicyRule.scope == scope)
         if source:
             count_stmt = count_stmt.where(PolicyRule.source == source)
+        if rule_type:
+            count_stmt = count_stmt.where(PolicyRule.rule_type == rule_type)
         if created_after:
             count_stmt = count_stmt.where(PolicyRule.created_at >= created_after)
         if created_before:
@@ -553,10 +566,16 @@ async def list_limits(
             pattern="^(BLOCK|WARN|REJECT|QUEUE|DEGRADE|ALERT)$",
         ),
     ] = None,
+    limit_type: Annotated[
+        Optional[str],
+        Query(
+            description="Filter by limit_type. Supports prefix match, e.g. RUNS_*, TOKENS_*, RISK_CEILING, COOLDOWN (PIN-411 Gap Closure)",
+        ),
+    ] = None,
     created_after: Annotated[Optional[datetime], Query(description="Filter by created_at >= value")] = None,
     created_before: Annotated[Optional[datetime], Query(description="Filter by created_at <= value")] = None,
     # Pagination
-    limit: Annotated[int, Query(ge=1, le=100, description="Max limits to return")] = 20,
+    max_limit: Annotated[int, Query(ge=1, le=100, alias="limit", description="Max limits to return")] = 20,
     offset: Annotated[int, Query(ge=0, description="Number of limits to skip")] = 0,
     # Dependencies
     session: AsyncSession = Depends(get_async_session_dep),
@@ -630,6 +649,15 @@ async def list_limits(
             stmt = stmt.where(Limit.enforcement == enforcement)
             filters_applied["enforcement"] = enforcement
 
+        if limit_type is not None:
+            # Support prefix match (e.g., RUNS_*, TOKENS_*)
+            if limit_type.endswith("*"):
+                prefix = limit_type[:-1]  # Remove the *
+                stmt = stmt.where(Limit.limit_type.startswith(prefix))
+            else:
+                stmt = stmt.where(Limit.limit_type == limit_type)
+            filters_applied["limit_type"] = limit_type
+
         if created_after is not None:
             stmt = stmt.where(Limit.created_at >= created_after)
             filters_applied["created_after"] = created_after.isoformat()
@@ -649,6 +677,12 @@ async def list_limits(
             count_stmt = count_stmt.where(Limit.scope == scope)
         if enforcement:
             count_stmt = count_stmt.where(Limit.enforcement == enforcement)
+        if limit_type:
+            if limit_type.endswith("*"):
+                prefix = limit_type[:-1]
+                count_stmt = count_stmt.where(Limit.limit_type.startswith(prefix))
+            else:
+                count_stmt = count_stmt.where(Limit.limit_type == limit_type)
         if created_after:
             count_stmt = count_stmt.where(Limit.created_at >= created_after)
         if created_before:
@@ -658,7 +692,7 @@ async def list_limits(
         total = count_result.scalar() or 0
 
         # Apply pagination
-        stmt = stmt.limit(limit).offset(offset)
+        stmt = stmt.limit(max_limit).offset(offset)
         result = await session.execute(stmt)
         rows = [dict(row._mapping) for row in result.all()]
 
@@ -839,3 +873,779 @@ async def get_limit_evidence(
         "affected_runs": [],
         "usage_history": [],
     }
+
+
+# =============================================================================
+# Lessons Learned - Customer Facade (L2)
+# Reference: PIN-411, POLICIES_DOMAIN_AUDIT.md Section 11
+# =============================================================================
+
+
+class LessonSummaryResponse(BaseModel):
+    """O2 Result Shape for lessons."""
+
+    id: str
+    lesson_type: str
+    severity: Optional[str]
+    title: str
+    status: str
+    source_event_type: str
+    created_at: datetime
+    has_proposed_action: bool
+
+
+class LessonsListResponse(BaseModel):
+    """GET /lessons response (O2)."""
+
+    items: List[LessonSummaryResponse]
+    total: int
+    has_more: bool
+    filters_applied: dict[str, Any]
+
+
+class LessonDetailResponse(BaseModel):
+    """GET /lessons/{id} response (O3)."""
+
+    id: str
+    lesson_type: str
+    severity: Optional[str]
+    source_event_id: Optional[str]
+    source_event_type: str
+    source_run_id: Optional[str]
+    title: str
+    description: str
+    proposed_action: Optional[str]
+    detected_pattern: Optional[dict[str, Any]]
+    status: str
+    draft_proposal_id: Optional[str]
+    created_at: str
+    converted_at: Optional[str]
+    deferred_until: Optional[str]
+
+
+class LessonStatsResponse(BaseModel):
+    """Lesson statistics response."""
+
+    total: int
+    by_type: dict[str, int]
+    by_status: dict[str, int]
+
+
+@router.get(
+    "/lessons",
+    response_model=LessonsListResponse,
+    summary="List lessons learned (O2)",
+    description="""
+    Returns paginated list of lessons learned.
+    Tenant isolation enforced via auth_context.
+    """,
+)
+async def list_lessons(
+    request: Request,
+    # Optional filters
+    lesson_type: Annotated[
+        Optional[str],
+        Query(
+            description="Filter by type: failure, near_threshold, critical_success",
+            pattern="^(failure|near_threshold|critical_success)$",
+        ),
+    ] = None,
+    status: Annotated[
+        Optional[str],
+        Query(
+            description="Filter by status: pending, converted_to_draft, deferred, dismissed",
+            pattern="^(pending|converted_to_draft|deferred|dismissed)$",
+        ),
+    ] = None,
+    severity: Annotated[
+        Optional[str],
+        Query(
+            description="Filter by severity: CRITICAL, HIGH, MEDIUM, LOW",
+            pattern="^(CRITICAL|HIGH|MEDIUM|LOW)$",
+        ),
+    ] = None,
+    # Pagination
+    limit: Annotated[int, Query(ge=1, le=100, description="Max lessons to return")] = 20,
+    offset: Annotated[int, Query(ge=0, description="Number of lessons to skip")] = 0,
+    # Dependencies
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> LessonsListResponse:
+    """List lessons learned (O2). READ-ONLY customer facade."""
+    from app.services.lessons_learned_engine import get_lessons_learned_engine
+
+    tenant_id = get_tenant_id_from_auth(request)
+    filters_applied: dict[str, Any] = {"tenant_id": tenant_id}
+
+    if lesson_type:
+        filters_applied["lesson_type"] = lesson_type
+    if status:
+        filters_applied["status"] = status
+    if severity:
+        filters_applied["severity"] = severity
+
+    engine = get_lessons_learned_engine()
+    lessons = engine.list_lessons(
+        tenant_id=tenant_id,
+        lesson_type=lesson_type,
+        status=status,
+        severity=severity,
+        limit=limit,
+        offset=offset,
+    )
+
+    items = [
+        LessonSummaryResponse(
+            id=lesson["id"],
+            lesson_type=lesson["lesson_type"],
+            severity=lesson["severity"],
+            title=lesson["title"],
+            status=lesson["status"],
+            source_event_type=lesson["source_event_type"],
+            created_at=datetime.fromisoformat(lesson["created_at"]) if lesson["created_at"] else datetime.utcnow(),
+            has_proposed_action=lesson["has_proposed_action"],
+        )
+        for lesson in lessons
+    ]
+
+    return LessonsListResponse(
+        items=items,
+        total=len(items),
+        has_more=len(items) == limit,
+        filters_applied=filters_applied,
+    )
+
+
+@router.get(
+    "/lessons/stats",
+    response_model=LessonStatsResponse,
+    summary="Get lesson statistics (O1)",
+    description="Returns lesson counts by type and status.",
+)
+async def get_lesson_stats(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> LessonStatsResponse:
+    """Get lesson statistics (O1). READ-ONLY customer facade."""
+    from app.services.lessons_learned_engine import get_lessons_learned_engine
+
+    tenant_id = get_tenant_id_from_auth(request)
+    engine = get_lessons_learned_engine()
+    stats = engine.get_lesson_stats(tenant_id=tenant_id)
+
+    return LessonStatsResponse(
+        total=stats.get("total", 0),
+        by_type=stats.get("by_type", {}),
+        by_status=stats.get("by_status", {}),
+    )
+
+
+@router.get(
+    "/lessons/{lesson_id}",
+    response_model=LessonDetailResponse,
+    summary="Get lesson detail (O3)",
+    description="Returns detailed information about a specific lesson.",
+)
+async def get_lesson_detail(
+    request: Request,
+    lesson_id: str,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> LessonDetailResponse:
+    """Get lesson detail (O3). READ-ONLY customer facade."""
+    from uuid import UUID
+    from app.services.lessons_learned_engine import get_lessons_learned_engine
+
+    tenant_id = get_tenant_id_from_auth(request)
+    engine = get_lessons_learned_engine()
+    lesson = engine.get_lesson(lesson_id=UUID(lesson_id), tenant_id=tenant_id)
+
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    return LessonDetailResponse(
+        id=lesson["id"],
+        lesson_type=lesson["lesson_type"],
+        severity=lesson["severity"],
+        source_event_id=lesson["source_event_id"],
+        source_event_type=lesson["source_event_type"],
+        source_run_id=lesson["source_run_id"],
+        title=lesson["title"],
+        description=lesson["description"],
+        proposed_action=lesson["proposed_action"],
+        detected_pattern=lesson["detected_pattern"],
+        status=lesson["status"],
+        draft_proposal_id=lesson["draft_proposal_id"],
+        created_at=lesson["created_at"],
+        converted_at=lesson["converted_at"],
+        deferred_until=lesson["deferred_until"],
+    )
+
+
+# =============================================================================
+# Policy State - ACT-O4 (PIN-411 Gap Closure)
+# =============================================================================
+
+
+class PolicyStateResponse(BaseModel):
+    """Policy layer state summary (ACT-O4)."""
+
+    total_policies: int
+    active_policies: int
+    drafts_pending_review: int
+    conflicts_detected: int
+    violations_24h: int
+    lessons_pending_action: int
+    last_updated: datetime
+
+
+@router.get(
+    "/state",
+    response_model=PolicyStateResponse,
+    summary="Get policy layer state (ACT-O4)",
+    description="""
+    Returns synthesized snapshot of the governance system.
+    Shows what is currently being enforced.
+    """,
+)
+async def get_policy_state(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> PolicyStateResponse:
+    """Get policy layer state (ACT-O4). Customer facade."""
+    from app.policy.engine import get_policy_engine
+    from app.services.lessons_learned_engine import get_lessons_learned_engine
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    try:
+        # Get state from policy engine
+        engine = get_policy_engine()
+        state = await engine.get_state(session)
+
+        # Get pending lessons count
+        lessons_engine = get_lessons_learned_engine()
+        lessons_stats = lessons_engine.get_lesson_stats(tenant_id=tenant_id)
+        pending_lessons = lessons_stats.get("by_status", {}).get("pending", 0)
+
+        # Get drafts pending (from policy proposals)
+        drafts_count = 0
+        try:
+            from app.models.policy import PolicyProposal
+            drafts_result = await session.execute(
+                select(func.count(PolicyProposal.id)).where(
+                    PolicyProposal.tenant_id == tenant_id,
+                    PolicyProposal.status == "pending",
+                )
+            )
+            drafts_count = drafts_result.scalar() or 0
+        except Exception:
+            pass
+
+        # Get conflicts count
+        conflicts_count = 0
+        try:
+            conflicts = await engine.get_policy_conflicts(session, include_resolved=False)
+            conflicts_count = len(conflicts)
+        except Exception:
+            pass
+
+        return PolicyStateResponse(
+            total_policies=state.total_policies,
+            active_policies=state.active_policies,
+            drafts_pending_review=drafts_count,
+            conflicts_detected=conflicts_count,
+            violations_24h=state.total_violations_today,
+            lessons_pending_action=pending_lessons,
+            last_updated=datetime.utcnow(),
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "state_query_failed", "message": str(e)},
+        )
+
+
+# =============================================================================
+# Policy Metrics - ACT-O5 (PIN-411 Gap Closure)
+# =============================================================================
+
+
+class PolicyMetricsResponse(BaseModel):
+    """Policy enforcement metrics (ACT-O5)."""
+
+    total_evaluations: int
+    total_blocks: int
+    total_allows: int
+    block_rate: float
+    avg_evaluation_ms: float
+    violations_by_type: dict[str, int]
+    evaluations_by_action: dict[str, int]
+    window_hours: int
+
+
+@router.get(
+    "/metrics",
+    response_model=PolicyMetricsResponse,
+    summary="Get policy metrics (ACT-O5)",
+    description="""
+    Returns policy enforcement effectiveness metrics.
+    Shows how policies are performing.
+    """,
+)
+async def get_policy_metrics(
+    request: Request,
+    hours: Annotated[int, Query(ge=1, le=720, description="Time window in hours")] = 24,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> PolicyMetricsResponse:
+    """Get policy metrics (ACT-O5). Customer facade."""
+    from app.policy.engine import get_policy_engine
+
+    _ = get_tenant_id_from_auth(request)  # Enforce auth
+
+    try:
+        engine = get_policy_engine()
+        metrics = await engine.get_metrics(session, hours=hours)
+
+        return PolicyMetricsResponse(
+            total_evaluations=metrics.get("total_evaluations", 0),
+            total_blocks=metrics.get("total_blocks", 0),
+            total_allows=metrics.get("total_allows", 0),
+            block_rate=metrics.get("block_rate", 0.0),
+            avg_evaluation_ms=metrics.get("avg_evaluation_ms", 0.0),
+            violations_by_type=metrics.get("violations_by_type", {}),
+            evaluations_by_action=metrics.get("evaluations_by_action", {}),
+            window_hours=hours,
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "metrics_query_failed", "message": str(e)},
+        )
+
+
+# =============================================================================
+# Policy Conflicts - DFT-O4 (PIN-411 Gap Closure)
+# =============================================================================
+
+
+class PolicyConflictResponse(BaseModel):
+    """Policy conflict summary."""
+
+    id: str
+    policy_a: str
+    policy_b: str
+    conflict_type: str
+    severity: str
+    description: str
+    affected_action_types: List[str]
+    resolved: bool
+    resolution: Optional[str]
+    detected_at: datetime
+
+
+class ConflictsListResponse(BaseModel):
+    """GET /conflicts response (DFT-O4)."""
+
+    items: List[PolicyConflictResponse]
+    total: int
+    unresolved_count: int
+
+
+@router.get(
+    "/conflicts",
+    response_model=ConflictsListResponse,
+    summary="List policy conflicts (DFT-O4)",
+    description="""
+    Returns detected policy conflicts.
+    Conflicts occur when policies have contradictory rules.
+    """,
+)
+async def list_policy_conflicts(
+    request: Request,
+    include_resolved: Annotated[bool, Query(description="Include resolved conflicts")] = False,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> ConflictsListResponse:
+    """List policy conflicts (DFT-O4). Customer facade."""
+    from app.policy.engine import get_policy_engine
+
+    _ = get_tenant_id_from_auth(request)  # Enforce auth
+
+    try:
+        engine = get_policy_engine()
+        conflicts = await engine.get_policy_conflicts(session, include_resolved=include_resolved)
+
+        items = [
+            PolicyConflictResponse(
+                id=c.id,
+                policy_a=c.policy_a,
+                policy_b=c.policy_b,
+                conflict_type=c.conflict_type,
+                severity=c.severity,
+                description=c.description,
+                affected_action_types=c.affected_action_types or [],
+                resolved=c.resolved,
+                resolution=c.resolution,
+                detected_at=c.detected_at,
+            )
+            for c in conflicts
+        ]
+
+        unresolved = sum(1 for c in conflicts if not c.resolved)
+
+        return ConflictsListResponse(
+            items=items,
+            total=len(items),
+            unresolved_count=unresolved,
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "conflicts_query_failed", "message": str(e)},
+        )
+
+
+# =============================================================================
+# Policy Dependencies - DFT-O5 (PIN-411 Gap Closure)
+# =============================================================================
+
+
+class PolicyDependencyEdge(BaseModel):
+    """A dependency relationship between policies."""
+
+    source_policy: str
+    target_policy: str
+    dependency_type: str
+    resolution_strategy: Optional[str]
+
+
+class DependencyGraphResponse(BaseModel):
+    """GET /dependencies response (DFT-O5)."""
+
+    nodes_count: int
+    edges_count: int
+    conflicts_count: int
+    dependencies: List[PolicyDependencyEdge]
+    computed_at: datetime
+
+
+@router.get(
+    "/dependencies",
+    response_model=DependencyGraphResponse,
+    summary="Get policy dependency graph (DFT-O5)",
+    description="""
+    Returns the policy dependency graph.
+    Shows relationships between policies.
+    """,
+)
+async def get_policy_dependencies(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> DependencyGraphResponse:
+    """Get policy dependency graph (DFT-O5). Customer facade."""
+    from app.policy.engine import get_policy_engine
+
+    _ = get_tenant_id_from_auth(request)  # Enforce auth
+
+    try:
+        engine = get_policy_engine()
+        graph = await engine.get_dependency_graph(session)
+
+        dependencies = [
+            PolicyDependencyEdge(
+                source_policy=e.source_policy,
+                target_policy=e.target_policy,
+                dependency_type=e.dependency_type,
+                resolution_strategy=e.resolution_strategy,
+            )
+            for e in graph.edges
+        ]
+
+        return DependencyGraphResponse(
+            nodes_count=len(graph.nodes),
+            edges_count=len(graph.edges),
+            conflicts_count=len([c for c in graph.conflicts if not c.resolved]),
+            dependencies=dependencies,
+            computed_at=graph.computed_at,
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "dependencies_query_failed", "message": str(e)},
+        )
+
+
+# =============================================================================
+# Policy Violations - VIO-O1 (PIN-411 Gap Closure - Unified Facade)
+# =============================================================================
+
+
+class PolicyViolationSummary(BaseModel):
+    """Policy violation summary (VIO-O1)."""
+
+    id: str
+    policy_id: Optional[str]
+    policy_name: Optional[str]
+    violation_type: str  # cost, quota, rate, temporal, safety, ethical
+    severity: float
+    source: str  # guard, sim, runtime
+    agent_id: Optional[str]
+    description: Optional[str]
+    occurred_at: datetime
+    is_synthetic: bool = False
+
+
+class ViolationsListResponse(BaseModel):
+    """GET /violations response (VIO-O1)."""
+
+    items: List[PolicyViolationSummary]
+    total: int
+    has_more: bool
+    filters_applied: dict[str, Any]
+
+
+@router.get(
+    "/violations",
+    response_model=ViolationsListResponse,
+    summary="List policy violations (VIO-O1)",
+    description="""
+    Returns unified list of policy violations.
+    A violation is a normalized governance fact, regardless of origin.
+    """,
+)
+async def list_policy_violations(
+    request: Request,
+    # Filters
+    violation_type: Annotated[
+        Optional[str],
+        Query(
+            description="Filter by type: cost, quota, rate, temporal, safety, ethical",
+            pattern="^(cost|quota|rate|temporal|safety|ethical)$",
+        ),
+    ] = None,
+    source: Annotated[
+        Optional[str],
+        Query(
+            description="Filter by source: guard, sim, runtime, cost (PIN-411 Gap Closure)",
+            pattern="^(guard|sim|runtime|cost)$",
+        ),
+    ] = None,
+    severity_min: Annotated[
+        Optional[float],
+        Query(ge=0.0, le=1.0, description="Minimum severity (0.0-1.0)"),
+    ] = None,
+    violation_kind: Annotated[
+        Optional[str],
+        Query(
+            description="Filter by violation kind: STANDARD, ANOMALY, DIVERGENCE (PIN-411 Gap Closure)",
+            pattern="^(STANDARD|ANOMALY|DIVERGENCE)$",
+        ),
+    ] = None,
+    hours: Annotated[int, Query(ge=1, le=720, description="Time window in hours")] = 24,
+    include_synthetic: Annotated[bool, Query(description="Include synthetic/simulated")] = False,
+    # Pagination
+    limit: Annotated[int, Query(ge=1, le=100, description="Max items")] = 50,
+    offset: Annotated[int, Query(ge=0, description="Offset")] = 0,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> ViolationsListResponse:
+    """List policy violations (VIO-O1). Unified customer facade."""
+    from app.policy.engine import get_policy_engine
+
+    tenant_id = get_tenant_id_from_auth(request)
+    filters_applied: dict[str, Any] = {"tenant_id": tenant_id, "hours": hours}
+
+    if violation_type:
+        filters_applied["violation_type"] = violation_type
+    if source:
+        filters_applied["source"] = source
+    if severity_min:
+        filters_applied["severity_min"] = severity_min
+    if violation_kind:
+        filters_applied["violation_kind"] = violation_kind
+
+    try:
+        engine = get_policy_engine()
+
+        # Convert string violation_type to ViolationType enum if provided
+        from app.policy.models import ViolationType as ViolationTypeEnum
+        violation_type_enum = None
+        if violation_type:
+            # Map simplified types to enum values
+            type_mapping = {
+                "cost": ViolationTypeEnum.RISK_CEILING_BREACH,
+                "quota": ViolationTypeEnum.TEMPORAL_LIMIT_EXCEEDED,
+                "rate": ViolationTypeEnum.TEMPORAL_LIMIT_EXCEEDED,
+                "temporal": ViolationTypeEnum.TEMPORAL_LIMIT_EXCEEDED,
+                "safety": ViolationTypeEnum.SAFETY_RULE_TRIGGERED,
+                "ethical": ViolationTypeEnum.ETHICAL_VIOLATION,
+            }
+            violation_type_enum = type_mapping.get(violation_type)
+
+        violations = await engine.get_violations(
+            session,
+            tenant_id=tenant_id,
+            violation_type=violation_type_enum,
+            severity_min=severity_min,
+            since=datetime.utcnow() - timedelta(hours=hours),
+            limit=limit + 1,  # Fetch one extra to check has_more
+        )
+
+        # Filter by source if specified
+        if source:
+            violations = [v for v in violations if getattr(v, "source", "runtime") == source]
+
+        # Filter by violation_kind if specified (PIN-411 Gap Closure)
+        if violation_kind:
+            violations = [v for v in violations if getattr(v, "violation_kind", "STANDARD") == violation_kind]
+
+        # Filter synthetic
+        if not include_synthetic:
+            violations = [v for v in violations if not getattr(v, "is_synthetic", False)]
+
+        # Check has_more
+        has_more = len(violations) > limit
+        violations = violations[:limit]
+
+        items = [
+            PolicyViolationSummary(
+                id=str(v.id),
+                policy_id=getattr(v, "policy_id", None),
+                policy_name=getattr(v, "policy_name", None),
+                violation_type=str(v.violation_type.value) if hasattr(v.violation_type, "value") else str(v.violation_type),
+                severity=v.severity,
+                source=getattr(v, "source", "runtime"),
+                agent_id=v.agent_id,
+                description=getattr(v, "description", None),
+                occurred_at=v.detected_at,
+                is_synthetic=getattr(v, "is_synthetic", False),
+            )
+            for v in violations
+        ]
+
+        return ViolationsListResponse(
+            items=items,
+            total=len(items),
+            has_more=has_more,
+            filters_applied=filters_applied,
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "violations_query_failed", "message": str(e)},
+        )
+
+
+# =============================================================================
+# Policy Budgets - THR-O2 (PIN-411 Gap Closure)
+# =============================================================================
+
+
+class BudgetDefinitionSummary(BaseModel):
+    """Budget definition summary (THR-O2)."""
+
+    id: str
+    name: str
+    scope: str  # GLOBAL, TENANT, PROJECT, AGENT
+    max_value: Decimal
+    reset_period: Optional[str]  # DAILY, WEEKLY, MONTHLY, NONE
+    enforcement: str  # BLOCK, WARN
+    status: str  # ACTIVE, DISABLED
+    current_usage: Optional[Decimal] = None
+    utilization_percent: Optional[float] = None
+
+
+class BudgetsListResponse(BaseModel):
+    """GET /budgets response (THR-O2)."""
+
+    items: List[BudgetDefinitionSummary]
+    total: int
+    filters_applied: dict[str, Any]
+
+
+@router.get(
+    "/budgets",
+    response_model=BudgetsListResponse,
+    summary="List budget definitions (THR-O2)",
+    description="""
+    Returns budget definitions (enforcement limits).
+    Budgets define spending ceilings, not analytics.
+    """,
+)
+async def list_budget_definitions(
+    request: Request,
+    scope: Annotated[
+        Optional[str],
+        Query(
+            description="Filter by scope: GLOBAL, TENANT, PROJECT, AGENT",
+            pattern="^(GLOBAL|TENANT|PROJECT|AGENT)$",
+        ),
+    ] = None,
+    status: Annotated[
+        str,
+        Query(
+            description="Filter by status: ACTIVE, DISABLED",
+            pattern="^(ACTIVE|DISABLED)$",
+        ),
+    ] = "ACTIVE",
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> BudgetsListResponse:
+    """List budget definitions (THR-O2). Customer facade."""
+
+    tenant_id = get_tenant_id_from_auth(request)
+    filters_applied: dict[str, Any] = {"tenant_id": tenant_id, "status": status}
+
+    if scope:
+        filters_applied["scope"] = scope
+
+    try:
+        # Query limits where category is BUDGET
+        stmt = (
+            select(Limit)
+            .where(
+                and_(
+                    Limit.tenant_id == tenant_id,
+                    Limit.limit_category == "BUDGET",
+                    Limit.status == status,
+                )
+            )
+            .order_by(Limit.created_at.desc())
+        )
+
+        if scope:
+            stmt = stmt.where(Limit.scope == scope)
+
+        stmt = stmt.limit(limit).offset(offset)
+        result = await session.execute(stmt)
+        limits = result.scalars().all()
+
+        items = [
+            BudgetDefinitionSummary(
+                id=str(lim.id),
+                name=lim.name,
+                scope=lim.scope,
+                max_value=lim.max_value,
+                reset_period=lim.reset_period,
+                enforcement=lim.enforcement,
+                status=lim.status,
+                current_usage=None,  # Could add usage query
+                utilization_percent=None,
+            )
+            for lim in limits
+        ]
+
+        return BudgetsListResponse(
+            items=items,
+            total=len(items),
+            filters_applied=filters_applied,
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "budgets_query_failed", "message": str(e)},
+        )

@@ -92,6 +92,15 @@ class PolicySource(str, Enum):
     LEARNED = "LEARNED"
 
 
+class RuleType(str, Enum):
+    """Policy rule semantic type (PIN-411 Gap Closure)."""
+
+    SYSTEM = "SYSTEM"  # System-generated operational rules
+    SAFETY = "SAFETY"  # Safety constraint rules
+    ETHICAL = "ETHICAL"  # Ethical guideline rules
+    TEMPORAL = "TEMPORAL"  # Time-bound rules (expiry, scheduling)
+
+
 class EnforcementAction(str, Enum):
     """Actions taken when a rule triggers."""
 
@@ -192,6 +201,9 @@ class PolicyRule(SQLModel, table=True):
     source: str = Field(
         max_length=16, default=PolicySource.MANUAL.value
     )  # MANUAL, SYSTEM, LEARNED
+    rule_type: str = Field(
+        max_length=16, default=RuleType.SYSTEM.value
+    )  # SYSTEM, SAFETY, ETHICAL, TEMPORAL (PIN-411 Gap Closure)
     source_proposal_id: Optional[str] = None
     parent_rule_id: Optional[str] = Field(
         default=None, foreign_key="policy_rules.id"
