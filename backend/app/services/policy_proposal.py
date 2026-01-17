@@ -28,6 +28,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_async_session
+from app.models.audit_ledger import ActorType
 from app.models.feedback import PatternFeedback
 from app.models.policy import (
     PolicyApprovalRequest,
@@ -35,8 +36,45 @@ from app.models.policy import (
     PolicyProposalCreate,
     PolicyVersion,
 )
+from app.services.logs.audit_ledger_service_async import AuditLedgerServiceAsync
+from app.services.policy_graph_engine import (
+    ConflictSeverity,
+    get_conflict_engine,
+    get_dependency_engine,
+)
 
 logger = logging.getLogger("nova.services.policy_proposal")
+
+
+# =============================================================================
+# Governance Invariant Exceptions (PIN-411)
+# =============================================================================
+
+
+class PolicyActivationBlockedError(Exception):
+    """
+    GOV-POL-001: Raised when policy activation is blocked due to BLOCKING conflicts.
+
+    This exception is CONSTITUTIONAL - it cannot be caught and ignored.
+    The caller must surface the conflict to the human reviewer.
+    """
+
+    def __init__(self, message: str, conflicts: list[dict]):
+        super().__init__(message)
+        self.conflicts = conflicts
+
+
+class PolicyDeletionBlockedError(Exception):
+    """
+    GOV-POL-002: Raised when policy deletion is blocked due to dependents.
+
+    This exception is CONSTITUTIONAL - it cannot be caught and ignored.
+    The caller must resolve dependencies before deletion.
+    """
+
+    def __init__(self, message: str, dependents: list[str]):
+        super().__init__(message)
+        self.dependents = dependents
 
 # Configuration for proposal thresholds
 FEEDBACK_THRESHOLD_FOR_PROPOSAL = 3  # Minimum feedback entries to propose
@@ -275,6 +313,11 @@ async def review_policy_proposal(
     PB-S4: This is a HUMAN action. The system cannot auto-approve.
     - Approval creates a new version and sets effective_from
     - Rejection marks the proposal as rejected (preserved for audit)
+
+    TRANSACTION CONTRACT:
+    - State change and audit event commit together (atomic)
+    - If audit emit fails, proposal review rolls back
+    - No partial state is possible
     """
     # Fetch the proposal
     result = await session.execute(select(PolicyProposal).where(PolicyProposal.id == proposal_id))
@@ -286,79 +329,137 @@ async def review_policy_proposal(
     if proposal.status != "draft":
         raise ValueError(f"Proposal {proposal_id} is not in draft status (current: {proposal.status})")
 
-    # Update review metadata
-    proposal.reviewed_at = datetime.utcnow()
-    proposal.reviewed_by = review.reviewed_by
-    proposal.review_notes = review.review_notes
+    # Create audit service for this session
+    audit = AuditLedgerServiceAsync(session)
 
-    if review.action == "approve":
-        proposal.status = "approved"
-        proposal.effective_from = review.effective_from or datetime.utcnow()
+    # ATOMIC BLOCK: state change + audit must succeed together
+    async with session.begin():
+        # Update review metadata
+        proposal.reviewed_at = datetime.utcnow()
+        proposal.reviewed_by = review.reviewed_by
+        proposal.review_notes = review.review_notes
 
-        # Create a version snapshot
-        # Count existing versions for this proposal
-        version_count_result = await session.execute(
-            select(func.count()).select_from(PolicyVersion).where(PolicyVersion.proposal_id == proposal_id)
-        )
-        version_count = version_count_result.scalar() or 0
+        if review.action == "approve":
+            # =====================================================================
+            # GOV-POL-001: Conflict detection is mandatory pre-activation
+            # =====================================================================
+            # Check for BLOCKING conflicts before allowing activation.
+            # This is CONSTITUTIONAL - cannot be bypassed.
+            # =====================================================================
+            conflict_engine = get_conflict_engine(str(proposal.tenant_id))
+            conflict_result = await conflict_engine.detect_conflicts(
+                session,
+                severity_filter=ConflictSeverity.BLOCKING,
+            )
 
-        version = PolicyVersion(
-            proposal_id=proposal.id,
-            version=version_count + 1,
-            rule_snapshot=proposal.proposed_rule,
-            created_at=datetime.utcnow(),
-            created_by=review.reviewed_by,
-            change_reason=f"Approved: {review.review_notes or 'No notes'}",
-        )
-        session.add(version)
+            if conflict_result.unresolved_count > 0:
+                blocking_conflicts = [c.to_dict() for c in conflict_result.conflicts]
+                logger.warning(
+                    "GOV-POL-001_ACTIVATION_BLOCKED",
+                    extra={
+                        "proposal_id": str(proposal.id),
+                        "blocking_conflicts": len(blocking_conflicts),
+                        "conflicts": blocking_conflicts,
+                    },
+                )
+                raise PolicyActivationBlockedError(
+                    f"Cannot activate: {conflict_result.unresolved_count} BLOCKING conflicts exist. "
+                    f"Resolve conflicts before approval.",
+                    conflicts=blocking_conflicts,
+                )
 
-        # =====================================================================
-        # POST-APPROVAL HOOK: Create policy_rule from approved proposal
-        # =====================================================================
-        # This bridges the gap between policy_proposals and policy_rules.
-        # When a proposal is approved, it becomes an enforceable rule.
-        #
-        # Contract:
-        # - Exactly 1 policy_rule per approved proposal (idempotent)
-        # - Rule is_active=true, mode='active' (enforcement ready)
-        # - No auto-approval logic - this only runs on human action
-        # =====================================================================
-        rule_id = await _create_policy_rule_from_proposal(
-            session=session,
-            proposal=proposal,
-            version_id=version.id if hasattr(version, 'id') else None,
-            approved_by=review.reviewed_by,
-        )
+            logger.info(
+                "GOV-POL-001_CONFLICT_CHECK_PASSED",
+                extra={
+                    "proposal_id": str(proposal.id),
+                    "blocking_conflicts": 0,
+                },
+            )
 
-        logger.info(
-            "policy_proposal_approved",
-            extra={
-                "proposal_id": str(proposal.id),
-                "reviewed_by": review.reviewed_by,
-                "effective_from": proposal.effective_from.isoformat(),
-                "version": version_count + 1,
-                "policy_rule_id": rule_id,
-            },
-        )
+            proposal.status = "approved"
+            proposal.effective_from = review.effective_from or datetime.utcnow()
 
-    elif review.action == "reject":
-        proposal.status = "rejected"
-        # No version created for rejections
-        # Proposal preserved for audit trail
+            # Create a version snapshot
+            # Count existing versions for this proposal
+            version_count_result = await session.execute(
+                select(func.count()).select_from(PolicyVersion).where(PolicyVersion.proposal_id == proposal_id)
+            )
+            version_count = version_count_result.scalar() or 0
 
-        logger.info(
-            "policy_proposal_rejected",
-            extra={
-                "proposal_id": str(proposal.id),
-                "reviewed_by": review.reviewed_by,
-                "reason": review.review_notes,
-            },
-        )
+            version = PolicyVersion(
+                proposal_id=proposal.id,
+                version=version_count + 1,
+                rule_snapshot=proposal.proposed_rule,
+                created_at=datetime.utcnow(),
+                created_by=review.reviewed_by,
+                change_reason=f"Approved: {review.review_notes or 'No notes'}",
+            )
+            session.add(version)
 
-    else:
-        raise ValueError(f"Invalid action: {review.action}. Must be 'approve' or 'reject'.")
+            # =====================================================================
+            # POST-APPROVAL HOOK: Create policy_rule from approved proposal
+            # =====================================================================
+            # This bridges the gap between policy_proposals and policy_rules.
+            # When a proposal is approved, it becomes an enforceable rule.
+            #
+            # Contract:
+            # - Exactly 1 policy_rule per approved proposal (idempotent)
+            # - Rule is_active=true, mode='active' (enforcement ready)
+            # - No auto-approval logic - this only runs on human action
+            # =====================================================================
+            rule_id = await _create_policy_rule_from_proposal(
+                session=session,
+                proposal=proposal,
+                version_id=version.id if hasattr(version, 'id') else None,
+                approved_by=review.reviewed_by,
+            )
 
-    await session.flush()
+            # Emit audit event for approval (PIN-413: Logs Domain)
+            await audit.policy_proposal_approved(
+                tenant_id=str(proposal.tenant_id),
+                proposal_id=str(proposal.id),
+                actor_id=review.reviewed_by,
+                actor_type=ActorType.HUMAN,
+                reason=review.review_notes,
+            )
+
+            logger.info(
+                "policy_proposal_approved",
+                extra={
+                    "proposal_id": str(proposal.id),
+                    "reviewed_by": review.reviewed_by,
+                    "effective_from": proposal.effective_from.isoformat(),
+                    "version": version_count + 1,
+                    "policy_rule_id": rule_id,
+                },
+            )
+
+        elif review.action == "reject":
+            proposal.status = "rejected"
+            # No version created for rejections
+            # Proposal preserved for audit trail
+
+            # Emit audit event for rejection (PIN-413: Logs Domain)
+            await audit.policy_proposal_rejected(
+                tenant_id=str(proposal.tenant_id),
+                proposal_id=str(proposal.id),
+                actor_id=review.reviewed_by,
+                actor_type=ActorType.HUMAN,
+                reason=review.review_notes,
+            )
+
+            logger.info(
+                "policy_proposal_rejected",
+                extra={
+                    "proposal_id": str(proposal.id),
+                    "reviewed_by": review.reviewed_by,
+                    "reason": review.review_notes,
+                },
+            )
+
+        else:
+            raise ValueError(f"Invalid action: {review.action}. Must be 'approve' or 'reject'.")
+
     return proposal
 
 
@@ -423,6 +524,93 @@ async def generate_proposals_from_feedback(
         result["errors"].append(str(e))
 
     return result
+
+
+async def delete_policy_rule(
+    session: AsyncSession,
+    rule_id: str,
+    tenant_id: str,
+    deleted_by: str,
+) -> bool:
+    """
+    Delete a policy rule with GOV-POL-002 enforcement.
+
+    GOV-POL-002: Dependency resolution is mandatory pre-delete.
+    A policy cannot be deleted if other policies depend on it.
+
+    Args:
+        session: Database session
+        rule_id: The rule ID to delete
+        tenant_id: Tenant ID for authorization
+        deleted_by: User performing the deletion
+
+    Returns:
+        True if deleted successfully
+
+    Raises:
+        PolicyDeletionBlockedError: If dependents exist (GOV-POL-002)
+        ValueError: If rule not found
+    """
+    # =========================================================================
+    # GOV-POL-002: Dependency resolution is mandatory pre-delete
+    # =========================================================================
+    # Check if any policies depend on this one before allowing deletion.
+    # This is CONSTITUTIONAL - cannot be bypassed.
+    # =========================================================================
+    dependency_engine = get_dependency_engine(tenant_id)
+    can_delete, dependents = await dependency_engine.check_can_delete(session, rule_id)
+
+    if not can_delete:
+        logger.warning(
+            "GOV-POL-002_DELETION_BLOCKED",
+            extra={
+                "rule_id": rule_id,
+                "tenant_id": tenant_id,
+                "dependent_count": len(dependents),
+                "dependents": dependents,
+            },
+        )
+        raise PolicyDeletionBlockedError(
+            f"Cannot delete: {len(dependents)} policies depend on this rule. "
+            f"Dependents: {', '.join(dependents)}",
+            dependents=dependents,
+        )
+
+    # Check if rule exists and belongs to tenant
+    result = await session.execute(
+        text("""
+            SELECT id, name FROM policy_rules
+            WHERE id = :rule_id AND tenant_id = :tenant_id
+        """),
+        {"rule_id": rule_id, "tenant_id": tenant_id},
+    )
+    row = result.fetchone()
+
+    if not row:
+        raise ValueError(f"Policy rule {rule_id} not found or does not belong to tenant")
+
+    rule_name = row[1]
+
+    # Delete the rule
+    await session.execute(
+        text("""
+            DELETE FROM policy_rules
+            WHERE id = :rule_id AND tenant_id = :tenant_id
+        """),
+        {"rule_id": rule_id, "tenant_id": tenant_id},
+    )
+
+    logger.info(
+        "GOV-POL-002_DELETION_ALLOWED",
+        extra={
+            "rule_id": rule_id,
+            "rule_name": rule_name,
+            "tenant_id": tenant_id,
+            "deleted_by": deleted_by,
+        },
+    )
+
+    return True
 
 
 def generate_default_rule(policy_type: str, feedback_type: str) -> dict:

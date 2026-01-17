@@ -200,6 +200,95 @@ async def update_queue_depth():
 
 
 # =============================================================================
+# PIN-411: Deferred Lessons Reactivation Scheduler
+# =============================================================================
+
+
+async def reactivate_deferred_lessons():
+    """
+    Periodically check for and reactivate deferred lessons.
+
+    Lessons can be deferred to "snooze" them for a period.
+    When the deferred_until time passes, they should be
+    reactivated back to pending status.
+
+    Runs every 60 seconds to balance responsiveness and efficiency.
+    """
+    from .services.lessons_learned_engine import get_lessons_learned_engine
+
+    while True:
+        try:
+            engine = get_lessons_learned_engine()
+            reactivated = engine.reactivate_expired_deferred_lessons()
+            if reactivated > 0:
+                logger.info(
+                    "deferred_lessons_reactivated",
+                    extra={"count": reactivated},
+                )
+        except Exception as e:
+            logger.warning(f"Failed to reactivate deferred lessons: {e}")
+        await asyncio.sleep(60)  # Check every 60 seconds
+
+
+# =============================================================================
+# PIN-411 GOV-POL-003: Panel Invariant Monitor Scheduler
+# =============================================================================
+
+
+async def run_panel_invariant_checks():
+    """
+    GOV-POL-003: Panel invariants are operator-monitored.
+
+    Periodically check panel-backing queries for silent governance failures.
+    Zero results trigger out-of-band alerts, NEVER UI blocking.
+
+    Alert Types:
+    - EMPTY_PANEL: Panel returning zero unexpectedly
+    - STALE_PANEL: Data older than freshness SLA
+    - FILTER_BREAK: Query returns error / no match
+
+    Runs every 5 minutes to balance alerting latency and efficiency.
+    This is CONSTITUTIONAL - silent failures must be detected.
+    """
+    from .services.panel_invariant_monitor import get_panel_monitor
+
+    while True:
+        try:
+            monitor = get_panel_monitor()
+            metrics = monitor.get_metrics()
+
+            # Log metrics for operator visibility
+            logger.info(
+                "GOV-POL-003_PANEL_INVARIANT_CHECK",
+                extra={
+                    "panels_monitored": metrics["panels_monitored"],
+                    "panels_healthy": metrics["panels_healthy"],
+                    "panels_unhealthy": metrics["panels_unhealthy"],
+                    "alerts_last_hour": metrics["alerts_last_hour"],
+                },
+            )
+
+            # If any panels are unhealthy, log warning
+            unhealthy = monitor.get_unhealthy_panels()
+            if unhealthy:
+                for panel in unhealthy:
+                    logger.warning(
+                        "GOV-POL-003_PANEL_UNHEALTHY",
+                        extra={
+                            "panel_id": panel.panel_id,
+                            "result_count": panel.result_count,
+                            "zero_duration_minutes": panel.zero_duration_minutes,
+                            "alert_type": panel.alert_type.value if panel.alert_type else None,
+                        },
+                    )
+
+        except Exception as e:
+            logger.warning(f"GOV-POL-003_PANEL_CHECK_ERROR: {e}")
+
+        await asyncio.sleep(300)  # Check every 5 minutes
+
+
+# =============================================================================
 # Runtime Route Validation (PIN-108)
 # =============================================================================
 
@@ -480,6 +569,14 @@ async def lifespan(app: FastAPI):
     task = asyncio.create_task(update_queue_depth())
     logger.info("queue_depth_updater_started")
 
+    # PIN-411: Start deferred lessons reactivation scheduler
+    lessons_task = asyncio.create_task(reactivate_deferred_lessons())
+    logger.info("deferred_lessons_scheduler_started")
+
+    # PIN-411 GOV-POL-003: Start panel invariant monitor scheduler
+    panel_monitor_task = asyncio.create_task(run_panel_invariant_checks())
+    logger.info("GOV-POL-003_panel_invariant_scheduler_started")
+
     # Runtime route validation (PIN-108)
     route_issues = validate_route_order(app)
     if route_issues:
@@ -526,6 +623,22 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
     logger.info("queue_depth_updater_stopped")
+
+    # Cancel lessons scheduler
+    lessons_task.cancel()
+    try:
+        await lessons_task
+    except asyncio.CancelledError:
+        pass
+    logger.info("deferred_lessons_scheduler_stopped")
+
+    # Cancel panel invariant monitor (GOV-POL-003)
+    panel_monitor_task.cancel()
+    try:
+        await panel_monitor_task
+    except asyncio.CancelledError:
+        pass
+    logger.info("GOV-POL-003_panel_invariant_scheduler_stopped")
 
 
 # ---------- FastAPI App ----------
@@ -592,6 +705,12 @@ from .api.platform import router as platform_router  # PIN-284 Platform Health (
 from .api.policies import router as policies_router  # POLICIES Domain: Unified facade (/api/v1/policies/*)
 from .api.policy import router as policy_router
 from .api.policy_layer import router as policy_layer_router  # M19 Policy Layer
+
+# PIN-LIM: Limits Management Domain
+from .api.policy_limits_crud import router as policy_limits_crud_router  # PIN-LIM-01: Policy limits CRUD
+from .api.policy_rules_crud import router as policy_rules_crud_router  # PIN-LIM-02: Policy rules CRUD
+from .api.limits.simulate import router as limits_simulate_router  # PIN-LIM-04: Limit simulation
+from .api.limits.override import router as limits_override_router  # PIN-LIM-05: Limit overrides
 from .api.rbac_api import router as rbac_router
 from .api.recovery import router as recovery_router
 from .api.recovery_ingest import router as recovery_ingest_router
@@ -604,6 +723,9 @@ from .api.sdk import router as sdk_router
 
 # PIN-409: Session context for frontend auth state
 from .api.session_context import router as session_context_router
+
+# Debug: Auth context visibility endpoint (AUTHORITY_CONTRACT.md)
+from .api.debug_auth import router as debug_auth_router
 from .api.status_history import router as status_history_router
 from .api.tenants import router as tenants_router  # M21 - RE-ENABLED: PIN-399 Onboarding State Machine
 from .api.traces import router as traces_router
@@ -639,6 +761,7 @@ app.include_router(workers_router)  # Business Builder Worker v0.2
 app.include_router(tenants_router)  # M21 - RE-ENABLED: PIN-399 Onboarding State Machine
 app.include_router(sdk_router)  # PIN-399: SDK handshake and registration
 app.include_router(session_context_router)  # PIN-409: Session context for frontend auth
+app.include_router(debug_auth_router)  # Debug: Auth context visibility (AUTHORITY_CONTRACT.md)
 
 # M22 KillSwitch MVP - OpenAI-compatible proxy (THE FRONT DOOR)
 app.include_router(v1_proxy_router)  # /v1/chat/completions, /v1/embeddings, /v1/status
@@ -652,6 +775,13 @@ app.include_router(activity_router)  # ACTIVITY Domain: /api/v1/activity/* (unif
 app.include_router(incidents_router)  # INCIDENTS Domain: /api/v1/incidents/* (unified facade)
 app.include_router(overview_router)  # OVERVIEW Domain: /api/v1/overview/* (unified facade)
 app.include_router(policies_router)  # POLICIES Domain: /api/v1/policies/* (unified facade)
+
+# PIN-LIM: Limits Management Domain routers
+app.include_router(policy_limits_crud_router, prefix="/api/v1")  # PIN-LIM-01: Policy limits CRUD
+app.include_router(policy_rules_crud_router, prefix="/api/v1")  # PIN-LIM-02: Policy rules CRUD
+app.include_router(limits_simulate_router, prefix="/api/v1")  # PIN-LIM-04: Limit simulation
+app.include_router(limits_override_router, prefix="/api/v1")  # PIN-LIM-05: Limit overrides
+
 app.include_router(logs_router)  # LOGS Domain: /api/v1/logs/* (unified facade)
 app.include_router(connectivity_router)  # CONNECTIVITY: /api/v1/connectivity/* (unified facade)
 app.include_router(accounts_router)  # ACCOUNTS: /api/v1/accounts/* (unified facade)

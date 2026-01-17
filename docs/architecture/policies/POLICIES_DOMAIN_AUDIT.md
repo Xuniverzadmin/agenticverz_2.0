@@ -1395,9 +1395,120 @@ The following invariants are **mandatory** and cannot be optionalized:
 
 | Invariant | Where Enforced |
 |-----------|----------------|
-| GOV-POL-001 | PolicyProposalEngine.approve() |
-| GOV-POL-002 | PolicyEngine.delete_rule() |
-| GOV-POL-003 | PanelInvariantMonitor (scheduler) |
+| GOV-POL-001 | `policy_proposal.py:review_policy_proposal()` |
+| GOV-POL-002 | `policy_proposal.py:delete_policy_rule()` |
+| GOV-POL-003 | `main.py:run_panel_invariant_checks()` (scheduler) |
+
+### 14.13 Governance Wiring (Implementation Details)
+
+**Date:** 2026-01-17
+**Status:** ✅ **WIRED INTO ENGINE CODE**
+
+#### GOV-POL-001 Implementation
+
+**File:** `backend/app/services/policy_proposal.py`
+
+Wired into `review_policy_proposal()` function - when `review.action == "approve"`:
+
+```python
+# GOV-POL-001: Conflict detection is mandatory pre-activation
+conflict_engine = get_conflict_engine(str(proposal.tenant_id))
+conflict_result = await conflict_engine.detect_conflicts(
+    session,
+    severity_filter=ConflictSeverity.BLOCKING,
+)
+
+if conflict_result.unresolved_count > 0:
+    raise PolicyActivationBlockedError(
+        f"Cannot activate: {conflict_result.unresolved_count} BLOCKING conflicts exist.",
+        conflicts=[c.to_dict() for c in conflict_result.conflicts],
+    )
+```
+
+**Exception:** `PolicyActivationBlockedError` - cannot be caught and ignored.
+
+**Logging:**
+- `GOV-POL-001_ACTIVATION_BLOCKED` (WARNING) - when activation is blocked
+- `GOV-POL-001_CONFLICT_CHECK_PASSED` (INFO) - when check passes
+
+#### GOV-POL-002 Implementation
+
+**File:** `backend/app/services/policy_proposal.py`
+
+New function `delete_policy_rule()`:
+
+```python
+async def delete_policy_rule(session, rule_id, tenant_id, deleted_by) -> bool:
+    # GOV-POL-002: Dependency resolution is mandatory pre-delete
+    dependency_engine = get_dependency_engine(tenant_id)
+    can_delete, dependents = await dependency_engine.check_can_delete(session, rule_id)
+
+    if not can_delete:
+        raise PolicyDeletionBlockedError(
+            f"Cannot delete: {len(dependents)} policies depend on this rule.",
+            dependents=dependents,
+        )
+    # ... proceed with deletion
+```
+
+**Exception:** `PolicyDeletionBlockedError` - cannot be caught and ignored.
+
+**Logging:**
+- `GOV-POL-002_DELETION_BLOCKED` (WARNING) - when deletion is blocked
+- `GOV-POL-002_DELETION_ALLOWED` (INFO) - when deletion proceeds
+
+#### GOV-POL-003 Implementation
+
+**File:** `backend/app/main.py`
+
+Scheduler function `run_panel_invariant_checks()`:
+
+```python
+async def run_panel_invariant_checks():
+    """
+    GOV-POL-003: Panel invariants are operator-monitored.
+    Runs every 5 minutes.
+    """
+    monitor = get_panel_monitor()
+    metrics = monitor.get_metrics()
+
+    # Log metrics for operator visibility
+    logger.info("GOV-POL-003_PANEL_INVARIANT_CHECK", extra={...})
+
+    # Log unhealthy panels
+    for panel in monitor.get_unhealthy_panels():
+        logger.warning("GOV-POL-003_PANEL_UNHEALTHY", extra={...})
+```
+
+**Scheduler Registration:**
+```python
+# In lifespan():
+panel_monitor_task = asyncio.create_task(run_panel_invariant_checks())
+logger.info("GOV-POL-003_panel_invariant_scheduler_started")
+```
+
+**Logging:**
+- `GOV-POL-003_PANEL_INVARIANT_CHECK` (INFO) - every 5 minutes
+- `GOV-POL-003_PANEL_UNHEALTHY` (WARNING) - for unhealthy panels
+- `GOV-POL-003_PANEL_CHECK_ERROR` (WARNING) - on errors
+
+#### Governance Exception Classes
+
+New exceptions in `policy_proposal.py`:
+
+| Exception | Invariant | Purpose |
+|-----------|-----------|---------|
+| `PolicyActivationBlockedError` | GOV-POL-001 | Prevents activation with BLOCKING conflicts |
+| `PolicyDeletionBlockedError` | GOV-POL-002 | Prevents deletion with dependents |
+
+Both exceptions include structured data (`conflicts` or `dependents`) for API responses.
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| `backend/app/services/policy_proposal.py` | +GOV-POL-001 check in approve, +delete_policy_rule with GOV-POL-002 |
+| `backend/app/main.py` | +run_panel_invariant_checks scheduler (GOV-POL-003) |
 
 ### 14.12 Residual Risk Acknowledgment
 
