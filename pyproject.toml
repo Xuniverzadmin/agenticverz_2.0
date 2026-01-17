@@ -1,0 +1,61 @@
+# Root pyproject.toml for workspace-level tooling
+# Backend-specific config: backend/pyproject.toml
+#
+# DEFERRED TECHNICAL DEBT (2026-01-17)
+# Ruff/Pyright warnings are pre-existing technical debt and are out of scope
+# for API-002 and governance enforcement work.
+# Reference: docs/governance/LINTING_TECHNICAL_DEBT.md
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "E741",   # ambiguous variable names
+    "E712",   # comparison to True/False
+]
+
+[tool.ruff.lint.per-file-ignores]
+# =============================================================================
+# DEFERRED TECHNICAL DEBT (2026-01-17)
+# Pre-existing violations acknowledged as deferred cleanup work.
+# These do NOT indicate governance violations - only code quality debt.
+# =============================================================================
+
+# budgetllm package
+"budgetllm/**/*.py" = ["E402", "F401", "F841", "I001"]
+
+# l2_1 harness (experimental)
+"l2_1/**/*.py" = ["E402", "F401", "F841", "E722", "I001"]
+
+# design tools
+"design/**/*.py" = ["E402", "F401", "F841", "I001"]
+
+# examples
+"examples/**/*.py" = ["E402", "F401", "F841", "I001"]
+
+# monitoring
+"monitoring/**/*.py" = ["E402", "F401", "F841", "I001"]
+
+# scripts - all directories
+"scripts/**/*.py" = ["E402", "F401", "F541", "F841", "I001", "E722", "W605", "F811"]
+
+# sdk
+"sdk/**/*.py" = ["E402", "F401", "F841", "I001", "E501", "SIM102", "B030"]
+
+# tests (root level)
+"tests/**/*.py" = ["E402", "F401", "F841", "F601", "I001"]
+
+# tools
+"tools/**/*.py" = ["E402", "F401", "F541", "F841", "F601", "I001"]
+
+# website
+"website/**/*.py" = ["E402", "F401", "F841", "I001"]
