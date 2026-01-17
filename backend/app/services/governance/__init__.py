@@ -115,6 +115,15 @@ from app.services.governance.validator_service import (
     ValidatorVerdict,
 )
 
+# Cross-Domain Governance (mandatory functions - design/CROSS_DOMAIN_GOVERNANCE.md)
+from app.services.governance.cross_domain import (
+    create_incident_from_cost_anomaly,
+    create_incident_from_cost_anomaly_sync,
+    record_limit_breach,
+    record_limit_breach_sync,
+    table_exists,
+)
+
 __all__ = [
     # Validator
     "ValidatorService",
@@ -193,4 +202,10 @@ __all__ = [
     "completion_report_to_dict",
     "STAGE_ORDER",
     "PROJECTION_VERSION",
+    # Cross-Domain Governance (mandatory functions)
+    "create_incident_from_cost_anomaly",
+    "create_incident_from_cost_anomaly_sync",
+    "record_limit_breach",
+    "record_limit_breach_sync",
+    "table_exists",
 ]

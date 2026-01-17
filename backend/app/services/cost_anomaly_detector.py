@@ -38,6 +38,7 @@ from app.db import (
     CostBudget,
     utc_now,
 )
+from app.services.governance.cross_domain import create_incident_from_cost_anomaly_sync
 
 logger = logging.getLogger("nova.cost_anomaly_detector")
 
@@ -1122,90 +1123,61 @@ async def run_anomaly_detection(session: Session, tenant_id: str) -> List[CostAn
     return persisted
 
 
-async def run_anomaly_detection_with_m25(
+async def run_anomaly_detection_with_governance(
     session: Session,
     tenant_id: str,
-    dispatcher=None,
 ) -> dict:
     """
-    Run anomaly detection AND escalate HIGH anomalies to M25 loop.
+    Run anomaly detection AND create incidents for HIGH anomalies.
+
+    MANDATORY GOVERNANCE: Every HIGH+ anomaly creates an incident or crashes.
+    There is no optional dispatcher. Governance is not negotiable.
 
     Returns:
         {
             "detected": [CostAnomaly, ...],
-            "escalated_to_m25": [{"anomaly_id": str, "incident_id": str, "loop_result": dict}, ...],
+            "incidents_created": [{"anomaly_id": str, "incident_id": str}, ...],
         }
+
+    Raises:
+        GovernanceError: If incident creation fails (mandatory)
     """
     persisted = await run_anomaly_detection(session, tenant_id)
 
     if not persisted:
-        return {"detected": [], "escalated_to_m25": []}
+        return {"detected": [], "incidents_created": []}
 
-    escalated = []
+    incidents_created = []
 
-    # Only HIGH severity anomalies trigger M25 loop (no CRITICAL - severity bands changed)
+    # Only HIGH severity anomalies create incidents (no CRITICAL - severity bands changed)
     high_anomalies = [a for a in persisted if a.severity == "HIGH"]
 
-    if high_anomalies and dispatcher:
-        try:
-            from app.integrations.cost_bridges import (
-                AnomalySeverity as BridgeAnomalySeverity,
-            )
-            from app.integrations.cost_bridges import (
-                AnomalyType as BridgeAnomalyType,
-            )
-            from app.integrations.cost_bridges import (
-                CostAnomaly as CostAnomalyBridge,
-            )
-            from app.integrations.cost_bridges import (
-                CostLoopOrchestrator,
-            )
+    # MANDATORY: Every HIGH anomaly creates an incident or raises GovernanceError
+    for cost_anomaly in high_anomalies:
+        incident_id = create_incident_from_cost_anomaly_sync(
+            session=session,
+            tenant_id=tenant_id,
+            anomaly_id=cost_anomaly.id,
+            anomaly_type=cost_anomaly.anomaly_type,
+            severity=cost_anomaly.severity,
+            current_value_cents=int(cost_anomaly.current_value_cents),
+            expected_value_cents=int(cost_anomaly.expected_value_cents),
+            entity_type=cost_anomaly.entity_type,
+            entity_id=cost_anomaly.entity_id,
+        )
 
-            orchestrator = CostLoopOrchestrator(dispatcher=dispatcher, db_session=session)
+        incidents_created.append(
+            {
+                "anomaly_id": cost_anomaly.id,
+                "incident_id": incident_id,
+            }
+        )
 
-            for cost_anomaly in high_anomalies:
-                # Map anomaly type
-                bridge_type = BridgeAnomalyType.USER_SPIKE
-                if "DRIFT" in cost_anomaly.anomaly_type:
-                    bridge_type = BridgeAnomalyType.TENANT_SPIKE
-                elif "BUDGET" in cost_anomaly.anomaly_type:
-                    bridge_type = BridgeAnomalyType.BUDGET_EXCEEDED
-
-                bridge_anomaly = CostAnomalyBridge.create(
-                    tenant_id=cost_anomaly.tenant_id,
-                    anomaly_type=bridge_type,
-                    entity_type=cost_anomaly.entity_type,
-                    entity_id=cost_anomaly.entity_id or "",
-                    current_value_cents=int(cost_anomaly.current_value_cents),
-                    expected_value_cents=int(cost_anomaly.expected_value_cents),
-                    metadata=cost_anomaly.metadata_json or {},
-                )
-                bridge_anomaly.id = cost_anomaly.id
-                bridge_anomaly.severity = BridgeAnomalySeverity.HIGH
-
-                loop_result = await orchestrator.process_anomaly(bridge_anomaly)
-
-                escalated.append(
-                    {
-                        "anomaly_id": cost_anomaly.id,
-                        "incident_id": loop_result.get("incident_id"),
-                        "loop_result": loop_result,
-                    }
-                )
-
-                logger.info(
-                    f"Escalated cost anomaly {cost_anomaly.id} to M25 loop: incident={loop_result.get('incident_id')}"
-                )
-
-        except ImportError as e:
-            logger.warning(f"M25 cost bridges not available: {e}")
-        except Exception as e:
-            logger.error(f"Failed to escalate anomalies to M25 loop: {e}")
-
-    elif high_anomalies:
-        logger.info(f"Found {len(high_anomalies)} HIGH anomalies but no dispatcher configured.")
+        logger.info(
+            f"[GOVERNANCE] Created incident {incident_id} from cost anomaly {cost_anomaly.id}"
+        )
 
     return {
         "detected": persisted,
-        "escalated_to_m25": escalated,
+        "incidents_created": incidents_created,
     }

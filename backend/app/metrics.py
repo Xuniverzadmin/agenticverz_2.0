@@ -681,3 +681,34 @@ M18_QUARANTINE_STATE = m18_quarantine_state
 M18_GOVERNOR_STATE = m18_governor_state
 M18_DRIFT_SIGNALS = m18_drift_signals_total
 M18_BOUNDARY_VIOLATIONS = m18_boundary_violations_total
+
+# =====================
+# Cross-Domain Governance Metrics (CROSS_DOMAIN_GOVERNANCE.md)
+# =====================
+#
+# DOCTRINE: Governance must throw. These metrics track when it does.
+# A quiet system with governance_invariant_violations_total = 0 is healthy.
+# Any non-zero value indicates a GovernanceError was raised.
+
+governance_invariant_violations_total = Counter(
+    "governance_invariant_violations_total",
+    "Total governance invariant violations (GovernanceError raised)",
+    ["domain", "operation"],
+    # domain: Activity, Analytics, Policies
+    # operation: create_incident_from_cost_anomaly, record_limit_breach, etc.
+)
+
+governance_incidents_created_total = Counter(
+    "governance_incidents_created_total",
+    "Total incidents created via mandatory governance",
+    ["domain", "source_type"],
+    # domain: Activity, Analytics
+    # source_type: run_failure, cost_anomaly
+)
+
+governance_limit_breaches_recorded_total = Counter(
+    "governance_limit_breaches_recorded_total",
+    "Total limit breaches recorded via mandatory governance",
+    ["breach_type"],
+    # breach_type: BREACHED, EXHAUSTED, THROTTLED, VIOLATED
+)

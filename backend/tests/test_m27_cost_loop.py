@@ -10,9 +10,22 @@ Tests for the full M27 cost loop:
 THE INVARIANT:
     Every cost anomaly enters the loop.
     Every loop completion reduces future cost risk.
+
+GOVERNANCE: CostLoopOrchestrator and SafeCostLoopOrchestrator require db_session.
+Tests use mock sessions - in production, real sessions are required.
 """
 
 import pytest
+from unittest.mock import MagicMock
+
+
+@pytest.fixture
+def mock_session():
+    """Create a mock database session for governance tests."""
+    session = MagicMock()
+    session.add = MagicMock()
+    session.flush = MagicMock()
+    return session
 
 # =============================================================================
 # UNIT TESTS: Cost Anomaly Model
@@ -383,7 +396,7 @@ class TestCostLoopOrchestrator:
     """Test full loop orchestration."""
 
     @pytest.mark.asyncio
-    async def test_low_severity_skipped(self):
+    async def test_low_severity_skipped(self, mock_session):
         """LOW severity anomalies should be skipped."""
         from app.integrations.cost_bridges import AnomalyType, CostAnomaly, CostLoopOrchestrator
 
@@ -396,14 +409,14 @@ class TestCostLoopOrchestrator:
             expected_value_cents=100,  # 20% deviation -> LOW
         )
 
-        orchestrator = CostLoopOrchestrator()
+        orchestrator = CostLoopOrchestrator(mock_session)
         result = await orchestrator.process_anomaly(anomaly)
 
         assert result["status"] == "skipped"
         assert "below threshold" in result["reason"].lower()
 
     @pytest.mark.asyncio
-    async def test_high_severity_full_loop(self):
+    async def test_high_severity_full_loop(self, mock_session):
         """HIGH severity should go through full loop."""
         from app.integrations.cost_bridges import AnomalyType, CostAnomaly, CostLoopOrchestrator
 
@@ -416,7 +429,7 @@ class TestCostLoopOrchestrator:
             expected_value_cents=100,  # 350% deviation -> HIGH
         )
 
-        orchestrator = CostLoopOrchestrator()
+        orchestrator = CostLoopOrchestrator(mock_session)
         result = await orchestrator.process_anomaly(anomaly)
 
         assert result["status"] in ["complete", "partial"]
@@ -425,7 +438,7 @@ class TestCostLoopOrchestrator:
         assert "incident_id" in result
 
     @pytest.mark.asyncio
-    async def test_critical_severity_full_artifacts(self):
+    async def test_critical_severity_full_artifacts(self, mock_session):
         """CRITICAL severity should produce all artifacts."""
         from app.integrations.cost_bridges import AnomalyType, CostAnomaly, CostLoopOrchestrator
 
@@ -439,7 +452,7 @@ class TestCostLoopOrchestrator:
             expected_value_cents=10000,  # 500% over budget -> CRITICAL
         )
 
-        orchestrator = CostLoopOrchestrator()
+        orchestrator = CostLoopOrchestrator(mock_session)
         result = await orchestrator.process_anomaly(anomaly)
 
         assert "artifacts" in result
@@ -457,7 +470,7 @@ class TestSafeCostLoopOrchestrator:
     """Test orchestrator with safety rails."""
 
     @pytest.mark.asyncio
-    async def test_safety_rails_applied(self):
+    async def test_safety_rails_applied(self, mock_session):
         """Safety rails should be applied to results."""
         from app.integrations.cost_bridges import AnomalyType, CostAnomaly
         from app.integrations.cost_safety_rails import SafeCostLoopOrchestrator, SafetyConfig
@@ -476,7 +489,7 @@ class TestSafeCostLoopOrchestrator:
             expected_value_cents=100,  # CRITICAL
         )
 
-        orchestrator = SafeCostLoopOrchestrator(safety_config=config)
+        orchestrator = SafeCostLoopOrchestrator(db_session=mock_session, safety_config=config)
         result = await orchestrator.process_anomaly_safe(anomaly)
 
         assert "safety_status" in result

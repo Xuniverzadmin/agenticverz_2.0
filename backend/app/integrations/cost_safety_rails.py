@@ -298,19 +298,30 @@ class SafeCostLoopOrchestrator:
     """
     Wraps CostLoopOrchestrator with safety rails.
 
+    MANDATORY GOVERNANCE: Incident creation requires db_session.
     Use this in production instead of raw CostLoopOrchestrator.
     """
 
     def __init__(
         self,
-        dispatcher=None,
-        db_session=None,
+        db_session,
         safety_config: SafetyConfig | None = None,
         redis_client=None,
     ):
+        """
+        Initialize safe orchestrator with database session.
+
+        Args:
+            db_session: Database session for governance operations (REQUIRED)
+            safety_config: Optional safety configuration
+            redis_client: Optional Redis client for rate limiting
+        """
+        if db_session is None:
+            raise ValueError("db_session is required for SafeCostLoopOrchestrator - governance is not optional")
+
         from app.integrations.cost_bridges import CostLoopOrchestrator
 
-        self.orchestrator = CostLoopOrchestrator(dispatcher, db_session)
+        self.orchestrator = CostLoopOrchestrator(db_session)
         self.safety_rails = CostSafetyRails(safety_config, redis_client, db_session)
 
     async def process_anomaly_safe(self, anomaly) -> dict[str, Any]:

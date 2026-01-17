@@ -1227,22 +1227,15 @@ async def trigger_anomaly_detection(
     """
     from app.services.cost_anomaly_detector import (
         run_anomaly_detection,
-        run_anomaly_detection_with_m25,
+        run_anomaly_detection_with_governance,
     )
 
     if request.escalate_to_m25:
-        # Try to get M25 dispatcher if available
-        dispatcher = None
-        try:
-            from app.integrations.dispatcher import get_dispatcher
-
-            dispatcher = get_dispatcher()
-        except Exception:
-            logger.warning("M25 dispatcher not available - anomalies will not be escalated")
-
-        result = await run_anomaly_detection_with_m25(session, tenant_id, dispatcher)
+        # MANDATORY GOVERNANCE: HIGH anomalies create incidents or crash
+        # No optional dispatcher. Governance is not negotiable.
+        result = await run_anomaly_detection_with_governance(session, tenant_id)
         detected = result["detected"]
-        escalated = result["escalated_to_m25"]
+        escalated = result["incidents_created"]
     else:
         detected = await run_anomaly_detection(session, tenant_id)
         escalated = []

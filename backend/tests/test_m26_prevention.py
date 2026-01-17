@@ -160,17 +160,18 @@ class TestLoopContract:
 
     @pytest.mark.asyncio
     async def test_anomaly_detection_returns_structure(self, session):
-        """Anomaly detection must return proper structure for M25 escalation."""
-        from app.services.cost_anomaly_detector import run_anomaly_detection_with_m25
+        """Anomaly detection must return proper structure for governance escalation."""
+        from app.services.cost_anomaly_detector import run_anomaly_detection_with_governance
 
-        result = await run_anomaly_detection_with_m25(
+        result = await run_anomaly_detection_with_governance(
             session=session,
             tenant_id="test_tenant",
-            dispatcher=None,  # No real dispatcher for unit test
         )
 
-        # Verify structure
-        assert "detected" in result or "anomalies" in result or isinstance(result, dict)
+        # Verify structure - mandatory governance returns detected + incidents_created
+        assert "detected" in result
+        assert "incidents_created" in result
+        assert isinstance(result, dict)
 
 
 # =============================================================================

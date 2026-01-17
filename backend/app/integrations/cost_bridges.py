@@ -41,6 +41,7 @@ from app.integrations.events import (
     RoutingAdjustment,
     ensure_json_serializable,
 )
+from app.services.governance.cross_domain import create_incident_from_cost_anomaly_sync
 
 logger = logging.getLogger("nova.integrations.cost")
 
@@ -171,53 +172,55 @@ class CostAnomaly:
 
 class CostLoopBridge:
     """
-    Bridge C1: Cost Anomaly → M25 Integration Loop.
+    Bridge C1: Cost Anomaly → Incident (MANDATORY GOVERNANCE).
 
-    Automatically creates incidents from cost anomalies,
-    feeding them into the standard recovery/policy flow.
+    Creates real incidents from cost anomalies using mandatory governance.
+    No simulation. No optional dispatcher. Every HIGH+ anomaly creates an incident or crashes.
     """
 
-    def __init__(self, dispatcher=None, db_session=None):
-        self.dispatcher = dispatcher
+    def __init__(self, db_session):
+        """
+        Initialize with database session.
+
+        Args:
+            db_session: Database session for creating incidents (REQUIRED)
+        """
+        if db_session is None:
+            raise ValueError("db_session is required for CostLoopBridge - governance is not optional")
         self.db_session = db_session
 
-    async def on_anomaly_detected(self, anomaly: CostAnomaly) -> Optional[str]:
+    def on_anomaly_detected(self, anomaly: CostAnomaly) -> Optional[str]:
         """
         Create incident from cost anomaly if severity warrants.
 
+        MANDATORY GOVERNANCE: HIGH+ anomalies create incidents or raise GovernanceError.
+        There is no optional dispatcher. Governance is not negotiable.
+
         Returns incident_id if created, None otherwise.
+
+        Raises:
+            GovernanceError: If incident creation fails (mandatory)
         """
         # Only HIGH and CRITICAL anomalies trigger incidents
         if anomaly.severity not in [AnomalySeverity.HIGH, AnomalySeverity.CRITICAL]:
             logger.info(f"Skipping {anomaly.severity.value} severity anomaly: {anomaly.id}")
             return None
 
-        # Create incident (simulated for now - in production, would write to incidents table)
-        incident_id = f"inc_{uuid.uuid4().hex[:16]}"
+        # MANDATORY: Create real incident via governance function
+        # This will raise GovernanceError if it fails - no silent failure allowed
+        incident_id = create_incident_from_cost_anomaly_sync(
+            session=self.db_session,
+            tenant_id=anomaly.tenant_id,
+            anomaly_id=anomaly.id,
+            anomaly_type=anomaly.anomaly_type.value,
+            severity=anomaly.severity.value,
+            current_value_cents=anomaly.current_value_cents,
+            expected_value_cents=anomaly.expected_value_cents,
+            entity_type=anomaly.entity_type,
+            entity_id=anomaly.entity_id,
+        )
 
-        logger.info(f"Creating cost incident {incident_id} from anomaly {anomaly.id}")
-
-        # Dispatch to M25 loop
-        if self.dispatcher:
-            event = LoopEvent.create(
-                incident_id=incident_id,
-                tenant_id=anomaly.tenant_id,
-                stage=LoopStage.INCIDENT_CREATED,
-                details=ensure_json_serializable(
-                    {
-                        "source": "cost_anomaly",
-                        "anomaly_id": anomaly.id,
-                        "anomaly_type": anomaly.anomaly_type.value,
-                        "severity": anomaly.severity.value,
-                        "entity_type": anomaly.entity_type,
-                        "entity_id": anomaly.entity_id,
-                        "deviation_pct": anomaly.deviation_pct,
-                        "current_value_cents": anomaly.current_value_cents,
-                        "expected_value_cents": anomaly.expected_value_cents,
-                    }
-                ),
-            )
-            await self.dispatcher.dispatch(event)
+        logger.info(f"[GOVERNANCE] Created cost incident {incident_id} from anomaly {anomaly.id}")
 
         return incident_id
 
@@ -1059,14 +1062,24 @@ class CostLoopOrchestrator:
     """
     Orchestrates the full M27 cost loop:
     Anomaly → Incident → Pattern → Recovery → Policy → Routing
+
+    MANDATORY GOVERNANCE: Incident creation is not optional.
+    If db_session is missing, initialization fails.
     """
 
-    def __init__(self, dispatcher=None, db_session=None):
-        self.dispatcher = dispatcher
+    def __init__(self, db_session):
+        """
+        Initialize orchestrator with database session.
+
+        Args:
+            db_session: Database session for governance operations (REQUIRED)
+        """
+        if db_session is None:
+            raise ValueError("db_session is required for CostLoopOrchestrator - governance is not optional")
         self.db_session = db_session
 
         # Initialize bridges
-        self.bridge_c1 = CostLoopBridge(dispatcher, db_session)
+        self.bridge_c1 = CostLoopBridge(db_session)
         self.bridge_c2 = CostPatternMatcher(db_session)
         self.bridge_c3 = CostRecoveryGenerator(db_session)
         self.bridge_c4 = CostPolicyGenerator(db_session)
@@ -1076,7 +1089,12 @@ class CostLoopOrchestrator:
         """
         Process a cost anomaly through the full loop.
 
+        MANDATORY GOVERNANCE: HIGH+ anomalies create incidents or raise GovernanceError.
+
         Returns loop status with all artifacts.
+
+        Raises:
+            GovernanceError: If incident creation fails (mandatory)
         """
         results: dict[str, Any] = {
             "anomaly_id": anomaly.id,
@@ -1084,8 +1102,8 @@ class CostLoopOrchestrator:
             "artifacts": {},
         }
 
-        # C1: Anomaly → Incident
-        incident_id = await self.bridge_c1.on_anomaly_detected(anomaly)
+        # C1: Anomaly → Incident (MANDATORY GOVERNANCE - sync, not async)
+        incident_id = self.bridge_c1.on_anomaly_detected(anomaly)
         if not incident_id:
             results["status"] = "skipped"
             results["reason"] = f"Severity {anomaly.severity.value} below threshold"
