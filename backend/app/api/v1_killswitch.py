@@ -256,7 +256,7 @@ async def get_killswitch_status(
             for ks in key_states
         ],
         "effective_state": "frozen" if (tenant_state and tenant_state.is_frozen) else "active",
-    }
+    })
 
 
 @router.delete("/killswitch/tenant", response_model=KillSwitchStatus)
