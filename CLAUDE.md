@@ -560,6 +560,32 @@ For paginated endpoints, `total` MUST come from a separate `COUNT(*)` query.
 
 **Enforcement:** If Claude uses `wrap_dict` without verifying these rules → Code Review MUST reject.
 
+### Linting Technical Debt Declaration (PIN-438)
+
+**Status:** ACKNOWLEDGED
+**Effective:** 2026-01-17
+**Reference:** `docs/governance/LINTING_TECHNICAL_DEBT.md`, PIN-438
+
+Ruff and Pyright warnings in the codebase are **pre-existing technical debt** and are explicitly **out of scope** for:
+- API-002 Response Envelope governance work
+- BLCA layer validation enforcement
+- Governance guardrail compliance checks
+
+**Enforcement Model:**
+
+| Tool | Scope | Blocking? |
+|------|-------|-----------
+| BLCA | All backend files | YES - 0 violations required |
+| Ruff | Staged files only | YES - for new violations only |
+| Pyright | Zone A modules | Warning only |
+
+**Key Rule:** New violations are blocked; existing debt is tolerated. Cleanup is a separate workstream.
+
+**Configuration Files:**
+- `backend/pyproject.toml` - Backend per-file-ignores
+- `pyproject.toml` - Root workspace per-file-ignores
+- `sdk/python/pyproject.toml` - SDK per-file-ignores
+
 ### SDSR UI Architecture Gate (BL-SDSR-UI-001)
 
 **Status:** BLOCKING

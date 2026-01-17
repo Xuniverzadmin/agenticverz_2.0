@@ -427,6 +427,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-435](PIN-435-panel-structure-pipeline---phase-1-2-complete.md) | **Panel Structure Pipeline - Phase 1 & 2 Complete** | Architecture / Pipeline | **✅ COMPLETE** | 2026-01-16 |
 | [PIN-436](PIN-436-guardrail-violations-baseline.md) | **Guardrail Violations Baseline** | Governance / Architecture Enforcement | **ACTIVE** | 2026-01-16 |
 | [PIN-437](PIN-437-api-002-counter-rules-wrapdict-risk-vectors.md) | **API-002 Counter-Rules: wrap_dict Risk Vectors** | Governance / Counter-Rules | **🏗️ ENFORCED** | 2026-01-17 |
+| [PIN-438](PIN-438-linting-technical-debt-declaration.md) | **Linting Technical Debt Declaration** | Governance / Technical Debt | **ENFORCED** | 2026-01-17 |
 
 ---
 
@@ -1196,6 +1197,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-17 | **PIN-438 Linting Technical Debt Declaration** - Declared ruff/pyright warnings as pre-existing technical debt. Configured per-file-ignores to block new violations only. Updated pyproject.toml files. |
 | 2026-01-17 | **PIN-437 API-002 Counter-Rules: wrap_dict Risk Vectors** - Created via memory_trail. |
 | 2026-01-16 | **PIN-436 Guardrail Violations Baseline** - Captured 41 violations across 10 guardrails. 17 enforcement scripts + 3-layer hook system installed. |
 | 2026-01-16 | **PIN-435 Panel Structure Pipeline - Phase 1 & 2 Complete** - Created via memory_trail. |
