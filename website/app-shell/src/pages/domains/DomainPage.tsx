@@ -47,6 +47,7 @@ import {
   AlertTriangle,
   Shield,
   FileText,
+  BarChart2,
   Loader2,
   AlertCircle,
   List,
@@ -89,6 +90,7 @@ const DOMAIN_ICONS: Record<DomainName, React.ElementType> = {
   Incidents: AlertTriangle,
   Policies: Shield,
   Logs: FileText,
+  Analytics: BarChart2,
   Account: User,
   Connectivity: Plug,
 };
@@ -793,6 +795,10 @@ export function PoliciesPage() {
 
 export function LogsPage() {
   return <DomainPage domainName="Logs" />;
+}
+
+export function AnalyticsPage() {
+  return <DomainPage domainName="Analytics" />;
 }
 
 export function AccountPage() {

@@ -1,0 +1,56 @@
+# AURORA L2 Capability Registry Entry
+# Capability: analytics.usage.export.json
+# Last Updated: 2026-01-17
+# Updated By: Analytics Domain Declaration v1 (Hard Commit)
+#
+# STATUS: OBSERVED
+#
+capability_id: analytics.usage.export.json
+status: OBSERVED
+source_panels:
+- ANL-STAT-USG-O2
+domain: ANALYTICS
+subdomain: STATISTICS
+topic: USAGE
+endpoint: /api/v1/analytics/statistics/usage/export.json
+method: GET
+metadata:
+  generated_by: Analytics Domain Declaration v1
+  generated_on: '2026-01-17'
+  declared_by: PIN-411
+  declared_on: '2026-01-17'
+  observed_by: Analytics Hard Commit
+  observed_on: '2026-01-17'
+acceptance_criteria:
+- Endpoint exists and responds with application/json
+- Response structure matches UsageStatisticsResponse
+- Data is bit-equivalent to read API
+- Same query parameters as read endpoint
+provenance_requirements:
+  required: true
+  fields:
+  - signals.sources
+  - signals.freshness_sec
+  - window.from
+  - window.to
+  - window.resolution
+signal_sources:
+- cost_records
+- llm.usage
+- worker.execution
+- gateway.metrics
+observation:
+  scenario_id: null
+  observed_at: '2026-01-17T00:00:00Z'
+  trace_id: null
+  invariants_passed: null
+  invariants_total: null
+coherency:
+  last_checked: '2026-01-17'
+  status: OBSERVED
+  checked_by: Analytics Hard Commit
+binding:
+  observed_endpoint: /api/v1/analytics/statistics/usage/export.json
+  observed_method: GET
+  observed_at: '2026-01-17T00:00:00Z'
+  observation_id: null

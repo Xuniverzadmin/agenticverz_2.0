@@ -29,6 +29,7 @@ import {
   AlertTriangle,
   Shield,
   FileText,
+  BarChart2,
   Loader2,
   AlertCircle,
   User,
@@ -54,6 +55,7 @@ const DOMAIN_ICONS: Record<DomainName, React.ElementType> = {
   Incidents: AlertTriangle,
   Policies: Shield,
   Logs: FileText,
+  Analytics: BarChart2,
   Account: User,
   Connectivity: Plug,
 };

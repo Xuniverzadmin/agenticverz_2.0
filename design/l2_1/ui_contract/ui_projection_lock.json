@@ -2,7 +2,7 @@
   "_meta": {
     "type": "ui_projection_lock",
     "version": "1.0.0",
-    "generated_at": "2026-01-15T12:41:51.477223+00:00",
+    "generated_at": "2026-01-15T18:35:46.815410+00:00",
     "source": "AURORA_L2 Intent Compiler",
     "generator": "AURORA_L2_COMPILER",
     "generator_version": "2.0.0",
@@ -19,19 +19,19 @@
   },
   "_statistics": {
     "domain_count": 6,
-    "panel_count": 92,
-    "control_count": 0,
-    "empty_panels": 36,
-    "unbound_panels": 0,
-    "draft_panels": 0,
-    "bound_panels": 51,
-    "deferred_panels": 5,
+    "panel_count": 84,
+    "control_count": 7,
+    "empty_panels": 3,
+    "unbound_panels": 22,
+    "draft_panels": 1,
+    "bound_panels": 58,
+    "deferred_panels": 0,
     "info_panels": 0,
     "sdsr_trace_count": 0,
     "panels_with_traces": 0,
     "unique_scenario_count": 0,
     "execution_panels": 7,
-    "interpretation_panels": 64,
+    "interpretation_panels": 54,
     "ui_plan_source": "ui_plan.yaml"
   },
   "_contract": {
@@ -59,7 +59,7 @@
       "panels": [
         {
           "panel_id": "OVR-SUM-CI-O1",
-          "panel_name": "Cost Summary",
+          "panel_name": "OVR-SUM-CI-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -129,7 +129,7 @@
         },
         {
           "panel_id": "OVR-SUM-CI-O2",
-          "panel_name": "Cost by Feature",
+          "panel_name": "OVR-SUM-CI-O2",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -154,8 +154,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -178,7 +177,7 @@
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -188,7 +187,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 1,
           "binding_metadata": {
             "scenario_ids": [],
@@ -200,7 +199,7 @@
         },
         {
           "panel_id": "OVR-SUM-CI-O3",
-          "panel_name": "Cost by Model",
+          "panel_name": "OVR-SUM-CI-O3",
           "order": "O3",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -225,8 +224,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -249,7 +247,7 @@
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -259,7 +257,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 2,
           "binding_metadata": {
             "scenario_ids": [],
@@ -271,7 +269,7 @@
         },
         {
           "panel_id": "OVR-SUM-CI-O4",
-          "panel_name": "Cost Anomalies",
+          "panel_name": "OVR-SUM-CI-O4",
           "order": "O4",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -296,8 +294,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -320,7 +317,7 @@
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -330,7 +327,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 3,
           "binding_metadata": {
             "scenario_ids": [],
@@ -342,7 +339,7 @@
         },
         {
           "panel_id": "OVR-SUM-DC-O1",
-          "panel_name": "Decisions List",
+          "panel_name": "OVR-SUM-DC-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -367,8 +364,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -385,13 +381,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "DECISIONS",
-          "topic_id": "OVERVIEW.SUM.DC",
+          "topic_id": "OVERVIEW.SUMMARY.DECISIONS",
           "subdomain": "SUMMARY",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -401,7 +397,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 4,
           "binding_metadata": {
             "scenario_ids": [],
@@ -413,7 +409,7 @@
         },
         {
           "panel_id": "OVR-SUM-DC-O2",
-          "panel_name": "Decisions Count",
+          "panel_name": "OVR-SUM-DC-O2",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -438,8 +434,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -456,13 +451,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "DECISIONS",
-          "topic_id": "OVERVIEW.SUM.DC",
+          "topic_id": "OVERVIEW.SUMMARY.DECISIONS",
           "subdomain": "SUMMARY",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -472,7 +467,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 5,
           "binding_metadata": {
             "scenario_ids": [],
@@ -484,7 +479,7 @@
         },
         {
           "panel_id": "OVR-SUM-DC-O3",
-          "panel_name": "Recovery Stats",
+          "panel_name": "OVR-SUM-DC-O3",
           "order": "O3",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -509,8 +504,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -527,13 +521,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "DECISIONS",
-          "topic_id": "OVERVIEW.SUM.DC",
+          "topic_id": "OVERVIEW.SUMMARY.DECISIONS",
           "subdomain": "SUMMARY",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -543,7 +537,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 6,
           "binding_metadata": {
             "scenario_ids": [],
@@ -555,7 +549,7 @@
         },
         {
           "panel_id": "OVR-SUM-DC-O4",
-          "panel_name": "Feedback Summary",
+          "panel_name": "OVR-SUM-DC-O4",
           "order": "O4",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -580,8 +574,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -598,13 +591,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "DECISIONS",
-          "topic_id": "OVERVIEW.SUM.DC",
+          "topic_id": "OVERVIEW.SUMMARY.DECISIONS",
           "subdomain": "SUMMARY",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -614,7 +607,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 7,
           "binding_metadata": {
             "scenario_ids": [],
@@ -626,7 +619,7 @@
         },
         {
           "panel_id": "OVR-SUM-HL-O1",
-          "panel_name": "Activity Snapshot",
+          "panel_name": "OVR-SUM-HL-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -696,7 +689,7 @@
         },
         {
           "panel_id": "OVR-SUM-HL-O2",
-          "panel_name": "Incident Snapshot",
+          "panel_name": "OVR-SUM-HL-O2",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -766,12 +759,12 @@
         },
         {
           "panel_id": "OVR-SUM-HL-O3",
-          "panel_name": "Activity Snapshot",
-          "order": "O3",
+          "panel_name": "OVR-SUM-HL-O3",
+          "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": null,
+          "disabled_reason": "This panel is planned but not yet defined",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -789,54 +782,37 @@
               "order": 1,
               "visibility": "ALWAYS",
               "enabled": true,
-              "render_mode": "TABLE",
+              "render_mode": "EMPTY_STATE",
               "components": [
-                "primary_display"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
+                "empty_state_message"
               ]
             }
           ],
           "controls": [],
           "control_count": 0,
           "topic": "HIGHLIGHTS",
-          "topic_id": "OVERVIEW.SUMMARY.HIGHLIGHTS",
+          "topic_id": "HIGHLIGHTS",
           "subdomain": "SUMMARY",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
             "filtering": false,
-            "read": true,
+            "read": false,
             "write": false,
             "activate": false
           },
           "route": "/overview/ovr-sum-hl-o3",
           "view_type": "PANEL_VIEW",
-          "binding_status": "BOUND",
-          "panel_state": "BOUND",
+          "binding_status": "EMPTY",
+          "panel_state": "EMPTY",
           "review_status": "UNREVIEWED",
           "panel_class": "interpretation",
-          "panel_display_order": 10,
-          "binding_metadata": {
-            "scenario_ids": [],
-            "observed_at": null,
-            "capability_ids": [],
-            "trace_count": 0,
-            "observed_effects": []
-          }
+          "panel_display_order": 10
         },
         {
           "panel_id": "OVR-SUM-HL-O4",
-          "panel_name": "Policy Snapshot",
+          "panel_name": "OVR-SUM-HL-O4",
           "order": "O4",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -916,7 +892,7 @@
       "panels": [
         {
           "panel_id": "ACT-LLM-COMP-O1",
-          "panel_name": "Completed Runs",
+          "panel_name": "ACT-LLM-COMP-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -941,8 +917,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -965,7 +940,7 @@
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -975,7 +950,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 12,
           "binding_metadata": {
             "scenario_ids": [],
@@ -987,7 +962,7 @@
         },
         {
           "panel_id": "ACT-LLM-COMP-O2",
-          "panel_name": "Activity Summary",
+          "panel_name": "ACT-LLM-COMP-O2",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -1012,8 +987,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -1030,13 +1004,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "COMPLETED",
-          "topic_id": "ACTIVITY.LLM.COMP",
+          "topic_id": "ACTIVITY.LLM_RUNS.COMPLETED",
           "subdomain": "LLM_RUNS",
           "topic_display_order": 1,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -1046,7 +1020,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 13,
           "binding_metadata": {
             "scenario_ids": [],
@@ -1058,8 +1032,8 @@
         },
         {
           "panel_id": "ACT-LLM-COMP-O3",
-          "panel_name": "Tenant Runs",
-          "order": "O3",
+          "panel_name": "ACT-LLM-COMP-O3",
+          "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
@@ -1081,34 +1055,23 @@
               "order": 1,
               "visibility": "ALWAYS",
               "enabled": true,
-              "render_mode": "TABLE",
+              "render_mode": "EMPTY_STATE",
               "components": [
-                "primary_display",
-                "filter_bar"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
+                "empty_state_message"
               ]
             }
           ],
           "controls": [],
           "control_count": 0,
           "topic": "COMPLETED",
-          "topic_id": "ACTIVITY.LLM.COMP",
+          "topic_id": "COMPLETED",
           "subdomain": "LLM_RUNS",
           "topic_display_order": 1,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
-            "read": true,
+            "filtering": false,
+            "read": false,
             "write": false,
             "activate": false
           },
@@ -1117,12 +1080,12 @@
           "binding_status": "EMPTY",
           "panel_state": "EMPTY",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 14
         },
         {
           "panel_id": "ACT-LLM-COMP-O4",
-          "panel_name": "Customer Activity",
+          "panel_name": "ACT-LLM-COMP-O4",
           "order": "O4",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -1147,8 +1110,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -1165,13 +1127,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "COMPLETED",
-          "topic_id": "ACTIVITY.LLM.COMP",
+          "topic_id": "ACTIVITY.LLM_RUNS.COMPLETED",
           "subdomain": "LLM_RUNS",
           "topic_display_order": 1,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -1181,7 +1143,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 15,
           "binding_metadata": {
             "scenario_ids": [],
@@ -1193,7 +1155,7 @@
         },
         {
           "panel_id": "ACT-LLM-COMP-O5",
-          "panel_name": "Runtime Traces",
+          "panel_name": "ACT-LLM-COMP-O5",
           "order": "O5",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -1218,8 +1180,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -1236,13 +1197,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "COMPLETED",
-          "topic_id": "ACTIVITY.LLM.COMP",
+          "topic_id": "ACTIVITY.LLM_RUNS.COMPLETED",
           "subdomain": "LLM_RUNS",
           "topic_display_order": 1,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -1252,7 +1213,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 16,
           "binding_metadata": {
             "scenario_ids": [],
@@ -1264,7 +1225,7 @@
         },
         {
           "panel_id": "ACT-LLM-LIVE-O1",
-          "panel_name": "Live Runs",
+          "panel_name": "ACT-LLM-LIVE-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -1289,8 +1250,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -1307,13 +1267,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "LIVE",
-          "topic_id": "ACTIVITY.LLM.LIVE",
+          "topic_id": "ACTIVITY.LLM_RUNS.LIVE",
           "subdomain": "LLM_RUNS",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -1323,7 +1283,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 17,
           "binding_metadata": {
             "scenario_ids": [],
@@ -1335,8 +1295,8 @@
         },
         {
           "panel_id": "ACT-LLM-LIVE-O2",
-          "panel_name": "Active Agents",
-          "order": "O2",
+          "panel_name": "ACT-LLM-LIVE-O2",
+          "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
@@ -1358,34 +1318,23 @@
               "order": 1,
               "visibility": "ALWAYS",
               "enabled": true,
-              "render_mode": "TABLE",
+              "render_mode": "EMPTY_STATE",
               "components": [
-                "primary_display",
-                "filter_bar"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
+                "empty_state_message"
               ]
             }
           ],
           "controls": [],
           "control_count": 0,
           "topic": "LIVE",
-          "topic_id": "ACTIVITY.LLM.LIVE",
+          "topic_id": "LIVE",
           "subdomain": "LLM_RUNS",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
-            "read": true,
+            "filtering": false,
+            "read": false,
             "write": false,
             "activate": false
           },
@@ -1394,17 +1343,17 @@
           "binding_status": "EMPTY",
           "panel_state": "EMPTY",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 18
         },
         {
           "panel_id": "ACT-LLM-LIVE-O3",
-          "panel_name": "Queued Runs",
+          "panel_name": "ACT-LLM-LIVE-O3",
           "order": "O3",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Data not yet observed",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -1424,8 +1373,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -1442,28 +1390,28 @@
           "controls": [],
           "control_count": 0,
           "topic": "LIVE",
-          "topic_id": "ACTIVITY.LLM.LIVE",
+          "topic_id": "ACTIVITY.LLM_RUNS.LIVE",
           "subdomain": "LLM_RUNS",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/activity/act-llm-live-o3",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "DRAFT",
+          "panel_state": "DRAFT",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 19
         },
         {
           "panel_id": "ACT-LLM-LIVE-O4",
-          "panel_name": "Worker Runs",
+          "panel_name": "ACT-LLM-LIVE-O4",
           "order": "O4",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -1488,8 +1436,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -1506,13 +1453,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "LIVE",
-          "topic_id": "ACTIVITY.LLM.LIVE",
+          "topic_id": "ACTIVITY.LLM_RUNS.LIVE",
           "subdomain": "LLM_RUNS",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -1522,7 +1469,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 20,
           "binding_metadata": {
             "scenario_ids": [],
@@ -1534,7 +1481,7 @@
         },
         {
           "panel_id": "ACT-LLM-LIVE-O5",
-          "panel_name": "Health Status",
+          "panel_name": "ACT-LLM-LIVE-O5",
           "order": "O5",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -1559,8 +1506,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -1577,13 +1523,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "LIVE",
-          "topic_id": "ACTIVITY.LLM.LIVE",
+          "topic_id": "ACTIVITY.LLM_RUNS.LIVE",
           "subdomain": "LLM_RUNS",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -1593,7 +1539,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 21,
           "binding_metadata": {
             "scenario_ids": [],
@@ -1605,7 +1551,7 @@
         },
         {
           "panel_id": "ACT-LLM-SIG-O1",
-          "panel_name": "Feedback List",
+          "panel_name": "ACT-LLM-SIG-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -1630,8 +1576,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -1648,13 +1593,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "SIGNALS",
-          "topic_id": "ACTIVITY.LLM.SIG",
+          "topic_id": "ACTIVITY.LLM_RUNS.SIGNALS",
           "subdomain": "LLM_RUNS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -1664,7 +1609,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 22,
           "binding_metadata": {
             "scenario_ids": [],
@@ -1676,7 +1621,7 @@
         },
         {
           "panel_id": "ACT-LLM-SIG-O2",
-          "panel_name": "Predictions List",
+          "panel_name": "ACT-LLM-SIG-O2",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -1701,8 +1646,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -1719,13 +1663,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "SIGNALS",
-          "topic_id": "ACTIVITY.LLM.SIG",
+          "topic_id": "ACTIVITY.LLM_RUNS.SIGNALS",
           "subdomain": "LLM_RUNS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -1735,7 +1679,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 23,
           "binding_metadata": {
             "scenario_ids": [],
@@ -1747,7 +1691,7 @@
         },
         {
           "panel_id": "ACT-LLM-SIG-O3",
-          "panel_name": "Predictions Summary",
+          "panel_name": "ACT-LLM-SIG-O3",
           "order": "O3",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -1772,8 +1716,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -1790,13 +1733,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "SIGNALS",
-          "topic_id": "ACTIVITY.LLM.SIG",
+          "topic_id": "ACTIVITY.LLM_RUNS.SIGNALS",
           "subdomain": "LLM_RUNS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -1806,7 +1749,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 24,
           "binding_metadata": {
             "scenario_ids": [],
@@ -1818,7 +1761,7 @@
         },
         {
           "panel_id": "ACT-LLM-SIG-O4",
-          "panel_name": "Discovery List",
+          "panel_name": "ACT-LLM-SIG-O4",
           "order": "O4",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -1843,8 +1786,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -1861,13 +1803,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "SIGNALS",
-          "topic_id": "ACTIVITY.LLM.SIG",
+          "topic_id": "ACTIVITY.LLM_RUNS.SIGNALS",
           "subdomain": "LLM_RUNS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -1877,7 +1819,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 25,
           "binding_metadata": {
             "scenario_ids": [],
@@ -1889,7 +1831,7 @@
         },
         {
           "panel_id": "ACT-LLM-SIG-O5",
-          "panel_name": "Discovery Stats",
+          "panel_name": "ACT-LLM-SIG-O5",
           "order": "O5",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -1914,8 +1856,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -1932,13 +1873,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "SIGNALS",
-          "topic_id": "ACTIVITY.LLM.SIG",
+          "topic_id": "ACTIVITY.LLM_RUNS.SIGNALS",
           "subdomain": "LLM_RUNS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -1948,7 +1889,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 26,
           "binding_metadata": {
             "scenario_ids": [],
@@ -1970,7 +1911,7 @@
       "panels": [
         {
           "panel_id": "INC-EV-ACT-O1",
-          "panel_name": "Active Incidents",
+          "panel_name": "INC-EV-ACT-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -1995,8 +1936,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -2019,7 +1959,7 @@
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -2041,7 +1981,7 @@
         },
         {
           "panel_id": "INC-EV-ACT-O2",
-          "panel_name": "Incidents Summary",
+          "panel_name": "INC-EV-ACT-O2",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -2066,8 +2006,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -2084,13 +2023,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "ACTIVE",
-          "topic_id": "INCIDENTS.EV.ACT",
+          "topic_id": "INCIDENTS.EVENTS.ACTIVE",
           "subdomain": "EVENTS",
           "topic_display_order": 1,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -2100,7 +2039,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 28,
           "binding_metadata": {
             "scenario_ids": [],
@@ -2112,7 +2051,7 @@
         },
         {
           "panel_id": "INC-EV-ACT-O3",
-          "panel_name": "Incidents Metrics",
+          "panel_name": "INC-EV-ACT-O3",
           "order": "O3",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -2137,8 +2076,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -2155,13 +2093,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "ACTIVE",
-          "topic_id": "INCIDENTS.EV.ACT",
+          "topic_id": "INCIDENTS.EVENTS.ACTIVE",
           "subdomain": "EVENTS",
           "topic_display_order": 1,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -2171,7 +2109,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 29,
           "binding_metadata": {
             "scenario_ids": [],
@@ -2183,12 +2121,12 @@
         },
         {
           "panel_id": "INC-EV-ACT-O4",
-          "panel_name": "Incident Patterns",
+          "panel_name": "INC-EV-ACT-O4",
           "order": "O4",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -2208,8 +2146,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -2226,33 +2163,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "ACTIVE",
-          "topic_id": "INCIDENTS.EV.ACT",
+          "topic_id": "INCIDENTS.EVENTS.ACTIVE",
           "subdomain": "EVENTS",
           "topic_display_order": 1,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/incidents/inc-ev-act-o4",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 30
         },
         {
           "panel_id": "INC-EV-ACT-O5",
-          "panel_name": "Infrastructure Summary",
+          "panel_name": "INC-EV-ACT-O5",
           "order": "O5",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -2272,8 +2209,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -2290,28 +2226,28 @@
           "controls": [],
           "control_count": 0,
           "topic": "ACTIVE",
-          "topic_id": "INCIDENTS.EV.ACT",
+          "topic_id": "INCIDENTS.EVENTS.ACTIVE",
           "subdomain": "EVENTS",
           "topic_display_order": 1,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/incidents/inc-ev-act-o5",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 31
         },
         {
           "panel_id": "INC-EV-HIST-O1",
-          "panel_name": "Historical Incidents",
+          "panel_name": "INC-EV-HIST-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -2336,8 +2272,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -2354,13 +2289,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "HISTORICAL",
-          "topic_id": "INCIDENTS.EV.HIST",
+          "topic_id": "INCIDENTS.EVENTS.HISTORICAL",
           "subdomain": "EVENTS",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -2370,7 +2305,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 32,
           "binding_metadata": {
             "scenario_ids": [],
@@ -2382,12 +2317,12 @@
         },
         {
           "panel_id": "INC-EV-HIST-O2",
-          "panel_name": "Guard Incidents",
+          "panel_name": "INC-EV-HIST-O2",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": null,
           "content_blocks": [
             {
               "type": "HEADER",
@@ -2407,8 +2342,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -2425,33 +2359,40 @@
           "controls": [],
           "control_count": 0,
           "topic": "HISTORICAL",
-          "topic_id": "INCIDENTS.EV.HIST",
+          "topic_id": "INCIDENTS.EVENTS.HISTORICAL",
           "subdomain": "EVENTS",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/incidents/inc-ev-hist-o2",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "BOUND",
+          "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 33
+          "panel_class": "interpretation",
+          "panel_display_order": 33,
+          "binding_metadata": {
+            "scenario_ids": [],
+            "observed_at": null,
+            "capability_ids": [],
+            "trace_count": 0,
+            "observed_effects": []
+          }
         },
         {
           "panel_id": "INC-EV-HIST-O3",
-          "panel_name": "V1 Incidents",
+          "panel_name": "INC-EV-HIST-O3",
           "order": "O3",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": null,
           "content_blocks": [
             {
               "type": "HEADER",
@@ -2471,8 +2412,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -2489,33 +2429,40 @@
           "controls": [],
           "control_count": 0,
           "topic": "HISTORICAL",
-          "topic_id": "INCIDENTS.EV.HIST",
+          "topic_id": "INCIDENTS.EVENTS.HISTORICAL",
           "subdomain": "EVENTS",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/incidents/inc-ev-hist-o3",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "BOUND",
+          "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 34
+          "panel_class": "interpretation",
+          "panel_display_order": 34,
+          "binding_metadata": {
+            "scenario_ids": [],
+            "observed_at": null,
+            "capability_ids": [],
+            "trace_count": 0,
+            "observed_effects": []
+          }
         },
         {
           "panel_id": "INC-EV-HIST-O4",
-          "panel_name": "Ops Incidents",
+          "panel_name": "INC-EV-HIST-O4",
           "order": "O4",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -2535,8 +2482,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -2553,28 +2499,28 @@
           "controls": [],
           "control_count": 0,
           "topic": "HISTORICAL",
-          "topic_id": "INCIDENTS.EV.HIST",
+          "topic_id": "INCIDENTS.EVENTS.HISTORICAL",
           "subdomain": "EVENTS",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/incidents/inc-ev-hist-o4",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 35
         },
         {
           "panel_id": "INC-EV-HIST-O5",
-          "panel_name": "Integration Stats",
+          "panel_name": "INC-EV-HIST-O5",
           "order": "O5",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -2599,8 +2545,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -2617,13 +2562,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "HISTORICAL",
-          "topic_id": "INCIDENTS.EV.HIST",
+          "topic_id": "INCIDENTS.EVENTS.HISTORICAL",
           "subdomain": "EVENTS",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -2633,7 +2578,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 36,
           "binding_metadata": {
             "scenario_ids": [],
@@ -2645,7 +2590,7 @@
         },
         {
           "panel_id": "INC-EV-RES-O1",
-          "panel_name": "Resolved Incidents",
+          "panel_name": "INC-EV-RES-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -2670,8 +2615,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -2688,13 +2632,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "RESOLVED",
-          "topic_id": "INCIDENTS.EV.RES",
+          "topic_id": "INCIDENTS.EVENTS.RESOLVED",
           "subdomain": "EVENTS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -2716,7 +2660,7 @@
         },
         {
           "panel_id": "INC-EV-RES-O2",
-          "panel_name": "Recovery Actions",
+          "panel_name": "INC-EV-RES-O2",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -2741,8 +2685,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -2759,13 +2702,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "RESOLVED",
-          "topic_id": "INCIDENTS.EV.RES",
+          "topic_id": "INCIDENTS.EVENTS.RESOLVED",
           "subdomain": "EVENTS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -2775,7 +2718,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 38,
           "binding_metadata": {
             "scenario_ids": [],
@@ -2787,7 +2730,7 @@
         },
         {
           "panel_id": "INC-EV-RES-O3",
-          "panel_name": "Recovery Candidates",
+          "panel_name": "INC-EV-RES-O3",
           "order": "O3",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -2812,8 +2755,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -2830,13 +2772,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "RESOLVED",
-          "topic_id": "INCIDENTS.EV.RES",
+          "topic_id": "INCIDENTS.EVENTS.RESOLVED",
           "subdomain": "EVENTS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -2846,7 +2788,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 39,
           "binding_metadata": {
             "scenario_ids": [],
@@ -2858,7 +2800,7 @@
         },
         {
           "panel_id": "INC-EV-RES-O4",
-          "panel_name": "Graduation List",
+          "panel_name": "INC-EV-RES-O4",
           "order": "O4",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -2883,8 +2825,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -2901,13 +2842,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "RESOLVED",
-          "topic_id": "INCIDENTS.EV.RES",
+          "topic_id": "INCIDENTS.EVENTS.RESOLVED",
           "subdomain": "EVENTS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -2917,7 +2858,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 40,
           "binding_metadata": {
             "scenario_ids": [],
@@ -2929,12 +2870,12 @@
         },
         {
           "panel_id": "INC-EV-RES-O5",
-          "panel_name": "Replay Summary",
+          "panel_name": "INC-EV-RES-O5",
           "order": "O5",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": null,
           "content_blocks": [
             {
               "type": "HEADER",
@@ -2954,8 +2895,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -2972,24 +2912,31 @@
           "controls": [],
           "control_count": 0,
           "topic": "RESOLVED",
-          "topic_id": "INCIDENTS.EV.RES",
+          "topic_id": "INCIDENTS.EVENTS.RESOLVED",
           "subdomain": "EVENTS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/incidents/inc-ev-res-o5",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "BOUND",
+          "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 41
+          "panel_class": "interpretation",
+          "panel_display_order": 41,
+          "binding_metadata": {
+            "scenario_ids": [],
+            "observed_at": null,
+            "capability_ids": [],
+            "trace_count": 0,
+            "observed_effects": []
+          }
         }
       ],
       "panel_count": 15,
@@ -3003,7 +2950,7 @@
       "panels": [
         {
           "panel_id": "POL-GOV-ACT-O1",
-          "panel_name": "Active Policy Proposals",
+          "panel_name": "POL-GOV-ACT-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -3028,8 +2975,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -3052,7 +2998,7 @@
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -3074,7 +3020,7 @@
         },
         {
           "panel_id": "POL-GOV-ACT-O2",
-          "panel_name": "Proposals Summary",
+          "panel_name": "POL-GOV-ACT-O2",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -3099,8 +3045,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -3117,13 +3062,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "ACTIVE",
-          "topic_id": "POLICIES.GOV.ACT",
+          "topic_id": "POLICIES.GOVERNANCE.ACTIVE",
           "subdomain": "GOVERNANCE",
           "topic_display_order": 1,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -3133,7 +3078,7 @@
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 43,
           "binding_metadata": {
             "scenario_ids": [],
@@ -3145,12 +3090,12 @@
         },
         {
           "panel_id": "POL-GOV-ACT-O3",
-          "panel_name": "Policy Requests",
+          "panel_name": "POL-GOV-ACT-O3",
           "order": "O3",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": null,
           "content_blocks": [
             {
               "type": "HEADER",
@@ -3170,8 +3115,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -3188,33 +3132,40 @@
           "controls": [],
           "control_count": 0,
           "topic": "ACTIVE",
-          "topic_id": "POLICIES.GOV.ACT",
+          "topic_id": "POLICIES.GOVERNANCE.ACTIVE",
           "subdomain": "GOVERNANCE",
           "topic_display_order": 1,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-gov-act-o3",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "BOUND",
+          "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 44
+          "panel_class": "interpretation",
+          "panel_display_order": 44,
+          "binding_metadata": {
+            "scenario_ids": [],
+            "observed_at": null,
+            "capability_ids": [],
+            "trace_count": 0,
+            "observed_effects": []
+          }
         },
         {
           "panel_id": "POL-GOV-ACT-O4",
-          "panel_name": "Policy Layer State",
+          "panel_name": "POL-GOV-ACT-O4",
           "order": "O4",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -3234,8 +3185,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -3252,33 +3202,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "ACTIVE",
-          "topic_id": "POLICIES.GOV.ACT",
+          "topic_id": "POLICIES.GOVERNANCE.ACTIVE",
           "subdomain": "GOVERNANCE",
           "topic_display_order": 1,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-gov-act-o4",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 45
         },
         {
           "panel_id": "POL-GOV-ACT-O5",
-          "panel_name": "Policy Metrics",
+          "panel_name": "POL-GOV-ACT-O5",
           "order": "O5",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -3298,8 +3248,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -3316,28 +3265,28 @@
           "controls": [],
           "control_count": 0,
           "topic": "ACTIVE",
-          "topic_id": "POLICIES.GOV.ACT",
+          "topic_id": "POLICIES.GOVERNANCE.ACTIVE",
           "subdomain": "GOVERNANCE",
           "topic_display_order": 1,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-gov-act-o5",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 46
         },
         {
           "panel_id": "POL-GOV-DFT-O1",
-          "panel_name": "Draft Proposals",
+          "panel_name": "POL-GOV-DFT-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -3362,8 +3311,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -3380,13 +3328,13 @@
           "controls": [],
           "control_count": 0,
           "topic": "DRAFTS",
-          "topic_id": "POLICIES.GOV.DFT",
+          "topic_id": "POLICIES.GOVERNANCE.DRAFTS",
           "subdomain": "GOVERNANCE",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
@@ -3408,12 +3356,12 @@
         },
         {
           "panel_id": "POL-GOV-DFT-O2",
-          "panel_name": "Policy Versions",
+          "panel_name": "POL-GOV-DFT-O2",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -3433,8 +3381,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -3451,33 +3398,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "DRAFTS",
-          "topic_id": "POLICIES.GOV.DFT",
+          "topic_id": "POLICIES.GOVERNANCE.DRAFTS",
           "subdomain": "GOVERNANCE",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-gov-dft-o2",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 48
         },
         {
           "panel_id": "POL-GOV-DFT-O3",
-          "panel_name": "Current Version",
+          "panel_name": "POL-GOV-DFT-O3",
           "order": "O3",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -3497,8 +3444,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -3515,33 +3461,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "DRAFTS",
-          "topic_id": "POLICIES.GOV.DFT",
+          "topic_id": "POLICIES.GOVERNANCE.DRAFTS",
           "subdomain": "GOVERNANCE",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-gov-dft-o3",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 49
         },
         {
           "panel_id": "POL-GOV-DFT-O4",
-          "panel_name": "Policy Conflicts",
+          "panel_name": "POL-GOV-DFT-O4",
           "order": "O4",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -3561,8 +3507,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -3579,33 +3524,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "DRAFTS",
-          "topic_id": "POLICIES.GOV.DFT",
+          "topic_id": "POLICIES.GOVERNANCE.DRAFTS",
           "subdomain": "GOVERNANCE",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-gov-dft-o4",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "execution",
           "panel_display_order": 50
         },
         {
           "panel_id": "POL-GOV-DFT-O5",
-          "panel_name": "Policy Dependencies",
+          "panel_name": "POL-GOV-DFT-O5",
           "order": "O5",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -3625,8 +3570,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -3643,33 +3587,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "DRAFTS",
-          "topic_id": "POLICIES.GOV.DFT",
+          "topic_id": "POLICIES.GOVERNANCE.DRAFTS",
           "subdomain": "GOVERNANCE",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-gov-dft-o5",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "execution",
           "panel_display_order": 51
         },
         {
           "panel_id": "POL-GOV-LIB-O1",
-          "panel_name": "Safety Rules",
+          "panel_name": "POL-GOV-LIB-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -3689,8 +3633,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -3707,33 +3650,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "POLICY_LIBRARY",
-          "topic_id": "POLICIES.GOV.LIB",
+          "topic_id": "POLICIES.GOVERNANCE.POLICY_LIBRARY",
           "subdomain": "GOVERNANCE",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-gov-lib-o1",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
           "panel_class": "evidence",
           "panel_display_order": 52
         },
         {
           "panel_id": "POL-GOV-LIB-O2",
-          "panel_name": "Ethical Constraints",
+          "panel_name": "POL-GOV-LIB-O2",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -3753,8 +3696,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -3771,33 +3713,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "POLICY_LIBRARY",
-          "topic_id": "POLICIES.GOV.LIB",
+          "topic_id": "POLICIES.GOVERNANCE.POLICY_LIBRARY",
           "subdomain": "GOVERNANCE",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-gov-lib-o2",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 53
         },
         {
           "panel_id": "POL-GOV-LIB-O3",
-          "panel_name": "Active Policies",
+          "panel_name": "POL-GOV-LIB-O3",
           "order": "O3",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": null,
           "content_blocks": [
             {
               "type": "HEADER",
@@ -3817,8 +3759,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -3835,33 +3776,40 @@
           "controls": [],
           "control_count": 0,
           "topic": "POLICY_LIBRARY",
-          "topic_id": "POLICIES.GOV.LIB",
+          "topic_id": "POLICIES.GOVERNANCE.POLICY_LIBRARY",
           "subdomain": "GOVERNANCE",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-gov-lib-o3",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "BOUND",
+          "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 54
+          "panel_class": "interpretation",
+          "panel_display_order": 54,
+          "binding_metadata": {
+            "scenario_ids": [],
+            "observed_at": null,
+            "capability_ids": [],
+            "trace_count": 0,
+            "observed_effects": []
+          }
         },
         {
           "panel_id": "POL-GOV-LIB-O4",
-          "panel_name": "Guard Policies",
+          "panel_name": "POL-GOV-LIB-O4",
           "order": "O4",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": null,
           "content_blocks": [
             {
               "type": "HEADER",
@@ -3881,8 +3829,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -3899,33 +3846,40 @@
           "controls": [],
           "control_count": 0,
           "topic": "POLICY_LIBRARY",
-          "topic_id": "POLICIES.GOV.LIB",
+          "topic_id": "POLICIES.GOVERNANCE.POLICY_LIBRARY",
           "subdomain": "GOVERNANCE",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-gov-lib-o4",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "BOUND",
+          "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 55
+          "panel_class": "execution",
+          "panel_display_order": 55,
+          "binding_metadata": {
+            "scenario_ids": [],
+            "observed_at": null,
+            "capability_ids": [],
+            "trace_count": 0,
+            "observed_effects": []
+          }
         },
         {
           "panel_id": "POL-GOV-LIB-O5",
-          "panel_name": "Temporal Policies",
+          "panel_name": "POL-GOV-LIB-O5",
           "order": "O5",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -3945,8 +3899,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -3963,33 +3916,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "POLICY_LIBRARY",
-          "topic_id": "POLICIES.GOV.LIB",
+          "topic_id": "POLICIES.GOVERNANCE.POLICY_LIBRARY",
           "subdomain": "GOVERNANCE",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-gov-lib-o5",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "interpretation",
           "panel_display_order": 56
         },
         {
           "panel_id": "POL-LIM-THR-O1",
-          "panel_name": "Risk Ceilings",
+          "panel_name": "POL-LIM-THR-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -4009,8 +3962,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -4027,33 +3979,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "THRESHOLDS",
-          "topic_id": "POLICIES.LIM.THR",
+          "topic_id": "POLICIES.LIMITS.THRESHOLDS",
           "subdomain": "LIMITS",
           "topic_display_order": 4,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-lim-thr-o1",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
           "panel_class": "evidence",
           "panel_display_order": 57
         },
         {
           "panel_id": "POL-LIM-THR-O2",
-          "panel_name": "Budget List",
+          "panel_name": "POL-LIM-THR-O2",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -4073,8 +4025,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -4091,33 +4042,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "THRESHOLDS",
-          "topic_id": "POLICIES.LIM.THR",
+          "topic_id": "POLICIES.LIMITS.THRESHOLDS",
           "subdomain": "LIMITS",
           "topic_display_order": 4,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-lim-thr-o2",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "execution",
           "panel_display_order": 58
         },
         {
           "panel_id": "POL-LIM-THR-O3",
-          "panel_name": "Run Quotas",
+          "panel_name": "POL-LIM-THR-O3",
           "order": "O3",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -4137,8 +4088,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -4155,33 +4105,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "THRESHOLDS",
-          "topic_id": "POLICIES.LIM.THR",
+          "topic_id": "POLICIES.LIMITS.THRESHOLDS",
           "subdomain": "LIMITS",
           "topic_display_order": 4,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-lim-thr-o3",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "execution",
           "panel_display_order": 59
         },
         {
           "panel_id": "POL-LIM-THR-O4",
-          "panel_name": "Token Quotas",
+          "panel_name": "POL-LIM-THR-O4",
           "order": "O4",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -4201,8 +4151,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -4219,33 +4168,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "THRESHOLDS",
-          "topic_id": "POLICIES.LIM.THR",
+          "topic_id": "POLICIES.LIMITS.THRESHOLDS",
           "subdomain": "LIMITS",
           "topic_display_order": 4,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-lim-thr-o4",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "execution",
           "panel_display_order": 60
         },
         {
           "panel_id": "POL-LIM-THR-O5",
-          "panel_name": "Cooldowns",
+          "panel_name": "POL-LIM-THR-O5",
           "order": "O5",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -4265,8 +4214,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -4283,353 +4231,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "THRESHOLDS",
-          "topic_id": "POLICIES.LIM.THR",
+          "topic_id": "POLICIES.LIMITS.THRESHOLDS",
           "subdomain": "LIMITS",
           "topic_display_order": 4,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-lim-thr-o5",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "panel_class": "execution",
           "panel_display_order": 61
         },
         {
-          "panel_id": "POL-LIM-USG-O1",
-          "panel_name": "Tenant Usage",
-          "order": "O1",
-          "render_mode": "TABLE",
-          "visibility": "ALWAYS",
-          "enabled": true,
-          "disabled_reason": "This feature is deferred by governance",
-          "content_blocks": [
-            {
-              "type": "HEADER",
-              "order": 0,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
-            },
-            {
-              "type": "DATA",
-              "order": 1,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "render_mode": "TABLE",
-              "components": [
-                "primary_display",
-                "filter_bar"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
-            }
-          ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "USAGE",
-          "topic_id": "POLICIES.LIM.USG",
-          "subdomain": "LIMITS",
-          "topic_display_order": 5,
-          "short_description": null,
-          "permissions": {
-            "nav_required": false,
-            "filtering": true,
-            "read": true,
-            "write": false,
-            "activate": false
-          },
-          "route": "/policies/pol-lim-usg-o1",
-          "view_type": "PANEL_VIEW",
-          "binding_status": "DEFERRED",
-          "panel_state": "DEFERRED",
-          "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 62
-        },
-        {
-          "panel_id": "POL-LIM-USG-O2",
-          "panel_name": "Cost Dashboard",
-          "order": "O2",
-          "render_mode": "TABLE",
-          "visibility": "ALWAYS",
-          "enabled": true,
-          "disabled_reason": "This feature is deferred by governance",
-          "content_blocks": [
-            {
-              "type": "HEADER",
-              "order": 0,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
-            },
-            {
-              "type": "DATA",
-              "order": 1,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "render_mode": "TABLE",
-              "components": [
-                "primary_display",
-                "filter_bar"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
-            }
-          ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "USAGE",
-          "topic_id": "POLICIES.LIM.USG",
-          "subdomain": "LIMITS",
-          "topic_display_order": 5,
-          "short_description": null,
-          "permissions": {
-            "nav_required": false,
-            "filtering": true,
-            "read": true,
-            "write": false,
-            "activate": false
-          },
-          "route": "/policies/pol-lim-usg-o2",
-          "view_type": "PANEL_VIEW",
-          "binding_status": "DEFERRED",
-          "panel_state": "DEFERRED",
-          "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 63
-        },
-        {
-          "panel_id": "POL-LIM-USG-O3",
-          "panel_name": "Cost by User",
-          "order": "O3",
-          "render_mode": "TABLE",
-          "visibility": "ALWAYS",
-          "enabled": true,
-          "disabled_reason": "This feature is deferred by governance",
-          "content_blocks": [
-            {
-              "type": "HEADER",
-              "order": 0,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
-            },
-            {
-              "type": "DATA",
-              "order": 1,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "render_mode": "TABLE",
-              "components": [
-                "primary_display",
-                "filter_bar"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
-            }
-          ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "USAGE",
-          "topic_id": "POLICIES.LIM.USG",
-          "subdomain": "LIMITS",
-          "topic_display_order": 5,
-          "short_description": null,
-          "permissions": {
-            "nav_required": false,
-            "filtering": true,
-            "read": true,
-            "write": false,
-            "activate": false
-          },
-          "route": "/policies/pol-lim-usg-o3",
-          "view_type": "PANEL_VIEW",
-          "binding_status": "DEFERRED",
-          "panel_state": "DEFERRED",
-          "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 64
-        },
-        {
-          "panel_id": "POL-LIM-USG-O4",
-          "panel_name": "Cost Projection",
-          "order": "O4",
-          "render_mode": "TABLE",
-          "visibility": "ALWAYS",
-          "enabled": true,
-          "disabled_reason": "This feature is deferred by governance",
-          "content_blocks": [
-            {
-              "type": "HEADER",
-              "order": 0,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
-            },
-            {
-              "type": "DATA",
-              "order": 1,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "render_mode": "TABLE",
-              "components": [
-                "primary_display",
-                "filter_bar"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
-            }
-          ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "USAGE",
-          "topic_id": "POLICIES.LIM.USG",
-          "subdomain": "LIMITS",
-          "topic_display_order": 5,
-          "short_description": null,
-          "permissions": {
-            "nav_required": false,
-            "filtering": true,
-            "read": true,
-            "write": false,
-            "activate": false
-          },
-          "route": "/policies/pol-lim-usg-o4",
-          "view_type": "PANEL_VIEW",
-          "binding_status": "DEFERRED",
-          "panel_state": "DEFERRED",
-          "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 65
-        },
-        {
-          "panel_id": "POL-LIM-USG-O5",
-          "panel_name": "Billing Status",
-          "order": "O5",
-          "render_mode": "TABLE",
-          "visibility": "ALWAYS",
-          "enabled": true,
-          "disabled_reason": "This feature is deferred by governance",
-          "content_blocks": [
-            {
-              "type": "HEADER",
-              "order": 0,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
-            },
-            {
-              "type": "DATA",
-              "order": 1,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "render_mode": "TABLE",
-              "components": [
-                "primary_display",
-                "filter_bar"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
-            }
-          ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "USAGE",
-          "topic_id": "POLICIES.LIM.USG",
-          "subdomain": "LIMITS",
-          "topic_display_order": 5,
-          "short_description": null,
-          "permissions": {
-            "nav_required": false,
-            "filtering": true,
-            "read": true,
-            "write": false,
-            "activate": false
-          },
-          "route": "/policies/pol-lim-usg-o5",
-          "view_type": "PANEL_VIEW",
-          "binding_status": "DEFERRED",
-          "panel_state": "DEFERRED",
-          "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 66
-        },
-        {
           "panel_id": "POL-LIM-VIO-O1",
-          "panel_name": "Violations List",
+          "panel_name": "POL-LIM-VIO-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -4649,8 +4277,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -4667,33 +4294,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "VIOLATIONS",
-          "topic_id": "POLICIES.LIM.VIO",
+          "topic_id": "POLICIES.LIMITS.VIOLATIONS",
           "subdomain": "LIMITS",
-          "topic_display_order": 6,
+          "topic_display_order": 5,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-lim-vio-o1",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
           "panel_class": "evidence",
-          "panel_display_order": 67
+          "panel_display_order": 62
         },
         {
           "panel_id": "POL-LIM-VIO-O2",
-          "panel_name": "Cost Incidents",
+          "panel_name": "POL-LIM-VIO-O2",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": null,
           "content_blocks": [
             {
               "type": "HEADER",
@@ -4713,8 +4340,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -4731,33 +4357,40 @@
           "controls": [],
           "control_count": 0,
           "topic": "VIOLATIONS",
-          "topic_id": "POLICIES.LIM.VIO",
+          "topic_id": "POLICIES.LIMITS.VIOLATIONS",
           "subdomain": "LIMITS",
-          "topic_display_order": 6,
+          "topic_display_order": 5,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-lim-vio-o2",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "BOUND",
+          "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 68
+          "panel_class": "interpretation",
+          "panel_display_order": 63,
+          "binding_metadata": {
+            "scenario_ids": [],
+            "observed_at": null,
+            "capability_ids": [],
+            "trace_count": 0,
+            "observed_effects": []
+          }
         },
         {
           "panel_id": "POL-LIM-VIO-O3",
-          "panel_name": "Simulated Incidents",
+          "panel_name": "POL-LIM-VIO-O3",
           "order": "O3",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": null,
           "content_blocks": [
             {
               "type": "HEADER",
@@ -4777,8 +4410,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -4795,33 +4427,40 @@
           "controls": [],
           "control_count": 0,
           "topic": "VIOLATIONS",
-          "topic_id": "POLICIES.LIM.VIO",
+          "topic_id": "POLICIES.LIMITS.VIOLATIONS",
           "subdomain": "LIMITS",
-          "topic_display_order": 6,
+          "topic_display_order": 5,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-lim-vio-o3",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "BOUND",
+          "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 69
+          "panel_class": "interpretation",
+          "panel_display_order": 64,
+          "binding_metadata": {
+            "scenario_ids": [],
+            "observed_at": null,
+            "capability_ids": [],
+            "trace_count": 0,
+            "observed_effects": []
+          }
         },
         {
           "panel_id": "POL-LIM-VIO-O4",
-          "panel_name": "Anomalies List",
+          "panel_name": "POL-LIM-VIO-O4",
           "order": "O4",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -4841,8 +4480,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -4859,33 +4497,33 @@
           "controls": [],
           "control_count": 0,
           "topic": "VIOLATIONS",
-          "topic_id": "POLICIES.LIM.VIO",
+          "topic_id": "POLICIES.LIMITS.VIOLATIONS",
           "subdomain": "LIMITS",
-          "topic_display_order": 6,
+          "topic_display_order": 5,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-lim-vio-o4",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 70
+          "panel_class": "interpretation",
+          "panel_display_order": 65
         },
         {
           "panel_id": "POL-LIM-VIO-O5",
-          "panel_name": "Divergence Report",
+          "panel_name": "POL-LIM-VIO-O5",
           "order": "O5",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
+          "disabled_reason": null,
           "content_blocks": [
             {
               "type": "HEADER",
@@ -4905,8 +4543,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -4923,27 +4560,34 @@
           "controls": [],
           "control_count": 0,
           "topic": "VIOLATIONS",
-          "topic_id": "POLICIES.LIM.VIO",
+          "topic_id": "POLICIES.LIMITS.VIOLATIONS",
           "subdomain": "LIMITS",
-          "topic_display_order": 6,
+          "topic_display_order": 5,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/policies/pol-lim-vio-o5",
           "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
+          "binding_status": "BOUND",
+          "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 71
+          "panel_class": "interpretation",
+          "panel_display_order": 66,
+          "binding_metadata": {
+            "scenario_ids": [],
+            "observed_at": null,
+            "capability_ids": [],
+            "trace_count": 0,
+            "observed_effects": []
+          }
         }
       ],
-      "panel_count": 30,
+      "panel_count": 25,
       "total_controls": 0,
       "short_description": null,
       "route": "/policies"
@@ -4954,7 +4598,7 @@
       "panels": [
         {
           "panel_id": "LOG-REC-AUD-O1",
-          "panel_name": "Execution Traces",
+          "panel_name": "LOG-REC-AUD-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -4979,8 +4623,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -4990,7 +4633,6 @@
               "enabled": true,
               "components": [
                 "replay_link",
-                "export_button",
                 "timestamp"
               ]
             }
@@ -5004,12 +4646,348 @@
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
           "route": "/logs/log-rec-aud-o1",
+          "view_type": "PANEL_VIEW",
+          "binding_status": "BOUND",
+          "panel_state": "BOUND",
+          "review_status": "UNREVIEWED",
+          "panel_class": "evidence",
+          "panel_display_order": 67,
+          "binding_metadata": {
+            "scenario_ids": [],
+            "observed_at": null,
+            "capability_ids": [],
+            "trace_count": 0,
+            "observed_effects": []
+          }
+        },
+        {
+          "panel_id": "LOG-REC-AUD-O2",
+          "panel_name": "LOG-REC-AUD-O2",
+          "order": "O2",
+          "render_mode": "TABLE",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": "Backend capability not connected",
+          "content_blocks": [
+            {
+              "type": "HEADER",
+              "order": 0,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": [
+                "title",
+                "status_badge",
+                "binding_indicator"
+              ]
+            },
+            {
+              "type": "DATA",
+              "order": 1,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "render_mode": "TABLE",
+              "components": [
+                "primary_display"
+              ]
+            },
+            {
+              "type": "FOOTER",
+              "order": 2,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": [
+                "replay_link",
+                "timestamp"
+              ]
+            }
+          ],
+          "controls": [],
+          "control_count": 0,
+          "topic": "AUDIT",
+          "topic_id": "LOGS.RECORDS.AUDIT",
+          "subdomain": "RECORDS",
+          "topic_display_order": 1,
+          "short_description": null,
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          },
+          "route": "/logs/log-rec-aud-o2",
+          "view_type": "PANEL_VIEW",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
+          "review_status": "UNREVIEWED",
+          "panel_class": "evidence",
+          "panel_display_order": 68
+        },
+        {
+          "panel_id": "LOG-REC-AUD-O3",
+          "panel_name": "LOG-REC-AUD-O3",
+          "order": "O3",
+          "render_mode": "TABLE",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "content_blocks": [
+            {
+              "type": "HEADER",
+              "order": 0,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": [
+                "title",
+                "status_badge",
+                "binding_indicator"
+              ]
+            },
+            {
+              "type": "DATA",
+              "order": 1,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "render_mode": "TABLE",
+              "components": [
+                "primary_display"
+              ]
+            },
+            {
+              "type": "FOOTER",
+              "order": 2,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": [
+                "replay_link",
+                "timestamp"
+              ]
+            }
+          ],
+          "controls": [],
+          "control_count": 0,
+          "topic": "AUDIT",
+          "topic_id": "LOGS.RECORDS.AUDIT",
+          "subdomain": "RECORDS",
+          "topic_display_order": 1,
+          "short_description": null,
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          },
+          "route": "/logs/log-rec-aud-o3",
+          "view_type": "PANEL_VIEW",
+          "binding_status": "BOUND",
+          "panel_state": "BOUND",
+          "review_status": "UNREVIEWED",
+          "panel_class": "evidence",
+          "panel_display_order": 69,
+          "binding_metadata": {
+            "scenario_ids": [],
+            "observed_at": null,
+            "capability_ids": [],
+            "trace_count": 0,
+            "observed_effects": []
+          }
+        },
+        {
+          "panel_id": "LOG-REC-AUD-O4",
+          "panel_name": "LOG-REC-AUD-O4",
+          "order": "O4",
+          "render_mode": "TABLE",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "content_blocks": [
+            {
+              "type": "HEADER",
+              "order": 0,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": [
+                "title",
+                "status_badge",
+                "binding_indicator"
+              ]
+            },
+            {
+              "type": "DATA",
+              "order": 1,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "render_mode": "TABLE",
+              "components": [
+                "primary_display"
+              ]
+            },
+            {
+              "type": "FOOTER",
+              "order": 2,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": [
+                "replay_link",
+                "timestamp"
+              ]
+            }
+          ],
+          "controls": [],
+          "control_count": 0,
+          "topic": "AUDIT",
+          "topic_id": "LOGS.RECORDS.AUDIT",
+          "subdomain": "RECORDS",
+          "topic_display_order": 1,
+          "short_description": null,
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          },
+          "route": "/logs/log-rec-aud-o4",
+          "view_type": "PANEL_VIEW",
+          "binding_status": "BOUND",
+          "panel_state": "BOUND",
+          "review_status": "UNREVIEWED",
+          "panel_class": "evidence",
+          "panel_display_order": 70,
+          "binding_metadata": {
+            "scenario_ids": [],
+            "observed_at": null,
+            "capability_ids": [],
+            "trace_count": 0,
+            "observed_effects": []
+          }
+        },
+        {
+          "panel_id": "LOG-REC-AUD-O5",
+          "panel_name": "LOG-REC-AUD-O5",
+          "order": "O5",
+          "render_mode": "TABLE",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": "Backend capability not connected",
+          "content_blocks": [
+            {
+              "type": "HEADER",
+              "order": 0,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": [
+                "title",
+                "status_badge",
+                "binding_indicator"
+              ]
+            },
+            {
+              "type": "DATA",
+              "order": 1,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "render_mode": "TABLE",
+              "components": [
+                "primary_display"
+              ]
+            },
+            {
+              "type": "FOOTER",
+              "order": 2,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": [
+                "replay_link",
+                "timestamp"
+              ]
+            }
+          ],
+          "controls": [],
+          "control_count": 0,
+          "topic": "AUDIT",
+          "topic_id": "LOGS.RECORDS.AUDIT",
+          "subdomain": "RECORDS",
+          "topic_display_order": 1,
+          "short_description": null,
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          },
+          "route": "/logs/log-rec-aud-o5",
+          "view_type": "PANEL_VIEW",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
+          "review_status": "UNREVIEWED",
+          "panel_class": "evidence",
+          "panel_display_order": 71
+        },
+        {
+          "panel_id": "LOG-REC-LLM-O1",
+          "panel_name": "LOG-REC-LLM-O1",
+          "order": "O1",
+          "render_mode": "TABLE",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "content_blocks": [
+            {
+              "type": "HEADER",
+              "order": 0,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": [
+                "title",
+                "status_badge",
+                "binding_indicator"
+              ]
+            },
+            {
+              "type": "DATA",
+              "order": 1,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "render_mode": "TABLE",
+              "components": [
+                "primary_display"
+              ]
+            },
+            {
+              "type": "FOOTER",
+              "order": 2,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": [
+                "replay_link",
+                "timestamp"
+              ]
+            }
+          ],
+          "controls": [],
+          "control_count": 0,
+          "topic": "LLM_RUNS",
+          "topic_id": "LOGS.RECORDS.LLM_RUNS",
+          "subdomain": "RECORDS",
+          "topic_display_order": 2,
+          "short_description": null,
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          },
+          "route": "/logs/log-rec-llm-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "BOUND",
           "panel_state": "BOUND",
@@ -5025,8 +5003,8 @@
           }
         },
         {
-          "panel_id": "LOG-REC-AUD-O2",
-          "panel_name": "RBAC Audit",
+          "panel_id": "LOG-REC-LLM-O2",
+          "panel_name": "LOG-REC-LLM-O2",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -5051,8 +5029,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -5068,19 +5045,19 @@
           ],
           "controls": [],
           "control_count": 0,
-          "topic": "AUDIT",
-          "topic_id": "LOGS.REC.AUD",
+          "topic": "LLM_RUNS",
+          "topic_id": "LOGS.RECORDS.LLM_RUNS",
           "subdomain": "RECORDS",
-          "topic_display_order": 1,
+          "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
-          "route": "/logs/log-rec-aud-o2",
+          "route": "/logs/log-rec-llm-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "BOUND",
           "panel_state": "BOUND",
@@ -5096,8 +5073,8 @@
           }
         },
         {
-          "panel_id": "LOG-REC-AUD-O3",
-          "panel_name": "Ops Audit",
+          "panel_id": "LOG-REC-LLM-O3",
+          "panel_name": "LOG-REC-LLM-O3",
           "order": "O3",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -5122,8 +5099,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -5139,19 +5115,19 @@
           ],
           "controls": [],
           "control_count": 0,
-          "topic": "AUDIT",
-          "topic_id": "LOGS.REC.AUD",
+          "topic": "LLM_RUNS",
+          "topic_id": "LOGS.RECORDS.LLM_RUNS",
           "subdomain": "RECORDS",
-          "topic_display_order": 1,
+          "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
-          "route": "/logs/log-rec-aud-o3",
+          "route": "/logs/log-rec-llm-o3",
           "view_type": "PANEL_VIEW",
           "binding_status": "BOUND",
           "panel_state": "BOUND",
@@ -5167,13 +5143,13 @@
           }
         },
         {
-          "panel_id": "LOG-REC-AUD-O4",
-          "panel_name": "Status History",
+          "panel_id": "LOG-REC-LLM-O4",
+          "panel_name": "LOG-REC-LLM-O4",
           "order": "O4",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
-          "disabled_reason": null,
+          "disabled_reason": "Backend capability not connected",
           "content_blocks": [
             {
               "type": "HEADER",
@@ -5193,8 +5169,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -5210,36 +5185,29 @@
           ],
           "controls": [],
           "control_count": 0,
-          "topic": "AUDIT",
-          "topic_id": "LOGS.REC.AUD",
+          "topic": "LLM_RUNS",
+          "topic_id": "LOGS.RECORDS.LLM_RUNS",
           "subdomain": "RECORDS",
-          "topic_display_order": 1,
+          "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
-          "route": "/logs/log-rec-aud-o4",
+          "route": "/logs/log-rec-llm-o4",
           "view_type": "PANEL_VIEW",
-          "binding_status": "BOUND",
-          "panel_state": "BOUND",
+          "binding_status": "UNBOUND",
+          "panel_state": "UNBOUND",
           "review_status": "UNREVIEWED",
           "panel_class": "evidence",
-          "panel_display_order": 75,
-          "binding_metadata": {
-            "scenario_ids": [],
-            "observed_at": null,
-            "capability_ids": [],
-            "trace_count": 0,
-            "observed_effects": []
-          }
+          "panel_display_order": 75
         },
         {
-          "panel_id": "LOG-REC-AUD-O5",
-          "panel_name": "Status Stats",
+          "panel_id": "LOG-REC-LLM-O5",
+          "panel_name": "LOG-REC-LLM-O5",
           "order": "O5",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -5264,8 +5232,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -5281,19 +5248,19 @@
           ],
           "controls": [],
           "control_count": 0,
-          "topic": "AUDIT",
-          "topic_id": "LOGS.REC.AUD",
+          "topic": "LLM_RUNS",
+          "topic_id": "LOGS.RECORDS.LLM_RUNS",
           "subdomain": "RECORDS",
-          "topic_display_order": 1,
+          "topic_display_order": 2,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
-          "route": "/logs/log-rec-aud-o5",
+          "route": "/logs/log-rec-llm-o5",
           "view_type": "PANEL_VIEW",
           "binding_status": "BOUND",
           "panel_state": "BOUND",
@@ -5309,8 +5276,8 @@
           }
         },
         {
-          "panel_id": "LOG-REC-LLM-O1",
-          "panel_name": "Runtime Traces",
+          "panel_id": "LOG-REC-SYS-O1",
+          "panel_name": "LOG-REC-SYS-O1",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -5335,8 +5302,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -5352,19 +5318,19 @@
           ],
           "controls": [],
           "control_count": 0,
-          "topic": "LLM_RUNS",
-          "topic_id": "LOGS.REC.LLM",
+          "topic": "SYSTEM_LOGS",
+          "topic_id": "LOGS.RECORDS.SYSTEM_LOGS",
           "subdomain": "RECORDS",
-          "topic_display_order": 2,
+          "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
-          "route": "/logs/log-rec-llm-o1",
+          "route": "/logs/log-rec-sys-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "BOUND",
           "panel_state": "BOUND",
@@ -5380,8 +5346,8 @@
           }
         },
         {
-          "panel_id": "LOG-REC-LLM-O2",
-          "panel_name": "Activity Runs",
+          "panel_id": "LOG-REC-SYS-O2",
+          "panel_name": "LOG-REC-SYS-O2",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -5406,8 +5372,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -5423,19 +5388,19 @@
           ],
           "controls": [],
           "control_count": 0,
-          "topic": "LLM_RUNS",
-          "topic_id": "LOGS.REC.LLM",
+          "topic": "SYSTEM_LOGS",
+          "topic_id": "LOGS.RECORDS.SYSTEM_LOGS",
           "subdomain": "RECORDS",
-          "topic_display_order": 2,
+          "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
-          "route": "/logs/log-rec-llm-o2",
+          "route": "/logs/log-rec-sys-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "BOUND",
           "panel_state": "BOUND",
@@ -5451,8 +5416,8 @@
           }
         },
         {
-          "panel_id": "LOG-REC-LLM-O3",
-          "panel_name": "Customer Runs",
+          "panel_id": "LOG-REC-SYS-O3",
+          "panel_name": "LOG-REC-SYS-O3",
           "order": "O3",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -5477,8 +5442,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -5494,19 +5458,19 @@
           ],
           "controls": [],
           "control_count": 0,
-          "topic": "LLM_RUNS",
-          "topic_id": "LOGS.REC.LLM",
+          "topic": "SYSTEM_LOGS",
+          "topic_id": "LOGS.RECORDS.SYSTEM_LOGS",
           "subdomain": "RECORDS",
-          "topic_display_order": 2,
+          "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
-          "route": "/logs/log-rec-llm-o3",
+          "route": "/logs/log-rec-sys-o3",
           "view_type": "PANEL_VIEW",
           "binding_status": "BOUND",
           "panel_state": "BOUND",
@@ -5522,137 +5486,9 @@
           }
         },
         {
-          "panel_id": "LOG-REC-LLM-O4",
-          "panel_name": "Tenant Runs",
+          "panel_id": "LOG-REC-SYS-O4",
+          "panel_name": "LOG-REC-SYS-O4",
           "order": "O4",
-          "render_mode": "TABLE",
-          "visibility": "ALWAYS",
-          "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
-          "content_blocks": [
-            {
-              "type": "HEADER",
-              "order": 0,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
-            },
-            {
-              "type": "DATA",
-              "order": 1,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "render_mode": "TABLE",
-              "components": [
-                "primary_display",
-                "filter_bar"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
-            }
-          ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "LLM_RUNS",
-          "topic_id": "LOGS.REC.LLM",
-          "subdomain": "RECORDS",
-          "topic_display_order": 2,
-          "short_description": null,
-          "permissions": {
-            "nav_required": false,
-            "filtering": true,
-            "read": true,
-            "write": false,
-            "activate": false
-          },
-          "route": "/logs/log-rec-llm-o4",
-          "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
-          "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 80
-        },
-        {
-          "panel_id": "LOG-REC-LLM-O5",
-          "panel_name": "Trace Mismatches",
-          "order": "O5",
-          "render_mode": "TABLE",
-          "visibility": "ALWAYS",
-          "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
-          "content_blocks": [
-            {
-              "type": "HEADER",
-              "order": 0,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
-            },
-            {
-              "type": "DATA",
-              "order": 1,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "render_mode": "TABLE",
-              "components": [
-                "primary_display",
-                "filter_bar"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
-            }
-          ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "LLM_RUNS",
-          "topic_id": "LOGS.REC.LLM",
-          "subdomain": "RECORDS",
-          "topic_display_order": 2,
-          "short_description": null,
-          "permissions": {
-            "nav_required": false,
-            "filtering": true,
-            "read": true,
-            "write": false,
-            "activate": false
-          },
-          "route": "/logs/log-rec-llm-o5",
-          "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
-          "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 81
-        },
-        {
-          "panel_id": "LOG-REC-SYS-O1",
-          "panel_name": "Guard Logs",
-          "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
           "enabled": true,
@@ -5676,8 +5512,7 @@
               "enabled": true,
               "render_mode": "TABLE",
               "components": [
-                "primary_display",
-                "filter_bar"
+                "primary_display"
               ]
             },
             {
@@ -5694,24 +5529,24 @@
           "controls": [],
           "control_count": 0,
           "topic": "SYSTEM_LOGS",
-          "topic_id": "LOGS.REC.SYS",
+          "topic_id": "LOGS.RECORDS.SYSTEM_LOGS",
           "subdomain": "RECORDS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
             "nav_required": false,
-            "filtering": true,
+            "filtering": false,
             "read": true,
             "write": false,
             "activate": false
           },
-          "route": "/logs/log-rec-sys-o1",
+          "route": "/logs/log-rec-sys-o4",
           "view_type": "PANEL_VIEW",
           "binding_status": "BOUND",
           "panel_state": "BOUND",
           "review_status": "UNREVIEWED",
           "panel_class": "evidence",
-          "panel_display_order": 82,
+          "panel_display_order": 80,
           "binding_metadata": {
             "scenario_ids": [],
             "observed_at": null,
@@ -5721,8 +5556,178 @@
           }
         },
         {
-          "panel_id": "LOG-REC-SYS-O2",
-          "panel_name": "Health Check",
+          "panel_id": "LOG-REC-SYS-O5",
+          "panel_name": "LOG-REC-SYS-O5",
+          "order": "O5",
+          "render_mode": "TABLE",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "content_blocks": [
+            {
+              "type": "HEADER",
+              "order": 0,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": [
+                "title",
+                "status_badge",
+                "binding_indicator"
+              ]
+            },
+            {
+              "type": "DATA",
+              "order": 1,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "render_mode": "TABLE",
+              "components": [
+                "primary_display"
+              ]
+            },
+            {
+              "type": "FOOTER",
+              "order": 2,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": [
+                "replay_link",
+                "timestamp"
+              ]
+            }
+          ],
+          "controls": [],
+          "control_count": 0,
+          "topic": "SYSTEM_LOGS",
+          "topic_id": "LOGS.RECORDS.SYSTEM_LOGS",
+          "subdomain": "RECORDS",
+          "topic_display_order": 3,
+          "short_description": null,
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          },
+          "route": "/logs/log-rec-sys-o5",
+          "view_type": "PANEL_VIEW",
+          "binding_status": "BOUND",
+          "panel_state": "BOUND",
+          "review_status": "UNREVIEWED",
+          "panel_class": "interpretation",
+          "panel_display_order": 81,
+          "binding_metadata": {
+            "scenario_ids": [],
+            "observed_at": null,
+            "capability_ids": [],
+            "trace_count": 0,
+            "observed_effects": []
+          }
+        }
+      ],
+      "panel_count": 15,
+      "total_controls": 0,
+      "short_description": null,
+      "route": "/logs"
+    },
+    {
+      "domain": "Analytics",
+      "order": 5,
+      "panels": [
+        {
+          "panel_id": "ANL-STAT-USG-O1",
+          "panel_name": "Usage Summary",
+          "order": "O1",
+          "render_mode": "CARD",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "content_blocks": [
+            {
+              "type": "HEADER",
+              "order": 0,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": ["title", "time_toggle", "refresh"]
+            },
+            {
+              "type": "DATA",
+              "order": 1,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "render_mode": "CARD",
+              "components": ["requests_total", "compute_units_total", "tokens_total"]
+            },
+            {
+              "type": "CONTROLS",
+              "order": 2,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": ["export_csv", "export_json"]
+            },
+            {
+              "type": "FOOTER",
+              "order": 3,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": ["freshness_indicator", "signal_sources"]
+            }
+          ],
+          "controls": [
+            {
+              "type": "TOGGLE",
+              "order": 0,
+              "icon": "calendar",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "EXPORT",
+              "order": 1,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 2,
+          "topic": "USAGE",
+          "topic_id": "ANALYTICS.STATISTICS.USAGE",
+          "subdomain": "STATISTICS",
+          "topic_display_order": 0,
+          "short_description": "Usage summary for last 7/30 days",
+          "permissions": {
+            "nav_required": false,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": false
+          },
+          "route": "/analytics",
+          "view_type": "DOMAIN_HOME",
+          "binding_status": "BOUND",
+          "panel_state": "BOUND",
+          "review_status": "APPROVED",
+          "panel_class": "interpretation",
+          "panel_display_order": 82,
+          "provenance": {
+            "source_panels": [],
+            "aggregation": "SUM",
+            "endpoint": "/api/v1/analytics/statistics/usage"
+          },
+          "binding_metadata": {
+            "scenario_ids": [],
+            "observed_at": "2026-01-17T00:00:00Z",
+            "capability_ids": ["analytics.usage"],
+            "trace_count": 0,
+            "observed_effects": []
+          }
+        },
+        {
+          "panel_id": "ANL-STAT-USG-O2",
+          "panel_name": "Usage Table",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -5734,11 +5739,7 @@
               "order": 0,
               "visibility": "ALWAYS",
               "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
+              "components": ["title", "time_window_control", "resolution_control", "scope_control"]
             },
             {
               "type": "DATA",
@@ -5746,29 +5747,71 @@
               "visibility": "ALWAYS",
               "enabled": true,
               "render_mode": "TABLE",
-              "components": [
-                "primary_display",
-                "filter_bar"
-              ]
+              "components": ["usage_table", "inline_totals"]
             },
             {
-              "type": "FOOTER",
+              "type": "CONTROLS",
               "order": 2,
               "visibility": "ALWAYS",
               "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
+              "components": ["export_csv_button", "export_json_button", "pagination"]
+            },
+            {
+              "type": "FOOTER",
+              "order": 3,
+              "visibility": "ALWAYS",
+              "enabled": true,
+              "components": ["freshness_indicator", "data_sources"]
             }
           ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "SYSTEM_LOGS",
-          "topic_id": "LOGS.REC.SYS",
-          "subdomain": "RECORDS",
-          "topic_display_order": 3,
-          "short_description": null,
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "calendar",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "order": 1,
+              "icon": "clock",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "order": 2,
+              "icon": "layers",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "EXPORT",
+              "order": 3,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "PAGINATION",
+              "order": 4,
+              "icon": "chevrons-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 5,
+          "topic": "USAGE",
+          "topic_id": "ANALYTICS.STATISTICS.USAGE",
+          "subdomain": "STATISTICS",
+          "topic_display_order": 0,
+          "short_description": "Detailed usage data with export",
           "permissions": {
             "nav_required": false,
             "filtering": true,
@@ -5776,622 +5819,25 @@
             "write": false,
             "activate": false
           },
-          "route": "/logs/log-rec-sys-o2",
+          "route": "/analytics/statistics/usage",
           "view_type": "PANEL_VIEW",
           "binding_status": "BOUND",
           "panel_state": "BOUND",
-          "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
+          "review_status": "APPROVED",
+          "panel_class": "execution",
           "panel_display_order": 83,
           "binding_metadata": {
             "scenario_ids": [],
-            "observed_at": null,
-            "capability_ids": [],
-            "trace_count": 0,
-            "observed_effects": []
-          }
-        },
-        {
-          "panel_id": "LOG-REC-SYS-O3",
-          "panel_name": "Ready Check",
-          "order": "O3",
-          "render_mode": "TABLE",
-          "visibility": "ALWAYS",
-          "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
-          "content_blocks": [
-            {
-              "type": "HEADER",
-              "order": 0,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
-            },
-            {
-              "type": "DATA",
-              "order": 1,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "render_mode": "TABLE",
-              "components": [
-                "primary_display",
-                "filter_bar"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
-            }
-          ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "SYSTEM_LOGS",
-          "topic_id": "LOGS.REC.SYS",
-          "subdomain": "RECORDS",
-          "topic_display_order": 3,
-          "short_description": null,
-          "permissions": {
-            "nav_required": false,
-            "filtering": true,
-            "read": true,
-            "write": false,
-            "activate": false
-          },
-          "route": "/logs/log-rec-sys-o3",
-          "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
-          "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 84
-        },
-        {
-          "panel_id": "LOG-REC-SYS-O4",
-          "panel_name": "Adapters Health",
-          "order": "O4",
-          "render_mode": "TABLE",
-          "visibility": "ALWAYS",
-          "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
-          "content_blocks": [
-            {
-              "type": "HEADER",
-              "order": 0,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
-            },
-            {
-              "type": "DATA",
-              "order": 1,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "render_mode": "TABLE",
-              "components": [
-                "primary_display",
-                "filter_bar"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
-            }
-          ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "SYSTEM_LOGS",
-          "topic_id": "LOGS.REC.SYS",
-          "subdomain": "RECORDS",
-          "topic_display_order": 3,
-          "short_description": null,
-          "permissions": {
-            "nav_required": false,
-            "filtering": true,
-            "read": true,
-            "write": false,
-            "activate": false
-          },
-          "route": "/logs/log-rec-sys-o4",
-          "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
-          "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 85
-        },
-        {
-          "panel_id": "LOG-REC-SYS-O5",
-          "panel_name": "Skills Health",
-          "order": "O5",
-          "render_mode": "TABLE",
-          "visibility": "ALWAYS",
-          "enabled": true,
-          "disabled_reason": "This panel is planned but not yet defined",
-          "content_blocks": [
-            {
-              "type": "HEADER",
-              "order": 0,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
-            },
-            {
-              "type": "DATA",
-              "order": 1,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "render_mode": "TABLE",
-              "components": [
-                "primary_display",
-                "filter_bar"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
-            }
-          ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "SYSTEM_LOGS",
-          "topic_id": "LOGS.REC.SYS",
-          "subdomain": "RECORDS",
-          "topic_display_order": 3,
-          "short_description": null,
-          "permissions": {
-            "nav_required": false,
-            "filtering": true,
-            "read": true,
-            "write": false,
-            "activate": false
-          },
-          "route": "/logs/log-rec-sys-o5",
-          "view_type": "PANEL_VIEW",
-          "binding_status": "EMPTY",
-          "panel_state": "EMPTY",
-          "review_status": "UNREVIEWED",
-          "panel_class": "evidence",
-          "panel_display_order": 86
-        }
-      ],
-      "panel_count": 15,
-      "total_controls": 0,
-      "short_description": null,
-      "route": "/logs"
-    },
-    {
-      "domain": "ANALYTICS",
-      "order": 5,
-      "panels": [
-        {
-          "panel_id": "ANL-USG-SUM-O1",
-          "panel_name": "",
-          "order": "O1",
-          "render_mode": "TABLE",
-          "visibility": "ALWAYS",
-          "enabled": true,
-          "disabled_reason": null,
-          "content_blocks": [
-            {
-              "type": "HEADER",
-              "order": 0,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
-            },
-            {
-              "type": "DATA",
-              "order": 1,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "render_mode": "TABLE",
-              "components": [
-                "primary_display"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
-            }
-          ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "USAGE",
-          "topic_id": "",
-          "subdomain": "INSIGHTS",
-          "topic_display_order": 1,
-          "short_description": null,
-          "permissions": {
-            "nav_required": false,
-            "filtering": false,
-            "read": true,
-            "write": false,
-            "activate": false
-          },
-          "route": "/analytics/anl-usg-sum-o1",
-          "view_type": "PANEL_VIEW",
-          "binding_status": "BOUND",
-          "panel_state": "BOUND",
-          "review_status": "UNREVIEWED",
-          "panel_class": "interpretation",
-          "panel_display_order": 87,
-          "provenance": {
-            "required": true,
-            "fields": [
-              "sources",
-              "window",
-              "aggregation",
-              "generated_at"
-            ]
-          },
-          "binding_metadata": {
-            "scenario_ids": [],
-            "observed_at": null,
-            "capability_ids": [],
-            "trace_count": 0,
-            "observed_effects": []
-          }
-        },
-        {
-          "panel_id": "ANL-CST-SUM-O1",
-          "panel_name": "",
-          "order": "O1",
-          "render_mode": "TABLE",
-          "visibility": "ALWAYS",
-          "enabled": true,
-          "disabled_reason": null,
-          "content_blocks": [
-            {
-              "type": "HEADER",
-              "order": 0,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
-            },
-            {
-              "type": "DATA",
-              "order": 1,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "render_mode": "TABLE",
-              "components": [
-                "primary_display"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
-            }
-          ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "COST",
-          "topic_id": "",
-          "subdomain": "INSIGHTS",
-          "topic_display_order": 2,
-          "short_description": null,
-          "permissions": {
-            "nav_required": false,
-            "filtering": false,
-            "read": true,
-            "write": false,
-            "activate": false
-          },
-          "route": "/analytics/anl-cst-sum-o1",
-          "view_type": "PANEL_VIEW",
-          "binding_status": "BOUND",
-          "panel_state": "BOUND",
-          "review_status": "UNREVIEWED",
-          "panel_class": "interpretation",
-          "panel_display_order": 88,
-          "provenance": {
-            "required": true,
-            "fields": [
-              "sources",
-              "window",
-              "aggregation",
-              "generated_at"
-            ]
-          },
-          "binding_metadata": {
-            "scenario_ids": [],
-            "observed_at": null,
-            "capability_ids": [],
-            "trace_count": 0,
-            "observed_effects": []
-          }
-        },
-        {
-          "panel_id": "ANL-CST-ACT-O1",
-          "panel_name": "",
-          "order": "O1",
-          "render_mode": "TABLE",
-          "visibility": "ALWAYS",
-          "enabled": true,
-          "disabled_reason": null,
-          "content_blocks": [
-            {
-              "type": "HEADER",
-              "order": 0,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
-            },
-            {
-              "type": "DATA",
-              "order": 1,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "render_mode": "TABLE",
-              "components": [
-                "primary_display"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
-            }
-          ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "COST",
-          "topic_id": "",
-          "subdomain": "INSIGHTS",
-          "topic_display_order": 2,
-          "short_description": null,
-          "permissions": {
-            "nav_required": false,
-            "filtering": false,
-            "read": true,
-            "write": false,
-            "activate": false
-          },
-          "route": "/analytics/anl-cst-act-o1",
-          "view_type": "PANEL_VIEW",
-          "binding_status": "BOUND",
-          "panel_state": "BOUND",
-          "review_status": "UNREVIEWED",
-          "panel_class": "interpretation",
-          "panel_display_order": 89,
-          "provenance": {
-            "required": true,
-            "fields": [
-              "sources",
-              "window",
-              "aggregation",
-              "generated_at"
-            ]
-          },
-          "binding_metadata": {
-            "scenario_ids": [],
-            "observed_at": null,
-            "capability_ids": [],
-            "trace_count": 0,
-            "observed_effects": []
-          }
-        },
-        {
-          "panel_id": "ANL-CST-MOD-O1",
-          "panel_name": "",
-          "order": "O1",
-          "render_mode": "TABLE",
-          "visibility": "ALWAYS",
-          "enabled": true,
-          "disabled_reason": null,
-          "content_blocks": [
-            {
-              "type": "HEADER",
-              "order": 0,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
-            },
-            {
-              "type": "DATA",
-              "order": 1,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "render_mode": "TABLE",
-              "components": [
-                "primary_display"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
-            }
-          ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "COST",
-          "topic_id": "",
-          "subdomain": "INSIGHTS",
-          "topic_display_order": 2,
-          "short_description": null,
-          "permissions": {
-            "nav_required": false,
-            "filtering": false,
-            "read": true,
-            "write": false,
-            "activate": false
-          },
-          "route": "/analytics/anl-cst-mod-o1",
-          "view_type": "PANEL_VIEW",
-          "binding_status": "BOUND",
-          "panel_state": "BOUND",
-          "review_status": "UNREVIEWED",
-          "panel_class": "interpretation",
-          "panel_display_order": 90,
-          "provenance": {
-            "required": true,
-            "fields": [
-              "sources",
-              "window",
-              "aggregation",
-              "generated_at"
-            ]
-          },
-          "binding_metadata": {
-            "scenario_ids": [],
-            "observed_at": null,
-            "capability_ids": [],
-            "trace_count": 0,
-            "observed_effects": []
-          }
-        },
-        {
-          "panel_id": "ANL-CST-ANM-O1",
-          "panel_name": "",
-          "order": "O1",
-          "render_mode": "TABLE",
-          "visibility": "ALWAYS",
-          "enabled": true,
-          "disabled_reason": null,
-          "content_blocks": [
-            {
-              "type": "HEADER",
-              "order": 0,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "title",
-                "status_badge",
-                "binding_indicator"
-              ]
-            },
-            {
-              "type": "DATA",
-              "order": 1,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "render_mode": "TABLE",
-              "components": [
-                "primary_display"
-              ]
-            },
-            {
-              "type": "FOOTER",
-              "order": 2,
-              "visibility": "ALWAYS",
-              "enabled": true,
-              "components": [
-                "replay_link",
-                "timestamp"
-              ]
-            }
-          ],
-          "controls": [],
-          "control_count": 0,
-          "topic": "ANOMALIES",
-          "topic_id": "",
-          "subdomain": "INSIGHTS",
-          "topic_display_order": 3,
-          "short_description": null,
-          "permissions": {
-            "nav_required": false,
-            "filtering": false,
-            "read": true,
-            "write": false,
-            "activate": false
-          },
-          "route": "/analytics/anl-cst-anm-o1",
-          "view_type": "PANEL_VIEW",
-          "binding_status": "BOUND",
-          "panel_state": "BOUND",
-          "review_status": "UNREVIEWED",
-          "panel_class": "interpretation",
-          "panel_display_order": 91,
-          "provenance": {
-            "required": true,
-            "fields": [
-              "sources",
-              "window",
-              "detection_method",
-              "generated_at"
-            ]
-          },
-          "binding_metadata": {
-            "scenario_ids": [],
-            "observed_at": null,
-            "capability_ids": [],
+            "observed_at": "2026-01-17T00:00:00Z",
+            "capability_ids": ["analytics.usage", "analytics.usage.export.csv", "analytics.usage.export.json"],
             "trace_count": 0,
             "observed_effects": []
           }
         }
       ],
-      "panel_count": 5,
-      "total_controls": 0,
-      "short_description": null,
+      "panel_count": 2,
+      "total_controls": 7,
+      "short_description": "Usage statistics and reporting",
       "route": "/analytics"
     }
   ]

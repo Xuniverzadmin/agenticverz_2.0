@@ -59,8 +59,11 @@ const ActivityPage = lazy(() => import('@/pages/domains/DomainPage').then(m => (
 const IncidentsPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.IncidentsPage })));
 const PoliciesPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.PoliciesPage })));
 const LogsPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.LogsPage })));
+const AnalyticsPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.AnalyticsPage })));
 const AccountPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.AccountPage })));
 const ConnectivityPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.ConnectivityPage })));
+// Analytics domain: Usage page with detailed table and export
+const AnalyticsUsagePage = lazy(() => import('@/pages/analytics/UsagePage'));
 const PanelView = lazy(() => import('@/pages/panels/PanelView'));
 // PIN-411: O2 Runs List Page for Activity domain navigation
 const RunsListPage = lazy(() => import('@/pages/activity/RunsListPage'));
@@ -187,6 +190,9 @@ export function AppRoutes() {
           <Route path="incidents" element={<IncidentsPage />} />
           <Route path="policies" element={<PoliciesPage />} />
           <Route path="logs" element={<LogsPage />} />
+          {/* Analytics domain: 6th primary domain */}
+          <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="analytics/statistics/usage" element={<AnalyticsUsagePage />} />
           <Route path="account" element={<AccountPage />} />
           <Route path="connectivity" element={<ConnectivityPage />} />
           {/* Panel execution surfaces - :domain/:panelSlug */}

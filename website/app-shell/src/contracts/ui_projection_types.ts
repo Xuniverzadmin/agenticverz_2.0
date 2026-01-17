@@ -221,6 +221,7 @@ export type DomainName =
   | "Incidents"
   | "Policies"
   | "Logs"
+  | "Analytics"
   | "Account"
   | "Connectivity";
 
@@ -373,6 +374,7 @@ export function isValidDomain(domain: string): domain is DomainName {
     "Incidents",
     "Policies",
     "Logs",
+    "Analytics",
     "Account",
     "Connectivity",
   ];

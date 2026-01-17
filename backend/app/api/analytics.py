@@ -12,8 +12,8 @@
 # GOVERNANCE NOTE:
 # This is the ONE facade for ANALYTICS domain.
 # All analytics reads flow through this API.
-# Console sidebar exposure is DEFERRED (not missing).
-# Reporting/export is DEFERRED (not missing).
+# Console sidebar: LIVE (6th primary domain)
+# Reporting/export: LIVE (CSV/JSON endpoints)
 
 """
 Unified Analytics API (L2)
@@ -26,22 +26,28 @@ Subdomain: Statistics
 Topic v1: Usage
 
 Endpoints:
-- GET /api/v1/analytics/statistics/usage    → O2 usage statistics
-- GET /api/v1/analytics/_status             → Capability probe
+- GET /api/v1/analytics/statistics/usage             → Usage statistics
+- GET /api/v1/analytics/statistics/usage/export.csv  → CSV export
+- GET /api/v1/analytics/statistics/usage/export.json → JSON export
+- GET /api/v1/analytics/_status                      → Capability probe
 
 Architecture:
 - ONE facade for all ANALYTICS needs
 - Facade normalizes, aggregates, enforces contracts
 - Does NOT compute - delegates to signal adapters
 - Tenant isolation via auth_context (not header)
+- Export endpoints use SAME aggregator (bit-equivalent)
 """
 
+import csv
+import io
 import logging
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import Annotated, Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -610,3 +616,215 @@ async def get_analytics_status() -> AnalyticsStatusResponse:
 async def analytics_health():
     """Internal health check for analytics facade."""
     return {"status": "healthy", "domain": "analytics"}
+
+
+# =============================================================================
+# Export Endpoints (LIVE - Not Placeholder)
+# =============================================================================
+
+
+async def _get_usage_data(
+    request: Request,
+    from_ts: datetime,
+    to_ts: datetime,
+    resolution: ResolutionType,
+    scope: ScopeType,
+    session: AsyncSession,
+) -> UsageStatisticsResponse:
+    """
+    Internal helper to get usage data (shared by read and export endpoints).
+
+    Ensures export is bit-equivalent to read API - no alternate code paths.
+    """
+    # Scope is declared for API contract, implementation pending
+    _ = scope  # Future: filter by project/env
+
+    # Get tenant from auth context
+    auth_context = get_auth_context(request)
+    tenant_id: str | None = getattr(auth_context, "tenant_id", None)
+
+    if not tenant_id:
+        raise HTTPException(status_code=401, detail="Tenant context required")
+
+    # Validate time window
+    if from_ts >= to_ts:
+        raise HTTPException(
+            status_code=400,
+            detail="'from' must be before 'to'",
+        )
+
+    # Limit window to 90 days max
+    max_window = timedelta(days=90)
+    if to_ts - from_ts > max_window:
+        raise HTTPException(
+            status_code=400,
+            detail="Time window cannot exceed 90 days",
+        )
+
+    # Reconcile signals
+    totals, series, signals = await reconcile_usage_signals(
+        session=session,
+        tenant_id=tenant_id,
+        from_ts=from_ts,
+        to_ts=to_ts,
+        resolution=resolution,
+    )
+
+    return UsageStatisticsResponse(
+        window=UsageWindow.model_validate({
+            "from": from_ts,
+            "to": to_ts,
+            "resolution": resolution,
+        }),
+        totals=totals,
+        series=series,
+        signals=signals,
+    )
+
+
+@router.get(
+    "/statistics/usage/export.csv",
+    summary="Export usage statistics (CSV)",
+    description="""
+Exports usage statistics as CSV.
+Uses the same aggregation logic as the read API.
+CSV format: timestamp,requests,compute_units,tokens
+
+**Contract:**
+- Deterministic ordering (by timestamp, UTC)
+- Same query parameters as read endpoint
+- Bit-equivalent to read API (no recomputation)
+""",
+    responses={
+        200: {
+            "content": {"text/csv": {}},
+            "description": "CSV export file",
+        }
+    },
+)
+async def export_usage_csv(
+    request: Request,
+    from_ts: Annotated[
+        datetime,
+        Query(
+            alias="from",
+            description="Start of time window (ISO-8601)",
+        ),
+    ],
+    to_ts: Annotated[
+        datetime,
+        Query(
+            alias="to",
+            description="End of time window (ISO-8601)",
+        ),
+    ],
+    resolution: Annotated[
+        ResolutionType,
+        Query(description="Time resolution: hour or day"),
+    ] = ResolutionType.DAY,
+    scope: Annotated[
+        ScopeType,
+        Query(description="Aggregation scope: org, project, or env"),
+    ] = ScopeType.ORG,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> Response:
+    """
+    Export usage statistics as CSV.
+
+    Uses the same aggregation logic as the read API.
+    Deterministic ordering. UTC only.
+    """
+    # Get usage data (same as read API)
+    data = await _get_usage_data(
+        request=request,
+        from_ts=from_ts,
+        to_ts=to_ts,
+        resolution=resolution,
+        scope=scope,
+        session=session,
+    )
+
+    # Generate CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header
+    writer.writerow(["timestamp", "requests", "compute_units", "tokens"])
+
+    # Data rows (deterministic ordering - already sorted by timestamp)
+    for point in data.series:
+        writer.writerow([
+            point.ts,
+            point.requests,
+            point.compute_units,
+            point.tokens,
+        ])
+
+    # Create filename with time range
+    from_str = from_ts.strftime("%Y%m%d")
+    to_str = to_ts.strftime("%Y%m%d")
+    filename = f"usage_{from_str}_{to_str}.csv"
+
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
+
+
+@router.get(
+    "/statistics/usage/export.json",
+    response_model=UsageStatisticsResponse,
+    summary="Export usage statistics (JSON)",
+    description="""
+Exports usage statistics as JSON.
+Structure matches the standard usage response.
+
+**Contract:**
+- Same structure as GET /analytics/statistics/usage
+- Same query parameters as read endpoint
+- Bit-equivalent to read API (no recomputation)
+""",
+)
+async def export_usage_json(
+    request: Request,
+    from_ts: Annotated[
+        datetime,
+        Query(
+            alias="from",
+            description="Start of time window (ISO-8601)",
+        ),
+    ],
+    to_ts: Annotated[
+        datetime,
+        Query(
+            alias="to",
+            description="End of time window (ISO-8601)",
+        ),
+    ],
+    resolution: Annotated[
+        ResolutionType,
+        Query(description="Time resolution: hour or day"),
+    ] = ResolutionType.DAY,
+    scope: Annotated[
+        ScopeType,
+        Query(description="Aggregation scope: org, project, or env"),
+    ] = ScopeType.ORG,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> UsageStatisticsResponse:
+    """
+    Export usage statistics as JSON.
+
+    Structure matches the standard usage response.
+    Bit-equivalent to read API.
+    """
+    return await _get_usage_data(
+        request=request,
+        from_ts=from_ts,
+        to_ts=to_ts,
+        resolution=resolution,
+        scope=scope,
+        session=session,
+    )
