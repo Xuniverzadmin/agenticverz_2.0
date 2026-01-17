@@ -1,0 +1,352 @@
+# Panel Invariant Registry
+# Reference: PIN-411 Gap Closure Spec (Part B)
+#
+# This registry defines expected behavior for panel-backing queries.
+# It enables detection of silent governance failures.
+#
+# Each panel declares:
+# - endpoint: The API endpoint backing this panel
+# - filters: Query parameters that define this panel's data
+# - expected_behavior: What we expect from this panel
+#   - min_rows: Minimum expected rows in steady state
+#   - warmup_grace_minutes: Grace period after system start (no alerts)
+#   - alert_after_minutes: Duration of zero before alert
+# - zero_allowed: Whether zero results is a valid state
+#
+# Panel Types and Zero Tolerance:
+# - Violations: Usually NO (something should have happened)
+# - Lessons: NO after warmup (learning should occur)
+# - Drafts: NO (proposals should exist)
+# - Conflicts: NO (conflicts should be detected if rules exist)
+# - Rules: YES (may have no rules defined)
+# - Limits: YES (may have no limits defined)
+
+version: "1.0"
+last_updated: "2026-01-17"
+
+panels:
+  # ==========================================================================
+  # GOVERNANCE - ACTIVE Topic
+  # ==========================================================================
+
+  POL-GOV-ACT-O1:
+    panel_id: POL-GOV-ACT-O1
+    panel_question: "What policy proposals exist?"
+    endpoint: /api/v1/policy-proposals
+    filters: {}
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 30
+      alert_after_minutes: null  # No alert for zero
+    zero_allowed: true
+    alert_enabled: false
+    notes: "Zero proposals is valid - may be a new tenant"
+
+  POL-GOV-ACT-O4:
+    panel_id: POL-GOV-ACT-O4
+    panel_question: "What is the policy layer state?"
+    endpoint: /api/v1/policies/state
+    filters: {}
+    expected_behavior:
+      min_rows: 1
+      warmup_grace_minutes: 5
+      alert_after_minutes: 60
+    zero_allowed: false
+    alert_enabled: true
+    notes: "State endpoint should always return a summary"
+
+  POL-GOV-ACT-O5:
+    panel_id: POL-GOV-ACT-O5
+    panel_question: "What are the policy layer metrics?"
+    endpoint: /api/v1/policies/metrics
+    filters: {}
+    expected_behavior:
+      min_rows: 1
+      warmup_grace_minutes: 5
+      alert_after_minutes: 60
+    zero_allowed: false
+    alert_enabled: true
+    notes: "Metrics endpoint should always return data"
+
+  # ==========================================================================
+  # GOVERNANCE - DRAFTS Topic
+  # ==========================================================================
+
+  POL-GOV-DFT-O1:
+    panel_id: POL-GOV-DFT-O1
+    panel_question: "What draft proposals exist?"
+    endpoint: /api/v1/policy-proposals
+    filters:
+      status: draft
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 60
+      alert_after_minutes: 1440  # 24 hours
+    zero_allowed: true  # Initially may have no drafts
+    alert_enabled: false
+    notes: "Zero drafts is valid for new tenants"
+
+  POL-GOV-DFT-O4:
+    panel_id: POL-GOV-DFT-O4
+    panel_question: "What policy conflicts exist?"
+    endpoint: /api/v1/policies/conflicts
+    filters: {}
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 30
+      alert_after_minutes: null
+    zero_allowed: true  # No conflicts is a good state
+    alert_enabled: false
+    notes: "Zero conflicts is the ideal state"
+
+  POL-GOV-DFT-O5:
+    panel_id: POL-GOV-DFT-O5
+    panel_question: "What policy dependencies exist?"
+    endpoint: /api/v1/policies/dependencies
+    filters: {}
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 30
+      alert_after_minutes: null
+    zero_allowed: true
+    alert_enabled: false
+    notes: "Zero dependencies is valid for simple setups"
+
+  # ==========================================================================
+  # GOVERNANCE - POLICY_LIBRARY Topic
+  # ==========================================================================
+
+  POL-GOV-LIB-O1:
+    panel_id: POL-GOV-LIB-O1
+    panel_question: "What safety rules are defined?"
+    endpoint: /api/v1/policies/rules
+    filters:
+      rule_type: SAFETY
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 30
+      alert_after_minutes: null
+    zero_allowed: true
+    alert_enabled: false
+    notes: "Zero safety rules is valid - may not have defined any"
+
+  POL-GOV-LIB-O2:
+    panel_id: POL-GOV-LIB-O2
+    panel_question: "What ethical constraints exist?"
+    endpoint: /api/v1/policies/rules
+    filters:
+      rule_type: ETHICAL
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 30
+      alert_after_minutes: null
+    zero_allowed: true
+    alert_enabled: false
+    notes: "Zero ethical rules is valid"
+
+  POL-GOV-LIB-O3:
+    panel_id: POL-GOV-LIB-O3
+    panel_question: "What active policies are adopted?"
+    endpoint: /api/v1/policies/rules
+    filters:
+      status: ACTIVE
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 30
+      alert_after_minutes: null
+    zero_allowed: true
+    alert_enabled: false
+    notes: "Zero active rules is valid for new tenants"
+
+  POL-GOV-LIB-O5:
+    panel_id: POL-GOV-LIB-O5
+    panel_question: "What temporal policies exist?"
+    endpoint: /api/v1/policies/rules
+    filters:
+      rule_type: TEMPORAL
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 30
+      alert_after_minutes: null
+    zero_allowed: true
+    alert_enabled: false
+    notes: "Zero temporal rules is valid"
+
+  # ==========================================================================
+  # LIMITS - THRESHOLDS Topic
+  # ==========================================================================
+
+  POL-LIM-THR-O1:
+    panel_id: POL-LIM-THR-O1
+    panel_question: "What risk ceilings are set?"
+    endpoint: /api/v1/policies/limits
+    filters:
+      limit_type: RISK_CEILING
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 30
+      alert_after_minutes: null
+    zero_allowed: true
+    alert_enabled: false
+    notes: "Zero risk ceilings is valid"
+
+  POL-LIM-THR-O2:
+    panel_id: POL-LIM-THR-O2
+    panel_question: "What budgets are configured?"
+    endpoint: /api/v1/policies/budgets
+    filters: {}
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 30
+      alert_after_minutes: null
+    zero_allowed: true
+    alert_enabled: false
+    notes: "Zero budgets is valid"
+
+  POL-LIM-THR-O3:
+    panel_id: POL-LIM-THR-O3
+    panel_question: "What run quotas exist?"
+    endpoint: /api/v1/policies/limits
+    filters:
+      limit_type: "RUNS_*"
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 30
+      alert_after_minutes: null
+    zero_allowed: true
+    alert_enabled: false
+    notes: "Zero run quotas is valid"
+
+  POL-LIM-THR-O5:
+    panel_id: POL-LIM-THR-O5
+    panel_question: "What cooldowns are configured?"
+    endpoint: /api/v1/policies/limits
+    filters:
+      limit_type: COOLDOWN
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 30
+      alert_after_minutes: null
+    zero_allowed: true
+    alert_enabled: false
+    notes: "Zero cooldowns is valid"
+
+  # ==========================================================================
+  # LIMITS - VIOLATIONS Topic
+  # ==========================================================================
+
+  POL-LIM-VIO-O1:
+    panel_id: POL-LIM-VIO-O1
+    panel_question: "What violations occurred?"
+    endpoint: /api/v1/policies/violations
+    filters: {}
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 60
+      alert_after_minutes: 1440  # 24 hours with activity
+    zero_allowed: true  # Zero violations is good
+    alert_enabled: false  # Only alert if activity but no violations recorded
+    notes: "Zero violations is good unless there's been activity"
+
+  POL-LIM-VIO-O2:
+    panel_id: POL-LIM-VIO-O2
+    panel_question: "What cost incidents occurred?"
+    endpoint: /api/v1/policies/violations
+    filters:
+      source: cost
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 60
+      alert_after_minutes: 1440
+    zero_allowed: true
+    alert_enabled: false
+    notes: "Zero cost violations is good"
+
+  POL-LIM-VIO-O3:
+    panel_id: POL-LIM-VIO-O3
+    panel_question: "What simulated incidents exist?"
+    endpoint: /api/v1/policies/violations
+    filters:
+      source: sim
+      include_synthetic: true
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 30
+      alert_after_minutes: null
+    zero_allowed: true
+    alert_enabled: false
+    notes: "Zero simulated violations is valid"
+
+  POL-LIM-VIO-O4:
+    panel_id: POL-LIM-VIO-O4
+    panel_question: "What anomalies were detected?"
+    endpoint: /api/v1/policies/violations
+    filters:
+      violation_kind: ANOMALY
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 60
+      alert_after_minutes: null
+    zero_allowed: true
+    alert_enabled: false
+    notes: "Zero anomalies is good"
+
+  POL-LIM-VIO-O5:
+    panel_id: POL-LIM-VIO-O5
+    panel_question: "What divergence was observed?"
+    endpoint: /api/v1/policies/violations
+    filters:
+      violation_kind: DIVERGENCE
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 60
+      alert_after_minutes: null
+    zero_allowed: true
+    alert_enabled: false
+    notes: "Zero divergence is good"
+
+  # ==========================================================================
+  # GOVERNANCE - LESSONS Topic (from Lessons Learned Engine)
+  # ==========================================================================
+
+  POL-GOV-LES-O1:
+    panel_id: POL-GOV-LES-O1
+    panel_question: "What lessons are pending?"
+    endpoint: /api/v1/policies/lessons
+    filters:
+      status: pending
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 120  # 2 hours after activity starts
+      alert_after_minutes: 2880  # 48 hours with activity but no lessons
+    zero_allowed: true
+    alert_enabled: true  # Alert if system is active but no lessons being learned
+    notes: "Zero pending lessons may indicate ingestion failure"
+
+  POL-GOV-LES-O2:
+    panel_id: POL-GOV-LES-O2
+    panel_question: "What lessons have been converted?"
+    endpoint: /api/v1/policies/lessons
+    filters:
+      status: converted_to_draft
+    expected_behavior:
+      min_rows: 0
+      warmup_grace_minutes: 120
+      alert_after_minutes: null
+    zero_allowed: true
+    alert_enabled: false
+    notes: "Zero converted lessons is valid"
+
+# ==========================================================================
+# Alert Destinations (Operator-grade)
+# ==========================================================================
+
+alert_config:
+  log_level: WARNING
+  metrics_enabled: true
+  metric_prefix: panel_invariant_
+
+  # Alert types from spec:
+  # - EMPTY_PANEL: Panel returning zero unexpectedly
+  # - STALE_PANEL: Data older than freshness SLA
+  # - FILTER_BREAK: Query returns error / no match

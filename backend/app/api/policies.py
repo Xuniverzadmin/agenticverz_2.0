@@ -33,10 +33,13 @@ Architecture:
 - SDSR validates this same production API
 """
 
+import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Annotated, Any, List, Optional
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
@@ -1226,21 +1229,22 @@ async def get_policy_metrics(
 
 # =============================================================================
 # Policy Conflicts - DFT-O4 (PIN-411 Gap Closure)
+# Uses PolicyConflictEngine for static conflict detection
+# Conflict Types: SCOPE_OVERLAP, THRESHOLD_CONTRADICTION, TEMPORAL_CONFLICT, PRIORITY_OVERRIDE
 # =============================================================================
 
 
 class PolicyConflictResponse(BaseModel):
-    """Policy conflict summary."""
+    """Policy conflict summary (DFT-O4 spec)."""
 
-    id: str
-    policy_a: str
-    policy_b: str
-    conflict_type: str
-    severity: str
-    description: str
-    affected_action_types: List[str]
-    resolved: bool
-    resolution: Optional[str]
+    policy_a_id: str
+    policy_b_id: str
+    policy_a_name: str
+    policy_b_name: str
+    conflict_type: str  # SCOPE_OVERLAP, THRESHOLD_CONTRADICTION, TEMPORAL_CONFLICT, PRIORITY_OVERRIDE
+    severity: str  # BLOCKING, WARNING
+    explanation: str
+    recommended_action: str
     detected_at: datetime
 
 
@@ -1250,83 +1254,140 @@ class ConflictsListResponse(BaseModel):
     items: List[PolicyConflictResponse]
     total: int
     unresolved_count: int
+    computed_at: datetime
 
 
 @router.get(
     "/conflicts",
     response_model=ConflictsListResponse,
-    summary="List policy conflicts (DFT-O4)",
+    summary="Detect policy conflicts (DFT-O4)",
     description="""
-    Returns detected policy conflicts.
-    Conflicts occur when policies have contradictory rules.
+    Detects logical contradictions, overlaps, or unsafe coexistence between policies.
+
+    Conflict Types:
+    - SCOPE_OVERLAP: Same scope, incompatible behavior
+    - THRESHOLD_CONTRADICTION: Limits cannot both be satisfied
+    - TEMPORAL_CONFLICT: Time windows clash
+    - PRIORITY_OVERRIDE: Lower-priority rule nullifies higher-priority
+
+    Severity:
+    - BLOCKING: Activation must be prevented
+    - WARNING: Allowed but requires review
     """,
 )
 async def list_policy_conflicts(
     request: Request,
+    policy_id: Annotated[
+        Optional[str],
+        Query(description="Filter to conflicts involving this policy"),
+    ] = None,
+    severity: Annotated[
+        Optional[str],
+        Query(description="Filter by severity: BLOCKING, WARNING"),
+    ] = None,
     include_resolved: Annotated[bool, Query(description="Include resolved conflicts")] = False,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> ConflictsListResponse:
-    """List policy conflicts (DFT-O4). Customer facade."""
-    from app.policy.engine import get_policy_engine
+    """Detect policy conflicts (DFT-O4). Uses PolicyConflictEngine."""
+    from app.services.policy_graph_engine import ConflictSeverity, get_conflict_engine
 
-    _ = get_tenant_id_from_auth(request)  # Enforce auth
+    tenant_id = get_tenant_id_from_auth(request)
 
     try:
-        engine = get_policy_engine()
-        conflicts = await engine.get_policy_conflicts(session, include_resolved=include_resolved)
+        engine = get_conflict_engine(tenant_id)
+
+        # Parse severity filter
+        severity_filter = None
+        if severity:
+            try:
+                severity_filter = ConflictSeverity(severity.upper())
+            except ValueError:
+                pass
+
+        result = await engine.detect_conflicts(
+            session=session,
+            policy_id=policy_id,
+            severity_filter=severity_filter,
+            include_resolved=include_resolved,
+        )
 
         items = [
             PolicyConflictResponse(
-                id=c.id,
-                policy_a=c.policy_a,
-                policy_b=c.policy_b,
-                conflict_type=c.conflict_type,
-                severity=c.severity,
-                description=c.description,
-                affected_action_types=c.affected_action_types or [],
-                resolved=c.resolved,
-                resolution=c.resolution,
+                policy_a_id=c.policy_a_id,
+                policy_b_id=c.policy_b_id,
+                policy_a_name=c.policy_a_name,
+                policy_b_name=c.policy_b_name,
+                conflict_type=c.conflict_type.value,
+                severity=c.severity.value,
+                explanation=c.explanation,
+                recommended_action=c.recommended_action,
                 detected_at=c.detected_at,
             )
-            for c in conflicts
+            for c in result.conflicts
         ]
-
-        unresolved = sum(1 for c in conflicts if not c.resolved)
 
         return ConflictsListResponse(
             items=items,
             total=len(items),
-            unresolved_count=unresolved,
+            unresolved_count=result.unresolved_count,
+            computed_at=result.computed_at,
         )
 
     except Exception as e:
+        logger.exception("Failed to detect policy conflicts")
         raise HTTPException(
             status_code=500,
-            detail={"error": "conflicts_query_failed", "message": str(e)},
+            detail={"error": "conflicts_detection_failed", "message": str(e)},
         )
 
 
 # =============================================================================
 # Policy Dependencies - DFT-O5 (PIN-411 Gap Closure)
+# Uses PolicyDependencyEngine for structural relationship analysis
+# Dependency Types: EXPLICIT, IMPLICIT_SCOPE, IMPLICIT_LIMIT
 # =============================================================================
 
 
-class PolicyDependencyEdge(BaseModel):
-    """A dependency relationship between policies."""
+class PolicyDependencyRelation(BaseModel):
+    """A dependency relationship detail."""
 
-    source_policy: str
-    target_policy: str
-    dependency_type: str
-    resolution_strategy: Optional[str]
+    policy_id: str
+    policy_name: str
+    dependency_type: str  # EXPLICIT, IMPLICIT_SCOPE, IMPLICIT_LIMIT
+    reason: str
+
+
+class PolicyNodeResponse(BaseModel):
+    """A node in the dependency graph (DFT-O5 spec)."""
+
+    id: str
+    name: str
+    rule_type: str  # SYSTEM, SAFETY, ETHICAL, TEMPORAL
+    scope: str  # GLOBAL, TENANT, PROJECT, AGENT
+    status: str  # ACTIVE, RETIRED
+    enforcement_mode: str  # BLOCK, WARN, AUDIT, DISABLED
+    depends_on: List[PolicyDependencyRelation]
+    required_by: List[PolicyDependencyRelation]
+
+
+class PolicyDependencyEdge(BaseModel):
+    """A dependency edge in the graph."""
+
+    policy_id: str
+    depends_on_id: str
+    policy_name: str
+    depends_on_name: str
+    dependency_type: str  # EXPLICIT, IMPLICIT_SCOPE, IMPLICIT_LIMIT
+    reason: str
 
 
 class DependencyGraphResponse(BaseModel):
     """GET /dependencies response (DFT-O5)."""
 
+    nodes: List[PolicyNodeResponse]
+    edges: List[PolicyDependencyEdge]
     nodes_count: int
     edges_count: int
-    conflicts_count: int
-    dependencies: List[PolicyDependencyEdge]
     computed_at: datetime
 
 
@@ -1335,42 +1396,91 @@ class DependencyGraphResponse(BaseModel):
     response_model=DependencyGraphResponse,
     summary="Get policy dependency graph (DFT-O5)",
     description="""
-    Returns the policy dependency graph.
-    Shows relationships between policies.
+    Computes structural relationships between policies.
+
+    Dependency Types:
+    - EXPLICIT: Declared via parent_rule_id or requires_policy_id
+    - IMPLICIT_SCOPE: Same scope, rely on each other's assumptions
+    - IMPLICIT_LIMIT: Limit-based dependencies (e.g., cooldown depends on run quota)
+
+    Each node shows:
+    - depends_on: Policies this one requires
+    - required_by: Policies that depend on this one
+
+    Enforcement Rules:
+    - Cannot delete a policy with active required_by
+    - Cannot activate a policy if depends_on is inactive
     """,
 )
 async def get_policy_dependencies(
     request: Request,
+    policy_id: Annotated[
+        Optional[str],
+        Query(description="Filter to dependencies involving this policy"),
+    ] = None,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> DependencyGraphResponse:
-    """Get policy dependency graph (DFT-O5). Customer facade."""
-    from app.policy.engine import get_policy_engine
+    """Get policy dependency graph (DFT-O5). Uses PolicyDependencyEngine."""
+    from app.services.policy_graph_engine import get_dependency_engine
 
-    _ = get_tenant_id_from_auth(request)  # Enforce auth
+    tenant_id = get_tenant_id_from_auth(request)
 
     try:
-        engine = get_policy_engine()
-        graph = await engine.get_dependency_graph(session)
+        engine = get_dependency_engine(tenant_id)
+        result = await engine.compute_dependency_graph(session, policy_id=policy_id)
 
-        dependencies = [
-            PolicyDependencyEdge(
-                source_policy=e.source_policy,
-                target_policy=e.target_policy,
-                dependency_type=e.dependency_type,
-                resolution_strategy=e.resolution_strategy,
+        nodes = [
+            PolicyNodeResponse(
+                id=n.id,
+                name=n.name,
+                rule_type=n.rule_type,
+                scope=n.scope,
+                status=n.status,
+                enforcement_mode=n.enforcement_mode,
+                depends_on=[
+                    PolicyDependencyRelation(
+                        policy_id=d["policy_id"],
+                        policy_name=d["policy_name"],
+                        dependency_type=d["type"],
+                        reason=d["reason"],
+                    )
+                    for d in n.depends_on
+                ],
+                required_by=[
+                    PolicyDependencyRelation(
+                        policy_id=d["policy_id"],
+                        policy_name=d["policy_name"],
+                        dependency_type=d["type"],
+                        reason=d["reason"],
+                    )
+                    for d in n.required_by
+                ],
             )
-            for e in graph.edges
+            for n in result.nodes
+        ]
+
+        edges = [
+            PolicyDependencyEdge(
+                policy_id=e.policy_id,
+                depends_on_id=e.depends_on_id,
+                policy_name=e.policy_name,
+                depends_on_name=e.depends_on_name,
+                dependency_type=e.dependency_type.value,
+                reason=e.reason,
+            )
+            for e in result.edges
         ]
 
         return DependencyGraphResponse(
-            nodes_count=len(graph.nodes),
-            edges_count=len(graph.edges),
-            conflicts_count=len([c for c in graph.conflicts if not c.resolved]),
-            dependencies=dependencies,
-            computed_at=graph.computed_at,
+            nodes=nodes,
+            edges=edges,
+            nodes_count=len(nodes),
+            edges_count=len(edges),
+            computed_at=result.computed_at,
         )
 
     except Exception as e:
+        logger.exception("Failed to compute dependency graph")
         raise HTTPException(
             status_code=500,
             detail={"error": "dependencies_query_failed", "message": str(e)},
