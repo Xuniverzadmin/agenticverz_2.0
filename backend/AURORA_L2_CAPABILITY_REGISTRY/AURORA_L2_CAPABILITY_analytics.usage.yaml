@@ -1,0 +1,65 @@
+# AURORA L2 Capability Registry Entry
+# Capability: analytics.usage
+# Last Updated: 2026-01-17
+# Updated By: Analytics Domain Declaration v1
+#
+# STATUS: DECLARED
+#
+# WARNING: Status transitions are MACHINE-OWNED.
+#          Do NOT manually edit the status field.
+#
+capability_id: analytics.usage
+status: DECLARED
+source_panels:
+- ANL-STAT-USG-O1
+- ANL-STAT-USG-O2
+domain: ANALYTICS
+subdomain: STATISTICS
+topic: USAGE
+endpoint: /api/v1/analytics/statistics/usage
+method: GET
+metadata:
+  generated_by: Analytics Domain Declaration v1
+  generated_on: '2026-01-17'
+  declared_by: PIN-411
+  declared_on: '2026-01-17'
+  observed_by: null
+  observed_on: null
+acceptance_criteria:
+- Endpoint exists and responds with UsageStatisticsResponse
+- Response includes window, totals, series, signals
+- Signals field includes sources and freshness_sec
+- Data is reconciled from cost_records, llm.usage, worker.execution
+- Time window validation enforced (max 90 days)
+provenance_requirements:
+  required: true
+  fields:
+  - signals.sources
+  - signals.freshness_sec
+  - window.from
+  - window.to
+  - window.resolution
+signal_sources:
+- cost_records
+- llm.usage
+- worker.execution
+- gateway.metrics
+observation:
+  scenario_id: null
+  observed_at: null
+  trace_id: null
+  invariants_passed: null
+  invariants_total: null
+coherency:
+  last_checked: null
+  status: PENDING
+  checked_by: null
+binding:
+  observed_endpoint: null
+  observed_method: null
+  observed_at: null
+  observation_id: null
+assumption:
+  endpoint: /api/v1/analytics/statistics/usage
+  method: GET
+  source: ANALYTICS_DOMAIN_DECLARATION_V1

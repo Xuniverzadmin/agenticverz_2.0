@@ -652,6 +652,7 @@ app = FastAPI(
 # Include API routers
 from .api.accounts import router as accounts_router  # ACCOUNTS: Unified facade (/api/v1/accounts/*)
 from .api.activity import router as activity_router  # ACTIVITY Domain: Unified facade (/api/v1/activity/*)
+from .api.analytics import router as analytics_router  # ANALYTICS Domain: Unified facade (/api/v1/analytics/*)
 from .api.agents import router as agents_router  # M12 Multi-Agent System
 from .api.authz_status import router as authz_status_router  # T5: Internal authz status
 from .api.connectivity import router as connectivity_router  # CONNECTIVITY: Unified facade (/api/v1/connectivity/*)
@@ -775,6 +776,7 @@ app.include_router(activity_router)  # ACTIVITY Domain: /api/v1/activity/* (unif
 app.include_router(incidents_router)  # INCIDENTS Domain: /api/v1/incidents/* (unified facade)
 app.include_router(overview_router)  # OVERVIEW Domain: /api/v1/overview/* (unified facade)
 app.include_router(policies_router)  # POLICIES Domain: /api/v1/policies/* (unified facade)
+app.include_router(analytics_router, prefix="/api/v1")  # ANALYTICS Domain: /api/v1/analytics/* (unified facade)
 
 # PIN-LIM: Limits Management Domain routers
 app.include_router(policy_limits_crud_router, prefix="/api/v1")  # PIN-LIM-01: Policy limits CRUD
