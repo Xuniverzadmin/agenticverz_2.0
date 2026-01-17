@@ -36,6 +36,7 @@ from app.adapters.customer_logs_adapter import (
 
 # Category 2 Auth: Domain-separated authentication for Customer Console
 from app.auth.console_auth import verify_console_token
+from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.guard_logs")
 
@@ -154,7 +155,7 @@ async def export_logs(
             )
         else:
             # Return JSON
-            return export_data
+            return wrap_dict(export_data)
 
     except Exception as e:
         logger.error(f"Error exporting logs for tenant {tenant_id}: {e}")
@@ -199,7 +200,7 @@ async def get_log(
                 detail=f"Log {log_id} not found or access denied",
             )
 
-        return log_detail
+        return wrap_dict(log_detail.model_dump())
     except HTTPException:
         raise
     except Exception as e:

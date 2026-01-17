@@ -1,0 +1,40 @@
+# AURORA_L2 Capability Registry - Logs LLM Runs List
+# Status: DECLARED (awaiting E2E validation per CAP-E2E-001)
+# Reference: docs/architecture/logs/LOGS_DOMAIN_AUDIT.md
+#
+capability_id: logs.llm_runs_list
+status: DECLARED
+source_panels:
+  - LOG-REC-LLM-O1
+  - LOG-REC-LLM-O3
+domain: LOGS
+metadata:
+  generated_by: manual
+  generated_on: '2026-01-17'
+  declared_by: claude-implementation
+  declared_on: '2026-01-17'
+assumption:
+  endpoint: /api/v1/logs/llm-runs
+  method: GET
+  source: LOGS_DOMAIN_AUDIT
+acceptance_criteria:
+  - Returns paginated list of LLM run records
+  - Supports filters: run_id, provider, model, execution_status
+  - Supports is_synthetic filter for SDSR
+  - Supports time range filters
+  - Tenant-scoped via auth_context
+  - Response includes total count and has_more
+implementation:
+  endpoint: /api/v1/logs/llm-runs
+  method: GET
+  handler: app.api.logs.list_llm_run_records
+  service: null  # Direct SQL query
+auth:
+  roles: [admin, member]
+  permissions: [logs:read]
+notes:
+  - "L2 facade: read-only, no writes"
+  - "Tenant-scoped via auth_context"
+  - "Queries llm_run_records table"
+  - "Write path: worker/runner.py creates records after LLM calls"
+  - "STATUS: FUNCTIONAL - data flowing"

@@ -79,11 +79,24 @@ domains:
             panel_slots: 5
       - id: LIMITS
         topics:
-          - id: USAGE
-            panel_slots: 5
           - id: THRESHOLDS
             panel_slots: 5
           - id: VIOLATIONS
+            panel_slots: 5
+
+  - id: ANALYTICS
+    description:
+      - What is my usage and cost consumption
+      - How is my budget performing
+      - What cost trends and projections exist
+    subdomains:
+      - id: COST
+        topics:
+          - id: USAGE
+            panel_slots: 5
+          - id: PROJECTIONS
+            panel_slots: 5
+          - id: BUDGETS
             panel_slots: 5
 
   - id: LOGS

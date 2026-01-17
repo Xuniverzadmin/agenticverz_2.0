@@ -28,6 +28,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.auth import verify_api_key
 from app.middleware.tenancy import get_tenant_id
+from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.customer_visibility")
 
@@ -496,7 +497,7 @@ async def get_pre_run_declaration(
         },
     )
 
-    return declaration
+    return wrap_dict(declaration.model_dump())
 
 
 @router.post("/acknowledge", response_model=AcknowledgementResponse)

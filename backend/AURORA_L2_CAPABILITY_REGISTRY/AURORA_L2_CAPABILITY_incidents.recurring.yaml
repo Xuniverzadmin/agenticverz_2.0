@@ -1,0 +1,38 @@
+# AURORA_L2 Capability Registry - Incidents Recurrence Analysis
+# Status: DECLARED (awaiting E2E validation per CAP-E2E-001)
+# Reference: docs/architecture/incidents/INCIDENTS_DOMAIN_SQL.md#9-hist-o3
+#
+capability_id: incidents.recurring
+status: DECLARED
+source_panels:
+  - INC-EV-HIST-O3
+domain: INCIDENTS
+metadata:
+  generated_by: manual
+  generated_on: '2026-01-17'
+  declared_by: claude-implementation
+  declared_on: '2026-01-17'
+  # observed_by: null  # Set by SDSR only
+  # observed_on: null  # Set by SDSR only
+assumption:
+  endpoint: /api/v1/incidents/recurring
+  method: GET
+  source: INCIDENTS_DOMAIN_SQL
+acceptance_criteria:
+  - Returns recurring incident groups
+  - Groups by category and resolution_method
+  - Includes occurrence frequency
+  - Includes recent incident IDs
+  - Response includes distinct_days count
+implementation:
+  endpoint: /api/v1/incidents/recurring
+  method: GET
+  handler: app.api.incidents.analyze_recurrence
+  service: app.services.incidents.RecurrenceAnalysisService
+auth:
+  roles: [admin, member]
+  permissions: [incidents:read]
+notes:
+  - "L4 service: RecurrenceAnalysisService"
+  - "Read-only analytics, no writes"
+  - "Tenant-scoped via auth_context"

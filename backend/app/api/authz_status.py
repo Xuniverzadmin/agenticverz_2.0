@@ -36,6 +36,7 @@ from app.auth.authorization_metrics import (
     get_dashboard_queries,
 )
 from app.auth.mappings import get_all_mappings
+from app.schemas.response import wrap_dict
 
 router = APIRouter(prefix="/internal/authz", tags=["Internal - Authorization"])
 
@@ -51,7 +52,7 @@ async def get_authz_status() -> Dict[str, Any]:
     strict = is_strict_mode()
     mappings = get_all_mappings()
 
-    return {
+    return wrap_dict({
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "phase": {
             "current": phase.value,
@@ -75,7 +76,7 @@ async def get_authz_status() -> Dict[str, Any]:
             "AUTHZ_PHASE": phase.value,
             "AUTHZ_STRICT_MODE": str(strict).lower(),
         },
-    }
+    })
 
 
 @router.get("/mappings")
@@ -114,7 +115,7 @@ async def get_phase_info() -> Dict[str, Any]:
 
     Returns descriptions and migration guidance for each phase.
     """
-    return {
+    return wrap_dict({
         "phases": {
             "A": {
                 "name": "Phase A - Read-Only Enforcement",
@@ -142,7 +143,7 @@ async def get_phase_info() -> Dict[str, Any]:
             "B_to_C": "Run with strict_mode=true to validate before final transition",
             "C_to_removal": "Remove M7 code after Phase C is stable",
         },
-    }
+    })
 
 
 @router.get("/metrics-info")
@@ -193,11 +194,11 @@ async def get_alert_rules_endpoint() -> Dict[str, Any]:
 
     Returns YAML alert rule templates.
     """
-    return {
+    return wrap_dict({
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "format": "prometheus-alerting-rules",
         "rules": get_alert_rules(),
-    }
+    })
 
 
 def _get_phase_description(phase: str) -> str:

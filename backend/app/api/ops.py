@@ -84,6 +84,7 @@ from app.contracts.ops import (
     FounderRootCauseDTO,
 )
 from app.db import get_session
+from app.schemas.response import wrap_dict
 
 # Incident model for database queries
 from app.models.killswitch import Incident, IncidentEvent
@@ -751,7 +752,8 @@ async def get_customer_segments(
     cache_key = f"customers:{risk_level or 'all'}:{limit}"
     cached = cache_get(cache_key)
     if cached:
-        return [CustomerSegment(**c) for c in cached]
+        items = [CustomerSegment(**c) for c in cached]
+        return wrap_dict({"items": items, "total": len(items)})
 
     try:
         stmt = text(
@@ -817,9 +819,9 @@ async def get_customer_segments(
         ]
         # Cache the result
         cache_set(cache_key, [c.model_dump() for c in result])
-        return result
+        return wrap_dict({"items": result, "total": len(result)})
     except Exception:
-        return []
+        return wrap_dict({"items": [], "total": 0})
 
 
 # =============================================================================
@@ -1000,7 +1002,8 @@ async def get_customers_at_risk(
     cache_key = f"customers-at-risk:{limit}"
     cached = cache_get(cache_key)
     if cached:
-        return [CustomerAtRisk(**c) for c in cached]
+        items = [CustomerAtRisk(**c) for c in cached]
+        return wrap_dict({"items": items, "total": len(items)})
 
     h7d_ago = get_window(168)  # 7 days
     now = utc_now()
@@ -1176,14 +1179,14 @@ async def get_customers_at_risk(
 
         # Cache the result
         cache_set(cache_key, [c.model_dump() for c in result])
-        return result
+        return wrap_dict({"items": result, "total": len(result)})
 
     except Exception as e:
         # Return empty list on error, log for debugging
         import logging
 
         logging.getLogger("nova.api.ops").error(f"at-risk query failed: {e}")
-        return []
+        return wrap_dict({"items": [], "total": 0})
 
 
 # =============================================================================
@@ -1313,7 +1316,7 @@ async def get_founder_playbooks():
                 notes=playbook["notes"],
             )
         )
-    return result
+    return wrap_dict({"items": [r.model_dump() for r in result], "total": len(result)})
 
 
 @router.get("/playbooks/{playbook_id}", response_model=PlaybookDetail)
@@ -1443,7 +1446,7 @@ async def get_incident_patterns(
         except Exception:
             continue
 
-    return patterns
+    return wrap_dict({"items": [p.model_dump() for p in patterns], "total": len(patterns)})
 
 
 # =============================================================================
@@ -1473,21 +1476,19 @@ async def get_infra_incident_summary(
     from datetime import timedelta
 
     from app.adapters.founder_ops_adapter import FounderOpsAdapter
-    from app.services.ops_incident_service import OpsIncidentService
+    from app.services.ops import get_ops_facade
 
     # Calculate time window
     now = datetime.now(timezone.utc)
     since = now - timedelta(hours=hours)
 
-    # Create L4 service (uses real DB session)
-    # Note: In production, OpsIncidentService queries infra_error_events directly
-    # For now, we wrap session access via the service's internal query
-    incident_service = OpsIncidentService(error_store=None)  # Uses internal DB access
+    # Use OpsFacade for proper encapsulation (API-001 compliance)
+    ops_facade = get_ops_facade()
 
     try:
-        # Query L4 for incidents
-        incidents = incident_service.get_active_incidents(since=since, until=now)
-        summary = incident_service.get_incident_summary(since=since, until=now)
+        # Query L4 for incidents via facade
+        incidents = ops_facade.get_active_incidents(since=since, until=now)
+        summary = ops_facade.get_incident_summary(since=since, until=now)
 
         # Adapt to Founder view via L3
         adapter = FounderOpsAdapter()
@@ -1500,7 +1501,7 @@ async def get_infra_incident_summary(
         )
 
         # Return as dict (dataclass to dict conversion)
-        return {
+        return wrap_dict({
             "total_incidents": response.total_incidents,
             "by_severity": response.by_severity,
             "recent_incidents": [
@@ -1520,18 +1521,18 @@ async def get_infra_incident_summary(
             ],
             "window_start": response.window_start,
             "window_end": response.window_end,
-        }
+        })
     except Exception as e:
         # Graceful degradation: return empty summary if infra_error_events not ready
         logging.warning(f"infra-summary query failed (table may not exist yet): {e}")
-        return {
+        return wrap_dict({
             "total_incidents": 0,
             "by_severity": {"urgent": 0, "action": 0, "attention": 0, "info": 0},
             "recent_incidents": [],
             "window_start": since.isoformat(),
             "window_end": now.isoformat(),
             "error": "Infrastructure error table not available",
-        }
+        })
 
 
 # =============================================================================
@@ -2109,7 +2110,7 @@ async def get_infra_limits(
     # Check cache first (longer TTL for infra)
     cached = cache_get("infra")
     if cached:
-        return InfraLimits(**cached)
+        return wrap_dict(InfraLimits(**cached).model_dump())
 
     warnings = []
 
@@ -2288,7 +2289,7 @@ async def get_infra_limits(
     )
     # Cache with longer TTL (infra metrics change slowly)
     cache_set("infra", result.model_dump(), 30)
-    return result
+    return wrap_dict(result.model_dump())
 
 
 # =============================================================================

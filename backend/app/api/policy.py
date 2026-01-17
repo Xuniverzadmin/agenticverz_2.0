@@ -61,6 +61,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import TenantTier, requires_feature, requires_tier
 from app.db_async import get_async_session
+from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.policy")
 
@@ -969,7 +970,7 @@ async def list_approval_requests(
         )
 
     await session.commit()
-    return responses
+    return wrap_dict({"items": [r.model_dump() for r in responses], "total": len(responses)})
 
 
 # =============================================================================

@@ -45,6 +45,7 @@ from app.auth.contexts import (
 from app.auth.gateway_middleware import get_auth_context
 from app.auth.lifecycle_provider import get_lifecycle_provider
 from app.auth.onboarding_state import OnboardingState
+from app.schemas.response import wrap_dict
 
 router = APIRouter(prefix="/api/v1/session", tags=["Session"])
 
@@ -124,13 +125,13 @@ async def get_session_context(request: Request) -> Dict[str, Any]:
             detail="Unknown authentication context type",
         )
 
-    return {
+    return wrap_dict({
         "actor_type": actor_type,
         "tenant_id": tenant_id,
         "capabilities": capabilities,
         "lifecycle_state": lifecycle_state,
         "onboarding_state": onboarding_state,
-    }
+    })
 
 
 def _get_onboarding_state(tenant_id: str) -> str:

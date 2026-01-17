@@ -17,13 +17,13 @@ Invariants:
     COH-001: ui_plan.panel_id == intent.panel_id
     COH-002: ui_plan.intent_spec path exists
     COH-003: intent.capability.id == capability.capability_id
-    COH-004: intent.capability.endpoint == capability.endpoint (if declared)
-    COH-005: intent.capability.method == capability.method (if declared)
+    COH-004: intent.assumed_endpoint == capability.assumption.endpoint (human consistency)
+    COH-005: intent.assumed_method == capability.assumption.method (human consistency)
     COH-006: intent.metadata.domain == capability.domain (if declared)
-    COH-007: capability.status in valid FSM states
+    COH-007: capability.status in valid FSM states (ASSUMED → OBSERVED → TRUSTED)
     COH-008: intent.sdsr.verified → capability.status >= OBSERVED
-    COH-009: capability.endpoint exists in backend routes
-    COH-010: capability.method matches backend route method
+    COH-009: assumed_endpoint exists in backend routes (reality check)
+    COH-010: assumed_method matches backend route method (reality check)
 
 Author: AURORA L2 Automation
 """
@@ -251,6 +251,16 @@ class CoherencyChecker:
         ))
 
         panel_data = panel_entry['panel']
+        panel_state = panel_data.get('state', 'EMPTY')
+
+        # EMPTY panels don't have intent YAMLs - skip coherency checks beyond COH-001
+        if panel_state == 'EMPTY':
+            results.append(CheckResult(
+                "COH-002", CheckStatus.SKIP,
+                f"Panel state is EMPTY - no intent YAML required yet",
+                {"state": panel_state}
+            ))
+            return results  # Valid EMPTY panel, coherency OK for this state
 
         # COH-002: Intent spec path exists
         intent_spec = panel_data.get('intent_spec')
@@ -325,51 +335,52 @@ class CoherencyChecker:
                 f"Capability ID matches: {capability_id}"
             ))
 
-        # COH-004: Endpoint match (if declared in both)
-        intent_endpoint = capability_ref.get('endpoint')
-        cap_endpoint = capability.get('endpoint')
+        # COH-004: Assumed endpoint consistency (human assumption should match across artifacts)
+        intent_assumed_endpoint = capability_ref.get('assumed_endpoint')
+        cap_assumption = capability.get('assumption', {})
+        cap_assumed_endpoint = cap_assumption.get('endpoint')
 
-        if intent_endpoint and cap_endpoint:
-            if intent_endpoint != cap_endpoint:
+        if intent_assumed_endpoint and cap_assumed_endpoint:
+            if intent_assumed_endpoint != cap_assumed_endpoint:
                 results.append(CheckResult(
                     "COH-004", CheckStatus.FAIL,
-                    f"Endpoint mismatch: intent='{intent_endpoint}', capability='{cap_endpoint}'"
+                    f"Assumed endpoint mismatch: intent='{intent_assumed_endpoint}', capability='{cap_assumed_endpoint}'"
                 ))
             else:
                 results.append(CheckResult(
                     "COH-004", CheckStatus.PASS,
-                    f"Endpoints match: {intent_endpoint}"
+                    f"Assumed endpoints consistent: {intent_assumed_endpoint}"
                 ))
-        elif intent_endpoint and not cap_endpoint:
+        elif intent_assumed_endpoint and not cap_assumed_endpoint:
             results.append(CheckResult(
                 "COH-004", CheckStatus.WARN,
-                f"Intent declares endpoint '{intent_endpoint}' but capability does not"
+                f"Intent has assumed_endpoint '{intent_assumed_endpoint}' but capability assumption missing"
             ))
         else:
             results.append(CheckResult(
                 "COH-004", CheckStatus.SKIP,
-                "No endpoint declared in intent"
+                "No assumed_endpoint declared in intent"
             ))
 
-        # COH-005: Method match (if declared in both)
-        intent_method = capability_ref.get('method')
-        cap_method = capability.get('method')
+        # COH-005: Assumed method consistency
+        intent_assumed_method = capability_ref.get('assumed_method')
+        cap_assumed_method = cap_assumption.get('method')
 
-        if intent_method and cap_method:
-            if intent_method.upper() != cap_method.upper():
+        if intent_assumed_method and cap_assumed_method:
+            if intent_assumed_method.upper() != cap_assumed_method.upper():
                 results.append(CheckResult(
                     "COH-005", CheckStatus.FAIL,
-                    f"Method mismatch: intent='{intent_method}', capability='{cap_method}'"
+                    f"Assumed method mismatch: intent='{intent_assumed_method}', capability='{cap_assumed_method}'"
                 ))
             else:
                 results.append(CheckResult(
                     "COH-005", CheckStatus.PASS,
-                    f"Methods match: {intent_method}"
+                    f"Assumed methods consistent: {intent_assumed_method}"
                 ))
         else:
             results.append(CheckResult(
                 "COH-005", CheckStatus.SKIP,
-                "Method not declared in both intent and capability"
+                "Assumed method not declared in both intent and capability"
             ))
 
         # COH-006: Domain match
@@ -426,9 +437,10 @@ class CoherencyChecker:
                 "SDSR not yet verified"
             ))
 
-        # COH-009/010: Backend route exists with correct method
-        endpoint_to_check = cap_endpoint or intent_endpoint
-        method_to_check = (cap_method or intent_method or 'GET').upper()
+        # COH-009/010: Backend route exists with correct method (reality check)
+        # Use assumed_endpoint from intent - this is what SDSR will test
+        endpoint_to_check = intent_assumed_endpoint or cap_assumed_endpoint
+        method_to_check = (intent_assumed_method or cap_assumed_method or 'GET').upper()
 
         if endpoint_to_check:
             # Check if endpoint exists

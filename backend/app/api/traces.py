@@ -42,6 +42,7 @@ else:
 
 # JWT Authentication
 from ..auth.jwt_auth import JWTAuthDependency, JWTConfig, TokenPayload
+from ..schemas.response import wrap_dict
 from ..traces.redact import redact_trace_data
 
 logger = logging.getLogger(__name__)
@@ -326,11 +327,11 @@ async def store_trace(
         )
         trace_id = run_id
 
-    return {
+    return wrap_dict({
         "trace_id": trace_id,
         "root_hash": trace.get("root_hash"),
         "stored": True,
-    }
+    })
 
 
 # =============================================================================
@@ -416,7 +417,7 @@ async def list_all_mismatches(
         )
         resolved_count = resolved_result.scalar() or 0
 
-    return {
+    return wrap_dict({
         "mismatches": [
             {
                 "id": str(r[0]),
@@ -438,7 +439,7 @@ async def list_all_mismatches(
         },
         "window": window,
         "total": len(rows),
-    }
+    })
 
 
 @router.get("/{run_id}", response_model=TraceDetailResponse)
@@ -700,10 +701,10 @@ async def cleanup_old_traces(
         raise HTTPException(status_code=403, detail="Requires admin role")
 
     count = await store.cleanup_old_traces(days)
-    return {
+    return wrap_dict({
         "deleted_count": count,
         "retention_days": days,
-    }
+    })
 
 
 # =============================================================================
@@ -728,17 +729,17 @@ async def check_idempotency(
     result = await store.check_idempotency_key(idempotency_key, user.tenant_id)
 
     if result:
-        return {
+        return wrap_dict({
             "executed": True,
             "trace_id": result["trace_id"],
             "step_index": result["step_index"],
             "status": result["status"],
             "output_hash": result["output_hash"],
-        }
+        })
     else:
-        return {
+        return wrap_dict({
             "executed": False,
-        }
+        })
 
 
 # =============================================================================
@@ -883,12 +884,12 @@ async def bulk_report_mismatches(
             except Exception as e:
                 logger.warning(f"Failed to create bulk GitHub issue: {e}")
 
-    return {
+    return wrap_dict({
         "linked_count": len(rows),
         "traces_affected": len(by_trace),
         "issue_url": issue_url,
         "mismatch_ids": [str(r[0]) for r in rows],
-    }
+    })
 
 
 # Parameter route MUST come after static routes
@@ -1106,7 +1107,7 @@ async def list_trace_mismatches(
         )
         rows = result.fetchall()
 
-    return {
+    return wrap_dict({
         "trace_id": trace_id,
         "mismatches": [
             {
@@ -1126,7 +1127,7 @@ async def list_trace_mismatches(
             for r in rows
         ],
         "total": len(rows),
-    }
+    })
 
 
 @router.post("/{trace_id}/mismatches/{mismatch_id}/resolve")
@@ -1190,4 +1191,4 @@ async def resolve_mismatch(
             except Exception as e:
                 logger.warning(f"Failed to comment on GitHub issue: {e}")
 
-    return {"status": "resolved", "mismatch_id": mismatch_id, "resolved_by": user.user_id}
+    return wrap_dict({"status": "resolved", "mismatch_id": mismatch_id, "resolved_by": user.user_id})

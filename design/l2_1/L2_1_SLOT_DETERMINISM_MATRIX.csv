@@ -1,0 +1,40 @@
+Slot_ID,Panel_ID,Required_Input,Input_Source,Missing_Input_Effect_State,Missing_Input_Effect_Authority,Missing_Input_Effect_Actionable,Stale_Input_Effect_State,Stale_Input_Effect_Authority,Contradictory_Signal_Rule,Expected_Negative_Authority,Determinism_Test_ID
+OVR-SUM-HL-O1,OVR-SUM-HL,active_run_count,/activity/summary,missing,indeterminate,no,partial,affirmative,N/A,N/A,DT-OVR-HL-O1-001
+OVR-SUM-HL-O1,OVR-SUM-HL,completed_run_count_window,/activity/summary,partial,affirmative,no,partial,affirmative,N/A,N/A,DT-OVR-HL-O1-002
+OVR-SUM-HL-O1,OVR-SUM-HL,near_threshold_run_count,/activity/summary,partial,affirmative,no,partial,affirmative,"IF near_threshold_run_count > 0 AND at_risk_runs = 0 → contradictory_signal_count += 1",N/A,DT-OVR-HL-O1-003
+OVR-SUM-HL-O1,OVR-SUM-HL,last_observation_timestamp,/activity/summary,partial,indeterminate,no,partial,indeterminate,N/A,N/A,DT-OVR-HL-O1-004
+OVR-SUM-HL-O2,OVR-SUM-HL,active_incident_count,/incidents/summary,missing,indeterminate,no,partial,affirmative,"IF active_incident_count > 0 AND attention_required = false → contradictory_signal_count += 1, authority = indeterminate",NO_INCIDENT,DT-OVR-HL-O2-001
+OVR-SUM-HL-O2,OVR-SUM-HL,near_threshold_count,/activity/summary,partial,affirmative,no,partial,affirmative,N/A,NO_NEAR_THRESHOLD,DT-OVR-HL-O2-002
+OVR-SUM-HL-O2,OVR-SUM-HL,prevented_violation_count,/incidents/summary,partial,affirmative,no,partial,affirmative,N/A,N/A,DT-OVR-HL-O2-003
+OVR-SUM-HL-O2,OVR-SUM-HL,max_severity_level,/incidents/summary,partial,affirmative,no,partial,affirmative,N/A,N/A,DT-OVR-HL-O2-004
+OVR-SUM-HL-O3,OVR-SUM-HL,historical_failure_ratios,/analytics,missing,indeterminate,no,partial,indeterminate,N/A,N/A,DT-OVR-HL-O3-001
+OVR-SUM-HL-O3,OVR-SUM-HL,escalation_latency_baseline,/analytics,missing,indeterminate,no,partial,indeterminate,N/A,N/A,DT-OVR-HL-O3-002
+OVR-SUM-HL-O4,OVR-SUM-HL,high_severity_violations,/policy-layer/violations,missing,indeterminate,no,partial,affirmative,N/A,NO_ANOMALY,DT-OVR-HL-O4-001
+OVR-SUM-HL-O4,OVR-SUM-HL,cost_anomalies,/cost/anomalies,partial,affirmative,no,partial,affirmative,N/A,NO_ANOMALY,DT-OVR-HL-O4-002
+OVR-SUM-CI-O1,OVR-SUM-CI,current_spend_rate,/cost/summary,missing,indeterminate,no,partial,affirmative,N/A,N/A,DT-OVR-CI-O1-001
+OVR-SUM-CI-O1,OVR-SUM-CI,previous_spend_rate,/cost/summary,partial,indeterminate,no,partial,indeterminate,"IF previous_spend_rate = null → trend = indeterminate",N/A,DT-OVR-CI-O1-002
+OVR-SUM-CI-O1,OVR-SUM-CI,cost_by_category,/cost/summary,partial,affirmative,no,partial,affirmative,N/A,N/A,DT-OVR-CI-O1-003
+OVR-SUM-CI-O4,OVR-SUM-CI,recent_cost_trend,/cost/projection,missing,indeterminate,no,partial,indeterminate,"IF recent_cost_trend.length < 3 → confidence = LOW",N/A,DT-OVR-CI-O4-001
+OVR-SUM-CI-O4,OVR-SUM-CI,projection_confidence,/cost/projection,partial,indeterminate,no,partial,indeterminate,N/A,N/A,DT-OVR-CI-O4-002
+OVR-SUM-CI-O4,OVR-SUM-CI,anomaly_adjustments,/cost/anomalies,available,affirmative,no,available,affirmative,"IF anomaly_adjustments contains high_impact → add 'anomaly_influence' to unverified_signal_refs",N/A,DT-OVR-CI-O4-003
+ACT-LLM-LIVE-O1,ACT-LLM-LIVE,live_run_count,/activity/runs,missing,indeterminate,no,partial,indeterminate,N/A,N/A,DT-ACT-LIVE-O1-001
+ACT-LLM-LIVE-O3,ACT-LLM-LIVE,runs_near_cost_limit,/activity/runs,partial,affirmative,no,partial,affirmative,N/A,NO_NEAR_THRESHOLD,DT-ACT-LIVE-O3-001
+ACT-LLM-LIVE-O3,ACT-LLM-LIVE,runs_near_time_limit,/activity/runs,partial,affirmative,no,partial,affirmative,N/A,NO_NEAR_THRESHOLD,DT-ACT-LIVE-O3-002
+ACT-LLM-LIVE-O3,ACT-LLM-LIVE,runs_near_token_limit,/activity/runs,partial,affirmative,no,partial,affirmative,N/A,NO_NEAR_THRESHOLD,DT-ACT-LIVE-O3-003
+ACT-LLM-LIVE-O3,ACT-LLM-LIVE,quota_headroom_percentage,/api/v1/tenant/quota/tokens,available,affirmative,no,available,affirmative,N/A,N/A,DT-ACT-LIVE-O3-004
+ACT-LLM-SIG-O1,ACT-LLM-SIG,critical_failure_count,/incidents/summary,missing,indeterminate,no,partial,indeterminate,N/A,NO_ACTIVE_RISK,DT-ACT-SIG-O1-001
+ACT-LLM-SIG-O1,ACT-LLM-SIG,critical_success_count,/activity/summary,partial,affirmative,no,partial,affirmative,N/A,N/A,DT-ACT-SIG-O1-002
+ACT-LLM-SIG-O1,ACT-LLM-SIG,active_risk_conditions,/incidents/summary,missing,indeterminate,no,partial,indeterminate,N/A,NO_ACTIVE_RISK,DT-ACT-SIG-O1-003
+ACT-LLM-SIG-O1,ACT-LLM-SIG,signal_timestamps,/activity/summary,partial,indeterminate,no,partial,indeterminate,"IF signal_timestamps are all stale → state = partial, stale_input_count += 1",N/A,DT-ACT-SIG-O1-004
+ACT-LLM-SIG-O2,ACT-LLM-SIG,token_limit_breaches_predicted,/api/v1/predictions/stats/summary,missing,indeterminate,no,partial,affirmative,N/A,NO_THRESHOLD_BREACH,DT-ACT-SIG-O2-001
+ACT-LLM-SIG-O2,ACT-LLM-SIG,cost_ceiling_approaches,/api/v1/predictions/stats/summary,missing,indeterminate,no,partial,affirmative,N/A,NO_THRESHOLD_BREACH,DT-ACT-SIG-O2-002
+ACT-LLM-SIG-O2,ACT-LLM-SIG,sla_timeout_risks,/api/v1/predictions/stats/summary,missing,indeterminate,no,partial,affirmative,N/A,NO_THRESHOLD_BREACH,DT-ACT-SIG-O2-003
+ACT-LLM-SIG-O2,ACT-LLM-SIG,rate_limit_pressure_score,/api/v1/predictions/stats/summary,available,affirmative,no,available,affirmative,"IF rate_limit_pressure_score = null → rate_limit_pressure = indeterminate",N/A,DT-ACT-SIG-O2-004
+INC-EV-ACT-O1,INC-EV-ACT,active_incidents,/guard/incidents,missing,indeterminate,no,partial,indeterminate,N/A,NO_INCIDENT,DT-INC-ACT-O1-001
+INC-EV-ACT-O3,INC-EV-ACT,incidents_with_containment,/guard/incidents,missing,indeterminate,no,partial,indeterminate,"IF containment_status missing for any incident → state = partial",N/A,DT-INC-ACT-O3-001
+INC-EV-ACT-O3,INC-EV-ACT,containment_status,/guard/incidents,partial,indeterminate,no,partial,indeterminate,"IF uncontained_count > 0 AND guardrails_holding = true → contradictory_signal_count += 1",N/A,DT-INC-ACT-O3-002
+POL-LIM-VIO-O1,POL-LIM-VIO,violation_list,/policy-layer/violations,missing,indeterminate,no,partial,indeterminate,N/A,NO_VIOLATION,DT-POL-VIO-O1-001
+POL-GOV-ACT-O1,POL-GOV-ACT,active_policies,/policy-layer/state,missing,indeterminate,no,partial,affirmative,N/A,N/A,DT-POL-ACT-O1-001
+POL-GOV-DFT-O1,POL-GOV-DFT,governance_signals,/policy-layer/metrics,missing,indeterminate,no,partial,indeterminate,N/A,N/A,DT-POL-DFT-O1-001
+LOG-REC-AUD-O1,LOG-REC-AUD,audit_traces,/logs/traces_list,missing,indeterminate,no,partial,indeterminate,N/A,N/A,DT-LOG-AUD-O1-001
+LOG-REC-LLM-O1,LOG-REC-LLM,run_log_envelope,/logs/runtime_traces,missing,indeterminate,no,partial,indeterminate,N/A,N/A,DT-LOG-LLM-O1-001

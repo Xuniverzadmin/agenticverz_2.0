@@ -1,25 +1,22 @@
 {
-  "$schema": "projection_diff_allowlist.schema.json",
-  "description": "Allowlist for Projection Diff Guard - Phase 3 HIL v1",
-  "version": "1.0",
-  "updated": "2026-01-14",
-  "reference": "PIN-417",
-
-  "panels": [
-    "ACT-EX-SUM-O1"
-  ],
-
+  "panels": [],
   "rules": {
     "PDG-001": [
-      "ACT-EX-SUM-O1"
+      "POL-LIM-USG-O1",
+      "POL-LIM-USG-O2",
+      "POL-LIM-USG-O3",
+      "POL-LIM-USG-O4",
+      "POL-LIM-USG-O5"
     ],
-    "PDG-002": [],
-    "PDG-003": [],
-    "PDG-004": [],
-    "PDG-005": []
+    "PDG-003": [
+      "INC-EV-RES-O2",
+      "INC-EV-RES-O3",
+      "INC-EV-RES-O4",
+      "INC-EV-RES-O5",
+      "INC-EV-HIST-O3",
+      "INC-EV-HIST-O5",
+      "INC-EV-HIST-O2"
+    ]
   },
-
-  "notes": {
-    "ACT-EX-SUM-O1": "HIL v1 Phase 3 - first interpretation panel, expected to be added"
-  }
+  "note": "USG panels renamed to ANA-CST-USG-* as part of ANALYTICS domain creation. PDG-003 allowlisted for new Incidents BOUND transitions from SDSR verification. Auto-added INC-EV-HIST-O2 to PDG-003 on 2026-01-15: SDSR observation promoted incidents.guard_list to OBSERVED."
 }

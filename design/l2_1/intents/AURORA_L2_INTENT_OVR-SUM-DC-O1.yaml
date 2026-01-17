@@ -1,0 +1,66 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: OVR-SUM-DC-O1
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: OVR-SUM-DC-O1
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: OVERVIEW
+  subdomain: SUMMARY
+  topic: DECISIONS
+  topic_id: OVERVIEW.SUMMARY.DECISIONS
+  order: O1
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: OVR-SUM-DC-O1
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: overview.decisions_list
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+notes: 'Surface decisions that require explicit human approval or rejection,
+
+  without forcing navigation into policies or incidents.
+
+
+  What it shows:
+
+  - Count of pending policy approvals
+
+  - Count of blocked runs awaiting human override
+
+  - Count of escalations requiring approval/reject decision
+
+  - Oldest pending decision age (time-based pressure)
+
+
+  What it explicitly does NOT show:
+
+  - No execution buttons
+
+  - No approval/reject actions
+
+  - No policy details
+
+  - No explanations or rationale
+
+  - No historical decisions'

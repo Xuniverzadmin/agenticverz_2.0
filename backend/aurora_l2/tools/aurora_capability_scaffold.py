@@ -34,8 +34,12 @@ CAPABILITY_REGISTRY = REPO_ROOT / "backend/AURORA_L2_CAPABILITY_REGISTRY"
 
 
 def load_intent_yaml(panel_id: str) -> Optional[Dict]:
-    """Load intent YAML for a panel."""
-    intent_path = INTENTS_DIR / f"{panel_id}.yaml"
+    """Load intent YAML for a panel (new naming convention with legacy fallback)."""
+    # Try new naming convention first
+    intent_path = INTENTS_DIR / f"AURORA_L2_INTENT_{panel_id}.yaml"
+    if not intent_path.exists():
+        # Fall back to legacy naming
+        intent_path = INTENTS_DIR / f"{panel_id}.yaml"
     if not intent_path.exists():
         return None
     with open(intent_path) as f:

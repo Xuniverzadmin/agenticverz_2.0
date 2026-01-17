@@ -1,0 +1,39 @@
+# AURORA_L2 Capability Registry - Incidents Cost Impact Analysis
+# Status: DECLARED (awaiting E2E validation per CAP-E2E-001)
+# Reference: docs/architecture/incidents/INCIDENTS_DOMAIN_SQL.md#12-res-o3
+#
+capability_id: incidents.cost_impact
+status: DECLARED
+source_panels:
+  - INC-EV-RES-O3
+domain: INCIDENTS
+metadata:
+  generated_by: manual
+  generated_on: '2026-01-17'
+  declared_by: claude-implementation
+  declared_on: '2026-01-17'
+  # observed_by: null  # Set by SDSR only
+  # observed_on: null  # Set by SDSR only
+assumption:
+  endpoint: /api/v1/incidents/cost-impact
+  method: GET
+  source: INCIDENTS_DOMAIN_SQL
+acceptance_criteria:
+  - Returns cost impact summaries by category
+  - Includes total cost impact
+  - Includes average cost per incident
+  - Groups by resolution method
+  - Response includes baseline_days
+implementation:
+  endpoint: /api/v1/incidents/cost-impact
+  method: GET
+  handler: app.api.incidents.analyze_cost_impact
+  service: null  # Inline SQL in endpoint
+auth:
+  roles: [admin, member]
+  permissions: [incidents:read]
+notes:
+  - "Direct SQL analytics in endpoint"
+  - "Read-only, no writes"
+  - "Tenant-scoped via auth_context"
+  - "Requires cost_impact column in incidents table"

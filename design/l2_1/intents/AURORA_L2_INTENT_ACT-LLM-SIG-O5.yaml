@@ -1,0 +1,66 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: ACT-LLM-SIG-O5
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: ACT-LLM-SIG-O5
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: ACTIVITY
+  subdomain: LLM_RUNS
+  topic: SIGNALS
+  topic_id: ACTIVITY.LLM_RUNS.SIGNALS
+  order: O5
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: ACT-LLM-SIG-O5
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: activity.discovery_stats
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+notes: 'Synthesize attention priority — what to look at first and why.
+
+
+  What it shows:
+
+  - Prioritized attention queue combining:
+
+  - Severity (O1)
+
+  - Proximity (O2)
+
+  - Pattern persistence (O3)
+
+  - Economic impact (O4)
+
+  - Grouping by LLM, Agent, or Human
+
+  - Cross-cutting issues
+
+
+  What it explicitly does NOT show:
+
+  - No decisions or actions
+
+  - No policy execution
+
+  - No drill-down details'

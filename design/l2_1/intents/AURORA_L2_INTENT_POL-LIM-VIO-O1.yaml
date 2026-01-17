@@ -1,0 +1,64 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: POL-LIM-VIO-O1
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-LIM-VIO-O1
+version: 1.0.0
+panel_class: evidence
+metadata:
+  domain: POLICIES
+  subdomain: LIMITS
+  topic: VIOLATIONS
+  topic_id: POLICIES.LIMITS.VIOLATIONS
+  order: O1
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: limit_violations
+  facet_criticality: HIGH
+display:
+  name: POL-LIM-VIO-O1
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: policies.violations_list
+  status: ASSUMED
+  assumed_endpoint: /api/v1/policy-layer/violations
+  assumed_method: GET
+  facade_note: "Added /api/v1 prefix - API Audit 2026-01-16"
+sdsr:
+  scenario: SDSR-POL-LIM-VIO-O1-001
+  verified: false
+notes: 'Show the violation ledger — immutable record of every limit violation.
+
+
+  What it shows:
+
+  - Run ID, timestamp, policy ID, limit type
+
+  - Violation mode: hard terminate, temporal fracture, human override
+
+  - Actor at violation: LLM, agent, human
+
+  - Enforcement state: blocked, allowed (override)
+
+  - One row per violation event, overrides do not erase violation
+
+
+  What it explicitly does NOT show:
+
+  - No configuration controls
+
+  - No policy editing'

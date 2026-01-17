@@ -127,6 +127,7 @@ SESSION_CONTINUATION_ACKNOWLEDGMENT
 | **ARCH-FRAG-ESCALATE-001** | **Fragmentation Escalation** | **BLOCKING** |
 | **SDSR-CONTRACT-001 to 003** | **SDSR System Contract** | **BLOCKING** |
 | **BL-ARCH-CONSTRAINT-001** | **Architecture Constraints** | **BLOCKING** |
+| **CAP-E2E-001** | **Capability Status Gate** | **BLOCKING** |
 
 ### SDSR System Contract (SESSION-INVARIANT - HARD BLOCK)
 
@@ -173,6 +174,49 @@ SDSR CONTRACT CHECK
 ```
 
 **No implementation before approval.**
+
+### Capability Status Gate (CAP-E2E-001) — HARD BLOCK
+
+**Status:** LOCKED
+**Effective:** 2026-01-17
+**Reference:** `docs/governance/SDSR_SYSTEM_CONTRACT.md` Section 10
+
+> **Capabilities MUST remain DECLARED until E2E validation passes.**
+> **Only when E2E validation passes can status change to OBSERVED.**
+
+**Capability Lifecycle:**
+```
+DECLARED → OBSERVED → TRUSTED → DEPRECATED
+```
+
+| Status | Meaning | Panel State |
+|--------|---------|-------------|
+| DECLARED | Code exists, not validated | Disabled |
+| OBSERVED | E2E validation passed | Enabled |
+| TRUSTED | Production-proven | Enabled |
+| DEPRECATED | Being removed | Hidden |
+
+**Transition Requirements (DECLARED → OBSERVED):**
+1. SDSR scenario exists and was executed
+2. All assertions passed
+3. Observation JSON emitted
+4. `AURORA_L2_apply_sdsr_observations.py` applied
+
+**Hard Failure Response:**
+
+If capability is marked OBSERVED without E2E:
+```
+CAP-E2E-001 VIOLATION: Capability status requires E2E validation.
+
+Capability: [capability_id]
+Current status: OBSERVED
+E2E validation: NOT FOUND / FAILED
+
+Correct action: Keep status as DECLARED until E2E passes.
+Reference: docs/governance/SDSR_SYSTEM_CONTRACT.md Section 10
+```
+
+**Rationale:** Claim ≠ Truth. Code existing is not proof that it works correctly.
 
 ### Canonical-First Fix Policy (HARD BLOCK - ARCH-CANON-001)
 
@@ -464,6 +508,57 @@ Claude must not invent architecture. If something is not explicitly declared, it
 | FA-007 | Custom pages for domain data | Use projection-driven DomainPage + PanelContentRegistry |
 
 **Enforcement:** If Claude introduces any forbidden assumption → Response is INVALID
+
+### API-002 Counter-Rules (MANDATORY)
+
+**Status:** ENFORCED
+**Effective:** 2026-01-17
+**Reference:** `docs/architecture/GOVERNANCE_GUARDRAILS.md` (API-002), PIN-437
+
+When fixing API-002 (Response Envelope) violations using `wrap_dict()`, Claude MUST follow these counter-rules to prevent future misuse.
+
+#### API-002-CR-001: Input Integrity ("Just wrap it" prevention)
+
+```python
+# ❌ VIOLATION - Wrapping internal/partial objects
+return wrap_dict(orm_entity)              # Raw ORM object
+return wrap_dict(domain_service_result)   # Internal domain object
+return wrap_dict(partial_computation)     # Incomplete result
+
+# ✅ CORRECT - Only wrap finalized outputs
+return wrap_dict(result.model_dump())     # Pydantic model → dict
+return wrap_dict({"key": "value"})        # Fully constructed dict
+```
+
+**Rule:** `wrap_dict()` must ONLY receive:
+1. `model_dump()` output from Pydantic response models
+2. Fully constructed response dictionaries
+
+**Never:** Raw ORM entities, internal domain objects, or partial results.
+
+#### API-002-CR-002: Total Computation (Pagination lie prevention)
+
+```python
+# ⚠️ VALID FOR NON-PAGINATED ONLY
+return wrap_dict({"items": [...], "total": len(results)})
+
+# ❌ VIOLATION - Paginated endpoint using len()
+items = service.get_page(offset, limit)
+return wrap_dict({"items": items, "total": len(items)})  # LIES about total
+
+# ✅ CORRECT - Paginated endpoint with COUNT(*)
+items = service.get_page(offset, limit)
+total = service.count_total()  # Separate COUNT(*) query
+return wrap_dict({"items": items, "total": total})
+```
+
+**Rule:** The `{"items": [...], "total": len(results)}` pattern is valid ONLY for:
+- Non-paginated endpoints
+- Endpoints where `results` represents the **complete** dataset
+
+For paginated endpoints, `total` MUST come from a separate `COUNT(*)` query.
+
+**Enforcement:** If Claude uses `wrap_dict` without verifying these rules → Code Review MUST reject.
 
 ### SDSR UI Architecture Gate (BL-SDSR-UI-001)
 

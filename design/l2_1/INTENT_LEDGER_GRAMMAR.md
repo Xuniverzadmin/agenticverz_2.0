@@ -1,8 +1,9 @@
 # INTENT_LEDGER.md Grammar Specification
 
-**Version:** 1.0.0
-**Status:** LOCKED
+**Version:** 1.1.0
+**Status:** ACTIVE
 **Authority:** PIN-419
+**Updated:** 2026-01-16 (Added Facet Grammar)
 
 ---
 
@@ -159,6 +160,90 @@ Acceptance:
 
 Observed: null
 ```
+
+---
+
+## Facet Entry Grammar (V1.1)
+
+Facets are **semantic groupings** of information needs that span multiple panels.
+They provide human-readable context without affecting pipeline mechanics.
+
+### Purpose
+
+Facets answer: "Why do these panels exist together?"
+
+**Key Invariants:**
+- Facets are **non-authoritative** — Phase A ignores them
+- Facets are **human-defined** — No machine generation
+- Facets are **additive** — Don't change panel semantics
+
+### Required Format
+
+```markdown
+## Facets
+
+### Facet: {facet_id}
+Purpose: {What information need does this facet address?}
+Criticality: {HIGH|MEDIUM|LOW}
+Domain: {Primary domain}
+
+Panels:
+- {panel_id} ({role description})
+- {panel_id} ({role description})
+```
+
+### Field Rules
+
+| Field | Required | Type | Values |
+|-------|----------|------|--------|
+| `facet_id` | YES | string | snake_case identifier |
+| `Purpose` | YES | text | Free text description |
+| `Criticality` | YES | string | HIGH, MEDIUM, LOW |
+| `Domain` | YES | string | Primary domain name |
+| `Panels` | YES | list | Markdown bullet list with panel_id |
+
+### Example
+
+```markdown
+### Facet: error_visibility
+Purpose: Operators must understand system error health and failure causes
+Criticality: HIGH
+Domain: Logs
+
+Panels:
+- LOG-REC-SYS-O1 (error status summary)
+- LOG-REC-SYS-O2 (error list)
+- LOG-REC-SYS-O3 (error details drilldown)
+```
+
+### Example (Multi-Domain)
+
+```markdown
+### Facet: incident_lifecycle
+Purpose: Track incidents from detection to resolution
+Criticality: HIGH
+Domain: Incidents
+
+Panels:
+- INC-EV-ACT-O1 (active incidents list)
+- INC-EV-ACT-O2 (incident details)
+- INC-EV-RES-O1 (resolved incidents)
+- INC-EV-HIST-O1 (incident history)
+- LOG-REC-SYS-O4 (incident trace logs)
+```
+
+### Generator Behavior
+
+The `sync_from_intent_ledger.py` script will:
+
+1. Parse facet sections
+2. Add `facet: {facet_id}` to panel intent YAMLs
+3. Add `facet_criticality: {criticality}` to panel intent YAMLs
+
+**Non-goals:**
+- No validation against facets in Phase A
+- No facet-based panel generation
+- No automatic criticality propagation
 
 ---
 

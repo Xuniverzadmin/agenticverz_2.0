@@ -1,0 +1,39 @@
+# AURORA_L2 Capability Registry - Incidents Learnings (Post-Mortem)
+# Status: DECLARED (awaiting E2E validation per CAP-E2E-001)
+# Reference: docs/architecture/incidents/INCIDENTS_DOMAIN_SQL.md#13-res-o4
+#
+capability_id: incidents.learnings
+status: DECLARED
+source_panels:
+  - INC-EV-RES-O4
+domain: INCIDENTS
+metadata:
+  generated_by: manual
+  generated_on: '2026-01-17'
+  declared_by: claude-implementation
+  declared_on: '2026-01-17'
+  # observed_by: null  # Set by SDSR only
+  # observed_on: null  # Set by SDSR only
+assumption:
+  endpoint: /api/v1/incidents/{incident_id}/learnings
+  method: GET
+  source: INCIDENTS_DOMAIN_SQL
+acceptance_criteria:
+  - Returns resolution summary for incident
+  - Returns similar past incidents
+  - Extracts actionable insights (prevention, detection, response)
+  - Includes confidence scores for insights
+  - Response includes generated_at timestamp
+implementation:
+  endpoint: /api/v1/incidents/{incident_id}/learnings
+  method: GET
+  handler: app.api.incidents.get_incident_learnings
+  service: app.services.incidents.PostMortemService
+auth:
+  roles: [admin, member]
+  permissions: [incidents:read]
+notes:
+  - "L4 service: PostMortemService"
+  - "Read-only analytics, no writes"
+  - "Tenant-scoped via auth_context"
+  - "Returns similar incidents and insights"

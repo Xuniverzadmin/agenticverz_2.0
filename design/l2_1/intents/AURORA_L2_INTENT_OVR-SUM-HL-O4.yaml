@@ -1,0 +1,66 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: OVR-SUM-HL-O4
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: OVR-SUM-HL-O4
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: OVERVIEW
+  subdomain: SUMMARY
+  topic: HIGHLIGHTS
+  topic_id: OVERVIEW.SUMMARY.HIGHLIGHTS
+  order: O4
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: system_health_overview
+  facet_criticality: HIGH
+display:
+  name: OVR-SUM-HL-O4
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: overview.policy_snapshot
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+notes: 'Expose rare but high-impact clusters — low-frequency, high-cost events
+
+  invisible in averages.
+
+
+  What it shows:
+
+  - Severity-weighted cost/time loss ranking
+
+  - Long-tail outliers (top 1-2%)
+
+  - Extreme run duration/cost spikes
+
+  - Overridden violations with high blast radius
+
+  - Impact-ranked clusters by LLM, agent, human, policy
+
+
+  What it explicitly does NOT show:
+
+  - No count-based rankings
+
+  - No actions or controls
+
+  - No policy editing
+
+  - No drill-down beyond identification'

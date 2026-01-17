@@ -41,6 +41,7 @@ from pydantic import BaseModel, Field
 
 from ..auth.gateway_middleware import get_auth_context
 from ..auth.onboarding_state import OnboardingState
+from ..schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.onboarding")
 
@@ -378,9 +379,9 @@ async def advance_api_key_created(request: Request):
         trigger=TransitionTrigger.FIRST_API_KEY_CREATED,
     )
 
-    return {
+    return wrap_dict({
         "success": result.success,
         "from_state": result.from_state.name,
         "to_state": result.to_state.name,
         "was_no_op": result.was_no_op,
-    }
+    })

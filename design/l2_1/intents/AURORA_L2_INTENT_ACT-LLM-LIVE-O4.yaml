@@ -1,0 +1,54 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: ACT-LLM-LIVE-O4
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: ACT-LLM-LIVE-O4
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: ACTIVITY
+  subdomain: LLM_RUNS
+  topic: LIVE
+  topic_id: ACTIVITY.LLM_RUNS.LIVE
+  order: O4
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: active_execution_monitoring
+  facet_criticality: HIGH
+display:
+  name: ACT-LLM-LIVE-O4
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: activity.worker_runs
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+notes: 'Indicate whether telemetry, logs, and traces are flowing for live runs.
+
+
+  What it shows:
+
+  - Percentage or status of live runs emitting evidence
+
+
+  What it explicitly does NOT show:
+
+  - No log contents
+
+  - No replay
+
+  - No export'

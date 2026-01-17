@@ -1,0 +1,56 @@
+# Panel Intent: Lesson Detail
+# Source: PIN-411 (Lessons Learned Engine)
+# Panel: POL-GOV-LES-O2
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-GOV-LES-O2
+version: 1.0.0
+panel_class: evidence
+metadata:
+  domain: POLICIES
+  subdomain: GOVERNANCE
+  topic: LESSONS
+  topic_id: POLICIES.GOVERNANCE.LESSONS
+  order: O2
+  action_layer: L2_1
+  source: PIN-411
+  review_status: DRAFT
+  facet: lessons_learned
+  facet_criticality: MEDIUM
+display:
+  name: Lesson Detail
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: false
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: lessons.get
+  status: DECLARED
+  assumed_endpoint: /api/v1/lessons/{lesson_id}
+  assumed_method: GET
+  facade_note: "Get lesson details including detected pattern and proposed action"
+sdsr:
+  scenario: SDSR-POL-GOV-LES-O2-001
+  verified: false
+notes: |
+  Show full details of a specific lesson.
+
+  What it shows:
+  - Lesson title and description
+  - Detected pattern (JSON)
+  - Proposed action (recommendation)
+  - Source event details (incident ID, run ID)
+  - State machine history (if available)
+  - Created/converted dates
+
+  What it explicitly does NOT show:
+  - No list navigation (use O1 for list)
+  - No action buttons (use O3/O4 for actions)

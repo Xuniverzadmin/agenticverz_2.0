@@ -1,0 +1,61 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: POL-GOV-DFT-O5
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-GOV-DFT-O5
+version: 1.0.0
+panel_class: execution
+metadata:
+  domain: POLICIES
+  subdomain: GOVERNANCE
+  topic: DRAFTS
+  topic_id: POLICIES.GOVERNANCE.DRAFTS
+  order: O5
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: POL-GOV-DFT-O5
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: policies.dependencies_list
+  status: ASSUMED
+  assumed_endpoint: /api/v1/policy-layer/dependencies
+  assumed_method: GET
+sdsr:
+  scenario: SDSR-POL-GOV-DFT-O5-001
+  verified: false
+notes: 'Show decision outcomes and lifecycle routing after human decides.
+
+
+  What it shows:
+
+  - Approved: draft → active policy, moves to Governance → Active
+
+  - Rejected: draft archived with reason, signal suppressed
+
+  - Deferred: parked for more data, re-evaluated later
+
+  - Every draft must end in one of these three states
+
+
+  What it explicitly does NOT show:
+
+  - No silent expiration
+
+  - No auto-decisions'

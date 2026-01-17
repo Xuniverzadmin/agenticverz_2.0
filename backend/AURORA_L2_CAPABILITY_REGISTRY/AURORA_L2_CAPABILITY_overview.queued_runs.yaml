@@ -1,0 +1,39 @@
+# AURORA L2 Capability Registry Entry
+# Capability: overview.queued_runs
+# Last Updated: 2026-01-17
+# Updated By: Manual (Activity domain integration)
+#
+# STATUS: DECLARED
+#
+# NOTE: This capability derives from Activity domain (worker_runs table)
+# and is exposed via the /highlights endpoint in the pulse.
+#
+capability_id: overview.queued_runs
+status: DECLARED
+source_panels:
+- OVR-SUM-HL-O1
+domain: OVERVIEW
+endpoint: /api/v1/overview/highlights
+method: GET
+metadata:
+  generated_by: manual_activity_integration
+  generated_on: '2026-01-17'
+  declared_by: CLAUDE_GOVERNANCE
+  declared_on: '2026-01-17'
+domain_lineage:
+  source_domain: ACTIVITY
+  source_table: worker_runs
+  drill_through: /precus/activity
+acceptance_criteria:
+- Returns count of queued executions (status='queued')
+- Included in SystemPulse.queued_runs field
+- Tenant-scoped query
+binding:
+  observed_endpoint: null
+  observed_method: null
+  observed_at: null
+  observation_id: null
+assumption:
+  endpoint: /api/v1/overview/highlights
+  method: GET
+  source: ACTIVITY_DOMAIN_INTEGRATION

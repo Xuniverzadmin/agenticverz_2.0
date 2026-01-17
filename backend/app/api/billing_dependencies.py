@@ -32,6 +32,7 @@ from app.billing.plan import Plan, DEFAULT_PLAN
 from app.billing.limits import Limits, DEFAULT_LIMITS
 from app.billing.provider import get_billing_provider
 from app.auth.onboarding_state import OnboardingState
+from app.schemas.response import wrap_dict
 
 
 @dataclass

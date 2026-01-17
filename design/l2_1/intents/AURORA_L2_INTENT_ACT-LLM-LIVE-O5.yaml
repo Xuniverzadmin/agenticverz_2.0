@@ -1,0 +1,56 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: ACT-LLM-LIVE-O5
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: ACT-LLM-LIVE-O5
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: ACTIVITY
+  subdomain: LLM_RUNS
+  topic: LIVE
+  topic_id: ACTIVITY.LLM_RUNS.LIVE
+  order: O5
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: active_execution_monitoring
+  facet_criticality: HIGH
+display:
+  name: ACT-LLM-LIVE-O5
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: activity.health_status
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+notes: 'Provide a coarse distribution of live runs by major dimension.
+
+
+  What it shows:
+
+  - Distribution by LLM provider, agent, or trigger type
+
+  (exact dimension decided later)
+
+
+  What it explicitly does NOT show:
+
+  - No drill-down
+
+  - No per-run detail
+
+  - No controls'

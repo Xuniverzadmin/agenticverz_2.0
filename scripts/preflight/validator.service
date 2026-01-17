@@ -1,0 +1,21 @@
+[Unit]
+Description=AgenticVerz Continuous Contract Validator
+Documentation=file:///root/agenticverz2.0/docs/architecture/contracts/INDEX.md
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/agenticverz2.0
+ExecStart=/usr/bin/python3 /root/agenticverz2.0/scripts/preflight/continuous_validator.py --daemon --verbose
+ExecStop=/usr/bin/python3 /root/agenticverz2.0/scripts/preflight/continuous_validator.py --stop
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/root/agenticverz2.0/.validator.log
+StandardError=append:/root/agenticverz2.0/.validator.log
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

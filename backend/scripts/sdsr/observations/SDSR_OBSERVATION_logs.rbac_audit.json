@@ -1,29 +1,31 @@
 {
-  "observation_id": "OBS-SDSR-LOG-REC-AUD-O2-001-20260115073031",
+  "observation_id": "OBS-SDSR-LOG-REC-AUD-O2-001-20260115173148",
   "scenario_id": "SDSR-LOG-REC-AUD-O2-001",
   "capability_id": "logs.rbac_audit",
   "panel_id": "LOG-REC-AUD-O2",
-  "status": "PASS",
-  "observed_at": "2026-01-15T07:30:34.897299+00:00",
-  "endpoint": "/api/v1/rbac/audit",
-  "method": "GET",
-  "response_status_code": 200,
-  "response_time_ms": 3531.5473079681396,
+  "status": "FAIL",
+  "observed_at": "2026-01-15T17:31:48.518664+00:00",
+  "assumed_endpoint": "/api/v1/rbac/audit",
+  "observed_endpoint": "/api/v1/rbac/audit",
+  "assumed_method": "GET",
+  "observed_method": "GET",
+  "response_status_code": 500,
+  "response_time_ms": 49.659013748168945,
   "invariants_total": 3,
-  "invariants_passed": 3,
-  "invariants_failed": 0,
+  "invariants_passed": 1,
+  "invariants_failed": 2,
   "invariant_results": [
     {
       "id": "INV-001",
       "name": "response_shape",
-      "status": "PASS",
-      "message": "Assertion passed: response is dict and response is not empty"
+      "status": "FAIL",
+      "message": "Assertion failed: response is dict and response is not empty"
     },
     {
       "id": "INV-002",
       "name": "status_code",
-      "status": "PASS",
-      "message": "Assertion passed: status_code == 200"
+      "status": "FAIL",
+      "message": "Assertion failed: status_code == 200"
     },
     {
       "id": "INV-003",
@@ -32,8 +34,8 @@
       "message": "Assertion passed: status_code != 401 and status_code != 403"
     }
   ],
-  "failure_reason": null,
-  "failure_taxonomy": null,
+  "failure_reason": "2 invariant(s) failed",
+  "failure_taxonomy": "INVARIANT_VIOLATED",
   "coherency_verified": true,
   "trace_id": null
 }

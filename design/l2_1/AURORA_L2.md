@@ -82,9 +82,38 @@ AURORA_L2_apply_sdsr_observations.py    ← Updates capability status
 backend/AURORA_L2_CAPABILITY_REGISTRY/*.yaml  (DECLARED → OBSERVED)
 design/l2_1/intents/AURORA_L2_INTENT_*.yaml   (appends observation_trace)
         ↓
-backend/aurora_l2/SDSR_UI_AURORA_compiler.py           ← Reads capabilities + intents
+┌─────────────────────────────────────────────────────────────┐
+│  PHASE A: INTENT GUARDRAILS (BLOCKING GATE)                 │
+│  Script: scripts/tools/validate_all_intents.py              │
+│                                                             │
+│  • Validates signal provability (INT-001)                   │
+│  • Validates capability cardinality ≤ 5 (INT-002)           │
+│  • Validates semantic contract exists (INT-007)             │
+│  • Validates capability reference is valid (INT-008)        │
+│  • BLOCKING violations → Pipeline STOPS (exit 1)            │
+│                                                             │
+│  Output: design/l2_1/ui_contract/phase_a_validation.json    │
+└─────────────────────────────────────────────────────────────┘
+        ↓ (only if Phase A passes)
+┌─────────────────────────────────────────────────────────────┐
+│  AURORA COMPILATION                                          │
+│  Script: backend/aurora_l2/SDSR_UI_AURORA_compiler.py        │
+│                                                             │
+│  • Reads capabilities + intents                             │
+│  • Compiles projection                                      │
+│  Output: design/l2_1/ui_contract/ui_projection_lock.json    │
+└─────────────────────────────────────────────────────────────┘
         ↓
-design/l2_1/ui_contract/ui_projection_lock.json  (CANONICAL OUTPUT)
+┌─────────────────────────────────────────────────────────────┐
+│  PHASE B: SEMANTIC REALITY (Runtime - during signal collect)│
+│                                                             │
+│  • Validates signal translations exist (SEM-001)            │
+│  • Validates capability is OBSERVED/TRUSTED (SEM-002)       │
+│  • Validates API fields match spec (SEM-003)                │
+│  • BLOCKING violations → Panel stays DRAFT                  │
+│                                                             │
+│  Spec: docs/architecture/pipeline/SEMANTIC_VALIDATOR.md     │
+└─────────────────────────────────────────────────────────────┘
         ↓
 cp → website/app-shell/public/projection/
         ↓
@@ -94,10 +123,29 @@ Frontend renderer (consumes verbatim, NO inference)
 ### 4.2 Orchestration Script
 
 ```bash
-./scripts/tools/run_aurora_l2_pipeline.sh
+# Run full pipeline (Phase A → Aurora → Copy)
+DB_AUTHORITY=neon ./scripts/tools/run_aurora_l2_pipeline.sh
+
+# Dry-run mode (show what would happen)
+DB_AUTHORITY=neon ./scripts/tools/run_aurora_l2_pipeline.sh --dry-run
+
+# Skip Phase A (DANGEROUS - debugging only)
+DB_AUTHORITY=neon ./scripts/tools/run_aurora_l2_pipeline.sh --skip-phase-a
 ```
 
 **Requires:** `DB_AUTHORITY=neon` (HARD FAIL if missing)
+
+**Pipeline Stages:**
+
+| Stage | Script | Purpose | Exit Code on Failure |
+|-------|--------|---------|---------------------|
+| Phase A | `validate_all_intents.py` | Intent Guardrails (INT-*) | 1 |
+| Aurora | `SDSR_UI_AURORA_compiler.py` | Compile projection | 2 |
+| Copy | `cp` | Copy to public/ | 2 |
+
+**Key Invariant:**
+
+> Phase A MUST pass before Aurora compilation runs. Phase A is the **single gate** for all downstream UI activities.
 
 ### 4.3 Legacy Flow (DEPRECATED)
 
@@ -283,6 +331,105 @@ design/l2_1/intents/*.yaml          ← Appends observation_trace
 **Rule:**
 > No ACTION may reach UI without an explicit binding_status.
 > No capability may advance to OBSERVED without SDSR evidence.
+
+---
+
+## 9.3 Semantic Validation Gate (Two-Phase Architecture)
+
+**Spec:** `docs/architecture/pipeline/SEMANTIC_VALIDATOR.md`
+**Implementation:** `backend/app/services/ai_console_panel_adapter/`
+  - `validator_engine.py` — Two-phase orchestrator
+  - `intent_guardrails.py` — Phase A rules
+  - `semantic_validator.py` — Phase B validator
+
+The Semantic Validator uses a two-phase architecture:
+
+```
+Phase A: Intent Guardrails (Design-time)
+        ↓
+        ├── Script: scripts/tools/validate_all_intents.py
+        ├── Trigger: Before Aurora compilation
+        ├── Checks: INT-001 to INT-008
+        └── If BLOCKING → Pipeline STOPS (exit 1)
+        ↓
+SDSR proves: "API works" (operational truth)
+        ↓
+Phase B: Semantic Reality (Proof-time)
+        ↓
+        ├── Trigger: During signal collection
+        ├── Checks: SEM-001 to SEM-008
+        └── If BLOCKING → Panel stays DRAFT
+        ↓
+Aurora compiles: Only semantically validated panels
+```
+
+### Phase A Checks (Intent Guardrails)
+
+| Code | Check | Severity |
+|------|-------|----------|
+| INT-001 | Signal is provable (observable or computed) | BLOCKING |
+| INT-002 | Capability cardinality ≤ 5 per panel | BLOCKING |
+| INT-003 | No semantic duplication across panels | WARNING |
+| INT-004 | No contradictory intents in same domain | BLOCKING |
+| INT-005 | Evolution/maturity path declared | WARNING |
+| INT-006 | Intent scope is bounded (≤ 20 signals) | WARNING |
+| INT-007 | Semantic contract exists in registry | BLOCKING |
+| INT-008 | Capability reference is valid | BLOCKING |
+
+### Phase B Checks (Semantic Reality)
+
+| Code | Check | Severity |
+|------|-------|----------|
+| SEM-001 | Signal has translation or compute function | BLOCKING |
+| SEM-002 | Capability is OBSERVED or TRUSTED | BLOCKING |
+| SEM-003 | API field exists in response | BLOCKING/WARNING |
+| SEM-004 | Signal type matches expected | WARNING |
+| SEM-005 | Semantic contract exists (INTENT_LEDGER) | BLOCKING |
+| SEM-006 | Cross-panel data is consistent | WARNING |
+
+### Enforcement
+
+| If... | Then... |
+|-------|---------|
+| Phase A BLOCKING violations | Pipeline stops, exit 1 |
+| Phase B BLOCKING violations | Panel stays DRAFT, Aurora compilation skipped |
+| WARNING violations exist | Logged, panel proceeds to compilation |
+| All checks pass | Panel proceeds to BOUND state |
+
+### Pipeline Wiring
+
+Phase A is wired as the **single gate** before Aurora compilation:
+
+```bash
+# Run the full pipeline (Phase A → Aurora → Copy)
+DB_AUTHORITY=neon ./scripts/tools/run_aurora_l2_pipeline.sh
+```
+
+Exit codes:
+- 0 = Pipeline complete
+- 1 = Phase A BLOCKED (design-time violations)
+- 2 = Aurora compilation failed
+- 3 = Configuration error
+
+### Integration with Panel Adapter
+
+```python
+# Signal collector calls validator before collecting
+if self._enforce_semantics:
+    report = self._semantic_validator.validate_slot(slot_spec, panel_id)
+    if not report.is_valid():
+        return CollectedSignals(semantic_valid=False, errors=[...])
+```
+
+### Gap Discovery
+
+```python
+# Find missing translations
+missing = validator.get_missing_translations()
+
+# Find unobserved capabilities
+unobserved = validator.get_unobserved_capabilities()
+```
 
 ---
 

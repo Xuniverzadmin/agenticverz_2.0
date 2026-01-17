@@ -29,6 +29,7 @@ from sqlalchemy import func, select
 from ..auth.authority import AuthorityResult, emit_authority_audit, require_predictions_read
 from ..db import get_async_session
 from ..models.prediction import PredictionEvent
+from ..schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.predictions")
 
@@ -252,7 +253,7 @@ async def get_predictions_for_subject(
         result = await session.execute(query)
         records = result.scalars().all()
 
-        return {
+        return wrap_dict({
             "subject_type": subject_type,
             "subject_id": subject_id,
             "predictions": [
@@ -271,7 +272,7 @@ async def get_predictions_for_subject(
             "count": len(records),
             "read_only": True,
             "pb_s5_compliant": True,
-        }
+        })
 
 
 @router.get("/stats/summary")
@@ -321,7 +322,7 @@ async def get_prediction_stats(
         # Verify all are advisory (PB-S5 enforcement)
         non_advisory = sum(1 for r in records if not r.is_advisory)
 
-        return {
+        return wrap_dict({
             "total": total,
             "by_type": by_type,
             "by_subject_type": by_subject_type,
@@ -333,4 +334,4 @@ async def get_prediction_stats(
             },
             "read_only": True,
             "pb_s5_compliant": True,
-        }
+        })

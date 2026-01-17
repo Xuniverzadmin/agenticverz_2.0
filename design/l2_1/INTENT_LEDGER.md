@@ -88,6 +88,149 @@ Only panels within these locations are valid.
 
 ---
 
+## Facets
+
+Facets are semantic groupings of information needs that span multiple panels.
+They provide context for why panels exist together without affecting pipeline mechanics.
+
+**Grammar:** See INTENT_LEDGER_GRAMMAR.md Section "Facet Entry Grammar"
+
+### Facet: system_health_overview
+Purpose: Operators need a quick snapshot of overall system health
+Criticality: HIGH
+Domain: OVERVIEW
+
+Panels:
+- OVR-SUM-HL-O1 (activity snapshot)
+- OVR-SUM-HL-O2 (incident snapshot)
+- OVR-SUM-HL-O4 (policy snapshot)
+
+### Facet: cost_intelligence
+Purpose: Operators must understand cost consumption and anomalies
+Criticality: HIGH
+Domain: OVERVIEW
+
+Panels:
+- OVR-SUM-CI-O1 (cost summary)
+- OVR-SUM-CI-O2 (cost by feature)
+- OVR-SUM-CI-O3 (cost by model)
+- OVR-SUM-CI-O4 (cost anomalies)
+
+### Facet: active_execution_monitoring
+Purpose: Track currently running and recently completed executions
+Criticality: HIGH
+Domain: ACTIVITY
+
+Panels:
+- ACT-LLM-LIVE-O1 (live runs)
+- ACT-LLM-LIVE-O3 (jobs list)
+- ACT-LLM-LIVE-O4 (worker runs)
+- ACT-LLM-LIVE-O5 (health status)
+- ACT-LLM-COMP-O1 (completed runs)
+- ACT-LLM-COMP-O2 (summary)
+
+### Facet: execution_signals
+Purpose: Surface predictions, anomalies, and risk signals from executions
+Criticality: MEDIUM
+Domain: ACTIVITY
+
+Panels:
+- ACT-LLM-SIG-O1 (signals)
+- ACT-LLM-SIG-O2 (predictions list)
+- ACT-LLM-SIG-O3 (predictions summary)
+- ACT-LLM-SIG-O4 (anomaly detection)
+
+### Facet: incident_lifecycle
+Purpose: Track incidents from detection through resolution to history
+Criticality: HIGH
+Domain: INCIDENTS
+
+Panels:
+- INC-EV-ACT-O1 (active incidents list)
+- INC-EV-ACT-O2 (incident details)
+- INC-EV-ACT-O3 (incident timeline)
+- INC-EV-RES-O1 (resolved list)
+- INC-EV-RES-O2 (resolution details)
+- INC-EV-HIST-O1 (historical incidents)
+- INC-EV-HIST-O2 (incident trends)
+
+### Facet: policy_governance
+Purpose: Manage active policies and policy proposals
+Criticality: HIGH
+Domain: POLICIES
+
+Panels:
+- POL-GOV-ACT-O1 (active policies)
+- POL-GOV-ACT-O2 (policy details)
+- POL-GOV-DFT-O1 (draft policies)
+- POL-GOV-DFT-O2 (proposal review)
+- POL-GOV-LIB-O1 (policy templates)
+- POL-GOV-LIB-O2 (ethical constraints)
+
+### Facet: limit_violations
+Purpose: Track usage limits and violation events
+Criticality: HIGH
+Domain: POLICIES
+
+Panels:
+- POL-LIM-THR-O1 (thresholds overview)
+- POL-LIM-THR-O2 (threshold details)
+- POL-LIM-VIO-O1 (violations list)
+- POL-LIM-VIO-O2 (violation details)
+
+### Facet: execution_traces
+Purpose: Provide execution trace logs for debugging and audit
+Criticality: MEDIUM
+Domain: LOGS
+
+Panels:
+- LOG-REC-LLM-O1 (run logs)
+- LOG-REC-LLM-O2 (run trace details)
+- LOG-REC-SYS-O1 (system logs summary)
+- LOG-REC-SYS-O2 (system log entries)
+
+### Facet: audit_trail
+Purpose: Maintain immutable audit log for compliance
+Criticality: HIGH
+Domain: LOGS
+
+Panels:
+- LOG-REC-AUD-O1 (audit log)
+- LOG-REC-AUD-O2 (audit event details)
+
+### Facet: account_identity
+Purpose: Manage organization identity and profile
+Criticality: MEDIUM
+Domain: ACCOUNT
+
+Panels:
+- ACC-PR-OV-O1 (account identity)
+- ACC-PR-OV-O2 (admin contacts)
+
+### Facet: billing_usage
+Purpose: Track billing, usage, and invoices
+Criticality: MEDIUM
+Domain: ACCOUNT
+
+Panels:
+- ACC-BL-US-O1 (usage summary)
+- ACC-BL-US-O2 (cost trend)
+- ACC-BL-IN-O1 (invoice list)
+- ACC-BL-IN-O2 (invoice export)
+
+### Facet: connectivity_health
+Purpose: Monitor provider connectivity and health
+Criticality: HIGH
+Domain: CONNECTIVITY
+
+Panels:
+- CON-PR-ST-O1 (provider status)
+- CON-PR-ST-O2 (provider details)
+- CON-HD-ER-O1 (connection errors)
+- CON-HD-ER-O2 (error details)
+
+---
+
 ## Panels
 
 ### Panel: ACC-PR-OV-O1
@@ -449,7 +592,7 @@ Location:
 - Slot: 2
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Surface non-ignorable signals that require human attention,
@@ -468,7 +611,7 @@ What it explicitly does NOT show:
 - No controls or actions
 - No links or drilldowns
 
-Capability: null
+Capability: overview.incident_snapshot
 
 ### Panel: OVR-SUM-HL-O3
 
@@ -509,7 +652,7 @@ Location:
 - Slot: 4
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Expose rare but high-impact clusters — low-frequency, high-cost events
@@ -528,7 +671,7 @@ What it explicitly does NOT show:
 - No policy editing
 - No drill-down beyond identification
 
-Capability: null
+Capability: overview.policy_snapshot
 
 ### Panel: OVR-SUM-DC-O1
 
@@ -539,7 +682,7 @@ Location:
 - Slot: 1
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Surface decisions that require explicit human approval or rejection,
@@ -558,7 +701,7 @@ What it explicitly does NOT show:
 - No explanations or rationale
 - No historical decisions
 
-Capability: null
+Capability: overview.decisions_list
 
 ### Panel: OVR-SUM-DC-O2
 
@@ -569,7 +712,7 @@ Location:
 - Slot: 2
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Provide short-term feedback on recent human decisions so the user
@@ -587,7 +730,7 @@ What it explicitly does NOT show:
 - No execution controls
 - No historical archive beyond recent window
 
-Capability: null
+Capability: overview.decisions_count
 
 ### Panel: OVR-SUM-DC-O3
 
@@ -598,7 +741,7 @@ Location:
 - Slot: 3
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Identify recurrent human decisions that should become policy —
@@ -616,7 +759,7 @@ What it explicitly does NOT show:
 - No policy editing
 - No incident details
 
-Capability: null
+Capability: overview.recovery_stats
 
 ### Panel: OVR-SUM-DC-O4
 
@@ -627,7 +770,7 @@ Location:
 - Slot: 4
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show decisions avoided by governance — where the system already removed
@@ -645,7 +788,7 @@ What it explicitly does NOT show:
 - No policy editing
 - No approval actions
 
-Capability: null
+Capability: overview.feedback_summary
 
 ### Panel: OVR-SUM-CI-O1
 
@@ -656,7 +799,7 @@ Location:
 - Slot: 1
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Give an immediate snapshot of current cost posture without requiring
@@ -674,7 +817,7 @@ What it explicitly does NOT show:
 - No thresholds or limits editing
 - No predictions
 
-Capability: null
+Capability: overview.cost_summary
 
 ### Panel: OVR-SUM-CI-O2
 
@@ -685,7 +828,7 @@ Location:
 - Slot: 2
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show how total cost is distributed across primary drivers so the user
@@ -703,7 +846,7 @@ What it explicitly does NOT show:
 - No thresholds or alerts
 - No forecasts
 
-Capability: null
+Capability: overview.cost_by_feature
 
 ### Panel: OVR-SUM-CI-O3
 
@@ -714,7 +857,7 @@ Location:
 - Slot: 3
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Provide a short-horizon view of cost movement so the user can tell
@@ -732,7 +875,7 @@ What it explicitly does NOT show:
 - No alerts or policy thresholds
 - No controls
 
-Capability: null
+Capability: overview.cost_by_model
 
 ### Panel: OVR-SUM-CI-O4
 
@@ -743,7 +886,7 @@ Location:
 - Slot: 4
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Provide a near-term cost trajectory based on recent behavior,
@@ -761,7 +904,7 @@ What it explicitly does NOT show:
 - No policy or alert thresholds
 - No per-run or per-model detail
 
-Capability: null
+Capability: overview.cost_anomalies
 
 ### Panel: ACT-LLM-LIVE-O1
 
@@ -772,7 +915,7 @@ Location:
 - Slot: 1
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show how many LLM runs are currently in progress.
@@ -785,7 +928,7 @@ What it explicitly does NOT show:
 - No status reasons
 - No controls
 
-Capability: null
+Capability: activity.live_runs
 
 ### Panel: ACT-LLM-LIVE-O2
 
@@ -820,7 +963,7 @@ Location:
 - Slot: 3
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Highlight live runs that are approaching failure or limits.
@@ -833,7 +976,7 @@ What it explicitly does NOT show:
 - No manual override
 - No mitigation controls
 
-Capability: null
+Capability: activity.jobs_list
 
 ### Panel: ACT-LLM-LIVE-O4
 
@@ -844,7 +987,7 @@ Location:
 - Slot: 4
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Indicate whether telemetry, logs, and traces are flowing for live runs.
@@ -857,7 +1000,7 @@ What it explicitly does NOT show:
 - No replay
 - No export
 
-Capability: null
+Capability: activity.worker_runs
 
 ### Panel: ACT-LLM-LIVE-O5
 
@@ -868,7 +1011,7 @@ Location:
 - Slot: 5
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Provide a coarse distribution of live runs by major dimension.
@@ -882,7 +1025,7 @@ What it explicitly does NOT show:
 - No per-run detail
 - No controls
 
-Capability: null
+Capability: activity.health_status
 
 ### Panel: ACT-LLM-COMP-O1
 
@@ -893,7 +1036,7 @@ Location:
 - Slot: 1
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show how many LLM runs have completed in the selected window.
@@ -906,7 +1049,7 @@ What it explicitly does NOT show:
 - No duration
 - No cost
 
-Capability: null
+Capability: activity.completed_runs
 
 ### Panel: ACT-LLM-COMP-O2
 
@@ -917,7 +1060,7 @@ Location:
 - Slot: 2
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Surface how many completed runs finished successfully.
@@ -930,7 +1073,7 @@ What it explicitly does NOT show:
 - No downstream impact
 - No policy attribution
 
-Capability: null
+Capability: activity.summary
 
 ### Panel: ACT-LLM-COMP-O3
 
@@ -965,7 +1108,7 @@ Location:
 - Slot: 4
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Highlight runs that completed but came close to limits.
@@ -981,7 +1124,7 @@ What it explicitly does NOT show:
 - No enforcement
 - No tuning actions
 
-Capability: null
+Capability: activity.customer_activity
 
 ### Panel: ACT-LLM-COMP-O5
 
@@ -992,7 +1135,7 @@ Location:
 - Slot: 5
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show runs that ended intentionally before completion.
@@ -1005,7 +1148,7 @@ What it explicitly does NOT show:
 - No reason codes
 - No recovery options
 
-Capability: null
+Capability: activity.runtime_traces
 
 ### Panel: ACT-LLM-SIG-O1
 
@@ -1016,7 +1159,7 @@ Location:
 - Slot: 1
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Surface what is happening right now that matters — the primary attention surface.
@@ -1032,7 +1175,7 @@ What it explicitly does NOT show:
 - No controls or actions
 - No policy execution
 
-Capability: null
+Capability: activity.signals
 
 ### Panel: ACT-LLM-SIG-O2
 
@@ -1043,7 +1186,7 @@ Location:
 - Slot: 2
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Surface runs approaching failure, policy, or cost limits (threshold proximity).
@@ -1059,7 +1202,7 @@ What it explicitly does NOT show:
 - No policy controls
 - No historical trends
 
-Capability: null
+Capability: activity.predictions_list
 
 ### Panel: ACT-LLM-SIG-O3
 
@@ -1070,7 +1213,7 @@ Location:
 - Slot: 3
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Surface temporal signals — behavior patterns over time indicating instability.
@@ -1086,7 +1229,7 @@ What it explicitly does NOT show:
 - No root cause analysis
 - No remediation controls
 
-Capability: null
+Capability: activity.predictions_summary
 
 ### Panel: ACT-LLM-SIG-O4
 
@@ -1097,7 +1240,7 @@ Location:
 - Slot: 4
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Surface economic deviations — where money is being lost or saved unexpectedly.
@@ -1113,7 +1256,7 @@ What it explicitly does NOT show:
 - No policy enforcement
 - No historical cost trends
 
-Capability: null
+Capability: activity.discovery_list
 
 ### Panel: ACT-LLM-SIG-O5
 
@@ -1124,7 +1267,7 @@ Location:
 - Slot: 5
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Synthesize attention priority — what to look at first and why.
@@ -1143,7 +1286,7 @@ What it explicitly does NOT show:
 - No policy execution
 - No drill-down details
 
-Capability: null
+Capability: activity.discovery_stats
 
 ### Panel: INC-EV-ACT-O1
 
@@ -1154,7 +1297,7 @@ Location:
 - Slot: 1
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show the canonical set of currently active incidents.
@@ -1171,7 +1314,7 @@ What it explicitly does NOT show:
 - No raw signals (those are in Activity)
 - No actions or controls
 
-Capability: null
+Capability: incidents.list
 
 ### Panel: INC-EV-ACT-O2
 
@@ -1182,7 +1325,7 @@ Location:
 - Slot: 2
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Explain why each incident occurred — cause and trigger classification.
@@ -1196,7 +1339,7 @@ What it explicitly does NOT show:
 - No actions or remediation
 - No policy editing
 
-Capability: null
+Capability: incidents.summary
 
 ### Panel: INC-EV-ACT-O3
 
@@ -1207,7 +1350,7 @@ Location:
 - Slot: 3
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show control state — whether each incident is contained or still dangerous.
@@ -1223,7 +1366,7 @@ What it explicitly does NOT show:
 - No policy changes
 - No resolution controls
 
-Capability: null
+Capability: incidents.metrics
 
 ### Panel: INC-EV-ACT-O4
 
@@ -1234,7 +1377,7 @@ Location:
 - Slot: 4
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show impact assessment — actual damage or prevented damage.
@@ -1251,7 +1394,7 @@ What it explicitly does NOT show:
 - No budget editing
 - No forecasts
 
-Capability: null
+Capability: incidents.patterns
 
 ### Panel: INC-EV-ACT-O5
 
@@ -1262,7 +1405,7 @@ Location:
 - Slot: 5
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Provide attribution and escalation context for each incident.
@@ -1278,7 +1421,7 @@ What it explicitly does NOT show:
 - No policy changes
 - No resolution execution
 
-Capability: null
+Capability: incidents.infra_summary
 
 ### Panel: INC-EV-RES-O1
 
@@ -1289,7 +1432,7 @@ Location:
 - Slot: 1
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show the canonical list of recently resolved incidents.
@@ -1305,7 +1448,7 @@ What it explicitly does NOT show:
 - No historical aggregation
 - No controls
 
-Capability: null
+Capability: incidents.resolved_list
 
 ### Panel: INC-EV-RES-O2
 
@@ -1316,7 +1459,7 @@ Location:
 - Slot: 2
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show how each incident was resolved — resolution method.
@@ -1334,7 +1477,7 @@ What it explicitly does NOT show:
 - No resolution actions
 - No policy editing
 
-Capability: null
+Capability: incidents.recovery_actions
 
 ### Panel: INC-EV-RES-O3
 
@@ -1345,7 +1488,7 @@ Location:
 - Slot: 3
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show time-to-resolution (TTR) and SLA compliance.
@@ -1361,7 +1504,7 @@ What it explicitly does NOT show:
 - No policy adjustments
 - No controls
 
-Capability: null
+Capability: incidents.recovery_candidates
 
 ### Panel: INC-EV-RES-O4
 
@@ -1372,7 +1515,7 @@ Location:
 - Slot: 4
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show outcome and impact post-resolution — the final reality.
@@ -1388,7 +1531,7 @@ What it explicitly does NOT show:
 - No forecasts
 - No policy controls
 
-Capability: null
+Capability: incidents.graduation_list
 
 ### Panel: INC-EV-RES-O5
 
@@ -1399,7 +1542,7 @@ Location:
 - Slot: 5
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Surface learning and follow-up signals from resolved incidents.
@@ -1415,7 +1558,7 @@ What it explicitly does NOT show:
 - No approvals
 - No automated actions
 
-Capability: null
+Capability: incidents.replay_summary
 
 ### Panel: INC-EV-HIST-O1
 
@@ -1426,7 +1569,7 @@ Location:
 - Slot: 1
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show incident volume and trend baseline over time.
@@ -1441,7 +1584,7 @@ What it explicitly does NOT show:
 - No real-time data
 - No controls
 
-Capability: null
+Capability: incidents.historical_list
 
 ### Panel: INC-EV-HIST-O2
 
@@ -1452,7 +1595,7 @@ Location:
 - Slot: 2
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show incident type distribution over time.
@@ -1468,7 +1611,7 @@ What it explicitly does NOT show:
 - No real-time data
 - No controls
 
-Capability: null
+Capability: incidents.guard_list
 
 ### Panel: INC-EV-HIST-O3
 
@@ -1479,7 +1622,7 @@ Location:
 - Slot: 3
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show repeatability and recurrence analysis — which incidents keep coming back.
@@ -1495,7 +1638,7 @@ What it explicitly does NOT show:
 - No policy changes
 - No actions
 
-Capability: null
+Capability: incidents.v1_list
 
 ### Panel: INC-EV-HIST-O4
 
@@ -1506,7 +1649,7 @@ Location:
 - Slot: 4
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show cost and impact over time — true economic footprint.
@@ -1523,7 +1666,7 @@ What it explicitly does NOT show:
 - No projections
 - No real-time data
 
-Capability: null
+Capability: incidents.ops_list
 
 ### Panel: INC-EV-HIST-O5
 
@@ -1534,7 +1677,7 @@ Location:
 - Slot: 5
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Surface systemic signals and governance pressure from historical patterns.
@@ -1550,7 +1693,7 @@ What it explicitly does NOT show:
 - No approvals
 - No automated actions
 
-Capability: null
+Capability: incidents.integration_stats
 
 ### Panel: POL-GOV-ACT-O1
 
@@ -1561,7 +1704,7 @@ Location:
 - Slot: 1
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show the complete inventory of currently active (enabled + enforced) policies.
@@ -1577,7 +1720,7 @@ What it explicitly does NOT show:
 - No drafts or proposals
 - No historical policies
 
-Capability: null
+Capability: policies.proposals_list
 
 ### Panel: POL-GOV-ACT-O2
 
@@ -1588,7 +1731,7 @@ Location:
 - Slot: 2
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show enforcement effectiveness — are policies actually doing anything.
@@ -1604,7 +1747,7 @@ What it explicitly does NOT show:
 - No recommendations
 - No draft proposals
 
-Capability: null
+Capability: policies.proposals_summary
 
 ### Panel: POL-GOV-ACT-O3
 
@@ -1615,7 +1758,7 @@ Location:
 - Slot: 3
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show incident prevention and regulation impact — what policies are preventing or shaping.
@@ -1632,7 +1775,7 @@ What it explicitly does NOT show:
 - No enforcement controls
 - No draft proposals
 
-Capability: null
+Capability: policies.requests_list
 
 ### Panel: POL-GOV-ACT-O4
 
@@ -1643,7 +1786,7 @@ Location:
 - Slot: 4
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show cost and performance side effects — what governance is costing us.
@@ -1659,7 +1802,7 @@ What it explicitly does NOT show:
 - No recommendations
 - No forecasts
 
-Capability: null
+Capability: policies.layer_state
 
 ### Panel: POL-GOV-ACT-O5
 
@@ -1670,7 +1813,7 @@ Location:
 - Slot: 5
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Surface governance stress and decision signals — which policies need review.
@@ -1687,7 +1830,7 @@ What it explicitly does NOT show:
 - No disabling
 - No auto-rewriting
 
-Capability: null
+Capability: policies.layer_metrics
 
 ### Panel: POL-GOV-DFT-O1
 
@@ -1698,7 +1841,7 @@ Location:
 - Slot: 1
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show observed governance signals — raw lessons from system behavior.
@@ -1715,7 +1858,7 @@ What it explicitly does NOT show:
 - No draft policies yet
 - No actions
 
-Capability: null
+Capability: policies.drafts_list
 
 ### Panel: POL-GOV-DFT-O2
 
@@ -1726,7 +1869,7 @@ Location:
 - Slot: 2
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show draft policy candidates — machine-proposed governance rules.
@@ -1742,7 +1885,7 @@ What it explicitly does NOT show:
 - No activation
 - No human bypass
 
-Capability: null
+Capability: policies.versions_list
 
 ### Panel: POL-GOV-DFT-O3
 
@@ -1753,7 +1896,7 @@ Location:
 - Slot: 3
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show draft justification and impact preview — why each draft exists.
@@ -1769,7 +1912,7 @@ What it explicitly does NOT show:
 - No black-box proposals
 - No enforcement
 
-Capability: null
+Capability: policies.current_version
 
 ### Panel: POL-GOV-DFT-O4
 
@@ -1780,7 +1923,7 @@ Location:
 - Slot: 4
 
 Class: execution
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Provide approval and blast radius control for draft policies.
@@ -1795,7 +1938,7 @@ What it explicitly does NOT show:
 - No auto-activation
 - No silent inheritance
 
-Capability: null
+Capability: policies.conflicts_list
 
 ### Panel: POL-GOV-DFT-O5
 
@@ -1806,7 +1949,7 @@ Location:
 - Slot: 5
 
 Class: execution
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show decision outcomes and lifecycle routing after human decides.
@@ -1821,7 +1964,7 @@ What it explicitly does NOT show:
 - No silent expiration
 - No auto-decisions
 
-Capability: null
+Capability: policies.dependencies_list
 
 ### Panel: POL-GOV-LIB-O1
 
@@ -1832,7 +1975,7 @@ Location:
 - Slot: 1
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show the global policy catalog — all policies available from Agenticverz backend.
@@ -1847,7 +1990,7 @@ What it explicitly does NOT show:
 - No filtering by current usage
 - No enforcement
 
-Capability: null
+Capability: policies.safety_rules
 
 ### Panel: POL-GOV-LIB-O2
 
@@ -1858,7 +2001,7 @@ Location:
 - Slot: 2
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show applicability and compatibility matrix — where each policy can be applied.
@@ -1872,7 +2015,7 @@ What it explicitly does NOT show:
 - No human override at this stage
 - No adoption actions
 
-Capability: null
+Capability: policies.ethical_constraints
 
 ### Panel: POL-GOV-LIB-O3
 
@@ -1883,7 +2026,7 @@ Location:
 - Slot: 3
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show adoption status and current usage — how and where each policy is used.
@@ -1898,7 +2041,7 @@ What it explicitly does NOT show:
 - No adoption controls
 - No proposed changes
 
-Capability: null
+Capability: policies.active_policies
 
 ### Panel: POL-GOV-LIB-O4
 
@@ -1909,7 +2052,7 @@ Location:
 - Slot: 4
 
 Class: execution
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Provide attach/detach policy controls — human action to adopt or remove policies.
@@ -1924,7 +2067,7 @@ What it explicitly does NOT show:
 - No default scope
 - No silent inheritance
 
-Capability: null
+Capability: policies.guard_policies
 
 ### Panel: POL-GOV-LIB-O5
 
@@ -1935,7 +2078,7 @@ Location:
 - Slot: 5
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show change impact and audit trail for policy adoption changes.
@@ -1951,13 +2094,13 @@ What it explicitly does NOT show:
 - No auto-rollback
 - No silent changes
 
-Capability: null
+Capability: policies.temporal_policies
 
-### Panel: POL-LIM-USG-O1
+### Panel: ANA-CST-USG-O1
 
 Location:
-- Domain: POLICIES
-- Subdomain: LIMITS
+- Domain: ANALYTICS
+- Subdomain: COST
 - Topic: USAGE
 - Slot: 1
 
@@ -1980,11 +2123,11 @@ What it explicitly does NOT show:
 
 Capability: null
 
-### Panel: POL-LIM-USG-O2
+### Panel: ANA-CST-USG-O2
 
 Location:
-- Domain: POLICIES
-- Subdomain: LIMITS
+- Domain: ANALYTICS
+- Subdomain: COST
 - Topic: USAGE
 - Slot: 2
 
@@ -2006,11 +2149,11 @@ What it explicitly does NOT show:
 
 Capability: null
 
-### Panel: POL-LIM-USG-O3
+### Panel: ANA-CST-USG-O3
 
 Location:
-- Domain: POLICIES
-- Subdomain: LIMITS
+- Domain: ANALYTICS
+- Subdomain: COST
 - Topic: USAGE
 - Slot: 3
 
@@ -2032,11 +2175,11 @@ What it explicitly does NOT show:
 
 Capability: null
 
-### Panel: POL-LIM-USG-O4
+### Panel: ANA-CST-USG-O4
 
 Location:
-- Domain: POLICIES
-- Subdomain: LIMITS
+- Domain: ANALYTICS
+- Subdomain: COST
 - Topic: USAGE
 - Slot: 4
 
@@ -2057,11 +2200,11 @@ What it explicitly does NOT show:
 
 Capability: null
 
-### Panel: POL-LIM-USG-O5
+### Panel: ANA-CST-USG-O5
 
 Location:
-- Domain: POLICIES
-- Subdomain: LIMITS
+- Domain: ANALYTICS
+- Subdomain: COST
 - Topic: USAGE
 - Slot: 5
 
@@ -2091,7 +2234,7 @@ Location:
 - Slot: 1
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show limit policy definition matrix — what limits exist and where they apply.
@@ -2106,7 +2249,7 @@ What it explicitly does NOT show:
 - No usage metrics
 - No violation data
 
-Capability: null
+Capability: policies.risk_ceilings
 
 ### Panel: POL-LIM-THR-O2
 
@@ -2117,7 +2260,7 @@ Location:
 - Slot: 2
 
 Class: execution
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Provide threshold configuration and fine-tuning controls.
@@ -2133,7 +2276,7 @@ What it explicitly does NOT show:
 - No usage analytics
 - No violation history
 
-Capability: null
+Capability: policies.budgets_list
 
 ### Panel: POL-LIM-THR-O3
 
@@ -2144,7 +2287,7 @@ Location:
 - Slot: 3
 
 Class: execution
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Provide blast radius and rollout strategy controls.
@@ -2160,7 +2303,7 @@ What it explicitly does NOT show:
 - No usage data
 - No violation data
 
-Capability: null
+Capability: policies.quota_runs
 
 ### Panel: POL-LIM-THR-O4
 
@@ -2171,7 +2314,7 @@ Location:
 - Slot: 4
 
 Class: execution
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Provide experimentation and what-if simulation capabilities.
@@ -2187,7 +2330,7 @@ What it explicitly does NOT show:
 - No live enforcement
 - No production impact
 
-Capability: null
+Capability: policies.quota_tokens
 
 ### Panel: POL-LIM-THR-O5
 
@@ -2198,7 +2341,7 @@ Location:
 - Slot: 5
 
 Class: execution
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Provide approval, audit, and activation workflow for threshold changes.
@@ -2213,7 +2356,7 @@ What it explicitly does NOT show:
 - No silent activation
 - No hidden changes
 
-Capability: null
+Capability: policies.cooldowns_list
 
 ### Panel: POL-LIM-VIO-O1
 
@@ -2224,7 +2367,7 @@ Location:
 - Slot: 1
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show the violation ledger — immutable record of every limit violation.
@@ -2240,7 +2383,7 @@ What it explicitly does NOT show:
 - No configuration controls
 - No policy editing
 
-Capability: null
+Capability: policies.violations_list
 
 ### Panel: POL-LIM-VIO-O2
 
@@ -2251,7 +2394,7 @@ Location:
 - Slot: 2
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show violation classification and attribution — why and who.
@@ -2265,7 +2408,7 @@ What it explicitly does NOT show:
 - No policy controls
 - No excuses
 
-Capability: null
+Capability: policies.cost_incidents
 
 ### Panel: POL-LIM-VIO-O3
 
@@ -2276,7 +2419,7 @@ Location:
 - Slot: 3
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show override and fracture analysis — which violations were ignored or softened.
@@ -2291,7 +2434,7 @@ What it explicitly does NOT show:
 - No override controls
 - No policy editing
 
-Capability: null
+Capability: policies.simulated_incidents
 
 ### Panel: POL-LIM-VIO-O4
 
@@ -2302,7 +2445,7 @@ Location:
 - Slot: 4
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show loss and impact quantification — what violations actually cost.
@@ -2317,7 +2460,7 @@ What it explicitly does NOT show:
 - No policy controls
 - No threshold editing
 
-Capability: null
+Capability: policies.anomalies_list
 
 ### Panel: POL-LIM-VIO-O5
 
@@ -2328,7 +2471,7 @@ Location:
 - Slot: 5
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show escalation, evidence, and governance hooks for violations requiring action.
@@ -2343,7 +2486,7 @@ What it explicitly does NOT show:
 - No editing limits
 - No approvals
 
-Capability: null
+Capability: policies.divergence_report
 
 ### Panel: LOG-REC-LLM-O1
 
@@ -2354,10 +2497,12 @@ Location:
 - Slot: 1
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show the run log envelope — canonical immutable record per run.
+
+Capability: logs.runtime_traces
 
 What it shows:
 - Run ID, start/end timestamp
@@ -2370,7 +2515,7 @@ What it explicitly does NOT show:
 - No interpretation
 - No aggregation
 
-Capability: null
+Capability: logs.runtime_traces
 
 ### Panel: LOG-REC-LLM-O2
 
@@ -2381,10 +2526,12 @@ Location:
 - Slot: 2
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show execution trace — step-by-step progression of the run.
+
+Capability: logs.activity_runs
 
 What it shows:
 - Step number, timestamp, action type (prompt, tool, API call, delegation)
@@ -2396,7 +2543,7 @@ What it explicitly does NOT show:
 - No summarization
 - No policy judgment
 
-Capability: null
+Capability: logs.activity_runs
 
 ### Panel: LOG-REC-LLM-O3
 
@@ -2407,10 +2554,12 @@ Location:
 - Slot: 3
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show threshold and policy interaction trace — governance footprint per run.
+
+Capability: logs.customer_runs
 
 What it shows:
 - Threshold checks (cost/time/token/rate)
@@ -2422,7 +2571,7 @@ What it explicitly does NOT show:
 - No policy editing
 - No recommendations
 
-Capability: null
+Capability: logs.customer_runs
 
 ### Panel: LOG-REC-LLM-O4
 
@@ -2433,10 +2582,12 @@ Location:
 - Slot: 4
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show 60-second incident replay window — what happened around the inflection point.
+
+Capability: logs.tenant_runs
 
 What it shows:
 - T-30s → T+30s around inflection point
@@ -2448,7 +2599,7 @@ What it explicitly does NOT show:
 - No summarization
 - No interpretation
 
-Capability: null
+Capability: logs.tenant_runs
 
 ### Panel: LOG-REC-LLM-O5
 
@@ -2459,10 +2610,12 @@ Location:
 - Slot: 5
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show audit and export package — legally defensible evidence bundle.
+
+Capability: logs.mismatch_list
 
 What it shows:
 - Audit metadata: accessed by, deterministic state hash, integrity checksum
@@ -2474,7 +2627,7 @@ What it explicitly does NOT show:
 - No modification controls
 - No redaction controls
 
-Capability: null
+Capability: logs.mismatch_list
 
 ### Panel: LOG-REC-SYS-O1
 
@@ -2485,10 +2638,12 @@ Location:
 - Slot: 1
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show environment snapshot — baseline state at run start.
+
+Capability: logs.guard_logs
 
 What it shows:
 - Customer environment ID, region/zone, VPC/subnet
@@ -2500,8 +2655,6 @@ What it explicitly does NOT show:
 - No interpretation
 - No recommendations
 
-Capability: null
-
 ### Panel: LOG-REC-SYS-O2
 
 Location:
@@ -2511,10 +2664,12 @@ Location:
 - Slot: 2
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show network and bandwidth telemetry — connectivity health during execution.
+
+Capability: logs.health_check
 
 What it shows:
 - Time-series: ingress/egress bandwidth, packet loss %, latency (p50/p95/p99)
@@ -2525,8 +2680,6 @@ What it explicitly does NOT show:
 - No interpretation
 - No blame attribution
 
-Capability: null
-
 ### Panel: LOG-REC-SYS-O3
 
 Location:
@@ -2536,10 +2689,12 @@ Location:
 - Slot: 3
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show infra interrupts and degradation events — what infra did to the run.
+
+Capability: logs.ready_check
 
 What it shows:
 - Node restarts, pod evictions, autoscaling events
@@ -2550,8 +2705,6 @@ What it explicitly does NOT show:
 - No interpretation
 - No recommendations
 
-Capability: null
-
 ### Panel: LOG-REC-SYS-O4
 
 Location:
@@ -2561,10 +2714,12 @@ Location:
 - Slot: 4
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show run-aligned infra replay window — infra state at moment of anomaly.
+
+Capability: logs.adapters_health
 
 What it shows:
 - 60-second window aligned to failure/near-threshold/cost spike/latency anomaly
@@ -2575,8 +2730,6 @@ What it explicitly does NOT show:
 - No interpretation
 - No blame shifting
 
-Capability: null
-
 ### Panel: LOG-REC-SYS-O5
 
 Location:
@@ -2586,10 +2739,12 @@ Location:
 - Slot: 5
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show infra audit and attribution record — who is responsible.
+
+Capability: logs.skills_health
 
 What it shows:
 - Infra fault attribution: customer infra, cloud provider, LLM provider, internal platform
@@ -2600,8 +2755,6 @@ What it explicitly does NOT show:
 - No policy controls
 - No recommendations
 
-Capability: null
-
 ### Panel: LOG-REC-AUD-O1
 
 Location:
@@ -2611,10 +2764,12 @@ Location:
 - Slot: 1
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show identity and authentication lifecycle — who accessed and how.
+
+Capability: logs.traces_list
 
 What it shows:
 - Login/logout, token issuance/refresh/revocation
@@ -2626,8 +2781,6 @@ What it explicitly does NOT show:
 - No authorization decisions (that's O2)
 - No interpretation
 
-Capability: null
-
 ### Panel: LOG-REC-AUD-O2
 
 Location:
@@ -2637,10 +2790,12 @@ Location:
 - Slot: 2
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show authorization and access decisions — what each identity was allowed to do.
+
+Capability: logs.rbac_audit
 
 What it shows:
 - Resource accessed, action attempted
@@ -2652,8 +2807,6 @@ What it explicitly does NOT show:
 - No policy editing
 - No recommendations
 
-Capability: null
-
 ### Panel: LOG-REC-AUD-O3
 
 Location:
@@ -2663,10 +2816,12 @@ Location:
 - Slot: 3
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show trace and log access audit — who viewed, exported, or modified observability data.
+
+Capability: logs.ops_audit
 
 What it shows:
 - Actions: log view, trace replay, evidence export, redaction applied, deletion attempts
@@ -2675,8 +2830,6 @@ What it shows:
 What it explicitly does NOT show:
 - No modification controls
 - No deletion controls (deletions must fail but are logged)
-
-Capability: null
 
 ### Panel: LOG-REC-AUD-O4
 
@@ -2687,10 +2840,12 @@ Location:
 - Slot: 4
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show integrity and tamper detection — was any audit data altered or compromised.
+
+Capability: logs.status_history
 
 What it shows:
 - Integrity: hashes per log segment, hash chaining, write-once markers
@@ -2701,8 +2856,6 @@ What it explicitly does NOT show:
 - No modification controls
 - No recovery actions
 
-Capability: null
-
 ### Panel: LOG-REC-AUD-O5
 
 Location:
@@ -2712,10 +2865,12 @@ Location:
 - Slot: 5
 
 Class: evidence
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Show compliance and export record — what audit evidence was produced, shared, or certified.
+
+Capability: logs.status_stats
 
 What it shows:
 - Per export: type (SOC2, ISO, internal, customer), scope, requestor, approval chain
@@ -2755,4 +2910,1130 @@ SDSR Verification:
 - Data is real: PASS
 
 Scenario: observe_overview_activity_snapshot
+
+### Capability: overview.live_runs
+
+Panel: OVR-SUM-HL-O1
+Status: DECLARED
+Added: 2026-01-17
+
+NOTE: Derived capability from Activity domain, exposed via Overview facade.
+
+Implementation:
+- Endpoint: /api/v1/overview/highlights
+- Method: GET
+
+Data Mapping:
+- live_runs → pulse.live_runs (count of status='running' in worker_runs)
+
+Domain Lineage:
+- Source Domain: ACTIVITY
+- Source Table: worker_runs
+- Drill-Through: /precus/activity
+
+Acceptance:
+- Returns count of currently running executions
+- Included in SystemPulse.live_runs field
+- Tenant-scoped query
+
+Scenario: PENDING (SDSR to be created)
+
+### Capability: overview.queued_runs
+
+Panel: OVR-SUM-HL-O1
+Status: DECLARED
+Added: 2026-01-17
+
+NOTE: Derived capability from Activity domain, exposed via Overview facade.
+
+Implementation:
+- Endpoint: /api/v1/overview/highlights
+- Method: GET
+
+Data Mapping:
+- queued_runs → pulse.queued_runs (count of status='queued' in worker_runs)
+
+Domain Lineage:
+- Source Domain: ACTIVITY
+- Source Table: worker_runs
+- Drill-Through: /precus/activity
+
+Acceptance:
+- Returns count of queued/pending executions
+- Included in SystemPulse.queued_runs field
+- Tenant-scoped query
+
+Scenario: PENDING (SDSR to be created)
+
+### Capability: overview.policy_breaches
+
+Panel: OVR-SUM-HL-O2
+Status: DECLARED
+Added: 2026-01-17
+
+NOTE: Derived capability from Policies domain, exposed via Overview facade.
+
+Implementation:
+- Endpoint: /api/v1/overview/highlights
+- Method: GET
+
+Data Mapping:
+- recent_breaches → pulse.recent_breaches (count of breaches in last 24h)
+
+Domain Lineage:
+- Source Domain: POLICIES
+- Source Table: limit_breaches
+- Drill-Through: /precus/policies
+
+Acceptance:
+- Returns count of recent limit breaches (last 24h)
+- Included in SystemPulse.recent_breaches field
+- Also shown in Policies domain_count.critical
+- Tenant-scoped query
+
+Scenario: PENDING (SDSR to be created)
+
+### Capability: activity.live_runs
+
+Panel: ACT-LLM-LIVE-O1
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/activity/runs
+- Method: GET
+
+Data Mapping:
+- count → total count of runs with status=running
+
+Acceptance:
+- Returns count of currently running LLM executions
+- Response includes total count field
+
+Scenario: SDSR-ACT-LLM-LIVE-O1-001
+
+### Capability: activity.completed_runs
+
+Panel: ACT-LLM-COMP-O1
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/activity/runs
+- Method: GET
+
+Data Mapping:
+- count → total count of runs with status=completed in window
+
+Acceptance:
+- Returns count of completed LLM executions in time window
+- Response includes total count field
+
+Scenario: SDSR-ACT-LLM-COMP-O1-001
+
+### Capability: activity.signals
+
+Panel: ACT-LLM-SIG-O1
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/activity/runs
+- Method: GET
+
+Data Mapping:
+- signals → runs with signal conditions (success, failure, near-threshold)
+
+Acceptance:
+- Returns runs that emit signals
+- Response includes signal type indicators (success, failure, threshold)
+
+Scenario: SDSR-ACT-LLM-SIG-O1-001
+
+### Capability: incidents.list
+
+Panel: INC-EV-ACT-O1
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/incidents
+- Method: GET
+
+Data Mapping:
+- incidents → list of active incidents
+
+Acceptance:
+- Returns list of currently active incidents
+- Response includes incident details
+
+Scenario: SDSR-INC-EV-ACT-O1-001
+
+### Capability: incidents.summary
+
+Panel: INC-EV-ACT-O2
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/incidents/summary
+- Method: GET
+
+Data Mapping:
+- summary → aggregated incident statistics
+
+Acceptance:
+- Returns incident summary with counts by type
+- Response includes cause classification
+
+Scenario: SDSR-INC-EV-ACT-O2-001
+
+### Capability: incidents.metrics
+
+Panel: INC-EV-ACT-O3
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/incidents/metrics
+- Method: GET
+
+Data Mapping:
+- metrics → incident control state metrics
+
+Acceptance:
+- Returns incident metrics (containment status)
+- Response includes guardrail status
+
+Scenario: SDSR-INC-EV-ACT-O3-001
+
+### Capability: incidents.patterns
+
+Panel: INC-EV-ACT-O4
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/ops/incidents/patterns
+- Method: GET
+
+Data Mapping:
+- patterns → incident impact patterns
+
+Acceptance:
+- Returns incident patterns and cost impact
+- Response includes damage assessment
+
+Scenario: SDSR-INC-EV-ACT-O4-001
+
+### Capability: incidents.infra_summary
+
+Panel: INC-EV-ACT-O5
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/ops/incidents/infra-summary
+- Method: GET
+
+Data Mapping:
+- infra_summary → attribution and escalation context
+
+Acceptance:
+- Returns incident attribution data
+- Response includes escalation eligibility
+
+Scenario: SDSR-INC-EV-ACT-O5-001
+
+### Capability: incidents.resolved_list
+
+Panel: INC-EV-RES-O1
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/incidents
+- Method: GET
+
+Data Mapping:
+- resolved → list of recently resolved incidents
+
+Acceptance:
+- Returns list of resolved incidents
+- Response includes resolution timestamp
+
+Scenario: SDSR-INC-EV-RES-O1-001
+
+### Capability: incidents.recovery_actions
+
+Panel: INC-EV-RES-O2
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/recovery/actions
+- Method: GET
+
+Data Mapping:
+- actions → resolution methods applied
+
+Acceptance:
+- Returns recovery actions taken
+- Response includes resolution method type
+
+Scenario: SDSR-INC-EV-RES-O2-001
+
+### Capability: incidents.recovery_candidates
+
+Panel: INC-EV-RES-O3
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/recovery/candidates
+- Method: GET
+
+Data Mapping:
+- candidates → TTR and SLA compliance data
+
+Acceptance:
+- Returns recovery candidates with timing
+- Response includes SLA compliance status
+
+Scenario: SDSR-INC-EV-RES-O3-001
+
+### Capability: incidents.graduation_list
+
+Panel: INC-EV-RES-O4
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /integration/graduation
+- Method: GET
+
+Data Mapping:
+- graduation → post-resolution outcomes
+
+Acceptance:
+- Returns graduated incident outcomes
+- Response includes final cost data
+
+Scenario: SDSR-INC-EV-RES-O4-001
+
+### Capability: incidents.replay_summary
+
+Panel: INC-EV-RES-O5
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /replay/{incident_id}/summary
+- Method: GET
+
+Data Mapping:
+- replay → learning signals from resolved incidents
+
+Acceptance:
+- Returns replay summary with learnings
+- Response includes recurrence risk
+
+Scenario: SDSR-INC-EV-RES-O5-001
+
+### Capability: incidents.historical_list
+
+Panel: INC-EV-HIST-O1
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/incidents
+- Method: GET
+
+Data Mapping:
+- historical → incident volume trends
+
+Acceptance:
+- Returns historical incident counts
+- Response includes trend direction
+
+Scenario: SDSR-INC-EV-HIST-O1-001
+
+### Capability: incidents.guard_list
+
+Panel: INC-EV-HIST-O2
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/guard/incidents
+- Method: GET
+
+Data Mapping:
+- guard → incident type distribution
+
+Acceptance:
+- Returns guarded incident types
+- Response includes category breakdown
+
+Scenario: SDSR-INC-EV-HIST-O2-001
+
+### Capability: incidents.v1_list
+
+Panel: INC-EV-HIST-O3
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /v1/incidents
+- Method: GET
+
+Data Mapping:
+- v1_list → recurrence analysis data
+
+Acceptance:
+- Returns v1 incident list with recurrence data
+- Response includes repeat markers
+
+Scenario: SDSR-INC-EV-HIST-O3-001
+
+### Capability: incidents.ops_list
+
+Panel: INC-EV-HIST-O4
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/ops/incidents
+- Method: GET
+
+Data Mapping:
+- ops_list → cost and impact over time
+
+Acceptance:
+- Returns ops incident list with costs
+- Response includes cost prevented data
+
+Scenario: SDSR-INC-EV-HIST-O4-001
+
+### Capability: incidents.integration_stats
+
+Panel: INC-EV-HIST-O5
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /integration/stats
+- Method: GET
+
+Data Mapping:
+- stats → systemic governance signals
+
+Acceptance:
+- Returns integration statistics
+- Response includes policy associations
+
+Scenario: SDSR-INC-EV-HIST-O5-001
+
+### Capability: policies.proposals_list
+
+Panel: POL-GOV-ACT-O1
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/policy-proposals
+- Method: GET
+
+Data Mapping:
+- proposals → list of policy proposals
+
+Acceptance:
+- Returns list of policy proposals
+- Response includes proposal status and metadata
+
+Scenario: SDSR-POL-GOV-ACT-O1-001
+
+### Capability: policies.proposals_summary
+
+Panel: POL-GOV-ACT-O2
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/policy-proposals/stats/summary
+- Method: GET
+
+Data Mapping:
+- summary → enforcement effectiveness metrics
+
+Acceptance:
+- Returns policy enforcement statistics
+- Response includes evaluation counts
+
+Scenario: SDSR-POL-GOV-ACT-O2-001
+
+### Capability: policies.requests_list
+
+Panel: POL-GOV-ACT-O3
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/policies/requests
+- Method: GET
+
+Data Mapping:
+- requests → policy action requests
+
+Acceptance:
+- Returns policy requests
+- Response includes request status
+
+Scenario: SDSR-POL-GOV-ACT-O3-001
+
+### Capability: policies.layer_state
+
+Panel: POL-GOV-ACT-O4
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /policy-layer/state
+- Method: GET
+
+Data Mapping:
+- state → policy layer state
+
+Acceptance:
+- Returns policy layer current state
+- Response includes active policies
+
+Scenario: SDSR-POL-GOV-ACT-O4-001
+
+### Capability: policies.layer_metrics
+
+Panel: POL-GOV-ACT-O5
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /policy-layer/metrics
+- Method: GET
+
+Data Mapping:
+- metrics → governance stress signals
+
+Acceptance:
+- Returns policy performance metrics
+- Response includes stress indicators
+
+Scenario: SDSR-POL-GOV-ACT-O5-001
+
+### Capability: policies.drafts_list
+
+Panel: POL-GOV-DFT-O1
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/policy-proposals
+- Method: GET
+
+Data Mapping:
+- drafts → draft policy proposals
+
+Acceptance:
+- Returns draft policy proposals
+- Response includes evidence links
+
+Scenario: SDSR-POL-GOV-DFT-O1-001
+
+### Capability: policies.versions_list
+
+Panel: POL-GOV-DFT-O2
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /policy-layer/versions
+- Method: GET
+
+Data Mapping:
+- versions → policy version history
+
+Acceptance:
+- Returns policy version list
+- Response includes version metadata
+
+Scenario: SDSR-POL-GOV-DFT-O2-001
+
+### Capability: policies.current_version
+
+Panel: POL-GOV-DFT-O3
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /policy-layer/versions/current
+- Method: GET
+
+Data Mapping:
+- version → current policy version
+
+Acceptance:
+- Returns current active policy version
+- Response includes version details
+
+Scenario: SDSR-POL-GOV-DFT-O3-001
+
+### Capability: policies.conflicts_list
+
+Panel: POL-GOV-DFT-O4
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /policy-layer/conflicts
+- Method: GET
+
+Data Mapping:
+- conflicts → policy conflicts
+
+Acceptance:
+- Returns policy conflict list
+- Response includes conflict details
+
+Scenario: SDSR-POL-GOV-DFT-O4-001
+
+### Capability: policies.dependencies_list
+
+Panel: POL-GOV-DFT-O5
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /policy-layer/dependencies
+- Method: GET
+
+Data Mapping:
+- dependencies → policy dependencies
+
+Acceptance:
+- Returns policy dependency graph
+- Response includes dependency metadata
+
+Scenario: SDSR-POL-GOV-DFT-O5-001
+
+### Capability: policies.safety_rules
+
+Panel: POL-GOV-LIB-O1
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /policy-layer/safety-rules
+- Method: GET
+
+Data Mapping:
+- rules → safety policy rules
+
+Acceptance:
+- Returns safety rule catalog
+- Response includes rule metadata
+
+Scenario: SDSR-POL-GOV-LIB-O1-001
+
+### Capability: policies.ethical_constraints
+
+Panel: POL-GOV-LIB-O2
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /policy-layer/ethical-constraints
+- Method: GET
+
+Data Mapping:
+- constraints → ethical constraints
+
+Acceptance:
+- Returns ethical constraint list
+- Response includes applicability matrix
+
+Scenario: SDSR-POL-GOV-LIB-O2-001
+
+### Capability: policies.active_policies
+
+Panel: POL-GOV-LIB-O3
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /v1/policies/active
+- Method: GET
+
+Data Mapping:
+- policies → active policy list
+
+Acceptance:
+- Returns active policies
+- Response includes adoption status
+
+Scenario: SDSR-POL-GOV-LIB-O3-001
+
+### Capability: policies.guard_policies
+
+Panel: POL-GOV-LIB-O4
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /guard/policies
+- Method: GET
+
+Data Mapping:
+- policies → guard policies
+
+Acceptance:
+- Returns guard policy list
+- Response includes enforcement controls
+
+Scenario: SDSR-POL-GOV-LIB-O4-001
+
+### Capability: policies.temporal_policies
+
+Panel: POL-GOV-LIB-O5
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /policy-layer/temporal-policies
+- Method: GET
+
+Data Mapping:
+- policies → temporal policies
+
+Acceptance:
+- Returns temporal policy list
+- Response includes audit trail
+
+Scenario: SDSR-POL-GOV-LIB-O5-001
+
+### Capability: policies.risk_ceilings
+
+Panel: POL-LIM-THR-O1
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /policy-layer/risk-ceilings
+- Method: GET
+
+Data Mapping:
+- ceilings → risk ceiling definitions
+
+Acceptance:
+- Returns risk ceiling matrix
+- Response includes scope information
+
+Scenario: SDSR-POL-LIM-THR-O1-001
+
+### Capability: policies.budgets_list
+
+Panel: POL-LIM-THR-O2
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /cost/budgets
+- Method: GET
+
+Data Mapping:
+- budgets → budget configurations
+
+Acceptance:
+- Returns budget list
+- Response includes threshold values
+
+Scenario: SDSR-POL-LIM-THR-O2-001
+
+### Capability: policies.quota_runs
+
+Panel: POL-LIM-THR-O3
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/tenants/tenant/quota/runs
+- Method: GET
+
+Data Mapping:
+- quota → run quota limits
+
+Acceptance:
+- Returns run quota configuration
+- Response includes usage/limits
+
+Scenario: SDSR-POL-LIM-THR-O3-001
+
+### Capability: policies.quota_tokens
+
+Panel: POL-LIM-THR-O4
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/tenants/tenant/quota/tokens
+- Method: GET
+
+Data Mapping:
+- quota → token quota limits
+
+Acceptance:
+- Returns token quota configuration
+- Response includes usage/limits
+
+Scenario: SDSR-POL-LIM-THR-O4-001
+
+### Capability: policies.cooldowns_list
+
+Panel: POL-LIM-THR-O5
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /policy-layer/cooldowns
+- Method: GET
+
+Data Mapping:
+- cooldowns → cooldown configurations
+
+Acceptance:
+- Returns cooldown list
+- Response includes reset logic
+
+Scenario: SDSR-POL-LIM-THR-O5-001
+
+### Capability: policies.violations_list
+
+Panel: POL-LIM-VIO-O1
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /policy-layer/violations
+- Method: GET
+
+Data Mapping:
+- violations → violation records
+
+Acceptance:
+- Returns violation ledger
+- Response includes enforcement state
+
+Scenario: SDSR-POL-LIM-VIO-O1-001
+
+### Capability: policies.cost_incidents
+
+Panel: POL-LIM-VIO-O2
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /guard/costs/incidents
+- Method: GET
+
+Data Mapping:
+- incidents → cost incidents
+
+Acceptance:
+- Returns cost incident list
+- Response includes classification
+
+Scenario: SDSR-POL-LIM-VIO-O2-001
+
+### Capability: policies.simulated_incidents
+
+Panel: POL-LIM-VIO-O3
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /costsim/v2/incidents
+- Method: GET
+
+Data Mapping:
+- incidents → simulated incidents
+
+Acceptance:
+- Returns simulated incident list
+- Response includes override analysis
+
+Scenario: SDSR-POL-LIM-VIO-O3-001
+
+### Capability: policies.anomalies_list
+
+Panel: POL-LIM-VIO-O4
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /cost/anomalies
+- Method: GET
+
+Data Mapping:
+- anomalies → cost anomalies
+
+Acceptance:
+- Returns anomaly list
+- Response includes impact data
+
+Scenario: SDSR-POL-LIM-VIO-O4-001
+
+### Capability: policies.divergence_report
+
+Panel: POL-LIM-VIO-O5
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /costsim/divergence
+- Method: GET
+
+Data Mapping:
+- divergence → divergence report
+
+Acceptance:
+- Returns divergence analysis
+- Response includes escalation triggers
+
+Scenario: SDSR-POL-LIM-VIO-O5-001
+
+### Capability: logs.runtime_traces
+
+Panel: LOG-REC-LLM-O1
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/runtime/traces
+- Method: GET
+
+Data Mapping:
+- traces → runtime execution traces
+
+Acceptance:
+- Returns runtime trace records
+- Response includes run envelope data
+
+Scenario: SDSR-LOG-REC-LLM-O1-001
+
+### Capability: logs.activity_runs
+
+Panel: LOG-REC-LLM-O2
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/activity/runs
+- Method: GET
+
+Data Mapping:
+- runs → activity run records
+
+Acceptance:
+- Returns step-by-step execution trace
+- Response includes action progression
+
+Scenario: SDSR-LOG-REC-LLM-O2-001
+
+### Capability: logs.customer_runs
+
+Panel: LOG-REC-LLM-O3
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/customer/activity
+- Method: GET
+
+Data Mapping:
+- activity → customer run activity
+
+Acceptance:
+- Returns customer-scoped run activity
+- Response includes policy interaction trace
+
+Scenario: SDSR-LOG-REC-LLM-O3-001
+
+### Capability: logs.tenant_runs
+
+Panel: LOG-REC-LLM-O4
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/tenants/runs
+- Method: GET
+
+Data Mapping:
+- runs → tenant run records
+
+Acceptance:
+- Returns tenant-scoped runs
+- Response includes 60s replay window data
+
+Scenario: SDSR-LOG-REC-LLM-O4-001
+
+### Capability: logs.mismatch_list
+
+Panel: LOG-REC-LLM-O5
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/traces/mismatches
+- Method: GET
+
+Data Mapping:
+- mismatches → trace mismatch records
+
+Acceptance:
+- Returns audit/export package metadata
+- Response includes integrity checksums
+
+Scenario: SDSR-LOG-REC-LLM-O5-001
+
+### Capability: logs.guard_logs
+
+Panel: LOG-REC-SYS-O1
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /guard/logs
+- Method: GET
+
+Data Mapping:
+- logs → guard system logs
+
+Acceptance:
+- Returns guard subsystem logs
+- Response includes environment snapshot
+
+Scenario: SDSR-LOG-REC-SYS-O1-001
+
+### Capability: logs.health_check
+
+Panel: LOG-REC-SYS-O2
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /health
+- Method: GET
+
+Data Mapping:
+- health → system health status
+
+Acceptance:
+- Returns system health metrics
+- Response includes connectivity telemetry
+
+Scenario: SDSR-LOG-REC-SYS-O2-001
+
+### Capability: logs.ready_check
+
+Panel: LOG-REC-SYS-O3
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /health/ready
+- Method: GET
+
+Data Mapping:
+- ready → system readiness status
+
+Acceptance:
+- Returns readiness check results
+- Response includes degradation events
+
+Scenario: SDSR-LOG-REC-SYS-O3-001
+
+### Capability: logs.adapters_health
+
+Panel: LOG-REC-SYS-O4
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /health/adapters
+- Method: GET
+
+Data Mapping:
+- adapters → adapter health status
+
+Acceptance:
+- Returns adapter health metrics
+- Response includes infra replay window
+
+Scenario: SDSR-LOG-REC-SYS-O4-001
+
+### Capability: logs.skills_health
+
+Panel: LOG-REC-SYS-O5
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /health/skills
+- Method: GET
+
+Data Mapping:
+- skills → skills health status
+
+Acceptance:
+- Returns skills health metrics
+- Response includes attribution data
+
+Scenario: SDSR-LOG-REC-SYS-O5-001
+
+### Capability: logs.traces_list
+
+Panel: LOG-REC-AUD-O1
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/traces
+- Method: GET
+
+Data Mapping:
+- traces → audit trace records
+
+Acceptance:
+- Returns audit trace list
+- Response includes identity lifecycle
+
+Scenario: SDSR-LOG-REC-AUD-O1-001
+
+### Capability: logs.rbac_audit
+
+Panel: LOG-REC-AUD-O2
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /api/v1/rbac/audit
+- Method: GET
+
+Data Mapping:
+- audit → RBAC audit records
+
+Acceptance:
+- Returns authorization decisions
+- Response includes access decisions
+
+Scenario: SDSR-LOG-REC-AUD-O2-001
+
+### Capability: logs.ops_audit
+
+Panel: LOG-REC-AUD-O3
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /ops/actions/audit
+- Method: GET
+
+Data Mapping:
+- audit → ops action audit
+
+Acceptance:
+- Returns ops action audit trail
+- Response includes log access records
+
+Scenario: SDSR-LOG-REC-AUD-O3-001
+
+### Capability: logs.status_history
+
+Panel: LOG-REC-AUD-O4
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /status_history
+- Method: GET
+
+Data Mapping:
+- history → status change history
+
+Acceptance:
+- Returns status history records
+- Response includes integrity markers
+
+Scenario: SDSR-LOG-REC-AUD-O4-001
+
+### Capability: logs.status_stats
+
+Panel: LOG-REC-AUD-O5
+Status: ASSUMED
+
+Implementation:
+- Endpoint: /status_history/stats
+- Method: GET
+
+Data Mapping:
+- stats → status statistics
+
+Acceptance:
+- Returns status statistics
+- Response includes compliance export records
+
+Scenario: SDSR-LOG-REC-AUD-O5-001
 

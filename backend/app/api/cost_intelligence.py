@@ -28,6 +28,7 @@ from app.db import (
 )
 
 # Phase 2B: Write service for DB operations
+from app.schemas.response import wrap_dict
 from app.services.cost_write_service import CostWriteService
 
 
@@ -446,7 +447,7 @@ async def record_cost(
         cost_cents=int(data.cost_cents),
     )
 
-    return {"id": record.id, "status": "recorded"}
+    return wrap_dict({"id": record.id, "status": "recorded"})
 
 
 # =============================================================================
@@ -786,7 +787,7 @@ async def list_budgets(
             )
         )
 
-    return result
+    return wrap_dict({"items": [r.model_dump() for r in result], "total": len(result)})
 
 
 # =============================================================================

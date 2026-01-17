@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db_async import get_async_session
+from app.schemas.response import wrap_dict
 from app.policy import (
     ActionType,
     PolicyEvaluationRequest,
@@ -158,7 +159,7 @@ async def evaluate_action(
     )
 
     result = await engine.evaluate(eval_request, db)
-    return result
+    return wrap_dict(result.model_dump())
 
 
 @router.post("/simulate", response_model=PolicyEvaluationResult)
@@ -194,7 +195,7 @@ async def simulate_evaluation(
 
     # Simulate with dry_run=True
     result = await engine.evaluate(eval_request, db, dry_run=True)
-    return result
+    return wrap_dict(result.model_dump())
 
 
 @router.get("/state", response_model=PolicyState)
@@ -212,7 +213,7 @@ async def get_policy_state(
     """
     engine = get_policy_engine()
     state = await engine.get_state(db)
-    return state
+    return wrap_dict(state.model_dump())
 
 
 @router.post("/reload")
@@ -227,7 +228,7 @@ async def reload_policies(
     """
     engine = get_policy_engine()
     result = await engine.reload_policies(db)
-    return {
+    return wrap_dict({
         "success": True,
         "policies_loaded": result.policies_loaded,
         "risk_ceilings_loaded": result.risk_ceilings_loaded,
@@ -236,7 +237,7 @@ async def reload_policies(
         "business_rules_loaded": result.business_rules_loaded,
         "errors": result.errors,
         "loaded_at": result.loaded_at.isoformat(),
-    }
+    })
 
 
 # =============================================================================
@@ -271,7 +272,7 @@ async def list_violations(
         since=since,
         limit=limit,
     )
-    return violations
+    return wrap_dict({"items": [v.model_dump() for v in violations], "total": len(violations)})
 
 
 @router.get("/violations/{violation_id}", response_model=PolicyViolation)
@@ -284,7 +285,7 @@ async def get_violation(
     violation = await engine.get_violation(db, violation_id)
     if not violation:
         raise HTTPException(status_code=404, detail="Violation not found")
-    return violation
+    return wrap_dict(violation.model_dump())
 
 
 @router.post("/violations/{violation_id}/acknowledge")
@@ -303,7 +304,7 @@ async def acknowledge_violation(
     success = await engine.acknowledge_violation(db, violation_id, notes)
     if not success:
         raise HTTPException(status_code=404, detail="Violation not found")
-    return {"acknowledged": True, "violation_id": violation_id}
+    return wrap_dict({"acknowledged": True, "violation_id": violation_id})
 
 
 # =============================================================================
@@ -320,7 +321,7 @@ async def list_risk_ceilings(
     """List all risk ceilings with current values."""
     engine = get_policy_engine()
     ceilings = await engine.get_risk_ceilings(db, tenant_id=tenant_id, include_inactive=include_inactive)
-    return [
+    items = [
         {
             "id": c.id,
             "name": c.name,
@@ -335,6 +336,7 @@ async def list_risk_ceilings(
         }
         for c in ceilings
     ]
+    return wrap_dict({"items": items, "total": len(items)})
 
 
 @router.get("/risk-ceilings/{ceiling_id}")
@@ -348,7 +350,7 @@ async def get_risk_ceiling(
     if not ceiling:
         raise HTTPException(status_code=404, detail="Risk ceiling not found")
 
-    return {
+    return wrap_dict({
         "id": ceiling.id,
         "name": ceiling.name,
         "description": ceiling.description,
@@ -361,7 +363,7 @@ async def get_risk_ceiling(
         "breach_count": ceiling.breach_count,
         "last_breach_at": ceiling.last_breach_at.isoformat() if ceiling.last_breach_at else None,
         "is_active": ceiling.is_active,
-    }
+    })
 
 
 @router.patch("/risk-ceilings/{ceiling_id}")
@@ -376,12 +378,12 @@ async def update_risk_ceiling(
     if not ceiling:
         raise HTTPException(status_code=404, detail="Risk ceiling not found")
 
-    return {
+    return wrap_dict({
         "updated": True,
         "id": ceiling.id,
         "name": ceiling.name,
         "max_value": ceiling.max_value,
-    }
+    })
 
 
 @router.post("/risk-ceilings/{ceiling_id}/reset")
@@ -395,7 +397,7 @@ async def reset_risk_ceiling(
     if not success:
         raise HTTPException(status_code=404, detail="Risk ceiling not found")
 
-    return {"reset": True, "ceiling_id": ceiling_id}
+    return wrap_dict({"reset": True, "ceiling_id": ceiling_id})
 
 
 # =============================================================================
@@ -412,7 +414,7 @@ async def list_safety_rules(
     """List all safety rules."""
     engine = get_policy_engine()
     rules = await engine.get_safety_rules(db, tenant_id=tenant_id, include_inactive=include_inactive)
-    return [
+    items = [
         {
             "id": r.id,
             "name": r.name,
@@ -425,6 +427,7 @@ async def list_safety_rules(
         }
         for r in rules
     ]
+    return wrap_dict({"items": items, "total": len(items)})
 
 
 @router.patch("/safety-rules/{rule_id}")
@@ -439,11 +442,11 @@ async def update_safety_rule(
     if not rule:
         raise HTTPException(status_code=404, detail="Safety rule not found")
 
-    return {
+    return wrap_dict({
         "updated": True,
         "id": rule.id,
         "name": rule.name,
-    }
+    })
 
 
 # =============================================================================
@@ -459,7 +462,7 @@ async def list_ethical_constraints(
     """List all ethical constraints."""
     engine = get_policy_engine()
     constraints = await engine.get_ethical_constraints(db, include_inactive=include_inactive)
-    return [
+    items = [
         {
             "id": c.id,
             "name": c.name,
@@ -471,6 +474,7 @@ async def list_ethical_constraints(
         }
         for c in constraints
     ]
+    return wrap_dict({"items": items, "total": len(items)})
 
 
 # =============================================================================
@@ -486,7 +490,7 @@ async def list_active_cooldowns(
     """List all active cooldowns."""
     engine = get_policy_engine()
     cooldowns = await engine.get_active_cooldowns(db, agent_id=agent_id)
-    return cooldowns
+    return wrap_dict({"items": [c.model_dump() for c in cooldowns], "total": len(cooldowns)})
 
 
 @router.delete("/cooldowns/{agent_id}")
@@ -502,7 +506,7 @@ async def clear_cooldowns(
     """
     engine = get_policy_engine()
     count = await engine.clear_cooldowns(db, agent_id, rule_name)
-    return {"cleared": count, "agent_id": agent_id}
+    return wrap_dict({"cleared": count, "agent_id": agent_id})
 
 
 # =============================================================================
@@ -558,7 +562,7 @@ async def evaluate_batch(
         result = await engine.evaluate(eval_request, db)
         results.append(result)
 
-    return results
+    return wrap_dict({"items": [r.model_dump() for r in results], "total": len(results)})
 
 
 # =============================================================================
@@ -594,7 +598,7 @@ async def list_policy_versions(
     """
     engine = get_policy_engine()
     versions = await engine.get_policy_versions(db, limit=limit, include_inactive=include_inactive)
-    return versions
+    return wrap_dict({"items": versions, "total": len(versions)})
 
 
 @router.get("/versions/current")
@@ -609,8 +613,8 @@ async def get_current_version(
     engine = get_policy_engine()
     version = await engine.get_current_version(db)
     if not version:
-        return {"version": "1.0.0", "is_active": True, "description": "Default"}
-    return version
+        return wrap_dict({"version": "1.0.0", "is_active": True, "description": "Default"})
+    return wrap_dict(version)
 
 
 @router.post("/versions")
@@ -630,12 +634,12 @@ async def create_policy_version(
         description=request.description,
         created_by=request.created_by,
     )
-    return {
+    return wrap_dict({
         "created": True,
         "version": version.version,
         "policy_hash": version.policy_hash,
         "created_at": version.created_at.isoformat(),
-    }
+    })
 
 
 @router.post("/versions/rollback")
@@ -660,7 +664,7 @@ async def rollback_to_version(
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result.get("error", "Rollback failed"))
 
-    return result
+    return wrap_dict(result)
 
 
 @router.get("/versions/{version_id}/provenance")
@@ -675,7 +679,7 @@ async def get_version_provenance(
     """
     engine = get_policy_engine()
     provenance = await engine.get_version_provenance(db, version_id)
-    return provenance
+    return wrap_dict({"items": provenance, "total": len(provenance)})
 
 
 # =============================================================================
@@ -694,7 +698,7 @@ async def get_dependency_graph(
     """
     engine = get_policy_engine()
     graph = await engine.get_dependency_graph(db)
-    return {
+    return wrap_dict({
         "nodes": len(graph.nodes),
         "edges": len(graph.edges),
         "conflicts": len(graph.conflicts),
@@ -721,7 +725,7 @@ async def get_dependency_graph(
             for c in graph.conflicts
             if not c.resolved
         ],
-    }
+    })
 
 
 @router.get("/conflicts")
@@ -736,7 +740,7 @@ async def list_conflicts(
     """
     engine = get_policy_engine()
     conflicts = await engine.get_policy_conflicts(db, include_resolved=include_resolved)
-    return [
+    items = [
         {
             "id": c.id,
             "policy_a": c.policy_a,
@@ -751,6 +755,7 @@ async def list_conflicts(
         }
         for c in conflicts
     ]
+    return wrap_dict({"items": items, "total": len(items)})
 
 
 class ResolveConflictRequest(BaseModel):
@@ -782,7 +787,7 @@ async def resolve_conflict(
     if not result:
         raise HTTPException(status_code=404, detail="Conflict not found")
 
-    return {"resolved": True, "conflict_id": conflict_id}
+    return wrap_dict({"resolved": True, "conflict_id": conflict_id})
 
 
 # =============================================================================
@@ -818,7 +823,7 @@ async def list_temporal_policies(
     """
     engine = get_policy_engine()
     policies = await engine.get_temporal_policies(db, metric=metric, include_inactive=include_inactive)
-    return [
+    items = [
         {
             "id": p.id,
             "name": p.name,
@@ -832,6 +837,7 @@ async def list_temporal_policies(
         }
         for p in policies
     ]
+    return wrap_dict({"items": items, "total": len(items)})
 
 
 @router.post("/temporal-policies")
@@ -847,11 +853,11 @@ async def create_temporal_policy(
     engine = get_policy_engine()
     policy = await engine.create_temporal_policy(db, request.model_dump())
 
-    return {
+    return wrap_dict({
         "created": True,
         "id": policy.id,
         "name": policy.name,
-    }
+    })
 
 
 @router.get("/temporal-policies/{policy_id}/utilization")
@@ -867,7 +873,7 @@ async def get_temporal_utilization(
     """
     engine = get_policy_engine()
     utilization = await engine.get_temporal_utilization(db, policy_id=policy_id, agent_id=agent_id)
-    return utilization
+    return wrap_dict(utilization)
 
 
 # =============================================================================
@@ -944,7 +950,7 @@ async def evaluate_with_context(
         context=request.context,
     )
 
-    return {
+    return wrap_dict({
         "decision": result.decision.value,
         "decision_reason": result.decision_reason,
         "policies_evaluated": result.policies_evaluated,
@@ -970,7 +976,7 @@ async def evaluate_with_context(
         "policy_version": result.policy_version,
         "policy_hash": result.policy_hash,
         "updated_context": result.updated_context.model_dump() if result.updated_context else None,
-    }
+    })
 
 
 # =============================================================================
@@ -998,7 +1004,7 @@ async def validate_dependency_dag(
     """
     engine = get_policy_engine()
     result = await engine.validate_dependency_dag(db)
-    return result
+    return wrap_dict(result)
 
 
 class AddDependencyRequest(BaseModel):
@@ -1052,7 +1058,7 @@ async def add_dependency_with_dag_check(
             )
         raise HTTPException(status_code=400, detail=result.get("error"))
 
-    return result
+    return wrap_dict(result)
 
 
 @router.get("/dependencies/evaluation-order")
@@ -1070,18 +1076,18 @@ async def get_evaluation_order(
     dag_result = await engine.validate_dependency_dag(db)
 
     if not dag_result.get("is_dag"):
-        return {
+        return wrap_dict({
             "success": False,
             "error": "Dependency graph contains cycles",
             "cycles": dag_result.get("cycles"),
-        }
+        })
 
-    return {
+    return wrap_dict({
         "success": True,
         "evaluation_order": dag_result.get("topological_order", []),
         "node_count": dag_result.get("node_count", 0),
         "edge_count": dag_result.get("edge_count", 0),
-    }
+    })
 
 
 # =============================================================================
@@ -1123,7 +1129,7 @@ async def prune_temporal_metrics(
     if not result.get("success"):
         raise HTTPException(status_code=500, detail=result.get("error"))
 
-    return result
+    return wrap_dict(result)
 
 
 @router.get("/temporal-metrics/storage-stats")
@@ -1138,7 +1144,7 @@ async def get_temporal_storage_stats(
     """
     engine = get_policy_engine()
     stats = await engine.get_temporal_storage_stats(db)
-    return stats
+    return wrap_dict(stats)
 
 
 # =============================================================================
@@ -1198,7 +1204,7 @@ async def activate_policy_version(
             )
         raise HTTPException(status_code=400, detail=result.get("error"))
 
-    return result
+    return wrap_dict(result)
 
 
 @router.post("/versions/{version_id}/check")
@@ -1219,4 +1225,223 @@ async def check_version_integrity(
         activated_by="check-only",
         dry_run=True,
     )
-    return result
+    return wrap_dict(result)
+
+
+# =============================================================================
+# Lessons Learned Endpoints (PIN-411)
+# =============================================================================
+
+
+class LessonConvertRequest(BaseModel):
+    """Request to convert a lesson to draft proposal."""
+
+    converted_by: str = "system"
+
+
+class LessonDeferRequest(BaseModel):
+    """Request to defer a lesson."""
+
+    defer_until: datetime
+
+
+class LessonDismissRequest(BaseModel):
+    """Request to dismiss a lesson."""
+
+    dismissed_by: str
+    reason: str
+
+
+@router.get("/lessons")
+async def list_lessons(
+    tenant_id: Optional[str] = None,
+    lesson_type: Optional[str] = Query(None, description="Filter: failure, near_threshold, critical_success"),
+    status: Optional[str] = Query(None, description="Filter: pending, converted_to_draft, deferred, dismissed"),
+    severity: Optional[str] = Query(None, description="Filter: CRITICAL, HIGH, MEDIUM, LOW"),
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_async_session),
+) -> Dict[str, Any]:
+    """
+    List lessons learned.
+
+    Returns lessons with optional filtering by type, status, and severity.
+    This endpoint is for the policy-layer (L3) - internal use.
+
+    Reference: PIN-411, POLICIES_DOMAIN_AUDIT.md Section 11
+    """
+    from app.services.lessons_learned_engine import get_lessons_learned_engine
+
+    if not tenant_id:
+        return wrap_dict({"error": "tenant_id required", "items": [], "total": 0})
+
+    engine = get_lessons_learned_engine()
+    lessons = engine.list_lessons(
+        tenant_id=tenant_id,
+        lesson_type=lesson_type,
+        status=status,
+        severity=severity,
+        limit=limit,
+        offset=offset,
+    )
+
+    return wrap_dict({
+        "items": lessons,
+        "total": len(lessons),
+        "has_more": len(lessons) == limit,
+        "filters": {
+            "tenant_id": tenant_id,
+            "lesson_type": lesson_type,
+            "status": status,
+            "severity": severity,
+        },
+    })
+
+
+@router.get("/lessons/stats")
+async def get_lesson_stats(
+    tenant_id: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> Dict[str, Any]:
+    """
+    Get lesson statistics for a tenant.
+
+    Returns counts by type and status.
+
+    Reference: PIN-411
+    """
+    from app.services.lessons_learned_engine import get_lessons_learned_engine
+
+    engine = get_lessons_learned_engine()
+    stats = engine.get_lesson_stats(tenant_id=tenant_id)
+
+    return wrap_dict(stats)
+
+
+@router.get("/lessons/{lesson_id}")
+async def get_lesson(
+    lesson_id: str,
+    tenant_id: str,
+    db: AsyncSession = Depends(get_async_session),
+) -> Dict[str, Any]:
+    """
+    Get a specific lesson by ID.
+
+    Returns detailed lesson information.
+
+    Reference: PIN-411
+    """
+    from uuid import UUID
+    from app.services.lessons_learned_engine import get_lessons_learned_engine
+
+    engine = get_lessons_learned_engine()
+    lesson = engine.get_lesson(lesson_id=UUID(lesson_id), tenant_id=tenant_id)
+
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    return wrap_dict(lesson)
+
+
+@router.post("/lessons/{lesson_id}/convert")
+async def convert_lesson_to_draft(
+    lesson_id: str,
+    request: LessonConvertRequest,
+    tenant_id: str = Query(..., description="Tenant ID"),
+    db: AsyncSession = Depends(get_async_session),
+) -> Dict[str, Any]:
+    """
+    Convert a lesson to a draft policy proposal.
+
+    Creates a new draft proposal and updates the lesson status.
+    PB-S4 compliant: drafts require human approval.
+
+    Reference: PIN-411, PB-S4
+    """
+    from uuid import UUID
+    from app.services.lessons_learned_engine import get_lessons_learned_engine
+
+    engine = get_lessons_learned_engine()
+    proposal_id = engine.convert_lesson_to_draft(
+        lesson_id=UUID(lesson_id),
+        tenant_id=tenant_id,
+        converted_by=request.converted_by,
+    )
+
+    if not proposal_id:
+        raise HTTPException(status_code=400, detail="Failed to convert lesson")
+
+    return wrap_dict({
+        "success": True,
+        "lesson_id": lesson_id,
+        "draft_proposal_id": str(proposal_id),
+    })
+
+
+@router.post("/lessons/{lesson_id}/defer")
+async def defer_lesson(
+    lesson_id: str,
+    request: LessonDeferRequest,
+    tenant_id: str = Query(..., description="Tenant ID"),
+    db: AsyncSession = Depends(get_async_session),
+) -> Dict[str, Any]:
+    """
+    Defer a lesson until a future date.
+
+    The lesson will resurface for review after the defer date.
+
+    Reference: PIN-411
+    """
+    from uuid import UUID
+    from app.services.lessons_learned_engine import get_lessons_learned_engine
+
+    engine = get_lessons_learned_engine()
+    success = engine.defer_lesson(
+        lesson_id=UUID(lesson_id),
+        tenant_id=tenant_id,
+        defer_until=request.defer_until,
+    )
+
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to defer lesson")
+
+    return wrap_dict({
+        "success": True,
+        "lesson_id": lesson_id,
+        "deferred_until": request.defer_until.isoformat(),
+    })
+
+
+@router.post("/lessons/{lesson_id}/dismiss")
+async def dismiss_lesson(
+    lesson_id: str,
+    request: LessonDismissRequest,
+    tenant_id: str = Query(..., description="Tenant ID"),
+    db: AsyncSession = Depends(get_async_session),
+) -> Dict[str, Any]:
+    """
+    Dismiss a lesson (mark as not actionable).
+
+    Dismissed lessons are preserved for audit but won't resurface.
+
+    Reference: PIN-411
+    """
+    from uuid import UUID
+    from app.services.lessons_learned_engine import get_lessons_learned_engine
+
+    engine = get_lessons_learned_engine()
+    success = engine.dismiss_lesson(
+        lesson_id=UUID(lesson_id),
+        tenant_id=tenant_id,
+        dismissed_by=request.dismissed_by,
+        reason=request.reason,
+    )
+
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to dismiss lesson")
+
+    return wrap_dict({
+        "success": True,
+        "lesson_id": lesson_id,
+        "dismissed_by": request.dismissed_by,
+    })

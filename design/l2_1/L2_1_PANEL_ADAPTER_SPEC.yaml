@@ -1,0 +1,939 @@
+# Layer: L2.1 — Panel Adapter Specification
+# Product: system-wide
+# Version: 2.0.0
+# Status: AUTHORITATIVE
+# Purpose: Single source of truth for customer-facing panel responses
+#
+# BINDING MODEL: CAPABILITY-BOUND (v2.0.0)
+#
+# Panels bind to CAPABILITY IDs, not endpoints.
+# Endpoints are resolved via AURORA_L2_CAPABILITY_REGISTRY at runtime.
+# This ensures:
+#   - Spec remains stable even when APIs change
+#   - Only OBSERVED/TRUSTED capabilities can be called
+#   - Clean separation: spec = meaning, registry = plumbing
+
+---
+adapter_metadata:
+  adapter_id: "L2_1_PANEL_ADAPTER"
+  adapter_version: "2.0.0"
+  schema_version: "2026-01-16"
+  binding_model: "CAPABILITY_BOUND"
+  immutability_rule: "Meaning changes require new version. Existing versions are immutable."
+  authority: "CANONICAL"
+
+  # CRITICAL: This spec binds to capabilities, NOT endpoints
+  capability_resolution:
+    registry: "backend/AURORA_L2_CAPABILITY_REGISTRY"
+    callable_statuses: ["OBSERVED", "TRUSTED"]
+    non_callable_statuses: ["DISCOVERED", "DECLARED", "DEPRECATED"]
+
+versioning:
+  current_version: "2.0.0"
+  version_history:
+    - version: "1.0.0"
+      date: "2026-01-16"
+      change: "Initial specification (path-bound)"
+      author: "system"
+    - version: "2.0.0"
+      date: "2026-01-16"
+      change: "Migrated to capability-bound model"
+      author: "system"
+      breaking_changes:
+        - "consumed_apis replaced by consumed_capabilities"
+        - "path/method now resolved via AURORA registry"
+  evolution_policy:
+    semantic_changes: "NEW_VERSION_REQUIRED"
+    signal_additions: "MINOR_VERSION_BUMP"
+    bug_fixes: "PATCH_VERSION_BUMP"
+
+truth_metadata_schema:
+  class:
+    enum: ["interpretation", "evidence", "execution"]
+    description: "What type of truth this slot represents"
+  lens:
+    enum: ["risk", "cost", "reliability", "compliance", "audit", "operational"]
+    description: "The perspective through which data is viewed"
+  capability:
+    type: "string"
+    examples:
+      - "activity_threshold_analysis"
+      - "runtime_telemetry_correlation"
+      - "cost_baseline_drift"
+      - "incident_causality_mapping"
+  state:
+    enum: ["available", "partial", "missing"]
+    description: "Data availability state"
+  authority:
+    enum: ["affirmative", "negative", "indeterminate"]
+    description: "Whether the answer is definitively yes, definitively no, or unknown"
+  actionable:
+    enum: ["yes", "no"]
+    description: "Whether the slot enables user action"
+
+time_semantics_schema:
+  as_of:
+    type: "ISO8601_timestamp"
+    required: true
+    description: "Evaluation timestamp"
+  evaluation_window:
+    type: "duration"
+    required: true
+    description: "Time window for data evaluation (e.g., PT15M, PT1H, P1D)"
+  baseline_window:
+    type: "duration"
+    required: false
+    description: "Comparison baseline window for drift/trend detection"
+  data_cutoff_time:
+    type: "ISO8601_timestamp"
+    required: true
+    description: "Latest data point included in evaluation"
+
+verification_signals_schema:
+  missing_input_count:
+    type: "integer"
+    constraint: "If > 0, state cannot be 'available'"
+  stale_input_count:
+    type: "integer"
+    constraint: "If > 0, state cannot be 'available'"
+  contradictory_signal_count:
+    type: "integer"
+    constraint: "If > 0, authority must be 'indeterminate'"
+  unverified_signal_refs:
+    type: "array[string]"
+    constraint: "Listed signals marked UNVERIFIED"
+
+negative_authority_values:
+  - "NO_VIOLATION"
+  - "NO_DRIFT"
+  - "NO_INCIDENT"
+  - "NO_POLICY_IMPACT"
+  - "NO_THRESHOLD_BREACH"
+  - "NO_ANOMALY"
+  - "NO_NEAR_THRESHOLD"
+  - "NO_ACTIVE_RISK"
+
+# =============================================================================
+# PANEL SPECIFICATIONS (CAPABILITY-BOUND)
+# =============================================================================
+
+panels:
+
+  # ===========================================================================
+  # OVERVIEW DOMAIN - SUMMARY SUBDOMAIN - HIGHLIGHTS TOPIC
+  # ===========================================================================
+
+  OVR-SUM-HL:
+    panel_contract_id: "OVR-SUM-HL-v2.0.0"
+    domain: "OVERVIEW"
+    subdomain: "SUMMARY"
+    topic: "HIGHLIGHTS"
+    description: "System activity snapshot - glanceable current state"
+
+    slots:
+      O1:
+        slot_contract_id: "OVR-SUM-HL-O1-v2.0.0"
+        slot_question: "Is the system calm, active, or stressed right now?"
+        class: "interpretation"
+        state: "BOUND"
+        capability_binding: "overview.activity_snapshot"
+
+        # CAPABILITY-BOUND: No paths, just capability IDs
+        consumed_capabilities:
+          - capability_id: "overview.activity_snapshot"
+            signals:
+              - "active_run_count"
+              - "completed_run_count_window"
+              - "near_threshold_run_count"
+              - "last_observation_timestamp"
+          - capability_id: "logs.runtime_traces"
+            signals:
+              - "trace_count"
+              - "latest_trace_timestamp"
+
+        input_signals:
+          raw:
+            - signal_id: "active_run_count"
+              source_capability: "overview.activity_snapshot"
+              type: "integer"
+              required: true
+            - signal_id: "completed_run_count_window"
+              source_capability: "overview.activity_snapshot"
+              type: "integer"
+              required: true
+            - signal_id: "near_threshold_run_count"
+              source_capability: "overview.activity_snapshot"
+              type: "integer"
+              required: true
+            - signal_id: "last_observation_timestamp"
+              source_capability: "overview.activity_snapshot"
+              type: "ISO8601_timestamp"
+              required: true
+
+        computation_placeholders:
+          - name: "STRESS_LEVEL_CLASSIFIER"
+            description: "Classify system state as calm/active/stressed based on run counts and thresholds"
+            inputs: ["active_run_count", "near_threshold_run_count", "completed_run_count_window"]
+            logic: "Computed via panel_signal_translator.py"
+            deterministic: true
+          - name: "OBSERVATION_FRESHNESS_CHECK"
+            description: "Verify observation timestamp is within acceptable staleness window"
+            inputs: ["last_observation_timestamp", "current_time"]
+            logic: "current_time - last_observation_timestamp < MAX_STALENESS_THRESHOLD"
+            deterministic: true
+
+        output_signals:
+          derived:
+            - signal_id: "system_state"
+              type: "enum"
+              values: ["CALM", "ACTIVE", "STRESSED"]
+              customer_facing: true
+              deterministic: true
+            - signal_id: "active_runs"
+              type: "integer"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "completed_runs_in_window"
+              type: "integer"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "at_risk_runs"
+              type: "integer"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "observation_timestamp"
+              type: "ISO8601_timestamp"
+              customer_facing: true
+              deterministic: true
+
+        truth_metadata:
+          class: "interpretation"
+          lens: "operational"
+          capability: "activity_snapshot_interpretation"
+          state_rule: "available if all required inputs present and fresh"
+          authority_rule: "affirmative if system_state computed, negative not applicable"
+          actionable: "no"
+
+        time_semantics:
+          evaluation_window: "PT15M"
+          baseline_window: null
+          staleness_threshold: "PT5M"
+
+        verification_rules:
+          - rule_id: "VR-OVR-HL-O1-001"
+            condition: "active_run_count is null"
+            action: "state = missing"
+          - rule_id: "VR-OVR-HL-O1-002"
+            condition: "observation_age > staleness_threshold"
+            action: "state = partial, add 'observation_stale' to unverified_signal_refs"
+          - rule_id: "VR-OVR-HL-O1-003"
+            condition: "near_threshold_run_count > 0 AND at_risk_runs = 0"
+            action: "contradictory_signal_count += 1"
+
+      O2:
+        slot_contract_id: "OVR-SUM-HL-O2-v2.0.0"
+        slot_question: "Are there non-ignorable signals requiring attention?"
+        class: "interpretation"
+        state: "DRAFT"
+        capability_binding: "overview.incident_snapshot"
+
+        consumed_capabilities:
+          - capability_id: "overview.incident_snapshot"
+            signals:
+              - "active_incident_count"
+              - "max_severity_level"
+              - "prevented_violation_count"
+          - capability_id: "overview.activity_snapshot"
+            signals:
+              - "near_threshold_run_count"
+
+        input_signals:
+          raw:
+            - signal_id: "active_incident_count"
+              source_capability: "overview.incident_snapshot"
+              type: "integer"
+              required: true
+            - signal_id: "near_threshold_count"
+              source_capability: "overview.activity_snapshot"
+              type: "integer"
+              required: true
+            - signal_id: "prevented_violation_count"
+              source_capability: "overview.incident_snapshot"
+              type: "integer"
+              required: true
+            - signal_id: "max_severity_level"
+              source_capability: "overview.incident_snapshot"
+              type: "enum"
+              required: false
+
+        computation_placeholders:
+          - name: "ATTENTION_REQUIRED_CLASSIFIER"
+            description: "Determine if attention signals exist"
+            inputs: ["active_incident_count", "near_threshold_count", "max_severity_level"]
+            logic: "Computed via panel_signal_translator.py"
+            deterministic: true
+
+        output_signals:
+          derived:
+            - signal_id: "attention_required"
+              type: "boolean"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "active_incidents"
+              type: "integer"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "near_threshold_runs"
+              type: "integer"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "prevented_violations"
+              type: "integer"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "highest_severity"
+              type: "enum"
+              values: ["NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"]
+              customer_facing: true
+              deterministic: true
+
+        truth_metadata:
+          class: "interpretation"
+          lens: "risk"
+          capability: "attention_signal_aggregation"
+          state_rule: "available if incident and activity signals present"
+          authority_rule: "affirmative if attention_required=true, negative if attention_required=false"
+          actionable: "no"
+
+        time_semantics:
+          evaluation_window: "PT15M"
+          baseline_window: null
+          staleness_threshold: "PT5M"
+
+        verification_rules:
+          - rule_id: "VR-OVR-HL-O2-001"
+            condition: "active_incident_count is null"
+            action: "state = missing"
+          - rule_id: "VR-OVR-HL-O2-002"
+            condition: "active_incident_count > 0 AND attention_required = false"
+            action: "contradictory_signal_count += 1, authority = indeterminate"
+
+      O4:
+        slot_contract_id: "OVR-SUM-HL-O4-v2.0.0"
+        slot_question: "Are there rare but high-impact clusters invisible in averages?"
+        class: "interpretation"
+        state: "DRAFT"
+        capability_binding: "overview.policy_snapshot"
+
+        consumed_capabilities:
+          - capability_id: "overview.policy_snapshot"
+            signals:
+              - "high_severity_violations"
+              - "overridden_violations_with_impact"
+          - capability_id: "overview.cost_anomalies"
+            signals:
+              - "cost_anomalies"
+
+        input_signals:
+          raw:
+            - signal_id: "high_severity_violations"
+              source_capability: "overview.policy_snapshot"
+              type: "array"
+              required: true
+            - signal_id: "cost_anomalies"
+              source_capability: "overview.cost_anomalies"
+              type: "array"
+              required: false
+            - signal_id: "overridden_violations_with_impact"
+              source_capability: "overview.policy_snapshot"
+              type: "array"
+              required: false
+
+        computation_placeholders:
+          - name: "OUTLIER_CLUSTER_DETECTOR"
+            description: "Identify top 1-2% outliers by severity-weighted impact"
+            inputs: ["high_severity_violations", "cost_anomalies"]
+            logic: "PLACEHOLDER - requires severity weighting algorithm"
+            deterministic: true
+
+        output_signals:
+          derived:
+            - signal_id: "has_high_impact_outliers"
+              type: "boolean"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "outlier_clusters"
+              type: "array"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "total_outlier_cost_impact"
+              type: "decimal"
+              customer_facing: true
+              deterministic: true
+
+        truth_metadata:
+          class: "interpretation"
+          lens: "risk"
+          capability: "outlier_detection"
+          state_rule: "available if violation data present, partial if cost data missing"
+          authority_rule: "affirmative if outliers found, negative (NO_ANOMALY) if none"
+          actionable: "no"
+
+        time_semantics:
+          evaluation_window: "P7D"
+          baseline_window: "P30D"
+          staleness_threshold: "PT1H"
+
+        verification_rules:
+          - rule_id: "VR-OVR-HL-O4-001"
+            condition: "high_severity_violations is null"
+            action: "state = missing"
+          - rule_id: "VR-OVR-HL-O4-002"
+            condition: "cost_anomalies is null"
+            action: "state = partial, add 'cost_data' to unverified_signal_refs"
+
+  # ===========================================================================
+  # OVERVIEW DOMAIN - SUMMARY SUBDOMAIN - COST_INTELLIGENCE TOPIC
+  # ===========================================================================
+
+  OVR-SUM-CI:
+    panel_contract_id: "OVR-SUM-CI-v2.0.0"
+    domain: "OVERVIEW"
+    subdomain: "SUMMARY"
+    topic: "COST_INTELLIGENCE"
+    description: "Cost posture snapshot without drilling into other domains"
+
+    slots:
+      O1:
+        slot_contract_id: "OVR-SUM-CI-O1-v2.0.0"
+        slot_question: "What is the current cost posture without navigation?"
+        class: "interpretation"
+        state: "DRAFT"
+        capability_binding: "overview.cost_summary"
+
+        consumed_capabilities:
+          - capability_id: "overview.cost_summary"
+            signals:
+              - "current_spend_rate"
+              - "previous_spend_rate"
+              - "cost_by_category"
+
+        input_signals:
+          raw:
+            - signal_id: "current_spend_rate"
+              source_capability: "overview.cost_summary"
+              type: "decimal"
+              required: true
+            - signal_id: "previous_spend_rate"
+              source_capability: "overview.cost_summary"
+              type: "decimal"
+              required: true
+            - signal_id: "cost_by_category"
+              source_capability: "overview.cost_summary"
+              type: "object"
+              required: true
+
+        computation_placeholders:
+          - name: "TREND_DIRECTION_CALCULATOR"
+            description: "Compare current vs previous spend rate"
+            inputs: ["current_spend_rate", "previous_spend_rate"]
+            logic: "IF current > previous * 1.05 THEN 'UP' ELIF current < previous * 0.95 THEN 'DOWN' ELSE 'FLAT'"
+            deterministic: true
+          - name: "PRIMARY_DRIVER_IDENTIFIER"
+            description: "Find category with highest contribution"
+            inputs: ["cost_by_category"]
+            logic: "MAX(cost_by_category.values)"
+            deterministic: true
+
+        output_signals:
+          derived:
+            - signal_id: "spend_rate"
+              type: "decimal"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "trend"
+              type: "enum"
+              values: ["UP", "FLAT", "DOWN"]
+              customer_facing: true
+              deterministic: true
+            - signal_id: "primary_driver"
+              type: "string"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "primary_driver_percentage"
+              type: "decimal"
+              customer_facing: true
+              deterministic: true
+
+        truth_metadata:
+          class: "interpretation"
+          lens: "cost"
+          capability: "cost_posture_snapshot"
+          state_rule: "available if spend data present"
+          authority_rule: "always affirmative - cost data is factual"
+          actionable: "no"
+
+        time_semantics:
+          evaluation_window: "PT24H"
+          baseline_window: "P7D"
+          staleness_threshold: "PT1H"
+
+        verification_rules:
+          - rule_id: "VR-OVR-CI-O1-001"
+            condition: "current_spend_rate is null"
+            action: "state = missing"
+          - rule_id: "VR-OVR-CI-O1-002"
+            condition: "previous_spend_rate is null"
+            action: "trend = indeterminate"
+
+      O4:
+        slot_contract_id: "OVR-SUM-CI-O4-v2.0.0"
+        slot_question: "What is the near-term cost trajectory?"
+        class: "interpretation"
+        state: "DRAFT"
+        capability_binding: "overview.cost_anomalies"
+
+        consumed_capabilities:
+          - capability_id: "policies.cost_projection"
+            signals:
+              - "recent_cost_trend"
+              - "projection_confidence"
+          - capability_id: "overview.cost_anomalies"
+            signals:
+              - "anomaly_adjustments"
+
+        input_signals:
+          raw:
+            - signal_id: "recent_cost_trend"
+              source_capability: "policies.cost_projection"
+              type: "array"
+              required: true
+            - signal_id: "projection_confidence"
+              source_capability: "policies.cost_projection"
+              type: "enum"
+              required: true
+            - signal_id: "anomaly_adjustments"
+              source_capability: "overview.cost_anomalies"
+              type: "array"
+              required: false
+
+        computation_placeholders:
+          - name: "TRAJECTORY_PROJECTOR"
+            description: "Project near-term direction from recent trend"
+            inputs: ["recent_cost_trend", "anomaly_adjustments"]
+            logic: "PLACEHOLDER - linear regression with anomaly weighting"
+            deterministic: true
+
+        output_signals:
+          derived:
+            - signal_id: "projected_direction"
+              type: "enum"
+              values: ["INCREASE", "STABLE", "DECREASE"]
+              customer_facing: true
+              deterministic: true
+            - signal_id: "confidence"
+              type: "enum"
+              values: ["LOW", "MEDIUM", "HIGH"]
+              customer_facing: true
+              deterministic: true
+            - signal_id: "projection_basis"
+              type: "string"
+              customer_facing: true
+              deterministic: true
+
+        truth_metadata:
+          class: "interpretation"
+          lens: "cost"
+          capability: "cost_trajectory_projection"
+          state_rule: "available if trend data present, partial if confidence low"
+          authority_rule: "affirmative with confidence qualifier"
+          actionable: "no"
+
+        time_semantics:
+          evaluation_window: "P7D"
+          baseline_window: "P30D"
+          staleness_threshold: "PT6H"
+
+        verification_rules:
+          - rule_id: "VR-OVR-CI-O4-001"
+            condition: "recent_cost_trend.length < 3"
+            action: "confidence = LOW"
+          - rule_id: "VR-OVR-CI-O4-002"
+            condition: "anomaly_adjustments contains high_impact"
+            action: "add 'anomaly_influence' to unverified_signal_refs"
+
+  # ===========================================================================
+  # ACTIVITY DOMAIN - LLM_RUNS SUBDOMAIN - LIVE TOPIC
+  # ===========================================================================
+
+  ACT-LLM-LIVE:
+    panel_contract_id: "ACT-LLM-LIVE-v2.0.0"
+    domain: "ACTIVITY"
+    subdomain: "LLM_RUNS"
+    topic: "LIVE"
+    description: "Currently running LLM executions"
+
+    slots:
+      O1:
+        slot_contract_id: "ACT-LLM-LIVE-O1-v2.0.0"
+        slot_question: "How many LLM runs are currently in progress?"
+        class: "interpretation"
+        state: "DRAFT"
+        capability_binding: "activity.live_runs"
+
+        consumed_capabilities:
+          - capability_id: "activity.live_runs"
+            signals:
+              - "live_run_count"
+
+        input_signals:
+          raw:
+            - signal_id: "live_run_count"
+              source_capability: "activity.live_runs"
+              type: "integer"
+              required: true
+
+        computation_placeholders:
+          - name: "LIVE_COUNT_AGGREGATOR"
+            description: "Count runs with status=running"
+            inputs: ["live_run_count"]
+            logic: "Direct passthrough"
+            deterministic: true
+
+        output_signals:
+          derived:
+            - signal_id: "total_live_runs"
+              type: "integer"
+              customer_facing: true
+              deterministic: true
+
+        truth_metadata:
+          class: "interpretation"
+          lens: "operational"
+          capability: "live_run_counting"
+          state_rule: "available if activity API responsive"
+          authority_rule: "affirmative - count is factual"
+          actionable: "no"
+
+        time_semantics:
+          evaluation_window: "PT0S"
+          baseline_window: null
+          staleness_threshold: "PT30S"
+
+        verification_rules:
+          - rule_id: "VR-ACT-LIVE-O1-001"
+            condition: "live_run_count is null"
+            action: "state = missing"
+
+      O3:
+        slot_contract_id: "ACT-LLM-LIVE-O3-v2.0.0"
+        slot_question: "Are any live runs approaching failure or limits?"
+        class: "interpretation"
+        state: "DRAFT"
+        capability_binding: "activity.jobs_list"
+
+        consumed_capabilities:
+          - capability_id: "activity.runs_list"
+            signals:
+              - "runs_near_threshold"
+          - capability_id: "policies.quota_tokens"
+            signals:
+              - "quota_headroom_percentage"
+
+        input_signals:
+          raw:
+            - signal_id: "runs_near_cost_limit"
+              source_capability: "activity.runs_list"
+              type: "integer"
+              required: true
+            - signal_id: "runs_near_time_limit"
+              source_capability: "activity.runs_list"
+              type: "integer"
+              required: true
+            - signal_id: "runs_near_token_limit"
+              source_capability: "activity.runs_list"
+              type: "integer"
+              required: true
+            - signal_id: "quota_headroom_percentage"
+              source_capability: "policies.quota_tokens"
+              type: "decimal"
+              required: false
+
+        computation_placeholders:
+          - name: "NEAR_THRESHOLD_CLASSIFIER"
+            description: "Classify runs by proximity to various limits"
+            inputs: ["runs_near_cost_limit", "runs_near_time_limit", "runs_near_token_limit"]
+            logic: "PLACEHOLDER - threshold proximity calculation"
+            deterministic: true
+
+        output_signals:
+          derived:
+            - signal_id: "has_near_threshold_runs"
+              type: "boolean"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "near_threshold_count"
+              type: "integer"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "near_threshold_by_type"
+              type: "object"
+              customer_facing: true
+              deterministic: true
+
+        truth_metadata:
+          class: "interpretation"
+          lens: "risk"
+          capability: "threshold_proximity_analysis"
+          state_rule: "available if run data present"
+          authority_rule: "affirmative if near_threshold_count > 0, negative (NO_NEAR_THRESHOLD) if 0"
+          actionable: "no"
+
+        time_semantics:
+          evaluation_window: "PT0S"
+          baseline_window: null
+          staleness_threshold: "PT30S"
+
+        verification_rules:
+          - rule_id: "VR-ACT-LIVE-O3-001"
+            condition: "any near_limit count is null"
+            action: "state = partial"
+          - rule_id: "VR-ACT-LIVE-O3-002"
+            condition: "quota_headroom_percentage is null"
+            action: "add 'quota_data' to unverified_signal_refs"
+
+  # ===========================================================================
+  # INCIDENTS DOMAIN - EVENTS SUBDOMAIN - ACTIVE TOPIC
+  # ===========================================================================
+
+  INC-EV-ACT:
+    panel_contract_id: "INC-EV-ACT-v2.0.0"
+    domain: "INCIDENTS"
+    subdomain: "EVENTS"
+    topic: "ACTIVE"
+    description: "Currently active incidents"
+
+    slots:
+      O1:
+        slot_contract_id: "INC-EV-ACT-O1-v2.0.0"
+        slot_question: "What are the currently active incidents?"
+        class: "evidence"
+        state: "DRAFT"
+        capability_binding: "incidents.list"
+
+        consumed_capabilities:
+          - capability_id: "incidents.guard_list"
+            signals:
+              - "incidents"
+              - "total_count"
+
+        input_signals:
+          raw:
+            - signal_id: "active_incidents"
+              source_capability: "incidents.guard_list"
+              type: "array"
+              required: true
+
+        computation_placeholders:
+          - name: "INCIDENT_CLASSIFIER"
+            description: "Classify incidents by type"
+            inputs: ["active_incidents"]
+            logic: "Group by type: failure, near_threshold, prevented, governance_halt"
+            deterministic: true
+
+        output_signals:
+          derived:
+            - signal_id: "incident_list"
+              type: "array"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "total_active_count"
+              type: "integer"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "by_type_counts"
+              type: "object"
+              customer_facing: true
+              deterministic: true
+
+        truth_metadata:
+          class: "evidence"
+          lens: "risk"
+          capability: "incident_enumeration"
+          state_rule: "available if incident API responsive"
+          authority_rule: "affirmative if incidents exist, negative (NO_INCIDENT) if empty list"
+          actionable: "no"
+
+        time_semantics:
+          evaluation_window: "PT0S"
+          baseline_window: null
+          staleness_threshold: "PT1M"
+
+        verification_rules:
+          - rule_id: "VR-INC-ACT-O1-001"
+            condition: "active_incidents is null"
+            action: "state = missing"
+
+      O3:
+        slot_contract_id: "INC-EV-ACT-O3-v2.0.0"
+        slot_question: "Is each incident contained or still dangerous?"
+        class: "interpretation"
+        state: "DRAFT"
+        capability_binding: "incidents.metrics"
+
+        consumed_capabilities:
+          - capability_id: "incidents.guard_list"
+            signals:
+              - "containment_status"
+              - "override_applied"
+              - "guardrail_status"
+
+        input_signals:
+          raw:
+            - signal_id: "incidents_with_containment"
+              source_capability: "incidents.guard_list"
+              type: "array"
+              required: true
+
+        computation_placeholders:
+          - name: "CONTAINMENT_STATUS_EVALUATOR"
+            description: "Evaluate containment for each incident"
+            inputs: ["incidents_with_containment"]
+            logic: "PLACEHOLDER - classify as contained/uncontained/partial"
+            deterministic: true
+
+        output_signals:
+          derived:
+            - signal_id: "contained_count"
+              type: "integer"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "uncontained_count"
+              type: "integer"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "override_count"
+              type: "integer"
+              customer_facing: true
+              deterministic: true
+            - signal_id: "guardrails_holding"
+              type: "boolean"
+              customer_facing: true
+              deterministic: true
+
+        truth_metadata:
+          class: "interpretation"
+          lens: "risk"
+          capability: "containment_status_evaluation"
+          state_rule: "available if incident containment data present"
+          authority_rule: "affirmative if all contained, negative if any uncontained"
+          actionable: "no"
+
+        time_semantics:
+          evaluation_window: "PT0S"
+          baseline_window: null
+          staleness_threshold: "PT1M"
+
+        verification_rules:
+          - rule_id: "VR-INC-ACT-O3-001"
+            condition: "containment_status missing for any incident"
+            action: "state = partial"
+          - rule_id: "VR-INC-ACT-O3-002"
+            condition: "uncontained_count > 0 AND guardrails_holding = true"
+            action: "contradictory_signal_count += 1"
+
+# =============================================================================
+# CROSS-SLOT CONSISTENCY RULES
+# =============================================================================
+
+consistency_rules:
+  - rule_id: "CR-001"
+    panels: ["OVR-SUM-HL", "ACT-LLM-SIG"]
+    condition: "OVR-SUM-HL.O2.attention_required = true AND ACT-LLM-SIG.O1.active_risk_count = 0"
+    action: "flag_inconsistency"
+    resolution: "mark both slots as indeterminate, surface conflict"
+
+  - rule_id: "CR-002"
+    panels: ["OVR-SUM-CI", "ACT-LLM-SIG"]
+    condition: "OVR-SUM-CI.O4.projected_direction = INCREASE AND ACT-LLM-SIG.O4.cost_overrun_count = 0"
+    action: "downgrade_authority"
+    resolution: "add 'cost_signal_mismatch' to unverified_signal_refs"
+
+  - rule_id: "CR-003"
+    panels: ["ACT-LLM-LIVE", "ACT-LLM-SIG"]
+    condition: "ACT-LLM-LIVE.O3.near_threshold_count > 0 AND ACT-LLM-SIG.O2.has_threshold_proximity = false"
+    action: "flag_inconsistency"
+    resolution: "mark ACT-LLM-SIG.O2 as indeterminate"
+
+  - rule_id: "CR-004"
+    panels: ["INC-EV-ACT", "OVR-SUM-HL"]
+    condition: "INC-EV-ACT.O1.total_active_count > 0 AND OVR-SUM-HL.O2.active_incidents = 0"
+    action: "flag_inconsistency"
+    resolution: "mark OVR-SUM-HL.O2 as indeterminate, surface conflict"
+
+  - rule_id: "CR-005"
+    panels: ["INC-EV-ACT"]
+    condition: "INC-EV-ACT.O3.uncontained_count > 0 AND INC-EV-ACT.O3.guardrails_holding = true"
+    action: "flag_internal_inconsistency"
+    resolution: "contradictory_signal_count += 1, authority = indeterminate"
+
+# =============================================================================
+# ADAPTER RESPONSE ENVELOPE SCHEMA
+# =============================================================================
+
+response_envelope_schema:
+  adapter_version: "string"
+  panel_contract_id: "string"
+  request_id: "uuid"
+  as_of: "ISO8601_timestamp"
+
+  slots:
+    type: "object"
+    properties:
+      slot_id:
+        slot_contract_id: "string"
+        state: "enum[available, partial, missing]"
+        authority: "enum[affirmative, negative, indeterminate]"
+
+        output:
+          type: "object"
+          description: "Computed output signals"
+
+        truth_metadata:
+          class: "string"
+          lens: "string"
+          capability: "string"
+          actionable: "boolean"
+
+        time_semantics:
+          as_of: "ISO8601_timestamp"
+          evaluation_window: "string"
+          baseline_window: "string|null"
+          data_cutoff_time: "ISO8601_timestamp"
+
+        verification:
+          missing_input_count: "integer"
+          stale_input_count: "integer"
+          contradictory_signal_count: "integer"
+          unverified_signal_refs: "array[string]"
+
+        # NEW: Capability resolution trace
+        capability_resolution:
+          capabilities_resolved: "array[string]"
+          capabilities_failed: "array[string]"
+          non_callable_reasons: "array[object]"
+
+  consistency_checks:
+    type: "array"
+    items:
+      rule_id: "string"
+      passed: "boolean"
+      conflict_description: "string|null"
+      affected_slots: "array[string]"
+
+  negative_authority_declarations:
+    type: "array"
+    items:
+      slot_id: "string"
+      declaration: "string"
+      confidence: "enum[HIGH, MEDIUM, LOW]"

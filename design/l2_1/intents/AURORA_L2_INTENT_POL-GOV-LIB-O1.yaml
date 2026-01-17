@@ -1,0 +1,61 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: POL-GOV-LIB-O1
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-GOV-LIB-O1
+version: 1.0.0
+panel_class: evidence
+metadata:
+  domain: POLICIES
+  subdomain: GOVERNANCE
+  topic: POLICY_LIBRARY
+  topic_id: POLICIES.GOVERNANCE.POLICY_LIBRARY
+  order: O1
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: policy_governance
+  facet_criticality: HIGH
+display:
+  name: POL-GOV-LIB-O1
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: policies.safety_rules
+  status: ASSUMED
+  assumed_endpoint: /api/v1/policy-layer/safety-rules
+  assumed_method: GET
+sdsr:
+  scenario: SDSR-POL-GOV-LIB-O1-001
+  verified: false
+notes: 'Show the global policy catalog — all policies available from Agenticverz backend.
+
+
+  What it shows:
+
+  - Complete list of global policies (cost controls, rate limits, safety guards, etc.)
+
+  - Metadata: policy ID, category, default enforcement mode, version, maintainer
+
+  - Read-only discovery surface
+
+
+  What it explicitly does NOT show:
+
+  - No adoption controls
+
+  - No filtering by current usage
+
+  - No enforcement'

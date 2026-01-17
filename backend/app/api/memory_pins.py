@@ -28,6 +28,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from ..db import get_session as get_db_session
+from ..schemas.response import wrap_dict
 from ..utils.metrics_helpers import get_or_create_counter, get_or_create_histogram
 
 logger = logging.getLogger("nova.api.memory_pins")
@@ -278,7 +279,7 @@ async def create_or_upsert_pin(pin: MemoryPinCreate, request: Request, db=Depend
             },
         )
 
-        return response
+        return wrap_dict(response.model_dump())
 
     except IntegrityError as e:
         db.rollback()
@@ -351,7 +352,7 @@ async def get_pin(
         # Write audit log
         write_memory_audit(db, operation="get", tenant_id=tenant_id, key=key, success=True, latency_ms=latency_ms)
 
-        return response
+        return wrap_dict(response.model_dump())
 
     except HTTPException:
         raise
@@ -553,11 +554,11 @@ async def cleanup_expired_pins(
 
         logger.info("memory_pins_cleanup", extra={"deleted_count": deleted_count, "tenant_id": tenant_id})
 
-        return {
+        return wrap_dict({
             "deleted_count": deleted_count,
             "tenant_id": tenant_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
+        })
 
     except Exception as e:
         db.rollback()

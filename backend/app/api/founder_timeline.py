@@ -24,6 +24,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 # PIN-318: Phase 1.2 Authority Hardening - Add founder auth
 from ..auth.console_auth import verify_fops_token
+from ..schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.founder_timeline")
 
@@ -532,7 +533,7 @@ async def count_decision_records(
     """
     db_url = get_db_url()
     if not db_url:
-        return {"count": 0, "error": "Database not configured"}
+        return wrap_dict({"count": 0, "error": "Database not configured"})
 
     try:
         engine = create_engine(db_url)
@@ -558,8 +559,8 @@ async def count_decision_records(
             count = result.scalar() or 0
 
         engine.dispose()
-        return {"count": count}
+        return wrap_dict({"count": count})
 
     except SQLAlchemyError as e:
         logger.warning(f"Failed to count decision records: {e}")
-        return {"count": 0, "error": str(e)}
+        return wrap_dict({"count": 0, "error": str(e)})

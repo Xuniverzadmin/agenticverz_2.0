@@ -27,6 +27,7 @@ from sqlalchemy import func, select
 from ..auth import verify_api_key
 from ..db import get_async_session
 from ..models.feedback import PatternFeedback
+from ..schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.feedback")
 
@@ -237,7 +238,7 @@ async def get_feedback_stats(
             by_type[r.pattern_type] = by_type.get(r.pattern_type, 0) + 1
             by_severity[r.severity] = by_severity.get(r.severity, 0) + 1
 
-        return {
+        return wrap_dict({
             "total": total,
             "acknowledged": acknowledged_count,
             "unacknowledged": unacknowledged_count,
@@ -245,4 +246,4 @@ async def get_feedback_stats(
             "by_severity": by_severity,
             "read_only": True,
             "pb_s3_compliant": True,
-        }
+        })

@@ -58,6 +58,7 @@ from app.core.execution_context import ExecutionContext, EvidenceSource
 from app.evidence.capture import capture_environment_evidence
 from app.models.tenant import WorkerRun
 from app.policy.engine import PolicyEngine
+from app.schemas.response import wrap_dict
 from app.services.worker_write_service_async import WorkerWriteServiceAsync
 
 logger = logging.getLogger("nova.api.workers")
@@ -538,7 +539,7 @@ async def _get_run(run_id: str) -> Optional[Dict[str, Any]]:
         if not run:
             return None
 
-        return {
+        return wrap_dict({
             "run_id": run.id,
             "task": run.task,
             "status": run.status,
@@ -555,7 +556,7 @@ async def _get_run(run_id: str) -> Optional[Dict[str, Any]]:
             "routing_decisions": [],
             "cost_report": None,
             "created_at": run.created_at.isoformat() if run.created_at else None,
-        }
+        })
 
 
 async def _list_runs(limit: int = 20, tenant_id: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -1028,7 +1029,7 @@ async def run_worker(
         # Store the run
         await _store_run(run_id, response.model_dump(), tenant_id=tenant_id)
 
-        return response
+        return wrap_dict(response.model_dump())
 
     except Exception as e:
         logger.exception("worker_run_failed")
@@ -1301,13 +1302,13 @@ async def worker_health():
     except Exception:
         pass
 
-    return {
+    return wrap_dict({
         "status": "healthy",
         "version": "0.4",  # v0.4: P0-005 fix - PostgreSQL persistence (no in-memory)
         "moats": moat_status,
         "runs_in_db": run_count,
         "persistence": "postgresql",  # Explicit indicator of persistence backend
-    }
+    })
 
 
 @router.delete("/runs/{run_id}")
@@ -1327,7 +1328,7 @@ async def delete_run(
         if run:
             await write_service.delete_worker_run(run)
             await write_service.commit()
-            return {"deleted": True, "run_id": run_id}
+            return wrap_dict({"deleted": True, "run_id": run_id})
 
     raise HTTPException(status_code=404, detail="Run not found")
 
@@ -1444,11 +1445,11 @@ async def get_run_events(
     Useful for replaying events or debugging.
     """
     events = _event_bus.get_history(run_id)
-    return {
+    return wrap_dict({
         "run_id": run_id,
         "events": events,
         "count": len(events),
-    }
+    })
 
 
 # =============================================================================

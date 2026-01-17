@@ -1,40 +1,38 @@
-# AURORA L2 Capability Registry Entry
-# Capability: incidents.patterns
-# Generated: 2026-01-15T06:41:47.999115+00:00
-# Generator: aurora_capability_scaffold.py
-#
-# STATUS LIFECYCLE (Machine-Owned):
-#   DECLARED → ASSUMED → OBSERVED → TRUSTED
-#
-# RULES:
-#   - Status transitions are MACHINE-ONLY
-#   - Humans must NOT edit status field
-#   - DECLARED → OBSERVED requires SDSR verification
-#   - CI blocks manual status changes
+# AURORA_L2 Capability Registry - Incidents Pattern Detection
+# Status: DECLARED (awaiting E2E validation per CAP-E2E-001)
+# Reference: docs/architecture/incidents/INCIDENTS_DOMAIN_SQL.md#5-act-o4
 #
 capability_id: incidents.patterns
 status: DECLARED
 source_panels:
-- INC-EV-ACT-O4
+  - INC-EV-ACT-O4
 domain: INCIDENTS
-endpoint: /api/v1/ops/incidents/patterns
-method: GET
 metadata:
-  generated_by: aurora_capability_scaffold.py
-  generated_on: '2026-01-15'
-  declared_by: AURORA_AUTOMATION
-  declared_on: '2026-01-15'
-coherency:
-  last_checked: null
-  status: UNVERIFIED
-  checked_by: null
-observation:
-  scenario_id: null
-  observed_at: null
-  trace_id: null
-  invariants_passed: null
+  generated_by: manual
+  generated_on: '2026-01-17'
+  declared_by: claude-implementation
+  declared_on: '2026-01-17'
+  # observed_by: null  # Set by SDSR only
+  # observed_on: null  # Set by SDSR only
+assumption:
+  endpoint: /api/v1/incidents/patterns
+  method: GET
+  source: INCIDENTS_DOMAIN_SQL
 acceptance_criteria:
-- Endpoint exists and responds
-- Response schema matches contract
-- Auth works correctly
-- Data is real (not mock)
+  - Returns detected incident patterns
+  - Includes category_cluster patterns
+  - Includes severity_spike patterns
+  - Includes cascade_failure patterns
+  - Response includes confidence scores
+implementation:
+  endpoint: /api/v1/incidents/patterns
+  method: GET
+  handler: app.api.incidents.detect_patterns
+  service: app.services.incidents.IncidentPatternService
+auth:
+  roles: [admin, member]
+  permissions: [incidents:read]
+notes:
+  - "L4 service: IncidentPatternService"
+  - "Read-only analytics, no writes"
+  - "Tenant-scoped via auth_context"

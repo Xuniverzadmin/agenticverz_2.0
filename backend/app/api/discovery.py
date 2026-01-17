@@ -12,6 +12,7 @@ from typing import Optional
 from fastapi import APIRouter, Query
 
 from app.discovery.ledger import get_signals
+from app.schemas.response import wrap_dict
 
 router = APIRouter(prefix="/api/v1/discovery", tags=["discovery"])
 
@@ -39,11 +40,11 @@ async def list_signals(
         limit=limit,
     )
 
-    return {
+    return wrap_dict({
         "items": signals,
         "total": len(signals),
         "note": "Discovery Ledger records curiosity, not decisions.",
-    }
+    })
 
 
 @router.get("/stats")
@@ -96,7 +97,7 @@ async def signal_stats():
                 )
             ).fetchall()
 
-            return {
+            return wrap_dict({
                 "by_artifact": [
                     {"artifact": r.artifact, "count": r.count, "total_seen": r.total_seen} for r in by_artifact
                 ],
@@ -104,11 +105,11 @@ async def signal_stats():
                     {"signal_type": r.signal_type, "count": r.count, "total_seen": r.total_seen} for r in by_signal_type
                 ],
                 "by_status": [{"status": r.status, "count": r.count} for r in by_status],
-            }
+            })
     except Exception as e:
-        return {
+        return wrap_dict({
             "by_artifact": [],
             "by_signal_type": [],
             "by_status": [],
             "error": str(e),
-        }
+        })

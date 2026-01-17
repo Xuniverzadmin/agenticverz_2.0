@@ -23,6 +23,7 @@ from ..services.tenant_service import (
     TenantService,
     TenantServiceError,
 )
+from ..schemas.response import wrap_dict, wrap_list
 from ..services.worker_registry_service import (
     WorkerNotFoundError,
     WorkerRegistryService,
@@ -456,7 +457,7 @@ async def revoke_api_key(
             reason=reason,
             user_id=ctx.user_id,
         )
-        return {"success": True, "message": f"API key {key_id} revoked"}
+        return wrap_dict({"success": True, "message": f"API key {key_id} revoked"})
 
     except TenantServiceError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -491,7 +492,7 @@ async def list_available_workers_for_tenant(
         ctx.tenant_id,
         include_disabled=include_disabled,
     )
-    return workers
+    return wrap_list(workers)
 
 
 @router.get("/workers/{worker_id}", response_model=WorkerDetailResponse)
@@ -611,7 +612,7 @@ async def tenant_health():
     """
     Health check for tenant system.
     """
-    return {
+    return wrap_dict({
         "status": "healthy",
         "version": "M21",
         "features": [
@@ -621,4 +622,4 @@ async def tenant_health():
             "usage_metering",
             "worker_registry",
         ],
-    }
+    })

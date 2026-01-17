@@ -40,6 +40,7 @@ from sqlmodel import Session
 
 from ..auth.authority import AuthorityResult, require_replay_read, verify_tenant_access
 from ..db import get_session as get_db_session
+from ..schemas.response import wrap_dict
 from ..models.killswitch import Incident, IncidentEvent, ProxyCall
 
 logger = logging.getLogger("nova.api.replay")
@@ -469,7 +470,7 @@ async def get_replay_timeline(
         start_time = incident.started_at.isoformat()
         end_time = (incident.ended_at or incident.started_at).isoformat()
 
-    return {
+    return wrap_dict({
         "incident_id": incident.id,
         "incident_title": incident.title,
         "timeline_start": start_time,
@@ -478,7 +479,7 @@ async def get_replay_timeline(
         "items": [item.model_dump() for item in all_items],
         "is_immutable": True,
         "note": "Timeline data is read-only. No mutations are possible.",
-    }
+    })
 
 
 # =============================================================================
@@ -573,14 +574,14 @@ async def explain_replay_item(
                 "note": "This is the actual API call that was executed.",
             }
 
-        return {
+        return wrap_dict({
             "item_id": item_id,
             "item_type": "proxy_call",
             "category": category.value,
             "timestamp": call.created_at.isoformat(),
             "explanation": explanation,
             "is_immutable": True,
-        }
+        })
 
     # Try to find as IncidentEvent
     stmt = select(IncidentEvent).where(
@@ -592,7 +593,7 @@ async def explain_replay_item(
     event = session.exec(stmt).first()
 
     if event:
-        return {
+        return wrap_dict({
             "item_id": item_id,
             "item_type": "incident_event",
             "category": "event",
@@ -604,6 +605,6 @@ async def explain_replay_item(
                 "note": "This is an incident timeline event.",
             },
             "is_immutable": True,
-        }
+        })
 
     raise HTTPException(status_code=404, detail=f"Item {item_id} not found")

@@ -33,6 +33,17 @@ from .skill import (
     SkillInputBase,
     SkillOutputBase,
 )
+from .response import (
+    ErrorDetail,
+    ResponseEnvelope,
+    ResponseMeta,
+    error,
+    ok,
+    paginated,
+    wrap_dict,
+    wrap_error,
+    wrap_list,
+)
 
 # M0: JSON Schema loaders for machine-native contracts
 _SCHEMA_DIR = Path(__file__).parent
@@ -97,4 +108,14 @@ __all__ = [
     "get_skill_metadata_schema",
     "get_resource_contract_schema",
     "get_agent_profile_schema",
+    # Response Envelope (API-002)
+    "ResponseEnvelope",
+    "ResponseMeta",
+    "ErrorDetail",
+    "ok",
+    "error",
+    "paginated",
+    "wrap_dict",
+    "wrap_list",
+    "wrap_error",
 ]

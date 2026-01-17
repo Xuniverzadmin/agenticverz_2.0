@@ -24,6 +24,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from uuid import UUID
 
 from sqlmodel import Session
 
@@ -43,7 +44,8 @@ from ..metrics import (
     nova_skill_attempts_total,
     nova_skill_duration_seconds,
 )
-from ..services.incident_engine import get_incident_engine
+from ..services.incidents.facade import get_incident_facade
+from ..services.lessons_learned_engine import get_lessons_learned_engine
 from ..services.policy_violation_service import create_policy_evaluation_sync
 from ..skills import get_skill_config
 from ..skills.executor import (
@@ -341,8 +343,8 @@ class RunRunner:
                 logger.warning("create_incident_skip_no_run", extra={"run_id": self.run_id})
                 return
 
-            incident_engine = get_incident_engine()
-            incident_id = incident_engine.check_and_create_incident(
+            incident_facade = get_incident_facade()
+            incident_id = incident_facade.check_and_create_incident(
                 run_id=self.run_id,
                 status="failed",
                 error_message=error_message or run.error_message,
@@ -389,8 +391,8 @@ class RunRunner:
                 return
 
             # PIN-407: Create incident record (SUCCESS, FAILURE, BLOCKED, etc.)
-            incident_engine = get_incident_engine()
-            incident_id = incident_engine.create_incident_for_run(
+            incident_facade = get_incident_facade()
+            incident_id = incident_facade.create_incident_for_run(
                 run_id=self.run_id,
                 tenant_id=run.tenant_id,
                 run_status=run_status,
@@ -436,6 +438,107 @@ class RunRunner:
             logger.error(
                 "governance_records_creation_failed",
                 extra={"run_id": self.run_id, "status": run_status, "error": str(e)},
+            )
+
+    def _emit_lessons_on_success(
+        self,
+        run: Run,
+        budget_context: BudgetContext,
+        run_consumed_cents: int,
+        duration_ms: int,
+    ):
+        """
+        Emit lessons for near-threshold and critical success conditions (PIN-411).
+
+        This method is WORKER-SAFE:
+        - Never raises exceptions (wraps all calls)
+        - Never blocks run completion
+        - Logs failures without interrupting the run
+
+        Near-threshold detection:
+        - Triggered when budget utilization >= 85% and < 100%
+        - Uses threshold bands (85-90%, 90-95%, 95-100%) for debounce granularity
+
+        Critical success detection:
+        - Triggered when run shows exceptional cost efficiency or performance
+        - Criteria: < 30% utilization AND fast execution (< 50% of expected)
+        """
+        if not run:
+            return
+
+        try:
+            # Calculate budget utilization
+            limit_cents = budget_context.limit_cents
+            if limit_cents <= 0:
+                # No budget configured, skip lessons
+                return
+
+            # Total consumed = pre-run consumed + this run's consumption
+            total_consumed = budget_context.consumed_cents + run_consumed_cents
+            utilization = (total_consumed / limit_cents) * 100
+
+            # Near-threshold detection: 85% <= utilization < 100%
+            if 85.0 <= utilization < 100.0:
+                engine = get_lessons_learned_engine()
+                lesson_id = engine.emit_near_threshold(
+                    tenant_id=run.tenant_id or "",
+                    metric="budget",
+                    utilization=utilization,
+                    threshold_value=limit_cents,
+                    current_value=total_consumed,
+                    source_event_id=UUID(self.run_id),
+                    window="24h",
+                    is_synthetic=run.is_synthetic or False,
+                    synthetic_scenario_id=run.synthetic_scenario_id,
+                )
+                if lesson_id:
+                    logger.info(
+                        "lessons_near_threshold_emitted",
+                        extra={
+                            "run_id": self.run_id,
+                            "lesson_id": str(lesson_id),
+                            "utilization": utilization,
+                        },
+                    )
+
+            # Critical success detection
+            # Criteria: Very efficient run (< 30% utilization, fast execution)
+            # This helps identify patterns worth documenting as best practices
+            if utilization < 30.0 and duration_ms < 5000:  # < 5s execution
+                # Calculate efficiency metrics for the lesson
+                efficiency_metrics = {
+                    "utilization_percent": utilization,
+                    "duration_ms": duration_ms,
+                    "run_consumed_cents": run_consumed_cents,
+                    "budget_remaining_percent": 100.0 - utilization,
+                    "efficiency_score": (100.0 - utilization) * (1000.0 / max(duration_ms, 1)),
+                }
+
+                engine = get_lessons_learned_engine()
+                lesson_id = engine.emit_critical_success(
+                    tenant_id=run.tenant_id or "",
+                    success_type="cost_efficiency",
+                    metrics=efficiency_metrics,
+                    source_event_id=UUID(self.run_id),
+                    is_synthetic=run.is_synthetic or False,
+                    synthetic_scenario_id=run.synthetic_scenario_id,
+                )
+                if lesson_id:
+                    logger.info(
+                        "lessons_critical_success_emitted",
+                        extra={
+                            "run_id": self.run_id,
+                            "lesson_id": str(lesson_id),
+                            "success_type": "cost_efficiency",
+                            "efficiency_metrics": efficiency_metrics,
+                        },
+                    )
+
+        except Exception as e:
+            # Worker-safe: log and continue, never block run completion
+            logger.warning(
+                "lessons_emission_failed",
+                extra={"run_id": self.run_id, "error": str(e)},
             )
 
     def _create_llm_run_record(
@@ -1131,6 +1234,17 @@ class RunRunner:
                 logger.debug("integrity_evidence_captured", extra={"run_id": self.run_id, "status": "succeeded"})
             except Exception as e:
                 logger.warning("integrity_evidence_capture_failed", extra={"run_id": self.run_id, "error": str(e)})
+
+            # =============================================================
+            # PIN-411: Lessons Learned Engine - Near-Threshold & Critical Success
+            # Worker-safe: never raises, never blocks run completion
+            # =============================================================
+            self._emit_lessons_on_success(
+                run=run,
+                budget_context=budget_context,
+                run_consumed_cents=run_consumed_cents,
+                duration_ms=duration_ms,
+            )
 
         except Exception as exc:
             # Failure: increment attempts and set next_attempt_at with exponential backoff

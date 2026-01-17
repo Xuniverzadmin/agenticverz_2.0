@@ -1,0 +1,377 @@
+# Layer: L2.1 — Panel Dependency Graph
+# Product: system-wide
+# Version: 1.0.0
+# Purpose: Declare panel-to-panel dependencies for evaluation order and failure propagation
+# Constraint: If upstream panel is indeterminate, downstream cannot be affirmative
+
+---
+metadata:
+  version: "1.0.0"
+  generated: "2026-01-16"
+  purpose: "Panel-level dependency awareness for evaluation short-circuit and failure explanation"
+
+# =============================================================================
+# DEPENDENCY DECLARATIONS
+# =============================================================================
+
+dependencies:
+
+  # ---------------------------------------------------------------------------
+  # OVERVIEW DOMAIN
+  # ---------------------------------------------------------------------------
+
+  OVR-SUM-HL:
+    panel_id: "OVR-SUM-HL"
+    description: "Aggregates Activity, Incidents, and Policy signals for system highlights"
+    depends_on:
+      - panel_id: "ACT-LLM-SIG"
+        dependency_type: "data_source"
+        slots_required: ["O1"]
+        failure_propagation: "IF ACT-LLM-SIG.O1.state = missing → OVR-SUM-HL.O1.state = partial"
+      - panel_id: "ACT-LLM-LIVE"
+        dependency_type: "data_source"
+        slots_required: ["O1", "O3"]
+        failure_propagation: "IF ACT-LLM-LIVE.O1.state = missing → OVR-SUM-HL.O1.state = partial"
+      - panel_id: "INC-EV-ACT"
+        dependency_type: "data_source"
+        slots_required: ["O1"]
+        failure_propagation: "IF INC-EV-ACT.O1.state = missing → OVR-SUM-HL.O2.state = partial"
+      - panel_id: "POL-LIM-VIO"
+        dependency_type: "data_source"
+        slots_required: ["O1"]
+        failure_propagation: "IF POL-LIM-VIO.O1.state = missing → OVR-SUM-HL.O4.state = partial"
+    evaluation_order: 4
+    can_short_circuit: true
+    short_circuit_condition: "IF all dependencies.state = missing → OVR-SUM-HL.state = missing"
+
+  OVR-SUM-CI:
+    panel_id: "OVR-SUM-CI"
+    description: "Cost intelligence derived from cost and anomaly data"
+    depends_on:
+      - panel_id: "COST-SUMMARY"
+        dependency_type: "data_source"
+        slots_required: ["*"]
+        failure_propagation: "IF COST-SUMMARY unavailable → OVR-SUM-CI.state = missing"
+      - panel_id: "COST-ANOMALIES"
+        dependency_type: "enrichment"
+        slots_required: ["*"]
+        failure_propagation: "IF COST-ANOMALIES unavailable → OVR-SUM-CI.O4.state = partial"
+    evaluation_order: 3
+    can_short_circuit: true
+    short_circuit_condition: "IF COST-SUMMARY unavailable → skip OVR-SUM-CI evaluation"
+
+  OVR-SUM-DC:
+    panel_id: "OVR-SUM-DC"
+    description: "Decision surface aggregating policy and incident decisions"
+    depends_on:
+      - panel_id: "POL-GOV-ACT"
+        dependency_type: "data_source"
+        slots_required: ["O1", "O2"]
+        failure_propagation: "IF POL-GOV-ACT.state = missing → OVR-SUM-DC.O1.state = partial"
+      - panel_id: "POL-GOV-DFT"
+        dependency_type: "data_source"
+        slots_required: ["O1", "O2"]
+        failure_propagation: "IF POL-GOV-DFT.state = missing → OVR-SUM-DC.O1.state = partial"
+      - panel_id: "INC-EV-ACT"
+        dependency_type: "data_source"
+        slots_required: ["O1"]
+        failure_propagation: "IF INC-EV-ACT.state = missing → OVR-SUM-DC.O1.state = partial"
+    evaluation_order: 5
+    can_short_circuit: false
+
+  # ---------------------------------------------------------------------------
+  # ACTIVITY DOMAIN
+  # ---------------------------------------------------------------------------
+
+  ACT-LLM-LIVE:
+    panel_id: "ACT-LLM-LIVE"
+    description: "Live run state - no upstream panel dependencies"
+    depends_on: []
+    evaluation_order: 1
+    can_short_circuit: false
+    note: "Primary data source - evaluated first"
+
+  ACT-LLM-COMP:
+    panel_id: "ACT-LLM-COMP"
+    description: "Completed runs - no upstream panel dependencies"
+    depends_on: []
+    evaluation_order: 1
+    can_short_circuit: false
+    note: "Primary data source - evaluated first"
+
+  ACT-LLM-SIG:
+    panel_id: "ACT-LLM-SIG"
+    description: "Activity signals derived from live and completed runs plus incidents"
+    depends_on:
+      - panel_id: "ACT-LLM-LIVE"
+        dependency_type: "data_source"
+        slots_required: ["O1", "O3"]
+        failure_propagation: "IF ACT-LLM-LIVE.state = missing → ACT-LLM-SIG.O1.state = partial"
+      - panel_id: "ACT-LLM-COMP"
+        dependency_type: "data_source"
+        slots_required: ["O1", "O2"]
+        failure_propagation: "IF ACT-LLM-COMP.state = missing → ACT-LLM-SIG.O3.state = partial"
+      - panel_id: "INC-EV-ACT"
+        dependency_type: "enrichment"
+        slots_required: ["O1"]
+        failure_propagation: "IF INC-EV-ACT.state = missing → ACT-LLM-SIG.O1.authority = indeterminate"
+    evaluation_order: 2
+    can_short_circuit: true
+    short_circuit_condition: "IF ACT-LLM-LIVE.state = missing AND ACT-LLM-COMP.state = missing → ACT-LLM-SIG.state = missing"
+
+  # ---------------------------------------------------------------------------
+  # INCIDENTS DOMAIN
+  # ---------------------------------------------------------------------------
+
+  INC-EV-ACT:
+    panel_id: "INC-EV-ACT"
+    description: "Active incidents - no upstream panel dependencies"
+    depends_on: []
+    evaluation_order: 1
+    can_short_circuit: false
+    note: "Primary data source - evaluated first"
+
+  INC-EV-RES:
+    panel_id: "INC-EV-RES"
+    description: "Resolved incidents - derived from active incidents"
+    depends_on:
+      - panel_id: "INC-EV-ACT"
+        dependency_type: "state_transition"
+        slots_required: ["O1"]
+        failure_propagation: "IF INC-EV-ACT.state = missing → INC-EV-RES.state = partial"
+    evaluation_order: 2
+    can_short_circuit: false
+
+  INC-EV-HIST:
+    panel_id: "INC-EV-HIST"
+    description: "Historical incidents - aggregates active and resolved"
+    depends_on:
+      - panel_id: "INC-EV-ACT"
+        dependency_type: "data_source"
+        slots_required: ["O1"]
+        failure_propagation: "IF INC-EV-ACT.state = missing → INC-EV-HIST current window unavailable"
+      - panel_id: "INC-EV-RES"
+        dependency_type: "data_source"
+        slots_required: ["O1"]
+        failure_propagation: "IF INC-EV-RES.state = missing → INC-EV-HIST resolution data unavailable"
+    evaluation_order: 3
+    can_short_circuit: false
+
+  # ---------------------------------------------------------------------------
+  # POLICIES DOMAIN
+  # ---------------------------------------------------------------------------
+
+  POL-GOV-ACT:
+    panel_id: "POL-GOV-ACT"
+    description: "Active policies - no upstream panel dependencies"
+    depends_on: []
+    evaluation_order: 1
+    can_short_circuit: false
+    note: "Primary data source - evaluated first"
+
+  POL-GOV-DFT:
+    panel_id: "POL-GOV-DFT"
+    description: "Draft policies - derived from governance signals"
+    depends_on:
+      - panel_id: "POL-GOV-ACT"
+        dependency_type: "reference"
+        slots_required: ["O1"]
+        failure_propagation: "IF POL-GOV-ACT.state = missing → POL-GOV-DFT cannot compare to active"
+      - panel_id: "ACT-LLM-SIG"
+        dependency_type: "data_source"
+        slots_required: ["O1", "O4"]
+        failure_propagation: "IF ACT-LLM-SIG.state = missing → POL-GOV-DFT.O1 cannot derive signals"
+      - panel_id: "INC-EV-ACT"
+        dependency_type: "data_source"
+        slots_required: ["O1", "O3"]
+        failure_propagation: "IF INC-EV-ACT.state = missing → POL-GOV-DFT cannot derive from incidents"
+    evaluation_order: 3
+    can_short_circuit: true
+    short_circuit_condition: "IF ACT-LLM-SIG.state = missing AND INC-EV-ACT.state = missing → POL-GOV-DFT.O1.state = missing"
+
+  POL-GOV-LIB:
+    panel_id: "POL-GOV-LIB"
+    description: "Policy library - references active policies for adoption status"
+    depends_on:
+      - panel_id: "POL-GOV-ACT"
+        dependency_type: "reference"
+        slots_required: ["O1"]
+        failure_propagation: "IF POL-GOV-ACT.state = missing → POL-GOV-LIB.O3 adoption status unavailable"
+    evaluation_order: 2
+    can_short_circuit: false
+
+  POL-LIM-THR:
+    panel_id: "POL-LIM-THR"
+    description: "Threshold configuration - no upstream panel dependencies"
+    depends_on: []
+    evaluation_order: 1
+    can_short_circuit: false
+    note: "Primary data source - evaluated first"
+
+  POL-LIM-VIO:
+    panel_id: "POL-LIM-VIO"
+    description: "Violations - depends on thresholds for context"
+    depends_on:
+      - panel_id: "POL-LIM-THR"
+        dependency_type: "reference"
+        slots_required: ["O1"]
+        failure_propagation: "IF POL-LIM-THR.state = missing → POL-LIM-VIO cannot reference thresholds"
+    evaluation_order: 2
+    can_short_circuit: false
+
+  # ---------------------------------------------------------------------------
+  # LOGS DOMAIN
+  # ---------------------------------------------------------------------------
+
+  LOG-REC-LLM:
+    panel_id: "LOG-REC-LLM"
+    description: "LLM run logs - depends on activity for run references"
+    depends_on:
+      - panel_id: "ACT-LLM-LIVE"
+        dependency_type: "reference"
+        slots_required: ["O1"]
+        failure_propagation: "IF ACT-LLM-LIVE.state = missing → LOG-REC-LLM live run logs unavailable"
+      - panel_id: "ACT-LLM-COMP"
+        dependency_type: "reference"
+        slots_required: ["O1"]
+        failure_propagation: "IF ACT-LLM-COMP.state = missing → LOG-REC-LLM completed run logs unavailable"
+    evaluation_order: 2
+    can_short_circuit: false
+
+  LOG-REC-AUD:
+    panel_id: "LOG-REC-AUD"
+    description: "Audit logs - no upstream panel dependencies"
+    depends_on: []
+    evaluation_order: 1
+    can_short_circuit: false
+    note: "Primary data source - evaluated first"
+
+  LOG-REC-SYS:
+    panel_id: "LOG-REC-SYS"
+    description: "System logs - no upstream panel dependencies"
+    depends_on: []
+    evaluation_order: 1
+    can_short_circuit: false
+    note: "Primary data source - evaluated first"
+
+  # ---------------------------------------------------------------------------
+  # ANALYTICS DOMAIN
+  # ---------------------------------------------------------------------------
+
+  ANA-CST-USG:
+    panel_id: "ANA-CST-USG"
+    description: "Cost usage analytics - aggregates from multiple domains"
+    depends_on:
+      - panel_id: "POL-GOV-ACT"
+        dependency_type: "data_source"
+        slots_required: ["O1"]
+        failure_propagation: "IF POL-GOV-ACT.state = missing → ANA-CST-USG.O1 coverage unavailable"
+      - panel_id: "POL-LIM-VIO"
+        dependency_type: "data_source"
+        slots_required: ["O1"]
+        failure_propagation: "IF POL-LIM-VIO.state = missing → ANA-CST-USG.O3 violation data unavailable"
+      - panel_id: "ACT-LLM-COMP"
+        dependency_type: "data_source"
+        slots_required: ["O1", "O4"]
+        failure_propagation: "IF ACT-LLM-COMP.state = missing → ANA-CST-USG usage calculation partial"
+    evaluation_order: 4
+    can_short_circuit: true
+    short_circuit_condition: "IF POL-GOV-ACT.state = missing AND POL-LIM-VIO.state = missing → ANA-CST-USG.state = missing"
+
+# =============================================================================
+# EVALUATION ORDER (Topological Sort Result)
+# =============================================================================
+
+evaluation_order:
+  tier_1:
+    order: 1
+    description: "Primary data sources - no dependencies"
+    panels:
+      - "ACT-LLM-LIVE"
+      - "ACT-LLM-COMP"
+      - "INC-EV-ACT"
+      - "POL-GOV-ACT"
+      - "POL-LIM-THR"
+      - "LOG-REC-AUD"
+      - "LOG-REC-SYS"
+
+  tier_2:
+    order: 2
+    description: "Single-dependency panels"
+    panels:
+      - "ACT-LLM-SIG"
+      - "INC-EV-RES"
+      - "POL-GOV-LIB"
+      - "POL-LIM-VIO"
+      - "LOG-REC-LLM"
+
+  tier_3:
+    order: 3
+    description: "Multi-dependency panels"
+    panels:
+      - "OVR-SUM-CI"
+      - "POL-GOV-DFT"
+      - "INC-EV-HIST"
+
+  tier_4:
+    order: 4
+    description: "Aggregation panels"
+    panels:
+      - "OVR-SUM-HL"
+      - "ANA-CST-USG"
+
+  tier_5:
+    order: 5
+    description: "Final aggregation"
+    panels:
+      - "OVR-SUM-DC"
+
+# =============================================================================
+# FAILURE PROPAGATION RULES
+# =============================================================================
+
+failure_propagation_rules:
+  - rule_id: "FP-001"
+    description: "Upstream missing → downstream partial"
+    condition: "IF dependency.state = missing"
+    effect: "dependent.state = partial (minimum)"
+
+  - rule_id: "FP-002"
+    description: "All upstream missing → downstream missing"
+    condition: "IF ALL dependencies.state = missing"
+    effect: "dependent.state = missing"
+
+  - rule_id: "FP-003"
+    description: "Upstream indeterminate → downstream authority cap"
+    condition: "IF dependency.authority = indeterminate"
+    effect: "dependent.authority cannot be affirmative (capped at indeterminate)"
+
+  - rule_id: "FP-004"
+    description: "Short-circuit on critical missing"
+    condition: "IF dependency_type = data_source AND dependency.state = missing"
+    effect: "IF can_short_circuit = true → skip dependent evaluation"
+
+# =============================================================================
+# DEPENDENCY TYPES
+# =============================================================================
+
+dependency_types:
+  data_source:
+    description: "Panel provides primary data for dependent"
+    failure_impact: "HIGH"
+    propagation: "state degradation"
+
+  enrichment:
+    description: "Panel provides supplementary data for dependent"
+    failure_impact: "MEDIUM"
+    propagation: "partial state only"
+
+  reference:
+    description: "Panel provides context but not primary data"
+    failure_impact: "LOW"
+    propagation: "unverified_signal_refs only"
+
+  state_transition:
+    description: "Panel represents lifecycle stage of dependent"
+    failure_impact: "MEDIUM"
+    propagation: "timeline gaps"

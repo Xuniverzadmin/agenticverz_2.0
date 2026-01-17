@@ -1,0 +1,64 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: OVR-SUM-CI-O1
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: OVR-SUM-CI-O1
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: OVERVIEW
+  subdomain: SUMMARY
+  topic: COST_INTELLIGENCE
+  topic_id: OVERVIEW.SUMMARY.COST_INTELLIGENCE
+  order: O1
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: cost_intelligence
+  facet_criticality: HIGH
+display:
+  name: OVR-SUM-CI-O1
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: overview.cost_summary
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+notes: 'Give an immediate snapshot of current cost posture without requiring
+
+  navigation into Activity or Policies.
+
+
+  What it shows:
+
+  - Current spend rate (aggregate)
+
+  - Trend indicator (up / flat / down)
+
+  - Primary cost driver (top contributor category)
+
+
+  What it explicitly does NOT show:
+
+  - No historical charts
+
+  - No per-run breakdown
+
+  - No policy configuration
+
+  - No thresholds or limits editing
+
+  - No predictions'

@@ -1,0 +1,60 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: POL-LIM-VIO-O2
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-LIM-VIO-O2
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: POLICIES
+  subdomain: LIMITS
+  topic: VIOLATIONS
+  topic_id: POLICIES.LIMITS.VIOLATIONS
+  order: O2
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: limit_violations
+  facet_criticality: HIGH
+display:
+  name: POL-LIM-VIO-O2
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: policies.violations
+  status: ASSUMED
+  assumed_endpoint: /api/v1/policy-layer/violations
+  assumed_method: GET
+  facade_note: "Unified facade - replaces direct /guard/costs/incidents"
+sdsr:
+  scenario: SDSR-POL-LIM-VIO-O2-001
+  verified: false
+notes: 'Show violation classification and attribution — why and who.
+
+
+  What it shows:
+
+  - Aggregations: by limit type, by LLM, by agent, by human, by policy
+
+  - Primary trigger: cost overrun, token spike, time breach
+
+  - Secondary factor: retry loop, fan-out, poor prompt, downstream latency
+
+
+  What it explicitly does NOT show:
+
+  - No policy controls
+
+  - No excuses'

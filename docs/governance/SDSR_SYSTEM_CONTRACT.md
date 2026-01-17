@@ -211,10 +211,77 @@ SDSR CONTRACT CHECK
 | Claude bypasses pipeline | Session blocked |
 | New table without approval | Hard stop |
 | New API without approval | Hard stop |
+| Capability marked OBSERVED without E2E | CI block (CAP-E2E-001) |
+| Panel enabled for DECLARED capability | Session blocked |
 
 ---
 
-## 10. Contract Evolution
+## 10. Capability Status Gate (CAP-E2E-001)
+
+> **Capabilities MUST remain DECLARED until E2E validation passes.**
+> **Only when E2E validation passes can status change to OBSERVED.**
+
+### 10.1 Capability Lifecycle
+
+```
+DECLARED → OBSERVED → TRUSTED → DEPRECATED
+```
+
+| Status | Meaning | Transition Condition |
+|--------|---------|----------------------|
+| DECLARED | Code exists, not validated | Implementation complete |
+| OBSERVED | E2E validation passed | SDSR scenario passed |
+| TRUSTED | Production-proven | Stability over time |
+| DEPRECATED | Being removed | Governance decision |
+
+### 10.2 Transition Gate: DECLARED → OBSERVED
+
+**Requirements (ALL must be true):**
+
+1. SDSR scenario exists in `backend/scripts/sdsr/scenarios/`
+2. Scenario executed with `inject_synthetic.py --wait`
+3. All assertions in scenario passed
+4. Observation JSON emitted to `SDSR_OBSERVATION_*.json`
+5. `AURORA_L2_apply_sdsr_observations.py` applied
+
+**Enforcement:**
+
+```python
+def can_promote_to_observed(capability_id: str) -> bool:
+    observation = lookup_sdsr_observation(capability_id)
+    if observation is None:
+        return False  # No E2E run exists
+    if observation.status != "PASS":
+        return False  # E2E failed
+    return True
+
+# CI will BLOCK any capability marked OBSERVED without passing E2E
+```
+
+### 10.3 Rationale
+
+> **Claim ≠ Truth. Code existing is not proof that it works.**
+
+- Endpoints can exist but return wrong data
+- Services can be implemented but have logic bugs
+- Capabilities can be declared but never actually work
+
+Only E2E validation proves the full pipeline works: `SDK → DB → View → Service → API → UI`
+
+### 10.4 Panel Binding Consequence
+
+| Capability Status | UI Panel State |
+|-------------------|----------------|
+| DECLARED | Disabled (grayed out) |
+| OBSERVED | Enabled (functional) |
+| TRUSTED | Enabled (stable) |
+| DEPRECATED | Hidden |
+
+**Never enable a panel for a DECLARED capability.**
+
+---
+
+## 11. Contract Evolution
 
 This contract may only be modified by:
 1. Founder explicit approval

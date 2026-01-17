@@ -35,6 +35,7 @@ from app.costsim import (
 )
 from app.costsim.config import get_config
 from app.costsim.divergence import generate_divergence_report
+from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.costsim")
 
@@ -612,7 +613,7 @@ async def simulate_v2(request: SimulateRequest):
             feasibility_match=result.comparison.feasibility_match,
         )
 
-    return response
+    return wrap_dict(response.model_dump())
 
 
 @router.post("/v2/reset")
@@ -633,20 +634,20 @@ async def reset_circuit_breaker(
     is_disabled = await circuit_breaker.is_disabled()
     if not is_disabled:
         state = await circuit_breaker.get_state()
-        return {
+        return wrap_dict({
             "success": True,
             "message": "Circuit breaker was already closed",
             "state": state.to_dict(),
-        }
+        })
 
     success = await circuit_breaker.reset_v2(reason=reason or "Manual reset via API")
 
     state = await circuit_breaker.get_state()
-    return {
+    return wrap_dict({
         "success": success,
         "message": "Circuit breaker reset" if success else "Failed to reset",
         "state": state.to_dict(),
-    }
+    })
 
 
 @router.get("/v2/incidents")
@@ -666,10 +667,10 @@ async def get_incidents(
         limit=limit,
     )
 
-    return {
+    return wrap_dict({
         "incidents": [i.to_dict() for i in incidents],
         "total": len(incidents),
-    }
+    })
 
 
 @router.get("/divergence", response_model=DivergenceReportResponse)
@@ -761,10 +762,10 @@ async def get_canary_reports(
     Full artifacts are available at the artifact_paths.
     """
     # TODO: Implement canary report storage and retrieval
-    return {
+    return wrap_dict({
         "reports": [],
         "message": "Canary report retrieval not yet implemented",
-    }
+    })
 
 
 # ============== Dataset Validation Endpoints ==============
@@ -834,14 +835,14 @@ async def get_dataset_info(dataset_id: str):
     if not dataset:
         raise HTTPException(status_code=404, detail=f"Dataset not found: {dataset_id}")
 
-    return {
+    return wrap_dict({
         "id": dataset.id,
         "name": dataset.name,
         "description": dataset.description,
         "sample_count": len(dataset.samples),
         "thresholds": dataset.validation_thresholds,
         "sample_tags": list(set(tag for sample in dataset.samples for tag in sample.tags)),
-    }
+    })
 
 
 @router.post("/datasets/{dataset_id}/validate", response_model=ValidationResultResponse)
@@ -886,7 +887,7 @@ async def validate_all():
 
     all_passed = all(r.verdict == "acceptable" for r in results.values())
 
-    return {
+    return wrap_dict({
         "all_passed": all_passed,
         "results": {
             dataset_id: {
@@ -899,4 +900,4 @@ async def validate_all():
             for dataset_id, result in results.items()
         },
         "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
+    })

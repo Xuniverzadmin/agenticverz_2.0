@@ -1,0 +1,64 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: POL-GOV-ACT-O4
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-GOV-ACT-O4
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: POLICIES
+  subdomain: GOVERNANCE
+  topic: ACTIVE
+  topic_id: POLICIES.GOVERNANCE.ACTIVE
+  order: O4
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: POL-GOV-ACT-O4
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: policies.layer_state
+  status: ASSUMED
+  assumed_endpoint: /api/v1/policy-layer/state
+  assumed_method: GET
+  facade_note: "Added /api/v1 prefix - API Audit 2026-01-16"
+sdsr:
+  scenario: SDSR-POL-GOV-ACT-O4-001
+  verified: false
+notes: 'Show cost and performance side effects — what governance is costing us.
+
+
+  What it shows:
+
+  - Cost saved by enforcement
+
+  - Cost introduced by enforcement (latency, friction, rejects)
+
+  - Trade-offs: safety vs throughput, cost vs success rate, automation vs human load
+
+  - Numbers only, no value judgment
+
+
+  What it explicitly does NOT show:
+
+  - No policy tuning controls
+
+  - No recommendations
+
+  - No forecasts'

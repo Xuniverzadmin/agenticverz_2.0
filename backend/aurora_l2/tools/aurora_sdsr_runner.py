@@ -12,7 +12,7 @@ Usage:
 
 Pre-conditions (enforced):
     1. Coherency gate must pass (COH-001 to COH-010)
-    2. Capability must be in DECLARED or ASSUMED status
+    2. Capability must be in ASSUMED status (human assumption, not yet verified)
     3. Backend must be reachable
 
 Post-conditions:
@@ -191,8 +191,11 @@ class Observation:
     panel_id: str
     status: str
     observed_at: str
-    endpoint: str
-    method: str
+    # Endpoint binding: assumption vs observation
+    assumed_endpoint: Optional[str]   # From Intent YAML (human assumption)
+    observed_endpoint: str            # Actually tested endpoint
+    assumed_method: Optional[str]     # From Intent YAML
+    observed_method: str              # Actually tested method
     response_status_code: Optional[int]
     response_time_ms: Optional[float]
     invariants_total: int
@@ -218,9 +221,34 @@ def load_intent_yaml(panel_id: str) -> Optional[Dict]:
     """Load intent YAML."""
     intent_path = INTENTS_DIR / f"{panel_id}.yaml"
     if not intent_path.exists():
-        return None
+        # Try with AURORA_L2_INTENT_ prefix
+        intent_path = INTENTS_DIR / f"AURORA_L2_INTENT_{panel_id}.yaml"
+        if not intent_path.exists():
+            return None
     with open(intent_path) as f:
         return yaml.safe_load(f)
+
+
+def get_assumed_endpoint(panel_id: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Get assumed_endpoint and assumed_method from Intent YAML.
+
+    Returns:
+        Tuple of (assumed_endpoint, assumed_method) from the intent's capability block.
+        Both can be None if not specified.
+    """
+    intent = load_intent_yaml(panel_id)
+    if not intent:
+        return (None, None)
+
+    capability = intent.get('capability', {})
+    if not capability:
+        return (None, None)
+
+    assumed_endpoint = capability.get('assumed_endpoint')
+    assumed_method = capability.get('assumed_method', 'GET')
+
+    return (assumed_endpoint, assumed_method)
 
 
 def find_scenario_for_panel(panel_id: str) -> Optional[str]:
@@ -466,6 +494,14 @@ def run_scenario(scenario: Dict, skip_coherency: bool = False) -> Observation:
 
     observation_id = f"OBS-{scenario_id}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
 
+    # Load assumed endpoint from Intent YAML (human assumption)
+    assumed_endpoint, assumed_method = get_assumed_endpoint(panel_id)
+
+    # The observed endpoint is what the scenario actually tests
+    # This may differ from assumed_endpoint if SDSR discovers a different path
+    observed_endpoint = inject.get('endpoint', '')
+    observed_method = inject.get('method', 'GET')
+
     # Pre-check: Coherency gate
     coherency_verified = False
     if not skip_coherency:
@@ -488,8 +524,10 @@ def run_scenario(scenario: Dict, skip_coherency: bool = False) -> Observation:
                     panel_id=panel_id,
                     status=ObservationStatus.BLOCKED.value,
                     observed_at=datetime.now(timezone.utc).isoformat(),
-                    endpoint=inject.get('endpoint', ''),
-                    method=inject.get('method', ''),
+                    assumed_endpoint=assumed_endpoint,
+                    observed_endpoint=observed_endpoint,
+                    assumed_method=assumed_method,
+                    observed_method=observed_method,
                     response_status_code=None,
                     response_time_ms=None,
                     invariants_total=len(invariants),
@@ -504,9 +542,7 @@ def run_scenario(scenario: Dict, skip_coherency: bool = False) -> Observation:
     else:
         coherency_verified = True  # Skipped by flag
 
-    # Execute API call
-    endpoint = inject.get('endpoint', '')
-    method = inject.get('method', 'GET')
+    # Execute API call using observed endpoint (from scenario)
     scenario_headers = inject.get('headers', {})
     params = inject.get('params', {})
 
@@ -519,7 +555,7 @@ def run_scenario(scenario: Dict, skip_coherency: bool = False) -> Observation:
     # Load headers based on auth mode
     headers = load_headers_for_auth_mode(auth_mode, scenario_headers)
 
-    result = execute_api_call(endpoint, method, headers, params)
+    result = execute_api_call(observed_endpoint, observed_method, headers, params)
 
     if not result.get('success'):
         # Classify the transient failure
@@ -533,8 +569,10 @@ def run_scenario(scenario: Dict, skip_coherency: bool = False) -> Observation:
             panel_id=panel_id,
             status=ObservationStatus.ERROR.value,
             observed_at=datetime.now(timezone.utc).isoformat(),
-            endpoint=endpoint,
-            method=method,
+            assumed_endpoint=assumed_endpoint,
+            observed_endpoint=observed_endpoint,
+            assumed_method=assumed_method,
+            observed_method=observed_method,
             response_status_code=None,
             response_time_ms=result.get('elapsed_ms'),
             invariants_total=len(invariants),
@@ -566,8 +604,10 @@ def run_scenario(scenario: Dict, skip_coherency: bool = False) -> Observation:
                 panel_id=panel_id,
                 status=ObservationStatus.PASS.value,  # PASS with VISIBILITY_RESTRICTED
                 observed_at=datetime.now(timezone.utc).isoformat(),
-                endpoint=endpoint,
-                method=method,
+                assumed_endpoint=assumed_endpoint,
+                observed_endpoint=observed_endpoint,
+                assumed_method=assumed_method,
+                observed_method=observed_method,
                 response_status_code=status_code,
                 response_time_ms=result.get('elapsed_ms'),
                 invariants_total=len(invariants),
@@ -588,8 +628,10 @@ def run_scenario(scenario: Dict, skip_coherency: bool = False) -> Observation:
                 panel_id=panel_id,
                 status=ObservationStatus.FAIL.value,
                 observed_at=datetime.now(timezone.utc).isoformat(),
-                endpoint=endpoint,
-                method=method,
+                assumed_endpoint=assumed_endpoint,
+                observed_endpoint=observed_endpoint,
+                assumed_method=assumed_method,
+                observed_method=observed_method,
                 response_status_code=status_code,
                 response_time_ms=result.get('elapsed_ms'),
                 invariants_total=len(invariants),
@@ -631,8 +673,10 @@ def run_scenario(scenario: Dict, skip_coherency: bool = False) -> Observation:
         panel_id=panel_id,
         status=overall_status,
         observed_at=datetime.now(timezone.utc).isoformat(),
-        endpoint=endpoint,
-        method=method,
+        assumed_endpoint=assumed_endpoint,
+        observed_endpoint=observed_endpoint,
+        assumed_method=assumed_method,
+        observed_method=observed_method,
         response_status_code=status_code,
         response_time_ms=result.get('elapsed_ms'),
         invariants_total=len(invariants),
@@ -707,7 +751,8 @@ def main():
     # Print results
     print(f"  Status: {observation.status}")
     print(f"  Capability: {observation.capability_id}")
-    print(f"  Endpoint: {observation.endpoint}")
+    print(f"  Assumed Endpoint: {observation.assumed_endpoint}")
+    print(f"  Observed Endpoint: {observation.observed_endpoint}")
     print(f"  Response Code: {observation.response_status_code}")
     print(f"  Response Time: {observation.response_time_ms:.2f}ms" if observation.response_time_ms else "  Response Time: N/A")
     print(f"  Coherency Verified: {observation.coherency_verified}")

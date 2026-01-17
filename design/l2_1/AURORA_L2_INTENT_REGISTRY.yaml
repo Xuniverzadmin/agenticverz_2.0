@@ -1,6 +1,6 @@
 # AURORA L2 Intent Registry
 # Generated/Updated by: aurora_intent_registry_sync.py
-# Last Updated: 2026-01-15T12:36:12.516311+00:00
+# Last Updated: 2026-01-15T15:19:01.447277+00:00
 #
 # Status values:
 #   DRAFT    - Intent created, awaiting human review
@@ -645,7 +645,7 @@ intents:
     topic: COMPLETED
     order: O1
     capability: activity.runs_list
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 7347e8f175f47293ca00a71501f177101c40e0a0369c7dc67bfc680d31137fcb
   INC-EV-ACT-O1:
@@ -840,7 +840,7 @@ intents:
     topic: LIVE
     order: O1
     capability: activity.live_runs
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: f1c3635394270056dae859145970eebb296f4bf049cdffe5466ff4521dd2b271
   ACT-LLM-LIVE-O2:
@@ -944,7 +944,7 @@ intents:
     topic: SIG
     order: O4
     capability: activity.discovery_list
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 82509c862e4102a9458ca14d087a604c47cf69c04dfc9a4138ad197e07867d46
   ACT-LLM-SIG-O5:

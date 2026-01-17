@@ -1,0 +1,61 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: INC-EV-HIST-O1
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: INC-EV-HIST-O1
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: INCIDENTS
+  subdomain: EVENTS
+  topic: HISTORICAL
+  topic_id: INCIDENTS.EVENTS.HISTORICAL
+  order: O1
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: incident_lifecycle
+  facet_criticality: HIGH
+display:
+  name: INC-EV-HIST-O1
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: incidents.historical_list
+  status: ASSUMED
+  assumed_endpoint: /api/v1/incidents
+  assumed_method: GET
+sdsr:
+  scenario: SDSR-INC-EV-HIST-O1-001
+  verified: false
+notes: 'Show incident volume and trend baseline over time.
+
+
+  What it shows:
+
+  - Incident counts by time window (day / week / month)
+
+  - Trend direction (rising, flat, declining)
+
+  - Aggregates only (no per-incident rows)
+
+
+  What it explicitly does NOT show:
+
+  - No individual incidents
+
+  - No real-time data
+
+  - No controls'

@@ -1,0 +1,24 @@
+{
+  "status": "VIOLATIONS",
+  "last_check": "2026-01-17T07:36:52.809949",
+  "violations": [
+    {
+      "file": "/root/agenticverz2.0/backend/app/schemas/test_violation.py",
+      "line": 4,
+      "rule": "NC-001",
+      "message": "Context suffix '_remaining' in field name",
+      "code": "tokens_remaining: int  # VIOLATION: context suffix in runtim"
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/app/schemas/test_violation.py",
+      "line": 5,
+      "rule": "NC-001",
+      "message": "Context suffix '_current' in field name",
+      "code": "cost_current: int      # VIOLATION: context suffix"
+    }
+  ],
+  "files_watched": 895,
+  "checks_run": 1,
+  "started_at": "2026-01-17T07:36:52.667402",
+  "pid": 3139164
+}

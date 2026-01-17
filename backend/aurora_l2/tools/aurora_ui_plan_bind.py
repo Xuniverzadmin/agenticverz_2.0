@@ -79,8 +79,12 @@ def save_ui_plan(ui_plan: Dict):
 
 
 def load_intent(panel_id: str) -> Optional[Dict]:
-    """Load intent YAML for panel."""
-    intent_path = INTENTS_DIR / f"{panel_id}.yaml"
+    """Load intent YAML for panel (new naming convention with legacy fallback)."""
+    # Try new naming convention first
+    intent_path = INTENTS_DIR / f"AURORA_L2_INTENT_{panel_id}.yaml"
+    if not intent_path.exists():
+        # Fall back to legacy naming
+        intent_path = INTENTS_DIR / f"{panel_id}.yaml"
     if not intent_path.exists():
         return None
     with open(intent_path) as f:
@@ -178,7 +182,7 @@ def bind_panel(panel_id: str, dry_run: bool = False, verbose: bool = False) -> b
         print(f"  Panel already BOUND, verifying consistency...")
         intent_spec = panel.get('intent_spec')
         expected_cap = panel.get('expected_capability')
-        expected_intent_spec = f"design/l2_1/intents/{panel_id}.yaml"
+        expected_intent_spec = f"design/l2_1/intents/AURORA_L2_INTENT_{panel_id}.yaml"
 
         if intent_spec != expected_intent_spec:
             print(f"    WARNING: intent_spec mismatch: {intent_spec} != {expected_intent_spec}")
@@ -190,7 +194,7 @@ def bind_panel(panel_id: str, dry_run: bool = False, verbose: bool = False) -> b
 
     # Step 6: Update panel
     new_state = 'BOUND'
-    new_intent_spec = f"design/l2_1/intents/{panel_id}.yaml"
+    new_intent_spec = f"design/l2_1/intents/AURORA_L2_INTENT_{panel_id}.yaml"
     new_expected_capability = capability_id
 
     print(f"  Updating ui_plan.yaml:")

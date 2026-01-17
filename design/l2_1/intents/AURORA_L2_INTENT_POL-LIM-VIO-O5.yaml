@@ -1,0 +1,62 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: POL-LIM-VIO-O5
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-LIM-VIO-O5
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: POLICIES
+  subdomain: LIMITS
+  topic: VIOLATIONS
+  topic_id: POLICIES.LIMITS.VIOLATIONS
+  order: O5
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: POL-LIM-VIO-O5
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: policies.temporal_policies
+  status: ASSUMED
+  assumed_endpoint: /api/v1/policy-layer/temporal-policies
+  assumed_method: GET
+  facade_note: "Unified facade - replaces direct /costsim/divergence"
+sdsr:
+  scenario: SDSR-POL-LIM-VIO-O5-001
+  verified: false
+notes: 'Show escalation, evidence, and governance hooks for violations requiring action.
+
+
+  What it shows:
+
+  - Triggers: repeated violations, high override density, high loss concentration
+
+  - Links to: Governance → Drafts (revision), Governance → Active (review)
+
+  - Export: audit logs, evidence bundles (SOC2/internal review)
+
+  - This surface escalates, not fixes
+
+
+  What it explicitly does NOT show:
+
+  - No editing limits
+
+  - No approvals'

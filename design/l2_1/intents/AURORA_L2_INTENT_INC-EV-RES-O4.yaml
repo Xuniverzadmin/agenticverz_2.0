@@ -1,0 +1,64 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: INC-EV-RES-O4
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: INC-EV-RES-O4
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: INCIDENTS
+  subdomain: EVENTS
+  topic: RESOLVED
+  topic_id: INCIDENTS.EVENTS.RESOLVED
+  order: O4
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: INC-EV-RES-O4
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: incidents.graduation_list
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+  facade_note: "Decoupled from /integration/* (FOPS auth) - API Audit 2026-01-16"
+sdsr:
+  scenario: SDSR-INC-EV-RES-O4-001
+  verified: false
+notes: 'Show outcome and impact post-resolution — the final reality.
+
+
+  What it shows:
+
+  - Final cost incurred
+
+  - Cost prevented
+
+  - Residual impact (if any)
+
+  - Side effects introduced by resolution
+
+
+  What it explicitly does NOT show:
+
+  - No projections
+
+  - No forecasts
+
+  - No policy controls'

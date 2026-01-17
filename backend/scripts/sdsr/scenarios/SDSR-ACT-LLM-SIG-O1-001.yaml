@@ -20,8 +20,8 @@
 scenario_id: SDSR-ACT-LLM-SIG-O1-001
 version: 1.0.0
 name: Observe ACT-LLM-SIG-O1 capability
-description: SDSR verification scenario for activity.feedback_list
-capability: activity.feedback_list
+description: SDSR verification scenario for activity.signals
+capability: activity.signals
 panel_id: ACT-LLM-SIG-O1
 domain: ACTIVITY
 auth:
@@ -32,7 +32,7 @@ metadata:
   panel_class: evidence
 inject:
   type: api_call
-  endpoint: /api/v1/feedback
+  endpoint: /api/v1/activity/runs
   method: GET
   headers:
     Content-Type: application/json

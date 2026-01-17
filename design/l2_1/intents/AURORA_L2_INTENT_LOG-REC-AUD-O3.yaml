@@ -1,0 +1,44 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: LOG-REC-AUD-O3
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: LOG-REC-AUD-O3
+version: 1.0.0
+panel_class: evidence
+metadata:
+  domain: LOGS
+  subdomain: RECORDS
+  topic: AUDIT
+  topic_id: LOGS.RECORDS.AUDIT
+  order: O3
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: LOG-REC-AUD-O3
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: logs.ops_audit
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+sdsr:
+  scenario: SDSR-LOG-REC-AUD-O3-001
+  verified: false
+notes: Show trace and log access audit — who viewed, exported, or modified observability
+  data.

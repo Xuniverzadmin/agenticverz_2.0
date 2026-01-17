@@ -100,6 +100,7 @@ class PolicyVersion(Base):
     # Version tracking
     version = Column(Integer, nullable=False)
     rule_snapshot = Column(JSONB, nullable=False)  # Snapshot of the rule at this version
+    is_current = Column(Boolean, nullable=False, default=False, index=True)  # PIN-411 Gap Closure
 
     # Audit trail
     created_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -155,6 +156,7 @@ class PolicyVersionResponse(BaseModel):
     proposal_id: UUID
     version: int
     rule_snapshot: dict
+    is_current: bool = False  # PIN-411 Gap Closure
     created_at: datetime
     created_by: Optional[str]
     change_reason: Optional[str]

@@ -360,9 +360,9 @@ def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
         "/metrics",
         "/api/v1/auth/",
         "/api/v1/c2/predictions/",
-        "/api/v1/activity/",
+        # REMOVED: "/api/v1/activity/" - now requires auth via unified facade
         "/api/v1/policy-proposals/",
-        "/api/v1/incidents/",
+        # REMOVED: "/api/v1/incidents/" - now requires auth via unified facade
         "/docs",
         "/openapi.json",
         "/redoc",

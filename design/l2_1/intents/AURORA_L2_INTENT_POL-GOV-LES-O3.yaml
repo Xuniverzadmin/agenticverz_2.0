@@ -1,0 +1,58 @@
+# Panel Intent: Convert Lesson to Draft
+# Source: PIN-411 (Lessons Learned Engine)
+# Panel: POL-GOV-LES-O3
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-GOV-LES-O3
+version: 1.0.0
+panel_class: execution
+metadata:
+  domain: POLICIES
+  subdomain: GOVERNANCE
+  topic: LESSONS
+  topic_id: POLICIES.GOVERNANCE.LESSONS
+  order: O3
+  action_layer: L2_1
+  source: PIN-411
+  review_status: DRAFT
+  facet: lessons_learned
+  facet_criticality: HIGH
+display:
+  name: Convert to Draft
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: false
+  download: false
+  write: true
+  replay: false
+controls:
+  filtering: false
+  activate: true
+  confirmation_required: true
+capability:
+  id: lessons.convert_to_draft
+  status: DECLARED
+  assumed_endpoint: /api/v1/lessons/{lesson_id}/convert-to-draft
+  assumed_method: POST
+  facade_note: "Convert lesson to policy draft - creates draft and transitions lesson"
+sdsr:
+  scenario: SDSR-POL-GOV-LES-O3-001
+  verified: false
+notes: |
+  Convert a pending lesson to a policy draft.
+
+  What it does:
+  - Creates a policy draft based on lesson content
+  - Transitions lesson status: pending -> converted_to_draft
+  - Links the draft to the source lesson
+  - Terminal state (cannot be undone)
+
+  State Machine:
+  - Only valid for pending lessons
+  - converted_to_draft is a terminal state
+
+  Requirements:
+  - Requires human confirmation
+  - Lesson must be in pending status

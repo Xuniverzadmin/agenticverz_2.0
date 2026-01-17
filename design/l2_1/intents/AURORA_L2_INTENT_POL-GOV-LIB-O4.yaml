@@ -1,0 +1,62 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: POL-GOV-LIB-O4
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-GOV-LIB-O4
+version: 1.0.0
+panel_class: execution
+metadata:
+  domain: POLICIES
+  subdomain: GOVERNANCE
+  topic: POLICY_LIBRARY
+  topic_id: POLICIES.GOVERNANCE.POLICY_LIBRARY
+  order: O4
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: POL-GOV-LIB-O4
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: policies.safety_rules
+  status: ASSUMED
+  assumed_endpoint: /api/v1/policy-layer/safety-rules
+  assumed_method: GET
+  facade_note: "Unified facade - replaces direct /guard/policies"
+sdsr:
+  scenario: SDSR-POL-GOV-LIB-O4-001
+  verified: false
+notes: 'Provide attach/detach policy controls — human action to adopt or remove policies.
+
+
+  What it shows:
+
+  - Attach policy to: single LLM, agent group, human role, all runs
+
+  - Detach policy from any scope
+
+  - Required inputs: scope selection, enforcement mode, justification (mandatory)
+
+  - Every change is auditable
+
+
+  What it explicitly does NOT show:
+
+  - No default scope
+
+  - No silent inheritance'

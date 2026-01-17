@@ -1,8 +1,41 @@
 #!/usr/bin/env python3
 """
+DEPRECATED - DO NOT USE (2026-01-15)
+
+Reason: Contains hardcoded ENDPOINT_MAP with semantically incorrect mappings.
+        - Activity panels mapped to Founder Console endpoints (/api/v1/discovery)
+        - Activity panels mapped to wrong domains (/api/v1/agents, /health)
+
+SDSR verifies TECHNICAL correctness (endpoint exists, returns 200).
+SDSR does NOT verify SEMANTIC correctness (is this the RIGHT endpoint for this panel?).
+
+The ENDPOINT_MAP was manually curated and contains errors that SDSR cannot detect.
+
+Replacement: Use manual HISAR panel-by-panel with human-verified endpoints:
+    1. Human curates capability.endpoint in Intent YAML
+    2. aurora_intent_scaffold.py --panel <id> --endpoint <correct_endpoint>
+    3. run_hisar.sh <panel_id>
+
+DO NOT IMPORT THIS FILE.
+DO NOT USE ENDPOINT_MAP.
+DO NOT RUN aurora_full_sweep.py.
+
+Reference: Session 2026-01-15, ENDPOINT_MAP curation problem discovery.
+
+=============================================================================
+ORIGINAL DOCSTRING (preserved for reference):
 AURORA L2 Full HISAR Sweep
 Runs HISAR pipeline for all panels in ui_plan.yaml
+=============================================================================
 """
+
+import sys
+print("=" * 70, file=sys.stderr)
+print("DEPRECATED: aurora_full_sweep.py", file=sys.stderr)
+print("This script contains hardcoded ENDPOINT_MAP with incorrect mappings.", file=sys.stderr)
+print("Use manual HISAR panel-by-panel instead.", file=sys.stderr)
+print("=" * 70, file=sys.stderr)
+sys.exit(1)
 
 import os
 import sys

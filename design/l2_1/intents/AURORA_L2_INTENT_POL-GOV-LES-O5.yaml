@@ -1,0 +1,61 @@
+# Panel Intent: Lessons History
+# Source: PIN-411 (Lessons Learned Engine)
+# Panel: POL-GOV-LES-O5
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-GOV-LES-O5
+version: 1.0.0
+panel_class: evidence
+metadata:
+  domain: POLICIES
+  subdomain: GOVERNANCE
+  topic: LESSONS
+  topic_id: POLICIES.GOVERNANCE.LESSONS
+  order: O5
+  action_layer: L2_1
+  source: PIN-411
+  review_status: DRAFT
+  facet: lessons_learned
+  facet_criticality: LOW
+display:
+  name: Lessons History
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: true
+  write: false
+  replay: false
+controls:
+  filtering: true
+  activate: false
+  confirmation_required: false
+capability:
+  id: lessons.history
+  status: DECLARED
+  assumed_endpoint: /api/v1/lessons
+  assumed_method: GET
+  facade_note: "List all lessons including converted and dismissed (full history)"
+sdsr:
+  scenario: SDSR-POL-GOV-LES-O5-001
+  verified: false
+notes: |
+  Show full history of all lessons.
+
+  What it shows:
+  - All lessons regardless of status
+  - Status filter (pending, converted_to_draft, deferred, dismissed)
+  - Conversion/dismissal timestamps
+  - Linked draft ID (for converted lessons)
+  - Deferred until time (for deferred lessons)
+  - Dismissal reason (for dismissed lessons)
+
+  Use Cases:
+  - Audit trail for policy evolution
+  - Review of dismissed patterns
+  - Tracking conversion rate
+  - Pattern analysis over time
+
+  What it explicitly does NOT show:
+  - No action buttons (history is read-only)

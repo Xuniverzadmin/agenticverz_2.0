@@ -34,6 +34,7 @@ from sqlmodel import Session
 
 # L6 imports (allowed)
 from app.db import get_session
+from app.schemas.response import wrap_dict
 
 router = APIRouter(prefix="/platform", tags=["platform"])
 
@@ -109,13 +110,13 @@ def get_platform_health(
     elif blca_status == "WARN" or lifecycle_coherence == "INCOHERENT":
         state = "DEGRADED"
 
-    return {
+    return wrap_dict({
         "state": state,
         "blca_status": blca_status,
         "lifecycle_coherence": lifecycle_coherence,
         "last_checked": now.isoformat(),
         "note": "Lightweight health check. Use /platform/capabilities for full capability status.",
-    }
+    })
 
 
 @router.get("/capabilities", response_model=None)
@@ -180,13 +181,13 @@ def get_capabilities_eligibility(
             else:
                 eligible_count += 1
 
-    return {
+    return wrap_dict({
         "total": len(capabilities),
         "eligible_count": eligible_count,
         "blocked_count": blocked_count,
         "capabilities": capabilities,
         "checked_at": now.isoformat(),
-    }
+    })
 
 
 @router.get("/domains/{domain_name}", response_model=None)
@@ -266,14 +267,14 @@ def get_domain_health(
     else:
         domain_state = "HEALTHY"
 
-    return {
+    return wrap_dict({
         "domain": domain,
         "state": domain_state,
         "healthy_count": healthy_count,
         "blocked_count": blocked_count,
         "capabilities": capabilities,
         "checked_at": datetime.now(timezone.utc).isoformat(),
-    }
+    })
 
 
 @router.get("/capabilities/{capability_name}", response_model=None)
@@ -372,14 +373,14 @@ def get_capability_health(
     else:
         state = "HEALTHY"
 
-    return {
+    return wrap_dict({
         "capability": cap_name,
         "domain": cap_to_domain[cap_name],
         "state": state,
         "is_eligible": not is_blocked,
         "reasons": reasons,
         "checked_at": datetime.now(timezone.utc).isoformat(),
-    }
+    })
 
 
 @router.get("/eligibility/{capability_name}")
@@ -449,9 +450,9 @@ def check_capability_eligibility(
     # Determine state
     state = "BLOCKED" if is_blocked else "HEALTHY"
 
-    return {
+    return wrap_dict({
         "capability": cap_name,
         "is_eligible": not is_blocked,
         "state": state,
         "checked_at": datetime.now(timezone.utc).isoformat(),
-    }
+    })

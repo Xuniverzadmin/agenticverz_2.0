@@ -39,6 +39,13 @@ from sqlalchemy import create_engine, text
 logger = logging.getLogger("nova.services.incident_engine")
 
 
+# Lazy import to avoid circular dependencies
+def _get_lessons_learned_engine():
+    """Get the LessonsLearnedEngine singleton (lazy import)."""
+    from app.services.lessons_learned_engine import get_lessons_learned_engine
+    return get_lessons_learned_engine()
+
+
 def utc_now() -> datetime:
     """Return timezone-aware UTC datetime."""
     return datetime.now(timezone.utc)
@@ -468,6 +475,24 @@ class IncidentEngine:
                         synthetic_scenario_id=synthetic_scenario_id,
                     )
 
+                # PIN-411: Detect lesson from ALL severity failures
+                # LessonsLearnedEngine captures learning signals for policy domain intelligence
+                try:
+                    from uuid import UUID as PyUUID
+                    lessons_engine = _get_lessons_learned_engine()
+                    lessons_engine.detect_lesson_from_failure(
+                        run_id=PyUUID(run_id) if isinstance(run_id, str) else run_id,
+                        tenant_id=tenant_id,
+                        error_code=error_code,
+                        error_message=error_message,
+                        severity=severity,
+                        is_synthetic=is_synthetic,
+                        synthetic_scenario_id=synthetic_scenario_id,
+                    )
+                except Exception as e:
+                    # Don't fail incident creation if lesson detection fails
+                    logger.warning(f"Failed to detect lesson from failure for incident {incident_id}: {e}")
+
             return incident_id
 
         except Exception as e:
@@ -639,6 +664,24 @@ class IncidentEngine:
                     is_synthetic=is_synthetic,
                     synthetic_scenario_id=synthetic_scenario_id,
                 )
+
+            # PIN-411: Detect lesson from ALL severity failures
+            # LessonsLearnedEngine captures learning signals for policy domain intelligence
+            try:
+                from uuid import UUID as PyUUID
+                lessons_engine = _get_lessons_learned_engine()
+                lessons_engine.detect_lesson_from_failure(
+                    run_id=PyUUID(run_id) if isinstance(run_id, str) else run_id,
+                    tenant_id=tenant_id,
+                    error_code=error_code,
+                    error_message=error_message,
+                    severity=severity,
+                    is_synthetic=is_synthetic,
+                    synthetic_scenario_id=synthetic_scenario_id,
+                )
+            except Exception as e:
+                # Don't fail incident creation if lesson detection fails
+                logger.warning(f"Failed to detect lesson from failure for incident {incident_id}: {e}")
 
             return incident_id
 

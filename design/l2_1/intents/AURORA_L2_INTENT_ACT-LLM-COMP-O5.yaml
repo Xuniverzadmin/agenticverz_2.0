@@ -1,0 +1,54 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: ACT-LLM-COMP-O5
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: ACT-LLM-COMP-O5
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: ACTIVITY
+  subdomain: LLM_RUNS
+  topic: COMPLETED
+  topic_id: ACTIVITY.LLM_RUNS.COMPLETED
+  order: O5
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: ACT-LLM-COMP-O5
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: activity.runtime_traces
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+notes: 'Show runs that ended intentionally before completion.
+
+
+  What it shows:
+
+  - Count of aborted or cancelled runs
+
+
+  What it explicitly does NOT show:
+
+  - No initiator identity
+
+  - No reason codes
+
+  - No recovery options'

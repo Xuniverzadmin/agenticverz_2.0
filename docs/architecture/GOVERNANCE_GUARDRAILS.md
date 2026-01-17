@@ -718,9 +718,20 @@ def check_no_direct_table_access():
 
 ### API-002: Consistent Response Envelope
 
-**Rule:** All list endpoints must return consistent envelope.
+**Rule:** All API endpoints must return responses wrapped in a standard envelope.
 
 ```python
+# Standard envelope format
+{
+    "success": true,
+    "data": { ... },
+    "meta": {
+        "timestamp": "...",
+        "request_id": "..."
+    }
+}
+
+# List endpoint format
 {
     "items": [...],
     "total": int,
@@ -728,6 +739,51 @@ def check_no_direct_table_access():
     "filters_applied": dict
 }
 ```
+
+#### Risk Vectors & Counter-Rules
+
+**RISK-001: "Just wrap it" mentality**
+
+```python
+# ❌ VIOLATION - Wrapping internal/partial objects
+return wrap_dict(some_partial_or_internal_object)
+return wrap_dict(domain_entity)  # Raw SQLModel/ORM object
+return wrap_dict(intermediate_result)  # Partial computation
+
+# ✅ CORRECT - Only wrap finalized outputs
+return wrap_dict(result.model_dump())  # Pydantic model → dict
+return wrap_dict({"key": "value", ...})  # Fully constructed dict
+```
+
+**Counter-rule (API-002-CR-001):**
+> `wrap_dict()` must ONLY receive:
+> 1. `model_dump()` output from Pydantic models
+> 2. Fully constructed response dictionaries
+>
+> **Never** internal domain objects, ORM entities, or partial results.
+
+---
+
+**RISK-002: Ad-hoc total computation**
+
+```python
+# ⚠️ CORRECT FOR NON-PAGINATED ONLY
+return wrap_dict({"items": [...], "total": len(results)})
+```
+
+This pattern is **correct for non-paginated endpoints** but becomes a lie when:
+- Pagination is later added (total ≠ len(current_page))
+- Results are pre-filtered (total reflects filtered, not actual)
+- DB-level counts diverge from in-memory counts
+
+**Counter-rule (API-002-CR-002):**
+> The `{"items": [...], "total": len(results)}` pattern is valid ONLY for:
+> - Non-paginated endpoints
+> - Endpoints where `results` represents the complete dataset
+>
+> For paginated endpoints, `total` MUST come from a separate `COUNT(*)` query.
+
+---
 
 **Enforcement:**
 

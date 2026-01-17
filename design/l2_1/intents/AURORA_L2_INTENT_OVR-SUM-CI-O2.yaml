@@ -1,0 +1,64 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: OVR-SUM-CI-O2
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: OVR-SUM-CI-O2
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: OVERVIEW
+  subdomain: SUMMARY
+  topic: COST_INTELLIGENCE
+  topic_id: OVERVIEW.SUMMARY.COST_INTELLIGENCE
+  order: O2
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: cost_intelligence
+  facet_criticality: HIGH
+display:
+  name: OVR-SUM-CI-O2
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: overview.cost_by_feature
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+notes: 'Show how total cost is distributed across primary drivers so the user
+
+  understands what is consuming money at a glance.
+
+
+  What it shows:
+
+  - Cost split by driver category (e.g., model, project, policy bucket)
+
+  - Percentage contribution per driver
+
+  - Top 1–3 contributors only
+
+
+  What it explicitly does NOT show:
+
+  - No per-run or per-request logs
+
+  - No time-series charts
+
+  - No configuration controls
+
+  - No thresholds or alerts
+
+  - No forecasts'

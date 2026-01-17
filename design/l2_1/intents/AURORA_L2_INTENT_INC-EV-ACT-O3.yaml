@@ -1,0 +1,63 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: INC-EV-ACT-O3
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: INC-EV-ACT-O3
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: INCIDENTS
+  subdomain: EVENTS
+  topic: ACTIVE
+  topic_id: INCIDENTS.EVENTS.ACTIVE
+  order: O3
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: incident_lifecycle
+  facet_criticality: HIGH
+display:
+  name: INC-EV-ACT-O3
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: incidents.metrics
+  status: ASSUMED
+  assumed_endpoint: /api/v1/incidents/metrics
+  assumed_method: GET
+sdsr:
+  scenario: SDSR-INC-EV-ACT-O3-001
+  verified: false
+notes: 'Show control state — whether each incident is contained or still dangerous.
+
+
+  What it shows:
+
+  - Still active / paused / quarantined
+
+  - Human override applied or not
+
+  - Auto-remediation attempted or not
+
+  - Guardrails holding or breached
+
+
+  What it explicitly does NOT show:
+
+  - No escalation actions
+
+  - No policy changes
+
+  - No resolution controls'

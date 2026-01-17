@@ -41,6 +41,7 @@ from pydantic import BaseModel, Field
 from ..auth.console_auth import FounderToken, verify_fops_token
 from ..auth.onboarding_state import OnboardingState
 from ..auth.onboarding_transitions import get_onboarding_service
+from ..schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.founder_onboarding")
 
@@ -274,7 +275,7 @@ async def get_stalled_tenants(
 
     stalled = await detect_stalled_onboarding(threshold_hours=threshold_hours)
 
-    return {
+    return wrap_dict({
         "stalled_count": len(stalled),
         "threshold_hours": threshold_hours,
         "tenants": [
@@ -286,4 +287,4 @@ async def get_stalled_tenants(
             }
             for t in stalled
         ],
-    }
+    })

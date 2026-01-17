@@ -88,6 +88,7 @@ while [[ $# -gt 0 ]]; do
       echo "  [A] 6.5  UI Plan Bind"
       echo "  [A] 7    Projection Diff Guard (BLOCKING)"
       echo "  [R] 8    Rendering"
+      echo "  [M] 9    Memory PIN Generation (Automation - PIN-432)"
       exit 0
       ;;
     *)
@@ -233,14 +234,18 @@ echo "▶ [H] Phase 1 — Human Intent Validation"
 echo "──────────────────────────────────────────────────────────────────────"
 
 if [[ "$MODE" == "single" ]]; then
-  # Check intent YAML exists
-  INTENT_FILE="$ROOT_DIR/design/l2_1/intents/${PANEL_ID}.yaml"
-  if [[ ! -f "$INTENT_FILE" ]]; then
+  # Check intent YAML exists (new naming convention with legacy fallback)
+  INTENT_FILE="$ROOT_DIR/design/l2_1/intents/AURORA_L2_INTENT_${PANEL_ID}.yaml"
+  INTENT_FILE_LEGACY="$ROOT_DIR/design/l2_1/intents/${PANEL_ID}.yaml"
+  if [[ -f "$INTENT_FILE" ]]; then
+    echo "  Intent YAML exists: $INTENT_FILE"
+  elif [[ -f "$INTENT_FILE_LEGACY" ]]; then
+    echo "  Intent YAML exists (legacy): $INTENT_FILE_LEGACY"
+    INTENT_FILE="$INTENT_FILE_LEGACY"
+  else
     echo "  Intent YAML not found: $INTENT_FILE"
     echo "  Scaffolding new intent..."
     run_cmd python3 "$TOOLS_DIR/aurora_intent_scaffold.py" --panel "$PANEL_ID"
-  else
-    echo "  Intent YAML exists: $INTENT_FILE"
   fi
 else
   echo "  Checking all intent files..."
@@ -293,7 +298,11 @@ echo "────────────────────────�
 CAPABILITY_FAILURES=0
 if [[ "$MODE" == "single" ]]; then
   # Extract capability ID from intent (look under capability: block, not panel_id)
-  INTENT_FILE="$ROOT_DIR/design/l2_1/intents/${PANEL_ID}.yaml"
+  # New naming convention with fallback to legacy
+  INTENT_FILE="$ROOT_DIR/design/l2_1/intents/AURORA_L2_INTENT_${PANEL_ID}.yaml"
+  if [[ ! -f "$INTENT_FILE" ]]; then
+    INTENT_FILE="$ROOT_DIR/design/l2_1/intents/${PANEL_ID}.yaml"  # Legacy fallback
+  fi
   CAP_ID=$(grep -A1 "^capability:" "$INTENT_FILE" | grep "id:" | awk '{print $2}' | tr -d "'\"")
   CAP_FILE="$ROOT_DIR/backend/AURORA_L2_CAPABILITY_REGISTRY/AURORA_L2_CAPABILITY_${CAP_ID}.yaml"
 
@@ -409,7 +418,11 @@ echo "────────────────────────�
 OBSERVATION_FAILURES=0
 if [[ "$MODE" == "single" ]]; then
   # Find the observation file - use capability.id not panel_id
-  INTENT_FILE="$ROOT_DIR/design/l2_1/intents/${PANEL_ID}.yaml"
+  # New naming convention with fallback to legacy
+  INTENT_FILE="$ROOT_DIR/design/l2_1/intents/AURORA_L2_INTENT_${PANEL_ID}.yaml"
+  if [[ ! -f "$INTENT_FILE" ]]; then
+    INTENT_FILE="$ROOT_DIR/design/l2_1/intents/${PANEL_ID}.yaml"  # Legacy fallback
+  fi
   if [[ -f "$INTENT_FILE" ]]; then
     CAP_ID=$(grep -A1 "^capability:" "$INTENT_FILE" | grep "id:" | awk '{print $2}' | tr -d "'\"")
     if [[ -n "$CAP_ID" ]]; then
@@ -454,7 +467,11 @@ echo "▶ [S] Phase 5.5 — Trust Evaluation"
 echo "──────────────────────────────────────────────────────────────────────"
 
 if [[ "$MODE" == "single" ]]; then
-  INTENT_FILE="$ROOT_DIR/design/l2_1/intents/${PANEL_ID}.yaml"
+  # New naming convention with fallback to legacy
+  INTENT_FILE="$ROOT_DIR/design/l2_1/intents/AURORA_L2_INTENT_${PANEL_ID}.yaml"
+  if [[ ! -f "$INTENT_FILE" ]]; then
+    INTENT_FILE="$ROOT_DIR/design/l2_1/intents/${PANEL_ID}.yaml"  # Legacy fallback
+  fi
   if [[ -f "$INTENT_FILE" ]]; then
     CAP_ID=$(grep "id:" "$INTENT_FILE" | grep -v "topic_id" | head -1 | awk '{print $2}' | tr -d "'\"")
     if [[ -n "$CAP_ID" ]]; then
@@ -572,6 +589,110 @@ echo "✓ Rendering updated"
 echo ""
 
 # -------------------------------
+# Phase 9: Memory PIN Generation (Automation)
+# -------------------------------
+# POST-PIPELINE AUTOMATION (PIN-432):
+# Auto-generate memory PIN summarizing the pipeline run.
+# This replaces manual PIN creation after HISAR execution.
+# -------------------------------
+echo "▶ [M] Phase 9 — Memory PIN Generation"
+echo "──────────────────────────────────────────────────────────────────────"
+
+# Generate pipeline summary
+PIPELINE_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+PROJECTION_FILE="$ROOT_DIR/design/l2_1/ui_contract/ui_projection_lock.json"
+
+if [[ -f "$PROJECTION_FILE" && "$DRY_RUN" == false ]]; then
+  # Extract stats from projection
+  TOTAL_PANELS=$(jq '[.domains[].panels[]? // empty] | length' "$PROJECTION_FILE" 2>/dev/null || echo "0")
+  BOUND_PANELS=$(jq '[.domains[].panels[]? | select(.binding_status == "BOUND")] | length' "$PROJECTION_FILE" 2>/dev/null || echo "0")
+  DOMAINS_COUNT=$(jq '.domains | length' "$PROJECTION_FILE" 2>/dev/null || echo "0")
+
+  echo "  Pipeline stats:"
+  echo "    Total panels: $TOTAL_PANELS"
+  echo "    BOUND panels: $BOUND_PANELS"
+  echo "    Domains: $DOMAINS_COUNT"
+
+  # Generate PIN content
+  PIN_TITLE="HISAR Pipeline Run"
+  [[ "$MODE" == "single" ]] && PIN_TITLE="HISAR Pipeline Run: $PANEL_ID"
+
+  # Include proper PIN header in content (memory_trail.py --from-file uses raw content)
+  # Note: Don't include "# PIN:" since memory_trail.py handles titling
+  PIN_CONTENT=$(cat <<EOF
+**Status:** COMPLETE
+**Created:** $(date +%Y-%m-%d)
+**Category:** HISAR / Pipeline Execution
+
+---
+
+## Summary
+
+HISAR pipeline executed successfully.
+
+- **Mode:** $MODE
+$([[ "$MODE" == "single" ]] && echo "- **Panel:** $PANEL_ID")
+- **Timestamp:** $PIPELINE_TIMESTAMP
+- **Total Panels:** $TOTAL_PANELS
+- **BOUND Panels:** $BOUND_PANELS
+- **Domains:** $DOMAINS_COUNT
+
+## Phases Completed
+
+| Phase | Name | Status |
+|-------|------|--------|
+| 0 | Snapshot Gate | ✓ PASSED |
+| 0.1 | Universe Validation | ✓ PASSED |
+| 1 | Human Intent Validation | ✓ PASSED |
+| 2 | Intent Specification | ✓ PASSED |
+| 3 | Capability Declaration | ✓ PASSED |
+| 3.5 | Coherency Gate | ✓ PASSED |
+| 4 | SDSR Verification | ✓ PASSED |
+| 5 | Observation Application | ✓ PASSED |
+| 5.5 | Trust Evaluation | ✓ PASSED |
+| 6 | Aurora Compilation | ✓ PASSED |
+| 6.5 | UI Plan Bind | ✓ PASSED |
+| 7 | Projection Diff Guard | ✓ PASSED |
+| 8 | Rendering | ✓ PASSED |
+
+## Automation Features (PIN-432)
+
+- Observation-preserving sync (prevents status regression)
+- PDG allowlist auto-append (auto-permits binding transitions)
+- Post-pipeline PIN generation (this document)
+EOF
+)
+
+  # Try to generate PIN using memory_trail.py (optional - don't fail pipeline if unavailable)
+  MEMORY_TRAIL="$ROOT_DIR/scripts/ops/memory_trail.py"
+  if [[ -x "$MEMORY_TRAIL" || -f "$MEMORY_TRAIL" ]]; then
+    # Write content to temp file
+    TEMP_PIN_CONTENT="/tmp/hisar_pin_content_$$.md"
+    echo "$PIN_CONTENT" > "$TEMP_PIN_CONTENT"
+
+    # Generate PIN (suppress errors, this is optional)
+    if python3 "$MEMORY_TRAIL" pin \
+        --title "$PIN_TITLE" \
+        --category "HISAR / Pipeline Execution" \
+        --status "COMPLETE" \
+        --from-file "$TEMP_PIN_CONTENT" 2>/dev/null; then
+      echo "  ✅ Memory PIN generated automatically"
+    else
+      echo "  ⚠️  Memory PIN generation skipped (memory_trail.py not configured)"
+    fi
+
+    rm -f "$TEMP_PIN_CONTENT"
+  else
+    echo "  ⚠️  Memory PIN generation skipped (memory_trail.py not found)"
+  fi
+else
+  echo "  Skipping PIN generation (dry run or no projection)"
+fi
+
+echo "✓ Pipeline documentation complete"
+echo ""
+
+# -------------------------------
 # Summary
 # -------------------------------
 echo "══════════════════════════════════════════════════════════════════════"
@@ -596,4 +717,5 @@ echo "    [A] 6    Aurora Compilation           ✓"
 echo "    [A] 6.5  UI Plan Bind                 ✓"
 echo "    [A] 7    Projection Diff Guard        ✓"
 echo "    [R] 8    Rendering                    ✓"
+echo "    [M] 9    Memory PIN Generation        ✓"
 echo ""

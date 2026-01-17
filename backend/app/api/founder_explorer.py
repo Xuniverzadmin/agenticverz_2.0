@@ -43,6 +43,7 @@ from sqlmodel import Session
 
 from ..auth.console_auth import FounderToken, verify_fops_token
 from ..db import get_session
+from ..schemas.response import wrap_dict, wrap_list
 
 logger = logging.getLogger("nova.api.founder_explorer")
 
@@ -367,7 +368,7 @@ async def list_tenants(
                 )
             )
 
-        return tenants
+        return wrap_list([t.model_dump() for t in tenants], total=len(tenants))
 
     except Exception as e:
         logger.error(f"Failed to list tenants: {e}")
@@ -687,7 +688,7 @@ async def get_usage_patterns(
 @router.get("/info")
 async def get_explorer_info():
     """Get information about the explorer endpoints."""
-    return {
+    return wrap_dict({
         "system": "H3 Founder Explorer",
         "access": "FOUNDER ONLY",
         "mode": "READ-ONLY",
@@ -706,4 +707,4 @@ async def get_explorer_info():
             "/explorer/patterns - Usage pattern analysis",
         ],
         "reference": "Phase H3 - Founder Console Exploratory Mode",
-    }
+    })

@@ -1,0 +1,528 @@
+# Activity Domain Capability Registry
+#
+# Status: AUTHORITATIVE
+# Created: 2026-01-17
+# Reference: Activity Domain System Design
+#
+# This registry is the SINGLE SOURCE OF TRUTH for:
+# - Capability → Endpoint mapping
+# - Endpoint → Service mapping
+# - Panel → Capability binding
+#
+# Claude Rule: No endpoint exists unless declared here.
+# CI Rule: Undeclared capabilities are violations.
+
+schema_version: "1.0"
+domain: activity
+layer: L2
+
+# =============================================================================
+# Registry Metadata
+# =============================================================================
+
+metadata:
+  description: "Activity domain capabilities for runs, traces, and signals"
+  owner: "activity-team"
+  last_updated: "2026-01-17"
+  governance:
+    - "Capabilities must be declared before implementation"
+    - "Endpoints must have exactly one capability"
+    - "Capabilities must have exactly one service"
+
+# =============================================================================
+# Capability Definitions
+# =============================================================================
+
+capabilities:
+
+  # ---------------------------------------------------------------------------
+  # COMP Panel Capabilities (Completed Runs)
+  # ---------------------------------------------------------------------------
+
+  activity.completed_runs:
+    status: OBSERVED
+    panel_id: ACT-LLM-COMP-O1
+    question: "How many LLM runs completed in window?"
+    endpoint:
+      path: /api/v1/activity/runs
+      method: GET
+      filters:
+        state: COMPLETED
+    service: CustomerActivityReadService
+    source_table: v_runs_o2
+    query_type: list
+    cache_ttl_seconds: 0  # Real-time
+
+  activity.runs_list:
+    status: OBSERVED
+    panel_id: ACT-LLM-COMP-O2
+    question: "How many arranged based on timestamp recency?"
+    endpoint:
+      path: /api/v1/activity/runs
+      method: GET
+      filters:
+        sort_by: completed_at
+        sort_order: desc
+    service: CustomerActivityReadService
+    source_table: v_runs_o2
+    query_type: list
+    cache_ttl_seconds: 0
+
+  activity.summary_by_status:
+    status: TODO
+    panel_id: ACT-LLM-COMP-O3
+    question: "How many completed critical success/failed/near threshold?"
+    endpoint:
+      path: /api/v1/activity/summary/by-status
+      method: GET
+    service: ActivitySummaryService
+    source_table: v_runs_o2
+    query_type: aggregate
+    sql_reference: "ACTIVITY_DOMAIN_SQL.md#1-comp-o3"
+    cache_ttl_seconds: 60  # 1 minute cache acceptable
+
+  activity.runtime_traces:
+    status: OBSERVED
+    panel_id: ACT-LLM-COMP-O5
+    question: "Which runs ended early (aborted/cancelled)?"
+    endpoint:
+      path: /api/v1/activity/runs
+      method: GET
+      filters:
+        status: [aborted]
+    service: CustomerActivityReadService
+    source_table: v_runs_o2
+    query_type: list
+    cache_ttl_seconds: 0
+
+  # ---------------------------------------------------------------------------
+  # LIVE Panel Capabilities (In-Progress Runs)
+  # ---------------------------------------------------------------------------
+
+  activity.live_runs:
+    status: OBSERVED
+    panel_id: ACT-LLM-LIVE-O1
+    question: "How many runs currently in progress?"
+    endpoint:
+      path: /api/v1/activity/runs
+      method: GET
+      filters:
+        state: LIVE
+    service: CustomerActivityReadService
+    source_table: v_runs_o2
+    query_type: list
+    cache_ttl_seconds: 0
+
+  activity.queued_runs:
+    status: OBSERVED
+    panel_id: ACT-LLM-LIVE-O3
+    question: "Which live runs approaching failure/limits?"
+    endpoint:
+      path: /api/v1/activity/runs
+      method: GET
+      filters:
+        state: LIVE
+        risk: true
+    service: CustomerActivityReadService
+    source_table: v_runs_o2
+    query_type: list
+    cache_ttl_seconds: 0
+
+  activity.evidence_health:
+    status: TODO
+    panel_id: ACT-LLM-LIVE-O4
+    question: "Are live runs emitting telemetry/logs/traces?"
+    endpoint:
+      path: /api/v1/activity/runs
+      method: GET
+      filters:
+        state: LIVE
+        evidence_health: [DEGRADED, MISSING]
+    service: CustomerActivityReadService
+    source_table: v_runs_o2
+    query_type: list
+    cache_ttl_seconds: 0
+
+  activity.runs_by_dimension:
+    status: TODO
+    panel_id: ACT-LLM-LIVE-O5
+    question: "Distribution of live runs by dimension?"
+    endpoint:
+      path: /api/v1/activity/runs/by-dimension
+      method: GET
+      parameters:
+        dim:
+          type: enum
+          allowed: [provider_type, source, agent_id]
+          required: true
+    service: ActivityDimensionService
+    source_table: v_runs_o2
+    query_type: aggregate
+    sql_reference: "ACTIVITY_DOMAIN_SQL.md#2-live-o5"
+    cache_ttl_seconds: 30
+
+  # ---------------------------------------------------------------------------
+  # SIGNAL Panel Capabilities (Intelligence)
+  # ---------------------------------------------------------------------------
+
+  activity.signals:
+    status: OBSERVED
+    panel_id: ACT-LLM-SIG-O1
+    question: "What's happening right now that matters?"
+    endpoint:
+      path: /api/v1/activity/runs
+      method: GET
+      filters:
+        risk: true
+    service: CustomerActivityReadService
+    source_table: v_runs_o2
+    query_type: list
+    cache_ttl_seconds: 0
+
+  activity.threshold_signals:
+    status: TODO
+    panel_id: ACT-LLM-SIG-O2
+    question: "Which runs approach policy/cost/failure limits?"
+    endpoint:
+      path: /api/v1/activity/runs
+      method: GET
+      filters:
+        risk_level: [NEAR_THRESHOLD, AT_RISK]
+    service: CustomerActivityReadService
+    source_table: v_runs_o2
+    query_type: list
+    sql_reference: "ACTIVITY_DOMAIN_SQL.md#3-sig-o2"
+    cache_ttl_seconds: 0
+
+  activity.patterns:
+    status: TODO
+    panel_id: ACT-LLM-SIG-O3
+    question: "What patterns indicate instability over time?"
+    endpoint:
+      path: /api/v1/activity/patterns
+      method: GET
+      parameters:
+        window_hours:
+          type: integer
+          default: 24
+          max: 168  # 7 days
+    service: PatternDetectionService
+    source_table: aos_trace_steps
+    query_type: analysis
+    sql_reference: "ACTIVITY_DOMAIN_SQL.md#4-sig-o3"
+    cache_ttl_seconds: 300  # 5 minute cache
+    patterns:
+      - retry_loop
+      - step_oscillation
+      - tool_call_loop
+      - timeout_cascade
+
+  activity.cost_analysis:
+    status: TODO
+    panel_id: ACT-LLM-SIG-O4
+    question: "Where is money being lost/saved unexpectedly?"
+    endpoint:
+      path: /api/v1/activity/cost-analysis
+      method: GET
+      parameters:
+        baseline_days:
+          type: integer
+          default: 7
+          max: 30
+        anomaly_threshold:
+          type: float
+          default: 2.0  # Z-score
+          max: 5.0
+    service: CostAnalysisService
+    source_table: runs
+    query_type: analysis
+    sql_reference: "ACTIVITY_DOMAIN_SQL.md#5-sig-o4"
+    cache_ttl_seconds: 300
+
+  activity.attention_queue:
+    status: TODO
+    panel_id: ACT-LLM-SIG-O5
+    question: "What should we look at first and why?"
+    endpoint:
+      path: /api/v1/activity/attention-queue
+      method: GET
+      parameters:
+        limit:
+          type: integer
+          default: 20
+          max: 100
+    service: AttentionRankingService
+    source_table: v_runs_o2
+    query_type: composite
+    sql_reference: "ACTIVITY_DOMAIN_SQL.md#6-sig-o5"
+    cache_ttl_seconds: 60
+    weights:
+      risk: 0.35
+      impact: 0.25
+      latency: 0.15
+      recency: 0.15
+      evidence: 0.10
+
+  # ---------------------------------------------------------------------------
+  # Detail Capabilities (O3-O5 drill-down)
+  # ---------------------------------------------------------------------------
+
+  activity.run_detail:
+    status: OBSERVED
+    panel_id: null  # Used by all panels for drill-down
+    question: "What are the details of this specific run?"
+    endpoint:
+      path: /api/v1/activity/runs/{run_id}
+      method: GET
+    service: CustomerActivityReadService
+    source_table: v_runs_o2
+    query_type: detail
+    cache_ttl_seconds: 0
+
+  activity.run_evidence:
+    status: OBSERVED
+    panel_id: null  # O4 drill-down
+    question: "What is the cross-domain impact of this run?"
+    endpoint:
+      path: /api/v1/activity/runs/{run_id}/evidence
+      method: GET
+    service: EvidenceService
+    source_table: multi  # Cross-domain join
+    query_type: detail
+    preflight_only: true
+    cache_ttl_seconds: 0
+
+  activity.run_proof:
+    status: OBSERVED
+    panel_id: null  # O5 drill-down
+    question: "What is the raw trace and integrity proof?"
+    endpoint:
+      path: /api/v1/activity/runs/{run_id}/proof
+      method: GET
+    service: ProofService
+    source_table: aos_traces
+    query_type: detail
+    preflight_only: true
+    cache_ttl_seconds: 0
+
+  activity.summary:
+    status: OBSERVED
+    panel_id: ACT-LLM-COMP-O2
+    question: "What are the aggregated counts?"
+    endpoint:
+      path: /api/v1/activity/summary
+      method: GET
+    service: ActivitySummaryService
+    source_table: v_runs_o2
+    query_type: aggregate
+    cache_ttl_seconds: 60
+
+# =============================================================================
+# Service Definitions
+# =============================================================================
+
+services:
+
+  CustomerActivityReadService:
+    layer: L4
+    location: backend/app/services/activity/customer_activity_read_service.py
+    responsibilities:
+      - "Query v_runs_o2 view"
+      - "Apply tenant isolation"
+      - "Apply filters and pagination"
+    forbidden:
+      - "Write to any table"
+      - "Call other services"
+      - "Compute derived fields (use view)"
+
+  ActivitySummaryService:
+    layer: L4
+    location: backend/app/services/activity/activity_summary_service.py
+    responsibilities:
+      - "Aggregate counts by status"
+      - "Aggregate counts by dimension"
+    forbidden:
+      - "Write to any table"
+      - "Apply business rules"
+
+  ActivityDimensionService:
+    layer: L4
+    location: backend/app/services/activity/activity_dimension_service.py
+    responsibilities:
+      - "Group runs by dimension"
+      - "Validate dimension allowlist"
+    forbidden:
+      - "Write to any table"
+      - "Accept arbitrary dimensions"
+
+  PatternDetectionService:
+    layer: L4
+    location: backend/app/services/activity/pattern_detection_service.py
+    responsibilities:
+      - "Detect instability patterns in trace steps"
+      - "Rule-based analysis only (no ML)"
+      - "Return pattern type + confidence"
+    forbidden:
+      - "Write to any table"
+      - "Call other services"
+      - "Use machine learning"
+    patterns_supported:
+      - retry_loop
+      - step_oscillation
+      - tool_call_loop
+      - timeout_cascade
+
+  CostAnalysisService:
+    layer: L4
+    location: backend/app/services/activity/cost_analysis_service.py
+    responsibilities:
+      - "Calculate baseline cost statistics"
+      - "Detect cost anomalies via Z-score"
+      - "Return anomaly + details"
+    forbidden:
+      - "Write to any table"
+      - "Modify cost fields"
+      - "Label runs as failed"
+
+  AttentionRankingService:
+    layer: L4
+    location: backend/app/services/activity/attention_ranking_service.py
+    responsibilities:
+      - "Combine signals into attention score"
+      - "Apply frozen weights"
+      - "Return ranked queue with reasons"
+    forbidden:
+      - "Recompute underlying signals"
+      - "Apply policy actions"
+      - "Modify weights at runtime"
+    weights_version: "1.0"
+
+  EvidenceService:
+    layer: L4
+    location: backend/app/services/activity/evidence_service.py
+    responsibilities:
+      - "Gather cross-domain impact"
+      - "Link incidents, policies, decisions"
+    forbidden:
+      - "Write to any table"
+
+  ProofService:
+    layer: L4
+    location: backend/app/services/activity/proof_service.py
+    responsibilities:
+      - "Return raw traces and steps"
+      - "Verify integrity chain"
+    forbidden:
+      - "Write to any table"
+      - "Modify trace data"
+
+# =============================================================================
+# Panel → Capability Binding
+# =============================================================================
+
+panel_bindings:
+
+  ACT-LLM-COMP-O1:
+    capability: activity.completed_runs
+    topic: COMPLETED
+    order: O1
+
+  ACT-LLM-COMP-O2:
+    capability: activity.runs_list
+    topic: COMPLETED
+    order: O2
+
+  ACT-LLM-COMP-O3:
+    capability: activity.summary_by_status
+    topic: COMPLETED
+    order: O3
+
+  ACT-LLM-COMP-O4:
+    capability: activity.threshold_signals
+    topic: COMPLETED
+    order: O4
+
+  ACT-LLM-COMP-O5:
+    capability: activity.runtime_traces
+    topic: COMPLETED
+    order: O5
+
+  ACT-LLM-LIVE-O1:
+    capability: activity.live_runs
+    topic: LIVE
+    order: O1
+
+  ACT-LLM-LIVE-O2:
+    capability: activity.runs_list
+    topic: LIVE
+    order: O2
+
+  ACT-LLM-LIVE-O3:
+    capability: activity.queued_runs
+    topic: LIVE
+    order: O3
+
+  ACT-LLM-LIVE-O4:
+    capability: activity.evidence_health
+    topic: LIVE
+    order: O4
+
+  ACT-LLM-LIVE-O5:
+    capability: activity.runs_by_dimension
+    topic: LIVE
+    order: O5
+
+  ACT-LLM-SIG-O1:
+    capability: activity.signals
+    topic: SIGNALS
+    order: O1
+
+  ACT-LLM-SIG-O2:
+    capability: activity.threshold_signals
+    topic: SIGNALS
+    order: O2
+
+  ACT-LLM-SIG-O3:
+    capability: activity.patterns
+    topic: SIGNALS
+    order: O3
+
+  ACT-LLM-SIG-O4:
+    capability: activity.cost_analysis
+    topic: SIGNALS
+    order: O4
+
+  ACT-LLM-SIG-O5:
+    capability: activity.attention_queue
+    topic: SIGNALS
+    order: O5
+
+# =============================================================================
+# Validation Rules (CI Enforced)
+# =============================================================================
+
+validation_rules:
+
+  - rule: "capability_endpoint_unique"
+    description: "Each capability maps to exactly one endpoint"
+    severity: ERROR
+
+  - rule: "endpoint_has_capability"
+    description: "Every endpoint must have a declared capability"
+    severity: ERROR
+
+  - rule: "service_layer_L4"
+    description: "All services must be in L4"
+    severity: ERROR
+
+  - rule: "no_write_in_read_service"
+    description: "Read services must not write to tables"
+    severity: ERROR
+
+  - rule: "panel_has_capability"
+    description: "Every panel must bind to a capability"
+    severity: WARNING
+
+  - rule: "todo_capability_no_endpoint"
+    description: "TODO capabilities should not have implemented endpoints"
+    severity: WARNING

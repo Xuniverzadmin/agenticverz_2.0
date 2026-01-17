@@ -1,0 +1,555 @@
+{
+  "$schema": "L2_1_PANEL_ADAPTER_SPEC.yaml#/response_envelope_schema",
+  "$comment": "Example adapter response demonstrating: near-threshold case, negative-authority case, partial-data case, verification flags, consistency conflict handling",
+
+  "adapter_version": "1.0.0",
+  "panel_contract_id": "OVR-SUM-HL-v1.0.0",
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "tenant_id": "tenant-demo-001",
+  "as_of": "2026-01-16T14:30:00Z",
+
+  "panel": {
+    "panel_id": "OVR-SUM-HL",
+    "domain": "OVERVIEW",
+    "subdomain": "SUMMARY",
+    "topic": "HIGHLIGHTS",
+    "description": "System activity snapshot - glanceable current state"
+  },
+
+  "slots": {
+
+    "O1": {
+      "slot_contract_id": "OVR-SUM-HL-O1-v1.0.0",
+      "slot_question": "Is the system calm, active, or stressed right now?",
+      "state": "available",
+      "authority": "affirmative",
+
+      "output": {
+        "system_state": "ACTIVE",
+        "active_runs": 12,
+        "completed_runs_in_window": 47,
+        "at_risk_runs": 2,
+        "observation_timestamp": "2026-01-16T14:29:55Z"
+      },
+
+      "truth_metadata": {
+        "class": "interpretation",
+        "lens": "operational",
+        "capability": "activity_snapshot_interpretation",
+        "actionable": false
+      },
+
+      "time_semantics": {
+        "as_of": "2026-01-16T14:30:00Z",
+        "evaluation_window": "PT15M",
+        "baseline_window": null,
+        "data_cutoff_time": "2026-01-16T14:29:55Z"
+      },
+
+      "verification": {
+        "missing_input_count": 0,
+        "stale_input_count": 0,
+        "contradictory_signal_count": 0,
+        "unverified_signal_refs": []
+      }
+    },
+
+    "O2": {
+      "slot_contract_id": "OVR-SUM-HL-O2-v1.0.0",
+      "slot_question": "Are there non-ignorable signals requiring attention?",
+      "state": "available",
+      "authority": "affirmative",
+
+      "output": {
+        "attention_required": true,
+        "active_incidents": 3,
+        "near_threshold_runs": 2,
+        "prevented_violations": 5,
+        "highest_severity": "MEDIUM"
+      },
+
+      "truth_metadata": {
+        "class": "interpretation",
+        "lens": "risk",
+        "capability": "attention_signal_aggregation",
+        "actionable": false
+      },
+
+      "time_semantics": {
+        "as_of": "2026-01-16T14:30:00Z",
+        "evaluation_window": "PT15M",
+        "baseline_window": null,
+        "data_cutoff_time": "2026-01-16T14:29:58Z"
+      },
+
+      "verification": {
+        "missing_input_count": 0,
+        "stale_input_count": 0,
+        "contradictory_signal_count": 0,
+        "unverified_signal_refs": []
+      }
+    },
+
+    "O3": {
+      "slot_contract_id": "OVR-SUM-HL-O3-v1.0.0",
+      "slot_question": "Are there emerging pattern shifts not yet incidents but statistically meaningful?",
+      "state": "partial",
+      "authority": "indeterminate",
+
+      "output": {
+        "has_pattern_shifts": null,
+        "week_over_week_deltas": null,
+        "change_point_signals": []
+      },
+
+      "truth_metadata": {
+        "class": "interpretation",
+        "lens": "risk",
+        "capability": "pattern_shift_detection",
+        "actionable": false
+      },
+
+      "time_semantics": {
+        "as_of": "2026-01-16T14:30:00Z",
+        "evaluation_window": "P7D",
+        "baseline_window": "P30D",
+        "data_cutoff_time": "2026-01-16T00:00:00Z"
+      },
+
+      "verification": {
+        "missing_input_count": 2,
+        "stale_input_count": 1,
+        "contradictory_signal_count": 0,
+        "unverified_signal_refs": [
+          "historical_failure_ratios",
+          "escalation_latency_baseline"
+        ]
+      },
+
+      "$comment": "PARTIAL DATA CASE: Missing historical baseline data prevents pattern analysis"
+    },
+
+    "O4": {
+      "slot_contract_id": "OVR-SUM-HL-O4-v1.0.0",
+      "slot_question": "Are there rare but high-impact clusters invisible in averages?",
+      "state": "available",
+      "authority": "negative",
+
+      "output": {
+        "has_high_impact_outliers": false,
+        "outlier_clusters": [],
+        "total_outlier_cost_impact": 0.00
+      },
+
+      "negative_authority_declaration": {
+        "declaration": "NO_ANOMALY",
+        "confidence": "HIGH",
+        "basis": "No violations with severity >= HIGH in evaluation window. No cost anomalies detected above 2-sigma threshold."
+      },
+
+      "truth_metadata": {
+        "class": "interpretation",
+        "lens": "risk",
+        "capability": "outlier_detection",
+        "actionable": false
+      },
+
+      "time_semantics": {
+        "as_of": "2026-01-16T14:30:00Z",
+        "evaluation_window": "P7D",
+        "baseline_window": "P30D",
+        "data_cutoff_time": "2026-01-16T14:00:00Z"
+      },
+
+      "verification": {
+        "missing_input_count": 0,
+        "stale_input_count": 0,
+        "contradictory_signal_count": 0,
+        "unverified_signal_refs": []
+      },
+
+      "$comment": "NEGATIVE AUTHORITY CASE: Explicit declaration that no anomalies exist"
+    }
+  },
+
+  "consistency_checks": [
+    {
+      "rule_id": "CR-001",
+      "panels_checked": ["OVR-SUM-HL.O2", "ACT-LLM-SIG.O1"],
+      "passed": true,
+      "conflict_description": null,
+      "affected_slots": []
+    },
+    {
+      "rule_id": "CR-004",
+      "panels_checked": ["INC-EV-ACT.O1", "OVR-SUM-HL.O2"],
+      "passed": true,
+      "conflict_description": null,
+      "affected_slots": []
+    }
+  ],
+
+  "negative_authority_declarations": [
+    {
+      "slot_id": "O4",
+      "declaration": "NO_ANOMALY",
+      "confidence": "HIGH"
+    }
+  ],
+
+  "aggregate_verification": {
+    "total_missing_inputs": 2,
+    "total_stale_inputs": 1,
+    "total_contradictions": 0,
+    "overall_state": "partial",
+    "degraded_slots": ["O3"]
+  },
+
+  "_examples": {
+
+    "near_threshold_response": {
+      "$comment": "NEAR-THRESHOLD CASE: Demonstrates approaching limits",
+      "panel_contract_id": "ACT-LLM-SIG-v1.0.0",
+      "slots": {
+        "O2": {
+          "slot_contract_id": "ACT-LLM-SIG-O2-v1.0.0",
+          "slot_question": "Are any runs approaching failure, policy, or cost limits?",
+          "state": "available",
+          "authority": "affirmative",
+
+          "output": {
+            "has_threshold_proximity": true,
+            "token_limit_risk_count": 3,
+            "cost_ceiling_risk_count": 1,
+            "timeout_risk_count": 2,
+            "rate_limit_pressure": "MEDIUM",
+            "proximity_details": [
+              {
+                "run_id": "run-abc-001",
+                "limit_type": "token",
+                "current_usage_pct": 87,
+                "threshold_pct": 90,
+                "time_to_breach_estimate": "PT3M"
+              },
+              {
+                "run_id": "run-abc-002",
+                "limit_type": "cost",
+                "current_usage_pct": 92,
+                "threshold_pct": 95,
+                "time_to_breach_estimate": "PT1M"
+              }
+            ]
+          },
+
+          "truth_metadata": {
+            "class": "interpretation",
+            "lens": "risk",
+            "capability": "threshold_proximity_prediction",
+            "actionable": false
+          },
+
+          "time_semantics": {
+            "as_of": "2026-01-16T14:30:00Z",
+            "evaluation_window": "PT5M",
+            "baseline_window": null,
+            "data_cutoff_time": "2026-01-16T14:29:59Z"
+          },
+
+          "verification": {
+            "missing_input_count": 0,
+            "stale_input_count": 0,
+            "contradictory_signal_count": 0,
+            "unverified_signal_refs": []
+          }
+        }
+      }
+    },
+
+    "consistency_conflict_response": {
+      "$comment": "CONSISTENCY CONFLICT CASE: Cross-slot contradiction detected",
+      "panel_contract_id": "OVR-SUM-HL-v1.0.0",
+      "slots": {
+        "O2": {
+          "slot_contract_id": "OVR-SUM-HL-O2-v1.0.0",
+          "slot_question": "Are there non-ignorable signals requiring attention?",
+          "state": "available",
+          "authority": "indeterminate",
+          "$comment": "Authority downgraded due to cross-slot conflict",
+
+          "output": {
+            "attention_required": true,
+            "active_incidents": 0,
+            "near_threshold_runs": 5,
+            "prevented_violations": 0,
+            "highest_severity": "NONE",
+            "_conflict_flag": true
+          },
+
+          "truth_metadata": {
+            "class": "interpretation",
+            "lens": "risk",
+            "capability": "attention_signal_aggregation",
+            "actionable": false
+          },
+
+          "time_semantics": {
+            "as_of": "2026-01-16T14:30:00Z",
+            "evaluation_window": "PT15M",
+            "baseline_window": null,
+            "data_cutoff_time": "2026-01-16T14:29:58Z"
+          },
+
+          "verification": {
+            "missing_input_count": 0,
+            "stale_input_count": 0,
+            "contradictory_signal_count": 1,
+            "unverified_signal_refs": ["incident_count_vs_attention_flag"]
+          }
+        }
+      },
+
+      "consistency_checks": [
+        {
+          "rule_id": "CR-001",
+          "panels_checked": ["OVR-SUM-HL.O2", "ACT-LLM-SIG.O1"],
+          "passed": false,
+          "conflict_description": "attention_required=true but active_incidents=0 and near_threshold signals exist in Activity but no causal signal found",
+          "affected_slots": ["OVR-SUM-HL.O2"],
+          "resolution_applied": "authority downgraded to indeterminate"
+        }
+      ]
+    },
+
+    "cost_drift_response": {
+      "$comment": "COST DRIFT CASE: Economic deviation detected",
+      "panel_contract_id": "OVR-SUM-CI-v1.0.0",
+      "slots": {
+        "O1": {
+          "slot_contract_id": "OVR-SUM-CI-O1-v1.0.0",
+          "slot_question": "What is the current cost posture without navigation?",
+          "state": "available",
+          "authority": "affirmative",
+
+          "output": {
+            "spend_rate": 47.82,
+            "spend_rate_unit": "USD/hour",
+            "trend": "UP",
+            "trend_magnitude": "+23%",
+            "primary_driver": "claude-3-opus",
+            "primary_driver_percentage": 67.3,
+            "cost_drift_detected": true,
+            "drift_from_baseline_pct": 23.4
+          },
+
+          "truth_metadata": {
+            "class": "interpretation",
+            "lens": "cost",
+            "capability": "cost_posture_snapshot",
+            "actionable": false
+          },
+
+          "time_semantics": {
+            "as_of": "2026-01-16T14:30:00Z",
+            "evaluation_window": "PT24H",
+            "baseline_window": "P7D",
+            "data_cutoff_time": "2026-01-16T14:29:00Z"
+          },
+
+          "verification": {
+            "missing_input_count": 0,
+            "stale_input_count": 0,
+            "contradictory_signal_count": 0,
+            "unverified_signal_refs": []
+          }
+        },
+
+        "O4": {
+          "slot_contract_id": "OVR-SUM-CI-O4-v1.0.0",
+          "slot_question": "What is the near-term cost trajectory?",
+          "state": "available",
+          "authority": "affirmative",
+
+          "output": {
+            "projected_direction": "INCREASE",
+            "confidence": "MEDIUM",
+            "projection_basis": "7-day linear regression with anomaly weighting",
+            "projected_daily_spend": 1147.68,
+            "projected_weekly_spend": 8033.76
+          },
+
+          "truth_metadata": {
+            "class": "interpretation",
+            "lens": "cost",
+            "capability": "cost_trajectory_projection",
+            "actionable": false
+          },
+
+          "time_semantics": {
+            "as_of": "2026-01-16T14:30:00Z",
+            "evaluation_window": "P7D",
+            "baseline_window": "P30D",
+            "data_cutoff_time": "2026-01-16T08:00:00Z"
+          },
+
+          "verification": {
+            "missing_input_count": 0,
+            "stale_input_count": 0,
+            "contradictory_signal_count": 0,
+            "unverified_signal_refs": []
+          }
+        }
+      }
+    },
+
+    "incident_evidence_response": {
+      "$comment": "EVIDENCE CLASS CASE: Factual incident list (not interpretation)",
+      "panel_contract_id": "INC-EV-ACT-v1.0.0",
+      "slots": {
+        "O1": {
+          "slot_contract_id": "INC-EV-ACT-O1-v1.0.0",
+          "slot_question": "What are the currently active incidents?",
+          "state": "available",
+          "authority": "affirmative",
+
+          "output": {
+            "incident_list": [
+              {
+                "incident_id": "inc-001",
+                "type": "failure",
+                "severity": "HIGH",
+                "created_at": "2026-01-16T14:15:00Z",
+                "source_run_id": "run-xyz-789"
+              },
+              {
+                "incident_id": "inc-002",
+                "type": "near_threshold",
+                "severity": "MEDIUM",
+                "created_at": "2026-01-16T14:22:00Z",
+                "source_run_id": "run-xyz-790"
+              },
+              {
+                "incident_id": "inc-003",
+                "type": "prevented",
+                "severity": "LOW",
+                "created_at": "2026-01-16T14:28:00Z",
+                "source_run_id": "run-xyz-791"
+              }
+            ],
+            "total_active_count": 3,
+            "by_type_counts": {
+              "failure": 1,
+              "near_threshold": 1,
+              "prevented": 1,
+              "governance_halt": 0
+            }
+          },
+
+          "truth_metadata": {
+            "class": "evidence",
+            "lens": "risk",
+            "capability": "incident_enumeration",
+            "actionable": false
+          },
+
+          "time_semantics": {
+            "as_of": "2026-01-16T14:30:00Z",
+            "evaluation_window": "PT0S",
+            "baseline_window": null,
+            "data_cutoff_time": "2026-01-16T14:30:00Z"
+          },
+
+          "verification": {
+            "missing_input_count": 0,
+            "stale_input_count": 0,
+            "contradictory_signal_count": 0,
+            "unverified_signal_refs": []
+          }
+        }
+      }
+    },
+
+    "missing_data_response": {
+      "$comment": "MISSING DATA CASE: Required signals unavailable",
+      "panel_contract_id": "ACT-LLM-LIVE-v1.0.0",
+      "slots": {
+        "O1": {
+          "slot_contract_id": "ACT-LLM-LIVE-O1-v1.0.0",
+          "slot_question": "How many LLM runs are currently in progress?",
+          "state": "missing",
+          "authority": "indeterminate",
+
+          "output": {
+            "total_live_runs": null,
+            "_error": "Activity API unavailable"
+          },
+
+          "truth_metadata": {
+            "class": "interpretation",
+            "lens": "operational",
+            "capability": "live_run_counting",
+            "actionable": false
+          },
+
+          "time_semantics": {
+            "as_of": "2026-01-16T14:30:00Z",
+            "evaluation_window": "PT0S",
+            "baseline_window": null,
+            "data_cutoff_time": null
+          },
+
+          "verification": {
+            "missing_input_count": 1,
+            "stale_input_count": 0,
+            "contradictory_signal_count": 0,
+            "unverified_signal_refs": ["live_run_count"]
+          }
+        }
+      }
+    },
+
+    "negative_no_violation_response": {
+      "$comment": "NEGATIVE AUTHORITY CASE: Explicit NO_VIOLATION declaration",
+      "panel_contract_id": "POL-LIM-VIO-v1.0.0",
+      "slots": {
+        "O1": {
+          "slot_contract_id": "POL-LIM-VIO-O1-v1.0.0",
+          "slot_question": "What policy violations have occurred?",
+          "state": "available",
+          "authority": "negative",
+
+          "output": {
+            "violation_list": [],
+            "total_violations": 0
+          },
+
+          "negative_authority_declaration": {
+            "declaration": "NO_VIOLATION",
+            "confidence": "HIGH",
+            "basis": "Zero policy violations recorded in evaluation window. All limit policies evaluated without breach."
+          },
+
+          "truth_metadata": {
+            "class": "evidence",
+            "lens": "compliance",
+            "capability": "violation_enumeration",
+            "actionable": false
+          },
+
+          "time_semantics": {
+            "as_of": "2026-01-16T14:30:00Z",
+            "evaluation_window": "PT24H",
+            "baseline_window": null,
+            "data_cutoff_time": "2026-01-16T14:30:00Z"
+          },
+
+          "verification": {
+            "missing_input_count": 0,
+            "stale_input_count": 0,
+            "contradictory_signal_count": 0,
+            "unverified_signal_refs": []
+          }
+        }
+      }
+    }
+  }
+}

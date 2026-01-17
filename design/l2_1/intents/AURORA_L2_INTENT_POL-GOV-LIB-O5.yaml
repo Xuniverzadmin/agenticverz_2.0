@@ -1,0 +1,63 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: POL-GOV-LIB-O5
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-GOV-LIB-O5
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: POLICIES
+  subdomain: GOVERNANCE
+  topic: POLICY_LIBRARY
+  topic_id: POLICIES.GOVERNANCE.POLICY_LIBRARY
+  order: O5
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: POL-GOV-LIB-O5
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: policies.temporal_policies
+  status: ASSUMED
+  assumed_endpoint: /api/v1/policy-layer/temporal-policies
+  assumed_method: GET
+sdsr:
+  scenario: SDSR-POL-GOV-LIB-O5-001
+  verified: false
+notes: 'Show change impact and audit trail for policy adoption changes.
+
+
+  What it shows:
+
+  - Impact preview based on historical runs
+
+  - Expected prevented incidents, cost savings
+
+  - Known risks
+
+  - Audit record: policy, scope before/after, approved by, timestamp
+
+  - Rollback option (first-class)
+
+
+  What it explicitly does NOT show:
+
+  - No auto-rollback
+
+  - No silent changes'

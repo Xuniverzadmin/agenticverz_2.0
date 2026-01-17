@@ -1,0 +1,65 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: INC-EV-ACT-O1
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: INC-EV-ACT-O1
+version: 1.0.0
+panel_class: evidence
+metadata:
+  domain: INCIDENTS
+  subdomain: EVENTS
+  topic: ACTIVE
+  topic_id: INCIDENTS.EVENTS.ACTIVE
+  order: O1
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: incident_lifecycle
+  facet_criticality: HIGH
+display:
+  name: INC-EV-ACT-O1
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: incidents.list
+  status: ASSUMED
+  assumed_endpoint: /api/v1/incidents
+  assumed_method: GET
+sdsr:
+  scenario: SDSR-INC-EV-ACT-O1-001
+  verified: false
+notes: 'Show the canonical set of currently active incidents.
+
+
+  What it shows:
+
+  - Failures (hard policy violation)
+
+  - Near-threshold escalations (policy-defined)
+
+  - Prevented overruns (policy intervened)
+
+  - Governance-triggered halts
+
+  - One row = one incident (no aggregation)
+
+
+  What it explicitly does NOT show:
+
+  - No trends or interpretation
+
+  - No raw signals (those are in Activity)
+
+  - No actions or controls'

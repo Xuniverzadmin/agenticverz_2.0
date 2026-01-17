@@ -16,6 +16,8 @@ metadata:
   action_layer: L2_1
   source: INTENT_LEDGER
   review_status: UNREVIEWED
+  facet: system_health_overview
+  facet_criticality: HIGH
 display:
   name: OVR-SUM-HL-O1
   visible_by_default: true
@@ -32,9 +34,10 @@ controls:
   confirmation_required: false
 capability:
   id: overview.activity_snapshot
-  status: OBSERVED
-  endpoint: null
-  method: GET
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+  facade_note: "Changed from /api/v1/activity/summary to overview facade - API Audit 2026-01-16"
 sdsr:
   scenario: observe_overview_activity_snapshot
   verified: false

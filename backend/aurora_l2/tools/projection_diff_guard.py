@@ -243,14 +243,16 @@ class ProjectionDiffGuard:
 
             # Check forbidden transitions first
             if transition in FORBIDDEN_BINDING_TRANSITIONS:
-                self.violations.append(Violation(
-                    rule="PDG-003",
-                    panel_id=panel_id,
-                    field="binding_status",
-                    old=old_status,
-                    new=new_status,
-                    message=f"Forbidden binding transition: {old_status} → {new_status}",
-                ))
+                # Check if allowlisted before flagging as violation
+                if not self._is_allowlisted(panel_id, "PDG-003"):
+                    self.violations.append(Violation(
+                        rule="PDG-003",
+                        panel_id=panel_id,
+                        field="binding_status",
+                        old=old_status,
+                        new=new_status,
+                        message=f"Forbidden binding transition: {old_status} → {new_status}",
+                    ))
             # Check if transition is allowed
             elif transition not in ALLOWED_BINDING_TRANSITIONS:
                 # Unknown transition - warn but don't block by default

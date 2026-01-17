@@ -47,6 +47,14 @@ SDSR exists to solve the "fake progress" problem where:
 └──────────────┬───────────────┘
                ↓
 ┌──────────────────────────────┐
+│ 3.5 SEMANTIC VALIDATION      │  ← NEW: Semantic authority gate
+│    (via SemanticValidator)   │
+│    - Signal translations     │
+│    - Capability binding      │
+│    - Type correctness        │
+└──────────────┬───────────────┘
+               ↓
+┌──────────────────────────────┐
 │ 4. UI PROJECTION             │  ← Observes backend state
 │    (via L2.1 pipeline)       │
 └──────────────┬───────────────┘
@@ -60,6 +68,60 @@ SDSR exists to solve the "fake progress" problem where:
 │    synthetic → real          │
 └──────────────────────────────┘
 ```
+
+### Step 3.5: Semantic Validation (Two-Phase)
+
+Before data flows to UI projection, the **Semantic Validator** enforces semantic authority
+using a two-phase architecture:
+
+```
+Phase A (Intent Guardrails - Design-time)
+        ↓
+SDSR proves: "API works" (operational truth)
+        ↓
+Phase B (Semantic Reality - Proof-time)
+        ↓
+UI Projection renders: Only semantically validated data
+```
+
+**Phase A Checks (Design-time - before Aurora):**
+
+| Check | Question | Failure Action |
+|-------|----------|----------------|
+| INT-001 | Is signal provable? | BLOCK |
+| INT-002 | Capability cardinality ≤ 5? | BLOCK |
+| INT-003 | No semantic duplication? | WARN |
+| INT-004 | No contradictory intents? | BLOCK |
+| INT-007 | Semantic contract exists? | BLOCK |
+| INT-008 | Capability reference valid? | BLOCK |
+
+**Phase B Checks (Proof-time - during signal collection):**
+
+| Check | Question | Failure Action |
+|-------|----------|----------------|
+| SEM-001 | Does signal have translation? | BLOCK |
+| SEM-002 | Is capability OBSERVED? | BLOCK |
+| SEM-003 | Does API field exist? | BLOCK/WARN |
+| SEM-004 | Is type correct? | WARN |
+
+**Pipeline Wiring (V2.1):**
+
+Phase A is wired as the **single gate** before Aurora compilation:
+
+```bash
+# Run the full pipeline with Phase A gate
+DB_AUTHORITY=neon ./scripts/tools/run_aurora_l2_pipeline.sh
+```
+
+**Why This Matters:**
+
+SDSR can prove an API returns data, but it cannot prove:
+- The data belongs in THIS panel
+- The signal names match the spec
+- The API fields exist for all signals
+- The types are correct
+
+**Spec:** [SEMANTIC_VALIDATOR.md](../architecture/pipeline/SEMANTIC_VALIDATOR.md)
 
 ---
 
@@ -423,6 +485,8 @@ If any answer is NO → STOP and resolve before proceeding.
 | **Observation watcher** | `scripts/tools/sdsr_observation_watcher.sh` |
 | Aurora applier | `scripts/tools/AURORA_L2_apply_sdsr_observations.py` |
 | Preflight pipeline | `scripts/tools/run_aurora_l2_pipeline_preflight.sh` |
+| **Phase A validator** | `scripts/tools/validate_all_intents.py` |
+| **Aurora L2 pipeline** | `scripts/tools/run_aurora_l2_pipeline.sh` |
 
 ### UI Components
 
@@ -689,9 +753,10 @@ provenance:
 
 ## Related Documents
 
-### Core Governance (SDSR/HISAR/Aurora)
+### Core Governance (SDSR/HISAR/Aurora/Semantic)
 
 - [HISAR.md](HISAR.md) - **Execution doctrine** (Human Intent → SDSR → Aurora → Rendering)
+- [SEMANTIC_VALIDATOR.md](../architecture/pipeline/SEMANTIC_VALIDATOR.md) - **Semantic Authority Enforcement** (Step 3.5)
 - [SDSR_SYSTEM_CONTRACT.md](SDSR_SYSTEM_CONTRACT.md) - System contract
 - [SDSR_PIPELINE_CONTRACT.md](SDSR_PIPELINE_CONTRACT.md) - Pipeline contract
 - [SDSR_E2E_TESTING_PROTOCOL.md](SDSR_E2E_TESTING_PROTOCOL.md) - E2E testing protocol
@@ -723,6 +788,8 @@ provenance:
 
 | Date | Change |
 |------|--------|
+| 2026-01-16 | Updated Semantic Validation section with two-phase architecture (Phase A + Phase B) |
+| 2026-01-16 | Added Phase A validator and Aurora L2 pipeline scripts to SDSR Components |
 | 2026-01-15 | Updated Files & Locations to reflect INTENT_LEDGER.md as single source of truth |
 | 2026-01-15 | Intent YAMLs now generated from INTENT_LEDGER.md via sync_from_intent_ledger.py |
 | 2026-01-15 | New naming convention: `AURORA_L2_INTENT_{panel_id}.yaml` |

@@ -1,40 +1,29 @@
-# AURORA L2 Capability Registry Entry
-# Capability: policies.temporal_policies
-# Generated: 2026-01-15T06:42:42.089571+00:00
-# Generator: aurora_capability_scaffold.py
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
 #
-# STATUS LIFECYCLE (Machine-Owned):
-#   DECLARED → ASSUMED → OBSERVED → TRUSTED
-#
-# RULES:
-#   - Status transitions are MACHINE-ONLY
-#   - Humans must NOT edit status field
-#   - DECLARED → OBSERVED requires SDSR verification
-#   - CI blocks manual status changes
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
 #
 capability_id: policies.temporal_policies
-status: DECLARED
+status: ASSUMED
 source_panels:
 - POL-GOV-LIB-O5
 domain: POLICIES
-endpoint: /policy-layer/temporal-policies
-method: GET
 metadata:
-  generated_by: aurora_capability_scaffold.py
-  generated_on: '2026-01-15'
-  declared_by: AURORA_AUTOMATION
-  declared_on: '2026-01-15'
-coherency:
-  last_checked: null
-  status: UNVERIFIED
-  checked_by: null
-observation:
-  scenario_id: null
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-16'
+  declared_by: intent-ledger
+  declared_on: '2026-01-16'
+  observed_by: SDSR-POL-GOV-LIB-O5-001
+assumption:
+  endpoint: /policy-layer/temporal-policies
+  method: GET
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: null
+  observed_method: null
   observed_at: null
-  trace_id: null
-  invariants_passed: null
+  observation_id: null
 acceptance_criteria:
-- Endpoint exists and responds
-- Response schema matches contract
-- Auth works correctly
-- Data is real (not mock)
+- Returns temporal policy list
+- Response includes audit trail

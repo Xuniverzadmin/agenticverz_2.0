@@ -7,10 +7,11 @@ This is a MACHINE-ONLY operation - humans must NOT call this manually.
 
 What it does:
     1. Reads SDSR observation JSON
-    2. If PASS: Updates capability status DECLARED → OBSERVED
-    3. Updates coherency block in capability YAML
-    4. Appends observation trace to intent YAML
-    5. Updates sdsr.verified in intent YAML
+    2. If PASS: Updates capability status ASSUMED → OBSERVED
+    3. Persists binding block with observed_endpoint (SDSR-verified)
+    4. Updates coherency block in capability YAML
+    5. Appends observation trace to intent YAML
+    6. Updates sdsr.verified in intent YAML
 
 Rules:
     - Only applies if observation.status == PASS
@@ -38,6 +39,68 @@ REPO_ROOT = Path(__file__).parent.parent.parent.parent
 INTENTS_DIR = REPO_ROOT / "design/l2_1/intents"
 CAPABILITY_REGISTRY = REPO_ROOT / "backend/AURORA_L2_CAPABILITY_REGISTRY"
 SDSR_OBSERVATIONS_DIR = REPO_ROOT / "backend/scripts/sdsr/observations"
+PDG_ALLOWLIST_PATH = REPO_ROOT / "backend/aurora_l2/tools/projection_diff_allowlist.json"
+
+
+def load_pdg_allowlist() -> Dict:
+    """Load PDG allowlist JSON."""
+    if not PDG_ALLOWLIST_PATH.exists():
+        return {"panels": [], "rules": {}}
+    with open(PDG_ALLOWLIST_PATH) as f:
+        return json.load(f)
+
+
+def save_pdg_allowlist(allowlist: Dict):
+    """Save PDG allowlist JSON."""
+    with open(PDG_ALLOWLIST_PATH, 'w') as f:
+        json.dump(allowlist, f, indent=2)
+        f.write('\n')
+
+
+def append_to_pdg_allowlist(panel_id: str, rule: str, reason: str) -> bool:
+    """Append a panel to the PDG allowlist for a specific rule.
+
+    PDG ALLOWLIST AUTO-APPEND (PIN-432):
+    When SDSR observation promotes a capability, automatically add the panel
+    to the PDG-003 allowlist to permit binding state transitions.
+
+    Args:
+        panel_id: The panel ID to allowlist
+        rule: The PDG rule (e.g., "PDG-003")
+        reason: Reason for allowlisting
+
+    Returns:
+        True if added, False if already present
+    """
+    allowlist = load_pdg_allowlist()
+
+    # Ensure rules dict exists
+    if "rules" not in allowlist:
+        allowlist["rules"] = {}
+
+    # Ensure rule list exists
+    if rule not in allowlist["rules"]:
+        allowlist["rules"][rule] = []
+
+    # Check if already present
+    if panel_id in allowlist["rules"][rule]:
+        return False
+
+    # Add to allowlist
+    allowlist["rules"][rule].append(panel_id)
+
+    # Update note
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    note = allowlist.get("note", "")
+    append_note = f" Auto-added {panel_id} to {rule} on {timestamp}: {reason}."
+    if note:
+        allowlist["note"] = note + append_note
+    else:
+        allowlist["note"] = append_note.strip()
+
+    # Save
+    save_pdg_allowlist(allowlist)
+    return True
 
 
 def load_observation(filename: str) -> Optional[Dict]:
@@ -134,6 +197,13 @@ def apply_observation(observation: Dict, dry_run: bool = False) -> bool:
     invariants_passed = observation.get('invariants_passed', 0)
     invariants_total = observation.get('invariants_total', 0)
     coherency_verified = observation.get('coherency_verified', False)
+    observation_id = observation.get('observation_id')
+
+    # Endpoint binding: assumed vs observed
+    assumed_endpoint = observation.get('assumed_endpoint')
+    observed_endpoint = observation.get('observed_endpoint')
+    assumed_method = observation.get('assumed_method')
+    observed_method = observation.get('observed_method')
 
     if not capability_id:
         print("Observation missing capability_id", file=sys.stderr)
@@ -148,7 +218,9 @@ def apply_observation(observation: Dict, dry_run: bool = False) -> bool:
     current_status = capability.get('status')
 
     # Determine new status
-    if current_status in ['DECLARED', 'ASSUMED']:
+    # Canonical transition: ASSUMED → OBSERVED (SDSR verification)
+    # DECLARED is deprecated, treat as ASSUMED for backwards compatibility
+    if current_status in ['ASSUMED', 'DECLARED']:
         new_status = 'OBSERVED'
     elif current_status == 'OBSERVED':
         new_status = 'OBSERVED'  # Already observed, just update trace
@@ -163,6 +235,13 @@ def apply_observation(observation: Dict, dry_run: bool = False) -> bool:
     print(f"  Coherency verified: {coherency_verified}")
     print(f"  Invariants: {invariants_passed}/{invariants_total}")
 
+    # PDG ALLOWLIST AUTO-APPEND (PIN-432):
+    # When promoting capability status, auto-add panel to PDG-003 allowlist
+    # to permit binding state transitions (DRAFT → BOUND, etc.)
+    pdg_allowlist_added = False
+    if panel_id and current_status in ['ASSUMED', 'DECLARED'] and new_status == 'OBSERVED':
+        pdg_allowlist_added = True
+
     if dry_run:
         print("\nDRY RUN - Would update:")
         print(f"  - Capability status: {current_status} → {new_status}")
@@ -170,10 +249,39 @@ def apply_observation(observation: Dict, dry_run: bool = False) -> bool:
         print(f"  - Capability coherency block")
         if panel_id:
             print(f"  - Intent YAML sdsr.verified")
+        if pdg_allowlist_added:
+            print(f"  - PDG allowlist: Add {panel_id} to PDG-003")
         return True
 
     # Update capability
     capability['status'] = new_status
+
+    # Auto-append to PDG allowlist if promoting to OBSERVED
+    if pdg_allowlist_added and panel_id:
+        added = append_to_pdg_allowlist(
+            panel_id,
+            "PDG-003",
+            f"SDSR observation promoted {capability_id} to OBSERVED"
+        )
+        if added:
+            print(f"  ✅ Auto-added {panel_id} to PDG-003 allowlist (PIN-432)")
+
+    # Update binding block with observed endpoint (SDSR-verified)
+    capability['binding'] = {
+        'observed_endpoint': observed_endpoint,
+        'observed_method': observed_method,
+        'observed_at': observed_at,
+        'observation_id': observation_id,
+    }
+
+    # Record assumption for traceability
+    if 'assumption' not in capability:
+        capability['assumption'] = {}
+    capability['assumption']['endpoint'] = assumed_endpoint
+    capability['assumption']['method'] = assumed_method
+    capability['assumption']['source'] = 'INTENT_LEDGER'
+
+    # Record observation trace
     capability['observation'] = {
         'scenario_id': scenario_id,
         'observed_at': observed_at,

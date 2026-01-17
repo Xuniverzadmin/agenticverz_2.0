@@ -28,6 +28,7 @@ from ..auth.role_guard import require_role
 from ..auth.tenant_roles import TenantRole
 from ..db import get_async_session
 from ..models.policy import PolicyApprovalRequest, PolicyProposal, PolicyVersion
+from ..schemas.response import wrap_dict
 from ..services.policy_proposal import review_policy_proposal
 
 logger = logging.getLogger("nova.api.policy_proposals")
@@ -209,7 +210,7 @@ async def get_proposal_stats(
         reviewed = approved + rejected
         approval_rate = (approved / reviewed * 100) if reviewed > 0 else 0
 
-        return {
+        return wrap_dict({
             "total": total,
             "by_status": by_status,
             "by_type": by_type,
@@ -218,7 +219,7 @@ async def get_proposal_stats(
             "approval_rate_percent": round(approval_rate, 1),
             "read_only": True,
             "pb_s4_compliant": True,
-        }
+        })
 
 
 @router.get("/{proposal_id}", response_model=ProposalDetailResponse)

@@ -46,7 +46,7 @@ This is not a script name. This is a **governed execution doctrine**.
 
 ---
 
-## The 8 Phases (+ Sync)
+## The 8 Phases (+ Sync + Semantic Validation)
 
 ```
 [H] Phase 1    Human Intent Validation
@@ -56,6 +56,7 @@ This is not a script name. This is a **governed execution doctrine**.
 [S] Phase 4    SDSR Verification
 [S] Phase 5    Observation Application
 [S] Phase 5.5  Trust Evaluation
+[V] Phase 5.7  Semantic Validation (BLOCKING)    ◄── NEW
 [A] Phase 6    Aurora Compilation
 [A] Phase 6.5  UI Plan Bind
 [A] Phase 7    Projection Diff Guard
@@ -68,6 +69,7 @@ This is not a script name. This is a **governed execution doctrine**.
 |--------|---------|-------|
 | **H** | Human | Intent declaration, approval |
 | **S** | SDSR | Verification, observation, trust |
+| **V** | Validator | Semantic authority enforcement |
 | **A** | Aurora | Compilation, projection |
 | **R** | Rendering | UI output |
 
@@ -190,6 +192,81 @@ This is not a script name. This is a **governed execution doctrine**.
 - Requires: 10 runs, 98% pass rate, invariant stability
 - OBSERVED → TRUSTED is machine-only
 
+### Phase 5.7: Semantic Validation (BLOCKING)
+
+**Owner:** Semantic Validator
+**Scripts:**
+- `scripts/tools/validate_all_intents.py` — Phase A batch validation
+- `scripts/tools/run_aurora_l2_pipeline.sh` — Pipeline orchestrator (Phase A → Aurora)
+- `panel_signal_collector.py` (integrated) — Runtime Phase B validation
+
+**Spec:** [SEMANTIC_VALIDATOR.md](../architecture/pipeline/SEMANTIC_VALIDATOR.md)
+
+- **BLOCKING** — Aurora cannot compile if semantic validation fails
+- Phase A validates intent guardrails (design-time) before Aurora compilation
+- Phase B validates semantic reality (proof-time) during signal collection
+
+**Phase A Checks (Intent Guardrails - Design-time):**
+
+| Check | Validates | Severity |
+|-------|-----------|----------|
+| INT-001 | Signal is provable (observable or computed) | BLOCKING |
+| INT-002 | Capability cardinality ≤ 5 per panel | BLOCKING |
+| INT-003 | No semantic duplication across panels | WARNING |
+| INT-004 | No contradictory intents in same domain | BLOCKING |
+| INT-005 | Evolution/maturity path declared | WARNING |
+| INT-006 | Intent scope is bounded (≤ 20 signals) | WARNING |
+| INT-007 | Semantic contract exists in registry | BLOCKING |
+| INT-008 | Capability reference is valid | BLOCKING |
+
+**Phase B Checks (Semantic Reality - Proof-time):**
+
+| Check | Validates | Severity |
+|-------|-----------|----------|
+| SEM-001 | Signal has translation or compute function | BLOCKING |
+| SEM-002 | Capability is OBSERVED or TRUSTED | BLOCKING |
+| SEM-003 | API field exists in response | BLOCKING/WARNING |
+| SEM-004 | Signal type matches expected | WARNING |
+| SEM-005 | Semantic contract exists | BLOCKING |
+| SEM-006 | Cross-panel consistency | WARNING |
+
+**Core Principle:**
+
+> **SDSR proves the API works. Semantic Validator proves the data is correct for THIS panel.**
+
+**Pipeline Wiring (V2.1):**
+
+Phase A is wired as the **single gate** before Aurora compilation:
+
+```bash
+# Run the full pipeline with Phase A gate
+DB_AUTHORITY=neon ./scripts/tools/run_aurora_l2_pipeline.sh
+```
+
+Exit codes:
+- 0 = Pipeline complete
+- 1 = Phase A BLOCKED (design-time violations)
+- 2 = Aurora compilation failed
+- 3 = Configuration error
+
+**If Semantic Validation Fails:**
+
+- Panel remains DRAFT (not BOUND)
+- Violations are logged with fix owner and action
+- Aurora Compilation is blocked for this panel
+- Other panels may proceed if valid
+
+**Helper Methods:**
+
+```python
+validator = get_semantic_validator()
+report = validator.validate_slot(slot_spec, panel_id)
+
+# Check for gaps
+missing_translations = validator.get_missing_translations()
+unobserved_caps = validator.get_unobserved_capabilities()
+```
+
 ### Phase 6: Aurora Compilation
 
 **Owner:** Aurora
@@ -310,6 +387,8 @@ Run: `python3 backend/aurora_l2/tests/test_golden_failure.py`
 | File | Purpose |
 |------|---------|
 | `scripts/tools/run_hisar.sh` | Canonical HISAR runner |
+| `scripts/tools/run_aurora_l2_pipeline.sh` | **Phase A + Aurora pipeline** (RECOMMENDED) |
+| `scripts/tools/validate_all_intents.py` | Phase A batch validation |
 | `scripts/tools/sync_from_intent_ledger.py` | **Phase 0**: Intent Ledger → YAML sync (SOURCE OF TRUTH) |
 | `design/l2_1/INTENT_LEDGER.md` | **SOURCE OF TRUTH** for all panel intents |
 | `backend/aurora_l2/tools/aurora_*.py` | Phase automation scripts |
@@ -471,9 +550,10 @@ observation_scope:
 
 ## References
 
-### Core Governance (SDSR/HISAR/Aurora)
+### Core Governance (SDSR/HISAR/Aurora/Semantic)
 
 - [SDSR.md](SDSR.md) — **Scenario-Driven System Realization** (companion doc)
+- [SEMANTIC_VALIDATOR.md](../architecture/pipeline/SEMANTIC_VALIDATOR.md) — **Semantic Authority Enforcement** (Phase 5.7)
 - [SDSR_SYSTEM_CONTRACT.md](SDSR_SYSTEM_CONTRACT.md) — System contract
 - [SDSR_PIPELINE_CONTRACT.md](SDSR_PIPELINE_CONTRACT.md) — Pipeline contract
 

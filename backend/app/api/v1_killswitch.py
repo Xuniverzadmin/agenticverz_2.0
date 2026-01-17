@@ -38,6 +38,7 @@ from sqlalchemy import and_, desc, select
 from sqlmodel import Session
 
 from app.auth.authority import AuthorityResult, emit_authority_audit, require_replay_execute
+from app.schemas.response import wrap_dict
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.db import get_session
@@ -234,7 +235,7 @@ async def get_killswitch_status(
     key_rows = session.exec(stmt).all()
     key_states = [r[0] for r in key_rows]
 
-    return {
+    return wrap_dict({
         "tenant_id": tenant_id,
         "tenant": {
             "is_frozen": tenant_state.is_frozen if tenant_state else False,

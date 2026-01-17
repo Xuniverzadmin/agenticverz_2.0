@@ -1,0 +1,40 @@
+# Capability: policies.lessons_stats
+# Reference: PIN-411, POLICIES_DOMAIN_AUDIT.md Section 11
+#
+# NOTE: Status is DECLARED until E2E validation passes (CAP-E2E-001)
+#
+capability_id: policies.lessons_stats
+status: DECLARED
+source_panels:
+- POL-GOV-LRN-O2
+domain: POLICIES
+metadata:
+  generated_by: manual
+  generated_on: '2026-01-17'
+  declared_by: PIN-411
+  declared_on: '2026-01-17'
+  observed_by: null
+  observed_on: null
+assumption:
+  endpoint: /policy-layer/lessons/stats
+  method: GET
+  source: PIN-411
+binding:
+  observed_endpoint: null
+  observed_method: null
+  observed_at: null
+  observation_id: null
+acceptance_criteria:
+- Returns aggregated statistics for lessons
+- Includes counts by status, type, and severity
+- Shows conversion rate to draft proposals
+observation:
+  scenario_id: null
+  observed_at: null
+  trace_id: null
+  invariants_passed: null
+  invariants_total: null
+coherency:
+  last_checked: null
+  status: PENDING
+  checked_by: null

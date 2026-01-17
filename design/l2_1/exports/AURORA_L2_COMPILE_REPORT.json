@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-01-11T17:23:40.247052+00:00",
+  "timestamp": "2026-01-15T17:40:36.666305+00:00",
   "pipeline_version": "2.0.0",
   "db_authority": "neon",
   "stages": {
@@ -8,6 +8,7 @@
     "semantic_validation": "PASS",
     "compilation": "PASS",
     "projection_validation": "PASS",
+    "diff_guard": "PASS",
     "deployment": "PASS"
   },
   "canonical_design": {

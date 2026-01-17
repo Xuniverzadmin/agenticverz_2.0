@@ -309,6 +309,10 @@ class Incident(SQLModel, table=True):
     llm_run_id: Optional[str] = Field(default=None, foreign_key="runs.id", index=True)
     cause_type: str = Field(default="HUMAN", max_length=16)  # LLM_RUN, SYSTEM, HUMAN
 
+    # Migration 096: Analytics fields
+    resolution_method: Optional[str] = Field(default=None, max_length=20)  # auto, manual, rollback
+    cost_impact: Optional[Decimal] = Field(default=None)  # USD impact, null if unknown
+
     def add_related_call(self, call_id: str):
         """Add a related call ID."""
         ids = self.get_related_call_ids()
@@ -323,13 +327,20 @@ class Incident(SQLModel, table=True):
             return json.loads(self.related_call_ids_json)
         return []
 
-    def resolve(self, by: str):
-        """Mark incident as resolved."""
+    def resolve(self, by: str, resolution_method: Optional[str] = None):
+        """Mark incident as resolved.
+
+        Args:
+            by: Who resolved the incident
+            resolution_method: How it was resolved (auto, manual, rollback)
+        """
         self.status = IncidentStatus.RESOLVED.value
         self.lifecycle_state = IncidentLifecycleState.RESOLVED.value  # PIN-412: canonical state
         self.resolved_at = utc_now()
         self.resolved_by = by
         self.ended_at = utc_now()
+        if resolution_method:
+            self.resolution_method = resolution_method
         if self.started_at:
             self.duration_seconds = int((self.ended_at - self.started_at).total_seconds())
         self.updated_at = utc_now()

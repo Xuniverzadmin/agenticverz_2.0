@@ -1,39 +1,40 @@
-# AURORA L2 Capability Registry Entry
-# Capability: activity.live_runs
-# Last Updated: 2026-01-15T06:41:17.522015+00:00
-# Updated By: aurora_apply_observation.py
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
 #
-# STATUS: OBSERVED
-#
-# WARNING: Status transitions are MACHINE-OWNED.
-#          Do NOT manually edit the status field.
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
 #
 capability_id: activity.live_runs
 status: OBSERVED
 source_panels:
 - ACT-LLM-LIVE-O1
 domain: ACTIVITY
-endpoint: /api/v1/activity/runs
-method: GET
 metadata:
-  generated_by: aurora_capability_scaffold.py
-  generated_on: '2026-01-15'
-  declared_by: AURORA_AUTOMATION
-  declared_on: '2026-01-15'
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-16'
+  declared_by: intent-ledger
+  declared_on: '2026-01-16'
   observed_by: SDSR-ACT-LLM-LIVE-O1-001
   observed_on: '2026-01-15'
-coherency:
-  last_checked: '2026-01-15T06:41:17.350849+00:00'
-  status: PASSED
-  checked_by: aurora_sdsr_runner.py
+assumption:
+  endpoint: /api/v1/activity/runs
+  method: GET
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: /api/v1/activity/runs
+  observed_method: GET
+  observed_at: '2026-01-15T16:42:48.821358+00:00'
+  observation_id: OBS-SDSR-ACT-LLM-LIVE-O1-001-20260115164242
+acceptance_criteria:
+- Returns count of currently running LLM executions
+- Response includes total count field
 observation:
   scenario_id: SDSR-ACT-LLM-LIVE-O1-001
-  observed_at: '2026-01-15T06:41:17.350849+00:00'
+  observed_at: '2026-01-15T16:42:48.821358+00:00'
   trace_id: null
   invariants_passed: 3
   invariants_total: 3
-acceptance_criteria:
-- Endpoint exists and responds
-- Response schema matches contract
-- Auth works correctly
-- Data is real (not mock)
+coherency:
+  last_checked: '2026-01-15T16:42:48.821358+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py

@@ -48,6 +48,7 @@ from app.auth.authority import AuthorityResult, require_replay_execute
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.middleware.rate_limit import rate_limit_dependency
+from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.runtime")
 
@@ -524,7 +525,7 @@ async def get_resource_contract(resource_id: str):
     adapter = _get_runtime_adapter()
     contract_info = adapter.get_resource_contract(resource_id)
 
-    return {
+    return wrap_dict({
         "resource_id": contract_info.resource_id,
         "budget": {
             "total_cents": contract_info.budget_cents,
@@ -543,7 +544,7 @@ async def get_resource_contract(resource_id: str):
         "time": {
             "max_run_duration_ms": 300000,
         },
-    }
+    })
 
 
 # =============================================================================
@@ -666,12 +667,12 @@ async def list_traces(
             offset=offset,
         )
 
-        return {
+        return wrap_dict({
             "traces": [t.to_dict() for t in traces],
             "count": len(traces),
             "limit": limit,
             "offset": offset,
-        }
+        })
 
     except ImportError as e:
         logger.error(f"Trace store not available: {e}")

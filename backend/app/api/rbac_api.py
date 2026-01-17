@@ -24,6 +24,7 @@ from sqlalchemy import text
 from ..auth.authorization_choke import check_permission_request
 from ..auth.rbac_engine import get_rbac_engine
 from ..db import get_session as get_db_session
+from ..schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.rbac")
 
@@ -187,8 +188,8 @@ async def get_permission_matrix(request: Request) -> Dict[str, Any]:
     # Access internal policy (not ideal but needed for introspection)
     with engine._policy_lock:
         if engine._policy:
-            return {"version": engine._policy.version, "hash": engine._policy.hash, "matrix": engine._policy.matrix}
-        return {"version": "default", "hash": "default", "matrix": engine._default_matrix}
+            return wrap_dict({"version": engine._policy.version, "hash": engine._policy.hash, "matrix": engine._policy.matrix})
+        return wrap_dict({"version": "default", "hash": "default", "matrix": engine._default_matrix})
 
 
 @router.get("/audit", response_model=AuditResponse)
@@ -321,11 +322,11 @@ async def cleanup_audit_logs(
             },
         )
 
-        return {
+        return wrap_dict({
             "deleted_count": deleted_count,
             "retention_days": retention_days,
             "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
+        })
 
     except Exception as e:
         logger.error(f"Error cleaning up audit logs: {e}")

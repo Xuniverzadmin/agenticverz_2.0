@@ -1,0 +1,63 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: INC-EV-RES-O1
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: INC-EV-RES-O1
+version: 1.0.0
+panel_class: evidence
+metadata:
+  domain: INCIDENTS
+  subdomain: EVENTS
+  topic: RESOLVED
+  topic_id: INCIDENTS.EVENTS.RESOLVED
+  order: O1
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: incident_lifecycle
+  facet_criticality: HIGH
+display:
+  name: INC-EV-RES-O1
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: incidents.resolved_list
+  status: ASSUMED
+  assumed_endpoint: /api/v1/incidents
+  assumed_method: GET
+sdsr:
+  scenario: SDSR-INC-EV-RES-O1-001
+  verified: false
+notes: 'Show the canonical list of recently resolved incidents.
+
+
+  What it shows:
+
+  - Incidents transitioned from Active → Resolved
+
+  - Within the recent window (not long-term history)
+
+  - Resolution timestamp mandatory
+
+  - Original incident ID preserved
+
+
+  What it explicitly does NOT show:
+
+  - No active incidents
+
+  - No historical aggregation
+
+  - No controls'

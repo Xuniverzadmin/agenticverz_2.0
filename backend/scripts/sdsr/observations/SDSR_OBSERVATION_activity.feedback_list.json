@@ -1,17 +1,19 @@
 {
-  "observation_id": "OBS-SDSR-ACT-LLM-SIG-O1-001-20260115072659",
+  "observation_id": "OBS-SDSR-ACT-LLM-SIG-O1-001-20260115163607",
   "scenario_id": "SDSR-ACT-LLM-SIG-O1-001",
   "capability_id": "activity.feedback_list",
   "panel_id": "ACT-LLM-SIG-O1",
-  "status": "PASS",
-  "observed_at": "2026-01-15T07:27:00.738073+00:00",
-  "endpoint": "/api/v1/feedback",
-  "method": "GET",
-  "response_status_code": 200,
-  "response_time_ms": 996.6938495635986,
+  "status": "FAIL",
+  "observed_at": "2026-01-15T16:36:07.365621+00:00",
+  "assumed_endpoint": "/api/v1/activity/runs",
+  "observed_endpoint": "/api/v1/feedback",
+  "assumed_method": "GET",
+  "observed_method": "GET",
+  "response_status_code": 422,
+  "response_time_ms": 19.484996795654297,
   "invariants_total": 3,
-  "invariants_passed": 3,
-  "invariants_failed": 0,
+  "invariants_passed": 2,
+  "invariants_failed": 1,
   "invariant_results": [
     {
       "id": "INV-001",
@@ -22,8 +24,8 @@
     {
       "id": "INV-002",
       "name": "status_code",
-      "status": "PASS",
-      "message": "Assertion passed: status_code == 200"
+      "status": "FAIL",
+      "message": "Assertion failed: status_code == 200"
     },
     {
       "id": "INV-003",
@@ -32,8 +34,8 @@
       "message": "Assertion passed: status_code != 401 and status_code != 403"
     }
   ],
-  "failure_reason": null,
-  "failure_taxonomy": null,
+  "failure_reason": "1 invariant(s) failed",
+  "failure_taxonomy": "INVARIANT_VIOLATED",
   "coherency_verified": true,
   "trace_id": null
 }

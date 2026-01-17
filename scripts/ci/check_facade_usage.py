@@ -59,6 +59,14 @@ DOMAIN_SERVICES = {
         'facade': 'limits_facade',
         'allowed_direct_callers': ['limits.py', 'policy.py'],
     },
+    'Ops': {
+        'services': [
+            'ops_incident_service',
+            'ops_service',
+        ],
+        'facade': 'ops_facade',
+        'allowed_direct_callers': ['ops.py', 'facade.py'],
+    },
 }
 
 

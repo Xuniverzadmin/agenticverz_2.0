@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from ..auth import verify_api_key
+from ..schemas.response import wrap_dict
 from ..memory.embedding_metrics import (
     EMBEDDING_DAILY_QUOTA,
     VECTOR_SEARCH_ENABLED,
@@ -126,12 +127,12 @@ async def embedding_health() -> dict:
     """
     status = get_embedding_quota_status()
 
-    return {
+    return wrap_dict({
         "status": "healthy" if not status["exceeded"] else "degraded",
         "reason": "quota_exceeded" if status["exceeded"] else None,
         "vector_search": VECTOR_SEARCH_ENABLED,
         "quota_remaining": status["remaining"],
-    }
+    })
 
 
 @router.get("/cache/stats")
@@ -162,7 +163,7 @@ async def clear_embedding_cache(
 
     cache = get_embedding_cache()
     cleared = await cache.clear_all()
-    return {"cleared": cleared}
+    return wrap_dict({"cleared": cleared})
 
 
 # =============================================================================
@@ -427,7 +428,7 @@ async def get_iaec_instructions(
     """
     from ..memory.iaec import INSTRUCTION_PROMPTS, INSTRUCTION_WEIGHTS
 
-    return {
+    return wrap_dict({
         "instructions": [
             {
                 "type": instr,
@@ -440,7 +441,7 @@ async def get_iaec_instructions(
             }
             for instr, w in INSTRUCTION_WEIGHTS.items()
         ]
-    }
+    })
 
 
 @router.get("/iaec/segment-info")
@@ -497,4 +498,4 @@ async def check_mismatch(
     if result.corrective_action:
         response["corrective_action"] = result.corrective_action.to_dict()
 
-    return response
+    return wrap_dict(response)

@@ -1,0 +1,64 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: INC-EV-ACT-O5
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: INC-EV-ACT-O5
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: INCIDENTS
+  subdomain: EVENTS
+  topic: ACTIVE
+  topic_id: INCIDENTS.EVENTS.ACTIVE
+  order: O5
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: INC-EV-ACT-O5
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: incidents.infra_summary
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+  facade_note: "Decoupled from /ops/* (founder-only) - API Audit 2026-01-16"
+sdsr:
+  scenario: SDSR-INC-EV-ACT-O5-001
+  verified: false
+notes: 'Provide attribution and escalation context for each incident.
+
+
+  What it shows:
+
+  - Attribution by LLM, Agent, Human, Policy
+
+  - Repeated incident marker
+
+  - Linked past incidents (if any)
+
+  - Escalation eligibility (yes/no)
+
+
+  What it explicitly does NOT show:
+
+  - No approval actions
+
+  - No policy changes
+
+  - No resolution execution'

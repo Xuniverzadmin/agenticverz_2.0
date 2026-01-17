@@ -8,6 +8,7 @@
 # Allowed Imports: L3, L4, L6
 # Forbidden Imports: L1, L5
 # Reference: INCIDENTS Domain - One Facade Architecture
+# Reference: docs/architecture/incidents/INCIDENTS_DOMAIN_SQL.md
 #
 # GOVERNANCE NOTE:
 # This is the ONE facade for INCIDENTS domain.
@@ -21,11 +22,15 @@ Customer-facing endpoints for viewing incidents.
 All requests are tenant-scoped via auth_context.
 
 Endpoints:
-- GET /api/v1/incidents                     → O2 list with filters
-- GET /api/v1/incidents/{incident_id}       → O3 detail
+- GET /api/v1/incidents                        → O2 list with filters
+- GET /api/v1/incidents/{incident_id}          → O3 detail
 - GET /api/v1/incidents/{incident_id}/evidence → O4 context (preflight)
 - GET /api/v1/incidents/{incident_id}/proof    → O5 raw (preflight)
-- GET /api/v1/incidents/by-run/{run_id}     → Incidents linked to run
+- GET /api/v1/incidents/{incident_id}/learnings → O4 post-mortem learnings
+- GET /api/v1/incidents/by-run/{run_id}        → Incidents linked to run
+- GET /api/v1/incidents/patterns               → ACT-O5 pattern detection
+- GET /api/v1/incidents/recurring              → HIST-O3 recurrence analysis
+- GET /api/v1/incidents/cost-impact            → RES-O3 cost impact analysis
 
 Architecture:
 - ONE facade for all INCIDENTS needs
@@ -46,6 +51,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
 from app.models.killswitch import Incident
+from app.schemas.response import wrap_dict
 
 # =============================================================================
 # Environment Configuration
@@ -195,6 +201,119 @@ class IncidentsByRunResponse(BaseModel):
     run_id: str
     incidents: List[IncidentSummary]
     total: int
+
+
+# =============================================================================
+# Pattern Detection Response Models
+# =============================================================================
+
+
+class PatternMatchResponse(BaseModel):
+    """A detected incident pattern."""
+
+    pattern_type: str  # category_cluster, severity_spike, cascade_failure
+    dimension: str  # category name, severity level, or source_run_id
+    count: int
+    incident_ids: List[str]
+    confidence: float
+
+
+class PatternDetectionResponse(BaseModel):
+    """GET /incidents/patterns response (ACT-O5)."""
+
+    patterns: List[PatternMatchResponse]
+    window_hours: int
+    window_start: datetime
+    window_end: datetime
+    incidents_analyzed: int
+
+
+# =============================================================================
+# Recurrence Analysis Response Models
+# =============================================================================
+
+
+class RecurrenceGroupResponse(BaseModel):
+    """A group of recurring incidents."""
+
+    category: str
+    resolution_method: Optional[str] = None
+    total_occurrences: int
+    distinct_days: int
+    occurrences_per_day: float
+    first_occurrence: datetime
+    last_occurrence: datetime
+    recent_incident_ids: List[str]
+
+
+class RecurrenceAnalysisResponse(BaseModel):
+    """GET /incidents/recurring response (HIST-O3)."""
+
+    groups: List[RecurrenceGroupResponse]
+    baseline_days: int
+    total_recurring: int
+    generated_at: datetime
+
+
+# =============================================================================
+# Cost Impact Response Models
+# =============================================================================
+
+
+class CostImpactSummary(BaseModel):
+    """Cost impact summary for an incident category."""
+
+    category: str
+    incident_count: int
+    total_cost_impact: float
+    avg_cost_impact: float
+    resolution_method: Optional[str] = None
+
+
+class CostImpactResponse(BaseModel):
+    """GET /incidents/cost-impact response (RES-O3)."""
+
+    summaries: List[CostImpactSummary]
+    total_cost_impact: float
+    baseline_days: int
+    generated_at: datetime
+
+
+# =============================================================================
+# Learnings Response Models
+# =============================================================================
+
+
+class LearningInsightResponse(BaseModel):
+    """A learning insight from incident analysis."""
+
+    insight_type: str  # prevention, detection, response, communication
+    description: str
+    confidence: float
+    supporting_incident_ids: List[str]
+
+
+class ResolutionSummaryResponse(BaseModel):
+    """Summary of incident resolution."""
+
+    incident_id: str
+    title: str
+    category: Optional[str] = None
+    severity: str
+    resolution_method: Optional[str] = None
+    time_to_resolution_ms: Optional[int] = None
+    evidence_count: int
+    recovery_attempted: bool
+
+
+class LearningsResponse(BaseModel):
+    """GET /incidents/{id}/learnings response (RES-O4)."""
+
+    incident_id: str
+    resolution_summary: ResolutionSummaryResponse
+    similar_incidents: List[ResolutionSummaryResponse]
+    insights: List[LearningInsightResponse]
+    generated_at: datetime
 
 
 # =============================================================================
@@ -461,6 +580,190 @@ async def get_incidents_for_run(
 
 
 # =============================================================================
+# GET /incidents/patterns - ACT-O5 Pattern Detection
+# NOTE: Static routes MUST be defined BEFORE /{incident_id} routes
+# =============================================================================
+
+
+@router.get(
+    "/patterns",
+    response_model=PatternDetectionResponse,
+    summary="Detect incident patterns (ACT-O5)",
+    description="""
+    Detects structural patterns across incidents:
+    - category_cluster: Multiple incidents in same category
+    - severity_spike: Multiple high/critical in short window
+    - cascade_failure: Multiple incidents from same source run
+    """,
+)
+async def detect_patterns(
+    request: Request,
+    window_hours: Annotated[int, Query(ge=1, le=168, description="Hours to look back (max 168 = 7 days)")] = 24,
+    limit: Annotated[int, Query(ge=1, le=50, description="Max patterns per type")] = 10,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> PatternDetectionResponse:
+    """Detect incident patterns. Tenant-scoped."""
+    from app.services.incidents import IncidentPatternService
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    service = IncidentPatternService(session)
+    result = await service.detect_patterns(
+        tenant_id=tenant_id,
+        window_hours=window_hours,
+        limit=limit,
+    )
+
+    return PatternDetectionResponse(
+        patterns=[
+            PatternMatchResponse(
+                pattern_type=p.pattern_type,
+                dimension=p.dimension,
+                count=p.count,
+                incident_ids=p.incident_ids,
+                confidence=p.confidence,
+            )
+            for p in result.patterns
+        ],
+        window_hours=window_hours,
+        window_start=result.window_start,
+        window_end=result.window_end,
+        incidents_analyzed=result.incidents_analyzed,
+    )
+
+
+# =============================================================================
+# GET /incidents/recurring - HIST-O3 Recurrence Analysis
+# =============================================================================
+
+
+@router.get(
+    "/recurring",
+    response_model=RecurrenceAnalysisResponse,
+    summary="Analyze recurring incidents (HIST-O3)",
+    description="""
+    Identifies recurring incident types by analyzing:
+    - Category clusters
+    - Resolution method patterns
+    - Occurrence frequency over time
+    """,
+)
+async def analyze_recurrence(
+    request: Request,
+    baseline_days: Annotated[int, Query(ge=1, le=90, description="Days to analyze (max 90)")] = 30,
+    recurrence_threshold: Annotated[int, Query(ge=2, le=100, description="Min occurrences to flag as recurring")] = 3,
+    limit: Annotated[int, Query(ge=1, le=50, description="Max groups to return")] = 20,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> RecurrenceAnalysisResponse:
+    """Analyze recurring incident patterns. Tenant-scoped."""
+    from app.services.incidents import RecurrenceAnalysisService
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    service = RecurrenceAnalysisService(session)
+    result = await service.analyze_recurrence(
+        tenant_id=tenant_id,
+        baseline_days=baseline_days,
+        recurrence_threshold=recurrence_threshold,
+        limit=limit,
+    )
+
+    return RecurrenceAnalysisResponse(
+        groups=[
+            RecurrenceGroupResponse(
+                category=g.category,
+                resolution_method=g.resolution_method,
+                total_occurrences=g.total_occurrences,
+                distinct_days=g.distinct_days,
+                occurrences_per_day=g.occurrences_per_day,
+                first_occurrence=g.first_occurrence,
+                last_occurrence=g.last_occurrence,
+                recent_incident_ids=g.recent_incident_ids,
+            )
+            for g in result.groups
+        ],
+        baseline_days=result.baseline_days,
+        total_recurring=result.total_recurring,
+        generated_at=result.generated_at,
+    )
+
+
+# =============================================================================
+# GET /incidents/cost-impact - RES-O3 Cost Impact Analysis
+# =============================================================================
+
+
+@router.get(
+    "/cost-impact",
+    response_model=CostImpactResponse,
+    summary="Analyze cost impact (RES-O3)",
+    description="""
+    Aggregates cost impact data across incidents:
+    - Total cost by category
+    - Average cost per incident
+    - Resolution method effectiveness
+    """,
+)
+async def analyze_cost_impact(
+    request: Request,
+    baseline_days: Annotated[int, Query(ge=1, le=90, description="Days to analyze (max 90)")] = 30,
+    limit: Annotated[int, Query(ge=1, le=50, description="Max categories to return")] = 20,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> CostImpactResponse:
+    """Analyze cost impact across incidents. Tenant-scoped."""
+    from datetime import timezone
+
+    from sqlalchemy import text
+
+    tenant_id = get_tenant_id_from_auth(request)
+    baseline_days = min(baseline_days, 90)
+
+    # Query cost impact by category
+    sql = text("""
+        SELECT
+            COALESCE(category, 'uncategorized') AS category,
+            resolution_method,
+            COUNT(*) AS incident_count,
+            SUM(cost_impact) AS total_cost_impact,
+            AVG(cost_impact) AS avg_cost_impact
+        FROM incidents
+        WHERE tenant_id = :tenant_id
+          AND cost_impact IS NOT NULL
+          AND created_at >= NOW() - INTERVAL '1 day' * :baseline_days
+        GROUP BY category, resolution_method
+        ORDER BY total_cost_impact DESC NULLS LAST
+        LIMIT :limit
+    """)
+
+    result = await session.execute(sql, {
+        "tenant_id": tenant_id,
+        "baseline_days": baseline_days,
+        "limit": limit,
+    })
+
+    summaries: List[CostImpactSummary] = []
+    total_cost = 0.0
+
+    for row in result.mappings():
+        cost = float(row["total_cost_impact"]) if row["total_cost_impact"] else 0.0
+        total_cost += cost
+        summaries.append(CostImpactSummary(
+            category=row["category"],
+            incident_count=row["incident_count"],
+            total_cost_impact=cost,
+            avg_cost_impact=float(row["avg_cost_impact"]) if row["avg_cost_impact"] else 0.0,
+            resolution_method=row["resolution_method"],
+        ))
+
+    return CostImpactResponse(
+        summaries=summaries,
+        total_cost_impact=total_cost,
+        baseline_days=baseline_days,
+        generated_at=datetime.now(timezone.utc),
+    )
+
+
+# =============================================================================
 # GET /incidents/{incident_id} - O3 Detail
 # =============================================================================
 
@@ -528,13 +831,13 @@ async def get_incident_evidence(
     require_preflight()
     _ = get_tenant_id_from_auth(request)  # Enforce auth
 
-    return {
+    return wrap_dict({
         "incident_id": incident_id,
         "source_run": None,
         "policies_triggered": [],
         "related_incidents": [],
         "recovery_suggestions": [],
-    }
+    })
 
 
 # =============================================================================
@@ -555,7 +858,7 @@ async def get_incident_proof(
     require_preflight()
     _ = get_tenant_id_from_auth(request)  # Enforce auth
 
-    return {
+    return wrap_dict({
         "incident_id": incident_id,
         "integrity": {
             "verification_status": "UNKNOWN",
@@ -563,4 +866,80 @@ async def get_incident_proof(
         "aos_traces": [],
         "raw_logs": [],
         "timeline": [],
-    }
+    })
+
+
+# =============================================================================
+# GET /incidents/{incident_id}/learnings - RES-O4 Post-Mortem Learnings
+# =============================================================================
+
+
+@router.get(
+    "/{incident_id}/learnings",
+    response_model=LearningsResponse,
+    summary="Get incident learnings (RES-O4)",
+    description="""
+    Extracts post-mortem learnings from an incident:
+    - Resolution summary
+    - Similar past incidents
+    - Actionable insights (prevention, detection, response)
+    """,
+)
+async def get_incident_learnings(
+    request: Request,
+    incident_id: str,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> LearningsResponse:
+    """Get post-mortem learnings for an incident. Tenant-scoped."""
+    from app.services.incidents import PostMortemService
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    service = PostMortemService(session)
+    result = await service.get_incident_learnings(
+        tenant_id=tenant_id,
+        incident_id=incident_id,
+    )
+
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "not_found", "message": f"Incident {incident_id} not found"},
+        )
+
+    return LearningsResponse(
+        incident_id=result.incident_id,
+        resolution_summary=ResolutionSummaryResponse(
+            incident_id=result.resolution_summary.incident_id,
+            title=result.resolution_summary.title,
+            category=result.resolution_summary.category,
+            severity=result.resolution_summary.severity,
+            resolution_method=result.resolution_summary.resolution_method,
+            time_to_resolution_ms=result.resolution_summary.time_to_resolution_ms,
+            evidence_count=result.resolution_summary.evidence_count,
+            recovery_attempted=result.resolution_summary.recovery_attempted,
+        ),
+        similar_incidents=[
+            ResolutionSummaryResponse(
+                incident_id=s.incident_id,
+                title=s.title,
+                category=s.category,
+                severity=s.severity,
+                resolution_method=s.resolution_method,
+                time_to_resolution_ms=s.time_to_resolution_ms,
+                evidence_count=s.evidence_count,
+                recovery_attempted=s.recovery_attempted,
+            )
+            for s in result.similar_incidents
+        ],
+        insights=[
+            LearningInsightResponse(
+                insight_type=i.insight_type,
+                description=i.description,
+                confidence=i.confidence,
+                supporting_incident_ids=i.supporting_incident_ids,
+            )
+            for i in result.insights
+        ],
+        generated_at=result.generated_at,
+    )

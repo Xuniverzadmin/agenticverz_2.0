@@ -1,0 +1,67 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: OVR-SUM-HL-O2
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: OVR-SUM-HL-O2
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: OVERVIEW
+  subdomain: SUMMARY
+  topic: HIGHLIGHTS
+  topic_id: OVERVIEW.SUMMARY.HIGHLIGHTS
+  order: O2
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: system_health_overview
+  facet_criticality: HIGH
+display:
+  name: OVR-SUM-HL-O2
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: overview.incident_snapshot
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+  facade_note: "Bound to overview facade - API Audit 2026-01-16"
+notes: 'Surface non-ignorable signals that require human attention,
+
+  without requiring navigation into domains.
+
+
+  What it shows:
+
+  - Count of active incidents (any severity)
+
+  - Count of runs currently in near-threshold state
+
+  - Count of policy violations prevented by governance
+
+  - Highest severity level currently present (if any)
+
+
+  What it explicitly does NOT show:
+
+  - No historical incidents
+
+  - No explanations
+
+  - No root cause
+
+  - No controls or actions
+
+  - No links or drilldowns'

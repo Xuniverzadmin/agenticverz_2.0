@@ -1,0 +1,64 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: INC-EV-HIST-O5
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: INC-EV-HIST-O5
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: INCIDENTS
+  subdomain: EVENTS
+  topic: HISTORICAL
+  topic_id: INCIDENTS.EVENTS.HISTORICAL
+  order: O5
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: INC-EV-HIST-O5
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: incidents.integration_stats
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+  facade_note: "Decoupled from /integration/* (FOPS auth) - API Audit 2026-01-16"
+sdsr:
+  scenario: SDSR-INC-EV-HIST-O5-001
+  verified: false
+notes: 'Surface systemic signals and governance pressure from historical patterns.
+
+
+  What it shows:
+
+  - Policies with chronic incident association
+
+  - Thresholds consistently too tight or too loose
+
+  - Areas where human overrides dominate
+
+  - Domains where automation underperforms
+
+
+  What it explicitly does NOT show:
+
+  - No policy execution
+
+  - No approvals
+
+  - No automated actions'

@@ -48,6 +48,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
+from app.schemas.response import wrap_dict
 from app.models.policy_control_plane import (
     Limit,
     LimitBreach,
@@ -844,12 +845,12 @@ async def get_rule_evidence(
     require_preflight()
     _ = get_tenant_id_from_auth(request)  # Enforce auth
 
-    return {
+    return wrap_dict({
         "rule_id": rule_id,
         "recent_enforcements": [],
         "affected_runs": [],
         "violations_triggered": [],
-    }
+    })
 
 
 # =============================================================================
@@ -870,12 +871,12 @@ async def get_limit_evidence(
     require_preflight()
     _ = get_tenant_id_from_auth(request)  # Enforce auth
 
-    return {
+    return wrap_dict({
         "limit_id": limit_id,
         "recent_breaches": [],
         "affected_runs": [],
         "usage_history": [],
-    }
+    })
 
 
 # =============================================================================

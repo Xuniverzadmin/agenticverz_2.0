@@ -49,6 +49,7 @@ from sqlalchemy import and_, select
 from sqlmodel import Session
 
 from app.db import get_session
+from app.schemas.response import wrap_dict
 from app.models.killswitch import (
     DefaultGuardrail,
     Incident,
@@ -1095,7 +1096,7 @@ async def proxy_status(
         "freeze_status": freeze_status,
     }
 
-    return {
+    return wrap_dict({
         "status": "healthy",
         "proxy_version": "1.0.0",
         "timestamp": now.isoformat(),
@@ -1109,4 +1110,4 @@ async def proxy_status(
             "replay": True,
         },
         "message": "This proxy is actively protecting your AI traffic.",
-    }
+    })

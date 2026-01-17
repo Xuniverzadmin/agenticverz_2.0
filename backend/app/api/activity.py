@@ -25,6 +25,11 @@ Endpoints:
 - GET /api/v1/activity/runs/{run_id}     → O3 detail
 - GET /api/v1/activity/runs/{run_id}/evidence → O4 context (preflight)
 - GET /api/v1/activity/runs/{run_id}/proof    → O5 raw (preflight)
+- GET /api/v1/activity/summary/by-status → COMP-O3 status summary
+- GET /api/v1/activity/runs/by-dimension → LIVE-O5 dimension grouping
+- GET /api/v1/activity/patterns          → SIG-O3 pattern detection
+- GET /api/v1/activity/cost-analysis     → SIG-O4 cost anomalies
+- GET /api/v1/activity/attention-queue   → SIG-O5 attention ranking
 
 Architecture:
 - ONE facade for all ACTIVITY needs
@@ -45,6 +50,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
+from app.services.activity import (
+    PatternDetectionService,
+    CostAnalysisService,
+    AttentionRankingService,
+)
+from app.schemas.response import wrap_dict
 
 # =============================================================================
 # Environment Configuration
@@ -247,6 +258,135 @@ class RunDetailResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# =============================================================================
+# COMP-O3 Response Models
+# =============================================================================
+
+
+class StatusBucket(BaseModel):
+    """A bucket in status summary."""
+
+    status: str
+    count: int
+    percentage: float
+
+
+class StatusSummaryResponse(BaseModel):
+    """GET /summary/by-status response (COMP-O3)."""
+
+    buckets: list[StatusBucket]
+    total_runs: int
+    generated_at: datetime
+
+
+# =============================================================================
+# LIVE-O5 Response Models
+# =============================================================================
+
+
+class DimensionValue(str, Enum):
+    """Allowed dimension values for grouping."""
+
+    PROVIDER_TYPE = "provider_type"
+    SOURCE = "source"
+    AGENT_ID = "agent_id"
+    RISK_LEVEL = "risk_level"
+    STATUS = "status"
+
+
+class DimensionGroup(BaseModel):
+    """A group in dimension breakdown."""
+
+    value: str
+    count: int
+    percentage: float
+
+
+class DimensionBreakdownResponse(BaseModel):
+    """GET /runs/by-dimension response (LIVE-O5)."""
+
+    dimension: str
+    groups: list[DimensionGroup]
+    total_runs: int
+    state_filter: str | None
+    generated_at: datetime
+
+
+# =============================================================================
+# SIG-O3 Response Models (Patterns)
+# =============================================================================
+
+
+class PatternMatchResponse(BaseModel):
+    """A detected pattern."""
+
+    pattern_type: str
+    run_id: str
+    confidence: float
+    details: dict
+
+
+class PatternDetectionResponse(BaseModel):
+    """GET /patterns response (SIG-O3)."""
+
+    patterns: list[PatternMatchResponse]
+    window_start: datetime
+    window_end: datetime
+    runs_analyzed: int
+
+
+# =============================================================================
+# SIG-O4 Response Models (Cost Analysis)
+# =============================================================================
+
+
+class AgentCostResponse(BaseModel):
+    """Cost analysis for a single agent."""
+
+    agent_id: str
+    current_cost_usd: float
+    run_count: int
+    baseline_avg_usd: float | None
+    baseline_p95_usd: float | None
+    z_score: float
+    is_anomaly: bool
+
+
+class CostAnalysisResponse(BaseModel):
+    """GET /cost-analysis response (SIG-O4)."""
+
+    agents: list[AgentCostResponse]
+    total_anomalies: int
+    total_cost_usd: float
+    window_current: str
+    window_baseline: str
+
+
+# =============================================================================
+# SIG-O5 Response Models (Attention Queue)
+# =============================================================================
+
+
+class AttentionItemResponse(BaseModel):
+    """An item in the attention queue."""
+
+    run_id: str
+    attention_score: float
+    reasons: list[str]
+    state: str
+    status: str
+    started_at: datetime | None
+
+
+class AttentionQueueResponse(BaseModel):
+    """GET /attention-queue response (SIG-O5)."""
+
+    queue: list[AttentionItemResponse]
+    total_attention_items: int
+    weights_version: str
+    generated_at: datetime
 
 
 # =============================================================================
@@ -587,13 +727,13 @@ async def get_run_evidence(
     require_preflight()
     _ = get_tenant_id_from_auth(request)  # Enforce auth
 
-    return {
+    return wrap_dict({
         "run_id": run_id,
         "incidents_caused": [],
         "policies_triggered": [],
         "decisions_made": [],
         "traces_linked": [],
-    }
+    })
 
 
 # =============================================================================
@@ -616,7 +756,7 @@ async def get_run_proof(
     _ = get_tenant_id_from_auth(request)  # Enforce auth
     _ = include_payloads  # Reserved for future use
 
-    return {
+    return wrap_dict({
         "run_id": run_id,
         "integrity": {
             "root_hash": None,
@@ -626,4 +766,291 @@ async def get_run_proof(
         "aos_traces": [],
         "aos_trace_steps": [],
         "raw_logs": [],
-    }
+    })
+
+
+# =============================================================================
+# GET /summary/by-status - COMP-O3 Status Summary
+# =============================================================================
+
+
+@router.get(
+    "/summary/by-status",
+    response_model=StatusSummaryResponse,
+    summary="Summary by status (COMP-O3)",
+    description="""
+    Returns run counts grouped by status for the tenant.
+    Provides a high-level overview of execution distribution.
+    """,
+)
+async def get_summary_by_status(
+    request: Request,
+    state: Annotated[RunState | None, Query(description="Filter by run state")] = None,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> StatusSummaryResponse:
+    """Get run summary by status (COMP-O3). READ-ONLY from v_runs_o2."""
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    # Build query
+    where_clause = "tenant_id = :tenant_id"
+    params: dict[str, Any] = {"tenant_id": tenant_id}
+
+    if state:
+        where_clause += " AND state = :state"
+        params["state"] = state.value
+
+    sql = text(f"""
+        SELECT
+            status,
+            COUNT(*) as count
+        FROM v_runs_o2
+        WHERE {where_clause}
+        GROUP BY status
+        ORDER BY count DESC
+    """)
+
+    result = await session.execute(sql, params)
+    rows = result.mappings().all()
+
+    # Calculate total and percentages
+    total = sum(row["count"] for row in rows)
+
+    buckets = [
+        StatusBucket(
+            status=row["status"],
+            count=row["count"],
+            percentage=round((row["count"] / total * 100) if total > 0 else 0, 2),
+        )
+        for row in rows
+    ]
+
+    return StatusSummaryResponse(
+        buckets=buckets,
+        total_runs=total,
+        generated_at=datetime.utcnow(),
+    )
+
+
+# =============================================================================
+# GET /runs/by-dimension - LIVE-O5 Dimension Breakdown
+# =============================================================================
+
+
+@router.get(
+    "/runs/by-dimension",
+    response_model=DimensionBreakdownResponse,
+    summary="Runs by dimension (LIVE-O5)",
+    description="""
+    Returns run counts grouped by a specified dimension.
+    Useful for analyzing distribution across providers, sources, agents, etc.
+    """,
+)
+async def get_runs_by_dimension(
+    request: Request,
+    dim: Annotated[DimensionValue, Query(description="Dimension to group by")],
+    state: Annotated[RunState | None, Query(description="Filter by run state")] = None,
+    limit: Annotated[int, Query(ge=1, le=100, description="Max groups to return")] = 20,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> DimensionBreakdownResponse:
+    """Get runs grouped by dimension (LIVE-O5). READ-ONLY from v_runs_o2."""
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    # Build query with dimension
+    dimension_col = dim.value
+    where_clause = "tenant_id = :tenant_id"
+    params: dict[str, Any] = {"tenant_id": tenant_id, "limit": limit}
+
+    if state:
+        where_clause += " AND state = :state"
+        params["state"] = state.value
+
+    sql = text(f"""
+        SELECT
+            COALESCE({dimension_col}::text, 'unknown') as value,
+            COUNT(*) as count
+        FROM v_runs_o2
+        WHERE {where_clause}
+        GROUP BY {dimension_col}
+        ORDER BY count DESC
+        LIMIT :limit
+    """)
+
+    result = await session.execute(sql, params)
+    rows = result.mappings().all()
+
+    # Calculate total and percentages
+    total = sum(row["count"] for row in rows)
+
+    groups = [
+        DimensionGroup(
+            value=row["value"],
+            count=row["count"],
+            percentage=round((row["count"] / total * 100) if total > 0 else 0, 2),
+        )
+        for row in rows
+    ]
+
+    return DimensionBreakdownResponse(
+        dimension=dimension_col,
+        groups=groups,
+        total_runs=total,
+        state_filter=state.value if state else None,
+        generated_at=datetime.utcnow(),
+    )
+
+
+# =============================================================================
+# GET /patterns - SIG-O3 Pattern Detection
+# =============================================================================
+
+
+@router.get(
+    "/patterns",
+    response_model=PatternDetectionResponse,
+    summary="Detect patterns (SIG-O3)",
+    description="""
+    Detects instability patterns in trace steps:
+    - retry_loop: Repeated retries (>3 in same run)
+    - step_oscillation: Same skill called non-consecutively
+    - tool_call_loop: Repeated skill within sliding window
+    - timeout_cascade: Multiple slow steps
+    """,
+)
+async def get_patterns(
+    request: Request,
+    window_hours: Annotated[int, Query(ge=1, le=168, description="Hours to look back")] = 24,
+    limit: Annotated[int, Query(ge=1, le=50, description="Max patterns per type")] = 10,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> PatternDetectionResponse:
+    """Detect instability patterns (SIG-O3). READ-ONLY from aos_traces/aos_trace_steps."""
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    service = PatternDetectionService(session)
+    result = await service.detect_patterns(
+        tenant_id=tenant_id,
+        window_hours=window_hours,
+        limit=limit,
+    )
+
+    return PatternDetectionResponse(
+        patterns=[
+            PatternMatchResponse(
+                pattern_type=p.pattern_type,
+                run_id=p.run_id,
+                confidence=p.confidence,
+                details=p.details,
+            )
+            for p in result.patterns
+        ],
+        window_start=result.window_start,
+        window_end=result.window_end,
+        runs_analyzed=result.runs_analyzed,
+    )
+
+
+# =============================================================================
+# GET /cost-analysis - SIG-O4 Cost Anomalies
+# =============================================================================
+
+
+@router.get(
+    "/cost-analysis",
+    response_model=CostAnalysisResponse,
+    summary="Cost analysis (SIG-O4)",
+    description="""
+    Analyzes cost anomalies via Z-score comparison against baseline.
+    Detects agents with unusual cost patterns.
+    """,
+)
+async def get_cost_analysis(
+    request: Request,
+    baseline_days: Annotated[int, Query(ge=1, le=30, description="Days for baseline")] = 7,
+    anomaly_threshold: Annotated[float, Query(ge=1.0, le=5.0, description="Z-score threshold")] = 2.0,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> CostAnalysisResponse:
+    """Analyze cost anomalies (SIG-O4). READ-ONLY from runs table."""
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    service = CostAnalysisService(session)
+    result = await service.analyze_costs(
+        tenant_id=tenant_id,
+        baseline_days=baseline_days,
+        anomaly_threshold=anomaly_threshold,
+    )
+
+    return CostAnalysisResponse(
+        agents=[
+            AgentCostResponse(
+                agent_id=a.agent_id,
+                current_cost_usd=a.current_cost_usd,
+                run_count=a.run_count,
+                baseline_avg_usd=a.baseline_avg_usd,
+                baseline_p95_usd=a.baseline_p95_usd,
+                z_score=a.z_score,
+                is_anomaly=a.is_anomaly,
+            )
+            for a in result.agents
+        ],
+        total_anomalies=result.total_anomalies,
+        total_cost_usd=result.total_cost_usd,
+        window_current=result.window_current,
+        window_baseline=result.window_baseline,
+    )
+
+
+# =============================================================================
+# GET /attention-queue - SIG-O5 Attention Ranking
+# =============================================================================
+
+
+@router.get(
+    "/attention-queue",
+    response_model=AttentionQueueResponse,
+    summary="Attention queue (SIG-O5)",
+    description="""
+    Returns runs ranked by composite attention score.
+    Combines risk, impact, latency, recency, and evidence signals.
+
+    Weight distribution (FROZEN):
+    - risk: 35%
+    - impact: 25%
+    - latency: 15%
+    - recency: 15%
+    - evidence: 10%
+    """,
+)
+async def get_attention_queue(
+    request: Request,
+    limit: Annotated[int, Query(ge=1, le=100, description="Max items to return")] = 20,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> AttentionQueueResponse:
+    """Get attention queue (SIG-O5). READ-ONLY from v_runs_o2."""
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    service = AttentionRankingService(session)
+    result = await service.get_attention_queue(
+        tenant_id=tenant_id,
+        limit=limit,
+    )
+
+    return AttentionQueueResponse(
+        queue=[
+            AttentionItemResponse(
+                run_id=item.run_id,
+                attention_score=item.attention_score,
+                reasons=item.reasons,
+                state=item.state,
+                status=item.status,
+                started_at=item.started_at,
+            )
+            for item in result.queue
+        ],
+        total_attention_items=result.total_attention_items,
+        weights_version=result.weights_version,
+        generated_at=result.generated_at,
+    )

@@ -58,6 +58,7 @@ from app.adapters.customer_killswitch_adapter import (
 # - All rejections logged to audit
 from app.auth.authority import AuthorityResult, emit_authority_audit, require_replay_execute
 from app.auth.console_auth import CustomerToken, verify_console_token
+from app.schemas.response import wrap_dict
 
 # M29 Category 5: Customer Incident Narrative DTOs (calm vocabulary)
 from app.contracts.guard import (
@@ -317,7 +318,7 @@ async def get_guard_status(
     cache = get_guard_cache()
     cached = await cache.get_status(tenant_id)
     if cached:
-        return GuardStatus(**cached)
+        return wrap_dict(GuardStatus(**cached).model_dump())
 
     # Get tenant state
     stmt = select(KillSwitchState).where(
@@ -362,7 +363,7 @@ async def get_guard_status(
     # Cache result
     await cache.set_status(tenant_id, result.model_dump())
 
-    return result
+    return wrap_dict(result.model_dump())
 
 
 @router.get("/snapshot/today", response_model=TodaySnapshot)
@@ -379,7 +380,7 @@ async def get_today_snapshot(
     cache = get_guard_cache()
     cached = await cache.get_snapshot(tenant_id)
     if cached:
-        return TodaySnapshot(**cached)
+        return wrap_dict(TodaySnapshot(**cached).model_dump())
 
     today_start = utc_now().replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -423,7 +424,7 @@ async def get_today_snapshot(
     # Cache result
     await cache.set_snapshot(tenant_id, result.model_dump())
 
-    return result
+    return wrap_dict(result.model_dump())
 
 
 # =============================================================================
@@ -457,7 +458,7 @@ async def activate_killswitch(
     cache = get_guard_cache()
     await cache.invalidate_tenant(tenant_id)
 
-    return {"status": result.status, "message": result.message}
+    return wrap_dict({"status": result.status, "message": result.message})
 
 
 @router.post("/killswitch/deactivate")
@@ -483,7 +484,7 @@ async def deactivate_killswitch(
     cache = get_guard_cache()
     await cache.invalidate_tenant(tenant_id)
 
-    return {"status": result.status, "message": result.message}
+    return wrap_dict({"status": result.status, "message": result.message})
 
 
 # =============================================================================
@@ -529,12 +530,12 @@ async def list_incidents(
         for inc in result.items
     ]
 
-    return {
+    return wrap_dict({
         "items": items,
         "total": result.total,
         "page": result.page,
         "page_size": result.page_size,
-    }
+    })
 
 
 @router.get("/incidents/{incident_id}", response_model=IncidentDetailResponse)
@@ -609,7 +610,7 @@ async def acknowledge_incident(
     if result is None:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    return {"status": result.status}
+    return wrap_dict({"status": result.status})
 
 
 @router.post("/incidents/{incident_id}/resolve")
@@ -630,7 +631,7 @@ async def resolve_incident(
     if result is None:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    return {"status": result.status}
+    return wrap_dict({"status": result.status})
 
 
 # =============================================================================
@@ -1105,12 +1106,12 @@ async def list_api_keys(
         for key in result.items
     ]
 
-    return {
+    return wrap_dict({
         "items": items,
         "total": result.total,
         "page": 1,
         "page_size": len(items),
-    }
+    })
 
 
 @router.post("/keys/{key_id}/freeze")
@@ -1131,7 +1132,7 @@ async def freeze_api_key(
     if result is None:
         raise HTTPException(status_code=404, detail="API key not found")
 
-    return {"status": result.status, "key_id": result.id, "message": result.message}
+    return wrap_dict({"status": result.status, "key_id": result.id, "message": result.message})
 
 
 @router.post("/keys/{key_id}/unfreeze")
@@ -1152,7 +1153,7 @@ async def unfreeze_api_key(
     if result is None:
         raise HTTPException(status_code=404, detail="API key not found")
 
-    return {"status": result.status, "key_id": result.id, "message": result.message}
+    return wrap_dict({"status": result.status, "key_id": result.id, "message": result.message})
 
 
 # =============================================================================
@@ -1373,12 +1374,12 @@ async def search_incidents(
             pass  # All incidents are policy failures
         elif request.policy_status == "passed":
             # No incidents for passed policies - return empty
-            return IncidentSearchResponse(
+            return wrap_dict(IncidentSearchResponse(
                 items=[],
                 total=0,
                 query=request.query,
                 filters_applied={"policy_status": "passed"},
-            )
+            ).model_dump())
 
     # Order and paginate
     stmt = stmt.order_by(desc(Incident.created_at)).offset(request.offset).limit(request.limit)
@@ -1452,7 +1453,7 @@ async def search_incidents(
             )
         )
 
-    return IncidentSearchResponse(
+    return wrap_dict(IncidentSearchResponse(
         items=items,
         total=total,
         query=request.query,
@@ -1464,7 +1465,7 @@ async def search_incidents(
             "model": request.model,
             "user_id": request.user_id,
         },
-    )
+    ).model_dump())
 
 
 @router.get("/incidents/{incident_id}/timeline", response_model=DecisionTimelineResponse)

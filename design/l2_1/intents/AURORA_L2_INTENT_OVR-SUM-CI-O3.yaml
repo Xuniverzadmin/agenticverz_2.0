@@ -1,0 +1,64 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: OVR-SUM-CI-O3
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: OVR-SUM-CI-O3
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: OVERVIEW
+  subdomain: SUMMARY
+  topic: COST_INTELLIGENCE
+  topic_id: OVERVIEW.SUMMARY.COST_INTELLIGENCE
+  order: O3
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: cost_intelligence
+  facet_criticality: HIGH
+display:
+  name: OVR-SUM-CI-O3
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: overview.cost_by_model
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+notes: 'Provide a short-horizon view of cost movement so the user can tell
+
+  whether spend is trending up, flat, or down.
+
+
+  What it shows:
+
+  - Aggregate cost trend over a short window (e.g., last N periods)
+
+  - Directional indicator only (↑ ↓ →)
+
+  - Relative change, not absolute detail
+
+
+  What it explicitly does NOT show:
+
+  - No driver-level breakdown
+
+  - No per-run or per-model detail
+
+  - No long-term forecasting
+
+  - No alerts or policy thresholds
+
+  - No controls'

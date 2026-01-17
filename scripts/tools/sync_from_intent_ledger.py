@@ -52,6 +52,7 @@ UI_PLAN_PATH = REPO_ROOT / "design" / "l2_1" / "ui_plan.yaml"
 INTENTS_DIR = REPO_ROOT / "design" / "l2_1" / "intents"
 CAPABILITY_REGISTRY_PATH = REPO_ROOT / "backend" / "AURORA_L2_CAPABILITY_REGISTRY"
 SDSR_SCENARIOS_PATH = REPO_ROOT / "backend" / "scripts" / "sdsr" / "scenarios"
+SEMANTIC_REGISTRY_PATH = REPO_ROOT / "design" / "l2_1" / "AURORA_L2_SEMANTIC_REGISTRY.yaml"
 
 
 @dataclass
@@ -89,6 +90,20 @@ class CapabilityEntry:
     scenario: Optional[str]
     acceptance: List[str]
     observed: Optional[str]
+    # Implementation block (human assumption)
+    assumed_endpoint: Optional[str] = None
+    assumed_method: str = "GET"
+
+
+@dataclass
+class FacetEntry:
+    """Parsed facet from ledger (V1.1 - semantic grouping)."""
+
+    facet_id: str
+    purpose: str
+    criticality: str  # HIGH, MEDIUM, LOW
+    domain: str
+    panels: List[str]  # List of panel_ids
 
 
 def load_yaml(path: Path) -> Dict:
@@ -129,7 +144,7 @@ def load_topology() -> Dict[Tuple[str, str, str], TopologySlot]:
     return slot_lookup
 
 
-def parse_ledger(path: Path) -> Tuple[List[PanelEntry], List[CapabilityEntry]]:
+def parse_ledger(path: Path) -> Tuple[List[PanelEntry], List[CapabilityEntry], List[FacetEntry]]:
     """Parse INTENT_LEDGER.md into structured data."""
     if not path.exists():
         print(f"ERROR: Ledger not found at {path}")
@@ -140,6 +155,7 @@ def parse_ledger(path: Path) -> Tuple[List[PanelEntry], List[CapabilityEntry]]:
 
     panels: List[PanelEntry] = []
     capabilities: List[CapabilityEntry] = []
+    facets: List[FacetEntry] = []
 
     # Split into sections
     sections = re.split(r"^## ", content, flags=re.MULTILINE)
@@ -149,8 +165,10 @@ def parse_ledger(path: Path) -> Tuple[List[PanelEntry], List[CapabilityEntry]]:
             panels = parse_panels_section(section)
         elif section.startswith("Capabilities"):
             capabilities = parse_capabilities_section(section)
+        elif section.startswith("Facets"):
+            facets = parse_facets_section(section)
 
-    return panels, capabilities
+    return panels, capabilities, facets
 
 
 def parse_panels_section(section: str) -> List[PanelEntry]:
@@ -256,7 +274,7 @@ def parse_panels_section(section: str) -> List[PanelEntry]:
 
 
 def parse_capabilities_section(section: str) -> List[CapabilityEntry]:
-    """Parse the Capabilities section."""
+    """Parse the Capabilities section including Implementation block."""
     capabilities = []
 
     # Split by capability entries
@@ -272,13 +290,37 @@ def parse_capabilities_section(section: str) -> List[CapabilityEntry]:
         # Parse fields
         fields = {}
         acceptance = []
+        implementation = {}
         in_acceptance = False
+        in_implementation = False
 
         for line in lines[1:]:
             line_stripped = line.strip()
 
             if line_stripped.startswith("Acceptance:"):
                 in_acceptance = True
+                in_implementation = False
+                continue
+
+            if line_stripped.startswith("Implementation:"):
+                in_implementation = True
+                in_acceptance = False
+                continue
+
+            if in_implementation:
+                if line_stripped.startswith("- "):
+                    # Parse implementation field: "- Endpoint: /api/v1/..."
+                    impl_match = re.match(r"^- (\w+):\s*(.*)$", line_stripped)
+                    if impl_match:
+                        key, value = impl_match.groups()
+                        implementation[key.lower()] = value.strip()
+                elif ":" in line_stripped and not line_stripped.startswith("-"):
+                    # End of implementation block
+                    in_implementation = False
+                    field_match = re.match(r"^(\w+):\s*(.*)$", line_stripped)
+                    if field_match:
+                        key, value = field_match.groups()
+                        fields[key.lower()] = value.strip()
                 continue
 
             if in_acceptance:
@@ -307,20 +349,105 @@ def parse_capabilities_section(section: str) -> List[CapabilityEntry]:
         if observed == "null":
             observed = None
 
+        # Extract implementation block values (human assumptions)
+        assumed_endpoint = implementation.get("endpoint")
+        assumed_method = implementation.get("method", "GET")
+
         capabilities.append(
             CapabilityEntry(
                 capability_id=cap_id,
                 panel=fields.get("panel", "UNKNOWN"),
-                status=fields.get("status", "DECLARED"),
+                status=fields.get("status", "ASSUMED"),
                 scenario=scenario,
                 acceptance=acceptance
                 if acceptance
                 else ["Capability behavior verified"],
                 observed=observed,
+                assumed_endpoint=assumed_endpoint,
+                assumed_method=assumed_method,
             )
         )
 
     return capabilities
+
+
+def parse_facets_section(section: str) -> List[FacetEntry]:
+    """Parse the Facets section (V1.1 grammar).
+
+    Facets are semantic groupings of information needs that span multiple panels.
+    They provide human-readable context without affecting pipeline mechanics.
+    """
+    facets = []
+
+    # Split by facet entries
+    facet_blocks = re.split(r"^### Facet: ", section, flags=re.MULTILINE)
+
+    for block in facet_blocks[1:]:  # Skip first (section header)
+        lines = block.strip().split("\n")
+        if not lines:
+            continue
+
+        facet_id = lines[0].strip()
+
+        # Parse fields
+        fields = {}
+        panels = []
+        in_panels = False
+
+        for line in lines[1:]:
+            line_stripped = line.strip()
+
+            if line_stripped.startswith("Panels:"):
+                in_panels = True
+                continue
+
+            if in_panels:
+                if line_stripped.startswith("- "):
+                    # Parse panel entry: "- OVR-SUM-HL-O1 (headline metrics)"
+                    panel_match = re.match(r"^- ([A-Z0-9\-]+)", line_stripped)
+                    if panel_match:
+                        panels.append(panel_match.group(1))
+                elif ":" in line_stripped and not line_stripped.startswith("-"):
+                    # End of panels block - new field
+                    in_panels = False
+                    field_match = re.match(r"^(\w+):\s*(.*)$", line_stripped)
+                    if field_match:
+                        key, value = field_match.groups()
+                        fields[key.lower()] = value.strip()
+            else:
+                # Regular field
+                field_match = re.match(r"^(\w+):\s*(.*)$", line_stripped)
+                if field_match:
+                    key, value = field_match.groups()
+                    fields[key.lower()] = value.strip()
+
+        facets.append(
+            FacetEntry(
+                facet_id=facet_id,
+                purpose=fields.get("purpose", ""),
+                criticality=fields.get("criticality", "MEDIUM"),
+                domain=fields.get("domain", "UNKNOWN"),
+                panels=panels,
+            )
+        )
+
+    return facets
+
+
+def build_panel_facet_mapping(facets: List[FacetEntry]) -> Dict[str, Tuple[str, str]]:
+    """Build a mapping from panel_id to (facet_id, criticality).
+
+    If a panel appears in multiple facets, uses the first occurrence.
+    This is intentional - panels should belong to one primary facet.
+    """
+    mapping: Dict[str, Tuple[str, str]] = {}
+
+    for facet in facets:
+        for panel_id in facet.panels:
+            if panel_id not in mapping:
+                mapping[panel_id] = (facet.facet_id, facet.criticality)
+
+    return mapping
 
 
 def validate_against_topology(
@@ -481,20 +608,86 @@ def generate_ui_plan(
     return ui_plan
 
 
-def generate_capability_yaml(cap: CapabilityEntry) -> Dict:
-    """Generate a single capability registry YAML."""
+def load_existing_capability(capability_id: str) -> Optional[Dict]:
+    """Load existing capability YAML if it exists.
+
+    This is used to preserve OBSERVED/TRUSTED status during sync.
+    """
+    cap_path = CAPABILITY_REGISTRY_PATH / f"AURORA_L2_CAPABILITY_{capability_id}.yaml"
+    if not cap_path.exists():
+        return None
+    with open(cap_path, "r") as f:
+        return yaml.safe_load(f)
+
+
+def generate_capability_yaml(cap: CapabilityEntry, existing: Optional[Dict] = None) -> Dict:
+    """Generate a single capability registry YAML.
+
+    OBSERVATION-PRESERVING SYNC (PIN-432):
+    If the capability already exists with status OBSERVED or TRUSTED,
+    we preserve that status and the binding block. This prevents
+    sync from regressing capability status.
+
+    Args:
+        cap: Capability entry from the ledger
+        existing: Existing capability YAML (if any)
+    """
+    # Determine status: preserve OBSERVED/TRUSTED, otherwise use ledger status
+    status = cap.status
+    binding = {
+        "observed_endpoint": None,
+        "observed_method": None,
+        "observed_at": None,
+        "observation_id": None,
+    }
+    observation = None
+    coherency = None
+
+    if existing:
+        existing_status = existing.get("status")
+        # Preserve higher-trust status
+        if existing_status in ["OBSERVED", "TRUSTED"]:
+            status = existing_status
+            # Also preserve binding block (SDSR-verified data)
+            if "binding" in existing:
+                binding = existing["binding"]
+            # Preserve observation trace
+            if "observation" in existing:
+                observation = existing["observation"]
+            # Preserve coherency block
+            if "coherency" in existing:
+                coherency = existing["coherency"]
+
     yaml_content = {
         "capability_id": cap.capability_id,
-        "status": cap.status,
+        "status": status,
         "source_panels": [cap.panel],
+        # Domain extracted from capability_id (e.g., "overview.activity_snapshot" → "OVERVIEW")
+        "domain": cap.capability_id.split(".")[0].upper() if "." in cap.capability_id else "UNKNOWN",
         "metadata": {
             "generated_by": "sync_from_intent_ledger.py",
             "generated_on": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
             "declared_by": "intent-ledger",
             "declared_on": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         },
+        # Human assumption from ledger (may be wrong, SDSR will verify)
+        "assumption": {
+            "endpoint": cap.assumed_endpoint,
+            "method": cap.assumed_method,
+            "source": "INTENT_LEDGER",
+        },
+        # Binding block: preserved if OBSERVED/TRUSTED, otherwise empty
+        "binding": binding,
         "acceptance_criteria": cap.acceptance,
     }
+
+    # Add observation trace if preserved
+    if observation:
+        yaml_content["observation"] = observation
+
+    # Add coherency block if preserved
+    if coherency:
+        yaml_content["coherency"] = coherency
 
     if cap.scenario:
         yaml_content["metadata"]["observed_by"] = cap.scenario
@@ -502,11 +695,29 @@ def generate_capability_yaml(cap: CapabilityEntry) -> Dict:
     if cap.observed:
         yaml_content["metadata"]["observed_on"] = cap.observed
 
+    # Preserve observed_by/observed_on from existing if we preserved status
+    if existing and status in ["OBSERVED", "TRUSTED"]:
+        if "metadata" in existing:
+            if "observed_by" in existing["metadata"]:
+                yaml_content["metadata"]["observed_by"] = existing["metadata"]["observed_by"]
+            if "observed_on" in existing["metadata"]:
+                yaml_content["metadata"]["observed_on"] = existing["metadata"]["observed_on"]
+
     return yaml_content
 
 
-def generate_intent_yaml(panel: PanelEntry, capabilities: List[CapabilityEntry]) -> Dict:
-    """Generate a single intent YAML from a PanelEntry."""
+def generate_intent_yaml(
+    panel: PanelEntry,
+    capabilities: List[CapabilityEntry],
+    panel_facet_mapping: Optional[Dict[str, Tuple[str, str]]] = None,
+) -> Dict:
+    """Generate a single intent YAML from a PanelEntry.
+
+    Args:
+        panel: The panel entry to generate YAML for
+        capabilities: List of all capabilities
+        panel_facet_mapping: Optional dict of panel_id -> (facet_id, criticality)
+    """
     # Find matching capability if any
     cap_entry = None
     if panel.capability:
@@ -521,6 +732,12 @@ def generate_intent_yaml(panel: PanelEntry, capabilities: List[CapabilityEntry])
     # Extract order from panel_id (e.g., "O1" from "OVR-SUM-HL-O1")
     order = panel.panel_id.split("-")[-1] if "-" in panel.panel_id else "O1"
 
+    # Get facet info if available
+    facet_id = None
+    facet_criticality = None
+    if panel_facet_mapping and panel.panel_id in panel_facet_mapping:
+        facet_id, facet_criticality = panel_facet_mapping[panel.panel_id]
+
     intent = {
         "panel_id": panel.panel_id,
         "version": "1.0.0",
@@ -534,6 +751,9 @@ def generate_intent_yaml(panel: PanelEntry, capabilities: List[CapabilityEntry])
             "action_layer": "L2_1",
             "source": "INTENT_LEDGER",
             "review_status": "UNREVIEWED",
+            # Facet information (V1.1 - semantic grouping)
+            "facet": facet_id,
+            "facet_criticality": facet_criticality,
         },
         "display": {
             "name": panel.panel_id,  # Default to panel_id, human can improve
@@ -558,9 +778,11 @@ def generate_intent_yaml(panel: PanelEntry, capabilities: List[CapabilityEntry])
     if panel.capability:
         intent["capability"] = {
             "id": panel.capability,
-            "status": cap_entry.status if cap_entry else "DECLARED",
-            "endpoint": None,  # Human must fill
-            "method": "GET",
+            # Initial status is ASSUMED (human assumption), SDSR elevates to OBSERVED
+            "status": cap_entry.status if cap_entry else "ASSUMED",
+            # Human assumption from ledger Implementation block
+            "assumed_endpoint": cap_entry.assumed_endpoint if cap_entry else None,
+            "assumed_method": cap_entry.assumed_method if cap_entry else "GET",
         }
         # Add SDSR block if capability has scenario
         if cap_entry and cap_entry.scenario:
@@ -579,8 +801,20 @@ def generate_intent_yaml(panel: PanelEntry, capabilities: List[CapabilityEntry])
     return intent
 
 
-def write_intent_yamls(panels: List[PanelEntry], capabilities: List[CapabilityEntry], path: Path):
-    """Write intent YAML files for all panels."""
+def write_intent_yamls(
+    panels: List[PanelEntry],
+    capabilities: List[CapabilityEntry],
+    path: Path,
+    panel_facet_mapping: Optional[Dict[str, Tuple[str, str]]] = None,
+):
+    """Write intent YAML files for all panels.
+
+    Args:
+        panels: List of panel entries
+        capabilities: List of capability entries
+        path: Directory to write intent YAMLs
+        panel_facet_mapping: Optional dict of panel_id -> (facet_id, criticality)
+    """
     path.mkdir(parents=True, exist_ok=True)
 
     written = 0
@@ -593,7 +827,7 @@ def write_intent_yamls(panels: List[PanelEntry], capabilities: List[CapabilityEn
             continue
 
         filepath = path / f"AURORA_L2_INTENT_{panel.panel_id}.yaml"
-        intent = generate_intent_yaml(panel, capabilities)
+        intent = generate_intent_yaml(panel, capabilities, panel_facet_mapping)
 
         header = f"""# GENERATED FILE - DO NOT EDIT MANUALLY
 # Source: design/l2_1/INTENT_LEDGER.md
@@ -632,19 +866,39 @@ def write_ui_plan(ui_plan: Dict, path: Path):
         )
 
 
-def write_capability_registry(capabilities: List[CapabilityEntry], path: Path):
-    """Write capability registry YAMLs."""
+def write_capability_registry(capabilities: List[CapabilityEntry], path: Path) -> Tuple[int, int]:
+    """Write capability registry YAMLs with observation-preserving sync.
+
+    OBSERVATION-PRESERVING SYNC (PIN-432):
+    Before overwriting a capability, check if it has status OBSERVED or TRUSTED.
+    If so, preserve that status and the binding block.
+
+    Returns:
+        Tuple of (written, preserved) counts.
+    """
     path.mkdir(parents=True, exist_ok=True)
+
+    preserved_count = 0
+    written_count = 0
 
     for cap in capabilities:
         filename = f"AURORA_L2_CAPABILITY_{cap.capability_id}.yaml"
         filepath = path / filename
 
-        yaml_content = generate_capability_yaml(cap)
+        # Load existing capability to preserve OBSERVED/TRUSTED status
+        existing = load_existing_capability(cap.capability_id)
+
+        yaml_content = generate_capability_yaml(cap, existing=existing)
+
+        # Track preserved status
+        if existing and existing.get("status") in ["OBSERVED", "TRUSTED"]:
+            preserved_count += 1
 
         header = """# GENERATED FILE - DO NOT EDIT MANUALLY
 # Source: design/l2_1/INTENT_LEDGER.md
 # Generator: scripts/tools/sync_from_intent_ledger.py
+#
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
 #
 """
         with open(filepath, "w") as f:
@@ -656,6 +910,73 @@ def write_capability_registry(capabilities: List[CapabilityEntry], path: Path):
                 sort_keys=False,
                 allow_unicode=True,
             )
+        written_count += 1
+
+    return written_count, preserved_count
+
+
+def update_semantic_registry_domains(topology_path: Path, registry_path: Path) -> int:
+    """Update semantic registry domains from topology template.
+
+    The topology is the authoritative source for domains and their questions.
+    This function extracts domains and updates the semantic registry.
+
+    Returns:
+        Number of domains written.
+    """
+    # Load topology
+    topology = load_yaml(topology_path)
+    if not topology:
+        return 0
+
+    # Load existing semantic registry
+    registry = load_yaml(registry_path)
+    if not registry:
+        return 0
+
+    # Extract domains from topology
+    domains_data = {}
+    for domain in topology.get("domains", []):
+        domain_id = domain.get("id", "")
+        description = domain.get("description", [])
+
+        # Convert description list to questions format
+        if isinstance(description, list):
+            questions = description
+        else:
+            questions = [description] if description else []
+
+        domains_data[domain_id] = {
+            "questions": questions,
+            "subdomains": [sd.get("id") for sd in domain.get("subdomains", [])]
+        }
+
+    # Update registry
+    registry["domains"] = domains_data
+
+    # Write back
+    with open(registry_path, "w") as f:
+        # Write header comment
+        f.write("# AURORA_L2 Semantic Vocabulary Registry\n")
+        f.write("# Status: LOCKED\n")
+        f.write("# Version: 1.0\n")
+        f.write("# Purpose: Defines the closed semantic vocabulary for intent specs\n")
+        f.write("#\n")
+        f.write("# This file contains the ONLY valid verbs, objects, and effects.\n")
+        f.write("# Any semantic not in this registry is INVALID.\n")
+        f.write("#\n")
+        f.write("# DOMAINS section is AUTO-GENERATED from UI_TOPOLOGY_TEMPLATE.yaml\n")
+        f.write("# Run sync_from_intent_ledger.py to update domains.\n\n")
+
+        yaml.dump(
+            registry,
+            f,
+            default_flow_style=False,
+            sort_keys=False,
+            allow_unicode=True,
+        )
+
+    return len(domains_data)
 
 
 def check_sdsr_scenarios(capabilities: List[CapabilityEntry], path: Path) -> List[str]:
@@ -684,9 +1005,15 @@ def main():
 
     # Parse ledger
     print("\nParsing INTENT_LEDGER.md...")
-    panels, capabilities = parse_ledger(LEDGER_PATH)
+    panels, capabilities, facets = parse_ledger(LEDGER_PATH)
     print(f"  Found {len(panels)} panels")
     print(f"  Found {len(capabilities)} capabilities")
+    print(f"  Found {len(facets)} facets (V1.1 semantic groupings)")
+
+    # Build facet mapping for intent YAMLs
+    panel_facet_mapping = build_panel_facet_mapping(facets)
+    panels_with_facets = len(panel_facet_mapping)
+    print(f"  Panels with facet assignment: {panels_with_facets}")
 
     # Validate against topology
     print("\nValidating against topology...")
@@ -710,16 +1037,25 @@ def main():
     write_ui_plan(ui_plan, UI_PLAN_PATH)
     print(f"  Written to: {UI_PLAN_PATH}")
 
-    # Generate intent YAMLs
+    # Generate intent YAMLs (with facet propagation)
     print("\nGenerating intent YAMLs...")
-    written, skipped = write_intent_yamls(panels, capabilities, INTENTS_DIR)
+    written, skipped = write_intent_yamls(panels, capabilities, INTENTS_DIR, panel_facet_mapping)
     print(f"  Written {written} intent YAMLs to: {INTENTS_DIR}")
+    if panels_with_facets > 0:
+        print(f"  Propagated facet metadata to {panels_with_facets} panels")
     print(f"  Skipped {skipped} EMPTY state panels")
 
-    # Generate capability registry
+    # Generate capability registry (with observation-preserving sync)
     print("\nGenerating capability registry...")
-    write_capability_registry(capabilities, CAPABILITY_REGISTRY_PATH)
-    print(f"  Written {len(capabilities)} files to: {CAPABILITY_REGISTRY_PATH}")
+    written_count, preserved_count = write_capability_registry(capabilities, CAPABILITY_REGISTRY_PATH)
+    print(f"  Written {written_count} files to: {CAPABILITY_REGISTRY_PATH}")
+    if preserved_count > 0:
+        print(f"  Preserved OBSERVED/TRUSTED status for {preserved_count} capabilities (PIN-432)")
+
+    # Update semantic registry domains
+    print("\nUpdating semantic registry domains...")
+    domains_count = update_semantic_registry_domains(TOPOLOGY_PATH, SEMANTIC_REGISTRY_PATH)
+    print(f"  Updated {domains_count} domains in: {SEMANTIC_REGISTRY_PATH}")
 
     # Check SDSR scenarios
     print("\nChecking SDSR scenarios...")
@@ -741,6 +1077,7 @@ def main():
     print(f"  - {UI_PLAN_PATH}")
     print(f"  - {INTENTS_DIR}/AURORA_L2_INTENT_*.yaml")
     print(f"  - {CAPABILITY_REGISTRY_PATH}/*.yaml")
+    print(f"  - {SEMANTIC_REGISTRY_PATH} (domains section)")
     print()
     print("Next steps:")
     print("  1. Validate: python scripts/tools/coherency_gate.py")

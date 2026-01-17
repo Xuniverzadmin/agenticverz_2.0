@@ -1,0 +1,62 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: POL-GOV-LIB-O3
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-GOV-LIB-O3
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: POLICIES
+  subdomain: GOVERNANCE
+  topic: POLICY_LIBRARY
+  topic_id: POLICIES.GOVERNANCE.POLICY_LIBRARY
+  order: O3
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: POL-GOV-LIB-O3
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: policies.state
+  status: ASSUMED
+  assumed_endpoint: /api/v1/policy-layer/state
+  assumed_method: GET
+  facade_note: "Unified facade - replaces direct /v1/policies/active"
+sdsr:
+  scenario: SDSR-POL-GOV-LIB-O3-001
+  verified: false
+notes: 'Show adoption status and current usage — how and where each policy is used.
+
+
+  What it shows:
+
+  - Adoption state: not used, used in limited scope, used globally
+
+  - Active scopes: specific LLMs, agents, humans, all runs
+
+  - Last modified, who approved
+
+  - Reflects actual enforcement, not intent
+
+
+  What it explicitly does NOT show:
+
+  - No adoption controls
+
+  - No proposed changes'

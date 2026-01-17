@@ -42,6 +42,7 @@ from pydantic import BaseModel, Field
 
 # PIN-318: Phase 1.2 Authority Hardening - Add founder auth
 from ..auth.console_auth import verify_fops_token
+from ..schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.scenarios")
 
@@ -443,7 +444,7 @@ async def delete_scenario(
 
     logger.info(f"Deleted scenario: {scenario_id}")
 
-    return {"message": f"Scenario {scenario_id} deleted", "success": True}
+    return wrap_dict({"message": f"Scenario {scenario_id} deleted", "success": True})
 
 
 @router.post("/{scenario_id}/simulate", response_model=SimulationResult)
@@ -472,7 +473,7 @@ async def simulate_scenario(
 
     logger.info(f"Simulated scenario: {scenario_id} - feasible={result.feasible}, cost={result.estimated_cost_cents}")
 
-    return result
+    return wrap_dict(result.model_dump())
 
 
 @router.post("/simulate-adhoc", response_model=SimulationResult)
@@ -494,7 +495,7 @@ async def simulate_adhoc(
 
     logger.info(f"Ad-hoc simulation: feasible={result.feasible}, cost={result.estimated_cost_cents}")
 
-    return result
+    return wrap_dict(result.model_dump())
 
 
 # =============================================================================
@@ -509,7 +510,7 @@ async def get_immutability_info():
 
     This endpoint documents the READ-ONLY nature of scenario simulations.
     """
-    return {
+    return wrap_dict({
         "system": "H2 Cost Simulation v1",
         "guarantees": [
             "Pure computation only - no real budget changes",
@@ -521,4 +522,4 @@ async def get_immutability_info():
         "No actual costs are incurred, no budgets are modified, "
         "and no real operations are triggered.",
         "reference": "Phase H2 - Cost Simulation v1",
-    }
+    })

@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 # PIN-318: Phase 1.2 Authority Hardening - Add founder auth
 from app.auth.console_auth import verify_fops_token
 from app.middleware.rate_limit import rate_limit_dependency
+from app.schemas.response import wrap_dict
 from app.services.recovery_matcher import RecoveryMatcher
 from app.services.recovery_write_service import RecoveryWriteService
 
@@ -335,7 +336,7 @@ async def delete_candidate(
             note="Revoked via admin delete",
         )
 
-        return {"status": "deleted", "candidate_id": candidate_id}
+        return wrap_dict({"status": "deleted", "candidate_id": candidate_id})
 
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -362,7 +363,7 @@ async def get_recovery_stats(
 
         # TODO: Add proper count queries
 
-        return {
+        return wrap_dict({
             "total_candidates": len(pending) + len(approved) + len(rejected),
             "pending": len(pending),
             "approved": len(approved),
@@ -370,7 +371,7 @@ async def get_recovery_stats(
             "approval_rate": (
                 len(approved) / (len(approved) + len(rejected)) if (len(approved) + len(rejected)) > 0 else 0
             ),
-        }
+        })
 
     except Exception as e:
         logger.error(f"Get stats error: {e}", exc_info=True)
@@ -679,11 +680,11 @@ async def update_candidate(
 
             write_service.commit()
 
-            return {
+            return wrap_dict({
                 "status": "updated",
                 "candidate_id": candidate_id,
                 "updates_applied": list(params.keys()),
-            }
+            })
 
     except HTTPException:
         raise
@@ -1182,7 +1183,7 @@ async def revoke_scope(scope_id: str = Path(..., description="Scope ID to revoke
 
         logger.info(f"P2FC-4: Revoked scope {scope_id}")
 
-        return {"status": "revoked", "scope_id": scope_id}
+        return wrap_dict({"status": "revoked", "scope_id": scope_id})
 
     except HTTPException:
         raise

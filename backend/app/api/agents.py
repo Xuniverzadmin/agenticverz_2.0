@@ -27,6 +27,7 @@ from fastapi import APIRouter, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from ..agents.services.blackboard_service import get_blackboard_service
+from ..schemas.response import wrap_dict
 from ..agents.services.credit_service import CREDIT_COSTS, get_credit_service
 from ..agents.services.job_service import JobConfig, get_job_service
 from ..agents.services.message_service import get_message_service
@@ -381,7 +382,7 @@ async def cancel_job(job_id: str):
     if not cancelled:
         raise HTTPException(status_code=400, detail="Job could not be cancelled")
 
-    return {"cancelled": True, "job_id": job_id}
+    return wrap_dict({"cancelled": True, "job_id": job_id})
 
 
 @router.post("/jobs/{job_id}/claim", response_model=ClaimItemResponse)
@@ -424,7 +425,7 @@ async def complete_item(
     job_service = get_job_service()
     job_service.check_job_completion(UUID(job_id))
 
-    return {"completed": True, "item_id": item_id}
+    return wrap_dict({"completed": True, "item_id": item_id})
 
 
 @router.post("/jobs/{job_id}/items/{item_id}/fail")
@@ -449,7 +450,7 @@ async def fail_item(
     job_service = get_job_service()
     job_service.check_job_completion(UUID(job_id))
 
-    return {"failed": True, "item_id": item_id}
+    return wrap_dict({"failed": True, "item_id": item_id})
 
 
 # ============ Blackboard Endpoints ============
@@ -461,11 +462,11 @@ async def get_blackboard(key: str):
     blackboard = get_blackboard_service()
     value = blackboard.get(key)
 
-    return {
+    return wrap_dict({
         "key": key,
         "value": value,
         "found": value is not None,
-    }
+    })
 
 
 @router.put("/blackboard/{key}")
@@ -477,7 +478,7 @@ async def put_blackboard(key: str, request: BlackboardWriteRequest):
     if not success:
         raise HTTPException(status_code=500, detail="Failed to write to blackboard")
 
-    return {"success": True, "key": key}
+    return wrap_dict({"success": True, "key": key})
 
 
 @router.post("/blackboard/{key}/increment")
@@ -489,7 +490,7 @@ async def increment_blackboard(key: str, request: BlackboardIncrementRequest):
     if new_value is None:
         raise HTTPException(status_code=500, detail="Failed to increment")
 
-    return {"key": key, "value": new_value}
+    return wrap_dict({"key": key, "value": new_value})
 
 
 @router.post("/blackboard/{key}/lock")
@@ -499,19 +500,19 @@ async def lock_blackboard(key: str, request: LockRequest):
 
     if request.action == "acquire":
         result = blackboard.acquire_lock(key, request.holder, request.ttl)
-        return {
+        return wrap_dict({
             "action": "acquire",
             "acquired": result.acquired,
             "holder": result.holder,
-        }
+        })
 
     elif request.action == "release":
         released = blackboard.release_lock(key, request.holder)
-        return {"action": "release", "released": released}
+        return wrap_dict({"action": "release", "released": released})
 
     elif request.action == "extend":
         extended = blackboard.extend_lock(key, request.holder, request.ttl)
-        return {"action": "extend", "extended": extended}
+        return wrap_dict({"action": "extend", "extended": extended})
 
     else:
         raise HTTPException(status_code=400, detail=f"Unknown action: {request.action}")
@@ -537,11 +538,11 @@ async def register_agent(request: RegisterAgentRequest):
     if not result.success:
         raise HTTPException(status_code=500, detail=result.error)
 
-    return {
+    return wrap_dict({
         "registered": True,
         "instance_id": result.instance_id,
         "db_id": str(result.db_id) if result.db_id else None,
-    }
+    })
 
 
 @router.post("/agents/{instance_id}/heartbeat")
@@ -553,7 +554,7 @@ async def agent_heartbeat(instance_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    return {"heartbeat": True, "instance_id": instance_id}
+    return wrap_dict({"heartbeat": True, "instance_id": instance_id})
 
 
 @router.delete("/agents/{instance_id}")
@@ -565,7 +566,7 @@ async def deregister_agent(instance_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    return {"deregistered": True, "instance_id": instance_id}
+    return wrap_dict({"deregistered": True, "instance_id": instance_id})
 
 
 @router.get("/agents/{instance_id}")
@@ -577,7 +578,7 @@ async def get_agent(instance_id: str):
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    return {
+    return wrap_dict({
         "id": str(agent.id),
         "agent_id": agent.agent_id,
         "instance_id": agent.instance_id,
@@ -587,7 +588,7 @@ async def get_agent(instance_id: str):
         "heartbeat_at": agent.heartbeat_at.isoformat() if agent.heartbeat_at else None,
         "heartbeat_age_seconds": agent.heartbeat_age_seconds,
         "created_at": agent.created_at.isoformat(),
-    }
+    })
 
 
 @router.get("/agents")
@@ -605,7 +606,7 @@ async def list_agents(
         status=status,
     )
 
-    return {
+    return wrap_dict({
         "agents": [
             {
                 "id": str(a.id),
@@ -618,7 +619,7 @@ async def list_agents(
             for a in agents
         ],
         "count": len(agents),
-    }
+    })
 
 
 # ============ Message Endpoints ============
@@ -644,10 +645,10 @@ async def send_message(instance_id: str, request: SendMessageRequest):
     if not result.success:
         raise HTTPException(status_code=500, detail=result.error)
 
-    return {
+    return wrap_dict({
         "sent": True,
         "message_id": str(result.message_id),
-    }
+    })
 
 
 @router.get("/agents/{instance_id}/messages")
@@ -669,7 +670,7 @@ async def get_messages(
         limit=limit,
     )
 
-    return {
+    return wrap_dict({
         "messages": [
             {
                 "id": str(m.id),
@@ -682,7 +683,7 @@ async def get_messages(
             for m in messages
         ],
         "count": len(messages),
-    }
+    })
 
 
 @router.post("/agents/{instance_id}/messages/{message_id}/read")
@@ -694,7 +695,7 @@ async def mark_message_read(instance_id: str, message_id: str):
     if not success:
         raise HTTPException(status_code=400, detail="Could not mark as read")
 
-    return {"read": True, "message_id": message_id}
+    return wrap_dict({"read": True, "message_id": message_id})
 
 
 # ============ Invocation Response Endpoint ============
@@ -711,7 +712,7 @@ async def respond_to_invocation(request: InvokeResponseRequest):
     if not success:
         raise HTTPException(status_code=400, detail="Could not respond to invocation")
 
-    return {"responded": True, "invoke_id": request.invoke_id}
+    return wrap_dict({"responded": True, "invoke_id": request.invoke_id})
 
 
 # ============ M15.1 SBA Endpoints ============
@@ -758,7 +759,7 @@ async def validate_sba_endpoint(request: SBAValidateRequest):
 
     result = validate_sba(request.sba, enforce_governance=request.enforce_governance)
 
-    return {
+    return wrap_dict({
         "valid": result.valid,
         "errors": [
             {
@@ -769,7 +770,7 @@ async def validate_sba_endpoint(request: SBAValidateRequest):
             for e in result.errors
         ],
         "warnings": result.warnings,
-    }
+    })
 
 
 @router.post("/sba/register")
@@ -805,12 +806,12 @@ async def register_agent_with_sba(
             validate=True,
         )
 
-        return {
+        return wrap_dict({
             "registered": True,
             "agent_id": agent.agent_id,
             "sba_version": agent.sba_version,
             "sba_validated": agent.sba_validated,
-        }
+        })
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -837,11 +838,11 @@ async def generate_sba_for_agent(request: SBAGenerateRequest):
             orchestrator=request.orchestrator,
         )
 
-        return {
+        return wrap_dict({
             "generated": True,
             "agent_id": request.agent_id,
             "sba": sba.to_dict(),
-        }
+        })
 
     except Exception as e:
         logger.error(f"SBA generation error: {e}", exc_info=True)
@@ -859,7 +860,7 @@ async def get_sba_version_info():
     if not SBA_AVAILABLE:
         raise HTTPException(status_code=501, detail="SBA module not available")
 
-    return get_version_info()
+    return wrap_dict(get_version_info())
 
 
 @router.post("/sba/version/negotiate")
@@ -878,22 +879,22 @@ async def negotiate_sba_version(
         negotiated = negotiate_version(requested_version)
         deprecated = check_version_deprecated(negotiated)
 
-        return {
+        return wrap_dict({
             "requested": requested_version,
             "negotiated": negotiated,
             "supported": True,
             "deprecated": deprecated,
             "message": f"Version {negotiated} is deprecated, consider upgrading" if deprecated else None,
-        }
+        })
     except SBAVersionError as e:
-        return {
+        return wrap_dict({
             "requested": requested_version,
             "negotiated": None,
             "supported": False,
             "deprecated": False,
             "message": str(e),
             "supported_versions": list(e.supported),
-        }
+        })
 
 
 @router.get("/sba/health")
@@ -907,14 +908,14 @@ async def get_sba_health(
     Used by StrategyHealthWidget in Guard Console.
     """
     if not SBA_AVAILABLE:
-        return {
+        return wrap_dict({
             "total_agents": 0,
             "healthy_count": 0,
             "approaching_bounds_count": 0,
             "exceeded_count": 0,
             "status": "unknown",
             "last_evaluated_at": None,
-        }
+        })
 
     try:
         from datetime import datetime, timezone
@@ -955,25 +956,25 @@ async def get_sba_health(
         else:
             status = "no_agents"
 
-        return {
+        return wrap_dict({
             "total_agents": total,
             "healthy_count": healthy,
             "approaching_bounds_count": approaching,
             "exceeded_count": exceeded,
             "status": status,
             "last_evaluated_at": datetime.now(timezone.utc).isoformat(),
-        }
+        })
 
     except Exception as e:
         logger.error(f"SBA health check error: {e}", exc_info=True)
-        return {
+        return wrap_dict({
             "total_agents": 0,
             "healthy_count": 0,
             "approaching_bounds_count": 0,
             "exceeded_count": 0,
             "status": "error",
             "last_evaluated_at": None,
-        }
+        })
 
 
 # Parameter route MUST come after static routes
@@ -994,7 +995,7 @@ async def get_agent_sba(agent_id: str):
         if not agent:
             raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
 
-        return {
+        return wrap_dict({
             "agent_id": agent.agent_id,
             "agent_name": agent.agent_name,
             "agent_type": agent.agent_type,
@@ -1003,7 +1004,7 @@ async def get_agent_sba(agent_id: str):
             "sba_validated": agent.sba_validated,
             "status": agent.status,
             "enabled": agent.enabled,
-        }
+        })
 
     except HTTPException:
         raise
@@ -1035,7 +1036,7 @@ async def list_agents_sba(
             sba_validated_only=sba_validated if sba_validated else False,
         )
 
-        return {
+        return wrap_dict({
             "agents": [
                 {
                     "agent_id": a.agent_id,
@@ -1049,7 +1050,7 @@ async def list_agents_sba(
                 for a in agents
             ],
             "count": len(agents),
-        }
+        })
 
     except Exception as e:
         logger.error(f"List SBA error: {e}", exc_info=True)
@@ -1080,11 +1081,11 @@ async def check_spawn_allowed(
             orchestrator=orchestrator,
         )
 
-        return {
+        return wrap_dict({
             "agent_id": agent_id,
             "spawn_allowed": allowed,
             "error": error,
-        }
+        })
 
     except Exception as e:
         logger.error(f"Check spawn error: {e}", exc_info=True)
@@ -1198,7 +1199,7 @@ async def get_fulfillment_aggregated(
         )
         result["groups"] = groups
 
-        return result
+        return wrap_dict(result)
 
     except Exception as e:
         logger.error(f"Fulfillment aggregation error: {e}", exc_info=True)
@@ -1963,7 +1964,7 @@ async def cascade_evaluate(
         # Sort by score
         results.sort(key=lambda r: r.score, reverse=True)
 
-        return {
+        return wrap_dict({
             "evaluated_count": len(results),
             "eligible_count": sum(1 for r in results if r.eligible),
             "agents": [
@@ -1989,7 +1990,7 @@ async def cascade_evaluate(
                 }
                 for r in results
             ],
-        }
+        })
 
     except Exception as e:
         logger.error(f"Cascade evaluate error: {e}", exc_info=True)
@@ -2029,7 +2030,7 @@ async def routing_dispatch(
         # Execute routing
         decision = await care.route(routing_request)
 
-        return {
+        return wrap_dict({
             "request_id": decision.request_id,
             "routed": decision.routed,
             "selected_agent_id": decision.selected_agent_id,
@@ -2045,7 +2046,7 @@ async def routing_dispatch(
             "stage_latencies": {k: round(v, 2) for k, v in decision.stage_latencies.items()},
             "decision_reason": decision.decision_reason,
             "decided_at": decision.decided_at.isoformat(),
-        }
+        })
 
     except Exception as e:
         logger.error(f"Routing dispatch error: {e}", exc_info=True)
@@ -2074,7 +2075,7 @@ async def get_agent_strategy(agent_id: str):
 
         sba = agent.sba
 
-        return {
+        return wrap_dict({
             "agent_id": agent.agent_id,
             "agent_name": agent.agent_name,
             "agent_type": agent.agent_type,
@@ -2088,7 +2089,7 @@ async def get_agent_strategy(agent_id: str):
                 "enabling_management_systems": sba.get("enabling_management_systems", {}),
             },
             "routing_config": sba.get("routing_config", {}),
-        }
+        })
 
     except HTTPException:
         raise
@@ -2161,11 +2162,11 @@ async def update_agent_strategy(
             )
             conn.commit()
 
-        return {
+        return wrap_dict({
             "agent_id": agent_id,
             "updated": True,
             "routing_config": routing_config,
-        }
+        })
 
     except HTTPException:
         raise
@@ -2211,7 +2212,7 @@ async def get_routing_stats(
             row = result.fetchone()
 
             if row:
-                return {
+                return wrap_dict({
                     "period": "24h",
                     "total_decisions": row[0] or 0,
                     "successful_routes": row[1] or 0,
@@ -2219,9 +2220,9 @@ async def get_routing_stats(
                     "avg_latency_ms": round(row[2] or 0, 2),
                     "unique_agents_routed": row[3] or 0,
                     "last_decision": row[4].isoformat() if row[4] else None,
-                }
+                })
             else:
-                return {
+                return wrap_dict({
                     "period": "24h",
                     "total_decisions": 0,
                     "successful_routes": 0,
@@ -2229,12 +2230,12 @@ async def get_routing_stats(
                     "avg_latency_ms": 0,
                     "unique_agents_routed": 0,
                     "last_decision": None,
-                }
+                })
 
     except Exception as e:
         # Table might not exist yet
         logger.warning(f"Routing stats error (table may not exist): {e}")
-        return {
+        return wrap_dict({
             "period": "24h",
             "total_decisions": 0,
             "successful_routes": 0,
@@ -2243,7 +2244,7 @@ async def get_routing_stats(
             "unique_agents_routed": 0,
             "last_decision": None,
             "note": "Routing table not yet created - run migrations",
-        }
+        })
 
 
 # ============================================================================
@@ -2604,11 +2605,11 @@ async def freeze_system(
         governor = get_governor()
         await governor.force_freeze(duration_seconds, reason)
 
-        return {
+        return wrap_dict({
             "frozen": True,
             "duration_seconds": duration_seconds,
             "reason": reason,
-        }
+        })
 
     except Exception as e:
         logger.error(f"Freeze system error: {e}", exc_info=True)
@@ -2629,7 +2630,7 @@ async def unfreeze_system():
         governor = get_governor()
         await governor.unfreeze()
 
-        return {"frozen": False, "message": "System unfrozen"}
+        return wrap_dict({"frozen": False, "message": "System unfrozen"})
 
     except Exception as e:
         logger.error(f"Unfreeze system error: {e}", exc_info=True)
@@ -2653,7 +2654,7 @@ async def trigger_batch_learning(
         feedback_loop = get_feedback_loop()
         result = await feedback_loop.run_batch_learning(window_hours)
 
-        return {
+        return wrap_dict({
             "batch_id": result.batch_id,
             "window_start": result.window_start.isoformat(),
             "window_end": result.window_end.isoformat(),
@@ -2666,7 +2667,7 @@ async def trigger_batch_learning(
             "drift_signals_generated": result.drift_signals_generated,
             "adjustments_recommended": result.adjustments_recommended,
             "processed_at": result.processed_at.isoformat(),
-        }
+        })
 
     except Exception as e:
         logger.error(f"Batch learning error: {e}", exc_info=True)
@@ -2709,13 +2710,13 @@ async def get_agent_sla(agent_id: str):
         sla_score = await feedback_loop.get_sla_score(agent_id)
 
         if not sla_score:
-            return {
+            return wrap_dict({
                 "agent_id": agent_id,
                 "has_sla_data": False,
                 "message": "No SLA data available for this agent",
-            }
+            })
 
-        return {
+        return wrap_dict({
             "agent_id": sla_score.agent_id,
             "has_sla_data": True,
             "raw_score": round(sla_score.raw_score, 3),
@@ -2725,7 +2726,7 @@ async def get_agent_sla(agent_id: str):
             "sla_gap": round(sla_score.sla_gap, 3),
             "meeting_sla": sla_score.current_sla >= sla_score.sla_target,
             "updated_at": sla_score.updated_at.isoformat(),
-        }
+        })
 
     except Exception as e:
         logger.error(f"Get SLA error: {e}", exc_info=True)
@@ -2746,11 +2747,11 @@ async def get_agent_successors(agent_id: str):
         feedback_loop = get_feedback_loop()
         successors = await feedback_loop.get_successor_mapping(agent_id)
 
-        return {
+        return wrap_dict({
             "agent_id": agent_id,
             "successors": successors,
             "has_successors": len(successors) > 0,
-        }
+        })
 
     except Exception as e:
         logger.error(f"Get successors error: {e}", exc_info=True)

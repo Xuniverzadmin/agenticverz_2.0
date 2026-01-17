@@ -1,0 +1,43 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: LOG-REC-SYS-O1
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: LOG-REC-SYS-O1
+version: 1.0.0
+panel_class: evidence
+metadata:
+  domain: LOGS
+  subdomain: RECORDS
+  topic: SYSTEM_LOGS
+  topic_id: LOGS.RECORDS.SYSTEM_LOGS
+  order: O1
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: execution_traces
+  facet_criticality: MEDIUM
+display:
+  name: LOG-REC-SYS-O1
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: logs.guard_logs
+  status: ASSUMED
+  assumed_endpoint: /guard/logs
+  assumed_method: GET
+sdsr:
+  scenario: SDSR-LOG-REC-SYS-O1-001
+  verified: false
+notes: Show environment snapshot — baseline state at run start.

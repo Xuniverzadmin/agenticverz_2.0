@@ -1,0 +1,64 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: POL-GOV-ACT-O2
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-GOV-ACT-O2
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: POLICIES
+  subdomain: GOVERNANCE
+  topic: ACTIVE
+  topic_id: POLICIES.GOVERNANCE.ACTIVE
+  order: O2
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: policy_governance
+  facet_criticality: HIGH
+display:
+  name: POL-GOV-ACT-O2
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: policies.metrics
+  status: ASSUMED
+  assumed_endpoint: /api/v1/policy-layer/metrics
+  assumed_method: GET
+  facade_note: "Unified facade - replaces direct /api/v1/policy-proposals/stats/summary"
+sdsr:
+  scenario: SDSR-POL-GOV-ACT-O2-001
+  verified: false
+notes: 'Show enforcement effectiveness — are policies actually doing anything.
+
+
+  What it shows:
+
+  - Per policy: times evaluated, triggered, enforced, bypassed
+
+  - Dead policies (never triggered)
+
+  - Over-firing policies
+
+  - Policies with zero real-world impact
+
+
+  What it explicitly does NOT show:
+
+  - No policy editing
+
+  - No recommendations
+
+  - No draft proposals'

@@ -20,8 +20,8 @@
 scenario_id: SDSR-ACT-LLM-COMP-O1-001
 version: 1.0.0
 name: Observe ACT-LLM-COMP-O1 capability
-description: SDSR verification scenario for activity.runs_list
-capability: activity.runs_list
+description: SDSR verification scenario for activity.completed_runs
+capability: activity.completed_runs
 panel_id: ACT-LLM-COMP-O1
 domain: ACTIVITY
 auth:

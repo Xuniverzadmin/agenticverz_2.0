@@ -121,19 +121,13 @@ def get_gateway_middleware_config() -> dict:
             # C2 Predictions (public advisory)
             "/api/v1/c2/predictions/",
             # =================================================================
-            # SDSR Activity API (PIN-370)
-            # Used for preflight SDSR validation. Route handler enforces API key.
+            # REMOVED: /api/v1/activity - SDSR should use customer API
+            # Customer Activity API at /api/v1/customer/activity requires auth
             # =================================================================
-            "/api/v1/activity",
-            "/api/v1/activity/",
-            "/api/v1/runs",
-            "/api/v1/runs/",
             # =================================================================
-            # SDSR Incidents API (PIN-370)
-            # Used for preflight SDSR validation. Route handler enforces API key.
+            # REMOVED: /api/v1/incidents - now requires auth via unified facade
+            # Customer Incidents API at /api/v1/incidents requires auth
             # =================================================================
-            "/api/v1/incidents",
-            "/api/v1/incidents/",
             # =================================================================
             # SDSR Logs/Traces API (PIN-407)
             # REMOVED from public paths - traces MUST require authentication

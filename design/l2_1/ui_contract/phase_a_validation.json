@@ -1,0 +1,13 @@
+{
+  "validated_at": "2026-01-16T13:40:20.793034+00:00",
+  "phase": "A",
+  "phase_name": "Intent Guardrails",
+  "intents_checked": 78,
+  "registered_panels_count": 148,
+  "known_capabilities_count": 95,
+  "total_violations": 0,
+  "blocking_count": 0,
+  "warning_count": 0,
+  "phase_a_valid": true,
+  "violations": []
+}

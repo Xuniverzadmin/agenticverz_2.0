@@ -26,9 +26,20 @@ Customer-facing endpoints for system overview and health.
 All requests are tenant-scoped via auth_context.
 
 Endpoints:
-- GET /api/v1/overview/highlights  → O1 system pulse & domain counts
-- GET /api/v1/overview/decisions   → O2 pending decisions queue
-- GET /api/v1/overview/costs       → O2 cost intelligence summary
+- GET /api/v1/overview/highlights      → O1 system pulse & domain counts (Activity, Incidents, Policies)
+- GET /api/v1/overview/decisions       → O2 pending decisions queue
+- GET /api/v1/overview/decisions/count → O2 decisions count summary
+- GET /api/v1/overview/costs           → O2 cost intelligence summary
+- GET /api/v1/overview/recovery-stats  → O3 recovery statistics
+
+Domain Lineage (all metrics have drill-through to navigable sidebar domains):
+- Activity: live_runs, queued_runs from worker_runs table
+- Incidents: active_incidents, recovery stats from incidents table
+- Policies: pending_decisions, breaches from policy_proposals, limit_breaches tables
+- Analytics: cost totals from worker_runs (via /costs endpoint)
+
+NOTE: /feedback is NOT exposed via Overview. pattern_feedback is internal operations
+data without customer domain lineage. See OVERVIEW_DOMAIN_AUDIT.md Section 0.3.
 
 Architecture:
 - ONE facade for all OVERVIEW needs
@@ -37,11 +48,14 @@ Architecture:
 - SDSR validates this same production API
 """
 
+import logging
 import os
 from datetime import datetime, timedelta
 from typing import Annotated, Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+
+logger = logging.getLogger("nova.api.overview")
 from pydantic import BaseModel
 from sqlalchemy import and_, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -96,6 +110,9 @@ class SystemPulse(BaseModel):
     active_incidents: int
     pending_decisions: int
     recent_breaches: int  # Last 24h
+    # Activity metrics (from Activity domain)
+    live_runs: int  # Currently running executions
+    queued_runs: int  # Pending/queued executions
 
 
 class HighlightsResponse(BaseModel):
@@ -186,6 +203,35 @@ class CostsResponse(BaseModel):
     actuals: CostActuals
     limits: List[LimitCostItem]
     violations: CostViolations
+
+
+# =============================================================================
+# Response Models — Decisions Count (O2)
+# =============================================================================
+
+
+class DecisionsCountResponse(BaseModel):
+    """GET /decisions/count response."""
+
+    total: int
+    by_domain: dict[str, int]
+    by_priority: dict[str, int]
+
+
+# =============================================================================
+# Response Models — Recovery Stats (O3)
+# =============================================================================
+
+
+class RecoveryStatsResponse(BaseModel):
+    """GET /recovery-stats response."""
+
+    total_incidents: int
+    recovered: int
+    pending_recovery: int
+    failed_recovery: int
+    recovery_rate_pct: float
+    period: CostPeriod
 
 
 # =============================================================================
@@ -285,25 +331,44 @@ async def get_highlights(
         proposal_result = await session.execute(proposal_stmt)
         proposal_row = proposal_result.one()
 
-        # Limit breach counts (last 24h)
-        breach_stmt = select(
-            func.count(LimitBreach.id).label("recent"),
-        ).where(
-            LimitBreach.tenant_id == tenant_id,
-            LimitBreach.breached_at >= last_24h,
-        )
-        breach_result = await session.execute(breach_stmt)
-        breach_row = breach_result.one()
+        # Limit breach counts (last 24h) - DEFENSIVE QUERY
+        # Per CROSS_DOMAIN_GOVERNANCE.md: Overview degrades gracefully on missing tables
+        try:
+            breach_stmt = select(
+                func.count(LimitBreach.id).label("recent"),
+            ).where(
+                LimitBreach.tenant_id == tenant_id,
+                LimitBreach.breached_at >= last_24h,
+            )
+            breach_result = await session.execute(breach_stmt)
+            breach_row = breach_result.one()
+            recent_breach_count = breach_row.recent or 0
+        except Exception as breach_err:
+            # Table may not exist or query may fail - degrade gracefully
+            logger.warning(f"[OVERVIEW] limit_breaches query failed (degrading): {breach_err}")
+            recent_breach_count = 0
+            breach_row = None  # For compatibility with existing code
 
         # Last activity
         last_activity_stmt = select(func.max(AuditLedger.created_at)).where(AuditLedger.tenant_id == tenant_id)
         last_activity_result = await session.execute(last_activity_stmt)
         last_activity_at = last_activity_result.scalar()
 
+        # Activity metrics: live and queued runs (from Activity domain)
+        activity_stmt = select(
+            func.sum(case((WorkerRun.status == "running", 1), else_=0)).label("live"),
+            func.sum(case((WorkerRun.status == "queued", 1), else_=0)).label("queued"),
+            func.count(WorkerRun.id).label("total"),
+        ).where(WorkerRun.tenant_id == tenant_id)
+        activity_result = await session.execute(activity_stmt)
+        activity_row = activity_result.one()
+        live_runs = activity_row.live or 0
+        queued_runs = activity_row.queued or 0
+
         # Calculate system pulse
         active_incidents = incident_row.pending or 0
         pending_decisions = (incident_row.pending or 0) + (proposal_row.pending or 0)
-        recent_breaches = breach_row.recent or 0
+        recent_breaches = recent_breach_count  # From defensive query above
 
         if incident_row.critical and incident_row.critical > 0:
             pulse_status = "CRITICAL"
@@ -317,9 +382,17 @@ async def get_highlights(
             active_incidents=active_incidents,
             pending_decisions=pending_decisions,
             recent_breaches=recent_breaches,
+            live_runs=live_runs,
+            queued_runs=queued_runs,
         )
 
         domain_counts = [
+            DomainCount(
+                domain="Activity",
+                total=activity_row.total or 0,
+                pending=queued_runs,  # Queued runs need to be processed
+                critical=0,  # Activity doesn't have critical designation
+            ),
             DomainCount(
                 domain="Incidents",
                 total=incident_row.total or 0,
@@ -330,7 +403,7 @@ async def get_highlights(
                 domain="Policies",
                 total=proposal_row.total or 0,
                 pending=proposal_row.pending or 0,
-                critical=0,
+                critical=recent_breaches,  # Breaches are critical for policies
             ),
         ]
 
@@ -562,16 +635,25 @@ async def get_costs(
                 )
             )
 
-        # 3. Get breach statistics
-        breach_stmt = select(
-            func.count(LimitBreach.id).label("breach_count"),
-            func.coalesce(func.sum(LimitBreach.value_at_breach - LimitBreach.limit_value), 0).label("total_overage"),
-        ).where(
-            LimitBreach.tenant_id == tenant_id,
-            LimitBreach.breached_at >= period_start,
-        )
-        breach_result = await session.execute(breach_stmt)
-        breach_row = breach_result.one()
+        # 3. Get breach statistics - DEFENSIVE QUERY
+        # Per CROSS_DOMAIN_GOVERNANCE.md: Overview degrades gracefully on missing tables
+        try:
+            breach_stmt = select(
+                func.count(LimitBreach.id).label("breach_count"),
+                func.coalesce(func.sum(LimitBreach.value_at_breach - LimitBreach.limit_value), 0).label("total_overage"),
+            ).where(
+                LimitBreach.tenant_id == tenant_id,
+                LimitBreach.breached_at >= period_start,
+            )
+            breach_result = await session.execute(breach_stmt)
+            breach_row = breach_result.one()
+            cost_breach_count = breach_row.breach_count or 0
+            cost_total_overage = max(0, float(breach_row.total_overage or 0))
+        except Exception as breach_err:
+            # Table may not exist or query may fail - degrade gracefully
+            logger.warning(f"[OVERVIEW] limit_breaches cost query failed (degrading): {breach_err}")
+            cost_breach_count = 0
+            cost_total_overage = 0.0
 
         return CostsResponse(
             currency="USD",
@@ -579,8 +661,8 @@ async def get_costs(
             actuals=CostActuals(llm_run_cost=llm_run_cost),
             limits=limit_items,
             violations=CostViolations(
-                breach_count=breach_row.breach_count or 0,
-                total_overage=max(0, float(breach_row.total_overage or 0)),
+                breach_count=cost_breach_count,
+                total_overage=cost_total_overage,
             ),
         )
 
@@ -589,3 +671,148 @@ async def get_costs(
             status_code=500,
             detail={"error": "query_failed", "message": str(e)},
         )
+
+
+# =============================================================================
+# GET /decisions/count - O2 Decisions Count Summary
+# =============================================================================
+
+
+@router.get(
+    "/decisions/count",
+    response_model=DecisionsCountResponse,
+    summary="Get decisions count summary (O2)",
+    description="""
+    Count of pending decisions by domain and priority.
+    PROJECTION-ONLY: Aggregates from incidents and policy_proposals.
+    """,
+)
+async def get_decisions_count(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> DecisionsCountResponse:
+    """Decisions count by domain and priority. Tenant-scoped."""
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    try:
+        # Count incidents by severity
+        incident_stmt = select(
+            func.count(Incident.id).label("total"),
+            func.sum(case((Incident.severity == "critical", 1), else_=0)).label("critical"),
+            func.sum(case((Incident.severity == "high", 1), else_=0)).label("high"),
+            func.sum(case((Incident.severity.in_(["medium", "low"]), 1), else_=0)).label("other"),
+        ).where(
+            Incident.tenant_id == tenant_id,
+            Incident.lifecycle_state == IncidentLifecycleState.ACTIVE.value,
+        )
+        incident_result = await session.execute(incident_stmt)
+        inc_row = incident_result.one()
+
+        # Count policy proposals (all draft = MEDIUM priority)
+        proposal_stmt = select(func.count(PolicyProposal.id).label("total")).where(
+            PolicyProposal.tenant_id == tenant_id,
+            PolicyProposal.status == "draft",
+        )
+        proposal_result = await session.execute(proposal_stmt)
+        prop_total = proposal_result.scalar() or 0
+
+        # Build response
+        incident_total = inc_row.total or 0
+        policy_total = prop_total
+        total = incident_total + policy_total
+
+        by_domain = {
+            "INCIDENT": incident_total,
+            "POLICY": policy_total,
+        }
+
+        by_priority = {
+            "CRITICAL": inc_row.critical or 0,
+            "HIGH": inc_row.high or 0,
+            "MEDIUM": (inc_row.other or 0) + policy_total,
+            "LOW": 0,
+        }
+
+        return DecisionsCountResponse(
+            total=total,
+            by_domain=by_domain,
+            by_priority=by_priority,
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "query_failed", "message": str(e)},
+        )
+
+
+# =============================================================================
+# GET /recovery-stats - O3 Recovery Statistics
+# =============================================================================
+
+
+@router.get(
+    "/recovery-stats",
+    response_model=RecoveryStatsResponse,
+    summary="Get recovery statistics (O3)",
+    description="""
+    Recovery statistics from incident lifecycle.
+    PROJECTION-ONLY: Aggregates from incidents table.
+    """,
+)
+async def get_recovery_stats(
+    request: Request,
+    period_days: Annotated[int, Query(ge=1, le=365, description="Period in days")] = 30,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> RecoveryStatsResponse:
+    """Recovery statistics from incidents. Tenant-scoped."""
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    now = datetime.utcnow()
+    period_start = now - timedelta(days=period_days)
+
+    try:
+        # Count incidents by lifecycle state
+        stmt = select(
+            func.count(Incident.id).label("total"),
+            func.sum(case((Incident.lifecycle_state == IncidentLifecycleState.RESOLVED.value, 1), else_=0)).label(
+                "recovered"
+            ),
+            func.sum(
+                case(
+                    (Incident.lifecycle_state.in_([IncidentLifecycleState.ACTIVE.value, "investigating"]), 1), else_=0
+                )
+            ).label("pending"),
+            func.sum(case((Incident.lifecycle_state == "failed", 1), else_=0)).label("failed"),
+        ).where(
+            Incident.tenant_id == tenant_id,
+            Incident.created_at >= period_start,
+        )
+        result = await session.execute(stmt)
+        row = result.one()
+
+        total = row.total or 0
+        recovered = row.recovered or 0
+        pending = row.pending or 0
+        failed = row.failed or 0
+
+        recovery_rate = (recovered / total * 100.0) if total > 0 else 0.0
+
+        return RecoveryStatsResponse(
+            total_incidents=total,
+            recovered=recovered,
+            pending_recovery=pending,
+            failed_recovery=failed,
+            recovery_rate_pct=round(recovery_rate, 2),
+            period=CostPeriod(start=period_start, end=now),
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "query_failed", "message": str(e)},
+        )
+
+

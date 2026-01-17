@@ -34,6 +34,7 @@ from pydantic import BaseModel, Field
 
 # PIN-318: Phase 1.2 Authority Hardening - Replace query param auth with proper token auth
 from ..auth.console_auth import FounderToken, verify_fops_token
+from ..schemas.response import wrap_dict
 
 
 def get_tenant_id_from_token(token: FounderToken = Depends(verify_fops_token)) -> str:
@@ -249,7 +250,7 @@ async def get_loop_stages(
             )
         )
 
-    return stages
+    return wrap_dict({"items": [s.model_dump() for s in stages], "total": len(stages)})
 
 
 @router.get("/loop/{incident_id}/stream")
@@ -354,12 +355,12 @@ async def revert_loop(
 
     try:
         await dispatcher.revert_loop(incident_id, user_id, request.reason)
-        return {
+        return wrap_dict({
             "status": "reverted",
             "incident_id": incident_id,
             "reverted_by": user_id,
             "reason": request.reason,
-        }
+        })
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -469,13 +470,13 @@ async def resolve_checkpoint(
     try:
         result = await dispatcher.resolve_checkpoint(checkpoint_id, user_id, request.resolution)
 
-        return {
+        return wrap_dict({
             "status": "resolved",
             "checkpoint_id": checkpoint_id,
             "resolution": request.resolution,
             "resolved_by": user_id,
             "loop_resumed": result is not None,
-        }
+        })
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -662,12 +663,12 @@ async def get_loop_narrative(
 
     display = loop_status.to_console_display()
 
-    return {
+    return wrap_dict({
         "incident_id": incident_id,
         "is_complete": loop_status.is_complete,
         "narrative": display.get("narrative", {}),
         "stages": display.get("stages", []),
-    }
+    })
 
 
 # =============================================================================
@@ -980,7 +981,7 @@ async def simulate_prevention(
 
         await session.commit()
 
-    return {
+    return wrap_dict({
         "status": "simulated",
         "prevention_id": record_id,
         "blocked_incident_id": blocked_id,
@@ -988,7 +989,7 @@ async def simulate_prevention(
         "counts_toward_graduation": False,
         "warning": "SIMULATION ONLY: This record is marked is_simulated=true and does NOT count toward real M25 graduation. Real graduation requires real prevention evidence.",
         "message": "Prevention event simulated for demo purposes.",
-    }
+    })
 
 
 class SimulateRegretRequest(BaseModel):
@@ -1081,7 +1082,7 @@ async def simulate_regret(
 
         await session.commit()
 
-    return {
+    return wrap_dict({
         "status": "simulated",
         "regret_id": regret_id,
         "policy_demoted": True,
@@ -1089,7 +1090,7 @@ async def simulate_regret(
         "counts_toward_graduation": False,
         "warning": "SIMULATION ONLY: This record is marked is_simulated=true and does NOT count toward real M25 graduation. Real graduation requires real regret/demotion evidence.",
         "message": "Regret event simulated for demo purposes.",
-    }
+    })
 
 
 @router.post("/graduation/simulate/timeline-view")
@@ -1143,7 +1144,7 @@ async def simulate_timeline_view(
 
         await session.commit()
 
-    return {
+    return wrap_dict({
         "status": "simulated",
         "view_id": view_id,
         "incident_id": incident_id,
@@ -1151,7 +1152,7 @@ async def simulate_timeline_view(
         "counts_toward_graduation": False,
         "warning": "SIMULATION ONLY: This view is marked is_simulated=true and does NOT count toward real M25 graduation. Real graduation requires real timeline views from operators.",
         "message": "Timeline view simulated for demo purposes.",
-    }
+    })
 
 
 @router.post("/graduation/record-view")
@@ -1210,14 +1211,14 @@ async def record_timeline_view(
 
         await session.commit()
 
-    return {
+    return wrap_dict({
         "status": "recorded",
         "view_id": view_id,
         "incident_id": incident_id,
         "is_simulated": False,
         "counts_toward_graduation": True,
         "message": "Timeline view recorded. This contributes to Gate 3 (Console Timeline) graduation.",
-    }
+    })
 
 
 @router.post("/graduation/re-evaluate")
@@ -1254,10 +1255,10 @@ async def trigger_graduation_re_evaluation(
             status = engine.compute(evidence)
         except Exception as e:
             logger.warning(f"Re-evaluation failed: {e}")
-            return {
+            return wrap_dict({
                 "status": "error",
                 "message": f"Failed to compute graduation: {str(e)}",
-            }
+            })
 
         # Store in graduation_history for audit trail
         await session.execute(
@@ -1328,7 +1329,7 @@ async def trigger_graduation_re_evaluation(
 
         await session.commit()
 
-    return {
+    return wrap_dict({
         "status": "re-evaluated",
         "level": status.level.value,
         "status_label": status.status_label,
@@ -1336,7 +1337,7 @@ async def trigger_graduation_re_evaluation(
         "is_degraded": status.is_degraded,
         "gates_passed": sum(1 for g in status.gates.values() if g.passed),
         "message": "Graduation status re-computed from evidence.",
-    }
+    })
 
 
 # =============================================================================

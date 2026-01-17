@@ -33,6 +33,7 @@ from app.adapters.customer_policies_adapter import (
 
 # Category 2 Auth: Domain-separated authentication for Customer Console
 from app.auth.console_auth import verify_console_token
+from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.guard_policies")
 
@@ -119,7 +120,7 @@ async def get_guardrail_detail(
                 detail=f"Guardrail {guardrail_id} not found",
             )
 
-        return guardrail
+        return wrap_dict(guardrail.model_dump())
     except HTTPException:
         raise
     except Exception as e:

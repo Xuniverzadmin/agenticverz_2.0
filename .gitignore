@@ -51,3 +51,6 @@ dist/
 .next/
 *.tsbuildinfo
 dist-preflight/
+
+# Governance enforcement (local only)
+.governance/

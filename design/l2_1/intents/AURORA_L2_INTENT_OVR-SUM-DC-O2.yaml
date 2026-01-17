@@ -1,0 +1,64 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: OVR-SUM-DC-O2
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: OVR-SUM-DC-O2
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: OVERVIEW
+  subdomain: SUMMARY
+  topic: DECISIONS
+  topic_id: OVERVIEW.SUMMARY.DECISIONS
+  order: O2
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: OVR-SUM-DC-O2
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: overview.decisions_count
+  status: ASSUMED
+  assumed_endpoint: null
+  assumed_method: GET
+notes: 'Provide short-term feedback on recent human decisions so the user
+
+  can confirm impact without drilling into other domains.
+
+
+  What it shows:
+
+  - Last N decisions taken (approve / reject / override)
+
+  - Resulting outcome state (resolved / still pending / failed)
+
+  - Time-to-effect (decision → outcome)
+
+
+  What it explicitly does NOT show:
+
+  - No ability to re-open or change decisions
+
+  - No policy configuration
+
+  - No incident details
+
+  - No execution controls
+
+  - No historical archive beyond recent window'

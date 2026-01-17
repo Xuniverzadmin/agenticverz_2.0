@@ -1,0 +1,43 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: LOG-REC-SYS-O4
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: LOG-REC-SYS-O4
+version: 1.0.0
+panel_class: evidence
+metadata:
+  domain: LOGS
+  subdomain: RECORDS
+  topic: SYSTEM_LOGS
+  topic_id: LOGS.RECORDS.SYSTEM_LOGS
+  order: O4
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: LOG-REC-SYS-O4
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: logs.adapters_health
+  status: ASSUMED
+  assumed_endpoint: /health/adapters
+  assumed_method: GET
+sdsr:
+  scenario: SDSR-LOG-REC-SYS-O4-001
+  verified: false
+notes: Show run-aligned infra replay window — infra state at moment of anomaly.

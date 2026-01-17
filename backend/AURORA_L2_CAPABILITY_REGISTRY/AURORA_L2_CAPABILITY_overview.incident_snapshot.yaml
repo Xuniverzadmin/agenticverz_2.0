@@ -1,6 +1,6 @@
 # AURORA L2 Capability Registry Entry
 # Capability: overview.incident_snapshot
-# Last Updated: 2026-01-15T05:37:37.585909+00:00
+# Last Updated: 2026-01-15T17:38:15.580407+00:00
 # Updated By: aurora_apply_observation.py
 #
 # STATUS: OBSERVED
@@ -37,3 +37,12 @@ acceptance_criteria:
 - Response schema matches contract
 - Auth works correctly
 - Data is real (not mock)
+binding:
+  observed_endpoint: null
+  observed_method: null
+  observed_at: '2026-01-15T05:37:29.653762+00:00'
+  observation_id: OBS-SDSR-OVR-SUM-HL-O2-001-20260115053728
+assumption:
+  endpoint: null
+  method: null
+  source: INTENT_LEDGER

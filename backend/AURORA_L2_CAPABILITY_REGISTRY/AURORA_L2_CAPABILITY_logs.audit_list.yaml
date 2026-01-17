@@ -1,0 +1,38 @@
+# AURORA_L2 Capability Registry - Logs Audit List
+# Status: DECLARED (awaiting E2E validation per CAP-E2E-001)
+# Reference: docs/architecture/logs/LOGS_DOMAIN_AUDIT.md
+#
+capability_id: logs.audit_list
+status: DECLARED
+source_panels:
+  - LOG-REC-AUD-O1
+  - LOG-REC-AUD-O2
+domain: LOGS
+metadata:
+  generated_by: manual
+  generated_on: '2026-01-17'
+  declared_by: claude-implementation
+  declared_on: '2026-01-17'
+assumption:
+  endpoint: /api/v1/logs/audit
+  method: GET
+  source: LOGS_DOMAIN_AUDIT
+acceptance_criteria:
+  - Returns paginated list of audit ledger entries
+  - Supports filters: event_type, entity_type, actor_type
+  - Supports time range filters
+  - Tenant-scoped via auth_context
+  - Response includes total count and has_more
+implementation:
+  endpoint: /api/v1/logs/audit
+  method: GET
+  handler: app.api.logs.list_audit_entries
+  service: null  # Direct SQL query
+auth:
+  roles: [admin, member]
+  permissions: [logs:read]
+notes:
+  - "L2 facade: read-only, no writes"
+  - "Tenant-scoped via auth_context"
+  - "Queries audit_ledger table"
+  - "CRITICAL: AuditLedger write path not yet wired"
