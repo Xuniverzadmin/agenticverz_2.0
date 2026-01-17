@@ -316,12 +316,85 @@ Lifecycle Operations:         65% COMPLETE
 
 ---
 
-## 11. Final State (Non-Negotiable Truth)
+## 11. E2E Verification (2026-01-17)
+
+### Test Environment
+
+| Component | Value |
+|-----------|-------|
+| Backend | Docker (nova_agent_manager) |
+| Database | Neon (production) |
+| Tenant | `demo-tenant` |
+| API Key | `DEMO_TENANT_API_KEY` (rotated 2026-01-17) |
+
+### Endpoint Verification
+
+| Endpoint | Status | Response |
+|----------|--------|----------|
+| `GET /api/v1/analytics/statistics/cost` | ✅ PASS | Real data returned |
+| `GET /api/v1/analytics/statistics/cost/export.csv` | ✅ PASS | CSV with header + data |
+| `GET /api/v1/analytics/statistics/cost/export.json` | ✅ PASS | JSON export |
+| `GET /api/v1/analytics/_status` | ✅ PASS | Shows usage + cost topics |
+
+### Sample Response (Cost Statistics)
+
+```json
+{
+  "window": {"from": "2025-12-20T00:00:00Z", "to": "2025-12-28T23:59:59Z", "resolution": "day"},
+  "totals": {
+    "spend_cents": 4.0,
+    "spend_usd": 0.04,
+    "requests": 2,
+    "input_tokens": 893,
+    "output_tokens": 2085
+  },
+  "by_model": [{"model": "claude-sonnet-4-20250514", "pct_of_total": 100.0}],
+  "by_feature": [{"feature_tag": "untagged", "pct_of_total": 100.0}],
+  "signals": {"sources": ["cost_records"], "freshness_sec": 1952443}
+}
+```
+
+### CSV Export Sample
+
+```csv
+timestamp,spend_cents,requests,input_tokens,output_tokens
+2025-12-26,4.0,2,893,2085
+```
+
+### Status Endpoint Response
+
+```json
+{
+  "domain": "analytics",
+  "subdomains": ["statistics"],
+  "topics": {
+    "usage": {"read": true, "write": false, "signals_bound": 3},
+    "cost": {"read": true, "write": false, "signals_bound": 1}
+  }
+}
+```
+
+---
+
+## 12. Final State (Non-Negotiable Truth)
 
 - Analytics **exists**
 - Analytics is **visible**
 - Usage is **implemented**
-- Reporting **works**
+- Cost is **implemented** (E2E verified)
+- Reporting **works** (E2E verified)
 - Facade is **enforced**
 
 No more "declared but missing".
+
+---
+
+## 13. Constitutional Reference
+
+**Constitution:** `docs/contracts/ANALYTICS_DOMAIN_CONSTITUTION.md`
+
+The Analytics Domain Constitution establishes governance invariants for:
+- Signal source authority
+- Export parity guarantees
+- Tenant isolation
+- API key governance
