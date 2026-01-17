@@ -1197,6 +1197,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-17 | **PIN-440 Customer Sandbox Auth Mode** - Designed and partially implemented customer-grade sandbox authentication. Sandbox auth module created, gateway integrated. Blocked by: DB_AUTHORITY=neon (safety gate), RBAC rules missing for /api/v1/cus/* paths. Documents resolution options. |
 | 2026-01-17 | **PIN-439 Customer LLM Integrations Complete** - All 6 phases complete (Foundation, Telemetry, Enforcement, Proxy, Console, Observability). ~12,500 lines across 29 files. Evidence → Observability linking with cus_* metrics, Grafana dashboard, 8 alert rules. Connectivity domain audit updated to FULLY IMPLEMENTED. |
 | 2026-01-17 | **PIN-438 Linting Technical Debt Declaration** - Declared ruff/pyright warnings as pre-existing technical debt. Configured per-file-ignores to block new violations only. Updated pyproject.toml files. |
 | 2026-01-17 | **PIN-437 API-002 Counter-Rules: wrap_dict Risk Vectors** - Created via memory_trail. |

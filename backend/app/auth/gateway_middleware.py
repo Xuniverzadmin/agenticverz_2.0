@@ -46,6 +46,7 @@ from .contexts import AuthPlane, GatewayContext
 from .gateway import AuthGateway, get_auth_gateway
 from .gateway_types import GatewayAuthError, is_error
 from .rbac_rules_loader import get_public_paths
+from .customer_sandbox import try_sandbox_auth, SandboxCustomerPrincipal, is_sandbox_allowed
 
 logger = logging.getLogger("nova.auth.gateway_middleware")
 
@@ -140,6 +141,22 @@ class AuthGatewayMiddleware(BaseHTTPMiddleware):
         # Check if path is public
         if self._is_public_path(path):
             return await call_next(request)
+
+        # =================================================================
+        # PIN-439: Customer Sandbox Auth (local/test mode only)
+        # Check sandbox auth BEFORE normal gateway authentication.
+        # This allows local development and CI to simulate real customers.
+        # =================================================================
+        if is_sandbox_allowed():
+            headers_dict = dict(request.headers)
+            sandbox_principal = try_sandbox_auth(headers_dict)
+            if sandbox_principal is not None:
+                logger.info(f"Sandbox auth: path={path}, tenant={sandbox_principal.tenant_id}")
+                # Inject sandbox context into request state
+                request.state.auth_context = sandbox_principal
+                request.state.is_sandbox = True
+                # Continue to route handler (skip normal auth)
+                return await call_next(request)
 
         # Extract auth headers
         authorization = request.headers.get("Authorization")
