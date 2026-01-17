@@ -2,6 +2,7 @@
 
 **Status:** ✅ COMPLETE
 **Last Updated:** 2026-01-17
+**Commit:** `f202b1c2` (PIN-411 gap closure)
 **Reference:** PIN-411 (Unified Facades)
 
 > **Section 13 Update (2026-01-17):** Filter-based gap closure completed. ALL pending panels now covered.
@@ -999,3 +1000,87 @@ These endpoints provide static analysis of policy rules:
 - Conflicts: Rules that contradict each other
 - Dependencies: DAG of policy relationships
 - Draft tracking: Via `is_current` flag on versions
+
+---
+
+## 13. Filter-Based Gap Closure (PIN-411)
+
+**Date:** 2026-01-17
+**Commit:** `f202b1c2`
+**Status:** ✅ **COMPLETE**
+
+### 13.1 Summary
+
+10 panels closed via filter parameters on existing endpoints (no new endpoints needed):
+
+| Gap | Panel | Filter | Status |
+|-----|-------|--------|--------|
+| LIB-O2 | Ethical constraints | `/rules?rule_type=ETHICAL` | ✅ IMPLEMENTED |
+| LIB-O5 | Temporal policies | `/rules?rule_type=TEMPORAL` | ✅ IMPLEMENTED |
+| THR-O1 | Risk ceilings | `/limits?limit_type=RISK_CEILING` | ✅ IMPLEMENTED |
+| THR-O3 | Run quotas | `/limits?limit_type=RUNS_*` | ✅ IMPLEMENTED |
+| THR-O4 | Token quotas | `/limits?limit_type=TOKENS_*` | ✅ IMPLEMENTED |
+| THR-O5 | Cooldowns | `/limits?limit_type=COOLDOWN` | ✅ IMPLEMENTED |
+| VIO-O2 | Cost incidents | `/violations?source=cost` | ✅ IMPLEMENTED |
+| VIO-O3 | Simulated incidents | `/violations?source=sim&include_synthetic=true` | ✅ IMPLEMENTED |
+| VIO-O4 | Anomalies | `/violations?violation_kind=ANOMALY` | ✅ IMPLEMENTED |
+| VIO-O5 | Divergence | `/violations?violation_kind=DIVERGENCE` | ✅ IMPLEMENTED |
+
+### 13.2 Schema Changes
+
+**Migration 099:** `policy_rules.rule_type`
+
+```sql
+ALTER TABLE policy_rules
+ADD COLUMN rule_type VARCHAR(16) NOT NULL DEFAULT 'SYSTEM';
+
+ALTER TABLE policy_rules
+ADD CONSTRAINT ck_policy_rules_rule_type
+CHECK (rule_type IN ('SYSTEM', 'SAFETY', 'ETHICAL', 'TEMPORAL'));
+
+CREATE INDEX ix_policy_rules_rule_type ON policy_rules (rule_type);
+```
+
+**Migration 100:** `policy.violations.violation_kind`
+
+```sql
+ALTER TABLE policy.violations
+ADD COLUMN violation_kind VARCHAR(16) NOT NULL DEFAULT 'STANDARD';
+
+ALTER TABLE policy.violations
+ADD CONSTRAINT ck_violations_violation_kind
+CHECK (violation_kind IN ('STANDARD', 'ANOMALY', 'DIVERGENCE'));
+
+CREATE INDEX ix_policy_violations_violation_kind
+ON policy.violations (violation_kind);
+```
+
+### 13.3 Files Modified
+
+| File | Layer | Changes |
+|------|-------|---------|
+| `backend/alembic/versions/099_policy_rules_rule_type.py` | L6 | New migration |
+| `backend/alembic/versions/100_policy_violations_violation_kind.py` | L6 | New migration |
+| `backend/app/models/policy_control_plane.py` | L6 | +`RuleType` enum, +`rule_type` field |
+| `backend/app/api/policies.py` | L2 | +`rule_type`, `limit_type`, `violation_kind` filters |
+
+### 13.4 Design Principle
+
+**Canonical Endpoint Pattern:** One endpoint per resource, panels differentiated by filters.
+
+This approach:
+- Avoids endpoint proliferation
+- Keeps API surface minimal
+- Aligns with REST best practices
+- Enables flexible UI panel composition
+
+### 13.5 Prefix Match Support
+
+The `limit_type` filter supports wildcard prefix matching:
+
+```
+/limits?limit_type=RUNS_*     → Matches RUNS_DAILY, RUNS_HOURLY, etc.
+/limits?limit_type=TOKENS_*   → Matches TOKENS_DAILY, TOKENS_PER_RUN, etc.
+```
+
+Implementation uses SQL `LIKE` with escaped prefix.
