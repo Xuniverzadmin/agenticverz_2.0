@@ -64,6 +64,8 @@ const AccountPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({
 const ConnectivityPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.ConnectivityPage })));
 // Analytics domain: Usage page with detailed table and export
 const AnalyticsUsagePage = lazy(() => import('@/pages/analytics/UsagePage'));
+// Analytics domain: Cost page with breakdowns and export
+const AnalyticsCostPage = lazy(() => import('@/pages/analytics/CostPage'));
 const PanelView = lazy(() => import('@/pages/panels/PanelView'));
 // PIN-411: O2 Runs List Page for Activity domain navigation
 const RunsListPage = lazy(() => import('@/pages/activity/RunsListPage'));
@@ -193,6 +195,7 @@ export function AppRoutes() {
           {/* Analytics domain: 6th primary domain */}
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="analytics/statistics/usage" element={<AnalyticsUsagePage />} />
+          <Route path="analytics/statistics/cost" element={<AnalyticsCostPage />} />
           <Route path="account" element={<AccountPage />} />
           <Route path="connectivity" element={<ConnectivityPage />} />
           {/* Panel execution surfaces - :domain/:panelSlug */}

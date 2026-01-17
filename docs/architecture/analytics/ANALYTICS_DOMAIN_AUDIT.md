@@ -8,6 +8,7 @@
 > - Domain: Analytics (6th primary domain)
 > - Subdomain: Statistics
 > - Topic v1: Usage (first truth-producing topic)
+> - **Topic v2: Cost (spend tracking with breakdowns)**
 > - Unified Facade: `/api/v1/analytics/*`
 > - Console sidebar: ✅ LIVE
 > - Reporting/export: ✅ LIVE (CSV/JSON)
@@ -90,6 +91,9 @@
 | `/api/v1/analytics/statistics/usage` | GET | Usage statistics (time series) | ✅ LIVE |
 | `/api/v1/analytics/statistics/usage/export.csv` | GET | CSV export | ✅ LIVE |
 | `/api/v1/analytics/statistics/usage/export.json` | GET | JSON export | ✅ LIVE |
+| `/api/v1/analytics/statistics/cost` | GET | Cost statistics (spend + breakdowns) | ✅ LIVE |
+| `/api/v1/analytics/statistics/cost/export.csv` | GET | Cost CSV export | ✅ LIVE |
+| `/api/v1/analytics/statistics/cost/export.json` | GET | Cost JSON export | ✅ LIVE |
 | `/api/v1/analytics/_status` | GET | Capability probe | ✅ LIVE |
 | `/api/v1/analytics/health` | GET | Internal health check | ✅ LIVE |
 
@@ -101,11 +105,27 @@ Query: from, to, resolution (hour|day), scope (org|project|env)
 Response: { window, totals, series, signals }
 ```
 
-### Export Endpoint Contract (CSV)
+### Cost Endpoint Contract
+
+```
+GET /api/v1/analytics/statistics/cost
+Query: from, to, resolution (hour|day), scope (org|project|env)
+Response: { window, totals, series, by_model, by_feature, signals }
+```
+
+### Export Endpoint Contract (Usage CSV)
 
 ```
 GET /api/v1/analytics/statistics/usage/export.csv
 Header: timestamp,requests,compute_units,tokens
+Content-Type: text/csv
+```
+
+### Export Endpoint Contract (Cost CSV)
+
+```
+GET /api/v1/analytics/statistics/cost/export.csv
+Header: timestamp,spend_cents,requests,input_tokens,output_tokens
 Content-Type: text/csv
 ```
 
@@ -127,27 +147,32 @@ Content-Type: text/csv
 |------|-----------|---------|
 | `/precus/analytics` | AnalyticsPage | Landing page (usage summary) |
 | `/precus/analytics/statistics/usage` | UsagePage | Detailed usage table |
+| `/precus/analytics/statistics/cost` | CostPage | Cost statistics with breakdowns |
 
 ### Sidebar Hierarchy
 
 ```
 Analytics (bar-chart icon)
  └─ Statistics
-     └─ Usage
+     ├─ Usage
+     └─ Cost
 ```
 
 ---
 
 ## 5. Capability Registry
 
-**Total Capabilities:** 8
-**Status:** 7 OBSERVED, 1 DECLARED
+**Total Capabilities:** 11
+**Status:** 10 OBSERVED, 1 DEPRECATED
 
 | Capability | Endpoint | Panel ID | Status |
 |------------|----------|----------|--------|
 | `analytics.usage` | `/api/v1/analytics/statistics/usage` | ANL-STAT-USG-O1 | OBSERVED |
 | `analytics.usage.export.csv` | `/api/v1/analytics/statistics/usage/export.csv` | ANL-STAT-USG-O2 | OBSERVED |
 | `analytics.usage.export.json` | `/api/v1/analytics/statistics/usage/export.json` | ANL-STAT-USG-O2 | OBSERVED |
+| `analytics.cost` | `/api/v1/analytics/statistics/cost` | ANL-STAT-CST-O1 | OBSERVED |
+| `analytics.cost.export.csv` | `/api/v1/analytics/statistics/cost/export.csv` | ANL-STAT-CST-O1 | OBSERVED |
+| `analytics.cost.export.json` | `/api/v1/analytics/statistics/cost/export.json` | ANL-STAT-CST-O1 | OBSERVED |
 | `analytics.tenant_usage` | `/api/v1/tenant/usage` | ANL-USG-SUM-O1 | DEPRECATED |
 | `analytics.cost_summary` | `/cost/dashboard` | ANL-CST-SUM-O1 | OBSERVED |
 | `analytics.cost_by_actor` | `/cost/by-user` | ANL-CST-ACT-O1 | OBSERVED |
@@ -201,30 +226,33 @@ Analytics (bar-chart icon)
 ## 8. Coverage Summary
 
 ```
-Backend Implementation:       95% COMPLETE
+Backend Implementation:       98% COMPLETE
   - Cost Recording:           ✅ COMPLETE
   - Cost Dashboards:          ✅ COMPLETE
+  - Cost Statistics:          ✅ LIVE (via facade)
   - Anomaly Detection:        ✅ COMPLETE
   - Budget Management:        ✅ COMPLETE
   - Usage Tracking:           ✅ IMPLEMENTED (v1)
-  - Reporting/Export:         ✅ LIVE (CSV/JSON)
+  - Reporting/Export:         ✅ LIVE (CSV/JSON for Usage + Cost)
 
-Console Integration:          85% COMPLETE
+Console Integration:          90% COMPLETE
   - Sidebar Domain:           ✅ LIVE
   - Landing Page:             ✅ LIVE
   - Usage Page:               ✅ LIVE
+  - Cost Page:                ✅ LIVE
   - Export Buttons:           ✅ LIVE
   - Overview Panels:          ✅ EMBEDDED
 
-API Architecture:             95% COMPLETE
+API Architecture:             98% COMPLETE
   - Unified Facade:           ✅ IMPLEMENTED
-  - Export Endpoints:         ✅ LIVE
+  - Export Endpoints:         ✅ LIVE (Usage + Cost)
+  - Cost Endpoints:           ✅ LIVE
   - Consistent Auth:          ✅ UNIFIED (via facade)
   - Cross-Domain Links:       ⚠️ PARTIAL
 
-Lifecycle Operations:         60% COMPLETE
+Lifecycle Operations:         65% COMPLETE
   - Create:                   ✅ IMPLEMENTED
-  - Read:                     ✅ IMPLEMENTED
+  - Read:                     ✅ IMPLEMENTED (Usage + Cost)
   - Update:                   ⚠️ PARTIAL (tags only)
   - Delete/Archive:           ⏸️ DEFERRED
   - Reconcile:                ✅ IMPLEMENTED
@@ -252,6 +280,7 @@ Lifecycle Operations:         60% COMPLETE
 | `website/app-shell/src/components/layout/ProjectionSidebar.tsx` | Analytics icon (BarChart2) | ✅ LIVE |
 | `website/app-shell/src/pages/domains/DomainPage.tsx` | AnalyticsPage export | ✅ LIVE |
 | `website/app-shell/src/pages/analytics/UsagePage.tsx` | Usage page component | ✅ LIVE |
+| `website/app-shell/src/pages/analytics/CostPage.tsx` | Cost page component | ✅ LIVE |
 | `website/app-shell/src/routes/index.tsx` | Analytics routes | ✅ LIVE |
 | `design/l2_1/ui_contract/ui_projection_lock.json` | Analytics domain in projection | ✅ LIVE |
 

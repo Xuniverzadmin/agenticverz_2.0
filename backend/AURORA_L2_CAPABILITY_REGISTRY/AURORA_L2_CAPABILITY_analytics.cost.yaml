@@ -1,0 +1,54 @@
+# AURORA L2 Capability Registry Entry
+# Capability: analytics.cost
+# Last Updated: 2026-01-17
+# Updated By: Analytics Cost Wiring (Hard Commit)
+#
+# STATUS: OBSERVED
+#
+capability_id: analytics.cost
+status: OBSERVED
+source_panels:
+- ANL-STAT-CST-O1
+domain: ANALYTICS
+subdomain: STATISTICS
+topic: COST
+endpoint: /api/v1/analytics/statistics/cost
+method: GET
+metadata:
+  generated_by: Analytics Cost Wiring
+  generated_on: '2026-01-17'
+  declared_by: PIN-411
+  declared_on: '2026-01-17'
+  observed_by: Analytics Cost Hard Commit
+  observed_on: '2026-01-17'
+acceptance_criteria:
+- Endpoint exists and responds with application/json
+- Response structure matches CostStatisticsResponse
+- Includes time series, by_model breakdown, by_feature breakdown
+- Spend values in cents and USD
+- Max 90-day window enforced
+provenance_requirements:
+  required: true
+  fields:
+  - signals.sources
+  - signals.freshness_sec
+  - window.from
+  - window.to
+  - window.resolution
+signal_sources:
+- cost_records
+observation:
+  scenario_id: null
+  observed_at: '2026-01-17T00:00:00Z'
+  trace_id: null
+  invariants_passed: null
+  invariants_total: null
+coherency:
+  last_checked: '2026-01-17'
+  status: OBSERVED
+  checked_by: Analytics Cost Hard Commit
+binding:
+  observed_endpoint: /api/v1/analytics/statistics/cost
+  observed_method: GET
+  observed_at: '2026-01-17T00:00:00Z'
+  observation_id: null

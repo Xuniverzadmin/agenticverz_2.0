@@ -119,6 +119,81 @@ paths:
         "401":
           description: Unauthorized
 
+  /analytics/statistics/cost:
+    get:
+      tags: [Statistics]
+      summary: Get cost statistics
+      description: >
+        Returns aggregated cost metrics for the requested time window.
+        Includes time series, breakdown by model, and breakdown by feature.
+      parameters:
+        - $ref: "#/components/parameters/From"
+        - $ref: "#/components/parameters/To"
+        - $ref: "#/components/parameters/Resolution"
+        - $ref: "#/components/parameters/Scope"
+      responses:
+        "200":
+          description: Cost statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CostResponse"
+        "400":
+          description: Invalid request parameters
+        "401":
+          description: Unauthorized
+        "429":
+          description: Rate limited
+
+  /analytics/statistics/cost/export.csv:
+    get:
+      tags: [Statistics]
+      summary: Export cost statistics (CSV)
+      description: >
+        Exports cost statistics as CSV.
+        Uses the same aggregation logic as the read API.
+        Header: timestamp,spend_cents,requests,input_tokens,output_tokens
+      parameters:
+        - $ref: "#/components/parameters/From"
+        - $ref: "#/components/parameters/To"
+        - $ref: "#/components/parameters/Resolution"
+        - $ref: "#/components/parameters/Scope"
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+        "400":
+          description: Invalid request parameters
+        "401":
+          description: Unauthorized
+
+  /analytics/statistics/cost/export.json:
+    get:
+      tags: [Statistics]
+      summary: Export cost statistics (JSON)
+      description: >
+        Exports cost statistics as JSON.
+        Structure matches the standard cost response.
+      parameters:
+        - $ref: "#/components/parameters/From"
+        - $ref: "#/components/parameters/To"
+        - $ref: "#/components/parameters/Resolution"
+        - $ref: "#/components/parameters/Scope"
+      responses:
+        "200":
+          description: JSON export
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CostResponse"
+        "400":
+          description: Invalid request parameters
+        "401":
+          description: Unauthorized
+
 components:
 
   parameters:
@@ -266,3 +341,112 @@ components:
         freshness_sec:
           type: integer
           minimum: 0
+
+    CostResponse:
+      type: object
+      required: [window, totals, series, by_model, by_feature, signals]
+      properties:
+        window:
+          $ref: "#/components/schemas/TimeWindow"
+        totals:
+          $ref: "#/components/schemas/CostTotals"
+        series:
+          type: array
+          items:
+            $ref: "#/components/schemas/CostSeriesPoint"
+        by_model:
+          type: array
+          items:
+            $ref: "#/components/schemas/CostByModel"
+        by_feature:
+          type: array
+          items:
+            $ref: "#/components/schemas/CostByFeature"
+        signals:
+          $ref: "#/components/schemas/SignalMetadata"
+
+    CostTotals:
+      type: object
+      required: [spend_cents, spend_usd, requests, input_tokens, output_tokens]
+      properties:
+        spend_cents:
+          type: number
+          minimum: 0
+          description: Total spend in cents
+        spend_usd:
+          type: number
+          minimum: 0
+          description: Total spend in USD
+        requests:
+          type: integer
+          minimum: 0
+        input_tokens:
+          type: integer
+          minimum: 0
+        output_tokens:
+          type: integer
+          minimum: 0
+
+    CostSeriesPoint:
+      type: object
+      required: [ts, spend_cents, requests, input_tokens, output_tokens]
+      properties:
+        ts:
+          type: string
+          description: Timestamp bucket (UTC)
+        spend_cents:
+          type: number
+          minimum: 0
+        requests:
+          type: integer
+          minimum: 0
+        input_tokens:
+          type: integer
+          minimum: 0
+        output_tokens:
+          type: integer
+          minimum: 0
+
+    CostByModel:
+      type: object
+      required: [model, spend_cents, requests, input_tokens, output_tokens, pct_of_total]
+      properties:
+        model:
+          type: string
+          description: Model name
+        spend_cents:
+          type: number
+          minimum: 0
+        requests:
+          type: integer
+          minimum: 0
+        input_tokens:
+          type: integer
+          minimum: 0
+        output_tokens:
+          type: integer
+          minimum: 0
+        pct_of_total:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Percentage of total spend
+
+    CostByFeature:
+      type: object
+      required: [feature_tag, spend_cents, requests, pct_of_total]
+      properties:
+        feature_tag:
+          type: string
+          description: Feature tag
+        spend_cents:
+          type: number
+          minimum: 0
+        requests:
+          type: integer
+          minimum: 0
+        pct_of_total:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Percentage of total spend

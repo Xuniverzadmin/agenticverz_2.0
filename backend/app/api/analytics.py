@@ -87,6 +87,21 @@ class ScopeType(str, Enum):
 # =============================================================================
 
 
+class TimeWindow(BaseModel):
+    """Generic time window specification (shared across topics)."""
+    from_ts: datetime = Field(..., alias="from")
+    to_ts: datetime = Field(..., alias="to")
+    resolution: ResolutionType
+
+    class Config:
+        populate_by_name = True
+
+
+# -----------------------------------------------------------------------------
+# Usage Topic Response Models
+# -----------------------------------------------------------------------------
+
+
 class UsageWindow(BaseModel):
     """Time window specification."""
     from_ts: datetime = Field(..., alias="from")
@@ -124,6 +139,63 @@ class UsageStatisticsResponse(BaseModel):
     totals: UsageTotals
     series: List[UsageDataPoint]
     signals: UsageSignals
+
+
+# -----------------------------------------------------------------------------
+# Cost Topic Response Models
+# -----------------------------------------------------------------------------
+
+
+class CostTotals(BaseModel):
+    """Aggregate cost totals."""
+    spend_cents: float = Field(..., description="Total spend in cents")
+    spend_usd: float = Field(..., description="Total spend in USD")
+    requests: int = Field(..., description="Total requests")
+    input_tokens: int = Field(..., description="Total input tokens")
+    output_tokens: int = Field(..., description="Total output tokens")
+
+
+class CostDataPoint(BaseModel):
+    """Single data point in cost time series."""
+    ts: str = Field(..., description="Timestamp (ISO-8601 date or datetime)")
+    spend_cents: float = Field(..., description="Spend in cents")
+    requests: int = Field(..., description="Number of requests")
+    input_tokens: int = Field(..., description="Input tokens")
+    output_tokens: int = Field(..., description="Output tokens")
+
+
+class CostByModel(BaseModel):
+    """Cost breakdown by model."""
+    model: str = Field(..., description="Model name")
+    spend_cents: float = Field(..., description="Total spend for this model")
+    requests: int = Field(..., description="Request count")
+    input_tokens: int = Field(..., description="Input tokens")
+    output_tokens: int = Field(..., description="Output tokens")
+    pct_of_total: float = Field(..., description="Percentage of total spend")
+
+
+class CostByFeature(BaseModel):
+    """Cost breakdown by feature tag."""
+    feature_tag: str = Field(..., description="Feature tag")
+    spend_cents: float = Field(..., description="Total spend for this feature")
+    requests: int = Field(..., description="Request count")
+    pct_of_total: float = Field(..., description="Percentage of total spend")
+
+
+class CostSignals(BaseModel):
+    """Signal source metadata for cost provenance."""
+    sources: List[str] = Field(..., description="Signal sources used")
+    freshness_sec: int = Field(..., description="Data freshness in seconds")
+
+
+class CostStatisticsResponse(BaseModel):
+    """GET /api/v1/analytics/statistics/cost response (contracted)."""
+    window: TimeWindow
+    totals: CostTotals
+    series: List[CostDataPoint]
+    by_model: List[CostByModel]
+    by_feature: List[CostByFeature]
+    signals: CostSignals
 
 
 class TopicStatus(BaseModel):
@@ -341,6 +413,174 @@ class SignalAdapter:
             "note": "Derived from llm.usage signal",
         }
 
+    # -------------------------------------------------------------------------
+    # Cost Topic Signal Adapters
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    async def fetch_cost_spend(
+        session: AsyncSession,
+        tenant_id: str,
+        from_ts: datetime,
+        to_ts: datetime,
+        resolution: ResolutionType,
+    ) -> Dict[str, Any]:
+        """
+        Fetch cost spend data from cost_records table.
+
+        Returns time series with spend_cents, requests, input_tokens, output_tokens.
+        """
+        try:
+            if resolution == ResolutionType.HOUR:
+                time_trunc = "hour"
+            else:
+                time_trunc = "day"
+
+            query = text("""
+                SELECT
+                    DATE_TRUNC(:time_trunc, created_at) as ts,
+                    COUNT(*) as requests,
+                    COALESCE(SUM(cost_cents), 0) as spend_cents,
+                    COALESCE(SUM(input_tokens), 0) as input_tokens,
+                    COALESCE(SUM(output_tokens), 0) as output_tokens
+                FROM cost_records
+                WHERE tenant_id = :tenant_id
+                  AND created_at >= :from_ts
+                  AND created_at < :to_ts
+                GROUP BY DATE_TRUNC(:time_trunc, created_at)
+                ORDER BY ts
+            """)
+
+            result = await session.execute(
+                query,
+                {
+                    "time_trunc": time_trunc,
+                    "tenant_id": tenant_id,
+                    "from_ts": from_ts,
+                    "to_ts": to_ts,
+                },
+            )
+            rows = result.fetchall()
+
+            return {
+                "source": "cost_records",
+                "data": [
+                    {
+                        "ts": row.ts.isoformat() if row.ts else None,
+                        "spend_cents": float(row.spend_cents or 0),
+                        "requests": row.requests or 0,
+                        "input_tokens": row.input_tokens or 0,
+                        "output_tokens": row.output_tokens or 0,
+                    }
+                    for row in rows
+                ],
+            }
+        except Exception as e:
+            logger.warning(f"Cost spend fetch failed: {e}")
+            return {"source": "cost_records", "data": [], "error": str(e)}
+
+    @staticmethod
+    async def fetch_cost_by_model(
+        session: AsyncSession,
+        tenant_id: str,
+        from_ts: datetime,
+        to_ts: datetime,
+    ) -> Dict[str, Any]:
+        """
+        Fetch cost breakdown by model from cost_records table.
+        """
+        try:
+            query = text("""
+                SELECT
+                    COALESCE(model, 'unknown') as model,
+                    COUNT(*) as requests,
+                    COALESCE(SUM(cost_cents), 0) as spend_cents,
+                    COALESCE(SUM(input_tokens), 0) as input_tokens,
+                    COALESCE(SUM(output_tokens), 0) as output_tokens
+                FROM cost_records
+                WHERE tenant_id = :tenant_id
+                  AND created_at >= :from_ts
+                  AND created_at < :to_ts
+                GROUP BY model
+                ORDER BY spend_cents DESC
+            """)
+
+            result = await session.execute(
+                query,
+                {
+                    "tenant_id": tenant_id,
+                    "from_ts": from_ts,
+                    "to_ts": to_ts,
+                },
+            )
+            rows = result.fetchall()
+
+            return {
+                "source": "cost_records",
+                "data": [
+                    {
+                        "model": row.model,
+                        "spend_cents": float(row.spend_cents or 0),
+                        "requests": row.requests or 0,
+                        "input_tokens": row.input_tokens or 0,
+                        "output_tokens": row.output_tokens or 0,
+                    }
+                    for row in rows
+                ],
+            }
+        except Exception as e:
+            logger.warning(f"Cost by model fetch failed: {e}")
+            return {"source": "cost_records", "data": [], "error": str(e)}
+
+    @staticmethod
+    async def fetch_cost_by_feature(
+        session: AsyncSession,
+        tenant_id: str,
+        from_ts: datetime,
+        to_ts: datetime,
+    ) -> Dict[str, Any]:
+        """
+        Fetch cost breakdown by feature tag from cost_records table.
+        """
+        try:
+            query = text("""
+                SELECT
+                    COALESCE(feature_tag, 'untagged') as feature_tag,
+                    COUNT(*) as requests,
+                    COALESCE(SUM(cost_cents), 0) as spend_cents
+                FROM cost_records
+                WHERE tenant_id = :tenant_id
+                  AND created_at >= :from_ts
+                  AND created_at < :to_ts
+                GROUP BY feature_tag
+                ORDER BY spend_cents DESC
+            """)
+
+            result = await session.execute(
+                query,
+                {
+                    "tenant_id": tenant_id,
+                    "from_ts": from_ts,
+                    "to_ts": to_ts,
+                },
+            )
+            rows = result.fetchall()
+
+            return {
+                "source": "cost_records",
+                "data": [
+                    {
+                        "feature_tag": row.feature_tag,
+                        "spend_cents": float(row.spend_cents or 0),
+                        "requests": row.requests or 0,
+                    }
+                    for row in rows
+                ],
+            }
+        except Exception as e:
+            logger.warning(f"Cost by feature fetch failed: {e}")
+            return {"source": "cost_records", "data": [], "error": str(e)}
+
 
 # =============================================================================
 # Signal Reconciliation
@@ -464,6 +704,111 @@ async def reconcile_usage_signals(
     )
 
     return totals, series, signals
+
+
+async def reconcile_cost_signals(
+    session: AsyncSession,
+    tenant_id: str,
+    from_ts: datetime,
+    to_ts: datetime,
+    resolution: ResolutionType,
+) -> tuple[CostTotals, List[CostDataPoint], List[CostByModel], List[CostByFeature], CostSignals]:
+    """
+    Reconcile cost signals into unified cost data.
+
+    Primary source: cost_records table
+    """
+    # Fetch cost data from all perspectives
+    spend_data = await SignalAdapter.fetch_cost_spend(
+        session, tenant_id, from_ts, to_ts, resolution
+    )
+    model_data = await SignalAdapter.fetch_cost_by_model(
+        session, tenant_id, from_ts, to_ts
+    )
+    feature_data = await SignalAdapter.fetch_cost_by_feature(
+        session, tenant_id, from_ts, to_ts
+    )
+
+    # Collect sources
+    sources = ["cost_records"] if spend_data.get("data") else []
+
+    # Build time series
+    series = []
+    for point in spend_data.get("data", []):
+        ts = point.get("ts")
+        if ts:
+            ts_formatted = ts.split("T")[0] if resolution == ResolutionType.DAY else ts
+            series.append(
+                CostDataPoint(
+                    ts=ts_formatted,
+                    spend_cents=point.get("spend_cents", 0),
+                    requests=point.get("requests", 0),
+                    input_tokens=point.get("input_tokens", 0),
+                    output_tokens=point.get("output_tokens", 0),
+                )
+            )
+
+    # Calculate totals
+    total_spend_cents = sum(p.spend_cents for p in series)
+    total_requests = sum(p.requests for p in series)
+    total_input_tokens = sum(p.input_tokens for p in series)
+    total_output_tokens = sum(p.output_tokens for p in series)
+
+    totals = CostTotals(
+        spend_cents=total_spend_cents,
+        spend_usd=total_spend_cents / 100.0,
+        requests=total_requests,
+        input_tokens=total_input_tokens,
+        output_tokens=total_output_tokens,
+    )
+
+    # Build by-model breakdown with percentages
+    by_model = []
+    for item in model_data.get("data", []):
+        pct = (item.get("spend_cents", 0) / total_spend_cents * 100) if total_spend_cents > 0 else 0
+        by_model.append(
+            CostByModel(
+                model=item.get("model", "unknown"),
+                spend_cents=item.get("spend_cents", 0),
+                requests=item.get("requests", 0),
+                input_tokens=item.get("input_tokens", 0),
+                output_tokens=item.get("output_tokens", 0),
+                pct_of_total=round(pct, 2),
+            )
+        )
+
+    # Build by-feature breakdown with percentages
+    by_feature = []
+    for item in feature_data.get("data", []):
+        pct = (item.get("spend_cents", 0) / total_spend_cents * 100) if total_spend_cents > 0 else 0
+        by_feature.append(
+            CostByFeature(
+                feature_tag=item.get("feature_tag", "untagged"),
+                spend_cents=item.get("spend_cents", 0),
+                requests=item.get("requests", 0),
+                pct_of_total=round(pct, 2),
+            )
+        )
+
+    # Calculate freshness
+    freshness_sec = 0
+    if series:
+        try:
+            last_ts = series[-1].ts
+            if "T" in last_ts:
+                last_dt = datetime.fromisoformat(last_ts.replace("Z", "+00:00"))
+            else:
+                last_dt = datetime.fromisoformat(last_ts + "T00:00:00+00:00")
+            freshness_sec = int((datetime.now(timezone.utc) - last_dt).total_seconds())
+        except Exception:
+            freshness_sec = 0
+
+    signals = CostSignals(
+        sources=sources if sources else ["none"],
+        freshness_sec=max(0, freshness_sec),
+    )
+
+    return totals, series, by_model, by_feature, signals
 
 
 # =============================================================================
@@ -597,10 +942,119 @@ async def get_analytics_status() -> AnalyticsStatusResponse:
                 write=False,
                 signals_bound=3,  # cost_records, llm.usage, worker.execution
             ),
+            "cost": TopicStatus(
+                read=True,
+                write=False,
+                signals_bound=1,  # cost_records
+            ),
             # Future topics (declared but not yet bound)
-            # "cost": TopicStatus(read=False, write=False, signals_bound=0),
             # "anomalies": TopicStatus(read=False, write=False, signals_bound=0),
         },
+    )
+
+
+# =============================================================================
+# Cost Topic Endpoints
+# =============================================================================
+
+
+@router.get(
+    "/statistics/cost",
+    response_model=CostStatisticsResponse,
+    summary="Get cost statistics",
+    description="""
+Returns cost statistics for the specified time window.
+
+**Domain:** Analytics
+**Subdomain:** Statistics
+**Topic:** Cost
+
+Includes:
+- Time series of spend (cents)
+- Breakdown by model
+- Breakdown by feature tag
+- Totals with USD conversion
+
+Signal sources:
+- cost_records (primary)
+""",
+)
+async def get_cost_statistics(
+    request: Request,
+    from_ts: Annotated[
+        datetime,
+        Query(
+            alias="from",
+            description="Start of time window (ISO-8601)",
+        ),
+    ],
+    to_ts: Annotated[
+        datetime,
+        Query(
+            alias="to",
+            description="End of time window (ISO-8601)",
+        ),
+    ],
+    resolution: Annotated[
+        ResolutionType,
+        Query(description="Time resolution: hour or day"),
+    ] = ResolutionType.DAY,
+    scope: Annotated[
+        ScopeType,
+        Query(description="Aggregation scope: org, project, or env"),
+    ] = ScopeType.ORG,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> CostStatisticsResponse:
+    """
+    Get cost statistics for the specified time window.
+
+    Primary endpoint for the Cost topic.
+    """
+    # Scope is declared for API contract, implementation pending
+    _ = scope  # Future: filter by project/env
+
+    # Get tenant from auth context
+    auth_context = get_auth_context(request)
+    tenant_id: str | None = getattr(auth_context, "tenant_id", None)
+
+    if not tenant_id:
+        raise HTTPException(status_code=401, detail="Tenant context required")
+
+    # Validate time window
+    if from_ts >= to_ts:
+        raise HTTPException(
+            status_code=400,
+            detail="'from' must be before 'to'",
+        )
+
+    # Limit window to 90 days max
+    max_window = timedelta(days=90)
+    if to_ts - from_ts > max_window:
+        raise HTTPException(
+            status_code=400,
+            detail="Time window cannot exceed 90 days",
+        )
+
+    # Reconcile cost signals
+    totals, series, by_model, by_feature, signals = await reconcile_cost_signals(
+        session=session,
+        tenant_id=tenant_id,
+        from_ts=from_ts,
+        to_ts=to_ts,
+        resolution=resolution,
+    )
+
+    return CostStatisticsResponse(
+        window=TimeWindow.model_validate({
+            "from": from_ts,
+            "to": to_ts,
+            "resolution": resolution,
+        }),
+        totals=totals,
+        series=series,
+        by_model=by_model,
+        by_feature=by_feature,
+        signals=signals,
     )
 
 
@@ -821,6 +1275,221 @@ async def export_usage_json(
     Bit-equivalent to read API.
     """
     return await _get_usage_data(
+        request=request,
+        from_ts=from_ts,
+        to_ts=to_ts,
+        resolution=resolution,
+        scope=scope,
+        session=session,
+    )
+
+
+# =============================================================================
+# Cost Export Endpoints
+# =============================================================================
+
+
+async def _get_cost_data(
+    request: Request,
+    from_ts: datetime,
+    to_ts: datetime,
+    resolution: ResolutionType,
+    scope: ScopeType,
+    session: AsyncSession,
+) -> CostStatisticsResponse:
+    """
+    Internal helper to get cost data (shared by read and export endpoints).
+
+    Ensures export is bit-equivalent to read API - no alternate code paths.
+    """
+    # Scope is declared for API contract, implementation pending
+    _ = scope  # Future: filter by project/env
+
+    # Get tenant from auth context
+    auth_context = get_auth_context(request)
+    tenant_id: str | None = getattr(auth_context, "tenant_id", None)
+
+    if not tenant_id:
+        raise HTTPException(status_code=401, detail="Tenant context required")
+
+    # Validate time window
+    if from_ts >= to_ts:
+        raise HTTPException(
+            status_code=400,
+            detail="'from' must be before 'to'",
+        )
+
+    # Limit window to 90 days max
+    max_window = timedelta(days=90)
+    if to_ts - from_ts > max_window:
+        raise HTTPException(
+            status_code=400,
+            detail="Time window cannot exceed 90 days",
+        )
+
+    # Reconcile cost signals
+    totals, series, by_model, by_feature, signals = await reconcile_cost_signals(
+        session=session,
+        tenant_id=tenant_id,
+        from_ts=from_ts,
+        to_ts=to_ts,
+        resolution=resolution,
+    )
+
+    return CostStatisticsResponse(
+        window=TimeWindow.model_validate({
+            "from": from_ts,
+            "to": to_ts,
+            "resolution": resolution,
+        }),
+        totals=totals,
+        series=series,
+        by_model=by_model,
+        by_feature=by_feature,
+        signals=signals,
+    )
+
+
+@router.get(
+    "/statistics/cost/export.csv",
+    summary="Export cost statistics (CSV)",
+    description="""
+Exports cost statistics as CSV.
+Uses the same aggregation logic as the read API.
+CSV format: timestamp,spend_cents,requests,input_tokens,output_tokens
+
+**Contract:**
+- Deterministic ordering (by timestamp, UTC)
+- Same query parameters as read endpoint
+- Bit-equivalent to read API (no recomputation)
+""",
+    responses={
+        200: {
+            "content": {"text/csv": {}},
+            "description": "CSV export file",
+        }
+    },
+)
+async def export_cost_csv(
+    request: Request,
+    from_ts: Annotated[
+        datetime,
+        Query(
+            alias="from",
+            description="Start of time window (ISO-8601)",
+        ),
+    ],
+    to_ts: Annotated[
+        datetime,
+        Query(
+            alias="to",
+            description="End of time window (ISO-8601)",
+        ),
+    ],
+    resolution: Annotated[
+        ResolutionType,
+        Query(description="Time resolution: hour or day"),
+    ] = ResolutionType.DAY,
+    scope: Annotated[
+        ScopeType,
+        Query(description="Aggregation scope: org, project, or env"),
+    ] = ScopeType.ORG,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> Response:
+    """
+    Export cost statistics as CSV.
+
+    Uses the same aggregation logic as the read API.
+    Deterministic ordering. UTC only.
+    """
+    # Get cost data (same as read API)
+    data = await _get_cost_data(
+        request=request,
+        from_ts=from_ts,
+        to_ts=to_ts,
+        resolution=resolution,
+        scope=scope,
+        session=session,
+    )
+
+    # Generate CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header
+    writer.writerow(["timestamp", "spend_cents", "requests", "input_tokens", "output_tokens"])
+
+    # Data rows (deterministic ordering - already sorted by timestamp)
+    for point in data.series:
+        writer.writerow([
+            point.ts,
+            point.spend_cents,
+            point.requests,
+            point.input_tokens,
+            point.output_tokens,
+        ])
+
+    # Create filename with time range
+    from_str = from_ts.strftime("%Y%m%d")
+    to_str = to_ts.strftime("%Y%m%d")
+    filename = f"cost_{from_str}_{to_str}.csv"
+
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
+
+
+@router.get(
+    "/statistics/cost/export.json",
+    response_model=CostStatisticsResponse,
+    summary="Export cost statistics (JSON)",
+    description="""
+Exports cost statistics as JSON.
+Structure matches the standard cost response.
+
+**Contract:**
+- Same structure as GET /analytics/statistics/cost
+- Same query parameters as read endpoint
+- Bit-equivalent to read API (no recomputation)
+""",
+)
+async def export_cost_json(
+    request: Request,
+    from_ts: Annotated[
+        datetime,
+        Query(
+            alias="from",
+            description="Start of time window (ISO-8601)",
+        ),
+    ],
+    to_ts: Annotated[
+        datetime,
+        Query(
+            alias="to",
+            description="End of time window (ISO-8601)",
+        ),
+    ],
+    resolution: Annotated[
+        ResolutionType,
+        Query(description="Time resolution: hour or day"),
+    ] = ResolutionType.DAY,
+    scope: Annotated[
+        ScopeType,
+        Query(description="Aggregation scope: org, project, or env"),
+    ] = ScopeType.ORG,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> CostStatisticsResponse:
+    """
+    Export cost statistics as JSON.
+
+    Structure matches the standard cost response.
+    Bit-equivalent to read API.
+    """
+    return await _get_cost_data(
         request=request,
         from_ts=from_ts,
         to_ts=to_ts,
