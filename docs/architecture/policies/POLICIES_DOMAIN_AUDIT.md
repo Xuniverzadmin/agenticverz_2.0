@@ -1371,3 +1371,49 @@ Key Design Decisions:
 - Severity separation (BLOCKING vs WARNING) for conflicts
 - IMPLICIT dependencies computed from scope/limit relationships
 ```
+
+### 14.11 Governance Invariants (LOCKED)
+
+**Status:** CONSTITUTIONAL
+**Effective:** 2026-01-17
+
+The following invariants are **mandatory** and cannot be optionalized:
+
+| Invariant | Rule | Enforcement |
+|-----------|------|-------------|
+| **GOV-POL-001** | Conflict detection is mandatory pre-activation | Policy cannot transition to ACTIVE if BLOCKING conflicts exist |
+| **GOV-POL-002** | Dependency resolution is mandatory pre-delete | Policy cannot be deleted if other policies depend on it |
+| **GOV-POL-003** | Panel invariants are operator-monitored | Zero results trigger alerts, not UI blocking |
+
+**Rationale:**
+
+- **GOV-POL-001**: Prevents contradictory policies from entering enforcement simultaneously
+- **GOV-POL-002**: Prevents orphaned dependencies that break policy evaluation
+- **GOV-POL-003**: Distinguishes "nothing happened" from "ingestion is broken"
+
+**Enforcement Points:**
+
+| Invariant | Where Enforced |
+|-----------|----------------|
+| GOV-POL-001 | PolicyProposalEngine.approve() |
+| GOV-POL-002 | PolicyEngine.delete_rule() |
+| GOV-POL-003 | PanelInvariantMonitor (scheduler) |
+
+### 14.12 Residual Risk Acknowledgment
+
+**Status:** ACCEPTED
+**Risk Level:** LOW
+
+There is exactly one remaining class of risk:
+
+> **False negatives in conflict detection due to semantic complexity**
+> (e.g., complex predicates that cannot be statically compared)
+
+This risk is **acceptable** because:
+
+1. Severity classification separates BLOCKING from WARNING
+2. BLOCKING conflicts prevent activation
+3. WARNING conflicts allow activation with visibility
+4. Human review is required for all policy activation
+
+This is the correct trade-off: we block what we can prove, we warn on what we suspect, and we never silently allow contradictions.
