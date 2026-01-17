@@ -1,0 +1,160 @@
+# Customer LLM Integration Alert Rules
+# Reference: CUSTOMER_INTEGRATIONS_ARCHITECTURE.md Section 16.4
+#
+# ALERT PAYLOAD RULE:
+#   Every alert MUST include: tenant_id, integration_id, enforcement_state
+#   Every alert MUST instruct: "Investigate in Console → Evidence-backed views"
+#
+# Alerts fire on DECISIONS, not raw usage.
+
+groups:
+  - name: cus_enforcement_alerts
+    interval: 30s
+    rules:
+      # Budget Warning - fires when budget utilization exceeds 80%
+      - alert: CusIntegrationBudgetWarning
+        expr: cus_budget_utilization_ratio > 0.8 and cus_budget_utilization_ratio < 0.95
+        for: 5m
+        labels:
+          severity: warning
+          domain: customer_integrations
+          enforcement_state: warned
+        annotations:
+          summary: "Budget near limit for {{ $labels.tenant_id }}/{{ $labels.integration_id }}"
+          description: |
+            Budget utilization is at {{ $value | humanizePercentage }}.
+            Tenant: {{ $labels.tenant_id }}
+            Integration: {{ $labels.integration_id }}
+
+            Investigate in Console → Activity / Incidents
+
+      # Budget Critical - fires when budget utilization exceeds 95%
+      - alert: CusIntegrationBudgetCritical
+        expr: cus_budget_utilization_ratio >= 0.95
+        for: 1m
+        labels:
+          severity: critical
+          domain: customer_integrations
+          enforcement_state: blocked
+        annotations:
+          summary: "Budget exhausted for {{ $labels.tenant_id }}/{{ $labels.integration_id }}"
+          description: |
+            Budget utilization is at {{ $value | humanizePercentage }}.
+            Calls may be blocked.
+            Tenant: {{ $labels.tenant_id }}
+            Integration: {{ $labels.integration_id }}
+
+            Investigate in Console → Activity / Incidents
+
+      # Enforcement Blocking Active
+      - alert: CusEnforcementBlocking
+        expr: sum(increase(cus_enforcement_blocked_total[5m])) by (tenant_id, integration_id, reason) > 0
+        for: 1m
+        labels:
+          severity: warning
+          domain: customer_integrations
+          enforcement_state: blocked
+        annotations:
+          summary: "Enforcement blocking calls for {{ $labels.tenant_id }}/{{ $labels.integration_id }}"
+          description: |
+            Calls are being blocked. Reason: {{ $labels.reason }}
+            Blocked count (5m): {{ $value }}
+            Tenant: {{ $labels.tenant_id }}
+            Integration: {{ $labels.integration_id }}
+
+            Investigate in Console → Activity / Incidents
+
+      # Integration Health Degraded
+      - alert: CusIntegrationHealthDegraded
+        expr: cus_integration_health_state == 2
+        for: 5m
+        labels:
+          severity: warning
+          domain: customer_integrations
+          enforcement_state: degraded
+        annotations:
+          summary: "Integration health degraded: {{ $labels.tenant_id }}/{{ $labels.integration_id }}"
+          description: |
+            Integration health state is DEGRADED.
+            Tenant: {{ $labels.tenant_id }}
+            Integration: {{ $labels.integration_id }}
+
+            Investigate in Console → Activity / Incidents
+
+      # Integration Health Failing
+      - alert: CusIntegrationHealthFailing
+        expr: cus_integration_health_state == 3
+        for: 2m
+        labels:
+          severity: critical
+          domain: customer_integrations
+          enforcement_state: failing
+        annotations:
+          summary: "Integration health FAILING: {{ $labels.tenant_id }}/{{ $labels.integration_id }}"
+          description: |
+            Integration health state is FAILING.
+            Calls may be hard-blocked.
+            Tenant: {{ $labels.tenant_id }}
+            Integration: {{ $labels.integration_id }}
+
+            Investigate in Console → Activity / Incidents
+
+      # High Error Rate
+      - alert: CusLLMHighErrorRate
+        expr: |
+          sum(rate(cus_llm_errors_total[5m])) by (tenant_id, integration_id)
+          /
+          sum(rate(cus_llm_calls_total[5m])) by (tenant_id, integration_id)
+          > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          domain: customer_integrations
+          enforcement_state: degraded
+        annotations:
+          summary: "High LLM error rate for {{ $labels.tenant_id }}/{{ $labels.integration_id }}"
+          description: |
+            Error rate is {{ $value | humanizePercentage }}.
+            Tenant: {{ $labels.tenant_id }}
+            Integration: {{ $labels.integration_id }}
+
+            Investigate in Console → Activity / Incidents
+
+      # Rate Limit Approaching
+      - alert: CusRateLimitApproaching
+        expr: |
+          cus_rate_current_rpm / cus_rate_limit_rpm > 0.8
+          and cus_rate_limit_rpm > 0
+        for: 2m
+        labels:
+          severity: warning
+          domain: customer_integrations
+          enforcement_state: warned
+        annotations:
+          summary: "Rate limit approaching for {{ $labels.tenant_id }}/{{ $labels.integration_id }}"
+          description: |
+            Current RPM is {{ $value | humanizePercentage }} of limit.
+            Tenant: {{ $labels.tenant_id }}
+            Integration: {{ $labels.integration_id }}
+
+            Investigate in Console → Activity / Incidents
+
+      # Throttling Active
+      - alert: CusThrottlingActive
+        expr: |
+          sum(increase(cus_enforcement_decisions_total{result="throttled"}[5m]))
+          by (tenant_id, integration_id) > 0
+        for: 1m
+        labels:
+          severity: warning
+          domain: customer_integrations
+          enforcement_state: throttled
+        annotations:
+          summary: "Throttling active for {{ $labels.tenant_id }}/{{ $labels.integration_id }}"
+          description: |
+            Calls are being throttled due to rate limiting.
+            Throttled count (5m): {{ $value }}
+            Tenant: {{ $labels.tenant_id }}
+            Integration: {{ $labels.integration_id }}
+
+            Investigate in Console → Activity / Incidents

@@ -656,6 +656,9 @@ from .api.analytics import router as analytics_router  # ANALYTICS Domain: Unifi
 from .api.agents import router as agents_router  # M12 Multi-Agent System
 from .api.authz_status import router as authz_status_router  # T5: Internal authz status
 from .api.connectivity import router as connectivity_router  # CONNECTIVITY: Unified facade (/api/v1/connectivity/*)
+from .api.cus_telemetry import router as cus_telemetry_router  # Customer LLM telemetry ingestion
+from .api.cus_integrations import router as cus_integrations_router  # Customer LLM integration management
+from .api.cus_enforcement import router as cus_enforcement_router  # Customer LLM enforcement checks
 from .api.cost_guard import router as cost_guard_router  # /guard/costs/* - Customer cost visibility
 
 # M26 Cost Intelligence - Token attribution, anomaly detection, budget enforcement
@@ -786,6 +789,9 @@ app.include_router(limits_override_router, prefix="/api/v1")  # PIN-LIM-05: Limi
 
 app.include_router(logs_router)  # LOGS Domain: /api/v1/logs/* (unified facade)
 app.include_router(connectivity_router)  # CONNECTIVITY: /api/v1/connectivity/* (unified facade)
+app.include_router(cus_telemetry_router, prefix="/api/v1")  # Customer LLM telemetry ingestion
+app.include_router(cus_integrations_router, prefix="/api/v1")  # Customer LLM integration management
+app.include_router(cus_enforcement_router, prefix="/api/v1")  # Customer LLM enforcement checks
 app.include_router(accounts_router)  # ACCOUNTS: /api/v1/accounts/* (unified facade)
 # M28: operator_router removed (PIN-145) - merged into /ops/*
 app.include_router(ops_router)  # /ops/* - M24 Founder Intelligence Console

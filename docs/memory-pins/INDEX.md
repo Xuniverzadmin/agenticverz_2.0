@@ -1197,6 +1197,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-17 | **PIN-439 Customer LLM Integrations Complete** - All 6 phases complete (Foundation, Telemetry, Enforcement, Proxy, Console, Observability). ~12,500 lines across 29 files. Evidence → Observability linking with cus_* metrics, Grafana dashboard, 8 alert rules. Connectivity domain audit updated to FULLY IMPLEMENTED. |
 | 2026-01-17 | **PIN-438 Linting Technical Debt Declaration** - Declared ruff/pyright warnings as pre-existing technical debt. Configured per-file-ignores to block new violations only. Updated pyproject.toml files. |
 | 2026-01-17 | **PIN-437 API-002 Counter-Rules: wrap_dict Risk Vectors** - Created via memory_trail. |
 | 2026-01-16 | **PIN-436 Guardrail Violations Baseline** - Captured 41 violations across 10 guardrails. 17 enforcement scripts + 3-layer hook system installed. |

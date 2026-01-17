@@ -712,3 +712,126 @@ governance_limit_breaches_recorded_total = Counter(
     ["breach_type"],
     # breach_type: BREACHED, EXHAUSTED, THROTTLED, VIOLATED
 )
+
+# =====================
+# Customer Integration Metrics (Phase 6 - Evidence Signal Wiring)
+# Namespace: cus_llm_*, cus_enforcement_*, cus_integration_*
+# Reference: CUSTOMER_INTEGRATIONS_ARCHITECTURE.md Section 16
+# =====================
+
+# LLM Usage Counters (from cus_llm_usage evidence)
+cus_llm_calls_total = Counter(
+    "cus_llm_calls_total",
+    "Total customer LLM calls",
+    ["tenant_id", "integration_id", "provider", "model"],
+)
+
+cus_llm_tokens_total = Counter(
+    "cus_llm_tokens_total",
+    "Total customer LLM tokens",
+    ["tenant_id", "integration_id", "token_type"],  # token_type: input, output
+)
+
+cus_llm_cost_cents_total = Counter(
+    "cus_llm_cost_cents_total",
+    "Total customer LLM cost in cents",
+    ["tenant_id", "integration_id"],
+)
+
+cus_llm_latency_seconds = Histogram(
+    "cus_llm_latency_seconds",
+    "Customer LLM call latency (seconds)",
+    ["tenant_id", "integration_id"],
+    buckets=(0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0),
+)
+
+cus_llm_errors_total = Counter(
+    "cus_llm_errors_total",
+    "Total customer LLM errors",
+    ["tenant_id", "integration_id", "error_code"],
+)
+
+# Enforcement Decision Counters (from enforcement service)
+cus_enforcement_decisions_total = Counter(
+    "cus_enforcement_decisions_total",
+    "Total enforcement decisions",
+    ["tenant_id", "integration_id", "result"],  # result: allowed, warned, throttled, blocked, hard_blocked
+)
+
+cus_enforcement_blocked_total = Counter(
+    "cus_enforcement_blocked_total",
+    "Total blocked enforcement decisions",
+    ["tenant_id", "integration_id", "reason"],  # reason: budget, token, rate, disabled
+)
+
+cus_policy_results_total = Counter(
+    "cus_policy_results_total",
+    "Total policy evaluation results",
+    ["tenant_id", "integration_id", "result"],  # result: allowed, warned, blocked
+)
+
+# Integration Health Gauges
+cus_integration_health_state = Gauge(
+    "cus_integration_health_state",
+    "Integration health state (0=unknown, 1=healthy, 2=degraded, 3=failing)",
+    ["tenant_id", "integration_id"],
+)
+
+cus_integration_status = Gauge(
+    "cus_integration_status",
+    "Integration status (0=created, 1=enabled, 2=disabled, 3=error)",
+    ["tenant_id", "integration_id"],
+)
+
+# Budget Utilization Gauges
+cus_budget_used_cents = Gauge(
+    "cus_budget_used_cents",
+    "Current budget used in cents",
+    ["tenant_id", "integration_id"],
+)
+
+cus_budget_limit_cents = Gauge(
+    "cus_budget_limit_cents",
+    "Budget limit in cents (0 = unlimited)",
+    ["tenant_id", "integration_id"],
+)
+
+cus_budget_utilization_ratio = Gauge(
+    "cus_budget_utilization_ratio",
+    "Budget utilization ratio (0.0 to 1.0+)",
+    ["tenant_id", "integration_id"],
+)
+
+# Token Utilization Gauges
+cus_tokens_used_month = Gauge(
+    "cus_tokens_used_month",
+    "Tokens used this month",
+    ["tenant_id", "integration_id"],
+)
+
+cus_token_limit_month = Gauge(
+    "cus_token_limit_month",
+    "Monthly token limit (0 = unlimited)",
+    ["tenant_id", "integration_id"],
+)
+
+# Rate Metrics
+cus_rate_current_rpm = Gauge(
+    "cus_rate_current_rpm",
+    "Current requests per minute",
+    ["tenant_id", "integration_id"],
+)
+
+cus_rate_limit_rpm = Gauge(
+    "cus_rate_limit_rpm",
+    "Rate limit (requests per minute, 0 = unlimited)",
+    ["tenant_id", "integration_id"],
+)
+
+# Aliases for test imports (UPPERCASE names)
+CUS_LLM_CALLS = cus_llm_calls_total
+CUS_LLM_COST = cus_llm_cost_cents_total
+CUS_ENFORCEMENT_DECISIONS = cus_enforcement_decisions_total
+CUS_ENFORCEMENT_BLOCKED = cus_enforcement_blocked_total
+CUS_INTEGRATION_HEALTH = cus_integration_health_state
+CUS_BUDGET_UTILIZATION = cus_budget_utilization_ratio

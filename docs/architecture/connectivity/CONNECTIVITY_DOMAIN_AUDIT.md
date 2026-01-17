@@ -1,8 +1,8 @@
 # Connectivity Domain Audit
 
-**Status:** PARTIALLY IMPLEMENTED
-**Last Updated:** 2026-01-16
-**Reference:** PIN-411 (Unified Facades)
+**Status:** FULLY IMPLEMENTED
+**Last Updated:** 2026-01-17
+**Reference:** PIN-411 (Unified Facades), CUSTOMER_INTEGRATIONS_ARCHITECTURE.md
 
 ---
 
@@ -27,9 +27,13 @@
 
 | Component | Status | Details |
 |-----------|--------|---------|
-| **API Keys** | ✅ MOSTLY COMPLETE | Create, list, freeze/unfreeze, revoke |
-| **Integrations** | ❌ NOT IMPLEMENTED | Customer console has no integration management |
-| **Lifecycle Ops** | ⚠️ PARTIAL | Missing: rotation, health checks, validation endpoint |
+| **API Keys** | ✅ COMPLETE | Create, list, freeze/unfreeze, revoke |
+| **Customer LLM Integrations** | ✅ COMPLETE | Full CRUD, health checks, enforcement, observability |
+| **SDK Telemetry** | ✅ COMPLETE | Provider adapters, middleware, automatic capture |
+| **Enforcement** | ✅ COMPLETE | Budget/token/rate limits with precedence ladder |
+| **Observability** | ✅ COMPLETE | Metrics, dashboards, alerts |
+
+**Major Update (2026-01-17):** Customer LLM Integrations feature is now production-ready. See `CUSTOMER_INTEGRATIONS_ARCHITECTURE.md` for full details.
 
 ---
 
@@ -72,32 +76,58 @@ Customer Console
 └─────────────────────────────────────────┘
 ```
 
-### Integration Flow (NOT YET IMPLEMENTED)
+### Customer LLM Integration Flow ✅ IMPLEMENTED
 
 ```
-Customer Console
+Customer Console / SDK
        │
        ▼
 ┌─────────────────────────────────────────┐
-│  Configure Integration                  │
-│  - LLM Provider (API key, model)        │
-│  - Webhook (URL, secret)                │
-│  - Notification Channel                 │
+│  POST /api/v1/cus/integrations          │
+│  Create Integration:                    │
+│  - provider_type: openai/anthropic      │
+│  - credentials: AES-256-GCM encrypted   │
+│  - limits: budget, token, rate          │
 └─────────────────────────────────────────┘
        │
        ▼
 ┌─────────────────────────────────────────┐
-│  WorkerConfig (per-tenant)              │
-│  - enabled: true/false                  │
-│  - config_json: provider settings       │
-│  - limits: max_runs_per_day             │
+│  SDK Provider Adapter                   │
+│  - CusOpenAIProvider / CusAnthropicProvider │
+│  - Wraps native SDK clients             │
+│  - Auto-captures telemetry              │
 └─────────────────────────────────────────┘
        │
        ▼
 ┌─────────────────────────────────────────┐
-│  Run Execution                          │
-│  - Worker uses tenant's integration config │
-│  - Credentials fetched at runtime       │
+│  Enforcement Check (Pre-Call)           │
+│  - Budget limit check                   │
+│  - Token limit check                    │
+│  - Rate limit check                     │
+│  - Decision: allow/warn/throttle/block  │
+└─────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│  LLM Call Execution                     │
+│  - Uses customer's own credentials      │
+│  - Timing and latency captured          │
+└─────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│  Telemetry Ingestion                    │
+│  - POST /api/v1/cus/telemetry/llm-usage │
+│  - Tokens, cost, latency recorded       │
+│  - cus_llm_usage table (immutable)      │
+└─────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│  Observability                          │
+│  - Prometheus metrics (cus_* namespace) │
+│  - Grafana dashboard                    │
+│  - Alertmanager rules                   │
 └─────────────────────────────────────────┘
 ```
 
@@ -141,17 +171,46 @@ Customer Console
 Note: EXPIRED checked at validation time (not a DB state)
 ```
 
-### Integrations Lifecycle (NOT IMPLEMENTED)
+### Customer LLM Integrations Lifecycle ✅ COMPLETE
 
-| Operation | Status | Notes |
-|-----------|--------|-------|
-| **CREATE** | ❌ MISSING | Cannot configure LLM providers |
-| **LIST** | ⚠️ PARTIAL | Worker registry is read-only |
-| **DETAIL** | ⚠️ PARTIAL | No per-tenant config view |
-| **UPDATE** | ❌ MISSING | Cannot modify integration settings |
-| **DELETE** | ❌ MISSING | Cannot remove integrations |
-| **TEST** | ❌ MISSING | No health check endpoint |
-| **ENABLE/DISABLE** | ❌ MISSING | No per-tenant toggle |
+| Operation | Status | Endpoint | Notes |
+|-----------|--------|----------|-------|
+| **CREATE** | ✅ IMPLEMENTED | `POST /api/v1/cus/integrations` | Full CRUD with AES-256-GCM encryption |
+| **LIST** | ✅ IMPLEMENTED | `GET /api/v1/cus/integrations` | Pagination, tenant-isolated |
+| **DETAIL** | ✅ IMPLEMENTED | `GET /api/v1/cus/integrations/{id}` | Full config view |
+| **UPDATE** | ✅ IMPLEMENTED | `PUT /api/v1/cus/integrations/{id}` | Config + limits |
+| **DELETE** | ✅ IMPLEMENTED | `DELETE /api/v1/cus/integrations/{id}` | Soft delete |
+| **ENABLE** | ✅ IMPLEMENTED | `POST /api/v1/cus/integrations/{id}/enable` | State machine |
+| **DISABLE** | ✅ IMPLEMENTED | `POST /api/v1/cus/integrations/{id}/disable` | State machine |
+| **HEALTH** | ✅ IMPLEMENTED | `GET /api/v1/cus/integrations/{id}/health` | Provider checks |
+| **TEST** | ✅ IMPLEMENTED | `POST /api/v1/cus/integrations/{id}/test` | Credential validation |
+| **LIMITS** | ✅ IMPLEMENTED | `GET /api/v1/cus/integrations/{id}/limits` | Budget/token/rate status |
+
+### Integration Status Transitions
+
+```
+         ┌──────────────────────┐
+         │       CREATED        │  (initial state)
+         └──────────────────────┘
+                   │
+                   ▼  (enable)
+         ┌──────────────────────┐
+         │       ENABLED        │  (active use)
+         └──────────────────────┘
+                   │
+        ┌──────────┴──────────┐
+        ▼                     ▼
+┌───────────────┐    ┌───────────────┐
+│   DISABLED    │    │     ERROR     │
+│  (temporary)  │    │ (health fail) │
+└───────────────┘    └───────────────┘
+        │                     │
+        ▼                     ▼
+┌───────────────┐    ┌───────────────┐
+│    ENABLED    │    │    ENABLED    │  (auto-recovery)
+│  (re-enable)  │    └───────────────┘
+└───────────────┘
+```
 
 ---
 
@@ -183,6 +242,39 @@ Note: EXPIRED checked at validation time (not a DB state)
 | `/api/v1/connectivity/integrations/{id}` | GET | Worker detail | ⚠️ READ-ONLY |
 | `/api/v1/connectivity/api-keys` | GET | List API keys | ✅ |
 | `/api/v1/connectivity/api-keys/{id}` | GET | Key detail | ✅ |
+
+### Customer LLM Integrations (`/api/v1/cus/*`) ✅ NEW
+
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/api/v1/cus/integrations` | GET | List customer integrations | ✅ |
+| `/api/v1/cus/integrations` | POST | Create integration | ✅ |
+| `/api/v1/cus/integrations/{id}` | GET | Integration detail | ✅ |
+| `/api/v1/cus/integrations/{id}` | PUT | Update integration | ✅ |
+| `/api/v1/cus/integrations/{id}` | DELETE | Delete integration | ✅ |
+| `/api/v1/cus/integrations/{id}/enable` | POST | Enable integration | ✅ |
+| `/api/v1/cus/integrations/{id}/disable` | POST | Disable integration | ✅ |
+| `/api/v1/cus/integrations/{id}/health` | GET | Health check | ✅ |
+| `/api/v1/cus/integrations/{id}/test` | POST | Test credentials | ✅ |
+| `/api/v1/cus/integrations/{id}/limits` | GET | Limits status | ✅ |
+
+### Customer Telemetry (`/api/v1/cus/telemetry/*`) ✅ NEW
+
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/api/v1/cus/telemetry/llm-usage` | POST | Ingest LLM usage | ✅ |
+| `/api/v1/cus/telemetry/llm-usage/batch` | POST | Batch ingest | ✅ |
+| `/api/v1/cus/usage-summary` | GET | Usage summary | ✅ |
+| `/api/v1/cus/usage-history` | GET | Usage history | ✅ |
+| `/api/v1/cus/daily-aggregates` | GET | Daily aggregates | ✅ |
+
+### Enforcement API (`/api/v1/enforcement/*`) ✅ NEW
+
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/api/v1/enforcement/check` | POST | Pre-flight enforcement check | ✅ |
+| `/api/v1/enforcement/status` | GET | Current limits and usage | ✅ |
+| `/api/v1/enforcement/batch` | POST | Batch enforcement check | ✅ |
 
 ---
 
@@ -266,6 +358,72 @@ class WorkerConfig(SQLModel):
 
     max_runs_per_day: int
     max_tokens_per_run: int
+```
+
+### CusIntegration Model (L6) ✅ NEW
+
+**File:** `backend/app/models/cus_models.py`
+
+```python
+class CusIntegration(SQLModel):
+    # Identification
+    id: UUID
+    tenant_id: UUID (FK → Tenant)
+    name: str
+
+    # Provider
+    provider_type: str     # openai, anthropic, azure_openai, bedrock, custom
+    credential_ref: str    # encrypted:// or vault:// reference
+    config: dict           # Provider-specific configuration
+    default_model: str
+
+    # Status
+    status: str            # created, enabled, disabled, error
+    health_state: str      # unknown, healthy, degraded, failing
+    health_checked_at: datetime
+    health_message: str
+
+    # Limits (Single Source of Truth)
+    budget_limit_cents: int      # 0 = unlimited
+    token_limit_month: int       # 0 = unlimited
+    rate_limit_rpm: int          # 0 = unlimited
+
+    # Audit
+    created_at: datetime
+    updated_at: datetime
+    created_by: UUID
+```
+
+### CusLLMUsage Model (L6) ✅ NEW
+
+**File:** `backend/app/models/cus_models.py`
+
+```python
+class CusLLMUsage(SQLModel):
+    # Identification
+    id: UUID
+    tenant_id: UUID
+    integration_id: UUID
+    call_id: str           # Idempotency key
+
+    # Call Details
+    provider: str
+    model: str
+    tokens_in: int
+    tokens_out: int
+    cost_cents: int
+    latency_ms: int
+
+    # Policy
+    policy_result: str     # allowed, warned, blocked
+    error_code: str
+    error_message: str
+
+    # Context
+    session_id: UUID
+    agent_id: str
+    metadata: dict
+    created_at: datetime
 ```
 
 ---
@@ -358,19 +516,47 @@ Security:               COMPLETE
   - Audit:     ✅ Usage tracked
 ```
 
-### Integrations
+### Customer LLM Integrations ✅ COMPLETE
 
 ```
-Lifecycle Operations:    1/6 (17%)
-  - CREATE:    ❌ MISSING
-  - LIST:      ⚠️ READ-ONLY (WorkerRegistry)
-  - DETAIL:    ⚠️ READ-ONLY
-  - UPDATE:    ❌ MISSING
-  - DELETE:    ❌ MISSING
-  - TEST:      ❌ MISSING
+Lifecycle Operations:    10/10 (100%)
+  - CREATE:        ✅ POST /api/v1/cus/integrations
+  - LIST:          ✅ GET /api/v1/cus/integrations
+  - DETAIL:        ✅ GET /api/v1/cus/integrations/{id}
+  - UPDATE:        ✅ PUT /api/v1/cus/integrations/{id}
+  - DELETE:        ✅ DELETE /api/v1/cus/integrations/{id}
+  - ENABLE:        ✅ POST /api/v1/cus/integrations/{id}/enable
+  - DISABLE:       ✅ POST /api/v1/cus/integrations/{id}/disable
+  - HEALTH:        ✅ GET /api/v1/cus/integrations/{id}/health
+  - TEST:          ✅ POST /api/v1/cus/integrations/{id}/test
+  - LIMITS:        ✅ GET /api/v1/cus/integrations/{id}/limits
 
-Customer Console:       NOT IMPLEMENTED
-Founder Console:        Available (M25)
+Telemetry Operations:    5/5 (100%)
+  - LLM Usage Ingest:    ✅ POST /api/v1/cus/telemetry/llm-usage
+  - Batch Ingest:        ✅ POST /api/v1/cus/telemetry/llm-usage/batch
+  - Usage Summary:       ✅ GET /api/v1/cus/usage-summary
+  - Usage History:       ✅ GET /api/v1/cus/usage-history
+  - Daily Aggregates:    ✅ GET /api/v1/cus/daily-aggregates
+
+Enforcement Operations:   3/3 (100%)
+  - Pre-flight Check:    ✅ POST /api/v1/enforcement/check
+  - Status:              ✅ GET /api/v1/enforcement/status
+  - Batch Check:         ✅ POST /api/v1/enforcement/batch
+
+SDK Components:          6/6 (100%)
+  - Reporter:            ✅ cus_reporter.py
+  - Base Provider:       ✅ cus_base.py
+  - Token Counter:       ✅ cus_token_counter.py
+  - Cost Calculator:     ✅ cus_cost.py
+  - OpenAI Adapter:      ✅ cus_openai.py
+  - Anthropic Adapter:   ✅ cus_anthropic.py
+  - Middleware:          ✅ cus_middleware.py
+  - Enforcer:            ✅ cus_enforcer.py
+
+Observability:           3/3 (100%)
+  - Prometheus Metrics:  ✅ metrics.py (cus_* namespace)
+  - Grafana Dashboard:   ✅ cus_llm_observability_dashboard.json
+  - Alert Rules:         ✅ cus_integration_alerts.yml
 ```
 
 ---
@@ -521,52 +707,58 @@ Response: {
 
 ---
 
-## 14. SDK Integration Audit
+## 14. SDK Integration Audit ✅ COMPLETE
 
-### Expected Customer Integration Flow
+### Customer Integration Flow ✅ IMPLEMENTED
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  1. Customer installs SDK: npm install aos-sdk              │
+│  1. Customer installs SDK: pip install aos-sdk              │ ✅
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  2. Customer provides THEIR OWN LLM credentials             │
-│     - Anthropic API key                                     │
-│     - OpenAI API key                                        │
-│     - Other LLM provider keys                               │
+│  2. Customer configures integration via Console/API         │ ✅
+│     - Create integration with provider type                 │
+│     - Credentials encrypted (AES-256-GCM)                   │
+│     - Set budget/token/rate limits                          │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  3. SDK wraps/intercepts customer's LLM calls               │
-│     - Measures tokens used                                  │
-│     - Tracks latency                                        │
-│     - Records cost                                          │
-│     - Captures request/response traces                      │
+│  3. SDK wraps customer's LLM calls via Provider Adapters    │ ✅
+│     - CusOpenAIProvider / CusAnthropicProvider              │
+│     - Or use @cus_telemetry decorator                       │
+│     - Or use cus_track() context manager                    │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  4. AOS backend receives telemetry                          │
-│     - Token usage per call                                  │
-│     - Cost calculation (by model)                           │
-│     - Latency metrics                                       │
-│     - Trace data for debugging                              │
+│  4. Pre-call enforcement check                              │ ✅
+│     - Budget limit check                                    │
+│     - Token limit check                                     │
+│     - Rate limit check                                      │
+│     - Decision: allow/warn/throttle/block                   │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  5. Customer Console displays                               │
-│     - Total LLM spend                                       │
-│     - Usage by provider/model                               │
-│     - Performance metrics                                   │
-│     - LLM call traces in Logs domain                        │
+│  5. AOS backend receives telemetry                          │ ✅
+│     - POST /api/v1/cus/telemetry/llm-usage                  │
+│     - Token usage, cost, latency recorded                   │
+│     - cus_llm_usage table (immutable evidence)              │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  6. Observability                                           │ ✅
+│     - Prometheus metrics (cus_* namespace)                  │
+│     - Grafana dashboard                                     │
+│     - Alert rules for budget/throttle/health                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Actual SDK State (What Exists)
+### SDK Components ✅ ALL IMPLEMENTED
 
 | Component | Status | Location |
 |-----------|--------|----------|
@@ -575,154 +767,98 @@ Response: {
 | HTTP client | ✅ EXISTS | `sdk/python/aos_sdk/client.py` |
 | Runtime context | ✅ EXISTS | `sdk/python/aos_sdk/runtime.py` |
 | Trace collection | ✅ EXISTS | `sdk/python/aos_sdk/trace.py` |
-| AOS API key auth | ✅ EXISTS | SDK accepts AOS key for backend calls |
+| **Telemetry Reporter** | ✅ NEW | `sdk/python/aos_sdk/cus_reporter.py` |
+| **Base Provider** | ✅ NEW | `sdk/python/aos_sdk/cus_base.py` |
+| **Token Counter** | ✅ NEW | `sdk/python/aos_sdk/cus_token_counter.py` |
+| **Cost Calculator** | ✅ NEW | `sdk/python/aos_sdk/cus_cost.py` |
+| **OpenAI Adapter** | ✅ NEW | `sdk/python/aos_sdk/cus_openai.py` |
+| **Anthropic Adapter** | ✅ NEW | `sdk/python/aos_sdk/cus_anthropic.py` |
+| **Middleware** | ✅ NEW | `sdk/python/aos_sdk/cus_middleware.py` |
+| **Enforcer** | ✅ NEW | `sdk/python/aos_sdk/cus_enforcer.py` |
 
-### CRITICAL GAPS (What's Missing)
+### SDK Usage Patterns ✅ IMPLEMENTED
 
-| Component | Status | Impact |
-|-----------|--------|--------|
-| **Customer LLM credential acceptance** | ❌ NOT IMPLEMENTED | SDK cannot receive customer's Anthropic/OpenAI keys |
-| **LLM provider adapters** | ❌ NOT IMPLEMENTED | No wrappers for Anthropic, OpenAI, etc. |
-| **LLM call interception** | ❌ NOT IMPLEMENTED | Customer's direct LLM calls are INVISIBLE |
-| **Token counting middleware** | ❌ NOT IMPLEMENTED | Cannot measure customer's token usage |
-| **Cost calculation from usage** | ❌ NOT IMPLEMENTED | Cannot calculate customer's LLM spend |
-| **Telemetry recording endpoint** | ❌ NOT IMPLEMENTED | No backend endpoint for customer LLM telemetry |
+#### Pattern 1: Provider Adapter (Recommended)
 
-### Architecture Gap Analysis
-
-**Current SDK Design:**
 ```python
-# What SDK currently does
-from aos_sdk import AOSClient
+from aos_sdk import create_openai_provider
 
-client = AOSClient(
-    api_key="aos_xxx",  # AOS API key only
-    base_url="https://api.agentiverz.com"
+# Create wrapped provider
+provider = create_openai_provider(
+    api_key="sk-xxx",  # Customer's OpenAI key
+    integration_key="tenant:integration:secret",  # AOS integration key
 )
 
-# SDK calls AOS backend APIs
-runs = client.runs.list()
-```
-
-**Expected SDK Design:**
-```python
-# What SDK SHOULD do
-from aos_sdk import AOSClient
-from aos_sdk.providers import AnthropicProvider
-
-client = AOSClient(
-    api_key="aos_xxx",  # AOS API key for backend
-    llm_credentials={
-        "anthropic": "sk-ant-xxx",  # Customer's LLM key
-        "openai": "sk-xxx"          # Customer's LLM key
-    }
-)
-
-# Wrapped LLM call - AOS intercepts and records
-response = client.anthropic.messages.create(
-    model="claude-3-opus",
+# All calls automatically tracked
+response = provider.chat_completions_create(
+    model="gpt-4o",
     messages=[{"role": "user", "content": "Hello"}]
 )
-# AOS automatically tracks: tokens, cost, latency
+# Telemetry sent: tokens, cost, latency
 ```
 
-### Missing SDK Components
-
-#### 1. Provider Adapters (HIGH PRIORITY)
-
-```
-sdk/
-├── python/aos_sdk/
-│   └── providers/           # ❌ MISSING
-│       ├── __init__.py
-│       ├── base.py          # Base provider interface
-│       ├── anthropic.py     # Anthropic wrapper
-│       ├── openai.py        # OpenAI wrapper
-│       └── langchain.py     # LangChain integration
-```
-
-#### 2. Telemetry Middleware (HIGH PRIORITY)
+#### Pattern 2: Decorator
 
 ```python
-# Missing: middleware to intercept and record LLM calls
-class LLMTelemetryMiddleware:
-    def before_call(self, request):
-        self.start_time = time.time()
-        self.input_tokens = count_tokens(request)
+from aos_sdk import cus_telemetry
 
-    def after_call(self, response):
-        self.output_tokens = count_tokens(response)
-        self.latency_ms = (time.time() - self.start_time) * 1000
-        self.send_telemetry_to_aos()
+@cus_telemetry(model="gpt-4o", provider="openai")
+def my_llm_function(prompt):
+    return openai.chat.completions.create(...)
 ```
 
-#### 3. Backend Telemetry Endpoint (HIGH PRIORITY)
+#### Pattern 3: Context Manager
 
-```
-POST /api/v1/telemetry/llm-calls
+```python
+from aos_sdk import cus_track
 
-Request: {
-    "provider": "anthropic",
-    "model": "claude-3-opus",
-    "input_tokens": 150,
-    "output_tokens": 500,
-    "latency_ms": 1200,
-    "cost_cents": 3.25,
-    "trace_id": "uuid",
-    "timestamp": "2026-01-16T10:00:00Z"
-}
+with cus_track("gpt-4o", provider="openai") as tracker:
+    response = openai.chat.completions.create(...)
+    tracker.set_usage_from_response(response, "openai")
 ```
 
-### Integration Status Summary
+#### Pattern 4: SDK Patching
+
+```python
+from aos_sdk import cus_configure, cus_install_middleware
+
+cus_configure(integration_key="tenant:integration:secret")
+cus_install_middleware(patch_openai=True, patch_anthropic=True)
+
+# All subsequent SDK calls automatically tracked
+response = openai.chat.completions.create(...)
+```
+
+### Integration Status Summary ✅ COMPLETE
 
 ```
-Customer LLM Integration:     0% IMPLEMENTED
+Customer LLM Integration:     100% IMPLEMENTED
 
 SDK Components:
   - SDK Package:              ✅ EXISTS
   - AOS Backend Client:       ✅ EXISTS
-  - LLM Credential Accept:    ❌ NOT IMPLEMENTED
-  - Provider Adapters:        ❌ NOT IMPLEMENTED
-  - Call Interception:        ❌ NOT IMPLEMENTED
-  - Token Counting:           ❌ NOT IMPLEMENTED
-  - Cost Calculation:         ❌ NOT IMPLEMENTED
+  - LLM Credential Accept:    ✅ IMPLEMENTED (encrypted storage)
+  - Provider Adapters:        ✅ IMPLEMENTED (OpenAI, Anthropic)
+  - Call Interception:        ✅ IMPLEMENTED (multiple patterns)
+  - Token Counting:           ✅ IMPLEMENTED (tiktoken + fallback)
+  - Cost Calculation:         ✅ IMPLEMENTED (table-driven, versioned)
 
 Backend Components:
-  - Telemetry Endpoint:       ❌ NOT IMPLEMENTED
-  - LLMRunRecord Model:       ✅ EXISTS (backend workers only)
-  - Customer LLM Storage:     ❌ NOT IMPLEMENTED
+  - Telemetry Endpoint:       ✅ IMPLEMENTED (/api/v1/cus/telemetry/*)
+  - Integration CRUD:         ✅ IMPLEMENTED (/api/v1/cus/integrations/*)
+  - Enforcement API:          ✅ IMPLEMENTED (/api/v1/enforcement/*)
+  - CusLLMUsage Model:        ✅ IMPLEMENTED (cus_models.py)
+  - CusIntegration Model:     ✅ IMPLEMENTED (cus_models.py)
+  - Credential Encryption:    ✅ IMPLEMENTED (AES-256-GCM)
+  - Health Checks:            ✅ IMPLEMENTED (provider-specific)
 
-Result: Customer's LLM usage is COMPLETELY INVISIBLE to Agentiverz.
+Observability:
+  - Prometheus Metrics:       ✅ IMPLEMENTED (cus_* namespace)
+  - Grafana Dashboard:        ✅ IMPLEMENTED
+  - Alert Rules:              ✅ IMPLEMENTED
+
+Result: Customer LLM usage is FULLY VISIBLE in Agentiverz.
 ```
-
-### TODO: SDK Integration Implementation
-
-#### Phase 1: Provider Adapters (CRITICAL)
-
-| Task | Priority |
-|------|----------|
-| Create `sdk/python/aos_sdk/providers/` module | HIGH |
-| Implement `AnthropicProvider` adapter | HIGH |
-| Implement `OpenAIProvider` adapter | HIGH |
-| Add credential configuration to SDK init | HIGH |
-
-#### Phase 2: Telemetry Pipeline (CRITICAL)
-
-| Task | Priority |
-|------|----------|
-| Add `POST /api/v1/telemetry/llm-calls` endpoint | HIGH |
-| Create `CustomerLLMCall` model (separate from internal LLMRunRecord) | HIGH |
-| Implement token counting for each provider | HIGH |
-| Implement cost calculation by model | HIGH |
-
-#### Phase 3: Customer Console Integration (MEDIUM)
-
-| Task | Priority |
-|------|----------|
-| Display customer LLM usage in Overview/costs | MEDIUM |
-| Add customer LLM calls to Logs domain | MEDIUM |
-| Show cost breakdown by provider/model | MEDIUM |
-| Add usage alerts/limits for customer LLM spend | MEDIUM |
 
 ---
 
@@ -731,7 +867,60 @@ Result: Customer's LLM usage is COMPLETELY INVISIBLE to Agentiverz.
 | Section | Grade | Notes |
 |---------|-------|-------|
 | **API Keys** | A- | Production-ready, missing rotation/test |
-| **Integrations (WorkerConfig)** | D | Read-only, no customer management |
-| **SDK Integration (Customer LLM)** | F | NOT IMPLEMENTED - critical gap |
+| **Integrations (WorkerConfig)** | B | Read-only legacy, superseded by cus_integrations |
+| **Customer LLM Integrations** | A | Full lifecycle, enforcement, observability |
+| **SDK Integration** | A | Multiple patterns, provider adapters |
+| **Enforcement** | A | Budget/token/rate limits with precedence ladder |
+| **Observability** | A | Metrics, dashboard, alerts |
 
-**Critical Finding:** The entire customer LLM monitoring value proposition is unimplemented. Customers cannot connect their own LLM providers to Agentiverz for monitoring.
+**Summary (2026-01-17):** Customer LLM Integration is now **PRODUCTION-READY**. All 6 phases complete:
+- Phase 1: Foundation (models, schemas, migration)
+- Phase 2: Telemetry Ingest (API, SDK reporter)
+- Phase 3: SDK Providers (OpenAI, Anthropic adapters)
+- Phase 4: Full Management (CRUD, health, credentials)
+- Phase 5: Enforcement (budget, token, rate limits)
+- Phase 6: Observability (metrics, dashboard, alerts)
+
+**Reference:** `docs/architecture/CUSTOMER_INTEGRATIONS_ARCHITECTURE.md`
+
+---
+
+## 16. Related Files Summary
+
+### Customer LLM Integrations (NEW)
+
+| File | Layer | Purpose |
+|------|-------|---------|
+| `backend/app/models/cus_models.py` | L6 | CusIntegration, CusLLMUsage, CusUsageDaily |
+| `backend/app/schemas/cus_schemas.py` | L6 | Request/response schemas |
+| `backend/app/api/cus_integrations.py` | L2 | Integration CRUD endpoints |
+| `backend/app/api/cus_telemetry.py` | L2 | Telemetry ingestion endpoints |
+| `backend/app/api/cus_enforcement.py` | L2 | Enforcement check endpoints |
+| `backend/app/services/cus_integration_service.py` | L4 | Integration business logic |
+| `backend/app/services/cus_telemetry_service.py` | L4 | Telemetry business logic |
+| `backend/app/services/cus_enforcement_service.py` | L4 | Enforcement decisions |
+| `backend/app/services/cus_credential_service.py` | L4 | AES-256-GCM encryption |
+| `backend/app/services/cus_health_service.py` | L4 | Provider health checks |
+| `sdk/python/aos_sdk/cus_reporter.py` | SDK | Telemetry reporter |
+| `sdk/python/aos_sdk/cus_base.py` | SDK | Abstract provider |
+| `sdk/python/aos_sdk/cus_openai.py` | SDK | OpenAI adapter |
+| `sdk/python/aos_sdk/cus_anthropic.py` | SDK | Anthropic adapter |
+| `sdk/python/aos_sdk/cus_middleware.py` | SDK | Middleware patterns |
+| `sdk/python/aos_sdk/cus_enforcer.py` | SDK | Client-side enforcer |
+| `sdk/python/aos_sdk/cus_cost.py` | SDK | Cost calculation |
+| `sdk/python/aos_sdk/cus_token_counter.py` | SDK | Token counting |
+| `backend/app/metrics.py` | L6 | cus_* Prometheus metrics |
+| `monitoring/grafana/.../cus_llm_observability_dashboard.json` | Ops | Grafana dashboard |
+| `monitoring/rules/cus_integration_alerts.yml` | Ops | Alert rules |
+
+---
+
+## Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-01-17 | **MAJOR UPDATE**: Customer LLM Integrations now FULLY IMPLEMENTED (all 6 phases) |
+| 2026-01-17 | Added Section 14: SDK Integration Audit (complete) |
+| 2026-01-17 | Added Section 16: Related Files Summary |
+| 2026-01-17 | Updated all sections to reflect implemented state |
+| 2026-01-16 | Initial audit identifying critical gaps |
