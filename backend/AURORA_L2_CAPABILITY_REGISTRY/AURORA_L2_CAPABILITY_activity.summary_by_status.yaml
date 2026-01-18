@@ -1,0 +1,43 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
+#
+capability_id: activity.summary_by_status
+status: OBSERVED
+source_panels:
+- ACT-LLM-COMP-O2
+- ACT-LLM-COMP-O3
+- ACT-LLM-LIVE-O5
+domain: ACTIVITY
+metadata:
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-18'
+  declared_by: intent-ledger
+  declared_on: '2026-01-18'
+  observed_by: SDSR-ACT-LLM-COMP-O2-001
+  observed_on: '2026-01-18'
+assumption:
+  endpoint: /api/v1/activity/summary/by-status
+  method: GET
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: /api/v1/activity/summary/by-status
+  observed_method: GET
+  observed_at: '2026-01-18T10:52:29.621468+00:00'
+  observation_id: OBS-SDSR-ACT-LLM-COMP-O2-001-20260118105216
+acceptance_criteria:
+- Returns run counts grouped by execution status
+- Response includes buckets array with status breakdown
+- Supports state filter for LIVE/COMPLETED scoping
+observation:
+  scenario_id: SDSR-ACT-LLM-COMP-O2-001
+  observed_at: '2026-01-18T10:52:29.621468+00:00'
+  trace_id: null
+  invariants_passed: 3
+  invariants_total: 3
+coherency:
+  last_checked: '2026-01-18T10:52:29.621468+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py

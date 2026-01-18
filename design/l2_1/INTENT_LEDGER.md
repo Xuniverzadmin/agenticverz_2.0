@@ -175,6 +175,7 @@ Domain: POLICIES
 Panels:
 - POL-LIM-THR-O1 (thresholds overview)
 - POL-LIM-THR-O2 (threshold details)
+- POL-LIM-THR-O3 (set execution thresholds)
 - POL-LIM-VIO-O1 (violations list)
 - POL-LIM-VIO-O2 (violation details)
 
@@ -228,6 +229,76 @@ Panels:
 - CON-PR-ST-O2 (provider details)
 - CON-HD-ER-O1 (connection errors)
 - CON-HD-ER-O2 (error details)
+
+---
+
+## Policy Clauses
+
+Policy clauses define non-negotiable control-plane rules for capability surfaces.
+Violations are architectural incidents, not implementation bugs.
+
+### Policy: TOPIC-SCOPED-ENDPOINT-001
+
+**Title:** Topic Determines Data Scope, Not Caller
+
+**Status:** ACTIVE
+**Effective:** 2026-01-18
+**Applies To:** Any capability serving multiple topics with distinct data boundaries
+
+**Problem Statement:**
+When a capability (e.g., `activity.runs_by_dimension`) serves panels in different topics
+(LIVE vs COMPLETED), the data scope must be enforced at the API boundary.
+Caller-controlled filtering (query params, headers) creates:
+- Data leakage risk (LIVE panel showing COMPLETED data)
+- Frontend misconfiguration surface
+- Silent correctness failures
+- "Why is LIVE showing completed?" incidents
+
+**Rule (Non-Negotiable):**
+
+> **Topic semantics MUST be enforced at the endpoint, not by the caller.**
+
+**Required Design Pattern:**
+
+1. **Single Capability** — Semantic contract remains unified
+2. **Topic-Scoped Endpoints** — Separate URLs with hardcoded state binding
+3. **Implicit Filtering** — State injected by endpoint, never from request
+4. **Non-Overrideable** — No query param or header can change scope
+
+**Endpoint Naming Convention:**
+```
+/api/v1/{domain}/{resource}/{topic}/by-{dimension}
+```
+
+Examples:
+- `/api/v1/activity/runs/live/by-dimension` → state=LIVE (hardcoded)
+- `/api/v1/activity/runs/completed/by-dimension` → state=COMPLETED (hardcoded)
+
+**Generic Endpoint Disposition:**
+If a generic endpoint exists (e.g., `/runs/by-dimension` with optional state param):
+- MUST NOT be bound to any panel
+- MUST be marked internal/admin-only
+- SHOULD be deprecated if no admin use case exists
+
+**Capability Mapping:**
+```yaml
+capability_id: activity.runs_by_dimension
+endpoints:
+  - /api/v1/activity/runs/live/by-dimension      # LIVE topic
+  - /api/v1/activity/runs/completed/by-dimension # COMPLETED topic
+semantic_contract: "Distribution by dimension, topic-scoped"
+```
+
+**Violation Classification:**
+- Exposing caller-controlled state filter to panel → **CONTROL-PLANE VIOLATION**
+- Panel calling generic endpoint instead of topic-scoped → **BINDING VIOLATION**
+- Frontend implementing conditional state logic → **NOISE VIOLATION**
+
+**Audit Requirement:**
+Any capability serving multiple topics MUST declare:
+1. Which topics it serves
+2. Which endpoint serves which topic
+3. Confirmation that state binding is implicit
 
 ---
 
@@ -788,7 +859,7 @@ What it explicitly does NOT show:
 - No policy editing
 - No approval actions
 
-Capability: overview.feedback_summary
+Capability: overview.decisions
 
 ### Panel: OVR-SUM-CI-O1
 
@@ -846,7 +917,7 @@ What it explicitly does NOT show:
 - No thresholds or alerts
 - No forecasts
 
-Capability: overview.cost_by_feature
+Capability: overview.costs
 
 ### Panel: OVR-SUM-CI-O3
 
@@ -875,7 +946,7 @@ What it explicitly does NOT show:
 - No alerts or policy thresholds
 - No controls
 
-Capability: overview.cost_by_model
+Capability: overview.costs
 
 ### Panel: OVR-SUM-CI-O4
 
@@ -904,7 +975,7 @@ What it explicitly does NOT show:
 - No policy or alert thresholds
 - No per-run or per-model detail
 
-Capability: overview.cost_anomalies
+Capability: overview.costs
 
 ### Panel: ACT-LLM-LIVE-O1
 
@@ -939,20 +1010,21 @@ Location:
 - Slot: 2
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Surface live runs exceeding expected execution time.
 
 What it shows:
 - Count of live runs exceeding time threshold (e.g., > X minutes)
+- Runs flagged as AT_RISK or VIOLATED for execution time
 
 What it explicitly does NOT show:
 - No root cause
 - No cost data
 - No termination control
 
-Capability: null
+Capability: activity.risk_signals
 
 ### Panel: ACT-LLM-LIVE-O3
 
@@ -976,7 +1048,7 @@ What it explicitly does NOT show:
 - No manual override
 - No mitigation controls
 
-Capability: activity.jobs_list
+Capability: activity.live_runs
 
 ### Panel: ACT-LLM-LIVE-O4
 
@@ -1000,7 +1072,7 @@ What it explicitly does NOT show:
 - No replay
 - No export
 
-Capability: activity.worker_runs
+Capability: activity.runtime_traces
 
 ### Panel: ACT-LLM-LIVE-O5
 
@@ -1017,15 +1089,25 @@ Purpose:
 Provide a coarse distribution of live runs by major dimension.
 
 What it shows:
-- Distribution by LLM provider, agent, or trigger type
-  (exact dimension decided later)
+- Distribution by LLM provider, agent, source, risk level, status, or cost
+- Dimension selector buttons to switch views (LIVE topic-scoped):
+  - By Provider → /runs/live/by-dimension?dim=provider_type
+  - By Source → /runs/live/by-dimension?dim=source
+  - By Agent → /runs/live/by-dimension?dim=agent_id
+  - By Risk → /runs/live/by-dimension?dim=risk_level
+  - By Status → /summary/by-status (future: /summary/live/by-status)
+  - By Cost → /cost-analysis (future: /cost-analysis/live)
+- NOTE: Per Policy TOPIC-SCOPED-ENDPOINT-001, state=LIVE is hardcoded at endpoint
 
 What it explicitly does NOT show:
 - No drill-down
 - No per-run detail
 - No controls
 
-Capability: activity.health_status
+Capabilities:
+- activity.runs_by_dimension (primary)
+- activity.summary_by_status (shared with COMP-O2)
+- activity.cost_analysis (shared with SIG-O4)
 
 ### Panel: ACT-LLM-COMP-O1
 
@@ -1073,7 +1155,7 @@ What it explicitly does NOT show:
 - No downstream impact
 - No policy attribution
 
-Capability: activity.summary
+Capability: activity.summary_by_status
 
 ### Panel: ACT-LLM-COMP-O3
 
@@ -1084,20 +1166,21 @@ Location:
 - Slot: 3
 
 Class: interpretation
-State: EMPTY
+State: DRAFT
 
 Purpose:
 Expose completed runs that ended in failure.
 
 What it shows:
-- Count of failed runs
+- Count of failed runs (from status breakdown)
+- Uses FAILED bucket from summary_by_status
 
 What it explicitly does NOT show:
 - No root cause
 - No retry controls
 - No blame attribution
 
-Capability: null
+Capability: activity.summary_by_status
 
 ### Panel: ACT-LLM-COMP-O4
 
@@ -1124,7 +1207,7 @@ What it explicitly does NOT show:
 - No enforcement
 - No tuning actions
 
-Capability: activity.customer_activity
+Capability: activity.completed_runs
 
 ### Panel: ACT-LLM-COMP-O5
 
@@ -1148,7 +1231,7 @@ What it explicitly does NOT show:
 - No reason codes
 - No recovery options
 
-Capability: activity.runtime_traces
+Capability: activity.run_detail
 
 ### Panel: ACT-LLM-SIG-O1
 
@@ -1202,7 +1285,7 @@ What it explicitly does NOT show:
 - No policy controls
 - No historical trends
 
-Capability: activity.predictions_list
+Capability: activity.signals
 
 ### Panel: ACT-LLM-SIG-O3
 
@@ -1229,7 +1312,7 @@ What it explicitly does NOT show:
 - No root cause analysis
 - No remediation controls
 
-Capability: activity.predictions_summary
+Capability: activity.patterns
 
 ### Panel: ACT-LLM-SIG-O4
 
@@ -1256,7 +1339,7 @@ What it explicitly does NOT show:
 - No policy enforcement
 - No historical cost trends
 
-Capability: activity.discovery_list
+Capability: activity.cost_analysis
 
 ### Panel: ACT-LLM-SIG-O5
 
@@ -1286,7 +1369,7 @@ What it explicitly does NOT show:
 - No policy execution
 - No drill-down details
 
-Capability: activity.discovery_stats
+Capability: activity.signals
 
 ### Panel: INC-EV-ACT-O1
 
@@ -1339,7 +1422,7 @@ What it explicitly does NOT show:
 - No actions or remediation
 - No policy editing
 
-Capability: incidents.summary
+Capability: incidents.list
 
 ### Panel: INC-EV-ACT-O3
 
@@ -1366,7 +1449,7 @@ What it explicitly does NOT show:
 - No policy changes
 - No resolution controls
 
-Capability: incidents.metrics
+Capability: incidents.list
 
 ### Panel: INC-EV-ACT-O4
 
@@ -1394,7 +1477,7 @@ What it explicitly does NOT show:
 - No budget editing
 - No forecasts
 
-Capability: incidents.patterns
+Capability: incidents.cost_impact
 
 ### Panel: INC-EV-ACT-O5
 
@@ -1421,7 +1504,7 @@ What it explicitly does NOT show:
 - No policy changes
 - No resolution execution
 
-Capability: incidents.infra_summary
+Capability: incidents.summary
 
 ### Panel: INC-EV-RES-O1
 
@@ -1477,7 +1560,7 @@ What it explicitly does NOT show:
 - No resolution actions
 - No policy editing
 
-Capability: incidents.recovery_actions
+Capability: incidents.learnings
 
 ### Panel: INC-EV-RES-O3
 
@@ -1504,7 +1587,7 @@ What it explicitly does NOT show:
 - No policy adjustments
 - No controls
 
-Capability: incidents.recovery_candidates
+Capability: incidents.metrics
 
 ### Panel: INC-EV-RES-O4
 
@@ -1531,7 +1614,7 @@ What it explicitly does NOT show:
 - No forecasts
 - No policy controls
 
-Capability: incidents.graduation_list
+Capability: incidents.resolved_list
 
 ### Panel: INC-EV-RES-O5
 
@@ -1558,7 +1641,7 @@ What it explicitly does NOT show:
 - No approvals
 - No automated actions
 
-Capability: incidents.replay_summary
+Capability: incidents.learnings
 
 ### Panel: INC-EV-HIST-O1
 
@@ -1611,7 +1694,7 @@ What it explicitly does NOT show:
 - No real-time data
 - No controls
 
-Capability: incidents.guard_list
+Capability: incidents.historical_list
 
 ### Panel: INC-EV-HIST-O3
 
@@ -1638,7 +1721,7 @@ What it explicitly does NOT show:
 - No policy changes
 - No actions
 
-Capability: incidents.v1_list
+Capability: incidents.recurring
 
 ### Panel: INC-EV-HIST-O4
 
@@ -1666,7 +1749,7 @@ What it explicitly does NOT show:
 - No projections
 - No real-time data
 
-Capability: incidents.ops_list
+Capability: incidents.cost_impact
 
 ### Panel: INC-EV-HIST-O5
 
@@ -1693,7 +1776,7 @@ What it explicitly does NOT show:
 - No approvals
 - No automated actions
 
-Capability: incidents.integration_stats
+Capability: incidents.patterns
 
 ### Panel: POL-GOV-ACT-O1
 
@@ -1720,7 +1803,7 @@ What it explicitly does NOT show:
 - No drafts or proposals
 - No historical policies
 
-Capability: policies.proposals_list
+Capability: policies.active_policies
 
 ### Panel: POL-GOV-ACT-O2
 
@@ -1747,7 +1830,7 @@ What it explicitly does NOT show:
 - No recommendations
 - No draft proposals
 
-Capability: policies.proposals_summary
+Capability: policies.metrics
 
 ### Panel: POL-GOV-ACT-O3
 
@@ -1775,7 +1858,7 @@ What it explicitly does NOT show:
 - No enforcement controls
 - No draft proposals
 
-Capability: policies.requests_list
+Capability: policies.requests
 
 ### Panel: POL-GOV-ACT-O4
 
@@ -1830,7 +1913,7 @@ What it explicitly does NOT show:
 - No disabling
 - No auto-rewriting
 
-Capability: policies.layer_metrics
+Capability: policies.metrics
 
 ### Panel: POL-GOV-DFT-O1
 
@@ -1858,7 +1941,7 @@ What it explicitly does NOT show:
 - No draft policies yet
 - No actions
 
-Capability: policies.drafts_list
+Capability: policies.lessons_stats
 
 ### Panel: POL-GOV-DFT-O2
 
@@ -1885,7 +1968,7 @@ What it explicitly does NOT show:
 - No activation
 - No human bypass
 
-Capability: policies.versions_list
+Capability: policies.drafts_list
 
 ### Panel: POL-GOV-DFT-O3
 
@@ -1912,7 +1995,7 @@ What it explicitly does NOT show:
 - No black-box proposals
 - No enforcement
 
-Capability: policies.current_version
+Capability: policies.proposals_summary
 
 ### Panel: POL-GOV-DFT-O4
 
@@ -1938,7 +2021,7 @@ What it explicitly does NOT show:
 - No auto-activation
 - No silent inheritance
 
-Capability: policies.conflicts_list
+Capability: policies.conflicts
 
 ### Panel: POL-GOV-DFT-O5
 
@@ -1964,7 +2047,64 @@ What it explicitly does NOT show:
 - No silent expiration
 - No auto-decisions
 
-Capability: policies.dependencies_list
+Capability: policies.dependencies
+
+### Panel: POL-GOV-LES-O1
+
+Location:
+- Domain: POLICIES
+- Subdomain: GOVERNANCE
+- Topic: LESSONS
+- Slot: 1
+
+Class: evidence
+State: DRAFT
+
+Purpose:
+Show lessons learned from system behavior — observed patterns that inform governance.
+
+What it shows:
+- Critical failures and their root causes
+- Near-threshold runs and recurring patterns
+- Cost overruns and cost-saving behaviors
+- High override frequency signals
+- Grouped by: LLM, Agent, Human actor, Policy gap type
+- Evidence links: incident IDs, run IDs, trace IDs
+
+What it explicitly does NOT show:
+- No recommendations or synthesis
+- No draft policies
+- No actions or controls
+
+Capability: lessons.list
+
+### Panel: POL-GOV-LES-O2
+
+Location:
+- Domain: POLICIES
+- Subdomain: GOVERNANCE
+- Topic: LESSONS
+- Slot: 2
+
+Class: interpretation
+State: DRAFT
+
+Purpose:
+Show draft policy proposals derived from lessons — awaiting human approval or rejection.
+
+What it shows:
+- Machine-proposed policy drafts based on observed lessons
+- Each proposal linked to source lessons (evidence chain)
+- Expected benefit: incidents prevented, costs saved
+- Known risks: false positives, friction
+- Proposal status: pending, approved, rejected, deferred
+
+What it explicitly does NOT show:
+- No auto-activation
+- No enforcement
+- No silent decisions
+
+Capability: lessons.get
 
 ### Panel: POL-GOV-LIB-O1
 
@@ -1990,7 +2130,7 @@ What it explicitly does NOT show:
 - No filtering by current usage
 - No enforcement
 
-Capability: policies.safety_rules
+Capability: policies.rules
 
 ### Panel: POL-GOV-LIB-O2
 
@@ -2015,7 +2155,7 @@ What it explicitly does NOT show:
 - No human override at this stage
 - No adoption actions
 
-Capability: policies.ethical_constraints
+Capability: policies.rules
 
 ### Panel: POL-GOV-LIB-O3
 
@@ -2041,7 +2181,7 @@ What it explicitly does NOT show:
 - No adoption controls
 - No proposed changes
 
-Capability: policies.active_policies
+Capability: policies.rules
 
 ### Panel: POL-GOV-LIB-O4
 
@@ -2067,7 +2207,7 @@ What it explicitly does NOT show:
 - No default scope
 - No silent inheritance
 
-Capability: policies.guard_policies
+Capability: policies.rules
 
 ### Panel: POL-GOV-LIB-O5
 
@@ -2094,7 +2234,7 @@ What it explicitly does NOT show:
 - No auto-rollback
 - No silent changes
 
-Capability: policies.temporal_policies
+Capability: policies.rules
 
 ### Panel: ANA-CST-USG-O1
 
@@ -2249,7 +2389,7 @@ What it explicitly does NOT show:
 - No usage metrics
 - No violation data
 
-Capability: policies.risk_ceilings
+Capability: policies.limits
 
 ### Panel: POL-LIM-THR-O2
 
@@ -2276,7 +2416,7 @@ What it explicitly does NOT show:
 - No usage analytics
 - No violation history
 
-Capability: policies.budgets_list
+Capability: policies.budgets
 
 ### Panel: POL-LIM-THR-O3
 
@@ -2286,24 +2426,34 @@ Location:
 - Topic: THRESHOLDS
 - Slot: 3
 
-Class: execution
+Class: configuration
 State: DRAFT
 
 Purpose:
-Provide blast radius and rollout strategy controls.
+Set execution thresholds that drive LLM run governance signals.
+
+This is the authoritative input surface for customer-controlled limits.
+These params feed the LLMRunThresholdResolver which evaluates runs.
 
 What it shows:
-- Start scope: single LLM/agent
-- Expansion path: group → global
-- Rollout mode: shadow → enforce, partial enforcement (% of runs)
-- Rollback switch: one-click revert
-- High blast radius requires shadow period and review acknowledgement
+- Max Execution Time (ms): 1000-300000, default 60000
+- Max Tokens: 256-200000, default 8192
+- Max Cost (USD): 0.01-100.00, default 1.00
+- Signal on Failure: toggle, default ON
+- Effective defaults shown when empty (grey "Inherited default")
+- Yellow badge: "Overrides default"
+- Red badge: "Invalid / rejected"
+
+What it enables:
+- ACT-LLM-LIVE-O2: Surface live runs exceeding expected execution time
+- ACT-LLM-COMP-O3: Expose completed runs that ended in failure
 
 What it explicitly does NOT show:
-- No usage data
-- No violation data
+- No usage analytics
+- No violation history
+- No live run data
 
-Capability: policies.quota_runs
+Capability: policies.limits.threshold_params
 
 ### Panel: POL-LIM-THR-O4
 
@@ -2330,7 +2480,7 @@ What it explicitly does NOT show:
 - No live enforcement
 - No production impact
 
-Capability: policies.quota_tokens
+Capability: policies.limits
 
 ### Panel: POL-LIM-THR-O5
 
@@ -2356,7 +2506,7 @@ What it explicitly does NOT show:
 - No silent activation
 - No hidden changes
 
-Capability: policies.cooldowns_list
+Capability: policies.limits
 
 ### Panel: POL-LIM-VIO-O1
 
@@ -2383,7 +2533,7 @@ What it explicitly does NOT show:
 - No configuration controls
 - No policy editing
 
-Capability: policies.violations_list
+Capability: policies.violations
 
 ### Panel: POL-LIM-VIO-O2
 
@@ -2408,7 +2558,7 @@ What it explicitly does NOT show:
 - No policy controls
 - No excuses
 
-Capability: policies.cost_incidents
+Capability: policies.violations
 
 ### Panel: POL-LIM-VIO-O3
 
@@ -2434,7 +2584,7 @@ What it explicitly does NOT show:
 - No override controls
 - No policy editing
 
-Capability: policies.simulated_incidents
+Capability: policies.violations
 
 ### Panel: POL-LIM-VIO-O4
 
@@ -2460,7 +2610,7 @@ What it explicitly does NOT show:
 - No policy controls
 - No threshold editing
 
-Capability: policies.anomalies_list
+Capability: policies.violations
 
 ### Panel: POL-LIM-VIO-O5
 
@@ -2486,7 +2636,7 @@ What it explicitly does NOT show:
 - No editing limits
 - No approvals
 
-Capability: policies.divergence_report
+Capability: policies.violations
 
 ### Panel: LOG-REC-LLM-O1
 
@@ -2502,7 +2652,7 @@ State: DRAFT
 Purpose:
 Show the run log envelope — canonical immutable record per run.
 
-Capability: logs.runtime_traces
+Capability: logs.llm_runs
 
 What it shows:
 - Run ID, start/end timestamp
@@ -2515,7 +2665,7 @@ What it explicitly does NOT show:
 - No interpretation
 - No aggregation
 
-Capability: logs.runtime_traces
+Capability: logs.llm_runs
 
 ### Panel: LOG-REC-LLM-O2
 
@@ -2531,7 +2681,7 @@ State: DRAFT
 Purpose:
 Show execution trace — step-by-step progression of the run.
 
-Capability: logs.activity_runs
+Capability: logs.llm_runs
 
 What it shows:
 - Step number, timestamp, action type (prompt, tool, API call, delegation)
@@ -2543,7 +2693,7 @@ What it explicitly does NOT show:
 - No summarization
 - No policy judgment
 
-Capability: logs.activity_runs
+Capability: logs.llm_runs
 
 ### Panel: LOG-REC-LLM-O3
 
@@ -2559,7 +2709,7 @@ State: DRAFT
 Purpose:
 Show threshold and policy interaction trace — governance footprint per run.
 
-Capability: logs.customer_runs
+Capability: logs.llm_runs
 
 What it shows:
 - Threshold checks (cost/time/token/rate)
@@ -2571,7 +2721,7 @@ What it explicitly does NOT show:
 - No policy editing
 - No recommendations
 
-Capability: logs.customer_runs
+Capability: logs.llm_runs
 
 ### Panel: LOG-REC-LLM-O4
 
@@ -2587,7 +2737,7 @@ State: DRAFT
 Purpose:
 Show 60-second incident replay window — what happened around the inflection point.
 
-Capability: logs.tenant_runs
+Capability: logs.llm_runs
 
 What it shows:
 - T-30s → T+30s around inflection point
@@ -2599,7 +2749,7 @@ What it explicitly does NOT show:
 - No summarization
 - No interpretation
 
-Capability: logs.tenant_runs
+Capability: logs.llm_runs
 
 ### Panel: LOG-REC-LLM-O5
 
@@ -2615,7 +2765,7 @@ State: DRAFT
 Purpose:
 Show audit and export package — legally defensible evidence bundle.
 
-Capability: logs.mismatch_list
+Capability: logs.llm_runs
 
 What it shows:
 - Audit metadata: accessed by, deterministic state hash, integrity checksum
@@ -2627,7 +2777,7 @@ What it explicitly does NOT show:
 - No modification controls
 - No redaction controls
 
-Capability: logs.mismatch_list
+Capability: logs.llm_runs
 
 ### Panel: LOG-REC-SYS-O1
 
@@ -2643,7 +2793,7 @@ State: DRAFT
 Purpose:
 Show environment snapshot — baseline state at run start.
 
-Capability: logs.guard_logs
+Capability: logs.system
 
 What it shows:
 - Customer environment ID, region/zone, VPC/subnet
@@ -2669,7 +2819,7 @@ State: DRAFT
 Purpose:
 Show network and bandwidth telemetry — connectivity health during execution.
 
-Capability: logs.health_check
+Capability: logs.system
 
 What it shows:
 - Time-series: ingress/egress bandwidth, packet loss %, latency (p50/p95/p99)
@@ -2694,7 +2844,7 @@ State: DRAFT
 Purpose:
 Show infra interrupts and degradation events — what infra did to the run.
 
-Capability: logs.ready_check
+Capability: logs.system
 
 What it shows:
 - Node restarts, pod evictions, autoscaling events
@@ -2719,7 +2869,7 @@ State: DRAFT
 Purpose:
 Show run-aligned infra replay window — infra state at moment of anomaly.
 
-Capability: logs.adapters_health
+Capability: logs.system
 
 What it shows:
 - 60-second window aligned to failure/near-threshold/cost spike/latency anomaly
@@ -2744,7 +2894,7 @@ State: DRAFT
 Purpose:
 Show infra audit and attribution record — who is responsible.
 
-Capability: logs.skills_health
+Capability: logs.system
 
 What it shows:
 - Infra fault attribution: customer infra, cloud provider, LLM provider, internal platform
@@ -2769,7 +2919,7 @@ State: DRAFT
 Purpose:
 Show identity and authentication lifecycle — who accessed and how.
 
-Capability: logs.traces_list
+Capability: logs.audit
 
 What it shows:
 - Login/logout, token issuance/refresh/revocation
@@ -2795,7 +2945,7 @@ State: DRAFT
 Purpose:
 Show authorization and access decisions — what each identity was allowed to do.
 
-Capability: logs.rbac_audit
+Capability: logs.audit
 
 What it shows:
 - Resource accessed, action attempted
@@ -2821,7 +2971,7 @@ State: DRAFT
 Purpose:
 Show trace and log access audit — who viewed, exported, or modified observability data.
 
-Capability: logs.ops_audit
+Capability: logs.audit
 
 What it shows:
 - Actions: log view, trace replay, evidence export, redaction applied, deletion attempts
@@ -2845,7 +2995,7 @@ State: DRAFT
 Purpose:
 Show integrity and tamper detection — was any audit data altered or compromised.
 
-Capability: logs.status_history
+Capability: logs.audit
 
 What it shows:
 - Integrity: hashes per log segment, hash chaining, write-once markers
@@ -2870,7 +3020,7 @@ State: DRAFT
 Purpose:
 Show compliance and export record — what audit evidence was produced, shared, or certified.
 
-Capability: logs.status_stats
+Capability: logs.audit
 
 What it shows:
 - Per export: type (SOC2, ISO, internal, customer), scope, requestor, approval chain
@@ -2887,7 +3037,7 @@ Capability: null
 
 ## Capabilities
 
-### Capability: overview.activity_snapshot
+### Capability: overview.highlights
 
 Panel: OVR-SUM-HL-O1
 Status: OBSERVED
@@ -2993,7 +3143,7 @@ Acceptance:
 
 Scenario: PENDING (SDSR to be created)
 
-### Capability: activity.live_runs
+### Capability: activity.runs
 
 Panel: ACT-LLM-LIVE-O1
 Status: ASSUMED
@@ -3011,7 +3161,7 @@ Acceptance:
 
 Scenario: SDSR-ACT-LLM-LIVE-O1-001
 
-### Capability: activity.completed_runs
+### Capability: activity.runs
 
 Panel: ACT-LLM-COMP-O1
 Status: ASSUMED
@@ -3029,23 +3179,114 @@ Acceptance:
 
 Scenario: SDSR-ACT-LLM-COMP-O1-001
 
-### Capability: activity.signals
+### Capability: activity.runs_by_dimension
 
-Panel: ACT-LLM-SIG-O1
-Status: ASSUMED
+Panel: ACT-LLM-LIVE-O5, ACT-LLM-COMP-O5
+Status: DECLARED
 
 Implementation:
-- Endpoint: /api/v1/activity/runs
+- Method: GET
+- Policy: TOPIC-SCOPED-ENDPOINT-001
+
+Topics Served:
+  - topic: LIVE
+    endpoint: /api/v1/activity/runs/live/by-dimension
+    state_binding: implicit (LIVE hardcoded)
+  - topic: COMPLETED
+    endpoint: /api/v1/activity/runs/completed/by-dimension
+    state_binding: implicit (COMPLETED hardcoded)
+
+Generic Endpoint (INTERNAL/ADMIN ONLY):
+  - endpoint: /api/v1/activity/runs/by-dimension
+  - status: DEPRECATED
+  - note: NOT FOR PANEL USE
+
+Data Mapping:
+- dimension → grouping field (provider_type, source, agent_id, risk_level, status)
+- groups → array of {value, count, percentage}
+- total_runs → total count before grouping
+
+Acceptance:
+- Returns run counts grouped by specified dimension
+- Response includes dimension, groups array, total_runs
+- State binding is IMPLICIT (injected by endpoint, not caller-controlled)
+- Frontend calls topic-scoped endpoint directly (no state param needed)
+
+Scenario: SDSR-ACT-LLM-LIVE-O5-001
+
+### Capability: activity.summary_by_status
+
+Panel: ACT-LLM-COMP-O2, ACT-LLM-LIVE-O5
+Status: OBSERVED
+
+Implementation:
+- Endpoint: /api/v1/activity/summary/by-status
 - Method: GET
 
 Data Mapping:
-- signals → runs with signal conditions (success, failure, near-threshold)
+- buckets → array of {status, count, percentage}
+- total_runs → total count across all statuses
 
 Acceptance:
-- Returns runs that emit signals
-- Response includes signal type indicators (success, failure, threshold)
+- Returns run counts grouped by execution status
+- Response includes buckets array with status breakdown
+- Supports state filter for LIVE/COMPLETED scoping
 
-Scenario: SDSR-ACT-LLM-SIG-O1-001
+Scenario: SDSR-ACT-LLM-COMP-O2-001
+
+### Capability: activity.patterns
+
+Panel: ACT-LLM-SIG-O3
+Status: OBSERVED
+
+Implementation:
+- Endpoint: /api/v1/activity/patterns
+- Method: GET
+
+Data Mapping:
+- patterns → detected instability patterns (retry_loop, step_oscillation, tool_call_loop, timeout_cascade)
+
+Acceptance:
+- Returns detected behavior patterns over time
+- Response includes pattern_type, run_id, confidence, details
+
+Scenario: SDSR-ACT-LLM-SIG-O3-001
+
+### Capability: activity.cost_analysis
+
+Panel: ACT-LLM-SIG-O4, ACT-LLM-LIVE-O5
+Status: DECLARED
+
+Implementation:
+- Endpoint: /api/v1/activity/cost-analysis
+- Method: GET
+
+Data Mapping:
+- agents → cost anomalies via Z-score comparison against baseline
+
+Acceptance:
+- Returns cost anomaly analysis per agent
+- Response includes z_score, is_anomaly, baseline comparison
+
+Scenario: SDSR-ACT-LLM-SIG-O4-001
+
+### Capability: activity.signals
+
+Panel: ACT-LLM-SIG-O1, ACT-LLM-SIG-O2, ACT-LLM-SIG-O5
+Status: OBSERVED
+
+Implementation:
+- Endpoint: /api/v1/activity/attention-queue
+- Method: GET
+
+Data Mapping:
+- queue → prioritized attention items with composite scores
+
+Acceptance:
+- Returns runs ranked by attention score (risk 35%, impact 25%, latency 15%, recency 15%, evidence 10%)
+- Response includes attention_score, reasons, state, status
+
+Scenario: SDSR-ACT-LLM-SIG-O5-001
 
 ### Capability: incidents.list
 
@@ -3065,7 +3306,7 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-ACT-O1-001
 
-### Capability: incidents.summary
+### Capability: incidents.list
 
 Panel: INC-EV-ACT-O2
 Status: ASSUMED
@@ -3083,7 +3324,7 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-ACT-O2-001
 
-### Capability: incidents.metrics
+### Capability: incidents.list
 
 Panel: INC-EV-ACT-O3
 Status: ASSUMED
@@ -3119,7 +3360,7 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-ACT-O4-001
 
-### Capability: incidents.infra_summary
+### Capability: incidents.list
 
 Panel: INC-EV-ACT-O5
 Status: ASSUMED
@@ -3137,7 +3378,7 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-ACT-O5-001
 
-### Capability: incidents.resolved_list
+### Capability: incidents.list
 
 Panel: INC-EV-RES-O1
 Status: ASSUMED
@@ -3155,7 +3396,7 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-RES-O1-001
 
-### Capability: incidents.recovery_actions
+### Capability: incidents.learnings
 
 Panel: INC-EV-RES-O2
 Status: ASSUMED
@@ -3173,7 +3414,7 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-RES-O2-001
 
-### Capability: incidents.recovery_candidates
+### Capability: incidents.learnings
 
 Panel: INC-EV-RES-O3
 Status: ASSUMED
@@ -3191,7 +3432,7 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-RES-O3-001
 
-### Capability: incidents.graduation_list
+### Capability: incidents.list
 
 Panel: INC-EV-RES-O4
 Status: ASSUMED
@@ -3209,7 +3450,7 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-RES-O4-001
 
-### Capability: incidents.replay_summary
+### Capability: incidents.list
 
 Panel: INC-EV-RES-O5
 Status: ASSUMED
@@ -3227,7 +3468,7 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-RES-O5-001
 
-### Capability: incidents.historical_list
+### Capability: incidents.list
 
 Panel: INC-EV-HIST-O1
 Status: ASSUMED
@@ -3245,7 +3486,7 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-HIST-O1-001
 
-### Capability: incidents.guard_list
+### Capability: incidents.list
 
 Panel: INC-EV-HIST-O2
 Status: ASSUMED
@@ -3263,7 +3504,7 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-HIST-O2-001
 
-### Capability: incidents.v1_list
+### Capability: incidents.list
 
 Panel: INC-EV-HIST-O3
 Status: ASSUMED
@@ -3281,7 +3522,7 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-HIST-O3-001
 
-### Capability: incidents.ops_list
+### Capability: incidents.list
 
 Panel: INC-EV-HIST-O4
 Status: ASSUMED
@@ -3299,7 +3540,7 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-HIST-O4-001
 
-### Capability: incidents.integration_stats
+### Capability: incidents.list
 
 Panel: INC-EV-HIST-O5
 Status: ASSUMED
@@ -3317,7 +3558,7 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-HIST-O5-001
 
-### Capability: policies.proposals_list
+### Capability: policies.rules
 
 Panel: POL-GOV-ACT-O1
 Status: ASSUMED
@@ -3335,7 +3576,7 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-ACT-O1-001
 
-### Capability: policies.proposals_summary
+### Capability: policies.rules
 
 Panel: POL-GOV-ACT-O2
 Status: ASSUMED
@@ -3353,7 +3594,7 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-ACT-O2-001
 
-### Capability: policies.requests_list
+### Capability: policies.requests
 
 Panel: POL-GOV-ACT-O3
 Status: ASSUMED
@@ -3371,7 +3612,7 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-ACT-O3-001
 
-### Capability: policies.layer_state
+### Capability: policies.state
 
 Panel: POL-GOV-ACT-O4
 Status: ASSUMED
@@ -3389,7 +3630,7 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-ACT-O4-001
 
-### Capability: policies.layer_metrics
+### Capability: policies.metrics
 
 Panel: POL-GOV-ACT-O5
 Status: ASSUMED
@@ -3407,7 +3648,7 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-ACT-O5-001
 
-### Capability: policies.drafts_list
+### Capability: policies.rules
 
 Panel: POL-GOV-DFT-O1
 Status: ASSUMED
@@ -3425,7 +3666,7 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-DFT-O1-001
 
-### Capability: policies.versions_list
+### Capability: policies.rules
 
 Panel: POL-GOV-DFT-O2
 Status: ASSUMED
@@ -3443,7 +3684,7 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-DFT-O2-001
 
-### Capability: policies.current_version
+### Capability: policies.rules
 
 Panel: POL-GOV-DFT-O3
 Status: ASSUMED
@@ -3461,7 +3702,7 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-DFT-O3-001
 
-### Capability: policies.conflicts_list
+### Capability: policies.conflicts
 
 Panel: POL-GOV-DFT-O4
 Status: ASSUMED
@@ -3479,7 +3720,7 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-DFT-O4-001
 
-### Capability: policies.dependencies_list
+### Capability: policies.dependencies
 
 Panel: POL-GOV-DFT-O5
 Status: ASSUMED
@@ -3497,7 +3738,7 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-DFT-O5-001
 
-### Capability: policies.safety_rules
+### Capability: policies.rules
 
 Panel: POL-GOV-LIB-O1
 Status: ASSUMED
@@ -3515,7 +3756,7 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-LIB-O1-001
 
-### Capability: policies.ethical_constraints
+### Capability: policies.rules
 
 Panel: POL-GOV-LIB-O2
 Status: ASSUMED
@@ -3533,7 +3774,7 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-LIB-O2-001
 
-### Capability: policies.active_policies
+### Capability: policies.rules
 
 Panel: POL-GOV-LIB-O3
 Status: ASSUMED
@@ -3551,7 +3792,7 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-LIB-O3-001
 
-### Capability: policies.guard_policies
+### Capability: policies.rules
 
 Panel: POL-GOV-LIB-O4
 Status: ASSUMED
@@ -3569,7 +3810,7 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-LIB-O4-001
 
-### Capability: policies.temporal_policies
+### Capability: policies.rules
 
 Panel: POL-GOV-LIB-O5
 Status: ASSUMED
@@ -3587,7 +3828,7 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-LIB-O5-001
 
-### Capability: policies.risk_ceilings
+### Capability: policies.limits
 
 Panel: POL-LIM-THR-O1
 Status: ASSUMED
@@ -3605,7 +3846,7 @@ Acceptance:
 
 Scenario: SDSR-POL-LIM-THR-O1-001
 
-### Capability: policies.budgets_list
+### Capability: policies.budgets
 
 Panel: POL-LIM-THR-O2
 Status: ASSUMED
@@ -3623,25 +3864,30 @@ Acceptance:
 
 Scenario: SDSR-POL-LIM-THR-O2-001
 
-### Capability: policies.quota_runs
+### Capability: policies.limits.threshold_params
 
 Panel: POL-LIM-THR-O3
-Status: ASSUMED
+Status: DECLARED
 
 Implementation:
-- Endpoint: /api/v1/tenants/tenant/quota/runs
-- Method: GET
+- Endpoint: /api/v1/policies/limits/{limit_id}/params
+- Method: PUT
 
 Data Mapping:
-- quota → run quota limits
+- max_execution_time_ms → Maximum execution time in milliseconds (1s-5min)
+- max_tokens → Maximum tokens allowed (256-200k)
+- max_cost_usd → Maximum cost per run (0.01-100)
+- failure_signal → Emit signal on run failure (boolean)
 
 Acceptance:
-- Returns run quota configuration
-- Response includes usage/limits
+- Validates all params within bounds (no partial garbage)
+- Rejects unknown keys (extra: forbid)
+- Returns effective params with defaults applied
+- Only accepts THRESHOLD category limits
 
 Scenario: SDSR-POL-LIM-THR-O3-001
 
-### Capability: policies.quota_tokens
+### Capability: policies.limits
 
 Panel: POL-LIM-THR-O4
 Status: ASSUMED
@@ -3659,7 +3905,7 @@ Acceptance:
 
 Scenario: SDSR-POL-LIM-THR-O4-001
 
-### Capability: policies.cooldowns_list
+### Capability: policies.limits
 
 Panel: POL-LIM-THR-O5
 Status: ASSUMED
@@ -3677,7 +3923,7 @@ Acceptance:
 
 Scenario: SDSR-POL-LIM-THR-O5-001
 
-### Capability: policies.violations_list
+### Capability: policies.violations
 
 Panel: POL-LIM-VIO-O1
 Status: ASSUMED
@@ -3695,7 +3941,7 @@ Acceptance:
 
 Scenario: SDSR-POL-LIM-VIO-O1-001
 
-### Capability: policies.cost_incidents
+### Capability: policies.violations
 
 Panel: POL-LIM-VIO-O2
 Status: ASSUMED
@@ -3713,7 +3959,7 @@ Acceptance:
 
 Scenario: SDSR-POL-LIM-VIO-O2-001
 
-### Capability: policies.simulated_incidents
+### Capability: policies.violations
 
 Panel: POL-LIM-VIO-O3
 Status: ASSUMED
@@ -3731,7 +3977,7 @@ Acceptance:
 
 Scenario: SDSR-POL-LIM-VIO-O3-001
 
-### Capability: policies.anomalies_list
+### Capability: policies.violations
 
 Panel: POL-LIM-VIO-O4
 Status: ASSUMED
@@ -3749,7 +3995,7 @@ Acceptance:
 
 Scenario: SDSR-POL-LIM-VIO-O4-001
 
-### Capability: policies.divergence_report
+### Capability: policies.violations
 
 Panel: POL-LIM-VIO-O5
 Status: ASSUMED
@@ -3767,7 +4013,7 @@ Acceptance:
 
 Scenario: SDSR-POL-LIM-VIO-O5-001
 
-### Capability: logs.runtime_traces
+### Capability: logs.llm_runs
 
 Panel: LOG-REC-LLM-O1
 Status: ASSUMED
@@ -3785,7 +4031,7 @@ Acceptance:
 
 Scenario: SDSR-LOG-REC-LLM-O1-001
 
-### Capability: logs.activity_runs
+### Capability: logs.llm_runs
 
 Panel: LOG-REC-LLM-O2
 Status: ASSUMED
@@ -3803,7 +4049,7 @@ Acceptance:
 
 Scenario: SDSR-LOG-REC-LLM-O2-001
 
-### Capability: logs.customer_runs
+### Capability: logs.llm_runs
 
 Panel: LOG-REC-LLM-O3
 Status: ASSUMED
@@ -3821,7 +4067,7 @@ Acceptance:
 
 Scenario: SDSR-LOG-REC-LLM-O3-001
 
-### Capability: logs.tenant_runs
+### Capability: logs.llm_runs
 
 Panel: LOG-REC-LLM-O4
 Status: ASSUMED
@@ -3839,7 +4085,7 @@ Acceptance:
 
 Scenario: SDSR-LOG-REC-LLM-O4-001
 
-### Capability: logs.mismatch_list
+### Capability: logs.llm_runs
 
 Panel: LOG-REC-LLM-O5
 Status: ASSUMED
@@ -3857,7 +4103,7 @@ Acceptance:
 
 Scenario: SDSR-LOG-REC-LLM-O5-001
 
-### Capability: logs.guard_logs
+### Capability: logs.system
 
 Panel: LOG-REC-SYS-O1
 Status: ASSUMED
@@ -3875,7 +4121,7 @@ Acceptance:
 
 Scenario: SDSR-LOG-REC-SYS-O1-001
 
-### Capability: logs.health_check
+### Capability: logs.system
 
 Panel: LOG-REC-SYS-O2
 Status: ASSUMED
@@ -3893,7 +4139,7 @@ Acceptance:
 
 Scenario: SDSR-LOG-REC-SYS-O2-001
 
-### Capability: logs.ready_check
+### Capability: logs.system
 
 Panel: LOG-REC-SYS-O3
 Status: ASSUMED
@@ -3911,7 +4157,7 @@ Acceptance:
 
 Scenario: SDSR-LOG-REC-SYS-O3-001
 
-### Capability: logs.adapters_health
+### Capability: logs.system
 
 Panel: LOG-REC-SYS-O4
 Status: ASSUMED
@@ -3929,7 +4175,7 @@ Acceptance:
 
 Scenario: SDSR-LOG-REC-SYS-O4-001
 
-### Capability: logs.skills_health
+### Capability: logs.system
 
 Panel: LOG-REC-SYS-O5
 Status: ASSUMED
@@ -3947,7 +4193,7 @@ Acceptance:
 
 Scenario: SDSR-LOG-REC-SYS-O5-001
 
-### Capability: logs.traces_list
+### Capability: logs.audit
 
 Panel: LOG-REC-AUD-O1
 Status: ASSUMED
@@ -3965,7 +4211,7 @@ Acceptance:
 
 Scenario: SDSR-LOG-REC-AUD-O1-001
 
-### Capability: logs.rbac_audit
+### Capability: logs.audit
 
 Panel: LOG-REC-AUD-O2
 Status: ASSUMED
@@ -3983,7 +4229,7 @@ Acceptance:
 
 Scenario: SDSR-LOG-REC-AUD-O2-001
 
-### Capability: logs.ops_audit
+### Capability: logs.audit
 
 Panel: LOG-REC-AUD-O3
 Status: ASSUMED
@@ -4001,7 +4247,7 @@ Acceptance:
 
 Scenario: SDSR-LOG-REC-AUD-O3-001
 
-### Capability: logs.status_history
+### Capability: logs.audit
 
 Panel: LOG-REC-AUD-O4
 Status: ASSUMED
@@ -4019,7 +4265,7 @@ Acceptance:
 
 Scenario: SDSR-LOG-REC-AUD-O4-001
 
-### Capability: logs.status_stats
+### Capability: logs.audit
 
 Panel: LOG-REC-AUD-O5
 Status: ASSUMED

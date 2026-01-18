@@ -75,6 +75,38 @@ capabilities:
         state: COMPLETED
 ```
 
+### Rule: Topic-Scoped Endpoints (TOPIC-SCOPED-ENDPOINT-001)
+
+**Status:** MANDATORY
+**Effective:** 2026-01-18
+**Reference:** `docs/governance/CAPABILITY_SURFACE_RULES.md`, `design/l2_1/INTENT_LEDGER.md`
+
+When a capability serves panels in different topics (LIVE vs COMPLETED), the data scope MUST be enforced at the API boundary via **topic-scoped endpoints**.
+
+**Pattern:**
+```
+/api/v1/activity/runs/{topic}/by-dimension
+```
+
+**Examples:**
+- `/api/v1/activity/runs/live/by-dimension` → state=LIVE (hardcoded)
+- `/api/v1/activity/runs/completed/by-dimension` → state=COMPLETED (hardcoded)
+
+**Rules:**
+
+| DO | DON'T |
+|----|-------|
+| Create topic-scoped endpoints with hardcoded state | Expose optional state filter to panels |
+| Inject state at the endpoint boundary | Accept state from query params for panel use |
+| Name endpoints to reflect topic: `/runs/live/...` | Use generic endpoints for topic-bound panels |
+
+**Generic Endpoint Disposition:**
+- Generic endpoints (e.g., `/runs/by-dimension`) MUST be marked as internal/admin-only
+- Generic endpoints MUST NOT be bound to panels
+- Generic endpoints SHOULD be deprecated if no admin use case exists
+
+**Rationale:** Topic determines what data a panel sees. Caller-controlled filtering creates data leakage risk.
+
 ### Rule: Capability Status Lifecycle
 
 ```
@@ -264,18 +296,32 @@ run_check "Activity Domain" "python scripts/preflight/check_activity_domain.py"
 
 ## 7. Panel → Capability Binding
 
-Every UI panel must bind to exactly one capability:
+Every UI panel must bind to one or more capabilities:
 
 | Panel | Capability | Status | Notes |
 |-------|------------|--------|-------|
-| ACT-LLM-COMP-O1 | `activity.completed_runs` | OBSERVED | E2E validated |
-| ACT-LLM-COMP-O2 | `activity.runs_list` | OBSERVED | E2E validated |
-| ACT-LLM-COMP-O3 | `activity.summary_by_status` | DECLARED | Awaiting E2E |
 | ACT-LLM-LIVE-O1 | `activity.live_runs` | OBSERVED | E2E validated |
-| ACT-LLM-LIVE-O5 | `activity.runs_by_dimension` | DECLARED | Awaiting E2E |
-| ACT-LLM-SIG-O3 | `activity.patterns` | DECLARED | Awaiting E2E |
-| ACT-LLM-SIG-O4 | `activity.cost_analysis` | DECLARED | Awaiting E2E |
-| ACT-LLM-SIG-O5 | `activity.attention_queue` | DECLARED | Awaiting E2E |
+| ACT-LLM-LIVE-O2 | `activity.risk_signals` | DECLARED | Uses `/risk-signals` endpoint |
+| ACT-LLM-LIVE-O3 | `activity.live_runs` | OBSERVED | Near-threshold runs |
+| ACT-LLM-LIVE-O4 | `activity.runtime_traces` | OBSERVED | Telemetry/evidence status |
+| ACT-LLM-LIVE-O5 | `activity.runs_by_dimension` | DECLARED | Topic-scoped: `/runs/live/by-dimension` |
+| ACT-LLM-LIVE-O5 | `activity.summary_by_status` | OBSERVED | Shared with COMP-O2, COMP-O3 |
+| ACT-LLM-LIVE-O5 | `activity.cost_analysis` | DECLARED | Shared with SIG-O4 |
+| ACT-LLM-COMP-O1 | `activity.completed_runs` | OBSERVED | E2E validated |
+| ACT-LLM-COMP-O2 | `activity.summary_by_status` | OBSERVED | Success count from status breakdown |
+| ACT-LLM-COMP-O3 | `activity.summary_by_status` | OBSERVED | Failed count from FAILED bucket |
+| ACT-LLM-COMP-O4 | `activity.completed_runs` | OBSERVED | Near-limit runs |
+| ACT-LLM-COMP-O5 | `activity.run_detail` | OBSERVED | Aborted/cancelled runs |
+| ACT-LLM-SIG-O1 | `activity.signals` | OBSERVED | Attention surface |
+| ACT-LLM-SIG-O2 | `activity.signals` | OBSERVED | Threshold proximity |
+| ACT-LLM-SIG-O3 | `activity.patterns` | OBSERVED | Temporal patterns |
+| ACT-LLM-SIG-O4 | `activity.cost_analysis` | DECLARED | Economic deviations |
+| ACT-LLM-SIG-O5 | `activity.signals` | OBSERVED | Attention queue |
+
+**Notes:**
+- ACT-LLM-LIVE-O5 and ACT-LLM-COMP-O5 share `activity.runs_by_dimension` capability but use topic-scoped endpoints per TOPIC-SCOPED-ENDPOINT-001.
+- ACT-LLM-LIVE-O2 was wired to `activity.risk_signals` on 2026-01-18 (previously EMPTY).
+- ACT-LLM-COMP-O3 was wired to `activity.summary_by_status` on 2026-01-18 (previously EMPTY).
 
 ---
 
@@ -307,6 +353,8 @@ UI Panels (L1: render only)
 | `ACTIVITY_CAPABILITY_REGISTRY.yaml` | Capability → endpoint mapping |
 | `check_activity_domain.py` | CI enforcement script |
 | `ACTIVITY_DOMAIN_AUDIT.md` | Coverage analysis |
+| `docs/governance/CAPABILITY_SURFACE_RULES.md` | Topic-scoped endpoint rules |
+| `design/l2_1/INTENT_LEDGER.md` | Panel intent and capability definitions |
 
 ---
 

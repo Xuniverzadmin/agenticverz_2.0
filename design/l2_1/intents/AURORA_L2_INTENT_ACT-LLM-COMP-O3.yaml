@@ -1,0 +1,59 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: ACT-LLM-COMP-O3
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: ACT-LLM-COMP-O3
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: ACTIVITY
+  subdomain: LLM_RUNS
+  topic: COMPLETED
+  topic_id: ACTIVITY.LLM_RUNS.COMPLETED
+  order: O3
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
+display:
+  name: ACT-LLM-COMP-O3
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: activity.summary_by_status
+  status: OBSERVED
+  assumed_endpoint: /api/v1/activity/summary/by-status
+  assumed_method: GET
+sdsr:
+  scenario: SDSR-ACT-LLM-COMP-O2-001
+  verified: false
+notes: 'Expose completed runs that ended in failure.
+
+
+  What it shows:
+
+  - Count of failed runs (from status breakdown)
+
+  - Uses FAILED bucket from summary_by_status
+
+
+  What it explicitly does NOT show:
+
+  - No root cause
+
+  - No retry controls
+
+  - No blame attribution'
