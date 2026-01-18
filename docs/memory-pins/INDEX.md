@@ -433,6 +433,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-441](PIN-441-policies-domain-sdsr-fixes.md) | **POLICIES Domain SDSR Scenario Fixes** | SDSR / Capability Validation | **✅ COMPLETE** | 2026-01-18 |
 | [PIN-442](PIN-442-policy-facade-api001-compliance.md) | **Policy Facade Layer - API-001 Compliance** | Architecture / Governance / API-001 | **✅ COMPLETE** | 2026-01-18 |
 | [PIN-443](PIN-443-activity-domain-panel-gap-fixes-act-llm-live-o2-act-llm-comp-o3.md) | **Activity Domain Panel Gap Fixes (ACT-LLM-LIVE-O2, ACT-LLM-COMP-O3)** | Activity Domain / Capability Wiring | **✅ COMPLETE** | 2026-01-18 |
+| [PIN-444](PIN-444-test-methods-design-document.md) | **Test Methods Design Document** | Documentation / Testing | **✅ COMPLETE** | 2026-01-18 |
 
 ---
 
@@ -1202,6 +1203,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-18 | **PIN-444 Test Methods Design Document** - Created via memory_trail. |
 | 2026-01-18 | **PIN-443 Activity Domain Panel Gap Fixes (ACT-LLM-LIVE-O2, ACT-LLM-COMP-O3)** - Updated: Updates |
 | 2026-01-18 | **PIN-443 Activity Domain Panel Gap Fixes (ACT-LLM-LIVE-O2, ACT-LLM-COMP-O3)** - Created via memory_trail. |
 | 2026-01-18 | **PIN-442 Policy Facade Layer - API-001 Compliance** - Created PolicyFacade in app/services/policy/facade.py. Replaced 33 direct get_policy_engine() calls with get_policy_facade() in policy_layer.py. Fixed API-001 governance violation. Architecture now matches Incidents/Ops facade pattern. |
