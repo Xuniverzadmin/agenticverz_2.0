@@ -605,6 +605,17 @@ async def lifespan(app: FastAPI):
         if os.getenv("AUTH_GATEWAY_REQUIRED", "false").lower() == "true":
             raise
 
+    # =========================================================================
+    # PIN-443: OpenAPI Warm-Up (Optional)
+    # =========================================================================
+    # Pre-generate OpenAPI schema to avoid cold-start latency on first request.
+    # Enabled via: WARM_OPENAPI_ON_STARTUP=true
+    # Recommended for: local, test, staging (not prod unless deterministic startup needed)
+    if os.getenv("WARM_OPENAPI_ON_STARTUP", "false").lower() == "true":
+        logger.info("[BOOT] Warming OpenAPI schema (WARM_OPENAPI_ON_STARTUP=true)")
+        app.openapi()  # Triggers custom_openapi() which logs timing
+        logger.info("[BOOT] OpenAPI schema warmed")
+
     yield
 
     # PIN-413: Create immutable system record for API shutdown
@@ -648,6 +659,47 @@ app = FastAPI(
     version="0.2.0",
     lifespan=lifespan,
 )
+
+
+# ---------- OpenAPI Generation Tracing (PIN-443) ----------
+# Explicit observability for schema generation - diagnoses cold-start hangs
+import time as _openapi_time
+
+from fastapi.openapi.utils import get_openapi as _fastapi_get_openapi
+
+
+def custom_openapi():
+    """
+    Custom OpenAPI generator with explicit tracing.
+
+    PIN-443: Provides visibility into schema generation timing.
+    FastAPI caches after first call, but first call can be slow (~1s for large schemas).
+    """
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    logger.info("openapi_generation_started")
+    start = _openapi_time.perf_counter()
+
+    schema = _fastapi_get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+    duration_ms = (_openapi_time.perf_counter() - start) * 1000
+    logger.info(
+        "openapi_generation_completed",
+        extra={"duration_ms": round(duration_ms, 2)},
+    )
+
+    app.openapi_schema = schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
+
 
 # Include API routers
 from .api.accounts import router as accounts_router  # ACCOUNTS: Unified facade (/api/v1/accounts/*)
@@ -875,6 +927,15 @@ app.add_middleware(OnboardingGateMiddleware)
 
 if AUTH_GATEWAY_ENABLED:
     setup_auth_middleware(app)
+
+# Slow Request Diagnostic Middleware (PIN-443)
+# Logs warnings for requests > 500ms - helps diagnose VPS hangs
+# Enabled via: ENABLE_SLOW_REQUEST_LOGS=true
+if os.getenv("ENABLE_SLOW_REQUEST_LOGS", "false").lower() == "true":
+    from .middleware.slow_requests import SlowRequestMiddleware
+
+    app.add_middleware(SlowRequestMiddleware, threshold_ms=500)
+    logger.info("[BOOT] SlowRequestMiddleware enabled (threshold=500ms)")
 
 
 @app.middleware("http")

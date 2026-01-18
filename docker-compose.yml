@@ -85,6 +85,13 @@ services:
       # System Mode Declarations (Objective-1)
       TENANT_MODE: ${TENANT_MODE:-single}
       CARE_SCOPE: ${CARE_SCOPE:-worker_only}
+      # Three-Mode Authority System (PIN-440)
+      # LOCAL: AOS_MODE=local, DB_AUTHORITY=local - full sandbox
+      # TEST:  AOS_MODE=test, DB_AUTHORITY=neon - sandbox with Neon test
+      # PROD:  AOS_MODE=prod, DB_AUTHORITY=neon - no sandbox (default)
+      AOS_MODE: ${AOS_MODE:-prod}
+      DB_AUTHORITY: ${DB_AUTHORITY:-neon}
+      CUSTOMER_SANDBOX_ENABLED: ${CUSTOMER_SANDBOX_ENABLED:-false}
       # Trace Storage (M8)
       USE_POSTGRES_TRACES: "true"
       # GitHub Integration (M8 - Mismatch Issue Automation)
@@ -105,6 +112,9 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-https://agenticverz.com}
       # Dev-only password login (preflight convenience)
       DEV_LOGIN_PASSWORD: ${DEV_LOGIN_PASSWORD:-}
+      # PIN-443: OpenAPI Cold-Start Observability
+      ENABLE_SLOW_REQUEST_LOGS: ${ENABLE_SLOW_REQUEST_LOGS:-false}
+      WARM_OPENAPI_ON_STARTUP: ${WARM_OPENAPI_ON_STARTUP:-false}
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import httpx; r=httpx.get('http://localhost:8000/health'); exit(0 if r.status_code==200 else 1)\""]
       interval: 10s
