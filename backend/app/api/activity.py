@@ -30,6 +30,7 @@ Endpoints:
 - GET /api/v1/activity/patterns          → SIG-O3 pattern detection
 - GET /api/v1/activity/cost-analysis     → SIG-O4 cost anomalies
 - GET /api/v1/activity/attention-queue   → SIG-O5 attention ranking
+- GET /api/v1/activity/risk-signals      → Risk signal aggregates
 
 Architecture:
 - ONE facade for all ACTIVITY needs
@@ -833,18 +834,159 @@ async def get_summary_by_status(
 
 
 # =============================================================================
-# GET /runs/by-dimension - LIVE-O5 Dimension Breakdown
+# Internal Helper: Dimension Breakdown (Shared Logic)
+# =============================================================================
+
+
+async def _get_runs_by_dimension_internal(
+    session: AsyncSession,
+    tenant_id: str,
+    dim: DimensionValue,
+    state: RunState,
+    limit: int = 20,
+) -> DimensionBreakdownResponse:
+    """
+    Internal helper for dimension breakdown with HARDCODED state binding.
+
+    This function is called by topic-scoped endpoints only.
+    State is injected by the endpoint, never from caller.
+
+    Policy: TOPIC-SCOPED-ENDPOINT-001
+    """
+    dimension_col = dim.value
+    where_clause = "tenant_id = :tenant_id AND state = :state"
+    params: dict[str, Any] = {
+        "tenant_id": tenant_id,
+        "state": state.value,
+        "limit": limit,
+    }
+
+    sql = text(f"""
+        SELECT
+            COALESCE({dimension_col}::text, 'unknown') as value,
+            COUNT(*) as count
+        FROM v_runs_o2
+        WHERE {where_clause}
+        GROUP BY {dimension_col}
+        ORDER BY count DESC
+        LIMIT :limit
+    """)
+
+    result = await session.execute(sql, params)
+    rows = result.mappings().all()
+
+    total = sum(row["count"] for row in rows)
+
+    groups = [
+        DimensionGroup(
+            value=row["value"],
+            count=row["count"],
+            percentage=round((row["count"] / total * 100) if total > 0 else 0, 2),
+        )
+        for row in rows
+    ]
+
+    return DimensionBreakdownResponse(
+        dimension=dimension_col,
+        groups=groups,
+        total_runs=total,
+        state_filter=state.value,
+        generated_at=datetime.utcnow(),
+    )
+
+
+# =============================================================================
+# GET /runs/live/by-dimension - LIVE Topic Distribution (LIVE-O5)
+# =============================================================================
+
+
+@router.get(
+    "/runs/live/by-dimension",
+    response_model=DimensionBreakdownResponse,
+    summary="Live runs by dimension (LIVE-O5)",
+    description="""
+    Returns LIVE run counts grouped by a specified dimension.
+
+    **Topic-Scoped Endpoint** - State filter is IMPLICIT (hardcoded to LIVE).
+    This endpoint ONLY returns runs with state=LIVE.
+
+    Policy: TOPIC-SCOPED-ENDPOINT-001
+    Capability: activity.runs_by_dimension
+    """,
+)
+async def get_live_runs_by_dimension(
+    request: Request,
+    dim: Annotated[DimensionValue, Query(description="Dimension to group by")],
+    limit: Annotated[int, Query(ge=1, le=100, description="Max groups to return")] = 20,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> DimensionBreakdownResponse:
+    """Get LIVE runs grouped by dimension. State=LIVE is hardcoded."""
+    tenant_id = get_tenant_id_from_auth(request)
+    return await _get_runs_by_dimension_internal(
+        session=session,
+        tenant_id=tenant_id,
+        dim=dim,
+        state=RunState.LIVE,  # HARDCODED - cannot be overridden
+        limit=limit,
+    )
+
+
+# =============================================================================
+# GET /runs/completed/by-dimension - COMPLETED Topic Distribution
+# =============================================================================
+
+
+@router.get(
+    "/runs/completed/by-dimension",
+    response_model=DimensionBreakdownResponse,
+    summary="Completed runs by dimension",
+    description="""
+    Returns COMPLETED run counts grouped by a specified dimension.
+
+    **Topic-Scoped Endpoint** - State filter is IMPLICIT (hardcoded to COMPLETED).
+    This endpoint ONLY returns runs with state=COMPLETED.
+
+    Policy: TOPIC-SCOPED-ENDPOINT-001
+    Capability: activity.runs_by_dimension
+    """,
+)
+async def get_completed_runs_by_dimension(
+    request: Request,
+    dim: Annotated[DimensionValue, Query(description="Dimension to group by")],
+    limit: Annotated[int, Query(ge=1, le=100, description="Max groups to return")] = 20,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> DimensionBreakdownResponse:
+    """Get COMPLETED runs grouped by dimension. State=COMPLETED is hardcoded."""
+    tenant_id = get_tenant_id_from_auth(request)
+    return await _get_runs_by_dimension_internal(
+        session=session,
+        tenant_id=tenant_id,
+        dim=dim,
+        state=RunState.COMPLETED,  # HARDCODED - cannot be overridden
+        limit=limit,
+    )
+
+
+# =============================================================================
+# GET /runs/by-dimension - INTERNAL/ADMIN ONLY (Deprecated for Panels)
 # =============================================================================
 
 
 @router.get(
     "/runs/by-dimension",
     response_model=DimensionBreakdownResponse,
-    summary="Runs by dimension (LIVE-O5)",
+    summary="[INTERNAL] Runs by dimension (admin only)",
     description="""
-    Returns run counts grouped by a specified dimension.
-    Useful for analyzing distribution across providers, sources, agents, etc.
+    **INTERNAL/ADMIN ENDPOINT - DO NOT USE FOR PANELS**
+
+    This endpoint accepts an optional state filter and is NOT topic-scoped.
+    For panel use, call the topic-scoped endpoints instead:
+    - LIVE panels: /runs/live/by-dimension
+    - COMPLETED panels: /runs/completed/by-dimension
+
+    Policy: TOPIC-SCOPED-ENDPOINT-001 - Generic endpoints must not be panel-bound.
     """,
+    deprecated=True,
 )
 async def get_runs_by_dimension(
     request: Request,
@@ -853,11 +995,9 @@ async def get_runs_by_dimension(
     limit: Annotated[int, Query(ge=1, le=100, description="Max groups to return")] = 20,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> DimensionBreakdownResponse:
-    """Get runs grouped by dimension (LIVE-O5). READ-ONLY from v_runs_o2."""
-
+    """[INTERNAL] Get runs grouped by dimension with optional state. NOT FOR PANELS."""
     tenant_id = get_tenant_id_from_auth(request)
 
-    # Build query with dimension
     dimension_col = dim.value
     where_clause = "tenant_id = :tenant_id"
     params: dict[str, Any] = {"tenant_id": tenant_id, "limit": limit}
@@ -880,7 +1020,6 @@ async def get_runs_by_dimension(
     result = await session.execute(sql, params)
     rows = result.mappings().all()
 
-    # Calculate total and percentages
     total = sum(row["count"] for row in rows)
 
     groups = [
@@ -1053,4 +1192,82 @@ async def get_attention_queue(
         total_attention_items=result.total_attention_items,
         weights_version=result.weights_version,
         generated_at=result.generated_at,
+    )
+
+
+# =============================================================================
+# GET /risk-signals - Risk Signal Aggregates
+# =============================================================================
+# PURPOSE: Returns aggregated risk counts for Customer Console panels
+# CAPABILITY: activity.risk_signals
+# SIGNALS: at_risk_count, cost_risk_count, time_risk_count, token_risk_count
+# =============================================================================
+
+
+class RiskSignalsResponse(BaseModel):
+    """GET /risk-signals response."""
+
+    at_risk_count: int
+    violated_count: int
+    at_risk_level_count: int
+    near_threshold_count: int
+    total_at_risk: int
+    generated_at: datetime
+
+
+@router.get(
+    "/risk-signals",
+    response_model=RiskSignalsResponse,
+    summary="Risk signal aggregates",
+    description="""
+    Returns aggregated counts of runs at various risk levels.
+
+    Risk levels:
+    - NORMAL: No risk signals
+    - NEAR_THRESHOLD: Approaching limits (warning)
+    - AT_RISK: Threshold breach imminent
+    - VIOLATED: Threshold exceeded
+
+    Capability: activity.risk_signals
+    Consumers: Overview panels, Activity summary panels
+    """,
+)
+async def get_risk_signals(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> RiskSignalsResponse:
+    """
+    Returns aggregated risk signal counts.
+
+    Supports: activity.risk_signals capability
+    Consumers: Overview panels, Activity summary panels
+
+    Only considers:
+    - Live runs (state = 'LIVE')
+    - Completed runs in the last 24 hours
+    """
+    tenant_id = get_tenant_id_from_auth(request)
+
+    sql = text("""
+        SELECT
+            COUNT(*) FILTER (WHERE risk_level IN ('NEAR_THRESHOLD', 'AT_RISK', 'VIOLATED')) as at_risk_count,
+            COUNT(*) FILTER (WHERE risk_level = 'VIOLATED') as violated_count,
+            COUNT(*) FILTER (WHERE risk_level = 'AT_RISK') as at_risk_level_count,
+            COUNT(*) FILTER (WHERE risk_level = 'NEAR_THRESHOLD') as near_threshold_count,
+            COUNT(*) FILTER (WHERE risk_level != 'NORMAL') as total_at_risk
+        FROM v_runs_o2
+        WHERE tenant_id = :tenant_id
+          AND (state = 'LIVE' OR completed_at >= NOW() - INTERVAL '24 hours')
+    """)
+
+    result = await session.execute(sql, {"tenant_id": tenant_id})
+    row = result.mappings().first()
+
+    return RiskSignalsResponse(
+        at_risk_count=row["at_risk_count"] or 0 if row else 0,
+        violated_count=row["violated_count"] or 0 if row else 0,
+        at_risk_level_count=row["at_risk_level_count"] or 0 if row else 0,
+        near_threshold_count=row["near_threshold_count"] or 0 if row else 0,
+        total_at_risk=row["total_at_risk"] or 0 if row else 0,
+        generated_at=datetime.utcnow(),
     )

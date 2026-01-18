@@ -440,6 +440,21 @@ class IncidentEngine:
                 )
                 conn.commit()
 
+                # Update runs.incident_count for Customer Console Activity panels
+                # This allows ACT-LLM-* panels to show "incidents caused by this run"
+                try:
+                    conn.execute(
+                        text("""
+                            UPDATE runs
+                            SET incident_count = incident_count + 1
+                            WHERE id = :run_id
+                        """),
+                        {"run_id": run_id},
+                    )
+                    conn.commit()
+                except Exception as e:
+                    logger.warning(f"Failed to update runs.incident_count for run {run_id}: {e}")
+
             logger.info(
                 f"Created incident {incident_id} for run {run_id} "
                 f"(outcome={outcome}, category={category}, severity={severity}, synthetic={is_synthetic})"
@@ -627,6 +642,21 @@ class IncidentEngine:
                     },
                 )
                 conn.commit()
+
+                # Update runs.incident_count for Customer Console Activity panels
+                # This allows ACT-LLM-* panels to show "incidents caused by this run"
+                try:
+                    conn.execute(
+                        text("""
+                            UPDATE runs
+                            SET incident_count = incident_count + 1
+                            WHERE id = :run_id
+                        """),
+                        {"run_id": run_id},
+                    )
+                    conn.commit()
+                except Exception as e:
+                    logger.warning(f"Failed to update runs.incident_count for run {run_id}: {e}")
 
             logger.info(
                 f"Created incident {incident_id} for failed run {run_id} "

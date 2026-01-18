@@ -440,6 +440,94 @@ class RunRunner:
                 extra={"run_id": self.run_id, "status": run_status, "error": str(e)},
             )
 
+    def _evaluate_and_emit_threshold_signals(
+        self,
+        run: Run,
+        run_status: str,
+        duration_ms: float,
+        tool_calls: list,
+    ):
+        """
+        Evaluate run against thresholds and emit dual signals.
+
+        Signal Flow:
+        1. Evaluate run against tenant's threshold params
+        2. If signals generated:
+           - emit to ops_events (Founder Console)
+           - update runs.risk_level (Customer Console)
+
+        Reference: Threshold Signal Wiring to Customer Console Plan
+        """
+        try:
+            # Calculate token totals from tool_calls
+            total_tokens = 0
+            total_cost_usd = 0.0
+
+            for tool_call in tool_calls:
+                skill_name = tool_call.get("skill", "")
+                if skill_name == "llm_invoke":
+                    response = tool_call.get("response", {})
+                    total_tokens += response.get("input_tokens", 0)
+                    total_tokens += response.get("output_tokens", 0)
+                    total_cost_usd += float(response.get("cost_cents", 0)) / 100.0
+
+            # Also check run-level token counts
+            if hasattr(run, "input_tokens") and run.input_tokens:
+                total_tokens = max(total_tokens, (run.input_tokens or 0) + (run.output_tokens or 0))
+            if hasattr(run, "estimated_cost_usd") and run.estimated_cost_usd:
+                total_cost_usd = max(total_cost_usd, float(run.estimated_cost_usd or 0))
+
+            # Import threshold service
+            from app.services.llm_threshold_service import (
+                LLMRunThresholdResolver,
+                LLMRunEvaluator,
+                emit_and_persist_threshold_signal,
+            )
+
+            # Get a sync session for threshold operations
+            with Session(engine) as session:
+                resolver = LLMRunThresholdResolver(session)
+                evaluator = LLMRunEvaluator(resolver)
+
+                # Evaluate the completed run
+                evaluation = evaluator.evaluate_completed_run(
+                    run_id=self.run_id,
+                    tenant_id=run.tenant_id or "",
+                    status=run_status,
+                    execution_time_ms=int(duration_ms),
+                    tokens_used=total_tokens,
+                    cost_usd=total_cost_usd,
+                )
+
+                # If there are signals, emit to both Founder and Customer consoles
+                if evaluation.signals:
+                    emit_and_persist_threshold_signal(
+                        session=session,
+                        tenant_id=run.tenant_id or "",
+                        run_id=self.run_id,
+                        state="completed",
+                        signals=evaluation.signals,
+                        params_used=evaluation.params_used,
+                    )
+
+                    logger.info(
+                        "threshold_signals_emitted",
+                        extra={
+                            "run_id": self.run_id,
+                            "signals": [s.value for s in evaluation.signals],
+                            "duration_ms": duration_ms,
+                            "tokens_used": total_tokens,
+                            "cost_usd": total_cost_usd,
+                        },
+                    )
+
+        except Exception as e:
+            # Don't fail the run because of threshold evaluation failure
+            logger.warning(
+                "threshold_evaluation_failed",
+                extra={"run_id": self.run_id, "error": str(e)},
+            )
+
     def _emit_lessons_on_success(
         self,
         run: Run,
@@ -1149,6 +1237,16 @@ class RunRunner:
             # it sees "succeeded" status. Records must exist BEFORE status change.
             self._create_governance_records_for_run(run_status="succeeded")
 
+            # Threshold Signal Wiring: Evaluate run against thresholds and emit signals
+            # This updates runs.risk_level for Customer Console Activity panels
+            # and emits to ops_events for Founder Console monitoring
+            self._evaluate_and_emit_threshold_signals(
+                run=run,
+                run_status="succeeded",
+                duration_ms=duration_ms,
+                tool_calls=tool_calls,
+            )
+
             # IMPORTANT: Run must not be marked terminal until incident + policy
             # records are created. Moving this call above governance creation
             # will break SDSR integrity checks. See PIN-407.
@@ -1272,6 +1370,20 @@ class RunRunner:
                             failed_tool_calls = json.loads(run.tool_calls_json)
                         except (json.JSONDecodeError, TypeError):
                             pass
+
+                    # Threshold Signal Wiring: Evaluate failed run against thresholds
+                    # Compute duration_ms from run timestamps
+                    failed_duration_ms = 0.0
+                    if run.started_at:
+                        failed_duration_ms = (datetime.now(timezone.utc) - run.started_at).total_seconds() * 1000
+
+                    self._evaluate_and_emit_threshold_signals(
+                        run=run,
+                        run_status="failed",
+                        duration_ms=failed_duration_ms,
+                        tool_calls=failed_tool_calls,
+                    )
+
                     self._create_llm_run_record(
                         run=run,
                         tool_calls=failed_tool_calls,

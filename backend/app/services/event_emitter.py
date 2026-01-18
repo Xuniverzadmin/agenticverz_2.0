@@ -3,6 +3,28 @@
 # Callers: Multiple products (founder console, ops console)
 # Reference: PIN-240
 # NOTE: This layer must not know what a "product" is.
+#
+# =============================================================================
+# EventEmitter - FOUNDER CONSOLE ONLY
+# =============================================================================
+#
+# IMPORTANT: This service writes to ops_events table which is consumed
+# EXCLUSIVELY by the Founder Console (api/ops.py).
+#
+# DO NOT use EventEmitter for Customer Console signal paths.
+# Customer Console signals should update the runs table directly via
+# RunSignalService, which feeds v_runs_o2 -> api/activity.py.
+#
+# Signal Audience Map:
+# +-----------------+-------------------+---------------------+
+# | Signal Type     | Founder Console   | Customer Console    |
+# +-----------------+-------------------+---------------------+
+# | Threshold Breach| ops_events        | runs.risk_level     |
+# | Incident Created| ops_events        | runs.incident_count |
+# | Policy Violation| ops_events        | runs.policy_violation|
+# +-----------------+-------------------+---------------------+
+#
+# =============================================================================
 
 """
 Event Emitter Service (M24 Ops Console)
@@ -10,10 +32,13 @@ Event Emitter Service (M24 Ops Console)
 PIN-105: Ops Console - Founder Intelligence System
 
 Provides:
-- Event emission to ops_events table
+- Event emission to ops_events table (FOUNDER CONSOLE ONLY)
 - Background batching for high-throughput scenarios
 - Type-safe event creation
 - Automatic timestamp and metadata handling
+
+NOTE: This service is for FOUNDER CONSOLE monitoring only.
+Customer Console signals use RunSignalService to update runs table.
 """
 
 import json as json_lib
