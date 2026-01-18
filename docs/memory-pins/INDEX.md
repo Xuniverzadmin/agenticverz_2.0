@@ -428,6 +428,11 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-436](PIN-436-guardrail-violations-baseline.md) | **Guardrail Violations Baseline** | Governance / Architecture Enforcement | **ACTIVE** | 2026-01-16 |
 | [PIN-437](PIN-437-api-002-counter-rules-wrapdict-risk-vectors.md) | **API-002 Counter-Rules: wrap_dict Risk Vectors** | Governance / Counter-Rules | **🏗️ ENFORCED** | 2026-01-17 |
 | [PIN-438](PIN-438-linting-technical-debt-declaration.md) | **Linting Technical Debt Declaration** | Governance / Technical Debt | **ENFORCED** | 2026-01-17 |
+| [PIN-439](PIN-439-customer-llm-integrations-complete.md) | **Customer LLM Integrations Complete** | Customer Integrations / Observability | **✅ COMPLETE** | 2026-01-17 |
+| [PIN-440](PIN-440-customer-sandbox-auth-mode.md) | **Customer Sandbox Authentication Mode** | Authentication / Customer Integrations | **✅ RESOLVED** | 2026-01-18 |
+| [PIN-441](PIN-441-policies-domain-sdsr-fixes.md) | **POLICIES Domain SDSR Scenario Fixes** | SDSR / Capability Validation | **✅ COMPLETE** | 2026-01-18 |
+| [PIN-442](PIN-442-policy-facade-api001-compliance.md) | **Policy Facade Layer - API-001 Compliance** | Architecture / Governance / API-001 | **✅ COMPLETE** | 2026-01-18 |
+| [PIN-443](PIN-443-activity-domain-panel-gap-fixes-act-llm-live-o2-act-llm-comp-o3.md) | **Activity Domain Panel Gap Fixes (ACT-LLM-LIVE-O2, ACT-LLM-COMP-O3)** | Activity Domain / Capability Wiring | **✅ COMPLETE** | 2026-01-18 |
 
 ---
 
@@ -1197,6 +1202,9 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-18 | **PIN-443 Activity Domain Panel Gap Fixes (ACT-LLM-LIVE-O2, ACT-LLM-COMP-O3)** - Created via memory_trail. |
+| 2026-01-18 | **PIN-442 Policy Facade Layer - API-001 Compliance** - Created PolicyFacade in app/services/policy/facade.py. Replaced 33 direct get_policy_engine() calls with get_policy_facade() in policy_layer.py. Fixed API-001 governance violation. Architecture now matches Incidents/Ops facade pattern. |
+| 2026-01-18 | **PIN-441 POLICIES Domain SDSR Scenario Fixes** - Fixed 26/30 POLICIES scenarios. Added policy_layer.py to routes cache known_prefixes. Created 3 intent YAMLs (POL-GOV-LES O3-O5). Fixed endpoint prefixes (/policy-layer/* → /api/v1/policy-layer/*) across 29 files. 32 total files modified. |
 | 2026-01-17 | **PIN-440 Customer Sandbox Auth Mode** - Designed and partially implemented customer-grade sandbox authentication. Sandbox auth module created, gateway integrated. Blocked by: DB_AUTHORITY=neon (safety gate), RBAC rules missing for /api/v1/cus/* paths. Documents resolution options. |
 | 2026-01-17 | **PIN-439 Customer LLM Integrations Complete** - All 6 phases complete (Foundation, Telemetry, Enforcement, Proxy, Console, Observability). ~12,500 lines across 29 files. Evidence → Observability linking with cus_* metrics, Grafana dashboard, 8 alert rules. Connectivity domain audit updated to FULLY IMPLEMENTED. |
 | 2026-01-17 | **PIN-438 Linting Technical Debt Declaration** - Declared ruff/pyright warnings as pre-existing technical debt. Configured per-file-ignores to block new violations only. Updated pyproject.toml files. |
