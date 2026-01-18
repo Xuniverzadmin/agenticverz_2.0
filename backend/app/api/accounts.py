@@ -50,17 +50,26 @@ Architecture:
 - SDSR validates this same production API
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated, Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
-from app.models.tenant import Subscription, Tenant, TenantMembership, User
+from app.models.tenant import (
+    Invitation,
+    Subscription,
+    SupportTicket,
+    Tenant,
+    TenantMembership,
+    User,
+    generate_uuid,
+    utc_now,
+)
 
 # =============================================================================
 # Router
@@ -745,4 +754,852 @@ async def get_billing_summary(
         raise HTTPException(
             status_code=500,
             detail={"error": "query_failed", "message": str(e)},
+        )
+
+
+# =============================================================================
+# PROFILE MANAGEMENT
+# =============================================================================
+
+
+class ProfileUpdateRequest(BaseModel):
+    """Request to update user profile preferences."""
+
+    display_name: Optional[str] = Field(None, max_length=100)
+    timezone: Optional[str] = Field(None, max_length=50)
+    preferences: Optional[dict] = Field(None, description="User preferences as JSON")
+
+
+class ProfileResponse(BaseModel):
+    """User profile response."""
+
+    user_id: str
+    email: str
+    display_name: Optional[str]
+    timezone: Optional[str]
+    preferences: dict
+    updated_at: datetime
+
+
+@router.put("/profile", response_model=ProfileResponse)
+async def update_profile(
+    request: Request,
+    update: ProfileUpdateRequest,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> ProfileResponse:
+    """
+    Update current user's profile and preferences.
+
+    Layer: L2 (Product APIs)
+    """
+    auth_ctx = get_auth_context(request)
+    user_id = auth_ctx.user_id
+
+    try:
+        stmt = select(User).where(User.id == user_id)
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Update fields if provided
+        if update.display_name is not None:
+            user.name = update.display_name
+        if update.timezone is not None:
+            # Store timezone in preferences
+            prefs = user.get_preferences()
+            prefs["timezone"] = update.timezone
+            user.set_preferences(prefs)
+        if update.preferences is not None:
+            # Merge with existing preferences
+            prefs = user.get_preferences()
+            prefs.update(update.preferences)
+            user.set_preferences(prefs)
+
+        user.updated_at = utc_now()
+        await session.commit()
+        await session.refresh(user)
+
+        return ProfileResponse(
+            user_id=user.id,
+            email=user.email,
+            display_name=user.name,
+            timezone=user.get_preferences().get("timezone"),
+            preferences=user.get_preferences(),
+            updated_at=user.updated_at,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "update_failed", "message": str(e)},
+        )
+
+
+# =============================================================================
+# BILLING - INVOICES (Free Tier = Unlimited)
+# =============================================================================
+
+
+class InvoiceSummary(BaseModel):
+    """Invoice summary for billing history."""
+
+    invoice_id: str
+    period_start: datetime
+    period_end: datetime
+    amount_cents: int
+    status: str  # paid, pending, void
+    description: str
+
+
+class InvoiceListResponse(BaseModel):
+    """List of invoices response."""
+
+    invoices: List[InvoiceSummary]
+    total: int
+    message: Optional[str] = None
+
+
+@router.get("/billing/invoices", response_model=InvoiceListResponse)
+async def get_billing_invoices(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> InvoiceListResponse:
+    """
+    Get billing invoice history.
+
+    For free tier (demo-tenant), returns empty list with unlimited usage message.
+
+    Layer: L2 (Product APIs)
+    """
+    auth_ctx = get_auth_context(request)
+    tenant_id = auth_ctx.tenant_id
+
+    try:
+        # Get tenant to check plan
+        stmt = select(Tenant).where(Tenant.id == tenant_id)
+        result = await session.execute(stmt)
+        tenant = result.scalar_one_or_none()
+
+        if tenant is None:
+            raise HTTPException(status_code=404, detail="Tenant not found")
+
+        # Free tier = no invoices, unlimited usage
+        if tenant.plan.lower() == "free":
+            return InvoiceListResponse(
+                invoices=[],
+                total=0,
+                message="Free tier - unlimited usage, no invoices",
+            )
+
+        # For paid tiers, would query invoices from billing system
+        # Currently all tenants are free tier during platform build
+        return InvoiceListResponse(
+            invoices=[],
+            total=0,
+            message="Free tier - unlimited usage, no invoices",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "query_failed", "message": str(e)},
+        )
+
+
+# =============================================================================
+# SUPPORT TICKETS (CRM Workflow Integration)
+# =============================================================================
+
+
+class SupportTicketCreate(BaseModel):
+    """Create a support ticket."""
+
+    subject: str = Field(..., max_length=200)
+    description: str = Field(..., max_length=4000)
+    category: str = Field(default="general", max_length=50)
+    priority: str = Field(default="medium", max_length=20)
+
+
+class SupportTicketResponse(BaseModel):
+    """Support ticket response."""
+
+    id: str
+    subject: str
+    description: str
+    category: str
+    priority: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    resolution: Optional[str] = None
+    resolved_at: Optional[datetime] = None
+
+
+class SupportTicketListResponse(BaseModel):
+    """List of support tickets."""
+
+    tickets: List[SupportTicketResponse]
+    total: int
+
+
+class SupportContactResponse(BaseModel):
+    """Support contact information."""
+
+    email: str
+    hours: str
+    response_time: str
+
+
+@router.get("/support", response_model=SupportContactResponse)
+async def get_support_contact() -> SupportContactResponse:
+    """
+    Get support contact information.
+
+    Layer: L2 (Product APIs)
+    """
+    return SupportContactResponse(
+        email="support@agenticverz.com",
+        hours="24/7",
+        response_time="Within 24 hours",
+    )
+
+
+@router.post("/support/tickets", response_model=SupportTicketResponse, status_code=201)
+async def create_support_ticket(
+    request: Request,
+    ticket: SupportTicketCreate,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> SupportTicketResponse:
+    """
+    Create a support ticket.
+
+    This feeds into the CRM workflow (Part-2) with human-in-the-loop
+    at Step 5 (Founder Review). No automatic agent assignment.
+
+    Layer: L2 (Product APIs)
+    Reference: PART2_CRM_WORKFLOW_CHARTER.md
+    """
+    auth_ctx = get_auth_context(request)
+
+    try:
+        now = utc_now()
+        new_ticket = SupportTicket(
+            id=generate_uuid(),
+            tenant_id=auth_ctx.tenant_id,
+            user_id=auth_ctx.user_id,
+            subject=ticket.subject,
+            description=ticket.description,
+            category=ticket.category,
+            priority=ticket.priority,
+            status="open",
+            created_at=now,
+            updated_at=now,
+        )
+
+        session.add(new_ticket)
+        await session.commit()
+        await session.refresh(new_ticket)
+
+        # TODO: Trigger CRM workflow via issue_event_id
+        # This would create an entry in the CRM system per PART2_CRM_WORKFLOW_CHARTER.md
+        # Step 1: CRM Ticket Created → Step 2: Auto-Classification → etc.
+
+        return SupportTicketResponse(
+            id=new_ticket.id,
+            subject=new_ticket.subject,
+            description=new_ticket.description,
+            category=new_ticket.category,
+            priority=new_ticket.priority,
+            status=new_ticket.status,
+            created_at=new_ticket.created_at,
+            updated_at=new_ticket.updated_at,
+            resolution=new_ticket.resolution,
+            resolved_at=new_ticket.resolved_at,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "create_failed", "message": str(e)},
+        )
+
+
+@router.get("/support/tickets", response_model=SupportTicketListResponse)
+async def list_support_tickets(
+    request: Request,
+    status: Optional[str] = Query(None, description="Filter by status"),
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> SupportTicketListResponse:
+    """
+    List support tickets for the current tenant.
+
+    Layer: L2 (Product APIs)
+    """
+    auth_ctx = get_auth_context(request)
+
+    try:
+        stmt = select(SupportTicket).where(
+            SupportTicket.tenant_id == auth_ctx.tenant_id
+        )
+
+        if status:
+            stmt = stmt.where(SupportTicket.status == status)
+
+        stmt = stmt.order_by(SupportTicket.created_at.desc())
+
+        result = await session.execute(stmt)
+        tickets = result.scalars().all()
+
+        return SupportTicketListResponse(
+            tickets=[
+                SupportTicketResponse(
+                    id=t.id,
+                    subject=t.subject,
+                    description=t.description,
+                    category=t.category,
+                    priority=t.priority,
+                    status=t.status,
+                    created_at=t.created_at,
+                    updated_at=t.updated_at,
+                    resolution=t.resolution,
+                    resolved_at=t.resolved_at,
+                )
+                for t in tickets
+            ],
+            total=len(tickets),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "query_failed", "message": str(e)},
+        )
+
+
+# =============================================================================
+# USER INVITATION & MANAGEMENT
+# =============================================================================
+
+
+class InviteUserRequest(BaseModel):
+    """Request to invite a user to the tenant."""
+
+    email: str = Field(..., max_length=255)
+    role: str = Field(default="member", max_length=50)
+
+
+class InvitationResponse(BaseModel):
+    """Invitation response."""
+
+    id: str
+    email: str
+    role: str
+    status: str
+    created_at: datetime
+    expires_at: datetime
+    invited_by: str
+
+
+class InvitationListResponse(BaseModel):
+    """List of invitations."""
+
+    invitations: List[InvitationResponse]
+    total: int
+
+
+class AcceptInvitationRequest(BaseModel):
+    """Request to accept an invitation."""
+
+    token: str = Field(..., description="Invitation token from email")
+
+
+class UpdateUserRoleRequest(BaseModel):
+    """Request to update a user's role."""
+
+    role: str = Field(..., max_length=50)
+
+
+class TenantUserResponse(BaseModel):
+    """User in tenant response."""
+
+    user_id: str
+    email: str
+    name: Optional[str]
+    role: str
+    joined_at: datetime
+
+
+class TenantUserListResponse(BaseModel):
+    """List of users in tenant."""
+
+    users: List[TenantUserResponse]
+    total: int
+
+
+@router.post("/users/invite", response_model=InvitationResponse, status_code=201)
+async def invite_user(
+    request: Request,
+    invite: InviteUserRequest,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> InvitationResponse:
+    """
+    Invite a user to join the tenant.
+
+    Requires: owner or admin role.
+
+    Layer: L2 (Product APIs)
+    """
+    import hashlib
+    import secrets
+
+    auth_ctx = get_auth_context(request)
+
+    try:
+        # Check caller has permission to invite
+        stmt = select(TenantMembership).where(
+            TenantMembership.tenant_id == auth_ctx.tenant_id,
+            TenantMembership.user_id == auth_ctx.user_id,
+        )
+        result = await session.execute(stmt)
+        membership = result.scalar_one_or_none()
+
+        if membership is None or not membership.can_manage_users():
+            raise HTTPException(
+                status_code=403,
+                detail="Only owners and admins can invite users",
+            )
+
+        # Check if email already invited (pending)
+        existing_stmt = select(Invitation).where(
+            Invitation.tenant_id == auth_ctx.tenant_id,
+            Invitation.email == invite.email,
+            Invitation.status == "pending",
+        )
+        existing_result = await session.execute(existing_stmt)
+        if existing_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=409,
+                detail="Invitation already pending for this email",
+            )
+
+        # Generate token and hash
+        token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+        now = utc_now()
+        expires_at = now + timedelta(days=7)  # 7 day expiry
+
+        new_invitation = Invitation(
+            id=generate_uuid(),
+            tenant_id=auth_ctx.tenant_id,
+            email=invite.email,
+            role=invite.role,
+            status="pending",
+            token_hash=token_hash,
+            invited_by=auth_ctx.user_id,
+            created_at=now,
+            expires_at=expires_at,
+        )
+
+        session.add(new_invitation)
+        await session.commit()
+        await session.refresh(new_invitation)
+
+        # TODO: Send invitation email with token
+        # The token would be included in an invitation link
+
+        return InvitationResponse(
+            id=new_invitation.id,
+            email=new_invitation.email,
+            role=new_invitation.role,
+            status=new_invitation.status,
+            created_at=new_invitation.created_at,
+            expires_at=new_invitation.expires_at,
+            invited_by=new_invitation.invited_by,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "invite_failed", "message": str(e)},
+        )
+
+
+@router.get("/invitations", response_model=InvitationListResponse)
+async def list_invitations(
+    request: Request,
+    status: Optional[str] = Query(None, description="Filter by status"),
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> InvitationListResponse:
+    """
+    List invitations for the current tenant.
+
+    Requires: owner or admin role.
+
+    Layer: L2 (Product APIs)
+    """
+    auth_ctx = get_auth_context(request)
+
+    try:
+        # Check caller has permission
+        stmt = select(TenantMembership).where(
+            TenantMembership.tenant_id == auth_ctx.tenant_id,
+            TenantMembership.user_id == auth_ctx.user_id,
+        )
+        result = await session.execute(stmt)
+        membership = result.scalar_one_or_none()
+
+        if membership is None or not membership.can_manage_users():
+            raise HTTPException(
+                status_code=403,
+                detail="Only owners and admins can view invitations",
+            )
+
+        inv_stmt = select(Invitation).where(
+            Invitation.tenant_id == auth_ctx.tenant_id
+        )
+
+        if status:
+            inv_stmt = inv_stmt.where(Invitation.status == status)
+
+        inv_stmt = inv_stmt.order_by(Invitation.created_at.desc())
+
+        inv_result = await session.execute(inv_stmt)
+        invitations = inv_result.scalars().all()
+
+        return InvitationListResponse(
+            invitations=[
+                InvitationResponse(
+                    id=inv.id,
+                    email=inv.email,
+                    role=inv.role,
+                    status=inv.status,
+                    created_at=inv.created_at,
+                    expires_at=inv.expires_at,
+                    invited_by=inv.invited_by,
+                )
+                for inv in invitations
+            ],
+            total=len(invitations),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "query_failed", "message": str(e)},
+        )
+
+
+@router.post("/invitations/{invitation_id}/accept", status_code=200)
+async def accept_invitation(
+    invitation_id: str,
+    accept: AcceptInvitationRequest,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> dict:
+    """
+    Accept an invitation to join a tenant.
+
+    This is a public endpoint (no auth required) as the user
+    may not have an account yet.
+
+    Layer: L2 (Product APIs)
+    """
+    import hashlib
+
+    try:
+        token_hash = hashlib.sha256(accept.token.encode()).hexdigest()
+
+        stmt = select(Invitation).where(
+            Invitation.id == invitation_id,
+            Invitation.token_hash == token_hash,
+            Invitation.status == "pending",
+        )
+        result = await session.execute(stmt)
+        invitation = result.scalar_one_or_none()
+
+        if invitation is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Invalid or expired invitation",
+            )
+
+        now = utc_now()
+
+        if invitation.expires_at < now:
+            invitation.status = "expired"
+            await session.commit()
+            raise HTTPException(
+                status_code=410,
+                detail="Invitation has expired",
+            )
+
+        # Check if user exists with this email
+        user_stmt = select(User).where(User.email == invitation.email)
+        user_result = await session.execute(user_stmt)
+        user = user_result.scalar_one_or_none()
+
+        if user is None:
+            # Create new user
+            user = User(
+                id=generate_uuid(),
+                email=invitation.email,
+                name=invitation.email.split("@")[0],  # Default name from email
+                created_at=now,
+                updated_at=now,
+            )
+            session.add(user)
+            await session.flush()
+
+        # Check if already a member
+        member_stmt = select(TenantMembership).where(
+            TenantMembership.tenant_id == invitation.tenant_id,
+            TenantMembership.user_id == user.id,
+        )
+        member_result = await session.execute(member_stmt)
+        if member_result.scalar_one_or_none():
+            invitation.status = "accepted"
+            invitation.accepted_at = now
+            await session.commit()
+            return {"message": "Already a member of this tenant"}
+
+        # Create membership
+        membership = TenantMembership(
+            id=generate_uuid(),
+            tenant_id=invitation.tenant_id,
+            user_id=user.id,
+            role=invitation.role,
+            created_at=now,
+        )
+        session.add(membership)
+
+        # Update invitation
+        invitation.status = "accepted"
+        invitation.accepted_at = now
+
+        await session.commit()
+
+        return {
+            "message": "Invitation accepted",
+            "tenant_id": invitation.tenant_id,
+            "role": invitation.role,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "accept_failed", "message": str(e)},
+        )
+
+
+@router.get("/users", response_model=TenantUserListResponse)
+async def list_tenant_users(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> TenantUserListResponse:
+    """
+    List users in the current tenant.
+
+    Layer: L2 (Product APIs)
+    """
+    auth_ctx = get_auth_context(request)
+
+    try:
+        stmt = (
+            select(TenantMembership, User)
+            .join(User, TenantMembership.user_id == User.id)
+            .where(TenantMembership.tenant_id == auth_ctx.tenant_id)
+            .order_by(TenantMembership.created_at)
+        )
+
+        result = await session.execute(stmt)
+        rows = result.all()
+
+        return TenantUserListResponse(
+            users=[
+                TenantUserResponse(
+                    user_id=membership.user_id,
+                    email=user.email,
+                    name=user.name,
+                    role=membership.role,
+                    joined_at=membership.created_at,
+                )
+                for membership, user in rows
+            ],
+            total=len(rows),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "query_failed", "message": str(e)},
+        )
+
+
+@router.put("/users/{user_id}/role", response_model=TenantUserResponse)
+async def update_user_role(
+    request: Request,
+    user_id: str,
+    update: UpdateUserRoleRequest,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> TenantUserResponse:
+    """
+    Update a user's role in the tenant.
+
+    Requires: owner role.
+
+    Layer: L2 (Product APIs)
+    """
+    auth_ctx = get_auth_context(request)
+
+    try:
+        # Check caller is owner
+        caller_stmt = select(TenantMembership).where(
+            TenantMembership.tenant_id == auth_ctx.tenant_id,
+            TenantMembership.user_id == auth_ctx.user_id,
+        )
+        caller_result = await session.execute(caller_stmt)
+        caller_membership = caller_result.scalar_one_or_none()
+
+        if caller_membership is None or not caller_membership.can_change_roles():
+            raise HTTPException(
+                status_code=403,
+                detail="Only owners can change user roles",
+            )
+
+        # Cannot change own role
+        if user_id == auth_ctx.user_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot change your own role",
+            )
+
+        # Get target membership
+        target_stmt = (
+            select(TenantMembership, User)
+            .join(User, TenantMembership.user_id == User.id)
+            .where(
+                TenantMembership.tenant_id == auth_ctx.tenant_id,
+                TenantMembership.user_id == user_id,
+            )
+        )
+        target_result = await session.execute(target_stmt)
+        row = target_result.one_or_none()
+
+        if row is None:
+            raise HTTPException(status_code=404, detail="User not found in tenant")
+
+        membership, user = row
+
+        # Validate role
+        valid_roles = ["owner", "admin", "member", "viewer"]
+        if update.role not in valid_roles:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid role. Must be one of: {valid_roles}",
+            )
+
+        membership.role = update.role
+        await session.commit()
+
+        return TenantUserResponse(
+            user_id=membership.user_id,
+            email=user.email,
+            name=user.name,
+            role=membership.role,
+            joined_at=membership.created_at,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "update_failed", "message": str(e)},
+        )
+
+
+@router.delete("/users/{user_id}", status_code=200)
+async def remove_user(
+    request: Request,
+    user_id: str,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> dict:
+    """
+    Remove a user from the tenant.
+
+    Requires: owner or admin role.
+
+    Layer: L2 (Product APIs)
+    """
+    auth_ctx = get_auth_context(request)
+
+    try:
+        # Check caller has permission
+        caller_stmt = select(TenantMembership).where(
+            TenantMembership.tenant_id == auth_ctx.tenant_id,
+            TenantMembership.user_id == auth_ctx.user_id,
+        )
+        caller_result = await session.execute(caller_stmt)
+        caller_membership = caller_result.scalar_one_or_none()
+
+        if caller_membership is None or not caller_membership.can_manage_users():
+            raise HTTPException(
+                status_code=403,
+                detail="Only owners and admins can remove users",
+            )
+
+        # Cannot remove self
+        if user_id == auth_ctx.user_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot remove yourself from tenant",
+            )
+
+        # Get target membership
+        target_stmt = select(TenantMembership).where(
+            TenantMembership.tenant_id == auth_ctx.tenant_id,
+            TenantMembership.user_id == user_id,
+        )
+        target_result = await session.execute(target_stmt)
+        target_membership = target_result.scalar_one_or_none()
+
+        if target_membership is None:
+            raise HTTPException(status_code=404, detail="User not found in tenant")
+
+        # Cannot remove owner (unless caller is also owner)
+        if target_membership.role == "owner" and caller_membership.role != "owner":
+            raise HTTPException(
+                status_code=403,
+                detail="Only owners can remove other owners",
+            )
+
+        await session.delete(target_membership)
+        await session.commit()
+
+        return {"message": "User removed from tenant", "user_id": user_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "remove_failed", "message": str(e)},
         )

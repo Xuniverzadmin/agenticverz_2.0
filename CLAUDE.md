@@ -1,6 +1,6 @@
 # Claude Context File - AOS / Agenticverz 2.0
 
-**Last Updated:** 2026-01-14
+**Last Updated:** 2026-01-18
 
 ---
 
@@ -8,7 +8,7 @@
 
 **Status:** ACTIVE
 **Effective:** 2026-01-02
-**Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`, `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`, `docs/contracts/ARCHITECTURE_CONSTRAINTS_V1.yaml`, `docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md`, `docs/governance/RBAC_AUTHORITY_SEPARATION_DESIGN.md`, `docs/governance/PERMISSION_TAXONOMY_V1.md`, `docs/governance/SDSR_E2E_TESTING_PROTOCOL.md`
+**Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`, `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`, `docs/contracts/ARCHITECTURE_CONSTRAINTS_V1.yaml`, `docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md`, `docs/governance/RBAC_AUTHORITY_SEPARATION_DESIGN.md`, `docs/governance/PERMISSION_TAXONOMY_V1.md`, `docs/governance/SDSR_E2E_TESTING_PROTOCOL.md`, `docs/architecture/ENVIRONMENT_CONTRACT.md`
 
 ### Session Playbook Bootstrap (REQUIRED - BL-BOOT-001, BL-BOOT-002)
 
@@ -63,7 +63,9 @@ SESSION_BOOTSTRAP_CONFIRMATION
   - CUSTOMER_CONSOLE_V1_CONSTITUTION.md
   - PHASE_G_STEADY_STATE_GOVERNANCE.md
   - GOVERNANCE_CHECKLIST.md
+  - ENVIRONMENT_CONTRACT.md
 - visibility_lifecycle_loaded: YES
+- environment_contract_loaded: YES
 - discovery_ledger_loaded: YES
 - database_contract_loaded: YES
 - console_constitution_loaded: YES
@@ -88,6 +90,56 @@ SESSION_BOOTSTRAP_CONFIRMATION
 
 No work is allowed until bootstrap is complete. Partial loading is rejected.
 **BLCA verification is mandatory** - skipping BLCA invalidates the bootstrap.
+
+### Environment Contract (MANDATORY - BL-ENV-CONTRACT-001)
+
+**Status:** ACTIVE
+**Effective:** 2026-01-18
+**Reference:** `docs/architecture/ENVIRONMENT_CONTRACT.md`
+
+> **Follow `/docs/architecture/ENVIRONMENT_CONTRACT.md` strictly for all environment and auth decisions.**
+
+Claude must understand and respect the three-plane separation:
+
+| Plane | Auth | Use |
+|-------|------|-----|
+| **Database** | `DATABASE_URL` only | Migrations, seeds, schema operations |
+| **Human** | `Authorization: Bearer <clerk_jwt>` | `/api/v1/accounts/*`, console APIs |
+| **Machine** | `X-AOS-Key: <api_key>` | `/api/v1/runs/*`, SDK, telemetry |
+
+**Environment Modes:**
+
+| Mode | AOS_MODE | DB_AUTHORITY | Purpose |
+|------|----------|--------------|---------|
+| LOCAL | local | local | Developer sandbox |
+| TEST | test | neon | Customer-grade testing |
+| PROD | prod | neon | Production |
+
+**Claude MUST:**
+- Always ask "What is the current AOS_MODE?" if ambiguous
+- Never suggest weakening auth to make tests pass
+- Never mix auth planes (no machine keys on human endpoints)
+- Use direct DB queries to verify migrations (not HTTP APIs)
+
+**Claude MUST NOT:**
+- Create fake JWTs or stub users
+- Add `X-AOS-Key` auth to human-plane endpoints
+- Use API calls to perform database operations
+- Assume environment intent without explicit declaration
+
+**Hard Failure Response:**
+
+If Claude is about to suggest weakening auth:
+```
+BL-ENV-CONTRACT-001 VIOLATION: Cannot weaken auth to make tests pass.
+
+The correct approach is:
+- Human endpoints: Use Clerk JWT (frontend or test users)
+- Machine endpoints: Use X-AOS-Key
+- DB operations: Use DATABASE_URL directly
+
+Reference: docs/architecture/ENVIRONMENT_CONTRACT.md
+```
 
 ### Session Continuation from Summary (REQUIRED - BL-BOOT-003)
 

@@ -238,10 +238,28 @@ class User(SQLModel, table=True):
     # Status
     status: str = Field(default="active", max_length=50)  # active, suspended, deleted
 
+    # User Preferences (JSON) - PIN-443 Account Domain
+    preferences_json: Optional[str] = Field(default=None, description="User preferences as JSON")
+
     # Timestamps
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
     last_login_at: Optional[datetime] = None
+
+    def get_preferences(self) -> dict:
+        """Parse preferences JSON, return empty dict if None."""
+        import json
+        if self.preferences_json:
+            try:
+                return json.loads(self.preferences_json)
+            except json.JSONDecodeError:
+                return {}
+        return {}
+
+    def set_preferences(self, prefs: dict) -> None:
+        """Set preferences from dict."""
+        import json
+        self.preferences_json = json.dumps(prefs) if prefs else None
 
 
 # ============== TENANT MEMBERSHIP ==============
@@ -271,6 +289,57 @@ class TenantMembership(SQLModel, table=True):
 
     def can_view_runs(self) -> bool:
         return True  # All roles can view
+
+    def can_manage_users(self) -> bool:
+        """Check if this member can invite/manage other users."""
+        return self.role in ("owner", "admin")
+
+    def can_change_roles(self) -> bool:
+        """Check if this member can change other users' roles."""
+        return self.role == "owner"
+
+
+# ============== INVITATION ==============
+
+
+class Invitation(SQLModel, table=True):
+    """User invitation to join a tenant."""
+
+    __tablename__ = "invitations"
+
+    id: str = Field(default_factory=generate_uuid, primary_key=True)
+    tenant_id: str = Field(foreign_key="tenants.id", index=True)
+
+    # Invitation details
+    email: str = Field(max_length=255, index=True)
+    role: str = Field(default="member", max_length=50)  # admin, member, viewer
+
+    # Invitation state
+    status: str = Field(default="pending", max_length=50)  # pending, accepted, expired, revoked
+    token_hash: str = Field(max_length=128, index=True)  # SHA-256 hash of invitation token
+
+    # Who invited
+    invited_by: str = Field(foreign_key="users.id")
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=utc_now)
+    expires_at: datetime  # Required - no default
+    accepted_at: Optional[datetime] = None
+
+    @staticmethod
+    def generate_token() -> tuple[str, str]:
+        """Generate invitation token. Returns (token, hash)."""
+        token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        return token, token_hash
+
+    def is_valid(self) -> bool:
+        """Check if invitation is valid (pending and not expired)."""
+        if self.status != "pending":
+            return False
+        if self.expires_at < utc_now():
+            return False
+        return True
 
 
 # ============== API KEY ==============
@@ -523,6 +592,50 @@ class WorkerRun(SQLModel, table=True):
     # SDSR: Synthetic data marking (PIN-370)
     is_synthetic: bool = Field(default=False, description="True if created by synthetic scenario injection")
     synthetic_scenario_id: Optional[str] = Field(default=None, max_length=100, description="Scenario ID for traceability")
+
+
+# ============== SUPPORT TICKET ==============
+
+
+class SupportTicket(SQLModel, table=True):
+    """Support ticket for customer issues - feeds into CRM workflow.
+
+    PIN-443 Account Domain: Support tickets enter the Part-2 CRM workflow
+    as issue_events with source='support_ticket'.
+
+    Workflow Integration:
+    - Ticket created → issue_events record created
+    - Validator analyzes → proposal created if actionable
+    - Founder reviews → approved or rejected
+    - Resolution recorded here
+
+    Note: This is the customer-facing ticket. The CRM workflow's issue_events
+    and system_contracts tables handle the internal governance process.
+    """
+
+    __tablename__ = "support_tickets"
+
+    id: str = Field(default_factory=generate_uuid, primary_key=True)
+    tenant_id: str = Field(foreign_key="tenants.id", index=True)
+    user_id: str = Field(foreign_key="users.id")
+
+    # Ticket details
+    subject: str = Field(max_length=200)
+    description: str = Field(max_length=4000)
+    category: str = Field(default="general", max_length=50)  # general, billing, technical, feature_request
+    priority: str = Field(default="medium", max_length=20)  # low, medium, high, critical
+
+    # Status
+    status: str = Field(default="open", max_length=50)  # open, in_progress, resolved, closed
+    resolution: Optional[str] = Field(default=None, max_length=4000)
+
+    # CRM workflow integration
+    issue_event_id: Optional[str] = Field(default=None, max_length=100)  # Links to issue_events if actionable
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+    resolved_at: Optional[datetime] = None
 
 
 # ============== AUDIT LOG ==============
