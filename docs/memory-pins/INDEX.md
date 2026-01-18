@@ -1202,6 +1202,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-18 | **PIN-443 Activity Domain Panel Gap Fixes (ACT-LLM-LIVE-O2, ACT-LLM-COMP-O3)** - Updated: Updates |
 | 2026-01-18 | **PIN-443 Activity Domain Panel Gap Fixes (ACT-LLM-LIVE-O2, ACT-LLM-COMP-O3)** - Created via memory_trail. |
 | 2026-01-18 | **PIN-442 Policy Facade Layer - API-001 Compliance** - Created PolicyFacade in app/services/policy/facade.py. Replaced 33 direct get_policy_engine() calls with get_policy_facade() in policy_layer.py. Fixed API-001 governance violation. Architecture now matches Incidents/Ops facade pattern. |
 | 2026-01-18 | **PIN-441 POLICIES Domain SDSR Scenario Fixes** - Fixed 26/30 POLICIES scenarios. Added policy_layer.py to routes cache known_prefixes. Created 3 intent YAMLs (POL-GOV-LES O3-O5). Fixed endpoint prefixes (/policy-layer/* → /api/v1/policy-layer/*) across 29 files. 32 total files modified. |

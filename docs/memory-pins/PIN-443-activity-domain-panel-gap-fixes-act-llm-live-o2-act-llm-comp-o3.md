@@ -59,3 +59,28 @@ Fixed two Activity domain panels that were in EMPTY state (no capability binding
 
 - ACTIVITY_DOMAIN_CONTRACT.md Section 7
 - Commit: 51d27375
+---
+
+## Updates
+
+### Update (2026-01-18)
+
+## 2026-01-18: SDSR Attribution Compliance Added
+
+inject_synthetic.py now complies with migration 105 attribution constraints:
+
+### Changes
+- Added `SDSR_ORIGIN_SYSTEM_ID = 'sdsr-inject-synthetic'` (replaces legacy-migration)
+- Added `SDSR_DEFAULT_ACTOR_TYPE = 'SYSTEM'` with logging when defaulting
+- Added `validate_sdsr_attribution()` for early validation
+- Scenario YAML now supports: `actor_type`, `actor_id`, `origin_system_id`
+- Optional metadata fields: `authorization_*`, `project_id`, `source`
+
+### Tightenings Implemented
+1. **Visibility**: Logs when actor_type defaults to SYSTEM
+2. **Namespace Reservation**: 'sdsr-' prefix reserved for SDSR
+
+### Result
+> Every run in the system — real or synthetic — obeys the same attribution law.
+
+Commit: c155d138
