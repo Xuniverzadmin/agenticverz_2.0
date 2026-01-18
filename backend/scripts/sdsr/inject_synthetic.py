@@ -211,6 +211,35 @@ ARCHIVE_ONLY_TABLES = frozenset(
 
 
 # =============================================================================
+# SDSR ATTRIBUTION DEFAULTS (PIN-443)
+# =============================================================================
+# SDSR-injected runs use a dedicated origin_system_id to distinguish them
+# from real SDK-created runs, while complying with attribution constraints
+# added in migration 105.
+#
+# Reference: docs/contracts/RUN_VALIDATION_RULES.md (R1-R5)
+# Reference: sdk/python/aos_sdk/attribution.py
+#
+# After migration 105:
+# - origin_system_id='legacy-migration' is FORBIDDEN for new runs
+# - actor_type must be HUMAN, SYSTEM, or SERVICE
+# - actor_id required iff actor_type=HUMAN
+#
+# SDSR is a FIRST-CLASS PRODUCER, not a privileged bypass.
+
+SDSR_ORIGIN_SYSTEM_ID = "sdsr-inject-synthetic"
+SDSR_DEFAULT_ACTOR_TYPE = "SYSTEM"  # SDSR scenarios are system-initiated by default
+
+# Valid actor types (closed set per RUN_VALIDATION_RULES R3)
+VALID_ACTOR_TYPES = frozenset({"HUMAN", "SYSTEM", "SERVICE"})
+
+# RESERVED NAMESPACE (Tightening #2)
+# origin_system_id values starting with 'sdsr-' are reserved for SDSR injection.
+# This prevents analytics pollution from non-SDSR paths using SDSR-like identifiers.
+SDSR_ORIGIN_SYSTEM_PREFIX = "sdsr-"
+
+
+# =============================================================================
 # SCHEMA DEFINITIONS
 # =============================================================================
 
@@ -226,7 +255,14 @@ OPTIONAL_FIELDS = {
     "tenants": ["plan", "status", "max_workers", "max_runs_per_day"],
     "api_keys": ["status", "permissions_json", "allowed_workers_json"],
     "agents": ["description", "status", "tenant_id", "owner_id"],
-    "runs": ["status", "tenant_id", "parent_run_id", "priority", "max_attempts", "plan_json"],
+    "runs": [
+        "status", "tenant_id", "parent_run_id", "priority", "max_attempts", "plan_json",
+        # Attribution fields (PIN-443)
+        "actor_type", "actor_id", "origin_system_id",
+        # Optional metadata fields
+        "authorization_decision", "authorization_engine", "authorization_context",
+        "project_id", "source", "provider_type",
+    ],
     "worker_runs": ["status", "input_json", "api_key_id", "user_id", "parent_run_id"],
 }
 
@@ -349,6 +385,61 @@ def validate_scenario_spec(spec: dict) -> None:
     if not has_old_format and not has_new_format:
         raise ScenarioValidationError(
             "Missing scenario structure. Expected 'backend.writes' (old format) or 'preconditions/steps' (new format)"
+        )
+
+
+def validate_sdsr_attribution(run_data: dict, step_id: str) -> None:
+    """
+    Validate attribution fields per RUN_VALIDATION_RULES (R1-R5).
+
+    This validation runs BEFORE database INSERT to provide clear error messages.
+    The database has CHECK constraints (migration 105) as defense-in-depth,
+    but SDSR should fail fast with intelligible errors.
+
+    Reference: docs/contracts/RUN_VALIDATION_RULES.md
+    Reference: sdk/python/aos_sdk/attribution.py
+
+    Raises:
+        ScenarioValidationError if validation fails
+    """
+    actor_type = run_data.get("actor_type", SDSR_DEFAULT_ACTOR_TYPE)
+    actor_id = run_data.get("actor_id")
+    origin_system_id = run_data.get("origin_system_id", SDSR_ORIGIN_SYSTEM_ID)
+    agent_id = run_data.get("agent_id")
+
+    # R1: agent_id is REQUIRED and non-empty
+    if not agent_id or agent_id == "legacy-unknown":
+        raise ScenarioValidationError(
+            f"Step '{step_id}': agent_id is required and cannot be 'legacy-unknown'. "
+            f"Provide a valid agent identifier."
+        )
+
+    # R3: actor_type must be from closed set {HUMAN, SYSTEM, SERVICE}
+    if actor_type not in VALID_ACTOR_TYPES:
+        raise ScenarioValidationError(
+            f"Step '{step_id}': invalid actor_type='{actor_type}'. "
+            f"Must be one of: {sorted(VALID_ACTOR_TYPES)}"
+        )
+
+    # R4: actor_id REQUIRED if actor_type = HUMAN
+    if actor_type == "HUMAN" and not actor_id:
+        raise ScenarioValidationError(
+            f"Step '{step_id}': actor_type='HUMAN' requires actor_id. "
+            f"Provide the human actor identity."
+        )
+
+    # R5: actor_id MUST be NULL if actor_type != HUMAN
+    if actor_type != "HUMAN" and actor_id:
+        raise ScenarioValidationError(
+            f"Step '{step_id}': actor_type='{actor_type}' must not have actor_id. "
+            f"Only HUMAN actors have actor_id."
+        )
+
+    # Check origin_system_id is not the forbidden legacy value
+    if origin_system_id == "legacy-migration":
+        raise ScenarioValidationError(
+            f"Step '{step_id}': origin_system_id='legacy-migration' is forbidden for new runs. "
+            f"Use a valid origin system identifier or omit to use SDSR default."
         )
 
 
@@ -599,6 +690,51 @@ def build_writes_from_new_format(spec: dict, case_id: str = None) -> List[Dict[s
             step_suffix = f"-{step_id.lower().replace('_', '-').replace(' ', '-')}"
             unique_run_id = f"run-{scenario_id.lower()}{case_suffix}{step_suffix}-{execution_timestamp}"
             run_index += 1
+
+            # =================================================================
+            # ATTRIBUTION FIELDS (PIN-443 — SDSR Attribution Compliance)
+            # =================================================================
+            # Per migration 105, new runs MUST have valid attribution:
+            # - origin_system_id != 'legacy-migration'
+            # - actor_type in {HUMAN, SYSTEM, SERVICE}
+            # - actor_id required iff actor_type = HUMAN
+            #
+            # SDSR is a first-class producer, not a privileged bypass.
+            # =================================================================
+
+            # Determine actor_type with Tightening #1: Log when defaulting
+            if "actor_type" not in data:
+                actor_type = SDSR_DEFAULT_ACTOR_TYPE
+                logger.info(
+                    f"SDSR step '{step_id}': actor_type not specified, defaulting to {SDSR_DEFAULT_ACTOR_TYPE}"
+                )
+            else:
+                actor_type = data["actor_type"].upper()
+
+            # Determine origin_system_id
+            if "origin_system_id" not in data:
+                origin_system_id = SDSR_ORIGIN_SYSTEM_ID
+            else:
+                origin_system_id = data["origin_system_id"]
+
+            # Actor ID handling per RUN_VALIDATION_RULES R4/R5
+            if actor_type == "HUMAN":
+                # R4: actor_id REQUIRED for HUMAN
+                actor_id = data.get("actor_id")
+                if not actor_id:
+                    raise ScenarioValidationError(
+                        f"Step '{step_id}': actor_type='HUMAN' requires actor_id. "
+                        f"Provide the human actor identity in the scenario YAML."
+                    )
+            else:
+                # R5: actor_id MUST be NULL for SYSTEM/SERVICE
+                if data.get("actor_id"):
+                    raise ScenarioValidationError(
+                        f"Step '{step_id}': actor_type='{actor_type}' must not have actor_id. "
+                        f"Only HUMAN actors have actor_id."
+                    )
+                actor_id = None
+
             run_data = {
                 "id": unique_run_id,  # Always unique per execution (SDSR Identity Rule)
                 "agent_id": data.get(
@@ -615,7 +751,30 @@ def build_writes_from_new_format(spec: dict, case_id: str = None) -> List[Dict[s
                 "max_attempts": data.get("max_attempts", 1),
                 # Required NOT NULL fields with defaults (from Run model)
                 "attempts": data.get("attempts", 0),
+                # =================================================================
+                # ATTRIBUTION FIELDS (Required by migration 105)
+                # =================================================================
+                "actor_type": actor_type,
+                "actor_id": actor_id,
+                "origin_system_id": origin_system_id,
             }
+
+            # =================================================================
+            # OPTIONAL METADATA FIELDS
+            # =================================================================
+            # These are passed through if provided in the scenario YAML.
+            # Useful for testing authorization paths, project scoping, etc.
+            optional_metadata_fields = [
+                "authorization_decision",
+                "authorization_engine",
+                "authorization_context",
+                "project_id",
+                "source",
+                "provider_type",
+            ]
+            for field in optional_metadata_fields:
+                if field in data:
+                    run_data[field] = data[field]
 
             # If the scenario expects failure, we need a plan that will fail
             # For EXECUTION_TIMEOUT scenarios, we use a special marker
@@ -680,6 +839,9 @@ def build_writes_from_new_format(spec: dict, case_id: str = None) -> List[Dict[s
                     },
                 }
                 run_data["plan_json"] = json.dumps(minimal_success_plan)
+
+            # Validate attribution before adding to writes
+            validate_sdsr_attribution(run_data, step_id)
 
             writes.append({"create_run": run_data})
 
@@ -765,6 +927,32 @@ def inject_scenario(spec: dict, dry_run: bool = False, case_id: str = None) -> d
                 # Rule 3: Inject synthetic markers
                 data["is_synthetic"] = True
                 data["synthetic_scenario_id"] = scenario_id
+
+                # =================================================================
+                # ATTRIBUTION DEFAULTS FOR RUNS (PIN-443)
+                # =================================================================
+                # Ensure runs have valid attribution per migration 105 constraints.
+                # For old-format scenarios or scenarios missing attribution fields.
+                if table == "runs":
+                    # Set origin_system_id if not provided (avoid legacy-migration trigger)
+                    if "origin_system_id" not in data:
+                        data["origin_system_id"] = SDSR_ORIGIN_SYSTEM_ID
+                        logger.info(f"Run '{data['id']}': origin_system_id defaulted to {SDSR_ORIGIN_SYSTEM_ID}")
+
+                    # Set actor_type if not provided
+                    if "actor_type" not in data:
+                        data["actor_type"] = SDSR_DEFAULT_ACTOR_TYPE
+                        logger.info(f"Run '{data['id']}': actor_type defaulted to {SDSR_DEFAULT_ACTOR_TYPE}")
+
+                    # Validate actor_type/actor_id consistency
+                    actor_type = data.get("actor_type", SDSR_DEFAULT_ACTOR_TYPE)
+                    if actor_type != "HUMAN":
+                        # Ensure actor_id is None for non-HUMAN
+                        data["actor_id"] = None
+                    elif not data.get("actor_id"):
+                        raise ScenarioValidationError(
+                            f"Run '{data['id']}': actor_type='HUMAN' requires actor_id"
+                        )
 
                 # Generate ID if not provided
                 if "id" not in data or data["id"] is None:
