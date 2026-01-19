@@ -62,6 +62,7 @@ class AuditEntityType(str, Enum):
     POLICY_PROPOSAL = "POLICY_PROPOSAL"
     LIMIT = "LIMIT"
     INCIDENT = "INCIDENT"
+    SIGNAL = "SIGNAL"
 
 
 class AuditEventType(str, Enum):
@@ -85,6 +86,9 @@ class AuditEventType(str, Enum):
     # System / Control
     EMERGENCY_OVERRIDE_ACTIVATED = "EmergencyOverrideActivated"
     EMERGENCY_OVERRIDE_DEACTIVATED = "EmergencyOverrideDeactivated"
+    # Signal Feedback
+    SIGNAL_ACKNOWLEDGED = "SignalAcknowledged"
+    SIGNAL_SUPPRESSED = "SignalSuppressed"
 
 
 # =============================================================================

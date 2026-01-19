@@ -1,9 +1,10 @@
 # Activity Domain Contract
 
 **Status:** ENFORCED
-**Effective:** 2026-01-17
+**Version:** 2.0
+**Effective:** 2026-01-19
 **Scope:** All Activity domain code (L2 facade, L4 services)
-**Reference:** Activity Domain System Design
+**Reference:** Activity Domain System Design, ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
 
 ---
 
@@ -368,3 +369,545 @@ When CI fails:
 4. **Fix the violation** — don't work around it
 
 **Rule:** Contracts evolve through governance. Bypasses do not.
+
+---
+
+## V2 EXTENSIONS (2026-01-19)
+
+The following sections are added for Activity V2 migration with policy context integration.
+
+---
+
+## 11. Policy Context Integration (V2)
+
+### Policy Context Shape (Mandatory)
+
+Every Activity response that returns runs or signals MUST include:
+
+```json
+{
+  "policy_context": {
+    "policy_id": "lim-123",
+    "policy_name": "Default Cost Guard",
+    "policy_scope": "TENANT",
+    "limit_type": "COST_USD",
+    "threshold_value": 1.00,
+    "threshold_unit": "USD",
+    "threshold_source": "TENANT_OVERRIDE",
+    "evaluation_outcome": "NEAR_THRESHOLD",
+    "actual_value": 0.85
+  }
+}
+```
+
+### Policy Resolution Order (Deterministic)
+
+When determining which policy limit applies to a run, resolve in this order:
+
+```
+1. Tenant-scoped ACTIVE limit (limits.scope = 'TENANT')
+2. Project-scoped ACTIVE limit (limits.scope = 'PROJECT')
+3. Agent-scoped ACTIVE limit (limits.scope = 'AGENT')
+4. Provider-scoped ACTIVE limit (limits.scope = 'PROVIDER')
+5. Global ACTIVE limit (limits.scope = 'GLOBAL')
+6. SYSTEM_DEFAULT (virtual, no database record)
+```
+
+**Rules:**
+- First match wins
+- Only `status = 'ACTIVE'` limits are considered
+- If no limit matches, use SYSTEM_DEFAULT
+- Resolution is **deterministic** — same run always gets same limit
+
+---
+
+## 12. Evaluation Outcome Semantics (V2)
+
+| Outcome | Definition | Trigger Condition |
+|---------|------------|-------------------|
+| `OK` | Run within all applicable limits | `actual_value < threshold * 0.8` |
+| `NEAR_THRESHOLD` | Run approaching limit | `actual_value >= threshold * 0.8 AND actual_value < threshold` |
+| `BREACH` | Run exceeded limit | `actual_value >= threshold` |
+| `OVERRIDDEN` | Human override applied | `limit_breaches.breach_type = 'OVERRIDDEN'` |
+| `ADVISORY` | System default, informational | No tenant/project/agent limit exists |
+
+**Threshold Proximity:**
+- `< 80%` → OK
+- `80% - 99%` → NEAR_THRESHOLD
+- `>= 100%` → BREACH
+
+---
+
+## 13. Signal Derivation Rules (V2)
+
+Signals are **projections**, not stored entities. They are computed at query time.
+
+### Signal Types
+
+| signal_type | Derivation Rule |
+|-------------|-----------------|
+| `CRITICAL_FAILURE` | `status = 'failed' AND (risk_level = 'VIOLATED' OR incident_count > 0)` |
+| `CRITICAL_SUCCESS` | `status = 'succeeded' AND incident_count = 0 AND policy_violation = false` |
+| `NEAR_THRESHOLD` | `evaluation_outcome = 'NEAR_THRESHOLD'` |
+| `AT_RISK` | `risk_level IN ('AT_RISK', 'VIOLATED')` |
+| `EVIDENCE_DEGRADED` | `evidence_health IN ('DEGRADED', 'MISSING')` |
+
+### Severity Mapping
+
+| risk_level | severity |
+|------------|----------|
+| `VIOLATED` | `HIGH` |
+| `AT_RISK` | `HIGH` |
+| `NEAR_THRESHOLD` | `MEDIUM` |
+| `NORMAL` | `LOW` |
+
+### Reason Generation
+
+| Condition | Reason Template |
+|-----------|-----------------|
+| Cost threshold | `"Cost at {proximity}% of ${threshold} limit"` |
+| Time threshold | `"Execution time at {proximity}% of {threshold}ms limit"` |
+| Token threshold | `"Token usage at {proximity}% of {threshold} limit"` |
+| Incident created | `"Run created {count} incident(s)"` |
+| Policy violation | `"Policy {policy_name} violated"` |
+
+### Signal Rejection Rule
+
+> **If a signal cannot cite a policy context, it must not exist.**
+
+Signals without policy justification are invalid and must be filtered out.
+
+### Signal Identity Rule — LOCKED
+
+> Signals are attention cues, not compliance records.
+> Authoritative state always resides with runs and policy evaluation.
+
+**Signals Are:**
+- Derived (computed at query time)
+- Ephemeral (not stored)
+- Ranked (by severity)
+- Policy-justified (every signal cites policy_context)
+
+**Signals Are NOT:**
+- Stored entities
+- Acknowledgeable actions
+- Mutable records
+- Authoritative compliance proof
+
+**Never Do:**
+- Create a `signals` table
+- Add "acknowledge" or "dismiss" actions to signals
+- Treat signals as durable records
+- Use signals for audit/compliance purposes
+
+---
+
+## 14. Policy Context Non-Nullability (V2) — LOCKED RULE
+
+**Authoritative Rule (POLICY-CONTEXT-001):**
+
+> `policy_context` MUST be a **required, non-null field** in all V2 response models.
+
+**Affected Models:**
+- `RunSummaryV2`
+- `SignalProjection`
+- `ThresholdSignal`
+
+**Fallback Behavior:**
+
+If policy extraction fails (no matching limit):
+```json
+{
+  "policy_context": {
+    "policy_id": "SYSTEM_DEFAULT",
+    "policy_name": "Default Safety Thresholds",
+    "policy_scope": "GLOBAL",
+    "limit_type": null,
+    "threshold_value": null,
+    "threshold_unit": null,
+    "threshold_source": "SYSTEM_DEFAULT",
+    "evaluation_outcome": "ADVISORY",
+    "actual_value": null,
+    "risk_type": null,
+    "proximity_pct": null
+  }
+}
+```
+
+**Guarantees:**
+- Schema truth — no optional/nullable policy_context
+- No "silent missing governance"
+- SYSTEM_DEFAULT makes governance visible from day zero
+
+**Never Return:**
+```json
+{
+  "policy_context": null  // FORBIDDEN
+}
+```
+
+---
+
+## 15. Advisory vs Authoritative Fields (V2)
+
+### Authoritative (Source of Truth)
+
+| Field | Source | Mutability |
+|-------|--------|------------|
+| `run_id` | runs table | Immutable |
+| `state` | runs table | System-controlled |
+| `status` | runs table | System-controlled |
+| `started_at` | runs table | Immutable |
+| `completed_at` | runs table | Immutable |
+| `duration_ms` | Computed | Immutable |
+
+### Advisory (Projections)
+
+| Field | Source | Note |
+|-------|--------|------|
+| `risk_level` | v_runs_o2 | Derived from thresholds |
+| `latency_bucket` | v_runs_o2 | Derived from duration |
+| `evidence_health` | v_runs_o2 | Derived from trace presence |
+| `policy_context` | JOIN to limits | Resolved at query time |
+| `signal_type` | Computed | Projection over runs |
+| `attention_score` | v_runs_o2 | Composite score |
+
+**Rule:** Advisory fields may change if underlying policies change. Authoritative fields are immutable.
+
+---
+
+## 15. SYSTEM_DEFAULT Behavior (V2)
+
+For new tenants or runs without applicable limits:
+
+```json
+{
+  "policy_context": {
+    "policy_id": "SYSTEM_DEFAULT",
+    "policy_name": "Default Safety Thresholds",
+    "policy_scope": "GLOBAL",
+    "limit_type": null,
+    "threshold_value": null,
+    "threshold_unit": null,
+    "threshold_source": "SYSTEM_DEFAULT",
+    "evaluation_outcome": "ADVISORY",
+    "actual_value": null
+  }
+}
+```
+
+**Purpose:**
+- Prevents empty dashboards
+- Makes governance visible from day zero
+- Signals that no tenant-specific policy exists
+
+---
+
+## 16. Multi-Limit Handling (V2) — LOCKED RULE
+
+**Scenario:** A run may trigger multiple limits (e.g., both COST and TIME).
+
+**Authoritative Rule (MOST-SEVERE-WINS-001):**
+
+> If multiple limits apply to a run, the evaluation with the highest severity
+> (BREACH > OVERRIDDEN > NEAR_THRESHOLD > OK > ADVISORY) is authoritative.
+
+**Resolution Order:**
+1. `policy_context` contains the **most severe** evaluation
+2. Severity order: `BREACH > OVERRIDDEN > NEAR_THRESHOLD > OK > ADVISORY`
+3. If same severity, prefer by risk type: `COST > TIME > TOKENS > RATE`
+4. Resolution is **deterministic** — same inputs always produce same output
+
+**Invariants:**
+- This rule is **non-optional** and **non-negotiable**
+- Prevents ambiguous policy_context
+- Prevents frontend misinterpretation
+- Makes multi-limit behavior deterministic
+
+**Future Enhancement:**
+```json
+{
+  "policy_context": { /* most severe */ },
+  "additional_limits": [
+    { /* secondary limit 1 */ },
+    { /* secondary limit 2 */ }
+  ]
+}
+```
+
+---
+
+## 17. Evaluation Time Semantics (V2) — LOCKED RULE
+
+**Scenario:** Admin updates a threshold while a run is LIVE.
+
+**Authoritative Rule (EVAL-TIME-001):**
+
+> Evaluation is performed against **the active limit set at evaluation time**.
+> Historical views do **not retroactively re-evaluate** runs.
+
+**Resolution:**
+- Evaluation uses **limit value at evaluation time** (query time)
+- Historical breach records preserve `limit_value` at breach time
+- Run detail shows current evaluation, not historical
+- `limit_breaches` table stores `limit_value` for audit trail
+
+**Implications:**
+1. A run's `evaluation_outcome` may change if queried after limit update
+2. This is **intentional** — live dashboards reflect current policy state
+3. For historical accuracy, consult `limit_breaches` table directly
+
+**Why This Matters:**
+- Prevents disputes when limits change
+- Protects historical analytics integrity
+- Makes "what if" analysis possible (compare current vs historical thresholds)
+
+**Never Do:**
+- Retroactively update historical breach records
+- Re-evaluate completed runs against new limits for compliance purposes
+- Assume `evaluation_outcome` is immutable
+
+---
+
+## 18. V2 Endpoint Invariants
+
+### `/activity/live` (NEW)
+
+| Invariant | Enforcement |
+|-----------|-------------|
+| Returns only `state = 'LIVE'` | Hardcoded WHERE clause |
+| Includes `policy_context` | Response model validation |
+| Never accepts `state` query param | Param not exposed |
+
+### `/activity/completed` (NEW)
+
+| Invariant | Enforcement |
+|-----------|-------------|
+| Returns only `state = 'COMPLETED'` | Hardcoded WHERE clause |
+| Sorted by `completed_at DESC` | Hardcoded ORDER BY |
+| Includes `policy_context` | Response model validation |
+
+### `/activity/signals` (NEW)
+
+| Invariant | Enforcement |
+|-----------|-------------|
+| Returns `SignalProjection`, not runs | Response model |
+| Every signal has `policy_context` | Validation filter |
+| Signals without policy are rejected | Pre-filter |
+
+### `/activity/runs` (DEPRECATED)
+
+| Invariant | Enforcement |
+|-----------|-------------|
+| Returns deprecation warning | Log + header |
+| Not bound to any panel | CI guard |
+| Blocked in production (future) | Feature flag |
+
+---
+
+## 19. V2 CI Enforcement Rules
+
+| Rule ID | Description | Script |
+|---------|-------------|--------|
+| ACT-V2-001 | No panel may bind to `/runs` | `check_activity_deprecation.py` |
+| ACT-V2-002 | Topic endpoints must not accept `state` param | OpenAPI validation |
+| ACT-V2-003 | All responses must include `policy_context` | Response schema validation |
+| ACT-V2-004 | Signals without policy must not exist | Projection filter |
+
+---
+
+## 20. Known Gaps (To Resolve During SDSR)
+
+### GAP-SDSR-1: Additional Scenarios Needed
+
+| Scenario | Panel Coverage |
+|----------|----------------|
+| LIVE run with evidence_health=DEGRADED | LIVE-O4 |
+| COMPLETED run aborted by policy | COMP-O5 |
+| Retry pattern detection | SIG-O3 |
+| Cost anomaly detection | SIG-O4 |
+
+### GAP-EDGE-1: Multi-Limit Handling
+
+Document that `policy_context` returns the most severe evaluation.
+
+### GAP-EDGE-2: Mid-Run Limit Change
+
+Document that evaluation uses limit value at evaluation time.
+
+### GAP-PHASE2: limit_breaches Extension
+
+Deferred: Extend `limit_breaches` table with `evaluation_type` column.
+
+---
+
+## 21. Signal Feedback Rules
+
+### SIGNAL-FEEDBACK-001
+**Status:** ENFORCED
+
+> Feedback annotations do not alter run state, policy evaluation, or signal derivation.
+
+Feedback is **overlay metadata** stored in `audit_ledger`. It does not:
+- Change the underlying run's status
+- Affect policy evaluation logic
+- Alter signal derivation rules
+
+Signals remain computed projections. Feedback affects only visibility and ranking.
+
+### SIGNAL-SUPPRESS-001
+**Status:** ENFORCED
+
+> Suppression is temporary (15-1440 minutes) and non-authoritative. Expiry is mandatory.
+
+**Constraints:**
+- Minimum duration: 15 minutes
+- Maximum duration: 1440 minutes (24 hours)
+- No permanent silencing allowed
+- After expiry, signal reappears if still active
+
+**Implementation:**
+- `suppress_until` timestamp stored in `audit_ledger.after_state`
+- Attention queue filters out suppressed signals where `suppress_until > NOW()`
+- Signals endpoint includes `suppressed_until` in feedback field
+
+### SIGNAL-ACK-001
+**Status:** ENFORCED
+
+> Acknowledgement records responsibility but does not silence signals.
+> Acknowledged signals receive 0.6x ranking dampener (ATTN-DAMP-001).
+
+**Guarantees:**
+- Acknowledged signals remain visible
+- `feedback.acknowledged = true` in responses
+- Attention score dampened by 0.6x (idempotent)
+- Audit trail preserved in `audit_ledger`
+
+### SIGNAL-ID-001 (Canonical Fingerprint Source)
+**Status:** LOCKED
+
+> Signal identity MUST be derived from backend-computed projection, never client input.
+
+**Implementation:**
+- Fingerprint format: `sig-{sha256[:16]}`
+- Derived from: `{run_id}:{signal_type}:{risk_type}:{evaluation_outcome}`
+- Module: `app/services/activity/signal_identity.py`
+
+**Never:**
+- Accept client-supplied fingerprint as authoritative
+- Trust path parameter fingerprint without validation
+- Compute fingerprint from request body fields
+
+### ATTN-DAMP-001 (Idempotent Dampening)
+**Status:** FROZEN
+
+> Acknowledgement dampening is idempotent and non-stacking (apply once, 0.6x).
+
+**Constant:** `ACK_DAMPENER = 0.6` (frozen in `attention_ranking_service.py`)
+
+**Logic:**
+```python
+if feedback.event_type == 'SignalAcknowledged':
+    effective_score = base_score * 0.6
+else:
+    effective_score = base_score
+# NEVER compound: no *= or repeated multiplication
+```
+
+### AUDIT-SIGNAL-CTX-001 (Structured Context)
+**Status:** ENFORCED
+
+> signal_context fields are fixed and versioned (no free-form blobs).
+
+**Schema (v1.0):**
+```python
+class SignalContext(TypedDict):
+    run_id: str
+    signal_type: str           # COST_RISK, TIME_RISK, etc.
+    risk_type: str             # COST, TIME, TOKENS, RATE
+    evaluation_outcome: str    # BREACH, NEAR_THRESHOLD, OK
+    policy_id: Optional[str]   # Governing policy if any
+    schema_version: str        # "1.0"
+```
+
+### SIGNAL-SCOPE-001 (Tenant-Scoped Suppression)
+**Status:** ENFORCED
+
+> Suppression applies tenant-wide. actor_id is for accountability, not scoping.
+
+**Implications:**
+- A suppressed signal is hidden for all users in the tenant
+- `actor_id` in audit entry shows who suppressed (accountability)
+- No per-user suppression scope
+
+---
+
+## 22. Signal Feedback Endpoints
+
+### POST `/api/v1/activity/signals/{signal_fingerprint}/ack`
+
+**Purpose:** Acknowledge a signal to record responsibility.
+
+**Request:**
+```json
+{
+  "run_id": "run-abc",
+  "signal_type": "COST_RISK",
+  "risk_type": "COST",
+  "comment": "Acknowledged"
+}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "signal_fingerprint": "sig-a1b2c3d4e5f6g7h8",
+    "acknowledged": true,
+    "acknowledged_by": "user-123",
+    "acknowledged_at": "2026-01-19T17:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `409 Conflict`: Signal not currently visible
+
+### POST `/api/v1/activity/signals/{signal_fingerprint}/suppress`
+
+**Purpose:** Suppress a signal temporarily.
+
+**Request:**
+```json
+{
+  "run_id": "run-abc",
+  "signal_type": "COST_RISK",
+  "risk_type": "COST",
+  "duration_minutes": 60,
+  "reason": "Known issue"
+}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "signal_fingerprint": "sig-a1b2c3d4e5f6g7h8",
+    "suppressed_until": "2026-01-19T18:00:00Z"
+  }
+}
+```
+
+**Error Codes:**
+- `400 Bad Request`: Invalid duration (must be 15-1440)
+- `409 Conflict`: Signal not currently visible
+
+---
+
+## Changelog
+
+| Date | Version | Change |
+|------|---------|--------|
+| 2026-01-19 | 2.1 | Added Signal Feedback Rules (Section 21-22) |
+| 2026-01-19 | 2.0 | Policy context integration, V2 migration, topic-scoped endpoints |
+| 2026-01-17 | 1.0 | Initial domain contract |

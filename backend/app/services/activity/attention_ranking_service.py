@@ -51,16 +51,29 @@ assert abs(sum(ATTENTION_WEIGHTS.values()) - 1.0) < 0.001, "Weights must sum to 
 
 WEIGHTS_VERSION = "1.0"
 
+# ============================================================================
+# FROZEN DAMPENING CONSTANT - DO NOT MODIFY WITHOUT GOVERNANCE APPROVAL
+# Reference: ATTN-DAMP-001 (Idempotent Dampening)
+# ============================================================================
+
+ACK_DAMPENER = 0.6  # Acknowledged signals receive 0.6x attention score
+
 
 @dataclass
 class AttentionItem:
     """An item in the attention queue."""
     run_id: str
     attention_score: float
+    effective_attention_score: float  # After dampening if acknowledged
     reasons: list[str]
     state: str
     status: str
     started_at: Optional[datetime]
+    # Feedback fields
+    acknowledged: bool = False
+    acknowledged_by: Optional[str] = None
+    acknowledged_at: Optional[datetime] = None
+    suppressed_until: Optional[datetime] = None
 
 
 @dataclass
@@ -94,13 +107,19 @@ class AttentionRankingService:
         self,
         tenant_id: str,
         limit: int = 20,
+        include_suppressed: bool = False,
     ) -> AttentionQueueResult:
         """
         Get the attention queue ranked by composite score.
 
+        Applies feedback from audit_ledger:
+        - Suppressed signals are filtered out (unless include_suppressed=True)
+        - Acknowledged signals receive 0.6x dampening (ATTN-DAMP-001)
+
         Args:
             tenant_id: Tenant scope
             limit: Max items to return (max 100)
+            include_suppressed: If True, include suppressed items (for admin view)
 
         Returns:
             AttentionQueueResult with ranked items
@@ -114,6 +133,9 @@ class AttentionRankingService:
         w_recency = ATTENTION_WEIGHTS["recency"]
         w_evidence = ATTENTION_WEIGHTS["evidence"]
 
+        # Import here to avoid circular imports
+        from app.services.activity.signal_identity import compute_signal_fingerprint_from_row
+
         sql = text("""
             WITH run_signals AS (
                 SELECT
@@ -122,6 +144,8 @@ class AttentionRankingService:
                     state,
                     status,
                     started_at,
+                    risk_type,
+                    evaluation_outcome,
                     -- Risk score (0-1)
                     CASE risk_level
                         WHEN 'VIOLATED' THEN 1.0
@@ -158,6 +182,8 @@ class AttentionRankingService:
                 state,
                 status,
                 started_at,
+                risk_type,
+                evaluation_outcome,
                 risk_score,
                 latency_score,
                 evidence_score,
@@ -192,9 +218,38 @@ class AttentionRankingService:
             "limit": limit,
         })
 
-        queue: list[AttentionItem] = []
+        rows = result.mappings().all()
 
-        for row in result.mappings():
+        # Compute fingerprints for all rows to enable feedback lookup
+        fingerprints: list[str] = []
+        for row in rows:
+            # Derive signal type from row
+            signal_type = f"{row.get('risk_type', 'UNKNOWN')}_RISK" if row.get("risk_type") else "UNKNOWN"
+            signal_row = {
+                "run_id": row["run_id"],
+                "signal_type": signal_type,
+                "risk_type": row.get("risk_type") or "UNKNOWN",
+                "evaluation_outcome": row.get("evaluation_outcome") or "UNKNOWN",
+            }
+            fingerprints.append(compute_signal_fingerprint_from_row(signal_row))
+
+        # Fetch feedback for all signals in bulk
+        feedback_map = await self._get_bulk_feedback(tenant_id, fingerprints)
+
+        queue: list[AttentionItem] = []
+        now = datetime.utcnow()
+
+        for i, row in enumerate(rows):
+            fingerprint = fingerprints[i]
+            feedback = feedback_map.get(fingerprint)
+
+            # Check suppression (SIGNAL-SUPPRESS-001)
+            if feedback and feedback.get("suppress_until"):
+                suppress_until = feedback["suppress_until"]
+                if suppress_until > now and not include_suppressed:
+                    # Skip suppressed signals
+                    continue
+
             # Build reason codes
             reasons = []
             if row["risk_score"] > 0:
@@ -206,14 +261,32 @@ class AttentionRankingService:
             if row["evidence_score"] > 0:
                 reasons.append("evidence")
 
+            base_score = round(float(row["attention_score"]), 3)
+
+            # Apply acknowledgement dampening (ATTN-DAMP-001)
+            # Idempotent: apply ONCE if acknowledged
+            is_acknowledged = bool(feedback and feedback.get("event_type") == "SignalAcknowledged")
+            if is_acknowledged:
+                effective_score = round(base_score * ACK_DAMPENER, 3)
+            else:
+                effective_score = base_score
+
             queue.append(AttentionItem(
                 run_id=row["run_id"],
-                attention_score=round(float(row["attention_score"]), 3),
+                attention_score=base_score,
+                effective_attention_score=effective_score,
                 reasons=reasons,
                 state=row["state"],
                 status=row["status"],
                 started_at=row["started_at"],
+                acknowledged=is_acknowledged,
+                acknowledged_by=feedback["actor_id"] if is_acknowledged and feedback else None,
+                acknowledged_at=feedback["created_at"] if is_acknowledged and feedback else None,
+                suppressed_until=feedback["suppress_until"] if feedback else None,
             ))
+
+        # Re-sort by effective_attention_score (dampening may change order)
+        queue.sort(key=lambda x: x.effective_attention_score, reverse=True)
 
         return AttentionQueueResult(
             queue=queue,
@@ -221,3 +294,55 @@ class AttentionRankingService:
             weights_version=WEIGHTS_VERSION,
             generated_at=datetime.utcnow(),
         )
+
+    async def _get_bulk_feedback(
+        self,
+        tenant_id: str,
+        fingerprints: list[str],
+    ) -> dict[str, dict]:
+        """
+        Get feedback state for multiple signals efficiently.
+
+        Args:
+            tenant_id: Tenant scope
+            fingerprints: List of signal fingerprints to query
+
+        Returns:
+            Dict mapping fingerprint to feedback dict with:
+            - event_type: SignalAcknowledged or SignalSuppressed
+            - actor_id: Who created the feedback
+            - created_at: When feedback was created
+            - suppress_until: Expiry time if suppressed
+        """
+        if not fingerprints:
+            return {}
+
+        sql = text("""
+            SELECT DISTINCT ON (entity_id)
+                entity_id AS fingerprint,
+                event_type,
+                actor_id,
+                created_at,
+                (after_state->>'suppress_until')::timestamptz AS suppress_until
+            FROM audit_ledger
+            WHERE tenant_id = :tenant_id
+              AND entity_type = 'SIGNAL'
+              AND entity_id = ANY(:fingerprints)
+            ORDER BY entity_id, created_at DESC
+        """)
+
+        result = await self.session.execute(sql, {
+            "tenant_id": tenant_id,
+            "fingerprints": fingerprints,
+        })
+
+        feedback_map: dict[str, dict] = {}
+        for row in result.mappings():
+            feedback_map[row["fingerprint"]] = {
+                "event_type": row["event_type"],
+                "actor_id": row["actor_id"],
+                "created_at": row["created_at"],
+                "suppress_until": row["suppress_until"],
+            }
+
+        return feedback_map

@@ -434,6 +434,8 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-442](PIN-442-policy-facade-api001-compliance.md) | **Policy Facade Layer - API-001 Compliance** | Architecture / Governance / API-001 | **✅ COMPLETE** | 2026-01-18 |
 | [PIN-443](PIN-443-activity-domain-panel-gap-fixes-act-llm-live-o2-act-llm-comp-o3.md) | **Activity Domain Panel Gap Fixes (ACT-LLM-LIVE-O2, ACT-LLM-COMP-O3)** | Activity Domain / Capability Wiring | **✅ COMPLETE** | 2026-01-18 |
 | [PIN-444](PIN-444-test-methods-design-document.md) | **Test Methods Design Document** | Documentation / Testing | **✅ COMPLETE** | 2026-01-18 |
+| [PIN-445](PIN-445-incidents-domain-v2-migration-complete.md) | **Incidents Domain V2 Migration Complete** | Architecture / Domain Migration | **🏗️ LOCKED** | 2026-01-18 |
+| [PIN-446](PIN-446-attention-feedback-loop-implementation.md) | **Attention Feedback Loop Implementation** | Activity Domain / Signal Feedback | **✅ COMPLETE** | 2026-01-19 |
 
 ---
 
@@ -1203,6 +1205,8 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-19 | **PIN-446 Attention Feedback Loop Implementation** - Created via memory_trail. |
+| 2026-01-18 | **PIN-445 Incidents Domain V2 Migration Complete** - Created via memory_trail. |
 | 2026-01-18 | **PIN-444 Test Methods Design Document** - Created via memory_trail. |
 | 2026-01-18 | **PIN-443 Activity Domain Panel Gap Fixes (ACT-LLM-LIVE-O2, ACT-LLM-COMP-O3)** - Updated: Updates |
 | 2026-01-18 | **PIN-443 Activity Domain Panel Gap Fixes (ACT-LLM-LIVE-O2, ACT-LLM-COMP-O3)** - Created via memory_trail. |

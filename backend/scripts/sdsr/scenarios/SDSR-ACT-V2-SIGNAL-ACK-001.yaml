@@ -1,0 +1,144 @@
+# SDSR Scenario: Signal Acknowledgment
+# Reference: Attention Feedback Loop Implementation Plan
+# Invariants Tested:
+#   - SIGNAL-ID-001: Canonical fingerprint derivation
+#   - SIGNAL-ACK-001: Acknowledgement records responsibility
+#   - ATTN-DAMP-001: Idempotent dampening (0.6x)
+#   - AUDIT-SIGNAL-CTX-001: Structured context
+
+scenario_id: SDSR-ACT-V2-SIGNAL-ACK-001
+domain: ACTIVITY
+capability: activity.signal_acknowledge
+status: DECLARED
+
+metadata:
+  title: "Signal Acknowledgment"
+  description: "Validates that signal acknowledgment creates audit entry, dampens ranking, but keeps signal visible"
+  author: "Claude Opus 4.5"
+  created: "2026-01-19"
+  version: "1.0"
+
+# Prerequisites
+prerequisites:
+  - type: run_with_signal
+    description: "A run with COST_RISK signal must exist"
+    state: COMPLETED
+    risk_level: VIOLATED
+    evaluation_outcome: BREACH
+
+# Synthetic data injection
+injection:
+  tenant:
+    id: "tenant-sdsr-ack-001"
+    name: "SDSR Signal Ack Test Tenant"
+
+  run:
+    id: "run-sdsr-ack-001"
+    state: COMPLETED
+    status: succeeded
+    risk_level: VIOLATED
+    evaluation_outcome: BREACH
+    risk_type: COST
+    started_at: "2026-01-19T10:00:00Z"
+    completed_at: "2026-01-19T10:05:00Z"
+
+# Actions to execute
+actions:
+  - action: api_call
+    order: 1
+    description: "Get signals to verify signal exists"
+    endpoint: "GET /api/v1/activity/signals"
+    headers:
+      Authorization: "Bearer {test_jwt}"
+    expected:
+      status_code: 200
+      body:
+        signals:
+          - signal_type: "COST_RISK"
+            feedback: null
+
+  - action: api_call
+    order: 2
+    description: "Acknowledge the signal"
+    endpoint: "POST /api/v1/activity/signals/{signal_fingerprint}/ack"
+    headers:
+      Authorization: "Bearer {test_jwt}"
+    body:
+      run_id: "run-sdsr-ack-001"
+      signal_type: "COST_RISK"
+      risk_type: "COST"
+      comment: "Acknowledged for SDSR testing"
+    expected:
+      status_code: 200
+      body:
+        acknowledged: true
+
+  - action: db_verify
+    order: 3
+    description: "Verify audit_ledger entry created"
+    query: |
+      SELECT event_type, entity_type, actor_id, action_reason, after_state
+      FROM audit_ledger
+      WHERE tenant_id = 'tenant-sdsr-ack-001'
+        AND entity_type = 'SIGNAL'
+      ORDER BY created_at DESC
+      LIMIT 1
+    expected:
+      event_type: "SignalAcknowledged"
+      entity_type: "SIGNAL"
+      action_reason: "Acknowledged for SDSR testing"
+
+  - action: api_call
+    order: 4
+    description: "Verify signal still visible with feedback"
+    endpoint: "GET /api/v1/activity/signals"
+    headers:
+      Authorization: "Bearer {test_jwt}"
+    expected:
+      status_code: 200
+      body:
+        signals:
+          - signal_type: "COST_RISK"
+            feedback:
+              acknowledged: true
+
+  - action: api_call
+    order: 5
+    description: "Verify attention queue has dampened score"
+    endpoint: "GET /api/v1/activity/attention-queue"
+    headers:
+      Authorization: "Bearer {test_jwt}"
+    expected:
+      status_code: 200
+      body:
+        queue:
+          - run_id: "run-sdsr-ack-001"
+            acknowledged: true
+            # effective_attention_score should be 0.6x of attention_score
+
+# Assertions
+assertions:
+  - assert: signal_visible_after_ack
+    description: "Signal must remain visible after acknowledgment"
+    condition: "signals[0].signal_type == 'COST_RISK'"
+
+  - assert: feedback_populated
+    description: "Feedback field must be populated"
+    condition: "signals[0].feedback.acknowledged == true"
+
+  - assert: audit_entry_created
+    description: "Audit entry must exist in audit_ledger"
+    condition: "audit_ledger.event_type == 'SignalAcknowledged'"
+
+  - assert: dampening_applied
+    description: "Effective score must be 0.6x of base score"
+    condition: "attention_queue[0].effective_attention_score == attention_queue[0].attention_score * 0.6"
+
+# Cleanup
+cleanup:
+  - type: delete_audit_entries
+    tenant_id: "tenant-sdsr-ack-001"
+  - type: delete_run
+    run_id: "run-sdsr-ack-001"
+  - type: delete_tenant
+    tenant_id: "tenant-sdsr-ack-001"
