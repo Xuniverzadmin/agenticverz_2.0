@@ -413,6 +413,23 @@ async def lifespan(app: FastAPI):
         raise
 
     # =========================================================================
+    # PIN-454: Governance Profile Validation (FAIL-FAST)
+    # =========================================================================
+    # Validate governance feature flag combinations at startup.
+    # Invalid combinations (e.g., RAC enforce without RAC enabled) will crash.
+    from .services.governance.profile import (
+        GovernanceConfigError,
+        validate_governance_at_startup,
+    )
+
+    try:
+        validate_governance_at_startup()
+        logger.info("governance_profile_validated")
+    except GovernanceConfigError as e:
+        logger.critical(f"STARTUP ABORTED - Invalid governance configuration: {e}")
+        raise
+
+    # =========================================================================
     # SYSTEM MODE DECLARATIONS (Objective-1: Variable Truth Mapping)
     # =========================================================================
 
@@ -606,15 +623,30 @@ async def lifespan(app: FastAPI):
             raise
 
     # =========================================================================
-    # PIN-443: OpenAPI Warm-Up (Optional)
+    # PIN-443, PIN-444: OpenAPI Warm-Up with Assertion
     # =========================================================================
     # Pre-generate OpenAPI schema to avoid cold-start latency on first request.
     # Enabled via: WARM_OPENAPI_ON_STARTUP=true
-    # Recommended for: local, test, staging (not prod unless deterministic startup needed)
+    # PIN-444: Added hard assertion - fail startup if generation exceeds threshold
     if os.getenv("WARM_OPENAPI_ON_STARTUP", "false").lower() == "true":
         logger.info("[BOOT] Warming OpenAPI schema (WARM_OPENAPI_ON_STARTUP=true)")
+
+        warmup_start = _openapi_time.perf_counter()
         app.openapi()  # Triggers custom_openapi() which logs timing
-        logger.info("[BOOT] OpenAPI schema warmed")
+        warmup_duration = _openapi_time.perf_counter() - warmup_start
+
+        # PIN-444: Hard assertion - if this fails, something is VERY wrong
+        openapi_hard_fail = os.getenv("OPENAPI_HARD_FAIL_ON_SLOW", "false").lower() == "true"
+        if warmup_duration > OPENAPI_TIMEOUT_THRESHOLD:
+            msg = (
+                f"[BOOT] OPENAPI WARM-UP EXCEEDED THRESHOLD: {warmup_duration:.2f}s > {OPENAPI_TIMEOUT_THRESHOLD}s. "
+                f"Investigate response models for recursion/unions/default_factory."
+            )
+            logger.critical(msg)
+            if openapi_hard_fail:
+                raise RuntimeError(msg)
+
+        logger.info("[BOOT] OpenAPI schema warmed in %.2fs", warmup_duration)
 
     yield
 
@@ -661,24 +693,31 @@ app = FastAPI(
 )
 
 
-# ---------- OpenAPI Generation Tracing (PIN-443) ----------
+# ---------- OpenAPI Generation Tracing (PIN-443, PIN-444) ----------
 # Explicit observability for schema generation - diagnoses cold-start hangs
+# PIN-444: Added timeout detection, cache-free debug endpoint, startup assertion
 import time as _openapi_time
 
 from fastapi.openapi.utils import get_openapi as _fastapi_get_openapi
 
+# Configurable timeout threshold (seconds) - fail loudly if exceeded
+OPENAPI_TIMEOUT_THRESHOLD = float(os.getenv("OPENAPI_TIMEOUT_THRESHOLD", "10.0"))
+
 
 def custom_openapi():
     """
-    Custom OpenAPI generator with explicit tracing.
+    Custom OpenAPI generator with explicit tracing and timeout detection.
 
     PIN-443: Provides visibility into schema generation timing.
-    FastAPI caches after first call, but first call can be slow (~1s for large schemas).
+    PIN-444: Adds timeout detection - logs CRITICAL if generation exceeds threshold.
+
+    FastAPI caches after first call, but first call can be slow (~2s for large schemas).
+    If generation exceeds OPENAPI_TIMEOUT_THRESHOLD, something is wrong.
     """
     if app.openapi_schema:
         return app.openapi_schema
 
-    logger.info("openapi_generation_started")
+    logger.warning("OPENAPI: generation started")
     start = _openapi_time.perf_counter()
 
     schema = _fastapi_get_openapi(
@@ -688,17 +727,121 @@ def custom_openapi():
         routes=app.routes,
     )
 
-    duration_ms = (_openapi_time.perf_counter() - start) * 1000
-    logger.info(
-        "openapi_generation_completed",
-        extra={"duration_ms": round(duration_ms, 2)},
-    )
+    duration_s = _openapi_time.perf_counter() - start
+    duration_ms = duration_s * 1000
+
+    if duration_s > OPENAPI_TIMEOUT_THRESHOLD:
+        logger.critical(
+            "OPENAPI: generation SLOW - possible schema graph issue",
+            extra={
+                "duration_ms": round(duration_ms, 2),
+                "threshold_s": OPENAPI_TIMEOUT_THRESHOLD,
+                "action": "investigate response models for recursion/unions/default_factory",
+            },
+        )
+    else:
+        logger.warning(
+            "OPENAPI: generation completed in %.2fs",
+            duration_s,
+            extra={"duration_ms": round(duration_ms, 2)},
+        )
 
     app.openapi_schema = schema
     return app.openapi_schema
 
 
 app.openapi = custom_openapi
+
+
+# PIN-444: Debug endpoints - DISABLED IN PRODUCTION
+# These endpoints expose operational debugging info. Safe for preprod/staging, not for prod.
+_DEBUG_ENDPOINTS_ENABLED = os.getenv("AOS_MODE", "preprod").lower() != "prod"
+
+
+# PIN-444: Debug endpoint for cache-free OpenAPI testing
+# Use this to disambiguate "bad schema" vs "bad cache"
+@app.get("/__debug/openapi_nocache", include_in_schema=False)
+async def openapi_nocache():
+    """
+    Generate OpenAPI schema WITHOUT cache.
+
+    PIN-444: Disambiguates schema graph problems from cache poisoning.
+    DISABLED IN PRODUCTION (AOS_MODE=prod).
+
+    If this hangs → schema graph problem (recursion, union explosion, default_factory)
+    If this works but /openapi.json hangs → cache poisoning / stale state
+
+    WARNING: This is slow (~2s) - only use for debugging.
+    """
+    if not _DEBUG_ENDPOINTS_ENABLED:
+        return JSONResponse(status_code=404, content={"error": "not_found"})
+
+    logger.warning("OPENAPI_DEBUG: cache-free generation requested")
+    start = _openapi_time.perf_counter()
+
+    # Force regeneration by clearing cache
+    app.openapi_schema = None
+    schema = app.openapi()
+
+    duration_ms = (_openapi_time.perf_counter() - start) * 1000
+    logger.warning(
+        "OPENAPI_DEBUG: cache-free generation completed",
+        extra={"duration_ms": round(duration_ms, 2)},
+    )
+
+    return {"status": "ok", "duration_ms": round(duration_ms, 2), "schema_routes": len(schema.get("paths", {}))}
+
+
+# PIN-444: Debug endpoint to inspect schema for problematic patterns
+@app.get("/__debug/openapi_inspect", include_in_schema=False)
+async def openapi_inspect():
+    """
+    Inspect OpenAPI schema for problematic patterns.
+
+    PIN-444: Quick diagnostic for schema health.
+    DISABLED IN PRODUCTION (AOS_MODE=prod).
+    """
+    if not _DEBUG_ENDPOINTS_ENABLED:
+        return JSONResponse(status_code=404, content={"error": "not_found"})
+
+    if not app.openapi_schema:
+        app.openapi()
+
+    schema = app.openapi_schema
+    components = schema.get("components", {}).get("schemas", {})
+
+    # Count potentially problematic patterns
+    recursive_refs = 0
+    union_types = 0
+    deep_nesting = 0
+
+    for name, model_schema in components.items():
+        # Check for recursive $ref patterns
+        schema_str = str(model_schema)
+        ref_count = schema_str.count("$ref")
+        if ref_count > 3:
+            recursive_refs += 1
+
+        # Check for anyOf/oneOf (unions)
+        if "anyOf" in model_schema or "oneOf" in model_schema:
+            union_types += 1
+
+        # Check for deep nesting (properties with nested objects)
+        props = model_schema.get("properties", {})
+        for prop_name, prop_schema in props.items():
+            if isinstance(prop_schema, dict) and prop_schema.get("type") == "object":
+                deep_nesting += 1
+
+    return {
+        "total_schemas": len(components),
+        "paths_count": len(schema.get("paths", {})),
+        "potential_issues": {
+            "high_ref_count_models": recursive_refs,
+            "union_types": union_types,
+            "deep_nesting": deep_nesting,
+        },
+        "health": "ok" if (recursive_refs < 5 and union_types < 10) else "review_needed",
+    }
 
 
 # Include API routers
