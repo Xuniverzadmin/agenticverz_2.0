@@ -1554,6 +1554,75 @@ cd backend
 python3 tests/destructive/test_worker_crash_stale_detection.py
 ```
 
+### 13.8 Governance Profile Abstraction
+
+**Implementation:** `backend/app/services/governance/profile.py`
+
+**Purpose:** Reduce configuration drift risk by providing coherent feature flag profiles.
+
+**Problem:** Multiple independent feature flags create undefined behavior when mixed incorrectly:
+- `ROK_ENABLED`
+- `RAC_ENABLED`
+- `TRANSACTION_COORDINATOR_ENABLED`
+- `EVENT_REACTOR_ENABLED`
+- `MID_EXECUTION_POLICY_CHECK_ENABLED`
+
+**Solution:** Three pre-defined profiles:
+
+| Profile | Use Case | Enforcement Level |
+|---------|----------|-------------------|
+| **STRICT** | Production | Full enforcement, all features enabled |
+| **STANDARD** | Staging/Dev | Core features, optional features configurable |
+| **OBSERVE_ONLY** | Safe rollout | Audit only, no enforcement blocking |
+
+**Configuration:**
+```bash
+# Set profile (default: STANDARD)
+GOVERNANCE_PROFILE=STRICT
+
+# Individual flags can still override profile defaults
+ROK_ENABLED=true
+RAC_ENABLED=true
+```
+
+**Startup Validation:**
+```python
+from app.services.governance.profile import validate_governance_at_startup
+
+# In FastAPI lifespan
+validate_governance_at_startup()  # Raises if invalid combination
+```
+
+**Invalid Combination Detection:**
+- RAC durability enforcement without RAC enabled → ERROR
+- Phase-status invariants without ROK enabled → ERROR
+- Transaction coordinator without ROK enabled → ERROR
+- Mid-execution policy check without EventReactor → ERROR
+
+### 13.9 Mental Model Documentation
+
+**Implementation:** `docs/architecture/GOVERNANCE_MENTAL_MODEL.md`
+
+**Purpose:** Reduce cognitive load for new engineers with a 1-page mental model.
+
+**The Four Roles:**
+
+| Role | Components | Question |
+|------|------------|----------|
+| **DECIDES** | PolicyChecker, ROK, RBAC | "Should this happen?" |
+| **EXECUTES** | RunRunner, Workers, Engines | "Do the work" |
+| **OBSERVES** | TraceFacade, EventReactor, Prometheus | "Record what happened" |
+| **AUDITS** | RAC, Reconciler | "Did what was promised happen?" |
+
+**Key Rules:**
+1. Deciders never execute
+2. Executors don't decide policy
+3. Observers are passive (record, never modify)
+4. Auditors verify (don't forgive missing work)
+
+**One Sentence Summary:**
+> PolicyChecker decides, RunRunner executes, TraceFacade observes, RAC audits — and finalize_run must always be acked.
+
 ---
 
 ## Changelog
@@ -1572,3 +1641,4 @@ python3 tests/destructive/test_worker_crash_stale_detection.py
 | 2026-01-20 | Systems Architect | **Test Findings Added:** Section 11 — Cross-domain EventReactor test (11/11 events), MidExecutionPolicyChecker test (10/10 tests), issues encountered and resolutions |
 | 2026-01-20 | Systems Architect | **Section 13: Optional Improvements Implemented** — RAC store durability enforcement, EventReactor heartbeat monitoring, transaction coordinator rollback audit trail, ROK phase-status invariants, PAUSE semantics, alert fatigue controls, destructive worker crash test |
 | 2026-01-20 | Systems Architect | **Destructive Test Verified** — All 6 test scenarios pass. Confirmed RAC reconciler correctly marks runs as STALE when `finalize_run` is not acked (PIN-454 liveness guarantee). |
+| 2026-01-20 | Systems Architect | **Section 13.8-13.9: Configuration & Onboarding** — Governance Profile abstraction (STRICT/STANDARD/OBSERVE_ONLY) with startup validation, Mental Model documentation for new engineers (4 roles: Decides, Executes, Observes, Audits). |
