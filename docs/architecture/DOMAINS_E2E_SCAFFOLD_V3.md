@@ -331,32 +331,139 @@ Tracks:
 
 ---
 
-## 7. Gap Summary
+## 7. Gap Ledger (Numbered)
 
-### 7.1 Critical Gaps (HIGH Priority)
+### Reference Design Comparison
 
-| Gap | Domain | Impact | Effort |
-|-----|--------|--------|--------|
-| API key targeting | Policies | Cannot scope policies to API keys | MEDIUM |
-| Human actor_id targeting | Policies | Cannot scope to human users | MEDIUM |
-| RAG access controls | Policies | No RAG governance | HIGH |
-| Database access controls | Policies | No DB query limits | HIGH |
-| Hallucination detection | Incidents | No hallucination incidents | HIGH |
+The following gaps were identified by comparing the current system against a reference control lever design:
 
-### 7.2 Medium Gaps
+```
+Reference Design Structure:
+Policy
+ └── Scope Selector        ← WHO / WHAT it applies to
+ └── Monitors              ← WHAT is observed during run
+ └── Limits                ← HARD quantitative constraints
+ └── Control Actions       ← WHAT happens near / at breach
+ └── Activation State      ← WHEN it is enforced
+```
 
-| Gap | Domain | Impact | Effort |
-|-----|--------|--------|--------|
-| Kill/Terminate action | Policies | ABORT not fully wired | LOW |
-| Multi-tier alerts | Policies | Only NEAR/BREACH states | MEDIUM |
-| SOC2 export completeness | Logs | Control mapping incomplete | MEDIUM |
+---
 
-### 7.3 Low Gaps
+### 7.1 Scope Selector Gaps
 
-| Gap | Domain | Impact | Effort |
-|-----|--------|--------|--------|
-| Executive debrief export | Logs | Not verified working | LOW |
-| Terminology (threshold→control) | All | Naming inconsistency | LOW |
+| ID | Gap | Current State | Required State | Priority |
+|----|-----|---------------|----------------|----------|
+| GAP-001 | API key targeting | Not supported | `scope_type: API_KEY` with `api_key_ids[]` | HIGH |
+| GAP-002 | Human actor targeting | Not supported | `scope_type: HUMAN_ACTOR` with `human_actor_ids[]` | HIGH |
+| GAP-003 | ALL_RUNS scope | Implicit via GLOBAL | Explicit `scope_type: ALL_RUNS` for clarity | LOW |
+| GAP-004 | Scope resolution snapshot | No snapshot on run | Store resolved scope on run at start | MEDIUM |
+
+**Current PolicyScope enum:** `GLOBAL | TENANT | PROJECT | AGENT`
+**Required PolicyScope enum:** `ALL_RUNS | TENANT | PROJECT | AGENT | API_KEY | HUMAN_ACTOR`
+
+---
+
+### 7.2 Monitor Gaps
+
+| ID | Gap | Current State | Required State | Priority |
+|----|-----|---------------|----------------|----------|
+| GAP-005 | Explicit monitor config | Implicit via limit types | Explicit `MonitorConfig` object | MEDIUM |
+| GAP-006 | RAG access monitoring | Not supported | `monitor_rag_access: { enabled, allowed_sources[] }` | HIGH |
+| GAP-007 | Burn rate monitoring | Not supported | `monitor_burn_rate: true` | MEDIUM |
+| GAP-008 | Monitor → Limit binding | Implicit | Explicit: "If not monitored, cannot trigger limit" | MEDIUM |
+
+**Principle:** If something is not monitored, it cannot trigger a limit or action.
+
+---
+
+### 7.3 Limit Gaps
+
+| ID | Gap | Current State | Required State | Priority |
+|----|-----|---------------|----------------|----------|
+| GAP-009 | RAG access boolean | Not supported | `rag_access: { allowed: boolean }` | HIGH |
+| GAP-010 | DB query limit | Not supported | `db_query_limit: { max_queries, window_seconds }` | HIGH |
+| GAP-011 | PER_SESSION vs TEMPORAL clarity | Unclear distinction | Explicit `limit_window: PER_SESSION | TEMPORAL` | MEDIUM |
+| GAP-012 | Limit separation principle | Limits can have actions | Limits emit NEAR/BREACH only, actions separate | LOW |
+
+**Principle:** Limits do not decide outcomes. They only emit `NEAR` or `BREACH`.
+
+---
+
+### 7.4 Control Action Gaps
+
+| ID | Gap | Current State | Required State | Priority |
+|----|-----|---------------|----------------|----------|
+| GAP-013 | PAUSE action (resumable) | Not supported | `action: PAUSE` - suspend, can resume | HIGH |
+| GAP-014 | STOP vs KILL semantics | Unclear (ABORT exists) | `STOP` = graceful, `KILL` = immediate | MEDIUM |
+| GAP-015 | requires_ack flag | Not supported | `requires_ack: boolean` for enforcement | LOW |
+| GAP-016 | Same-step enforcement | Not guaranteed | "STOP/KILL must halt within same step" | HIGH |
+
+**Current actions:** `BLOCK | WARN | REJECT | QUEUE | DEGRADE | ALERT | ABORT`
+**Required actions:** `CONTINUE | WARN | PAUSE | STOP | KILL`
+
+---
+
+### 7.5 Alerting Gaps
+
+| ID | Gap | Current State | Required State | Priority |
+|----|-----|---------------|----------------|----------|
+| GAP-017 | Notify channels | Not configurable | `notify: [UI, WEBHOOK, EMAIL]` | MEDIUM |
+| GAP-018 | Multi-tier alerts | Only NEAR/BREACH | Support 50%, 70%, 80%, 90% tiers | LOW |
+| GAP-019 | Alert → Log linking | Implicit | Explicit: near-control events in LLM Runs log | MEDIUM |
+
+---
+
+### 7.6 Policy Lifecycle Gaps
+
+| ID | Gap | Current State | Required State | Priority |
+|----|-----|---------------|----------------|----------|
+| GAP-020 | DRAFT state | Not supported | `status: DRAFT` before activation | MEDIUM |
+| GAP-021 | SUSPENDED state | Not supported | `status: SUSPENDED` (temporary disable) | LOW |
+| GAP-022 | threshold_snapshot_hash | Not stored | Hash of threshold config for audit | MEDIUM |
+
+**Current lifecycle:** `ACTIVE | RETIRED | DISABLED`
+**Required lifecycle:** `DRAFT → ACTIVE → SUSPENDED → RETIRED`
+
+---
+
+### 7.7 Incident Gaps
+
+| ID | Gap | Current State | Required State | Priority |
+|----|-----|---------------|----------------|----------|
+| GAP-023 | Hallucination detection | Not supported | Incident category `HALLUCINATION` | HIGH |
+| GAP-024 | Inflection point metadata | Partial | Full inflection capture in incident | MEDIUM |
+
+---
+
+### 7.8 Logs & Export Gaps
+
+| ID | Gap | Current State | Required State | Priority |
+|----|-----|---------------|----------------|----------|
+| GAP-025 | SOC2 control mapping | Partial | Complete SOC2 control objective mapping | MEDIUM |
+| GAP-026 | Executive debrief export | Declared | Verified working | LOW |
+| GAP-027 | Evidence PDF completeness | Exists | Verify all fields included | LOW |
+
+---
+
+### 7.9 Runtime Integration Gaps
+
+| ID | Gap | Current State | Required State | Priority |
+|----|-----|---------------|----------------|----------|
+| GAP-028 | Scope resolution at run start | Implicit | Explicit scope resolution, snapshot stored | MEDIUM |
+| GAP-029 | Policy snapshot immutability | Exists | Verify snapshot cannot be modified | LOW |
+| GAP-030 | Step-level enforcement guarantee | Not verified | Enforcement within same step guaranteed | HIGH |
+
+---
+
+### Gap Summary by Priority
+
+| Priority | Count | Gap IDs |
+|----------|-------|---------|
+| **HIGH** | 10 | GAP-001, GAP-002, GAP-006, GAP-009, GAP-010, GAP-013, GAP-016, GAP-023, GAP-030 |
+| **MEDIUM** | 13 | GAP-004, GAP-005, GAP-007, GAP-008, GAP-011, GAP-014, GAP-017, GAP-019, GAP-020, GAP-022, GAP-024, GAP-025, GAP-028 |
+| **LOW** | 7 | GAP-003, GAP-012, GAP-015, GAP-018, GAP-021, GAP-026, GAP-027, GAP-029 |
+
+**Total Gaps:** 30
 
 ---
 
@@ -405,3 +512,4 @@ Tracks:
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-01-20 | Systems Architect | Initial draft — Gap analysis from policy control lever review |
+| 2026-01-20 | Systems Architect | Added numbered Gap Ledger (GAP-001 to GAP-030) after reference design comparison |
