@@ -1,0 +1,67 @@
+# AURORA L2 Capability Registry Entry
+# Capability: activity.completed_v2
+# Last Updated: 2026-01-19T00:00:00+00:00
+# Updated By: Phase 4 Registry Rebinding
+#
+# STATUS: OBSERVED
+#
+# V2 ENDPOINT: Topic-scoped with policy context
+# Replaces: activity.completed_runs, activity.runs_list (DEPRECATED)
+#
+# Reference: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
+# Evidence: Phase 3 Shadow Validation
+#
+capability_id: activity.completed_v2
+status: OBSERVED
+source_panels:
+  - ACT-LLM-COMP-O2
+  - ACT-LLM-COMP-O5
+domain: ACTIVITY
+topic: COMPLETED
+metadata:
+  generated_by: Phase 4 Registry Rebinding
+  generated_on: '2026-01-19'
+  declared_by: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
+  declared_on: '2026-01-19'
+  observed_by: shadow_validate_v2.py
+  observed_on: '2026-01-19'
+  migration_note: "Replaces activity.completed_runs - topic-scoped with policy context"
+  policy_context_included: true
+assumption:
+  endpoint: /api/v1/activity/completed
+  method: GET
+  source: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN
+  state_binding: implicit  # COMPLETED hardcoded at endpoint level
+binding:
+  observed_endpoint: /api/v1/activity/completed
+  observed_method: GET
+  observed_at: '2026-01-19T00:00:00+00:00'
+  observation_id: OBS-PHASE3-SHADOW-VALIDATION-COMPLETED
+  hard_guarantee: "state = COMPLETED (cannot be overridden by query params)"
+acceptance_criteria:
+  - Returns runs with state=COMPLETED (hardcoded, not filterable)
+  - Every run includes policy_context (POLICY-CONTEXT-001)
+  - Response includes total count field
+  - Status filter supported (succeeded, failed, aborted)
+  - Time range filter supported (completed_after, completed_before)
+observation:
+  scenario_id: SDSR-ACT-V2-COMPLETED-BREACH-001
+  observed_at: '2026-01-19T00:00:00+00:00'
+  trace_id: null
+  invariants_passed: 6
+  invariants_total: 6
+  phase3_evidence:
+    - parity-completed: PASSED
+    - policy-context: PASSED
+    - most-severe-wins: PASSED
+coherency:
+  last_checked: '2026-01-19T00:00:00+00:00'
+  status: PASSED
+  checked_by: shadow_validate_v2.py
+replaces:
+  - capability_id: activity.completed_runs
+    reason: "Legacy endpoint uses /runs?state=COMPLETED (query-param filtering)"
+    migration_path: "Use /activity/completed instead"
+  - capability_id: activity.runs_list
+    reason: "Legacy endpoint uses /runs with sort params"
+    migration_path: "Use /activity/completed with sort params"

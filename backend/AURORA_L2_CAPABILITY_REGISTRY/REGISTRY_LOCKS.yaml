@@ -1,0 +1,58 @@
+# AURORA L2 Capability Registry - Endpoint Locks
+#
+# This file documents endpoints that are LOCKED for new capability bindings.
+# The CI guard (scripts/preflight/check_incidents_deprecation.py) enforces these locks.
+#
+# Once an endpoint is locked, no new capabilities may bind to it.
+# Existing deprecated capabilities are grandfathered but must not be re-enabled.
+#
+# Reference: INCIDENTS_DOMAIN_MIGRATION_PLAN.md Phase 5
+
+locked_endpoints:
+  - endpoint: /api/v1/incidents
+    locked_on: "2026-01-18"
+    reason: "Generic incidents endpoint deprecated in favor of topic-scoped endpoints"
+    migration_plan: "docs/architecture/incidents/INCIDENTS_DOMAIN_MIGRATION_PLAN.md"
+    replacement_endpoints:
+      - /api/v1/incidents/active
+      - /api/v1/incidents/resolved
+      - /api/v1/incidents/historical
+    deprecated_capabilities:
+      - incidents.list
+      - incidents.resolved_list
+      - incidents.historical_list
+      - incidents.metrics
+      - incidents.summary
+      - incidents.learnings
+
+  - endpoint: /api/v1/activity/runs
+    locked_on: "2026-01-19"
+    reason: "Generic runs list endpoint deprecated in favor of topic-scoped endpoints"
+    migration_plan: "docs/architecture/activity/ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md"
+    replacement_endpoints:
+      - /api/v1/activity/live
+      - /api/v1/activity/completed
+      - /api/v1/activity/signals
+      - /api/v1/activity/metrics
+      - /api/v1/activity/threshold-signals
+    deprecated_capabilities:
+      - activity.runs
+      - activity.runs_list
+      - activity.live_runs
+      - activity.completed_runs
+      - activity.queued_runs
+      - activity.signals
+      - activity.threshold_signals
+    exceptions:
+      - path: /api/v1/activity/runs/{run_id}
+        reason: "Detail endpoint - not deprecated"
+      - path: /api/v1/activity/runs/{run_id}/evidence
+        reason: "Evidence endpoint - not deprecated"
+      - path: /api/v1/activity/runs/{run_id}/proof
+        reason: "Proof endpoint - not deprecated"
+
+# Lock enforcement rules:
+# 1. CI guard MUST fail if any non-DEPRECATED capability binds to locked endpoints
+# 2. New capabilities targeting locked endpoints MUST be rejected
+# 3. Existing DEPRECATED capabilities are grandfathered (read-only, no status changes)
+# 4. Only topic-scoped endpoints may be used for new capability bindings

@@ -55,6 +55,11 @@ Only panels within these locations are valid.
 - SYSTEM_LOGS (4 slots)
 - AUDIT (4 slots)
 
+### ANALYTICS
+
+#### COST
+- USAGE (5 slots)
+
 ### ACCOUNT
 
 #### PROFILE
@@ -162,8 +167,13 @@ Domain: POLICIES
 Panels:
 - POL-GOV-ACT-O1 (active policies)
 - POL-GOV-ACT-O2 (policy details)
-- POL-GOV-DFT-O1 (draft policies)
-- POL-GOV-DFT-O2 (proposal review)
+- POL-GOV-DFT-O1 (lessons list - under LESSONS topic)
+- POL-GOV-DFT-O2 (lesson stats - under LESSONS topic)
+- POL-GOV-DFT-O3 (lesson detail - under LESSONS topic)
+- POL-GOV-DFT-O4 (convert to draft - under LESSONS topic)
+- POL-GOV-DFT-O5 (defer lesson - under LESSONS topic)
+- POL-GOV-LES-O6 (learning insights - under LESSONS topic)
+- POL-GOV-LES-O7 (learning proposals - under LESSONS topic)
 - POL-GOV-LIB-O1 (policy templates)
 - POL-GOV-LIB-O2 (ethical constraints)
 
@@ -173,9 +183,9 @@ Criticality: HIGH
 Domain: POLICIES
 
 Panels:
-- POL-LIM-THR-O1 (thresholds overview)
-- POL-LIM-THR-O2 (threshold details)
-- POL-LIM-THR-O3 (set execution thresholds)
+- POL-LIM-CTR-O1 (controls overview)
+- POL-LIM-CTR-O2 (control details)
+- POL-LIM-CTR-O3 (set execution controls)
 - POL-LIM-VIO-O1 (violations list)
 - POL-LIM-VIO-O2 (violation details)
 
@@ -652,7 +662,7 @@ What it explicitly does NOT show:
 - No per-run drilldown
 - No policy or cost breakdown
 
-Capability: overview.activity_snapshot
+Capability: overview.highlights
 
 ### Panel: OVR-SUM-HL-O2
 
@@ -1104,10 +1114,10 @@ What it explicitly does NOT show:
 - No per-run detail
 - No controls
 
-Capabilities:
-- activity.runs_by_dimension (primary)
-- activity.summary_by_status (shared with COMP-O2)
-- activity.cost_analysis (shared with SIG-O4)
+Capability: activity.runs_by_dimension
+
+NOTE: This panel also uses activity.summary_by_status (shared with COMP-O2)
+and activity.cost_analysis (shared with SIG-O4) as secondary data sources.
 
 ### Panel: ACT-LLM-COMP-O1
 
@@ -1397,7 +1407,7 @@ What it explicitly does NOT show:
 - No raw signals (those are in Activity)
 - No actions or controls
 
-Capability: incidents.list
+Capability: incidents.active_list
 
 ### Panel: INC-EV-ACT-O2
 
@@ -1422,7 +1432,7 @@ What it explicitly does NOT show:
 - No actions or remediation
 - No policy editing
 
-Capability: incidents.list
+Capability: incidents.active_list
 
 ### Panel: INC-EV-ACT-O3
 
@@ -1449,7 +1459,7 @@ What it explicitly does NOT show:
 - No policy changes
 - No resolution controls
 
-Capability: incidents.list
+Capability: incidents.metrics_v2
 
 ### Panel: INC-EV-ACT-O4
 
@@ -1504,7 +1514,7 @@ What it explicitly does NOT show:
 - No policy changes
 - No resolution execution
 
-Capability: incidents.summary
+Capability: incidents.active_list
 
 ### Panel: INC-EV-RES-O1
 
@@ -1531,7 +1541,7 @@ What it explicitly does NOT show:
 - No historical aggregation
 - No controls
 
-Capability: incidents.resolved_list
+Capability: incidents.resolved_list_v2
 
 ### Panel: INC-EV-RES-O2
 
@@ -1587,7 +1597,7 @@ What it explicitly does NOT show:
 - No policy adjustments
 - No controls
 
-Capability: incidents.metrics
+Capability: incidents.metrics_v2
 
 ### Panel: INC-EV-RES-O4
 
@@ -1614,7 +1624,7 @@ What it explicitly does NOT show:
 - No forecasts
 - No policy controls
 
-Capability: incidents.resolved_list
+Capability: incidents.resolved_list_v2
 
 ### Panel: INC-EV-RES-O5
 
@@ -1667,7 +1677,7 @@ What it explicitly does NOT show:
 - No real-time data
 - No controls
 
-Capability: incidents.historical_list
+Capability: incidents.historical_trend
 
 ### Panel: INC-EV-HIST-O2
 
@@ -1694,7 +1704,7 @@ What it explicitly does NOT show:
 - No real-time data
 - No controls
 
-Capability: incidents.historical_list
+Capability: incidents.historical_distribution
 
 ### Panel: INC-EV-HIST-O3
 
@@ -1749,7 +1759,7 @@ What it explicitly does NOT show:
 - No projections
 - No real-time data
 
-Capability: incidents.cost_impact
+Capability: incidents.historical_cost_trend
 
 ### Panel: INC-EV-HIST-O5
 
@@ -1920,7 +1930,7 @@ Capability: policies.metrics
 Location:
 - Domain: POLICIES
 - Subdomain: GOVERNANCE
-- Topic: DRAFTS
+- Topic: LESSONS
 - Slot: 1
 
 Class: evidence
@@ -1941,14 +1951,14 @@ What it explicitly does NOT show:
 - No draft policies yet
 - No actions
 
-Capability: policies.lessons_stats
+Capability: lessons.list
 
 ### Panel: POL-GOV-DFT-O2
 
 Location:
 - Domain: POLICIES
 - Subdomain: GOVERNANCE
-- Topic: DRAFTS
+- Topic: LESSONS
 - Slot: 2
 
 Class: interpretation
@@ -1968,14 +1978,14 @@ What it explicitly does NOT show:
 - No activation
 - No human bypass
 
-Capability: policies.drafts_list
+Capability: lessons.stats
 
 ### Panel: POL-GOV-DFT-O3
 
 Location:
 - Domain: POLICIES
 - Subdomain: GOVERNANCE
-- Topic: DRAFTS
+- Topic: LESSONS
 - Slot: 3
 
 Class: interpretation
@@ -1995,14 +2005,14 @@ What it explicitly does NOT show:
 - No black-box proposals
 - No enforcement
 
-Capability: policies.proposals_summary
+Capability: lessons.get
 
 ### Panel: POL-GOV-DFT-O4
 
 Location:
 - Domain: POLICIES
 - Subdomain: GOVERNANCE
-- Topic: DRAFTS
+- Topic: LESSONS
 - Slot: 4
 
 Class: execution
@@ -2021,14 +2031,14 @@ What it explicitly does NOT show:
 - No auto-activation
 - No silent inheritance
 
-Capability: policies.conflicts
+Capability: lessons.convert_to_draft
 
 ### Panel: POL-GOV-DFT-O5
 
 Location:
 - Domain: POLICIES
 - Subdomain: GOVERNANCE
-- Topic: DRAFTS
+- Topic: LESSONS
 - Slot: 5
 
 Class: execution
@@ -2047,15 +2057,15 @@ What it explicitly does NOT show:
 - No silent expiration
 - No auto-decisions
 
-Capability: policies.dependencies
+Capability: lessons.dismiss_or_defer
 
-### Panel: POL-GOV-LES-O1
+### Panel: POL-GOV-LES-O6
 
 Location:
 - Domain: POLICIES
 - Subdomain: GOVERNANCE
 - Topic: LESSONS
-- Slot: 1
+- Slot: 6
 
 Class: evidence
 State: DRAFT
@@ -2078,13 +2088,13 @@ What it explicitly does NOT show:
 
 Capability: lessons.list
 
-### Panel: POL-GOV-LES-O2
+### Panel: POL-GOV-LES-O7
 
 Location:
 - Domain: POLICIES
 - Subdomain: GOVERNANCE
 - Topic: LESSONS
-- Slot: 2
+- Slot: 7
 
 Class: interpretation
 State: DRAFT
@@ -2365,12 +2375,12 @@ What it explicitly does NOT show:
 
 Capability: null
 
-### Panel: POL-LIM-THR-O1
+### Panel: POL-LIM-CTR-O1
 
 Location:
 - Domain: POLICIES
 - Subdomain: LIMITS
-- Topic: THRESHOLDS
+- Topic: CONTROLS
 - Slot: 1
 
 Class: evidence
@@ -2391,12 +2401,12 @@ What it explicitly does NOT show:
 
 Capability: policies.limits
 
-### Panel: POL-LIM-THR-O2
+### Panel: POL-LIM-CTR-O2
 
 Location:
 - Domain: POLICIES
 - Subdomain: LIMITS
-- Topic: THRESHOLDS
+- Topic: CONTROLS
 - Slot: 2
 
 Class: execution
@@ -2418,12 +2428,12 @@ What it explicitly does NOT show:
 
 Capability: policies.budgets
 
-### Panel: POL-LIM-THR-O3
+### Panel: POL-LIM-CTR-O3
 
 Location:
 - Domain: POLICIES
 - Subdomain: LIMITS
-- Topic: THRESHOLDS
+- Topic: CONTROLS
 - Slot: 3
 
 Class: configuration
@@ -2455,12 +2465,12 @@ What it explicitly does NOT show:
 
 Capability: policies.limits.threshold_params
 
-### Panel: POL-LIM-THR-O4
+### Panel: POL-LIM-CTR-O4
 
 Location:
 - Domain: POLICIES
 - Subdomain: LIMITS
-- Topic: THRESHOLDS
+- Topic: CONTROLS
 - Slot: 4
 
 Class: execution
@@ -2482,12 +2492,12 @@ What it explicitly does NOT show:
 
 Capability: policies.limits
 
-### Panel: POL-LIM-THR-O5
+### Panel: POL-LIM-CTR-O5
 
 Location:
 - Domain: POLICIES
 - Subdomain: LIMITS
-- Topic: THRESHOLDS
+- Topic: CONTROLS
 - Slot: 5
 
 Class: execution
@@ -3031,8 +3041,6 @@ What it explicitly does NOT show:
 - No modification controls
 - No approval actions
 
-Capability: null
-
 ---
 
 ## Capabilities
@@ -3044,7 +3052,7 @@ Status: OBSERVED
 Verified: 2026-01-14
 
 Implementation:
-- Endpoint: /api/v1/activity/summary
+- Endpoint: /api/v1/activity/summary/by-status
 - Method: GET
 
 Data Mapping:
@@ -3288,13 +3296,13 @@ Acceptance:
 
 Scenario: SDSR-ACT-LLM-SIG-O5-001
 
-### Capability: incidents.list
+### Capability: incidents.active_list
 
 Panel: INC-EV-ACT-O1
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /api/v1/incidents
+- Endpoint: /api/v1/incidents/active
 - Method: GET
 
 Data Mapping:
@@ -3306,13 +3314,13 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-ACT-O1-001
 
-### Capability: incidents.list
+### Capability: incidents.active_list
 
 Panel: INC-EV-ACT-O2
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /api/v1/incidents/summary
+- Endpoint: /api/v1/incidents/active
 - Method: GET
 
 Data Mapping:
@@ -3324,7 +3332,7 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-ACT-O2-001
 
-### Capability: incidents.list
+### Capability: incidents.metrics
 
 Panel: INC-EV-ACT-O3
 Status: ASSUMED
@@ -3342,13 +3350,13 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-ACT-O3-001
 
-### Capability: incidents.patterns
+### Capability: incidents.cost_impact
 
 Panel: INC-EV-ACT-O4
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /api/v1/ops/incidents/patterns
+- Endpoint: /api/v1/incidents/cost-impact
 - Method: GET
 
 Data Mapping:
@@ -3360,13 +3368,13 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-ACT-O4-001
 
-### Capability: incidents.list
+### Capability: incidents.active_list
 
 Panel: INC-EV-ACT-O5
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /api/v1/ops/incidents/infra-summary
+- Endpoint: /api/v1/incidents/active
 - Method: GET
 
 Data Mapping:
@@ -3378,13 +3386,13 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-ACT-O5-001
 
-### Capability: incidents.list
+### Capability: incidents.resolved_list
 
 Panel: INC-EV-RES-O1
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /api/v1/incidents
+- Endpoint: /api/v1/incidents/resolved
 - Method: GET
 
 Data Mapping:
@@ -3402,7 +3410,7 @@ Panel: INC-EV-RES-O2
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /api/v1/recovery/actions
+- Endpoint: /api/v1/incidents/{incident_id}/learnings
 - Method: GET
 
 Data Mapping:
@@ -3414,13 +3422,13 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-RES-O2-001
 
-### Capability: incidents.learnings
+### Capability: incidents.metrics
 
 Panel: INC-EV-RES-O3
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /api/v1/recovery/candidates
+- Endpoint: /api/v1/incidents/metrics
 - Method: GET
 
 Data Mapping:
@@ -3432,13 +3440,13 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-RES-O3-001
 
-### Capability: incidents.list
+### Capability: incidents.resolved_list
 
 Panel: INC-EV-RES-O4
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /integration/graduation
+- Endpoint: /api/v1/incidents/resolved
 - Method: GET
 
 Data Mapping:
@@ -3450,13 +3458,13 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-RES-O4-001
 
-### Capability: incidents.list
+### Capability: incidents.learnings
 
 Panel: INC-EV-RES-O5
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /replay/{incident_id}/summary
+- Endpoint: /api/v1/incidents/{incident_id}/learnings
 - Method: GET
 
 Data Mapping:
@@ -3468,13 +3476,13 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-RES-O5-001
 
-### Capability: incidents.list
+### Capability: incidents.historical_trend
 
 Panel: INC-EV-HIST-O1
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /api/v1/incidents
+- Endpoint: /api/v1/incidents/historical/trend
 - Method: GET
 
 Data Mapping:
@@ -3486,13 +3494,13 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-HIST-O1-001
 
-### Capability: incidents.list
+### Capability: incidents.historical_dist
 
 Panel: INC-EV-HIST-O2
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /api/v1/guard/incidents
+- Endpoint: /api/v1/incidents/historical/distribution
 - Method: GET
 
 Data Mapping:
@@ -3504,13 +3512,13 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-HIST-O2-001
 
-### Capability: incidents.list
+### Capability: incidents.recurring
 
 Panel: INC-EV-HIST-O3
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /v1/incidents
+- Endpoint: /api/v1/incidents/recurring
 - Method: GET
 
 Data Mapping:
@@ -3522,13 +3530,13 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-HIST-O3-001
 
-### Capability: incidents.list
+### Capability: incidents.historical_cost
 
 Panel: INC-EV-HIST-O4
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /api/v1/ops/incidents
+- Endpoint: /api/v1/incidents/historical/cost-trend
 - Method: GET
 
 Data Mapping:
@@ -3540,13 +3548,13 @@ Acceptance:
 
 Scenario: SDSR-INC-EV-HIST-O4-001
 
-### Capability: incidents.list
+### Capability: incidents.patterns
 
 Panel: INC-EV-HIST-O5
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /integration/stats
+- Endpoint: /api/v1/incidents/patterns
 - Method: GET
 
 Data Mapping:
@@ -3618,7 +3626,7 @@ Panel: POL-GOV-ACT-O4
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /policy-layer/state
+- Endpoint: /api/v1/policy-layer/state
 - Method: GET
 
 Data Mapping:
@@ -3636,7 +3644,7 @@ Panel: POL-GOV-ACT-O5
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /policy-layer/metrics
+- Endpoint: /api/v1/policy-layer/metrics
 - Method: GET
 
 Data Mapping:
@@ -3648,93 +3656,98 @@ Acceptance:
 
 Scenario: SDSR-POL-GOV-ACT-O5-001
 
-### Capability: policies.rules
+### Capability: lessons.list
 
 Panel: POL-GOV-DFT-O1
+Domain: POLICIES
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /api/v1/policy-proposals
+- Endpoint: /api/v1/policy-layer/lessons
 - Method: GET
 
 Data Mapping:
-- drafts → draft policy proposals
+- lessons → list of lessons learned
 
 Acceptance:
-- Returns draft policy proposals
-- Response includes evidence links
+- Returns lessons list
+- Response includes status, evidence links
 
 Scenario: SDSR-POL-GOV-DFT-O1-001
 
-### Capability: policies.rules
+### Capability: lessons.stats
 
 Panel: POL-GOV-DFT-O2
+Domain: POLICIES
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /policy-layer/versions
+- Endpoint: /api/v1/policy-layer/lessons/stats
 - Method: GET
 
 Data Mapping:
-- versions → policy version history
+- stats → lesson statistics
 
 Acceptance:
-- Returns policy version list
-- Response includes version metadata
+- Returns lesson stats
+- Response includes counts by status
 
 Scenario: SDSR-POL-GOV-DFT-O2-001
 
-### Capability: policies.rules
+### Capability: lessons.get
 
 Panel: POL-GOV-DFT-O3
+Domain: POLICIES
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /policy-layer/versions/current
+- Endpoint: /api/v1/policy-layer/lessons/{lesson_id}
 - Method: GET
 
 Data Mapping:
-- version → current policy version
+- lesson → lesson detail
 
 Acceptance:
-- Returns current active policy version
-- Response includes version details
+- Returns lesson detail
+- Response includes evidence chain
 
 Scenario: SDSR-POL-GOV-DFT-O3-001
 
-### Capability: policies.conflicts
+### Capability: lessons.convert_to_draft
 
 Panel: POL-GOV-DFT-O4
+Domain: POLICIES
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /policy-layer/conflicts
-- Method: GET
+- Endpoint: /api/v1/policy-layer/lessons/{lesson_id}/convert
+- Method: POST
 
 Data Mapping:
-- conflicts → policy conflicts
+- draft_id → created draft proposal ID
 
 Acceptance:
-- Returns policy conflict list
-- Response includes conflict details
+- Converts lesson to draft proposal
+- Response includes new draft ID
 
 Scenario: SDSR-POL-GOV-DFT-O4-001
 
-### Capability: policies.dependencies
+### Capability: lessons.dismiss_or_defer
 
 Panel: POL-GOV-DFT-O5
+Domain: POLICIES
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /policy-layer/dependencies
-- Method: GET
+- Endpoint: /api/v1/policy-layer/lessons/{lesson_id}/defer
+- Method: POST
 
 Data Mapping:
-- dependencies → policy dependencies
+- success → defer status
 
 Acceptance:
-- Returns policy dependency graph
-- Response includes dependency metadata
+- Defers lesson until specified date
+- Response includes deferred_until timestamp
 
 Scenario: SDSR-POL-GOV-DFT-O5-001
 
@@ -3744,7 +3757,7 @@ Panel: POL-GOV-LIB-O1
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /policy-layer/safety-rules
+- Endpoint: /api/v1/policy-layer/safety-rules
 - Method: GET
 
 Data Mapping:
@@ -3762,7 +3775,7 @@ Panel: POL-GOV-LIB-O2
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /policy-layer/ethical-constraints
+- Endpoint: /api/v1/policy-layer/ethical-constraints
 - Method: GET
 
 Data Mapping:
@@ -3780,11 +3793,11 @@ Panel: POL-GOV-LIB-O3
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /v1/policies/active
+- Endpoint: /api/v1/policy/active
 - Method: GET
 
 Data Mapping:
-- policies → active policy list
+- policies → active policy list (V2 facade)
 
 Acceptance:
 - Returns active policies
@@ -3816,7 +3829,7 @@ Panel: POL-GOV-LIB-O5
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /policy-layer/temporal-policies
+- Endpoint: /api/v1/policy-layer/temporal-policies
 - Method: GET
 
 Data Mapping:
@@ -3830,11 +3843,11 @@ Scenario: SDSR-POL-GOV-LIB-O5-001
 
 ### Capability: policies.limits
 
-Panel: POL-LIM-THR-O1
+Panel: POL-LIM-CTR-O1
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /policy-layer/risk-ceilings
+- Endpoint: /api/v1/policy-layer/risk-ceilings
 - Method: GET
 
 Data Mapping:
@@ -3844,11 +3857,11 @@ Acceptance:
 - Returns risk ceiling matrix
 - Response includes scope information
 
-Scenario: SDSR-POL-LIM-THR-O1-001
+Scenario: SDSR-POL-LIM-CTR-O1-001
 
 ### Capability: policies.budgets
 
-Panel: POL-LIM-THR-O2
+Panel: POL-LIM-CTR-O2
 Status: ASSUMED
 
 Implementation:
@@ -3862,11 +3875,11 @@ Acceptance:
 - Returns budget list
 - Response includes threshold values
 
-Scenario: SDSR-POL-LIM-THR-O2-001
+Scenario: SDSR-POL-LIM-CTR-O2-001
 
 ### Capability: policies.limits.threshold_params
 
-Panel: POL-LIM-THR-O3
+Panel: POL-LIM-CTR-O3
 Status: DECLARED
 
 Implementation:
@@ -3885,15 +3898,15 @@ Acceptance:
 - Returns effective params with defaults applied
 - Only accepts THRESHOLD category limits
 
-Scenario: SDSR-POL-LIM-THR-O3-001
+Scenario: SDSR-POL-LIM-CTR-O3-001
 
 ### Capability: policies.limits
 
-Panel: POL-LIM-THR-O4
+Panel: POL-LIM-CTR-O4
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /api/v1/tenants/tenant/quota/tokens
+- Endpoint: /api/v1/tenant/quota/tokens
 - Method: GET
 
 Data Mapping:
@@ -3903,15 +3916,15 @@ Acceptance:
 - Returns token quota configuration
 - Response includes usage/limits
 
-Scenario: SDSR-POL-LIM-THR-O4-001
+Scenario: SDSR-POL-LIM-CTR-O4-001
 
 ### Capability: policies.limits
 
-Panel: POL-LIM-THR-O5
+Panel: POL-LIM-CTR-O5
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /policy-layer/cooldowns
+- Endpoint: /api/v1/policy-layer/cooldowns
 - Method: GET
 
 Data Mapping:
@@ -3921,7 +3934,7 @@ Acceptance:
 - Returns cooldown list
 - Response includes reset logic
 
-Scenario: SDSR-POL-LIM-THR-O5-001
+Scenario: SDSR-POL-LIM-CTR-O5-001
 
 ### Capability: policies.violations
 
@@ -3929,11 +3942,11 @@ Panel: POL-LIM-VIO-O1
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /policy-layer/violations
+- Endpoint: /api/v1/policy/violations
 - Method: GET
 
 Data Mapping:
-- violations → violation records
+- violations → violation records (V2 facade list)
 
 Acceptance:
 - Returns violation ledger
@@ -3947,15 +3960,15 @@ Panel: POL-LIM-VIO-O2
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /guard/costs/incidents
+- Endpoint: /api/v1/policy/violations
 - Method: GET
 
 Data Mapping:
-- incidents → cost incidents
+- violations → violation list (V2 facade filtered view)
 
 Acceptance:
-- Returns cost incident list
-- Response includes classification
+- Returns violation list with classification
+- Response includes enforcement state
 
 Scenario: SDSR-POL-LIM-VIO-O2-001
 
@@ -3965,15 +3978,15 @@ Panel: POL-LIM-VIO-O3
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /costsim/v2/incidents
+- Endpoint: /api/v1/policy/violations/{violation_id}
 - Method: GET
 
 Data Mapping:
-- incidents → simulated incidents
+- violation → violation detail (V2 facade detail)
 
 Acceptance:
-- Returns simulated incident list
-- Response includes override analysis
+- Returns violation detail
+- Response includes full enforcement context
 
 Scenario: SDSR-POL-LIM-VIO-O3-001
 
@@ -3983,15 +3996,15 @@ Panel: POL-LIM-VIO-O4
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /cost/anomalies
+- Endpoint: /api/v1/policy/violations/{violation_id}
 - Method: GET
 
 Data Mapping:
-- anomalies → cost anomalies
+- violation → violation context (V2 facade impact view)
 
 Acceptance:
-- Returns anomaly list
-- Response includes impact data
+- Returns violation with impact context
+- Response includes related policies and thresholds
 
 Scenario: SDSR-POL-LIM-VIO-O4-001
 
@@ -4001,285 +4014,647 @@ Panel: POL-LIM-VIO-O5
 Status: ASSUMED
 
 Implementation:
-- Endpoint: /costsim/divergence
+- Endpoint: /api/v1/policy/violations/{violation_id}
 - Method: GET
 
 Data Mapping:
-- divergence → divergence report
+- violation → violation proof (V2 facade raw evidence)
 
 Acceptance:
-- Returns divergence analysis
-- Response includes escalation triggers
+- Returns violation with raw proof data
+- Response includes audit trail and evidence
 
 Scenario: SDSR-POL-LIM-VIO-O5-001
 
 ### Capability: logs.llm_runs
 
 Panel: LOG-REC-LLM-O1
-Status: ASSUMED
+Status: DECLARED
+Updated: 2026-01-19 (LOGS Domain V2)
 
 Implementation:
-- Endpoint: /api/v1/runtime/traces
+- Endpoint: /api/v1/logs/llm-runs/{run_id}/envelope
 - Method: GET
 
 Data Mapping:
-- traces → runtime execution traces
+- LLMRunRecord → canonical immutable run envelope
+- EvidenceMetadata → correlation spine, provenance
 
 Acceptance:
-- Returns runtime trace records
-- Response includes run envelope data
+- Returns canonical immutable run record
+- Response includes EvidenceMetadata (INV-LOG-META-001)
+- Tenant-scoped query
 
 Scenario: SDSR-LOG-REC-LLM-O1-001
 
 ### Capability: logs.llm_runs
 
 Panel: LOG-REC-LLM-O2
-Status: ASSUMED
+Status: DECLARED
+Updated: 2026-01-19 (LOGS Domain V2)
 
 Implementation:
-- Endpoint: /api/v1/activity/runs
+- Endpoint: /api/v1/logs/llm-runs/{run_id}/trace
 - Method: GET
 
 Data Mapping:
-- runs → activity run records
+- aos_traces → trace header
+- aos_trace_steps → step-by-step progression
 
 Acceptance:
 - Returns step-by-step execution trace
-- Response includes action progression
+- Response includes EvidenceMetadata
+- Tenant-scoped query
 
 Scenario: SDSR-LOG-REC-LLM-O2-001
 
 ### Capability: logs.llm_runs
 
 Panel: LOG-REC-LLM-O3
-Status: ASSUMED
+Status: DECLARED
+Updated: 2026-01-19 (LOGS Domain V2)
 
 Implementation:
-- Endpoint: /api/v1/customer/activity
+- Endpoint: /api/v1/logs/llm-runs/{run_id}/governance
 - Method: GET
 
 Data Mapping:
-- activity → customer run activity
+- audit_ledger → policy/limit events for run
 
 Acceptance:
-- Returns customer-scoped run activity
-- Response includes policy interaction trace
+- Returns policy and threshold interaction trace
+- Response includes EvidenceMetadata
+- Tenant-scoped query
 
 Scenario: SDSR-LOG-REC-LLM-O3-001
 
 ### Capability: logs.llm_runs
 
 Panel: LOG-REC-LLM-O4
-Status: ASSUMED
+Status: DECLARED
+Updated: 2026-01-19 (LOGS Domain V2)
 
 Implementation:
-- Endpoint: /api/v1/tenants/runs
+- Endpoint: /api/v1/logs/llm-runs/{run_id}/replay
 - Method: GET
 
 Data Mapping:
-- runs → tenant run records
+- aos_trace_steps + system_records + audit_ledger → T±30s window
 
 Acceptance:
-- Returns tenant-scoped runs
-- Response includes 60s replay window data
+- Returns 60-second replay window around inflection point
+- Response includes events from llm, system, policy sources
+- Tenant-scoped query
 
 Scenario: SDSR-LOG-REC-LLM-O4-001
 
 ### Capability: logs.llm_runs
 
 Panel: LOG-REC-LLM-O5
-Status: ASSUMED
+Status: DECLARED
+Updated: 2026-01-19 (LOGS Domain V2)
 
 Implementation:
-- Endpoint: /api/v1/traces/mismatches
+- Endpoint: /api/v1/logs/llm-runs/{run_id}/export
 - Method: GET
 
 Data Mapping:
-- mismatches → trace mismatch records
+- log_exports → export metadata
+- available_formats, compliance_tags
 
 Acceptance:
-- Returns audit/export package metadata
-- Response includes integrity checksums
+- Returns audit-grade evidence bundle information
+- Response includes available formats, compliance tags
+- Tenant-scoped query
 
 Scenario: SDSR-LOG-REC-LLM-O5-001
 
-### Capability: logs.system
+### Capability: logs.system_logs
 
 Panel: LOG-REC-SYS-O1
-Status: ASSUMED
+Status: DECLARED
+Updated: 2026-01-19 (LOGS Domain V2)
 
 Implementation:
-- Endpoint: /guard/logs
+- Endpoint: /api/v1/logs/system/{run_id}/snapshot
 - Method: GET
 
 Data Mapping:
-- logs → guard system logs
+- system_records → environment baseline snapshot
 
 Acceptance:
-- Returns guard subsystem logs
-- Response includes environment snapshot
+- Returns environment baseline state at run start
+- Response includes EvidenceMetadata
+- Tenant-scoped query
 
 Scenario: SDSR-LOG-REC-SYS-O1-001
 
-### Capability: logs.system
+### Capability: logs.system_logs
 
 Panel: LOG-REC-SYS-O2
-Status: ASSUMED
+Status: DECLARED (STUB)
+Updated: 2026-01-19 (LOGS Domain V2)
 
 Implementation:
-- Endpoint: /health
+- Endpoint: /api/v1/logs/system/{run_id}/telemetry
 - Method: GET
 
 Data Mapping:
-- health → system health status
+- STUB response (producer not implemented)
 
 Acceptance:
-- Returns system health metrics
-- Response includes connectivity telemetry
+- Returns telemetry_not_collected stub
+- Infrastructure telemetry producer not yet implemented
+- Future milestone: M-TBD
 
 Scenario: SDSR-LOG-REC-SYS-O2-001
 
-### Capability: logs.system
+### Capability: logs.system_logs
 
 Panel: LOG-REC-SYS-O3
-Status: ASSUMED
+Status: DECLARED
+Updated: 2026-01-19 (LOGS Domain V2)
 
 Implementation:
-- Endpoint: /health/ready
+- Endpoint: /api/v1/logs/system/{run_id}/events
 - Method: GET
 
 Data Mapping:
-- ready → system readiness status
+- system_records → infra events correlated to run
 
 Acceptance:
-- Returns readiness check results
-- Response includes degradation events
+- Returns infrastructure events affecting the run
+- Response includes EvidenceMetadata
+- Tenant-scoped query
 
 Scenario: SDSR-LOG-REC-SYS-O3-001
 
-### Capability: logs.system
+### Capability: logs.system_logs
 
 Panel: LOG-REC-SYS-O4
-Status: ASSUMED
+Status: DECLARED
+Updated: 2026-01-19 (LOGS Domain V2)
 
 Implementation:
-- Endpoint: /health/adapters
+- Endpoint: /api/v1/logs/system/{run_id}/replay
 - Method: GET
 
 Data Mapping:
-- adapters → adapter health status
+- system_records → T±30s window around anomaly
 
 Acceptance:
-- Returns adapter health metrics
-- Response includes infra replay window
+- Returns infra replay window around anomaly
+- Response includes EvidenceMetadata
+- Tenant-scoped query
 
 Scenario: SDSR-LOG-REC-SYS-O4-001
 
-### Capability: logs.system
+### Capability: logs.system_logs
 
 Panel: LOG-REC-SYS-O5
-Status: ASSUMED
+Status: DECLARED
+Updated: 2026-01-19 (LOGS Domain V2)
 
 Implementation:
-- Endpoint: /health/skills
+- Endpoint: /api/v1/logs/system/audit
 - Method: GET
 
 Data Mapping:
-- skills → skills health status
+- system_records → infra attribution and audit
 
 Acceptance:
-- Returns skills health metrics
-- Response includes attribution data
+- Returns infrastructure attribution records
+- Response includes EvidenceMetadata
+- Tenant-scoped query
 
 Scenario: SDSR-LOG-REC-SYS-O5-001
 
 ### Capability: logs.audit
 
 Panel: LOG-REC-AUD-O1
-Status: ASSUMED
+Status: DECLARED
+Updated: 2026-01-19 (LOGS Domain V2)
 
 Implementation:
-- Endpoint: /api/v1/traces
+- Endpoint: /api/v1/logs/audit/identity
 - Method: GET
 
 Data Mapping:
-- traces → audit trace records
+- audit_ledger (user_create, user_modify, user_delete) → identity lifecycle
+- EvidenceMetadata → correlation spine, provenance
 
 Acceptance:
-- Returns audit trace list
-- Response includes identity lifecycle
+- Returns identity lifecycle audit records
+- Response includes EvidenceMetadata (INV-LOG-META-001)
+- Tenant-scoped query
 
 Scenario: SDSR-LOG-REC-AUD-O1-001
 
 ### Capability: logs.audit
 
 Panel: LOG-REC-AUD-O2
-Status: ASSUMED
+Status: DECLARED
+Updated: 2026-01-19 (LOGS Domain V2)
 
 Implementation:
-- Endpoint: /api/v1/rbac/audit
+- Endpoint: /api/v1/logs/audit/authorization
 - Method: GET
 
 Data Mapping:
-- audit → RBAC audit records
+- audit_ledger (permission, rbac, auth) → authorization decisions
+- EvidenceMetadata → correlation spine, provenance
 
 Acceptance:
-- Returns authorization decisions
-- Response includes access decisions
+- Returns authorization decision records
+- Response includes EvidenceMetadata (INV-LOG-META-001)
+- Tenant-scoped query
 
 Scenario: SDSR-LOG-REC-AUD-O2-001
 
 ### Capability: logs.audit
 
 Panel: LOG-REC-AUD-O3
-Status: ASSUMED
+Status: DECLARED
+Updated: 2026-01-19 (LOGS Domain V2)
 
 Implementation:
-- Endpoint: /ops/actions/audit
+- Endpoint: /api/v1/logs/audit/access
 - Method: GET
 
 Data Mapping:
-- audit → ops action audit
+- audit_ledger (log_access, export, download) → log access records
+- EvidenceMetadata → correlation spine, provenance
 
 Acceptance:
-- Returns ops action audit trail
-- Response includes log access records
+- Returns log access audit records
+- Response includes EvidenceMetadata (INV-LOG-META-001)
+- Tenant-scoped query
 
 Scenario: SDSR-LOG-REC-AUD-O3-001
 
 ### Capability: logs.audit
 
 Panel: LOG-REC-AUD-O4
-Status: ASSUMED
+Status: DECLARED
+Updated: 2026-01-19 (LOGS Domain V2)
 
 Implementation:
-- Endpoint: /status_history
+- Endpoint: /api/v1/logs/audit/integrity
 - Method: GET
 
 Data Mapping:
-- history → status change history
+- audit_ledger (checksum, verify, seal) → integrity markers
+- EvidenceMetadata → correlation spine, provenance
 
 Acceptance:
-- Returns status history records
-- Response includes integrity markers
+- Returns integrity check records
+- Response includes EvidenceMetadata (INV-LOG-META-001)
+- Tenant-scoped query
 
 Scenario: SDSR-LOG-REC-AUD-O4-001
 
 ### Capability: logs.audit
 
 Panel: LOG-REC-AUD-O5
-Status: ASSUMED
+Status: DECLARED
+Updated: 2026-01-19 (LOGS Domain V2)
 
 Implementation:
-- Endpoint: /status_history/stats
+- Endpoint: /api/v1/logs/audit/exports
 - Method: GET
 
 Data Mapping:
-- stats → status statistics
+- log_exports → compliance export records (O5 evidence bundles)
+- EvidenceMetadata → correlation spine, provenance
 
 Acceptance:
-- Returns status statistics
-- Response includes compliance export records
+- Returns compliance export records
+- Response includes EvidenceMetadata (INV-LOG-META-001)
+- Tenant-scoped query
 
 Scenario: SDSR-LOG-REC-AUD-O5-001
+
+---
+
+### Missing Capability Definitions (Added 2026-01-19)
+
+> **NOTE:** The following capabilities were referenced by panels but lacked definitions.
+> Use DECLARED if endpoint exists, DEFERRED if no backend support yet.
+
+### Capability: activity.live_runs
+
+Panel: ACT-LLM-LIVE-O1, ACT-LLM-LIVE-O3
+Status: DECLARED
+Added: 2026-01-19
+
+Implementation:
+- Endpoint: /api/v1/activity/runs
+- Method: GET
+
+Query Params:
+- status: running (implicit filter)
+- window: 24h
+
+Acceptance:
+- Returns list of currently running executions
+- Tenant-scoped query
+
+Scenario: PENDING
+
+### Capability: activity.completed_runs
+
+Panel: ACT-LLM-COMP-O1, ACT-LLM-COMP-O4
+Status: DECLARED
+Added: 2026-01-19
+
+Implementation:
+- Endpoint: /api/v1/activity/runs
+- Method: GET
+
+Query Params:
+- status: completed (implicit filter)
+- window: 24h
+
+Acceptance:
+- Returns list of completed executions
+- Tenant-scoped query
+
+Scenario: PENDING
+
+### Capability: activity.risk_signals
+
+Panel: ACT-LLM-LIVE-O2
+Status: DECLARED
+Added: 2026-01-19
+
+Implementation:
+- Endpoint: /api/v1/activity/attention-queue
+- Method: GET
+
+Acceptance:
+- Returns executions with risk signals
+- Tenant-scoped query
+
+Scenario: PENDING
+
+### Capability: activity.run_detail
+
+Panel: ACT-LLM-COMP-O5
+Status: DECLARED
+Added: 2026-01-19
+
+Implementation:
+- Endpoint: /api/v1/activity/runs/{run_id}
+- Method: GET
+
+Acceptance:
+- Returns detailed run information
+- Tenant-scoped query
+
+Scenario: PENDING
+
+### Capability: activity.runtime_traces
+
+Panel: ACT-LLM-LIVE-O4
+Status: DEFERRED
+Added: 2026-01-19
+
+NOTE: No direct backend endpoint exists. Requires backend implementation.
+Deferred until traces service is complete.
+
+Implementation:
+- Endpoint: null
+- Method: GET
+
+Scenario: DEFERRED
+
+### Capability: overview.cost_summary
+
+Panel: OVR-SUM-CI-O1
+Status: DECLARED
+Added: 2026-01-19
+
+Implementation:
+- Endpoint: /api/v1/overview/costs
+- Method: GET
+
+Acceptance:
+- Returns cost summary for tenant
+- Tenant-scoped query
+
+Scenario: PENDING
+
+### Capability: overview.costs
+
+Panel: OVR-SUM-CI-O2, OVR-SUM-CI-O3, OVR-SUM-CI-O4
+Status: DECLARED
+Added: 2026-01-19
+
+Implementation:
+- Endpoint: /api/v1/overview/costs
+- Method: GET
+
+Acceptance:
+- Returns cost breakdown by feature/model/anomaly
+- Tenant-scoped query
+
+Scenario: PENDING
+
+### Capability: overview.decisions
+
+Panel: OVR-SUM-DC-O4
+Status: DECLARED
+Added: 2026-01-19
+
+Implementation:
+- Endpoint: /api/v1/overview/decisions
+- Method: GET
+
+Acceptance:
+- Returns pending decisions queue
+- Tenant-scoped query
+
+Scenario: PENDING
+
+### Capability: overview.decisions_count
+
+Panel: OVR-SUM-DC-O2
+Status: DECLARED
+Added: 2026-01-19
+
+Implementation:
+- Endpoint: /api/v1/overview/decisions/count
+- Method: GET
+
+Acceptance:
+- Returns decisions count summary
+- Tenant-scoped query
+
+Scenario: PENDING
+
+### Capability: overview.decisions_list
+
+Panel: OVR-SUM-DC-O1
+Status: DECLARED
+Added: 2026-01-19
+
+Implementation:
+- Endpoint: /api/v1/overview/decisions
+- Method: GET
+
+Acceptance:
+- Returns list of pending decisions
+- Tenant-scoped query
+
+Scenario: PENDING
+
+### Capability: overview.recovery_stats
+
+Panel: OVR-SUM-DC-O3
+Status: DECLARED
+Added: 2026-01-19
+
+Implementation:
+- Endpoint: /api/v1/overview/recovery-stats
+- Method: GET
+
+Acceptance:
+- Returns recovery statistics
+- Tenant-scoped query
+
+Scenario: PENDING
+
+### Capability: overview.incident_snapshot
+
+Panel: OVR-SUM-HL-O2
+Status: DEFERRED
+Added: 2026-01-19
+
+NOTE: Requires facade endpoint to aggregate incidents for overview.
+Can be derived from /api/v1/incidents/metrics.
+
+Implementation:
+- Endpoint: null
+- Method: GET
+
+Scenario: DEFERRED
+
+### Capability: overview.policy_snapshot
+
+Panel: OVR-SUM-HL-O4
+Status: DEFERRED
+Added: 2026-01-19
+
+NOTE: Requires facade endpoint to aggregate policies for overview.
+
+Implementation:
+- Endpoint: null
+- Method: GET
+
+Scenario: DEFERRED
+
+### Capability: incidents.metrics_v2
+
+Panel: INC-EV-ACT-O3, INC-EV-RES-O3
+Status: DEFERRED
+Added: 2026-01-19
+
+NOTE: V2 metrics endpoint not yet implemented.
+Deferred until v2 incidents service is complete.
+
+Implementation:
+- Endpoint: null
+- Method: GET
+
+Scenario: DEFERRED
+
+### Capability: incidents.resolved_list_v2
+
+Panel: INC-EV-RES-O1, INC-EV-RES-O4
+Status: DEFERRED
+Added: 2026-01-19
+
+NOTE: V2 resolved list endpoint not yet implemented.
+Deferred until v2 incidents service is complete.
+
+Implementation:
+- Endpoint: null
+- Method: GET
+
+Scenario: DEFERRED
+
+### Capability: incidents.historical_distribution
+
+Panel: INC-EV-HIST-O2
+Status: DEFERRED
+Added: 2026-01-19
+
+NOTE: Historical distribution endpoint not yet implemented.
+
+Implementation:
+- Endpoint: null
+- Method: GET
+
+Scenario: DEFERRED
+
+### Capability: incidents.historical_cost_trend
+
+Panel: INC-EV-HIST-O4
+Status: DEFERRED
+Added: 2026-01-19
+
+NOTE: Historical cost trend endpoint not yet implemented.
+
+Implementation:
+- Endpoint: null
+- Method: GET
+
+Scenario: DEFERRED
+
+### Capability: logs.system
+
+Panel: LOG-REC-SYS-O1, LOG-REC-SYS-O2, LOG-REC-SYS-O3, LOG-REC-SYS-O4, LOG-REC-SYS-O5
+Status: DEFERRED
+Added: 2026-01-19
+
+NOTE: System logs capability not yet implemented.
+Requires backend log aggregation service.
+
+Implementation:
+- Endpoint: null
+- Method: GET
+
+Scenario: DEFERRED
+
+### Capability: policies.active_policies
+
+Panel: POL-GOV-ACT-O1
+Status: DECLARED
+Added: 2026-01-19
+
+Implementation:
+- Endpoint: /api/v1/policy/active
+- Method: GET
+
+Acceptance:
+- Returns list of active policies
+- Tenant-scoped query
+
+Scenario: PENDING
+
+### Capability: policies.layer_state
+
+Panel: POL-GOV-ACT-O4
+Status: DECLARED
+Added: 2026-01-19
+
+Implementation:
+- Endpoint: /api/v1/policy-layer/state
+- Method: GET
+
+Acceptance:
+- Returns current policy layer state
+- Tenant-scoped query
+
+Scenario: PENDING
 

@@ -3,19 +3,25 @@
 # Temporal:
 #   Trigger: scheduler (standalone process)
 #   Execution: sync (dispatch loop) + ThreadPoolExecutor (worker threads)
-# Role: Worker pool dispatch (polls DB, dispatches to RunRunner)
+# Role: Worker pool dispatch (polls DB, dispatches to RunRunner via ROK)
 # Authority: Run claim (pending → running via ThreadPool dispatch)
 # Callers: Standalone process (`python -m app.worker.pool`)
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3
+# Allowed Imports: L5 (orchestration), L6
+# Forbidden Imports: L1, L2, L3, L4
 # Contract: EXECUTION_SEMANTIC_CONTRACT.md (Guarantee 3: At-Least-Once Worker Dispatch)
 # Pattern: Sync dispatch loop with ThreadPoolExecutor for worker isolation
+# Reference: PIN-454 (Cross-Domain Orchestration Audit)
 
 """
 Worker pool: polls runs table and dispatches runs to runner workers.
 Designed to be launched as a separate process: `python -m app.worker.pool`
 
 Supports graceful shutdown via SIGTERM/SIGINT - waits for running tasks to complete.
+
+PIN-454 Integration:
+- Uses ROK for run lifecycle management
+- Declares audit expectations at dispatch time (T0)
+- Finalizes ROK after run completion
 """
 
 import logging
@@ -47,6 +53,9 @@ from ..models.logs_records import (
     SystemSeverity,
 )
 from .runner import RunRunner
+
+# PIN-454: Run Orchestration Kernel for lifecycle management
+ROK_ENABLED = os.getenv("ROK_ENABLED", "true").lower() == "true"
 
 # Phase-2.3: Feature Intent Declaration
 # Thread pool state tracking, no distributed locks needed
@@ -188,9 +197,53 @@ class WorkerPool:
                 session.commit()
 
     def _execute_run(self, run_id: str):
-        """Execute run using runner (called in thread pool)."""
-        runner = RunRunner(run_id=run_id, publisher=self.publisher)
-        runner.run()
+        """
+        Execute run using runner (called in thread pool).
+
+        PIN-454: Uses ROK for lifecycle management:
+        1. Create ROK instance
+        2. Declare audit expectations (T0)
+        3. Execute via RunRunner
+        4. Finalize ROK (emits finalize_run ack)
+        """
+        rok = None
+        success = False
+        error = None
+
+        try:
+            # PIN-454: Initialize ROK and declare expectations
+            if ROK_ENABLED:
+                from app.worker.orchestration import create_rok
+
+                rok = create_rok(run_id)
+                rok.declare_expectations()
+
+            # Execute the run
+            runner = RunRunner(run_id=run_id, publisher=self.publisher)
+            runner.run()
+
+            # If we get here without exception, consider it a success
+            # (actual run status is determined by runner)
+            success = True
+
+        except Exception as e:
+            error = str(e)
+            logger.error(
+                "run_execution_error",
+                extra={"run_id": run_id, "error": error},
+            )
+            raise
+
+        finally:
+            # PIN-454: Finalize ROK (emits finalize_run ack for liveness proof)
+            if rok is not None:
+                try:
+                    rok.finalize(success=success, error=error)
+                except Exception as e:
+                    logger.warning(
+                        f"rok.finalize_failed: {e}",
+                        extra={"run_id": run_id},
+                    )
 
     def _on_run_complete(self, run_id: str, future):
         """Callback when run execution completes."""

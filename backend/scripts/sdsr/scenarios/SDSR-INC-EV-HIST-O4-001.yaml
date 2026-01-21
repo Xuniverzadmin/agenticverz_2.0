@@ -20,23 +20,24 @@
 scenario_id: SDSR-INC-EV-HIST-O4-001
 version: 1.0.0
 name: Observe INC-EV-HIST-O4 capability
-description: SDSR verification scenario for incidents.ops_list
-capability: incidents.ops_list
+description: SDSR verification scenario for incidents.cost_impact (historical cost impact)
+capability: incidents.cost_impact
 panel_id: INC-EV-HIST-O4
 domain: INCIDENTS
+auth:
+  mode: OBSERVER
 metadata:
   generated_by: aurora_sdsr_synth.py
   generated_at: '2026-01-15T06:41:59.248955+00:00'
-  panel_class: evidence
+  panel_class: interpretation
 inject:
   type: api_call
-  endpoint: /api/v1/ops/incidents
+  endpoint: /api/v1/incidents/cost-impact
   method: GET
   headers:
-    Authorization: Bearer ${AUTH_TOKEN}
     Content-Type: application/json
   params:
-    window: 24h
+    baseline_days: 90
 expect:
   status_code: 200
   response_type: json

@@ -33,11 +33,11 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: logs.health_check
-  status: ASSUMED
-  assumed_endpoint: /health
+  id: logs.system
+  status: DEFERRED
+  assumed_endpoint: 'null'
   assumed_method: GET
 sdsr:
-  scenario: SDSR-LOG-REC-SYS-O2-001
+  scenario: DEFERRED
   verified: false
 notes: Show network and bandwidth telemetry — connectivity health during execution.

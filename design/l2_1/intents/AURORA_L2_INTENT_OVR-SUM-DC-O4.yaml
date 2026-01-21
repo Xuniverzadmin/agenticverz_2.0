@@ -33,10 +33,13 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: overview.feedback_summary
-  status: ASSUMED
-  assumed_endpoint: null
+  id: overview.decisions
+  status: DECLARED
+  assumed_endpoint: /api/v1/overview/decisions
   assumed_method: GET
+sdsr:
+  scenario: PENDING
+  verified: false
 notes: 'Show decisions avoided by governance — where the system already removed
 
   decision load successfully, reinforcing trust in automation.

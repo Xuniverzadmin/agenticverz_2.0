@@ -1,0 +1,22 @@
+{
+  "observation_id": "OBS-SDSR-POL-LIM-THR-O5-001-20260119145858",
+  "scenario_id": "SDSR-POL-LIM-THR-O5-001",
+  "capability_id": "policies.limits",
+  "panel_id": "POL-LIM-THR-O5",
+  "status": "BLOCKED",
+  "observed_at": "2026-01-19T14:58:58.841195+00:00",
+  "assumed_endpoint": "/policy-layer/risk-ceilings",
+  "observed_endpoint": "/api/v1/policy-layer/risk-ceilings",
+  "assumed_method": "GET",
+  "observed_method": "GET",
+  "response_status_code": null,
+  "response_time_ms": null,
+  "invariants_total": 3,
+  "invariants_passed": 0,
+  "invariants_failed": 0,
+  "invariant_results": [],
+  "failure_reason": "Coherency gate failed: COH-004, COH-009",
+  "failure_taxonomy": "REALITY_MISMATCH",
+  "coherency_verified": false,
+  "trace_id": null
+}

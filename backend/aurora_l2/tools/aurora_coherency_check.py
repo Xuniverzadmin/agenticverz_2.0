@@ -128,6 +128,32 @@ class CoherencyChecker:
         with open(ROUTES_CACHE, 'w') as f:
             json.dump(self.routes_cache, f, indent=2)
 
+    def _check_route_exists(self, endpoint: str) -> bool:
+        """Check if a route exists in the backend routes cache.
+
+        Handles path parameters like {run_id}, {violation_id}, etc.
+        """
+        if not self.routes_cache:
+            return False
+
+        # Direct match
+        if endpoint in self.routes_cache:
+            return True
+
+        # Try matching with path parameters (e.g., /api/v1/runs/{run_id})
+        # Convert the endpoint to a regex pattern
+        import re
+        pattern = re.sub(r'\{[^}]+\}', r'[^/]+', endpoint)
+        pattern = f"^{pattern}$"
+
+        for cached_route in self.routes_cache.keys():
+            # Convert cached route to comparable format
+            cached_pattern = re.sub(r'\{[^}]+\}', r'[^/]+', cached_route)
+            if re.match(pattern, cached_route) or re.match(cached_pattern, endpoint):
+                return True
+
+        return False
+
     def _introspect_backend_routes(self) -> Dict[str, List[str]]:
         """
         Introspect FastAPI routes from source files.
@@ -152,7 +178,7 @@ class CoherencyChecker:
         known_prefixes = {
             'activity.py': '/api/v1/activity',
             'incidents.py': '/api/v1/incidents',
-            'policy.py': '/api/v1/policies',
+            'policy.py': '/api/v1/policy',  # V2 facade (PIN-447)
             'policy_proposals.py': '/api/v1/policy-proposals',
             'traces.py': '/api/v1/traces',
             'runtime.py': '/api/v1/runtime',
@@ -163,6 +189,9 @@ class CoherencyChecker:
             'feedback.py': '/api/v1/feedback',
             'tenants.py': '/api/v1',  # Fixed: router has prefix="/api/v1", not /api/v1/tenants
             'guard.py': '/api/v1/guard',
+            'policy_layer.py': '/api/v1/policy-layer',  # Router mounted with prefix="/api/v1"
+            'policy_limits_crud.py': '/api/v1/policies',  # PIN-LIM-01: mounted with prefix="/api/v1"
+            'policy_rules_crud.py': '/api/v1/policies',  # PIN-LIM-02: mounted with prefix="/api/v1"
         }
 
         for api_file in BACKEND_API_DIR.glob("*.py"):
@@ -336,16 +365,54 @@ class CoherencyChecker:
             ))
 
         # COH-004: Assumed endpoint consistency (human assumption should match across artifacts)
+        # NOTE: A capability can serve multiple panels with different endpoints.
+        #
+        # Pattern 1: Same-base multi-panel (e.g., logs.llm_runs)
+        #   O1 → /api/v1/logs/llm-runs/{run_id}/envelope
+        #   O2 → /api/v1/logs/llm-runs/{run_id}/trace
+        #   All share the same base path.
+        #
+        # Pattern 2: Multi-endpoint capability (e.g., policies.violations)
+        #   O1 → /api/v1/policy-layer/violations
+        #   O2 → /guard/costs/incidents
+        #   O3 → /costsim/v2/incidents
+        #   Different APIs serving different data aspects of the same capability.
+        #
+        # Both patterns are VALID if the intent's endpoint exists in the backend.
         intent_assumed_endpoint = capability_ref.get('assumed_endpoint')
         cap_assumption = capability.get('assumption', {})
         cap_assumed_endpoint = cap_assumption.get('endpoint')
 
         if intent_assumed_endpoint and cap_assumed_endpoint:
             if intent_assumed_endpoint != cap_assumed_endpoint:
-                results.append(CheckResult(
-                    "COH-004", CheckStatus.FAIL,
-                    f"Assumed endpoint mismatch: intent='{intent_assumed_endpoint}', capability='{cap_assumed_endpoint}'"
-                ))
+                # Check if endpoints share same base path (Pattern 1: same-base multi-panel)
+                # E.g., /api/v1/logs/llm-runs/{run_id}/envelope vs /api/v1/logs/llm-runs/{run_id}/export
+                intent_base = '/'.join(intent_assumed_endpoint.split('/')[:-1])
+                cap_base = '/'.join(cap_assumed_endpoint.split('/')[:-1])
+
+                if intent_base == cap_base:
+                    # Same capability domain, different O-level endpoint - VALID pattern
+                    results.append(CheckResult(
+                        "COH-004", CheckStatus.PASS,
+                        f"Multi-panel capability: intent='{intent_assumed_endpoint}' (same base as capability)",
+                        {"capability_endpoint": cap_assumed_endpoint, "shared_base": intent_base}
+                    ))
+                else:
+                    # Different base paths - check if intent's endpoint exists in backend (Pattern 2)
+                    # Multi-endpoint capability: same capability, different APIs
+                    intent_route_exists = self._check_route_exists(intent_assumed_endpoint)
+                    if intent_route_exists:
+                        results.append(CheckResult(
+                            "COH-004", CheckStatus.PASS,
+                            f"Multi-endpoint capability: intent='{intent_assumed_endpoint}' (valid route, different from capability)",
+                            {"capability_endpoint": cap_assumed_endpoint, "intent_route_valid": True}
+                        ))
+                    else:
+                        # Intent endpoint doesn't exist - real mismatch
+                        results.append(CheckResult(
+                            "COH-004", CheckStatus.FAIL,
+                            f"Assumed endpoint mismatch: intent='{intent_assumed_endpoint}', capability='{cap_assumed_endpoint}'"
+                        ))
             else:
                 results.append(CheckResult(
                     "COH-004", CheckStatus.PASS,

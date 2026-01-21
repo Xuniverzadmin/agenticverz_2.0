@@ -1,0 +1,40 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
+#
+capability_id: activity.run_detail
+status: OBSERVED
+source_panels:
+- ACT-LLM-COMP-O5
+domain: ACTIVITY
+metadata:
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
+  declared_by: intent-ledger
+  declared_on: '2026-01-20'
+  observed_by: SDSR-ACT-LLM-COMP-O5-001
+  observed_on: '2026-01-18'
+assumption:
+  endpoint: /api/v1/activity/runs/{run_id}
+  method: GET
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: /api/v1/activity/runs
+  observed_method: GET
+  observed_at: '2026-01-18T10:53:51.755025+00:00'
+  observation_id: OBS-SDSR-ACT-LLM-COMP-O5-001-20260118105339
+acceptance_criteria:
+- Returns detailed run information
+- Tenant-scoped query
+observation:
+  scenario_id: SDSR-ACT-LLM-COMP-O5-001
+  observed_at: '2026-01-18T10:53:51.755025+00:00'
+  trace_id: null
+  invariants_passed: 3
+  invariants_total: 3
+coherency:
+  last_checked: '2026-01-18T10:53:51.755025+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py

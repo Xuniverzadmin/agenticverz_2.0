@@ -709,59 +709,112 @@ export function DomainPage({ domainName }: DomainPageProps) {
     return <DomainNotFound domainName={domainName} />;
   }
 
+  // Get active topic definition from topics array
+  const activeTopicDef = topics.find(t => t.topic === activeTopic);
+
+  // Get topic definition/description (from panel or scaffolding)
+  const getTopicDescription = (): string => {
+    if (!activeTopic) return '';
+
+    // Try to get from first panel in topic
+    const firstPanel = topicPanels[0];
+    if (firstPanel?.short_description) {
+      return firstPanel.short_description;
+    }
+
+    // Default descriptions for common topics
+    const defaultDescriptions: Record<string, string> = {
+      // Overview
+      highlights: 'System pulse and status cards',
+      decisions: 'Pending approvals and actions required',
+      // Activity
+      live: 'Currently executing LLM runs',
+      completed: 'Finished runs with outcomes',
+      signals: 'Predictions, anomalies, and risk indicators',
+      // Incidents
+      active: 'Incidents requiring attention',
+      resolved: 'Acknowledged and closed incidents',
+      historical: 'Incident audit trail',
+      // Policies
+      active_policies: 'Currently enforced policies',
+      lessons: 'Learned patterns and policy proposals',
+      policy_library: 'Templates and ethical constraints',
+      thresholds: 'Configured limit values',
+      violations: 'Limit breach events',
+      // Logs
+      llm_runs: 'Execution log records',
+      system_logs: 'Worker and system events',
+      audit_logs: 'Governance action records',
+      // Analytics
+      cost_intelligence: 'Spend tracking, anomalies, and forecasts',
+      policy_usage: 'Policy effectiveness and coverage',
+      productivity: 'Saved time and efficiency gains',
+      // Connectivity
+      sdk_setup: 'aos_sdk integration guide',
+      api_keys: 'Create, rotate, and revoke API keys',
+      // Account
+      overview: 'Organization identity',
+      subscription: 'Current plan details',
+      invoices: 'Invoice history',
+      members: 'Team members management',
+      account_mgmt: 'Suspend or terminate account',
+    };
+
+    const topicKey = activeTopic.toLowerCase().replace(/ /g, '_');
+    return defaultDescriptions[topicKey] || '';
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* ================================================================
-          HEADER HIERARCHY (LOCKED ORDER):
-          1. Domain
-          2. Subdomain
-          3. Short description (if provided)
-          4. Topic tabs
+          MAIN WORKSPACE LAYOUT (per v2 Constitution Wireframe):
+          1. Breadcrumb — Navigation path (Domain > Subdomain > Topic)
+          2. Topic Header — Selected topic name + definition
+          3. Topic Tabs — Horizontal tabs for switching topics
+          4. Panel Content — Data/UI for selected topic
           ================================================================ */}
 
-      {/* 1. Domain */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-primary-900/30 rounded-lg">
-          <Icon size={24} className="text-primary-400" />
-        </div>
-        <h1 className="text-2xl font-semibold text-gray-100">{domain.domain}</h1>
-      </div>
+      {/* 1. BREADCRUMB */}
+      <nav className="flex items-center gap-2 text-sm text-gray-400">
+        <span className="text-gray-300 font-medium">{domain.domain}</span>
+        {activeSubdomain && (
+          <>
+            <span className="text-gray-600">{'>'}</span>
+            <span className="text-gray-300">{formatLabel(activeSubdomain)}</span>
+          </>
+        )}
+        {activeTopic && (
+          <>
+            <span className="text-gray-600">{'>'}</span>
+            <span className="text-gray-100">{formatLabel(activeTopic)}</span>
+          </>
+        )}
+      </nav>
 
-      {/* 2. Subdomain */}
-      {activeSubdomain && (
-        <div className="text-lg font-medium text-gray-300">
-          {formatLabel(activeSubdomain)}
-        </div>
-      )}
-
-      {/* 3. Short Description (domain level) */}
-      {domain.short_description && (
-        <div className="flex items-center gap-2">
-          <p className="text-sm text-gray-400">{domain.short_description}</p>
-          {/* Auto-description marker - Inspector only */}
-          {domain._normalization?.auto_description && (
-            <InspectorOnly>
-              <span className="text-xs px-1.5 py-0.5 bg-amber-900/30 text-amber-500 rounded font-mono">
-                AUTO
+      {/* 2. TOPIC HEADER (Selected topic name + definition) */}
+      {activeTopic && (
+        <div className="pb-2">
+          <h1 className="text-xl font-semibold text-gray-100">
+            {formatLabel(activeTopic)}
+            {getTopicDescription() && (
+              <span className="ml-2 text-base font-normal text-gray-400">
+                — {getTopicDescription()}
               </span>
-            </InspectorOnly>
-          )}
+            )}
+          </h1>
         </div>
       )}
 
-      {/* 4. Topic Tabs (Horizontal) */}
+      {/* 3. TOPIC TABS (Horizontal) */}
       <TopicTabs
         topics={topics}
         activeTopic={activeTopic}
         onSelectTopic={setActiveTopic}
       />
 
-      {/* ================================================================
-          PANELS (Render ONLY under selected topic)
-          ================================================================ */}
-
+      {/* 4. PANEL CONTENT */}
       {activeTopic ? (
-        <div className="space-y-4">
+        <div className="space-y-4 pt-2">
           <PanelsGrid panels={topicPanels} />
         </div>
       ) : (
@@ -769,6 +822,41 @@ export function DomainPage({ domainName }: DomainPageProps) {
           <p className="text-gray-500">Select a topic to view panels.</p>
         </div>
       )}
+
+      {/* Inspector: Domain Info (Dev Mode Only) */}
+      <InspectorOnly>
+        <div className="mt-6 p-4 bg-gray-900/50 border border-gray-700 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <Icon size={16} className="text-primary-400" />
+            <span className="text-sm font-medium text-gray-300">Domain Context</span>
+          </div>
+          <div className="grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <span className="text-gray-500">Domain:</span>
+              <span className="ml-2 text-gray-300 font-mono">{domain.domain}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Subdomain:</span>
+              <span className="ml-2 text-gray-300 font-mono">{activeSubdomain || 'none'}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Topic:</span>
+              <span className="ml-2 text-gray-300 font-mono">{activeTopic || 'none'}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Panels:</span>
+              <span className="ml-2 text-gray-300 font-mono">{topicPanels.length}</span>
+            </div>
+          </div>
+          {domain._normalization?.auto_description && (
+            <div className="mt-2 pt-2 border-t border-gray-700">
+              <span className="text-xs px-1.5 py-0.5 bg-amber-900/30 text-amber-500 rounded font-mono">
+                AUTO-DESCRIPTION
+              </span>
+            </div>
+          )}
+        </div>
+      </InspectorOnly>
     </div>
   );
 }

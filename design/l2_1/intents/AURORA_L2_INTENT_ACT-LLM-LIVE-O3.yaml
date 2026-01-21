@@ -33,10 +33,13 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: activity.jobs_list
-  status: ASSUMED
-  assumed_endpoint: null
+  id: activity.live_runs
+  status: DECLARED
+  assumed_endpoint: /api/v1/activity/runs
   assumed_method: GET
+sdsr:
+  scenario: PENDING
+  verified: false
 notes: 'Highlight live runs that are approaching failure or limits.
 
 

@@ -1,0 +1,57 @@
+# AURORA L2 Capability Registry Entry
+# Capability: activity.metrics_v2
+# Last Updated: 2026-01-19T00:00:00+00:00
+# Updated By: Phase 4 Registry Rebinding
+#
+# STATUS: OBSERVED
+#
+# V2 ENDPOINT: Aggregated metrics with topic-aware counts
+# Extends: /risk-signals → /metrics
+#
+# Reference: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
+# Evidence: Phase 3 Shadow Validation
+#
+capability_id: activity.metrics_v2
+status: OBSERVED
+source_panels:
+  - ACT-LLM-LIVE-O1
+  - ACT-LLM-LIVE-O2
+  - ACT-LLM-LIVE-O4
+  - ACT-LLM-COMP-O1
+  - ACT-LLM-COMP-O3
+domain: ACTIVITY
+metadata:
+  generated_by: Phase 4 Registry Rebinding
+  generated_on: '2026-01-19'
+  declared_by: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
+  declared_on: '2026-01-19'
+  observed_by: shadow_validate_v2.py
+  observed_on: '2026-01-19'
+  migration_note: "Extends /risk-signals with topic-aware counts"
+assumption:
+  endpoint: /api/v1/activity/metrics
+  method: GET
+  source: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN
+binding:
+  observed_endpoint: /api/v1/activity/metrics
+  observed_method: GET
+  observed_at: '2026-01-19T00:00:00+00:00'
+  observation_id: OBS-PHASE3-SHADOW-VALIDATION-METRICS
+acceptance_criteria:
+  - Returns aggregated risk counts (at_risk_count, violated_count, near_threshold_count)
+  - Includes topic-aware counts (live_count, completed_count)
+  - Includes evidence health breakdown (flowing, degraded, missing)
+  - Includes risk type breakdown (cost, time, tokens, rate)
+observation:
+  scenario_id: SDSR-ACT-V2-METRICS-001
+  observed_at: '2026-01-19T00:00:00+00:00'
+  trace_id: null
+  invariants_passed: 6
+  invariants_total: 6
+coherency:
+  last_checked: '2026-01-19T00:00:00+00:00'
+  status: PASSED
+  checked_by: shadow_validate_v2.py
+extends:
+  - capability_id: activity.risk_signals
+    reason: "V2 metrics adds topic-aware counts and evidence health breakdown"

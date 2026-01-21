@@ -34,9 +34,12 @@ controls:
   confirmation_required: false
 capability:
   id: overview.decisions_list
-  status: ASSUMED
-  assumed_endpoint: null
+  status: DECLARED
+  assumed_endpoint: /api/v1/overview/decisions
   assumed_method: GET
+sdsr:
+  scenario: PENDING
+  verified: false
 notes: 'Surface decisions that require explicit human approval or rejection,
 
   without forcing navigation into policies or incidents.

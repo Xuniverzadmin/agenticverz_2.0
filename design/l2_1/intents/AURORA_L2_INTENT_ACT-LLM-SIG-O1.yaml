@@ -34,11 +34,11 @@ controls:
   confirmation_required: false
 capability:
   id: activity.signals
-  status: ASSUMED
-  assumed_endpoint: /api/v1/activity/runs
+  status: OBSERVED
+  assumed_endpoint: /api/v1/activity/attention-queue
   assumed_method: GET
 sdsr:
-  scenario: SDSR-ACT-LLM-SIG-O1-001
+  scenario: SDSR-ACT-LLM-SIG-O5-001
   verified: false
 notes: 'Surface what is happening right now that matters — the primary attention surface.
 

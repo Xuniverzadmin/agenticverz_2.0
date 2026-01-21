@@ -1,6 +1,6 @@
 # SDSR Verification Scenario
 # Scenario: SDSR-LOG-REC-LLM-O5-001
-# Generated: 2026-01-15T08:13:44.776944+00:00
+# Generated: 2026-01-19T18:19:43.377162+00:00
 # Generator: aurora_sdsr_synth.py
 #
 # PURPOSE:
@@ -20,19 +20,19 @@
 scenario_id: SDSR-LOG-REC-LLM-O5-001
 version: 1.0.0
 name: Observe LOG-REC-LLM-O5 capability
-description: SDSR verification scenario for logs.mismatch_list
-capability: logs.mismatch_list
+description: SDSR verification scenario for logs.llm_runs
+capability: logs.llm_runs
 panel_id: LOG-REC-LLM-O5
 domain: LOGS
 auth:
   mode: OBSERVER
 metadata:
   generated_by: aurora_sdsr_synth.py
-  generated_at: '2026-01-15T08:13:44.776830+00:00'
+  generated_at: '2026-01-19T18:19:43.376987+00:00'
   panel_class: evidence
 inject:
   type: api_call
-  endpoint: /api/v1/traces/mismatches
+  endpoint: /api/v1/logs/llm-runs/{run_id}/export
   method: GET
   headers:
     Content-Type: application/json
@@ -43,19 +43,23 @@ expect:
   response_type: json
   response_shape:
     _note: Define expected response structure here
-invariants:
-- id: INV-001
-  name: response_shape
-  description: Response has expected top-level structure
-  assertion: response is dict and response is not empty
-- id: INV-002
-  name: status_code
-  description: API returns 200 OK
-  assertion: status_code == 200
-- id: INV-003
-  name: auth_works
-  description: Authenticated request succeeds
-  assertion: status_code != 401 and status_code != 403
+invariant_ids:
+- INV-L0-001
+- INV-L0-002
+- INV-L0-003
+- INV-L0-004
+- INV-L0-005
+- INV-L0-006
+- INV-L0-007
+- INV-L0-008
+- INV-LOG-001
+- INV-LOG-002
+- INV-LOG-003
+- INV-LOG-004
+- INV-LOG-005
+- INV-LOG-006
+- INV-LOG-007
+- INV-LOG-008
 cleanup:
   required: false
   note: Read-only observation, no cleanup needed

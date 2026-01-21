@@ -1,8 +1,15 @@
-# Layer: L2a — Product API (Console-scoped)
+# Layer: L2a — Boundary Adapter (Console-scoped, DEPRECATED)
 # Product: AI Console (Customer Console)
 # Auth: verify_console_token (aud=console)
 # Reference: PIN-280, PIN-281 (L2 Promotion Governance)
 # NOTE: Workers NEVER call this. SDK NEVER imports this.
+#
+# GOVERNANCE NOTE (LOGS Domain V2):
+# This adapter is DEPRECATED in favor of the unified LOGS facade.
+# The canonical facade is /api/v1/logs/* (logs.py).
+# This adapter remains for backward compatibility with /guard/logs/* routes.
+# New console features should use /api/v1/logs/llm-runs/* instead.
+# Migration path: PIN-TBD (consolidate to unified facade)
 
 """Guard Logs API - Customer Console Logs Endpoint
 

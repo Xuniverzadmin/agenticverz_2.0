@@ -1,17 +1,19 @@
 {
-  "observation_id": "OBS-SDSR-OVR-SUM-HL-O4-001-20260115055834",
+  "observation_id": "OBS-SDSR-OVR-SUM-HL-O4-001-20260118100431",
   "scenario_id": "SDSR-OVR-SUM-HL-O4-001",
   "capability_id": "overview.policy_snapshot",
   "panel_id": "OVR-SUM-HL-O4",
-  "status": "PASS",
-  "observed_at": "2026-01-15T05:58:35.640778+00:00",
-  "endpoint": "/api/v1/policy-proposals/stats/summary",
-  "method": "GET",
+  "status": "FAIL",
+  "observed_at": "2026-01-18T10:04:38.432788+00:00",
+  "assumed_endpoint": null,
+  "observed_endpoint": "/api/v1/policy-proposals/stats/summary",
+  "assumed_method": "GET",
+  "observed_method": "GET",
   "response_status_code": 200,
-  "response_time_ms": 756.0334205627441,
+  "response_time_ms": 7097.335577011108,
   "invariants_total": 5,
-  "invariants_passed": 5,
-  "invariants_failed": 0,
+  "invariants_passed": 3,
+  "invariants_failed": 2,
   "invariant_results": [
     {
       "id": "INV-001",
@@ -34,18 +36,18 @@
     {
       "id": "INV-004",
       "name": "total_present",
-      "status": "PASS",
-      "message": "Assertion passed: \"total\" in response"
+      "status": "FAIL",
+      "message": "Assertion failed: \"total\" in response"
     },
     {
       "id": "INV-005",
       "name": "by_status_present",
-      "status": "PASS",
-      "message": "Assertion passed: \"by_status\" in response"
+      "status": "FAIL",
+      "message": "Assertion failed: \"by_status\" in response"
     }
   ],
-  "failure_reason": null,
-  "failure_taxonomy": null,
+  "failure_reason": "2 invariant(s) failed",
+  "failure_taxonomy": "INVARIANT_VIOLATED",
   "coherency_verified": true,
   "trace_id": null
 }

@@ -10,14 +10,14 @@ panel_class: interpretation
 metadata:
   domain: POLICIES
   subdomain: GOVERNANCE
-  topic: DRAFTS
-  topic_id: POLICIES.GOVERNANCE.DRAFTS
+  topic: LESSONS
+  topic_id: POLICIES.GOVERNANCE.LESSONS
   order: O3
   action_layer: L2_1
   source: INTENT_LEDGER
   review_status: UNREVIEWED
-  facet: null
-  facet_criticality: null
+  facet: policy_governance
+  facet_criticality: HIGH
 display:
   name: POL-GOV-DFT-O3
   visible_by_default: true
@@ -33,9 +33,9 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: policies.current_version
+  id: lessons.get
   status: ASSUMED
-  assumed_endpoint: /api/v1/policy-layer/versions/current
+  assumed_endpoint: /api/v1/policy-layer/lessons/{lesson_id}
   assumed_method: GET
 sdsr:
   scenario: SDSR-POL-GOV-DFT-O3-001

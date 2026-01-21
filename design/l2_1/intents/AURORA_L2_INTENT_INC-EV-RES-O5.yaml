@@ -33,9 +33,9 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: incidents.replay_summary
+  id: incidents.learnings
   status: ASSUMED
-  assumed_endpoint: /replay/{incident_id}/summary
+  assumed_endpoint: /api/v1/incidents/{incident_id}/learnings
   assumed_method: GET
 sdsr:
   scenario: SDSR-INC-EV-RES-O5-001

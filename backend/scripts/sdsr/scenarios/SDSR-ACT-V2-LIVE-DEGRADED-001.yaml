@@ -1,0 +1,93 @@
+# SDSR Verification Scenario
+# Scenario: SDSR-ACT-V2-LIVE-DEGRADED-001
+# Generated: 2026-01-19
+#
+# PURPOSE:
+#   Verify /activity/live handles runs with evidence_health=DEGRADED
+#   and includes policy context even for health-related signals.
+#
+# REFERENCE:
+#   - ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md (GAP-SDSR-1)
+#   - Panel: LIVE-O4
+
+scenario_id: SDSR-ACT-V2-LIVE-DEGRADED-001
+version: 1.0.0
+name: LIVE run with evidence_health=DEGRADED and policy context
+description: |
+  Verifies that /activity/live endpoint handles runs with:
+  - evidence_health=DEGRADED
+  - policy_context still present and valid
+  - Evidence health combined with policy context for panels
+capability: activity.live_runs_v2
+panel_id: ACT-LLM-LIVE-O4
+domain: ACTIVITY
+metadata:
+  generated_by: manual
+  generated_at: '2026-01-19T00:00:00+00:00'
+  panel_class: evidence
+  migration_phase: Phase1_Schema_Enhancement
+  gap_reference: GAP-SDSR-1
+
+inject:
+  type: api_call
+  endpoint: /api/v1/activity/live
+  method: GET
+  headers:
+    Authorization: Bearer ${AUTH_TOKEN}
+    Content-Type: application/json
+  params:
+    evidence_health: DEGRADED
+
+expect:
+  status_code: 200
+  response_type: json
+  response_shape:
+    items: list
+    total: int
+    has_more: bool
+    pagination:
+      limit: int
+      offset: int
+    generated_at: string
+
+invariants:
+  - id: INV-DEG-001
+    name: evidence_health_filter_works
+    description: All returned runs have evidence_health=DEGRADED
+    assertion: |
+      all(item.get('evidence_health') == 'DEGRADED' for item in response.get('items', []))
+  - id: INV-DEG-002
+    name: policy_context_present_regardless
+    description: policy_context is present even for evidence health issues
+    assertion: |
+      all(item.get('policy_context') is not None for item in response.get('items', []))
+  - id: INV-DEG-003
+    name: state_still_live
+    description: Topic boundary preserved (state=LIVE)
+    assertion: |
+      all(item.get('state') == 'LIVE' for item in response.get('items', []))
+  - id: INV-DEG-004
+    name: combined_health_and_policy
+    description: Can observe both evidence_health and policy evaluation together
+    assertion: |
+      all(
+        'evidence_health' in item and 'policy_context' in item and
+        item.get('policy_context', {}).get('evaluation_outcome') is not None
+        for item in response.get('items', [])
+      )
+
+cleanup:
+  required: false
+  note: Read-only observation, no cleanup needed
+
+on_success:
+  update_capability_status: OBSERVED
+  emit_observation: true
+
+on_failure:
+  update_capability_status: null
+  emit_observation: true
+  failure_taxonomy:
+    endpoint_missing: V2 /activity/live route does not exist
+    filter_broken: evidence_health filter not working
+    policy_missing_for_degraded: policy_context missing for degraded runs

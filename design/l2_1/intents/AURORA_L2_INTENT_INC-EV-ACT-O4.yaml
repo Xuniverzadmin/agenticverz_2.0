@@ -33,11 +33,10 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: incidents.patterns
+  id: incidents.cost_impact
   status: ASSUMED
-  assumed_endpoint: null
+  assumed_endpoint: /api/v1/incidents/cost-impact
   assumed_method: GET
-  facade_note: "Decoupled from /ops/* (founder-only) - API Audit 2026-01-16"
 sdsr:
   scenario: SDSR-INC-EV-ACT-O4-001
   verified: false

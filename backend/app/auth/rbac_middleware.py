@@ -48,6 +48,7 @@ from .contexts import (
     MachineCapabilityContext,
     GatewayContext,
 )
+from .customer_sandbox import SandboxCustomerPrincipal, get_sandbox_capabilities
 from .gateway_middleware import get_auth_context
 from .oidc_provider import (
     OIDC_ENABLED,
@@ -842,6 +843,13 @@ def derive_capabilities_from_context(request: Request) -> List[str]:
     if isinstance(context, HumanAuthContext):
         logger.debug(f"Human context - base capabilities for {context.actor_id}")
         return HUMAN_BASE_CAPABILITIES
+
+    # PIN-440: Sandbox Customer Principal (local/test mode)
+    # Uses permission ceiling from customer_sandbox.py for security
+    if isinstance(context, SandboxCustomerPrincipal):
+        logger.debug(f"Sandbox context - tenant={context.tenant_id}, role={context.role}")
+        # Use the canonical capability helper which enforces permission ceiling
+        return get_sandbox_capabilities(context)
 
     logger.warning(f"Unknown context type: {type(context)}")
     return []

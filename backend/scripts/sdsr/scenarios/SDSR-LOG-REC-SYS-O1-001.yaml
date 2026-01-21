@@ -20,23 +20,24 @@
 scenario_id: SDSR-LOG-REC-SYS-O1-001
 version: 1.0.0
 name: Observe LOG-REC-SYS-O1 capability
-description: SDSR verification scenario for logs.guard_logs
-capability: logs.guard_logs
+description: SDSR verification scenario for logs.system (system logs summary)
+capability: logs.system
 panel_id: LOG-REC-SYS-O1
 domain: LOGS
+auth:
+  mode: OBSERVER
 metadata:
   generated_by: aurora_sdsr_synth.py
   generated_at: '2026-01-15T06:43:35.192552+00:00'
   panel_class: evidence
 inject:
   type: api_call
-  endpoint: /guard/logs
+  endpoint: /api/v1/logs/system
   method: GET
   headers:
-    Authorization: Bearer ${AUTH_TOKEN}
     Content-Type: application/json
   params:
-    window: 24h
+    limit: 10
 expect:
   status_code: 200
   response_type: json

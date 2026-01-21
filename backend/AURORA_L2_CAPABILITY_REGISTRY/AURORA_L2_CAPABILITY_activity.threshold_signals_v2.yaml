@@ -1,0 +1,61 @@
+# AURORA L2 Capability Registry Entry
+# Capability: activity.threshold_signals_v2
+# Last Updated: 2026-01-19T00:00:00+00:00
+# Updated By: Phase 4 Registry Rebinding
+#
+# STATUS: OBSERVED
+#
+# V2 ENDPOINT: Typed threshold proximity tracking
+# Replaces: activity.threshold_signals (DEPRECATED)
+#
+# Reference: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
+# Evidence: Phase 3 Shadow Validation
+#
+capability_id: activity.threshold_signals_v2
+status: OBSERVED
+source_panels:
+  - ACT-LLM-LIVE-O2
+  - ACT-LLM-COMP-O4
+  - ACT-LLM-SIG-O2
+domain: ACTIVITY
+metadata:
+  generated_by: Phase 4 Registry Rebinding
+  generated_on: '2026-01-19'
+  declared_by: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
+  declared_on: '2026-01-19'
+  observed_by: shadow_validate_v2.py
+  observed_on: '2026-01-19'
+  migration_note: "Replaces activity.threshold_signals - typed proximity with policy context"
+  policy_context_included: true
+assumption:
+  endpoint: /api/v1/activity/threshold-signals
+  method: GET
+  source: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN
+binding:
+  observed_endpoint: /api/v1/activity/threshold-signals
+  observed_method: GET
+  observed_at: '2026-01-19T00:00:00+00:00'
+  observation_id: OBS-PHASE3-SHADOW-VALIDATION-THRESHOLD
+acceptance_criteria:
+  - Returns runs with typed threshold proximity
+  - Each signal includes run_id, limit_type, proximity_pct, evaluation_outcome
+  - Each signal includes policy_context (POLICY-CONTEXT-001)
+  - Risk type filter supported (COST, TIME, TOKENS, RATE)
+  - Ranked by severity (BREACH first, then by proximity)
+observation:
+  scenario_id: SDSR-ACT-V2-THRESHOLD-001
+  observed_at: '2026-01-19T00:00:00+00:00'
+  trace_id: null
+  invariants_passed: 6
+  invariants_total: 6
+  phase3_evidence:
+    - signals-order: PASSED
+    - most-severe-wins: PASSED
+coherency:
+  last_checked: '2026-01-19T00:00:00+00:00'
+  status: PASSED
+  checked_by: shadow_validate_v2.py
+replaces:
+  - capability_id: activity.threshold_signals
+    reason: "Legacy endpoint uses /runs?risk_level=..."
+    migration_path: "Use /activity/threshold-signals instead"

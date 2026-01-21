@@ -1,11 +1,11 @@
 {
-  "observation_id": "OBS-SDSR-LOG-REC-LLM-O4-001-20260115173138",
+  "observation_id": "OBS-SDSR-LOG-REC-LLM-O4-001-20260118120757",
   "scenario_id": "SDSR-LOG-REC-LLM-O4-001",
   "capability_id": "logs.tenant_runs",
   "panel_id": "LOG-REC-LLM-O4",
   "status": "BLOCKED",
-  "observed_at": "2026-01-15T17:31:38.225200+00:00",
-  "assumed_endpoint": "/api/v1/tenants/runs",
+  "observed_at": "2026-01-18T12:07:57.457767+00:00",
+  "assumed_endpoint": "/api/v1/runtime/traces",
   "observed_endpoint": "/api/v1/tenants/runs",
   "assumed_method": "GET",
   "observed_method": "GET",
@@ -15,8 +15,8 @@
   "invariants_passed": 0,
   "invariants_failed": 0,
   "invariant_results": [],
-  "failure_reason": "Coherency gate failed: COH-009",
-  "failure_taxonomy": "REALITY_MISMATCH",
+  "failure_reason": "Coherency gate failed: COH-004",
+  "failure_taxonomy": "COHERENCY_VIOLATION",
   "coherency_verified": false,
   "trace_id": null
 }

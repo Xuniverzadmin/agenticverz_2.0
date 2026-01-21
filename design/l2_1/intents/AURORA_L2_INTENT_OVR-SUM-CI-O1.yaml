@@ -34,9 +34,12 @@ controls:
   confirmation_required: false
 capability:
   id: overview.cost_summary
-  status: ASSUMED
-  assumed_endpoint: null
+  status: DECLARED
+  assumed_endpoint: /api/v1/overview/costs
   assumed_method: GET
+sdsr:
+  scenario: PENDING
+  verified: false
 notes: 'Give an immediate snapshot of current cost posture without requiring
 
   navigation into Activity or Policies.

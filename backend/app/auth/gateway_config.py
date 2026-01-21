@@ -116,6 +116,9 @@ def get_gateway_middleware_config() -> dict:
             "/docs",
             "/redoc",
             "/openapi.json",
+            # PIN-444: Debug endpoints for OpenAPI health monitoring
+            "/__debug/openapi_nocache",
+            "/__debug/openapi_inspect",
             # Auth endpoints (self-service)
             "/api/v1/auth/",
             # C2 Predictions (public advisory)
@@ -161,7 +164,7 @@ def get_gateway_middleware_config() -> dict:
             # SDSR Policy Layer API (PIN-427)
             # Used for preflight SDSR validation of policy panels.
             # =================================================================
-            "/policy-layer/",
+            "/api/v1/policy-layer/",
             # =================================================================
             # SDSR Feedback/Predictions API (PIN-427)
             # Used for preflight SDSR validation of signal panels.
@@ -201,6 +204,13 @@ def get_gateway_middleware_config() -> dict:
             "/api/v1/guard/",
             "/guard/logs",
             "/guard/logs/",
+            # =================================================================
+            # LOGS Domain V2 Facade (LOGS_DOMAIN_V2_CONTRACT.md)
+            # Unified logs API for LLM_RUNS, SYSTEM_LOGS, AUDIT.
+            # Used for preflight SDSR validation of logs panels.
+            # NOTE: All endpoints are GET-only (no mutations).
+            # =================================================================
+            "/api/v1/logs/",
             # =================================================================
             # SDSR Agents API (PIN-427)
             # Used for preflight SDSR validation of agent panels.

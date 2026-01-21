@@ -1,0 +1,30 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
+#
+capability_id: logs.system_logs
+status: DECLARED
+source_panels:
+- LOG-REC-SYS-O5
+domain: LOGS
+metadata:
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
+  declared_by: intent-ledger
+  declared_on: '2026-01-20'
+  observed_by: SDSR-LOG-REC-SYS-O5-001
+assumption:
+  endpoint: /api/v1/logs/system/audit
+  method: GET
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: null
+  observed_method: null
+  observed_at: null
+  observation_id: null
+acceptance_criteria:
+- Returns infrastructure attribution records
+- Response includes EvidenceMetadata
+- Tenant-scoped query

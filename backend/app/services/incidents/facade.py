@@ -5,9 +5,9 @@
 #   Execution: sync
 # Role: Incident Domain Facade - Centralized access to incident operations
 # Callers: API routes, worker runtime, governance services
-# Allowed Imports: L4 incident services, L5, L6 (models, db)
+# Allowed Imports: L4 incident services, L4 audit, L5, L6 (models, db)
 # Forbidden Imports: L1, L2, L3
-# Reference: API-001 Guardrail (Domain Facade Required)
+# Reference: API-001 Guardrail (Domain Facade Required), PIN-454 (RAC)
 
 """
 Incident Domain Facade
@@ -20,6 +20,7 @@ Why Facades Matter:
 - Audit logging is centralized
 - Domain encapsulation is preserved
 - Interface stability for external callers
+- RAC acknowledgments are emitted automatically (PIN-454)
 
 Usage:
     from app.services.incidents.facade import get_incident_facade
@@ -29,9 +30,14 @@ Usage:
 """
 
 import logging
+import os
 from typing import Any, Dict, List, Optional
+from uuid import UUID
 
 logger = logging.getLogger("nova.services.incidents.facade")
+
+# RAC integration flag (PIN-454)
+RAC_ENABLED = os.getenv("RAC_ENABLED", "true").lower() == "true"
 
 
 class IncidentFacade:
@@ -125,6 +131,8 @@ class IncidentFacade:
         PIN-407: Success as First-Class Data
         Every run produces an incident record with explicit outcome.
 
+        PIN-454: Emits RAC acknowledgment after creation.
+
         Args:
             run_id: ID of the run
             tenant_id: Tenant scope
@@ -142,16 +150,72 @@ class IncidentFacade:
             "facade.create_incident_for_run",
             extra={"run_id": run_id, "run_status": run_status}
         )
-        return self._engine.create_incident_for_run(
-            run_id=run_id,
-            tenant_id=tenant_id,
-            run_status=run_status,
-            error_code=error_code,
-            error_message=error_message,
-            agent_id=agent_id,
-            is_synthetic=is_synthetic,
-            synthetic_scenario_id=synthetic_scenario_id,
-        )
+
+        incident_id = None
+        error = None
+
+        try:
+            incident_id = self._engine.create_incident_for_run(
+                run_id=run_id,
+                tenant_id=tenant_id,
+                run_status=run_status,
+                error_code=error_code,
+                error_message=error_message,
+                agent_id=agent_id,
+                is_synthetic=is_synthetic,
+                synthetic_scenario_id=synthetic_scenario_id,
+            )
+        except Exception as e:
+            error = str(e)
+            logger.error(
+                "facade.create_incident_for_run failed",
+                extra={"run_id": run_id, "error": error}
+            )
+
+        # PIN-454: Emit RAC acknowledgment
+        if RAC_ENABLED:
+            self._emit_ack(run_id, incident_id, error)
+
+        return incident_id
+
+    def _emit_ack(
+        self,
+        run_id: str,
+        result_id: Optional[str],
+        error: Optional[str],
+    ) -> None:
+        """
+        Emit RAC acknowledgment for incident creation.
+
+        PIN-454: Facades emit acks after domain operations.
+        """
+        try:
+            from app.services.audit.models import AuditAction, AuditDomain, DomainAck
+            from app.services.audit.store import get_audit_store
+
+            ack = DomainAck(
+                run_id=UUID(run_id),
+                domain=AuditDomain.INCIDENTS,
+                action=AuditAction.CREATE_INCIDENT,
+                result_id=result_id,
+                error=error,
+            )
+
+            store = get_audit_store()
+            store.add_ack(UUID(run_id), ack)
+
+            logger.debug(
+                "facade.emit_ack",
+                extra={
+                    "run_id": run_id,
+                    "domain": "incidents",
+                    "action": "create_incident",
+                    "success": error is None,
+                }
+            )
+        except Exception as e:
+            # RAC failures should not block the facade
+            logger.warning(f"Failed to emit RAC ack: {e}")
 
     def get_incidents_for_run(self, run_id: str) -> List[Dict[str, Any]]:
         """

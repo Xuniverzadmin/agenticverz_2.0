@@ -1,0 +1,109 @@
+# SDSR Loop Assertion Scenario
+# Scenario: SDSR-POL-LOOP-001
+# Created: 2026-01-19
+# Reference: PIN-447, POLICY_DOMAIN_V2_DESIGN.md
+#
+# PURPOSE:
+#   LOOP INVARIANT: Violation before incident
+#
+#   This scenario verifies that:
+#   1. Policy violations are created by Policy Engine (not Incidents)
+#   2. Violations MUST exist before any incident referencing them
+#   3. Incidents cannot create violations directly
+#
+# CROSS-DOMAIN RULE:
+#   Incidents → Policy: READ violations (not CREATE)
+#
+# EXECUTION:
+#   python aurora_sdsr_runner.py --scenario SDSR-POL-LOOP-001
+#
+scenario_id: SDSR-POL-LOOP-001
+version: 1.0.0
+name: Violation before incident (Loop Invariant)
+description: >
+  Verifies the SDSR loop invariant that violations must exist
+  before any incident that references them. Ensures Incidents domain
+  cannot create violations - only Policy domain can.
+
+capability: policy.violations
+panel_id: POL-FACADE-VIOLATIONS-O2
+domain: POLICIES
+subdomain: LIMITS
+topic: VIOLATIONS
+
+auth:
+  mode: OBSERVER
+
+metadata:
+  generated_by: manual-pin447
+  generated_at: '2026-01-19'
+  loop_invariant: VIOLATION_BEFORE_INCIDENT
+  cross_domain_rule: Incidents reads violations, never creates
+  contract_ref: CROSS_DOMAIN_POLICY_CONTRACT.md Section 2.3
+
+# Step 1: Query existing violations
+inject:
+  type: api_call
+  endpoint: /api/v1/policy/violations
+  method: GET
+  headers:
+    Content-Type: application/json
+  params:
+    hours: 24
+    limit: 10
+
+expect:
+  status_code: 200
+  response_type: json
+  response_shape:
+    items: list
+    total: int
+    has_more: bool
+
+invariants:
+- id: INV-LOOP-001
+  name: violation_has_policy_origin
+  description: Every violation has a policy_id or policy_name
+  assertion: >
+    all(v.get('policy_id') or v.get('policy_name') for v in response.get('items', []))
+    or len(response.get('items', [])) == 0
+  severity: BLOCKING
+
+- id: INV-LOOP-002
+  name: violation_has_facade_ref
+  description: Every violation has facade_ref for cross-domain navigation
+  assertion: >
+    all('facade_ref' in v for v in response.get('items', []))
+    or len(response.get('items', [])) == 0
+  severity: BLOCKING
+
+- id: INV-LOOP-003
+  name: violation_has_occurred_at
+  description: Every violation has timestamp
+  assertion: >
+    all('occurred_at' in v for v in response.get('items', []))
+    or len(response.get('items', [])) == 0
+  severity: BLOCKING
+
+- id: INV-LOOP-004
+  name: violations_endpoint_exists
+  description: V2 facade violations endpoint is functional
+  assertion: status_code == 200
+  severity: BLOCKING
+
+cleanup:
+  required: false
+  note: Read-only observation, no cleanup needed
+
+on_success:
+  update_capability_status: OBSERVED
+  emit_observation: true
+  loop_assertion_passed: VIOLATION_BEFORE_INCIDENT
+
+on_failure:
+  update_capability_status: null
+  emit_observation: true
+  failure_taxonomy:
+    loop_invariant_violated: Violation-before-incident contract broken
+    endpoint_missing: V2 facade endpoint not available
+    auth_failed: Authentication/authorization issue

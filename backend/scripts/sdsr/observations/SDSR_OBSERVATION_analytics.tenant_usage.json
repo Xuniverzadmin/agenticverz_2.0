@@ -1,51 +1,22 @@
 {
-  "observation_id": "OBS-SDSR-ANL-USG-SUM-O1-001-20260115115958",
-  "scenario_id": "SDSR-ANL-USG-SUM-O1-001",
+  "observation_id": "OBS-SDSR-ANA-CST-USG-O1-001-20260118100525",
+  "scenario_id": "SDSR-ANA-CST-USG-O1-001",
   "capability_id": "analytics.tenant_usage",
-  "panel_id": "ANL-USG-SUM-O1",
-  "status": "PASS",
-  "observed_at": "2026-01-15T12:00:07.553757+00:00",
-  "endpoint": "/api/v1/tenant/usage",
-  "method": "GET",
-  "response_status_code": 200,
-  "response_time_ms": 8734.112739562988,
-  "invariants_total": 5,
-  "invariants_passed": 5,
+  "panel_id": "ANA-CST-USG-O1",
+  "status": "BLOCKED",
+  "observed_at": "2026-01-18T10:05:25.208112+00:00",
+  "assumed_endpoint": null,
+  "observed_endpoint": "/api/v1/tenants/tenant/usage",
+  "assumed_method": null,
+  "observed_method": "GET",
+  "response_status_code": null,
+  "response_time_ms": null,
+  "invariants_total": 3,
+  "invariants_passed": 0,
   "invariants_failed": 0,
-  "invariant_results": [
-    {
-      "id": "INV-001",
-      "name": "response_shape",
-      "status": "PASS",
-      "message": "Assertion passed: response is dict and response is not empty"
-    },
-    {
-      "id": "INV-002",
-      "name": "status_code",
-      "status": "PASS",
-      "message": "Assertion passed: status_code == 200"
-    },
-    {
-      "id": "INV-003",
-      "name": "auth_works",
-      "status": "PASS",
-      "message": "Assertion passed: status_code != 401 and status_code != 403"
-    },
-    {
-      "id": "INV-004",
-      "name": "provenance_present",
-      "status": "PASS",
-      "message": "Assertion passed: \"provenance\" in response"
-    },
-    {
-      "id": "INV-005",
-      "name": "aggregation_type_present",
-      "status": "PASS",
-      "message": "Assertion passed: \"aggregation\" in response.get(\"provenance\", {})"
-    }
-  ],
-  "failure_reason": null,
-  "failure_taxonomy": null,
-  "coherency_verified": true,
+  "invariant_results": [],
+  "failure_reason": "Coherency gate failed: COH-001",
+  "failure_taxonomy": "COHERENCY_VIOLATION",
+  "coherency_verified": false,
   "trace_id": null
 }

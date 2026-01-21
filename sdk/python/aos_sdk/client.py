@@ -19,7 +19,22 @@ import logging
 import os
 import time
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
+from .attribution import (
+    ActorType,
+    AttributionContext,
+    AttributionError,
+    AttributionErrorCode,
+    EnforcementMode,
+    create_human_attribution,
+    create_service_attribution,
+    create_system_attribution,
+    get_enforcement_mode,
+    is_legacy_override_enabled,
+    validate_attribution,
+)
 
 try:
     import httpx
@@ -504,22 +519,75 @@ class AOSClient:
     # =========== Run Management APIs ===========
 
     def create_run(
-        self, agent_id: str, goal: str, plan: Optional[List[Dict]] = None
+        self,
+        goal: str,
+        *,
+        agent_id: str,
+        actor_type: str,
+        origin_system_id: str,
+        actor_id: Optional[str] = None,
+        plan: Optional[List[Dict]] = None,
+        **kwargs: Any,
     ) -> Dict[str, Any]:
         """
-        Create a new run for an agent.
+        Create a new run with required attribution.
+
+        Attribution is REQUIRED per AOS_SDK_ATTRIBUTION_CONTRACT.
+        Runs without proper attribution will be rejected.
 
         Args:
-            agent_id: Agent ID
-            goal: Goal description
+            goal: Goal description / objective for the run
+            agent_id: REQUIRED - Executing agent identifier
+            actor_type: REQUIRED - HUMAN | SYSTEM | SERVICE
+            origin_system_id: REQUIRED - System that initiated this run
+            actor_id: REQUIRED if actor_type == HUMAN, must be None otherwise
             plan: Optional pre-defined plan
+            **kwargs: Additional run parameters
 
         Returns:
             Run creation response with run_id
 
         Raises:
+            AttributionError: If attribution validation fails
             SafetyBlockedError: If plan contains forbidden fields (PIN-332 INPUT-003)
+
+        Example:
+            >>> # SYSTEM run (automation)
+            >>> run = client.create_run(
+            ...     goal="Process daily reports",
+            ...     agent_id="agent-report-processor",
+            ...     actor_type="SYSTEM",
+            ...     origin_system_id="cron-scheduler-001",
+            ... )
+
+            >>> # HUMAN run (user action)
+            >>> run = client.create_run(
+            ...     goal="Analyze data",
+            ...     agent_id="agent-analyst",
+            ...     actor_type="HUMAN",
+            ...     actor_id="user_12345",
+            ...     origin_system_id="customer-console",
+            ... )
         """
+        # =========================================================================
+        # ATTRIBUTION VALIDATION (Phase 3)
+        # Per AOS_SDK_ATTRIBUTION_CONTRACT.md
+        # =========================================================================
+        attr_ctx = AttributionContext(
+            agent_id=agent_id,
+            actor_type=actor_type,
+            origin_system_id=origin_system_id,
+            actor_id=actor_id,
+            origin_ts=datetime.now(timezone.utc),
+        )
+
+        # Validate BEFORE any network call
+        validate_attribution(
+            attr_ctx,
+            enforcement_mode=get_enforcement_mode(),
+            allow_legacy_override=is_legacy_override_enabled(),
+        )
+
         # =========================================================================
         # SAFETY CHECK (PIN-332)
         # =========================================================================
@@ -534,14 +602,155 @@ class AOSClient:
                 )
                 self._run_safety_check("create_run", result)
 
+        # Build payload with attribution
         payload: Dict[str, Any] = {
             "agent_id": agent_id,
             "goal": goal,
+            "actor_type": actor_type.upper(),
+            "origin_system_id": origin_system_id,
+            **kwargs,
         }
+
+        # actor_id only included when present (HUMAN actors)
+        if actor_id is not None:
+            payload["actor_id"] = actor_id
+
         if plan:
             payload["plan"] = plan
 
         return self._request("POST", "/api/v1/runs", json=payload)
+
+    def create_system_run(
+        self,
+        goal: str,
+        *,
+        agent_id: str,
+        origin_system_id: str,
+        plan: Optional[List[Dict]] = None,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """
+        Create a SYSTEM-initiated run.
+
+        Use for: cron jobs, schedulers, policy triggers, automation.
+        actor_type is automatically set to SYSTEM.
+        actor_id is automatically set to None.
+
+        Args:
+            goal: Goal description
+            agent_id: REQUIRED - Executing agent identifier
+            origin_system_id: REQUIRED - System that initiated this run
+            plan: Optional pre-defined plan
+            **kwargs: Additional run parameters
+
+        Returns:
+            Run creation response with run_id
+
+        Example:
+            >>> run = client.create_system_run(
+            ...     goal="Process daily reports",
+            ...     agent_id="agent-report-processor",
+            ...     origin_system_id="cron-scheduler-001",
+            ... )
+        """
+        return self.create_run(
+            goal=goal,
+            agent_id=agent_id,
+            actor_type="SYSTEM",
+            origin_system_id=origin_system_id,
+            actor_id=None,
+            plan=plan,
+            **kwargs,
+        )
+
+    def create_human_run(
+        self,
+        goal: str,
+        *,
+        agent_id: str,
+        actor_id: str,
+        origin_system_id: str,
+        plan: Optional[List[Dict]] = None,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """
+        Create a HUMAN-initiated run.
+
+        Use for: user-triggered actions, console operations.
+        actor_type is automatically set to HUMAN.
+        actor_id is REQUIRED for human runs.
+
+        Args:
+            goal: Goal description
+            agent_id: REQUIRED - Executing agent identifier
+            actor_id: REQUIRED - Human actor identity
+            origin_system_id: REQUIRED - System that initiated this run
+            plan: Optional pre-defined plan
+            **kwargs: Additional run parameters
+
+        Returns:
+            Run creation response with run_id
+
+        Example:
+            >>> run = client.create_human_run(
+            ...     goal="Analyze customer data",
+            ...     agent_id="agent-data-analyst",
+            ...     actor_id="user_12345",
+            ...     origin_system_id="customer-console",
+            ... )
+        """
+        return self.create_run(
+            goal=goal,
+            agent_id=agent_id,
+            actor_type="HUMAN",
+            origin_system_id=origin_system_id,
+            actor_id=actor_id,
+            plan=plan,
+            **kwargs,
+        )
+
+    def create_service_run(
+        self,
+        goal: str,
+        *,
+        agent_id: str,
+        origin_system_id: str,
+        plan: Optional[List[Dict]] = None,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """
+        Create a SERVICE-initiated run.
+
+        Use for: service-to-service calls, internal APIs, workers.
+        actor_type is automatically set to SERVICE.
+        actor_id is automatically set to None.
+
+        Args:
+            goal: Goal description
+            agent_id: REQUIRED - Executing agent identifier
+            origin_system_id: REQUIRED - System that initiated this run
+            plan: Optional pre-defined plan
+            **kwargs: Additional run parameters
+
+        Returns:
+            Run creation response with run_id
+
+        Example:
+            >>> run = client.create_service_run(
+            ...     goal="Validate payment",
+            ...     agent_id="agent-payment-validator",
+            ...     origin_system_id="payment-service-v2",
+            ... )
+        """
+        return self.create_run(
+            goal=goal,
+            agent_id=agent_id,
+            actor_type="SERVICE",
+            origin_system_id=origin_system_id,
+            actor_id=None,
+            plan=plan,
+            **kwargs,
+        )
 
     def get_run(self, run_id: str) -> Dict[str, Any]:
         """

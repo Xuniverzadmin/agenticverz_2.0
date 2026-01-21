@@ -1,0 +1,274 @@
+# SOURCE_CHAIN_REGISTRY.yaml
+# Purpose: Maps generated files to their authoritative sources
+# Status: ACTIVE
+# Effective: 2026-01-18
+# Reference: BL-SOURCE-CHAIN-001
+#
+# GOLDEN RULE: Never edit generated files directly.
+# Always edit the SOURCE, then run the GENERATOR.
+#
+# This registry exists to prevent pipeline violations where generated
+# files are edited directly instead of through their proper source chain.
+#
+
+version: "1.0.0"
+status: LOCKED
+authority: "This registry is the authoritative source-chain truth"
+
+# =============================================================================
+# GENERATION CHAINS
+# =============================================================================
+#
+# Each chain defines:
+#   - source: The authoritative input file(s)
+#   - generator: The script that produces outputs
+#   - outputs: The generated files (DO NOT EDIT DIRECTLY)
+#   - markers: Strings that appear in generated file headers
+#   - command: How to regenerate the outputs
+#
+
+chains:
+  # ---------------------------------------------------------------------------
+  # CHAIN 1: Intent Ledger → Intent YAMLs + UI Plan + Capabilities
+  # ---------------------------------------------------------------------------
+  intent_ledger_to_yamls:
+    id: CHAIN-001
+    name: "Intent Ledger Compilation"
+    description: |
+      Parses INTENT_LEDGER.md and generates all intent YAML artifacts.
+      This is the AUTHORITATIVE generator - YAMLs are compiled artifacts.
+
+      The topology template validates panel locations before generation.
+
+    sources:
+      - path: "design/l2_1/INTENT_LEDGER.md"
+        role: "Human intent definitions (panels, capabilities, facets)"
+      - path: "design/l2_1/UI_TOPOLOGY_TEMPLATE.yaml"
+        role: "Authoritative structure (domains, subdomains, topics, slot limits)"
+
+    generator:
+      script: "scripts/tools/sync_from_intent_ledger.py"
+      layer: L8
+      execution: sync
+      reference: PIN-419
+
+    outputs:
+      - pattern: "design/l2_1/intents/AURORA_L2_INTENT_*.yaml"
+        description: "Individual panel intent specifications"
+      - pattern: "design/l2_1/ui_plan.yaml"
+        description: "UI structure plan"
+      - pattern: "backend/AURORA_L2_CAPABILITY_REGISTRY/AURORA_L2_CAPABILITY_*.yaml"
+        description: "Capability registry entries"
+      - pattern: "design/l2_1/AURORA_L2_SEMANTIC_REGISTRY.yaml"
+        description: "Semantic vocabulary (domains section auto-updated)"
+
+    markers:
+      - "# GENERATED FILE - DO NOT EDIT MANUALLY"
+      - "# Source: design/l2_1/INTENT_LEDGER.md"
+      - "# Generator: scripts/tools/sync_from_intent_ledger.py"
+
+    command: "python scripts/tools/sync_from_intent_ledger.py"
+
+    validation: "python scripts/tools/coherency_gate.py"
+
+  # ---------------------------------------------------------------------------
+  # CHAIN 2: Aurora Compilation → UI Projection
+  # ---------------------------------------------------------------------------
+  aurora_compilation:
+    id: CHAIN-002
+    name: "Aurora UI Projection Compilation"
+    description: |
+      Compiles intent YAMLs and capability registry into the canonical
+      UI projection lock file. This is what the frontend consumes.
+
+      Requires Phase A (intent guardrails) to pass first.
+
+    sources:
+      - path: "design/l2_1/intents/*.yaml"
+        role: "Panel intent specifications"
+      - path: "backend/AURORA_L2_CAPABILITY_REGISTRY/*.yaml"
+        role: "Capability status and bindings"
+      - path: "design/l2_1/ui_plan.yaml"
+        role: "UI structure plan"
+
+    generator:
+      script: "backend/aurora_l2/SDSR_UI_AURORA_compiler.py"
+      layer: L8
+      execution: sync
+      reference: PIN-420
+
+    outputs:
+      - pattern: "design/l2_1/ui_contract/ui_projection_lock.json"
+        description: "Canonical UI projection (design artifact)"
+      - pattern: "design/l2_1/exports/AURORA_L2_COMPILE_REPORT.json"
+        description: "Compilation report"
+
+    markers:
+      - '"generated_by": "SDSR_UI_AURORA_compiler"'
+      - '"source": "aurora_l2"'
+
+    command: |
+      cd backend && DB_AUTHORITY=neon python3 -m aurora_l2.SDSR_UI_AURORA_compiler --output-projection
+
+    prereq: "Phase A validation must pass first"
+
+  # ---------------------------------------------------------------------------
+  # CHAIN 3: Projection Copy → Public Frontend
+  # ---------------------------------------------------------------------------
+  projection_copy:
+    id: CHAIN-003
+    name: "Projection Copy to Public"
+    description: |
+      Copies the canonical projection from design/ to the frontend public/.
+      This is the final step that makes projection available to the UI.
+
+    sources:
+      - path: "design/l2_1/ui_contract/ui_projection_lock.json"
+        role: "Canonical projection (design artifact)"
+
+    generator:
+      script: "scripts/tools/run_aurora_l2_pipeline.sh"
+      layer: L8
+      execution: sync
+      reference: PIN-420
+
+    outputs:
+      - pattern: "website/app-shell/public/projection/ui_projection_lock.json"
+        description: "Public projection consumed by frontend"
+
+    markers:
+      - "This file is copied by run_aurora_l2_pipeline.sh"
+
+    command: "DB_AUTHORITY=neon ./scripts/tools/run_aurora_l2_pipeline.sh"
+
+  # ---------------------------------------------------------------------------
+  # CHAIN 4: SDSR Observations → Capability Status
+  # ---------------------------------------------------------------------------
+  sdsr_observations:
+    id: CHAIN-004
+    name: "SDSR Observation Application"
+    description: |
+      Applies SDSR observation JSON files to update capability status.
+      This is how capabilities transition from DECLARED to OBSERVED.
+
+    sources:
+      - path: "backend/scripts/sdsr/observations/SDSR_OBSERVATION_*.json"
+        role: "SDSR execution observation output"
+
+    generator:
+      script: "scripts/tools/AURORA_L2_apply_sdsr_observations.py"
+      layer: L8
+      execution: sync
+      reference: PIN-379
+
+    outputs:
+      - pattern: "backend/AURORA_L2_CAPABILITY_REGISTRY/AURORA_L2_CAPABILITY_*.yaml"
+        description: "Updated capability status (DECLARED → OBSERVED)"
+      - pattern: "design/l2_1/intents/AURORA_L2_INTENT_*.yaml"
+        description: "Updated observation trace in intent YAMLs"
+
+    markers:
+      - "observation_id:"
+      - "observed_at:"
+      - "status: OBSERVED"
+
+    command: |
+      python scripts/tools/AURORA_L2_apply_sdsr_observations.py --observation <json_file>
+
+# =============================================================================
+# DISCOVERY RULES
+# =============================================================================
+#
+# When Claude encounters a file, it should check against these patterns
+# to determine if the file is generated and locate its source chain.
+#
+
+discovery_rules:
+  - pattern: "design/l2_1/intents/AURORA_L2_INTENT_*.yaml"
+    chain: CHAIN-001
+    source_file: "design/l2_1/INTENT_LEDGER.md"
+
+  - pattern: "design/l2_1/ui_plan.yaml"
+    chain: CHAIN-001
+    source_file: "design/l2_1/INTENT_LEDGER.md"
+
+  - pattern: "backend/AURORA_L2_CAPABILITY_REGISTRY/AURORA_L2_CAPABILITY_*.yaml"
+    chain: CHAIN-001
+    source_file: "design/l2_1/INTENT_LEDGER.md"
+
+  - pattern: "design/l2_1/ui_contract/ui_projection_lock.json"
+    chain: CHAIN-002
+    source_file: "design/l2_1/intents/*.yaml (run compiler)"
+
+  - pattern: "website/app-shell/public/projection/ui_projection_lock.json"
+    chain: CHAIN-003
+    source_file: "design/l2_1/ui_contract/ui_projection_lock.json"
+
+# =============================================================================
+# HEADER MARKERS
+# =============================================================================
+#
+# Files with these markers in their header are GENERATED.
+# If you see these markers, DO NOT EDIT - find the source chain.
+#
+
+header_markers:
+  - "# GENERATED FILE - DO NOT EDIT MANUALLY"
+  - "# AUTO-GENERATED"
+  - "# This file is generated"
+  - "generated_by"
+
+# =============================================================================
+# BEHAVIOR RULE
+# =============================================================================
+#
+# This section defines the behavior rule that Claude must follow.
+#
+
+behavior_rule:
+  id: BL-SOURCE-CHAIN-001
+  name: "Source Chain Discovery Before Edit"
+  status: BLOCKING
+  effective: "2026-01-18"
+
+  description: |
+    Before editing ANY file in design/ or backend/AURORA_L2_CAPABILITY_REGISTRY/,
+    Claude MUST check if the file is generated by consulting this registry.
+
+    If the file matches a discovery rule pattern:
+    1. DO NOT edit the file directly
+    2. Identify the source chain
+    3. Edit the SOURCE file instead
+    4. Run the GENERATOR command
+    5. Verify the generated output
+
+  trigger:
+    - "About to edit a file in design/l2_1/"
+    - "About to edit a file in backend/AURORA_L2_CAPABILITY_REGISTRY/"
+    - "About to create a new AURORA_L2_INTENT_*.yaml file"
+    - "File header contains GENERATED markers"
+
+  required_action: |
+    SOURCE CHAIN CHECK
+
+    1. Is this file generated? Check header for markers.
+    2. If generated, consult: design/SOURCE_CHAIN_REGISTRY.yaml
+    3. Find the source chain and source file
+    4. Edit the SOURCE file, not the generated file
+    5. Run the generator command
+    6. Verify the output
+
+  hard_failure_response: |
+    BL-SOURCE-CHAIN-001 VIOLATION: Cannot edit generated file directly.
+
+    File: {file_path}
+    Chain: {chain_id}
+    Source: {source_file}
+    Generator: {generator_script}
+
+    Correct action:
+    1. Edit: {source_file}
+    2. Run: {command}
+    3. Verify generated output
+
+    Reference: design/SOURCE_CHAIN_REGISTRY.yaml

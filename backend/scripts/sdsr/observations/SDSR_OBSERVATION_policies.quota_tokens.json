@@ -1,11 +1,11 @@
 {
-  "observation_id": "OBS-SDSR-POL-LIM-THR-O4-001-20260115171616",
+  "observation_id": "OBS-SDSR-POL-LIM-THR-O4-001-20260118121803",
   "scenario_id": "SDSR-POL-LIM-THR-O4-001",
   "capability_id": "policies.quota_tokens",
   "panel_id": "POL-LIM-THR-O4",
   "status": "BLOCKED",
-  "observed_at": "2026-01-15T17:16:16.167425+00:00",
-  "assumed_endpoint": "/api/v1/tenants/tenant/quota/tokens",
+  "observed_at": "2026-01-18T12:18:03.826824+00:00",
+  "assumed_endpoint": "/policy-layer/risk-ceilings",
   "observed_endpoint": "/api/v1/tenants/tenant/quota/tokens",
   "assumed_method": "GET",
   "observed_method": "GET",
@@ -15,8 +15,8 @@
   "invariants_passed": 0,
   "invariants_failed": 0,
   "invariant_results": [],
-  "failure_reason": "Coherency gate failed: COH-009",
-  "failure_taxonomy": "REALITY_MISMATCH",
+  "failure_reason": "Coherency gate failed: COH-004",
+  "failure_taxonomy": "COHERENCY_VIOLATION",
   "coherency_verified": false,
   "trace_id": null
 }

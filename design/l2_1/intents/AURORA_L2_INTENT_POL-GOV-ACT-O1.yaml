@@ -33,13 +33,12 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: policies.state
-  status: ASSUMED
-  assumed_endpoint: /api/v1/policy-layer/state
+  id: policies.active_policies
+  status: DECLARED
+  assumed_endpoint: /api/v1/policy/active
   assumed_method: GET
-  facade_note: "Unified facade - replaces direct /api/v1/policy-proposals"
 sdsr:
-  scenario: SDSR-POL-GOV-ACT-O1-001
+  scenario: PENDING
   verified: false
 notes: 'Show the complete inventory of currently active (enabled + enforced) policies.
 

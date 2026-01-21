@@ -81,7 +81,9 @@ while [[ $# -gt 0 ]]; do
       echo "  [H] 2    Intent Specification"
       echo "  [A] 3    Capability Declaration"
       echo "  [S] 3.5  Coherency Gate (BLOCKING)"
-      echo "  [S] 4    SDSR Verification"
+      echo "  [S] 4.0  SDSR Synthesis — Generate scenario YAML"
+      echo "  [S] 4.1  SDSR Execution — Run invariants"
+      echo "  [S] 4.5  Promotion Guard (BLOCKING) — L0 all + L1 ≥1"
       echo "  [S] 5    Observation Application"
       echo "  [S] 5.5  Trust Evaluation"
       echo "  [A] 6    Aurora Compilation"
@@ -374,39 +376,128 @@ echo "✓ Coherency verified"
 echo ""
 
 # -------------------------------
-# Phase 4: SDSR Verification
+# Phase 4.0: SDSR Synthesis
 # -------------------------------
-echo "▶ [S] Phase 4 — SDSR Verification"
+echo "▶ [S] Phase 4.0 — SDSR Synthesis"
 echo "──────────────────────────────────────────────────────────────────────"
+
+# Runner location (not in TOOLS_DIR)
+SDSR_RUNNER="$ROOT_DIR/backend/scripts/sdsr/aurora_sdsr_runner.py"
+SDSR_SYNTH="$TOOLS_DIR/aurora_sdsr_synth.py"
 
 if [[ "$MODE" == "single" ]]; then
   # Generate scenario if needed
   SCENARIO_FILE="$ROOT_DIR/backend/scripts/sdsr/scenarios/SDSR-${PANEL_ID}-001.yaml"
   if [[ ! -f "$SCENARIO_FILE" ]]; then
     echo "  Generating SDSR scenario..."
-    run_cmd python3 "$TOOLS_DIR/aurora_sdsr_synth.py" --panel "$PANEL_ID"
+    run_cmd python3 "$SDSR_SYNTH" --panel "$PANEL_ID"
+  else
+    echo "  Scenario exists: SDSR-${PANEL_ID}-001.yaml"
   fi
+else
+  # Generate scenarios for all panels that don't have them
+  echo "  Checking scenarios for all panels..."
+  for intent in "$ROOT_DIR/design/l2_1/intents"/*.yaml; do
+    if [[ -f "$intent" ]]; then
+      panel=$(basename "$intent" .yaml)
+      # Remove AURORA_L2_INTENT_ prefix if present
+      panel="${panel#AURORA_L2_INTENT_}"
+      scenario_file="$ROOT_DIR/backend/scripts/sdsr/scenarios/SDSR-${panel}-001.yaml"
+      if [[ ! -f "$scenario_file" ]]; then
+        echo "  Generating scenario for $panel..."
+        run_cmd python3 "$SDSR_SYNTH" --panel "$panel" || true
+      fi
+    fi
+  done
+fi
 
-  # Run SDSR - exit code MUST be checked
-  run_cmd python3 "$TOOLS_DIR/aurora_sdsr_runner.py" --panel "$PANEL_ID"
+echo "✓ SDSR synthesis complete"
+echo ""
+
+# -------------------------------
+# Phase 4.1: SDSR Execution
+# -------------------------------
+echo "▶ [S] Phase 4.1 — SDSR Execution"
+echo "──────────────────────────────────────────────────────────────────────"
+
+SDSR_FAILURES=0
+if [[ "$MODE" == "single" ]]; then
+  # Run SDSR for single panel - exit code MUST be checked
+  run_cmd python3 "$SDSR_RUNNER" --scenario "SDSR-${PANEL_ID}-001"
   SDSR_EXIT=$?
   if [[ $SDSR_EXIT -ne 0 ]]; then
-    echo "  FATAL: SDSR verification failed for $PANEL_ID"
+    echo "  FATAL: SDSR execution failed for SDSR-${PANEL_ID}-001"
     echo "         Exit code: $SDSR_EXIT"
     exit 1
   fi
 else
-  # Run all scenarios
-  run_cmd python3 "$TOOLS_DIR/aurora_sdsr_schedule.py" --all
-  SDSR_EXIT=$?
-  if [[ $SDSR_EXIT -ne 0 ]]; then
-    echo "  FATAL: SDSR schedule failed. Pipeline blocked."
-    echo "         Exit code: $SDSR_EXIT"
+  # Run all scenarios (deterministic iteration, no schedule script)
+  echo "  Executing all SDSR scenarios..."
+  for scenario in "$ROOT_DIR/backend/scripts/sdsr/scenarios"/SDSR-*.yaml; do
+    if [[ -f "$scenario" ]]; then
+      scenario_id=$(basename "$scenario" .yaml)
+      echo "  Running: $scenario_id"
+      run_cmd python3 "$SDSR_RUNNER" --scenario "$scenario_id"
+      if [[ $? -ne 0 ]]; then
+        echo "  WARNING: SDSR execution failed for $scenario_id"
+        SDSR_FAILURES=$((SDSR_FAILURES + 1))
+      fi
+    fi
+  done
+  if [[ $SDSR_FAILURES -gt 0 ]]; then
+    echo "  FATAL: $SDSR_FAILURES SDSR executions failed. Pipeline blocked."
     exit 1
   fi
 fi
 
-echo "✓ SDSR observation complete"
+echo "✓ SDSR execution complete"
+echo ""
+
+# -------------------------------
+# Phase 4.5: Promotion Guard (BLOCKING)
+# -------------------------------
+# INVARIANT: Capability can be promoted to OBSERVED only if:
+#   - All L0 (transport) invariants pass
+#   - At least one L1 (domain) invariant passes
+# This gate is NON-NEGOTIABLE.
+# -------------------------------
+echo "▶ [S] Phase 4.5 — Promotion Guard (BLOCKING)"
+echo "──────────────────────────────────────────────────────────────────────"
+
+PROMOTION_GUARD="$ROOT_DIR/backend/scripts/sdsr/aurora_promotion_guard.py"
+
+if [[ "$MODE" == "single" ]]; then
+  # Extract capability ID from intent
+  INTENT_FILE="$ROOT_DIR/design/l2_1/intents/AURORA_L2_INTENT_${PANEL_ID}.yaml"
+  if [[ ! -f "$INTENT_FILE" ]]; then
+    INTENT_FILE="$ROOT_DIR/design/l2_1/intents/${PANEL_ID}.yaml"
+  fi
+  CAP_ID=$(grep -A1 "^capability:" "$INTENT_FILE" | grep "id:" | awk '{print $2}' | tr -d "'\"")
+
+  if [[ -n "$CAP_ID" ]]; then
+    run_cmd python3 "$PROMOTION_GUARD" --capability "$CAP_ID" --ci
+    GUARD_EXIT=$?
+    if [[ $GUARD_EXIT -ne 0 ]]; then
+      echo "  FATAL: Promotion guard failed for $CAP_ID"
+      echo "         Capability cannot be promoted to OBSERVED."
+      echo "         L0 must all pass AND L1 must have at least one pass."
+      exit 1
+    fi
+  else
+    echo "  WARNING: Could not extract capability ID, skipping guard"
+  fi
+else
+  # Validate all capabilities
+  run_cmd python3 "$PROMOTION_GUARD" --all --ci
+  GUARD_EXIT=$?
+  if [[ $GUARD_EXIT -ne 0 ]]; then
+    echo "  FATAL: Promotion guard failed. Pipeline blocked."
+    echo "         One or more capabilities cannot be promoted to OBSERVED."
+    exit 1
+  fi
+fi
+
+echo "✓ Promotion guard passed"
 echo ""
 
 # -------------------------------
@@ -647,7 +738,9 @@ $([[ "$MODE" == "single" ]] && echo "- **Panel:** $PANEL_ID")
 | 2 | Intent Specification | ✓ PASSED |
 | 3 | Capability Declaration | ✓ PASSED |
 | 3.5 | Coherency Gate | ✓ PASSED |
-| 4 | SDSR Verification | ✓ PASSED |
+| 4.0 | SDSR Synthesis | ✓ PASSED |
+| 4.1 | SDSR Execution | ✓ PASSED |
+| 4.5 | Promotion Guard | ✓ PASSED |
 | 5 | Observation Application | ✓ PASSED |
 | 5.5 | Trust Evaluation | ✓ PASSED |
 | 6 | Aurora Compilation | ✓ PASSED |
@@ -710,7 +803,9 @@ echo "    [H] 1    Human Intent Validation      ✓"
 echo "    [H] 2    Intent Specification         ✓"
 echo "    [A] 3    Capability Declaration       ✓"
 echo "    [S] 3.5  Coherency Gate               ✓"
-echo "    [S] 4    SDSR Verification            ✓"
+echo "    [S] 4.0  SDSR Synthesis               ✓"
+echo "    [S] 4.1  SDSR Execution               ✓"
+echo "    [S] 4.5  Promotion Guard              ✓"
 echo "    [S] 5    Observation Application      ✓"
 echo "    [S] 5.5  Trust Evaluation             ✓"
 echo "    [A] 6    Aurora Compilation           ✓"

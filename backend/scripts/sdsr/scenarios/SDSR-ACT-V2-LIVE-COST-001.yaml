@@ -1,0 +1,107 @@
+# SDSR Verification Scenario
+# Scenario: SDSR-ACT-V2-LIVE-COST-001
+# Generated: 2026-01-19
+#
+# PURPOSE:
+#   Verify /activity/live returns runs with policy context
+#   showing NEAR_THRESHOLD evaluation at 85% of COST threshold.
+#
+# EXECUTION:
+#   python aurora_sdsr_runner.py --scenario SDSR-ACT-V2-LIVE-COST-001
+#
+# REFERENCE:
+#   - ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md (Phase 0 SDSR Scenarios)
+#   - ACTIVITY_DOMAIN_CONTRACT.md (V2 Policy Context sections)
+
+scenario_id: SDSR-ACT-V2-LIVE-COST-001
+version: 1.0.0
+name: LIVE run at 85% COST threshold with TENANT_OVERRIDE
+description: |
+  Verifies that /activity/live endpoint returns LIVE runs with:
+  - policy_context embedded in every run
+  - evaluation_outcome = NEAR_THRESHOLD when at 85% of threshold
+  - threshold_source = TENANT_OVERRIDE for tenant-scoped limits
+capability: activity.live_runs_v2
+panel_id: ACT-LLM-LIVE-O2
+domain: ACTIVITY
+metadata:
+  generated_by: manual
+  generated_at: '2026-01-19T00:00:00+00:00'
+  panel_class: evidence
+  migration_phase: Phase1_Schema_Enhancement
+
+inject:
+  type: api_call
+  endpoint: /api/v1/activity/live
+  method: GET
+  headers:
+    Authorization: Bearer ${AUTH_TOKEN}
+    Content-Type: application/json
+  params:
+    risk_level: NEAR_THRESHOLD
+
+expect:
+  status_code: 200
+  response_type: json
+  response_shape:
+    items: list
+    total: int
+    has_more: bool
+    pagination:
+      limit: int
+      offset: int
+    generated_at: string
+
+invariants:
+  - id: INV-V2-001
+    name: policy_context_present
+    description: Every run has policy_context embedded
+    assertion: |
+      all(item.get('policy_context') is not None for item in response.get('items', []))
+  - id: INV-V2-002
+    name: policy_context_shape
+    description: policy_context has all required fields
+    assertion: |
+      all(
+        'policy_id' in item.get('policy_context', {}) and
+        'policy_name' in item.get('policy_context', {}) and
+        'evaluation_outcome' in item.get('policy_context', {})
+        for item in response.get('items', [])
+      )
+  - id: INV-V2-003
+    name: state_is_live
+    description: All returned runs have state=LIVE (topic boundary)
+    assertion: |
+      all(item.get('state') == 'LIVE' for item in response.get('items', []))
+  - id: INV-V2-004
+    name: near_threshold_filter_works
+    description: Filtered runs are at NEAR_THRESHOLD risk level
+    assertion: |
+      all(item.get('risk_level') == 'NEAR_THRESHOLD' for item in response.get('items', []))
+  - id: INV-V2-005
+    name: cost_threshold_context
+    description: Runs with COST risk have limit_type like 'COST%'
+    assertion: |
+      all(
+        item.get('policy_context', {}).get('risk_type') in ['COST', None] or
+        item.get('policy_context', {}).get('limit_type', '').startswith('COST')
+        for item in response.get('items', [])
+        if item.get('policy_context', {}).get('evaluation_outcome') == 'NEAR_THRESHOLD'
+      )
+
+cleanup:
+  required: false
+  note: Read-only observation, no cleanup needed
+
+on_success:
+  update_capability_status: OBSERVED
+  emit_observation: true
+
+on_failure:
+  update_capability_status: null
+  emit_observation: true
+  failure_taxonomy:
+    endpoint_missing: V2 /activity/live route does not exist
+    policy_context_missing: Response items missing policy_context field
+    schema_mismatch: Response shape does not match V2 contract
+    invariant_violated: One or more policy context invariants failed

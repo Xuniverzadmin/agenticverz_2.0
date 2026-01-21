@@ -1,5 +1,5 @@
 /**
- * Projection-Driven Sidebar
+ * Projection-Driven Sidebar (v2 Wireframe)
  *
  * Layer: L1 — Product Experience (UI)
  * Product: system-wide
@@ -7,14 +7,14 @@
  *   Trigger: runtime (on mount)
  *   Execution: async (projection load)
  * Role: Render sidebar navigation from L2.1 UI Projection Lock
- * Reference: L2.1 UI Projection Pipeline, PIN-352, PIN-355
+ * Reference: L2.1 UI Projection Pipeline, PIN-352, PIN-355, CUSTOMER_CONSOLE_V2_CONSTITUTION.md
  *
- * GOVERNANCE RULES (LOCKED):
- * - Sidebar renders STRUCTURE, not content
- * - Sidebar shows ONLY: Domain → Subdomain
- * - NO topics in sidebar
- * - NO panels in sidebar
- * - Topics and Panels belong in main workspace only
+ * DESIGN DECISIONS (per v2 Constitution):
+ * - Sidebar shows: Domain → Subdomain (nested)
+ * - Topics are NOT in sidebar (they appear as tabs in main workspace)
+ * - Section headers: CORE LENSES, INTELLIGENCE (no redundant headers for single-domain sections)
+ * - Account is pinned to sidebar footer
+ * - Subdomains are collapsible per domain
  */
 
 import { useEffect, useState, useCallback } from 'react';
@@ -23,7 +23,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  ChevronUp,
   LayoutDashboard,
   Activity,
   AlertTriangle,
@@ -61,18 +60,43 @@ const DOMAIN_ICONS: Record<DomainName, React.ElementType> = {
 };
 
 // ============================================================================
-// Subdomain Nav Item (Structure Only - No Panels)
-// LOCKED: Sidebar stops at Domain → Subdomain. No deeper.
+// Section Configuration (v2 Constitution - Domain Tiers)
+// No redundant section headers for single-domain groups
+// ============================================================================
+
+interface SectionConfig {
+  title: string | null; // null means no header (domain shown directly with icon)
+  domains: DomainName[];
+}
+
+const SIDEBAR_SECTIONS: SectionConfig[] = [
+  {
+    title: 'CORE LENSES',
+    domains: ['Overview', 'Activity', 'Incidents', 'Policies', 'Logs'],
+  },
+  {
+    title: 'INTELLIGENCE',
+    domains: ['Analytics'],
+  },
+  {
+    title: null, // No header - Connectivity shown directly with icon
+    domains: ['Connectivity'],
+  },
+];
+
+// Account is handled separately (pinned to footer)
+const ACCOUNT_DOMAIN: DomainName = 'Account';
+
+// ============================================================================
+// Subdomain Nav Item (Shown when domain is expanded)
 // ============================================================================
 
 interface SubdomainNavItemProps {
-  domainName: DomainName;
   subdomain: string;
   domainRoute: string;
 }
 
 function SubdomainNavItem({
-  domainName,
   subdomain,
   domainRoute,
 }: SubdomainNavItemProps) {
@@ -84,7 +108,7 @@ function SubdomainNavItem({
   // Subdomain route: domain route + subdomain slug
   const subdomainRoute = `${domainRoute}?subdomain=${encodeURIComponent(subdomain)}`;
 
-  // Check if this subdomain is active (domain route matches and subdomain param matches)
+  // Check if this subdomain is active
   const searchParams = new URLSearchParams(location.search);
   const activeSubdomain = searchParams.get('subdomain');
   const isActive = location.pathname.startsWith(domainRoute) && activeSubdomain === subdomain;
@@ -105,36 +129,44 @@ function SubdomainNavItem({
 }
 
 // ============================================================================
-// Domain Section Component (Structure Only)
-// LOCKED: Shows Domain → Subdomain. No topics. No panels.
+// Domain Item Component (with collapsible nested subdomains)
 // ============================================================================
 
-interface DomainSectionProps {
+interface DomainItemProps {
   domain: Domain;
-  collapsed: boolean;
-  expanded: boolean;
-  onToggle: () => void;
+  collapsed: boolean; // sidebar collapsed (icons only)
 }
 
-function DomainSection({
-  domain,
-  collapsed,
-  expanded,
-  onToggle,
-}: DomainSectionProps) {
+function DomainItem({ domain, collapsed }: DomainItemProps) {
   const Icon = DOMAIN_ICONS[domain.domain] || LayoutDashboard;
   const subdomains = getSubdomainsForDomain(domain.domain);
   const location = useLocation();
 
-  // Check if current route is within this domain (using projection route)
+  // Track whether subdomains are expanded (collapsed by default)
+  const [subdomainsExpanded, setSubdomainsExpanded] = useState(false);
+
+  // Check if current route is within this domain
   const isActive = location.pathname.startsWith(domain.route);
+
+  // Auto-expand subdomains when domain is active
+  useEffect(() => {
+    if (isActive && subdomains.length > 0) {
+      setSubdomainsExpanded(true);
+    }
+  }, [isActive, subdomains.length]);
 
   const handleDomainClick = () => {
     preflightLogger.nav.domainClick(domain.domain);
   };
 
+  const toggleSubdomains = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSubdomainsExpanded(!subdomainsExpanded);
+  };
+
   if (collapsed) {
-    // Collapsed mode: icon linking to domain route (from projection)
+    // Sidebar collapsed mode: icon only
     return (
       <NavLink
         to={domain.route}
@@ -152,16 +184,18 @@ function DomainSection({
     );
   }
 
-  // Expanded mode: domain header + subdomain list (NO panels)
+  const hasSubdomains = subdomains.length > 0;
+
+  // Sidebar expanded mode: domain header + collapsible subdomains
   return (
     <div className="space-y-1">
-      {/* Domain Header - NavLink to domain route */}
+      {/* Domain Header */}
       <div className="flex items-center">
         <NavLink
           to={domain.route}
           onClick={handleDomainClick}
           className={cn(
-            'flex-1 flex items-center gap-3 px-3 py-2 rounded-l-lg text-sm font-medium transition-colors',
+            'flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
             isActive
               ? 'bg-primary-900/20 text-primary-300'
               : 'text-gray-300 hover:bg-gray-700'
@@ -170,37 +204,55 @@ function DomainSection({
           <Icon size={20} className="flex-shrink-0" />
           <span>{domain.domain}</span>
         </NavLink>
-
-        {/* Expand/Collapse button for subdomains */}
-        {subdomains.length > 0 && (
+        {/* Collapse toggle for subdomains */}
+        {hasSubdomains && (
           <button
-            onClick={onToggle}
-            className={cn(
-              'px-2 py-2 rounded-r-lg transition-colors',
-              isActive
-                ? 'bg-primary-900/20 text-primary-300 hover:bg-primary-900/30'
-                : 'text-gray-500 hover:bg-gray-700 hover:text-gray-300'
-            )}
-            title={expanded ? 'Collapse subdomains' : 'Expand subdomains'}
+            onClick={toggleSubdomains}
+            className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-gray-300 transition-colors"
+            title={subdomainsExpanded ? 'Collapse subdomains' : 'Expand subdomains'}
           >
-            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            <ChevronDown
+              size={16}
+              className={cn(
+                'transition-transform duration-200',
+                !subdomainsExpanded && '-rotate-90'
+              )}
+            />
           </button>
         )}
       </div>
 
-      {/* Subdomain List (Structure Only - No Panels) */}
-      {expanded && subdomains.length > 0 && (
+      {/* Subdomains (Collapsible) */}
+      {hasSubdomains && subdomainsExpanded && (
         <div className="ml-6 space-y-0.5 border-l border-gray-700 pl-2">
           {subdomains.map((subdomain) => (
             <SubdomainNavItem
               key={subdomain}
-              domainName={domain.domain}
               subdomain={subdomain}
               domainRoute={domain.route}
             />
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Section Header Component
+// ============================================================================
+
+interface SectionHeaderProps {
+  title: string | null;
+  collapsed: boolean;
+}
+
+function SectionHeader({ title, collapsed }: SectionHeaderProps) {
+  if (collapsed || !title) return null;
+
+  return (
+    <div className="px-3 pt-4 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+      {title}
     </div>
   );
 }
@@ -265,11 +317,9 @@ export function ProjectionSidebar({ collapsed }: ProjectionSidebarProps) {
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const location = useLocation();
 
-  // State (Structure Only - No panel/topic state needed)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [domains, setDomains] = useState<Domain[]>([]);
-  const [expandedDomains, setExpandedDomains] = useState<Set<DomainName>>(new Set());
 
   // Load projection on mount
   const loadData = useCallback(async () => {
@@ -280,40 +330,24 @@ export function ProjectionSidebar({ collapsed }: ProjectionSidebarProps) {
       const loadedDomains = getDomains();
       setDomains(loadedDomains);
       preflightLogger.sidebar.render(loadedDomains.length);
-
-      // Auto-expand domain based on current route (using projection routes)
-      const currentDomain = loadedDomains.find((d) =>
-        location.pathname.startsWith(d.route)
-      );
-      if (currentDomain) {
-        setExpandedDomains(new Set([currentDomain.domain]));
-        preflightLogger.sidebar.expand(currentDomain.domain);
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load projection');
     } finally {
       setLoading(false);
     }
-  }, [location.pathname]);
+  }, []);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // Toggle domain expansion (shows/hides subdomains)
-  const toggleDomain = (domain: DomainName) => {
-    setExpandedDomains((prev) => {
-      const next = new Set(prev);
-      if (next.has(domain)) {
-        next.delete(domain);
-        preflightLogger.sidebar.collapse(domain);
-      } else {
-        next.add(domain);
-        preflightLogger.sidebar.expand(domain);
-      }
-      return next;
-    });
+  // Helper to get domain by name
+  const getDomainByName = (name: DomainName): Domain | undefined => {
+    return domains.find(d => d.domain === name);
   };
+
+  // Get Account domain for footer
+  const accountDomain = getDomainByName(ACCOUNT_DOMAIN);
 
   return (
     <aside
@@ -322,14 +356,15 @@ export function ProjectionSidebar({ collapsed }: ProjectionSidebarProps) {
         collapsed ? 'w-16' : 'w-60'
       )}
     >
-      {/* Projection Source Indicator (dev only) */}
+      {/* Preflight Mode Indicator */}
       {!collapsed && import.meta.env.VITE_PREFLIGHT_MODE === 'true' && (
         <div className="px-3 py-2 bg-amber-900/20 border-b border-amber-700/30">
           <span className="text-xs text-amber-400 font-mono">PREFLIGHT</span>
         </div>
       )}
 
-      <nav className="flex-1 p-3 space-y-2 overflow-y-auto">
+      {/* Main Navigation (Scrollable) */}
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {loading && <SidebarLoading collapsed={collapsed} />}
 
         {error && (
@@ -340,21 +375,47 @@ export function ProjectionSidebar({ collapsed }: ProjectionSidebarProps) {
           />
         )}
 
-        {!loading && !error && domains.map((domain) => (
-          <DomainSection
-            key={domain.domain}
-            domain={domain}
-            collapsed={collapsed}
-            expanded={expandedDomains.has(domain.domain)}
-            onToggle={() => toggleDomain(domain.domain)}
-          />
-        ))}
+        {!loading && !error && (
+          <>
+            {/* Render sections with domain groups */}
+            {SIDEBAR_SECTIONS.map((section, index) => {
+              const sectionDomains = section.domains
+                .map(name => getDomainByName(name))
+                .filter((d): d is Domain => d !== undefined);
+
+              if (sectionDomains.length === 0) return null;
+
+              // Use title or first domain as key (handles null titles)
+              const sectionKey = section.title || section.domains[0] || `section-${index}`;
+
+              return (
+                <div key={sectionKey}>
+                  <SectionHeader title={section.title} collapsed={collapsed} />
+                  <div className="space-y-1">
+                    {sectionDomains.map((domain) => (
+                      <DomainItem
+                        key={domain.domain}
+                        domain={domain}
+                        collapsed={collapsed}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
       </nav>
 
-      {/* Statistics Footer (Structure Only) */}
-      {!collapsed && !loading && !error && (
-        <div className="px-3 py-2 border-t border-gray-700 text-xs text-gray-500">
-          <span>{domains.length} domains</span>
+      {/* Account Section (Pinned to Footer - per v2 Constitution) */}
+      {!loading && !error && accountDomain && (
+        <div className="border-t border-gray-700 p-3">
+          {!collapsed && (
+            <div className="px-3 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              ACCOUNT
+            </div>
+          )}
+          <DomainItem domain={accountDomain} collapsed={collapsed} />
         </div>
       )}
 

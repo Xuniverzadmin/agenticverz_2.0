@@ -32,6 +32,43 @@
 set -e
 
 # =============================================================================
+# V2 CONSTITUTION DEPRECATION GUARD (2026-01-20)
+# =============================================================================
+# The AURORA L2 pipeline is DEPRECATED for customer console projection.
+# V2 Constitution is now the authoritative source.
+# Source: design/v2_constitution/ui_projection_lock.json
+# Scaffolding: src/contracts/ui_plan_scaffolding.ts
+#
+# This pipeline would overwrite the V2 Constitution structure with old AURORA output.
+# To re-enable, remove this guard. But you probably don't want to do that.
+# =============================================================================
+
+echo ""
+echo -e "\033[1;33m================================================================\033[0m"
+echo -e "\033[1;33m  AURORA L2 PIPELINE - DEPRECATED\033[0m"
+echo -e "\033[1;33m================================================================\033[0m"
+echo ""
+echo "The AURORA L2 pipeline is DEPRECATED for customer console projection."
+echo ""
+echo "V2 Constitution is now the authoritative source:"
+echo "  - Projection: design/v2_constitution/ui_projection_lock.json"
+echo "  - Scaffolding: src/contracts/ui_plan_scaffolding.ts"
+echo ""
+echo "Running this pipeline would overwrite V2 Constitution with old AURORA output."
+echo ""
+echo "If you REALLY need to run AURORA pipeline, use:"
+echo "  ALLOW_AURORA_OVERRIDE=1 ./scripts/tools/run_aurora_l2_pipeline.sh"
+echo ""
+
+if [ "$ALLOW_AURORA_OVERRIDE" != "1" ]; then
+    echo -e "\033[0;31mABORTED: AURORA pipeline is deprecated.\033[0m"
+    exit 0
+fi
+
+echo -e "\033[1;33m[WARNING] AURORA override enabled - proceeding...\033[0m"
+echo ""
+
+# =============================================================================
 # CONFIGURATION
 # =============================================================================
 

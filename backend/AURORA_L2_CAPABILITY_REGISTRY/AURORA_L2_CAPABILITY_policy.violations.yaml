@@ -1,0 +1,80 @@
+# AURORA L2 Capability Registry Entry
+# Capability: policy.violations
+# Last Updated: 2026-01-19
+# Created By: Policy V2 Facade Implementation (PIN-447)
+#
+# STATUS: DECLARED
+#
+# V2 FACADE CAPABILITY - CROSS-DOMAIN VISIBLE
+# This capability is part of the Policy V2 facade layer.
+# Incidents domain links to violations when creating incidents from policy breaches.
+#
+# INVARIANT: Violations MUST exist before incidents.
+#
+# Reference: PIN-447, POLICY_DOMAIN_V2_DESIGN.md
+# Contract: CROSS_DOMAIN_POLICY_CONTRACT.md
+#
+capability_id: policy.violations
+status: DECLARED
+source_panels:
+- POL-FACADE-VIOLATIONS-O2
+domain: POLICIES
+subdomain: LIMITS
+topic: VIOLATIONS
+cross_domain: true
+facade_layer: v2
+
+metadata:
+  generated_by: manual-pin447
+  generated_on: '2026-01-19'
+  declared_by: PIN-447
+  declared_on: '2026-01-19'
+  observed_by: null
+  observed_on: null
+
+assumption:
+  endpoint: /api/v1/policy/violations
+  method: GET
+  source: POLICY_V2_DESIGN
+  description: "What enforcement occurred?"
+
+binding:
+  observed_endpoint: null
+  observed_method: null
+  observed_at: null
+  observation_id: null
+
+acceptance_criteria:
+- Returns policy enforcement events (violations)
+- Includes facade_ref for navigation
+- Includes run_id for cross-domain linking
+- Supports violation_type and severity filters
+- Tenant-scoped via auth_context
+
+cross_domain_rules:
+  allowed_callers:
+  - Incidents domain (for violation_ref)
+  - Activity domain (for policy_context.violation_ref)
+  - Customer Console
+  invariants:
+  - Violations must exist BEFORE incidents
+  - Incidents MUST link violation_id if created from breach
+  response_includes:
+  - facade_ref for each violation
+  - run_ref and policy_ref in detail
+
+sdsr_loop_assertions:
+- SDSR-POL-LOOP-001: Violation before incident
+- SDSR-POL-LOOP-003: Active policy has origin
+
+observation:
+  scenario_id: null
+  observed_at: null
+  trace_id: null
+  invariants_passed: 0
+  invariants_total: 0
+
+coherency:
+  last_checked: null
+  status: PENDING
+  checked_by: null

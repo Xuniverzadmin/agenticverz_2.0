@@ -33,11 +33,10 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: incidents.recovery_actions
+  id: incidents.learnings
   status: ASSUMED
-  assumed_endpoint: null
+  assumed_endpoint: /api/v1/incidents/{incident_id}/learnings
   assumed_method: GET
-  facade_note: "Decoupled from /api/v1/recovery/* (FOPS auth) - API Audit 2026-01-16"
 sdsr:
   scenario: SDSR-INC-EV-RES-O2-001
   verified: false

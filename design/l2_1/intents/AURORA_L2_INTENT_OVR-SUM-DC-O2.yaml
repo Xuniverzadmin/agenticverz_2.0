@@ -34,9 +34,12 @@ controls:
   confirmation_required: false
 capability:
   id: overview.decisions_count
-  status: ASSUMED
-  assumed_endpoint: null
+  status: DECLARED
+  assumed_endpoint: /api/v1/overview/decisions/count
   assumed_method: GET
+sdsr:
+  scenario: PENDING
+  verified: false
 notes: 'Provide short-term feedback on recent human decisions so the user
 
   can confirm impact without drilling into other domains.

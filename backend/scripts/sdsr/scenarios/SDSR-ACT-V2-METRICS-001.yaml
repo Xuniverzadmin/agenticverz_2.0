@@ -1,0 +1,102 @@
+# SDSR Verification Scenario
+# Scenario: SDSR-ACT-V2-METRICS-001
+# Generated: 2026-01-19
+#
+# PURPOSE:
+#   Verify /activity/metrics returns aggregated counts
+#   with topic-aware and risk-type breakdowns.
+#
+# REFERENCE:
+#   - ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
+#   - Extends /risk-signals with V2 metrics
+
+scenario_id: SDSR-ACT-V2-METRICS-001
+version: 1.0.0
+name: Activity metrics with topic-aware counts
+description: |
+  Verifies that /activity/metrics endpoint returns:
+  - Risk level counts (at_risk, violated, near_threshold)
+  - Topic counts (live_count, completed_count)
+  - Evidence health breakdown
+  - Risk type breakdown (cost, time, token, rate)
+capability: activity.metrics_v2
+panel_id: ACT-LLM-LIVE-O1
+domain: ACTIVITY
+metadata:
+  generated_by: manual
+  generated_at: '2026-01-19T00:00:00+00:00'
+  panel_class: evidence
+  migration_phase: Phase2_Endpoint_Addition
+
+inject:
+  type: api_call
+  endpoint: /api/v1/activity/metrics
+  method: GET
+  headers:
+    Authorization: Bearer ${AUTH_TOKEN}
+    Content-Type: application/json
+
+expect:
+  status_code: 200
+  response_type: json
+  response_shape:
+    at_risk_count: int
+    violated_count: int
+    near_threshold_count: int
+    total_at_risk: int
+    live_count: int
+    completed_count: int
+    evidence_flowing_count: int
+    evidence_degraded_count: int
+    evidence_missing_count: int
+    cost_risk_count: int
+    time_risk_count: int
+    token_risk_count: int
+    rate_risk_count: int
+    generated_at: string
+
+invariants:
+  - id: INV-MET-001
+    name: topic_counts_present
+    description: Response includes live_count and completed_count
+    assertion: |
+      'live_count' in response and 'completed_count' in response
+  - id: INV-MET-002
+    name: evidence_breakdown_present
+    description: Response includes evidence health breakdown
+    assertion: |
+      all(k in response for k in ['evidence_flowing_count', 'evidence_degraded_count', 'evidence_missing_count'])
+  - id: INV-MET-003
+    name: risk_type_breakdown_present
+    description: Response includes risk type breakdown
+    assertion: |
+      all(k in response for k in ['cost_risk_count', 'time_risk_count', 'token_risk_count', 'rate_risk_count'])
+  - id: INV-MET-004
+    name: counts_are_non_negative
+    description: All count values are >= 0
+    assertion: |
+      all(
+        isinstance(response.get(k), int) and response.get(k) >= 0
+        for k in ['at_risk_count', 'violated_count', 'near_threshold_count', 'live_count', 'completed_count']
+      )
+  - id: INV-MET-005
+    name: total_at_risk_consistent
+    description: total_at_risk >= violated + near_threshold (consistent aggregation)
+    assertion: |
+      response.get('total_at_risk', 0) >= (response.get('violated_count', 0) + response.get('near_threshold_count', 0))
+
+cleanup:
+  required: false
+  note: Read-only observation, no cleanup needed
+
+on_success:
+  update_capability_status: OBSERVED
+  emit_observation: true
+
+on_failure:
+  update_capability_status: null
+  emit_observation: true
+  failure_taxonomy:
+    endpoint_missing: V2 /activity/metrics route does not exist
+    missing_topic_counts: live_count or completed_count missing
+    missing_risk_types: Risk type breakdown incomplete

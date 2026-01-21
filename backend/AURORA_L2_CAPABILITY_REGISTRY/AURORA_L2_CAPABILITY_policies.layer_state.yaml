@@ -5,18 +5,18 @@
 # NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
 #
 capability_id: policies.layer_state
-status: ASSUMED
+status: DECLARED
 source_panels:
 - POL-GOV-ACT-O4
 domain: POLICIES
 metadata:
   generated_by: sync_from_intent_ledger.py
-  generated_on: '2026-01-16'
+  generated_on: '2026-01-20'
   declared_by: intent-ledger
-  declared_on: '2026-01-16'
-  observed_by: SDSR-POL-GOV-ACT-O4-001
+  declared_on: '2026-01-20'
+  observed_by: PENDING
 assumption:
-  endpoint: /policy-layer/state
+  endpoint: /api/v1/policy-layer/state
   method: GET
   source: INTENT_LEDGER
 binding:
@@ -25,5 +25,5 @@ binding:
   observed_at: null
   observation_id: null
 acceptance_criteria:
-- Returns policy layer current state
-- Response includes active policies
+- Returns current policy layer state
+- Tenant-scoped query

@@ -10,8 +10,8 @@ panel_class: interpretation
 metadata:
   domain: POLICIES
   subdomain: GOVERNANCE
-  topic: DRAFTS
-  topic_id: POLICIES.GOVERNANCE.DRAFTS
+  topic: LESSONS
+  topic_id: POLICIES.GOVERNANCE.LESSONS
   order: O2
   action_layer: L2_1
   source: INTENT_LEDGER
@@ -33,11 +33,10 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: policies.versions_list
+  id: lessons.stats
   status: ASSUMED
-  assumed_endpoint: /api/v1/policy-layer/versions
+  assumed_endpoint: /api/v1/policy-layer/lessons/stats
   assumed_method: GET
-  facade_note: "Added /api/v1 prefix - API Audit 2026-01-16"
 sdsr:
   scenario: SDSR-POL-GOV-DFT-O2-001
   verified: false

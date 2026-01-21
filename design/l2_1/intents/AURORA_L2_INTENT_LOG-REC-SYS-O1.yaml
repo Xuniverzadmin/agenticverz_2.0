@@ -33,11 +33,11 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: logs.guard_logs
-  status: ASSUMED
-  assumed_endpoint: /guard/logs
+  id: logs.system
+  status: DEFERRED
+  assumed_endpoint: 'null'
   assumed_method: GET
 sdsr:
-  scenario: SDSR-LOG-REC-SYS-O1-001
+  scenario: DEFERRED
   verified: false
 notes: Show environment snapshot — baseline state at run start.

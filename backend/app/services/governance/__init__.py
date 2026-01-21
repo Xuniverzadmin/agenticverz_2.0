@@ -124,6 +124,23 @@ from app.services.governance.cross_domain import (
     table_exists,
 )
 
+# Run Governance Facade (PIN-454 FIX-002 - L5→L4 layer compliance)
+from app.services.governance.run_governance_facade import (
+    RunGovernanceFacade,
+    get_run_governance_facade,
+)
+
+# Transaction Coordinator (PIN-454 FIX-001 - Atomic cross-domain writes)
+from app.services.governance.transaction_coordinator import (
+    DomainResult,
+    RunCompletionTransaction,
+    TransactionFailed,
+    TransactionPhase,
+    TransactionResult,
+    create_transaction_coordinator,
+    get_transaction_coordinator,
+)
+
 __all__ = [
     # Validator
     "ValidatorService",
@@ -208,4 +225,15 @@ __all__ = [
     "record_limit_breach",
     "record_limit_breach_sync",
     "table_exists",
+    # Run Governance Facade (PIN-454)
+    "RunGovernanceFacade",
+    "get_run_governance_facade",
+    # Transaction Coordinator (PIN-454 FIX-001)
+    "RunCompletionTransaction",
+    "TransactionResult",
+    "TransactionFailed",
+    "TransactionPhase",
+    "DomainResult",
+    "get_transaction_coordinator",
+    "create_transaction_coordinator",
 ]

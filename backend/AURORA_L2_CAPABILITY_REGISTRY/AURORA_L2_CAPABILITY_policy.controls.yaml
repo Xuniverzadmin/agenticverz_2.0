@@ -1,0 +1,72 @@
+# AURORA L2 Capability Registry Entry
+# Capability: policy.controls
+# Last Updated: 2026-01-20
+# Created By: Policy V2 Facade Implementation (PIN-447)
+#
+# STATUS: DECLARED
+#
+# V2 FACADE CAPABILITY - CROSS-DOMAIN VISIBLE
+# This capability is part of the Policy V2 facade layer.
+# Activity domain embeds control_ref in policy_context for runs near limits.
+#
+# Reference: PIN-447, POLICY_DOMAIN_V2_DESIGN.md
+# Contract: CROSS_DOMAIN_POLICY_CONTRACT.md
+# Note: Renamed from policy.thresholds (2026-01-20)
+#
+capability_id: policy.controls
+status: DECLARED
+source_panels:
+- POL-FACADE-CONTROLS-O2
+domain: POLICIES
+subdomain: LIMITS
+topic: CONTROLS
+cross_domain: true
+facade_layer: v2
+
+metadata:
+  generated_by: manual-pin447
+  generated_on: '2026-01-19'
+  declared_by: PIN-447
+  declared_on: '2026-01-19'
+  observed_by: null
+  observed_on: null
+
+assumption:
+  endpoint: /api/v1/policy/controls
+  method: GET
+  source: POLICY_V2_DESIGN
+  description: "What limits are enforced?"
+
+binding:
+  observed_endpoint: null
+  observed_method: null
+  observed_at: null
+  observation_id: null
+
+acceptance_criteria:
+- Returns enforced limits and controls
+- Includes facade_ref for navigation
+- Supports limit_category and scope filters
+- Tenant-scoped via auth_context
+
+cross_domain_rules:
+  allowed_callers:
+  - Activity domain (for control_ref in policy_context)
+  - Customer Console
+  invariants:
+  - Activity caches control_ref for resilience
+  response_includes:
+  - facade_ref for each control
+  - violations_ref in detail
+
+observation:
+  scenario_id: null
+  observed_at: null
+  trace_id: null
+  invariants_passed: 0
+  invariants_total: 0
+
+coherency:
+  last_checked: null
+  status: PENDING
+  checked_by: null

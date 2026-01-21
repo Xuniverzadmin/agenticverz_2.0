@@ -73,13 +73,13 @@ domains:
         topics:
           - id: ACTIVE
             panel_slots: 5
-          - id: DRAFTS
-            panel_slots: 5
+          - id: LESSONS
+            panel_slots: 10  # Merged: DRAFTS (5) + LEARNING (5)
           - id: POLICY_LIBRARY
             panel_slots: 5
       - id: LIMITS
         topics:
-          - id: THRESHOLDS
+          - id: CONTROLS
             panel_slots: 5
           - id: VIOLATIONS
             panel_slots: 5

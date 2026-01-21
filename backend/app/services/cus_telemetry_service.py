@@ -132,7 +132,7 @@ class CusTelemetryService:
                 policy_result=payload.policy_result,
                 error_code=payload.error_code,
                 error_message=payload.error_message,
-                metadata=payload.metadata,
+                extra_data=payload.metadata,  # Schema uses 'metadata', model uses 'extra_data'
                 created_at=utc_now(),
             )
 
@@ -204,7 +204,7 @@ class CusTelemetryService:
                         policy_result=payload.policy_result,
                         error_code=payload.error_code,
                         error_message=payload.error_message,
-                        metadata=payload.metadata,
+                        extra_data=payload.metadata,  # Schema uses 'metadata', model uses 'extra_data'
                         created_at=utc_now(),
                     )
                     session.add(record)

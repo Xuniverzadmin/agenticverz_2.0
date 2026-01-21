@@ -1,11 +1,10 @@
-# Panel Intent: Lesson Actions (Dismiss/Defer)
-# Source: PIN-411 (Lessons Learned Engine)
-# Panel: POL-GOV-LES-O4
-# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+# AURORA_L2 Intent Spec: POL-GOV-LES-O4
+# Last Updated: 2026-01-18
+# Updated By: manual
 #
 panel_id: POL-GOV-LES-O4
 version: 1.0.0
-panel_class: execution
+panel_class: action
 metadata:
   domain: POLICIES
   subdomain: GOVERNANCE
@@ -13,17 +12,17 @@ metadata:
   topic_id: POLICIES.GOVERNANCE.LESSONS
   order: O4
   action_layer: L2_1
-  source: PIN-411
-  review_status: DRAFT
-  facet: lessons_learned
-  facet_criticality: MEDIUM
+  source: INTENT_LEDGER
+  review_status: REVIEWED
+  facet: null
+  facet_criticality: null
 display:
-  name: Dismiss/Defer
+  name: POL-GOV-LES-O4
   visible_by_default: true
   nav_required: false
   expansion_mode: INLINE
 data:
-  read: false
+  read: true
   download: false
   write: true
   replay: false
@@ -34,32 +33,18 @@ controls:
 capability:
   id: lessons.dismiss_or_defer
   status: DECLARED
-  assumed_endpoint: /api/v1/lessons/{lesson_id}/dismiss
+  assumed_endpoint: /api/v1/policy-layer/lessons/{lesson_id}/dismiss
   assumed_method: POST
-  facade_note: "Dismiss or defer a lesson - different endpoints for each action"
+notes: 'Dismiss or defer a lesson learned.
+
+  Mark lessons as not actionable or defer for future consideration.'
 sdsr:
-  scenario: SDSR-POL-GOV-LES-O4-001
   verified: false
-notes: |
-  Dismiss or defer a pending lesson.
-
-  Dismiss Action:
-  - Permanently marks lesson as dismissed
-  - Transition: pending -> dismissed
-  - Terminal state (cannot be undone)
-  - Requires reason
-
-  Defer Action:
-  - Temporarily snoozes the lesson
-  - Transition: pending -> deferred
-  - Requires deferred_until datetime
-  - Will reactivate automatically when time expires
-  - Non-terminal (can be reactivated)
-
-  State Machine:
-  - Dismiss: pending -> dismissed (terminal)
-  - Defer: pending -> deferred -> pending (via scheduler)
-
-  Requirements:
-  - Requires human confirmation
-  - Lesson must be in pending status
+  verification_date: null
+  scenario: SDSR-POL-GOV-LES-O4-001
+  observation_trace: null
+  checks:
+    endpoint_exists: PENDING
+    schema_matches: PENDING
+    auth_works: PENDING
+    data_is_real: PENDING

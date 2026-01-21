@@ -1053,3 +1053,988 @@ def run_escalation_task():
             return await run_escalation_check(session)
 
     return asyncio.run(_run())
+
+
+# =============================================================================
+# POLICY V2 FACADE — Cross-Domain Authority Endpoints (PIN-447)
+# =============================================================================
+#
+# These endpoints form the V2 facade layer for cross-domain access.
+# Domains (Activity, Incidents) MUST use these endpoints, not internal APIs.
+#
+# Reference: docs/architecture/policies/POLICY_DOMAIN_V2_DESIGN.md
+# Contract: docs/contracts/CROSS_DOMAIN_POLICY_CONTRACT.md
+# =============================================================================
+
+
+# =============================================================================
+# Governance Metadata Schema (PIN-447 — aos_sdk-grade traceability)
+# =============================================================================
+
+
+class PolicyMetadata(BaseModel):
+    """
+    Governance metadata for policy artifacts (aos_sdk-grade).
+
+    STATUS: DECLARED (PARTIALLY MATERIALIZED)
+    Reference: docs/contracts/CROSS_DOMAIN_INVARIANTS.md Section IX
+    Maturity: docs/contracts/METADATA_MATURITY.md
+
+    Provides provenance, lifecycle, and accountability traceability
+    for cross-domain consumers per CROSS_DOMAIN_INVARIANTS.md.
+
+    NULL SEMANTICS (INV-META-NULL-001):
+    ===================================
+    A null field means "NOT YET MATERIALIZED", not "NOT APPLICABLE" or "DENIED".
+    Consumers MUST NOT:
+    - Branch on `field is None` to infer absence
+    - Treat null as negative truth (e.g., null approved_by ≠ rejected)
+    - Auto-populate nulls with system actors
+
+    FIELD CLASSIFICATION:
+    =====================
+    Class A (Immutable Provenance) — DB-backed, never changes once written:
+      - created_by, created_at, origin, source_proposal_id
+
+    Class B (Governance Decisions) — Human-gated, requires workflow:
+      - approved_by, approved_at (null until proposal workflow is real)
+
+    Class C (Temporal Validity) — Required before historical analytics:
+      - effective_from, effective_until (default: effective_from = created_at)
+    """
+
+    # CLASS A — Immutable Provenance (MATERIALIZED)
+    created_by: Optional[str] = None  # actor_id who created (null = system-generated)
+    created_at: datetime  # when created (REQUIRED - always present)
+    origin: str  # SYSTEM_DEFAULT, MANUAL, LEARNED, INCIDENT, MIGRATION (REQUIRED)
+    source_proposal_id: Optional[str] = None  # if promoted from proposal
+
+    # CLASS B — Governance Decisions (DECLARED, NOT MATERIALIZED)
+    approved_by: Optional[str] = None  # actor_id who approved (null = pending or N/A)
+    approved_at: Optional[datetime] = None  # when approved (null = pending or N/A)
+
+    # CLASS C — Temporal Validity (DECLARED, NOT MATERIALIZED)
+    effective_from: Optional[datetime] = None  # start of validity (null = created_at)
+    effective_until: Optional[datetime] = None  # end of validity (null = no expiry)
+
+    # Updated tracking
+    updated_at: Optional[datetime] = None  # last modification time
+
+
+def _build_policy_metadata_from_rule(rule) -> PolicyMetadata:
+    """
+    Build PolicyMetadata from a PolicyRule model instance.
+
+    Maps available model fields to governance metadata schema.
+    Fields not in the model are left as None (to be populated when
+    the underlying schema evolves).
+    """
+    return PolicyMetadata(
+        created_by=getattr(rule, "created_by", None),
+        created_at=rule.created_at,
+        approved_by=None,  # Not yet in PolicyRule model
+        approved_at=None,  # Not yet in PolicyRule model
+        effective_from=None,  # Not yet in PolicyRule model
+        effective_until=None,  # Not yet in PolicyRule model
+        origin=rule.source,  # MANUAL, SYSTEM, LEARNED maps to origin
+        source_proposal_id=getattr(rule, "source_proposal_id", None),
+        updated_at=getattr(rule, "updated_at", None),
+    )
+
+
+def _build_policy_metadata_from_limit(limit) -> PolicyMetadata:
+    """
+    Build PolicyMetadata from a Limit model instance.
+
+    Maps available model fields to governance metadata schema.
+    """
+    return PolicyMetadata(
+        created_by=None,  # Not in Limit model
+        created_at=limit.created_at,
+        approved_by=None,  # Not in Limit model
+        approved_at=None,  # Not in Limit model
+        effective_from=None,  # Not in Limit model
+        effective_until=None,  # Not in Limit model
+        origin="MANUAL",  # Limits are typically manually configured
+        source_proposal_id=None,
+        updated_at=getattr(limit, "updated_at", None),
+    )
+
+
+def _build_policy_metadata_from_violation(v) -> PolicyMetadata:
+    """
+    Build PolicyMetadata from a violation object (from policy engine).
+
+    Violations are system-generated enforcement events.
+    """
+    return PolicyMetadata(
+        created_by=None,  # System-generated
+        created_at=v.detected_at,
+        approved_by=None,  # Violations don't need approval
+        approved_at=None,
+        effective_from=None,
+        effective_until=None,
+        origin="SYSTEM",  # Violations are always system-generated
+        source_proposal_id=None,
+        updated_at=None,  # Violations are immutable
+    )
+
+
+def _build_policy_metadata_from_lesson(lesson: dict) -> PolicyMetadata:
+    """
+    Build PolicyMetadata from a lesson dict (from lessons_learned_engine).
+
+    Maps available dict fields to governance metadata schema.
+    """
+    created_at_str = lesson.get("created_at")
+    created_at = (
+        datetime.fromisoformat(created_at_str)
+        if created_at_str
+        else datetime.now(timezone.utc)
+    )
+
+    converted_at_str = lesson.get("converted_at")
+    converted_at = (
+        datetime.fromisoformat(converted_at_str)
+        if converted_at_str
+        else None
+    )
+
+    # Lessons originate from incidents or system detection
+    origin = "INCIDENT" if lesson.get("source_event_id") else "SYSTEM"
+
+    return PolicyMetadata(
+        created_by=lesson.get("created_by"),  # May be system or operator
+        created_at=created_at,
+        approved_by=None,  # Lessons in DRAFT don't have approval yet
+        approved_at=converted_at,  # Conversion time acts as informal approval
+        effective_from=None,  # Lessons don't have temporal validity
+        effective_until=lesson.get("deferred_until"),  # Deferred lessons have end time
+        origin=origin,
+        source_proposal_id=lesson.get("draft_proposal_id"),
+        updated_at=None,  # Lessons are immutable once created
+    )
+
+
+class PolicyContextSummary(BaseModel):
+    """Summary of an active policy for cross-domain consumption."""
+
+    policy_id: str
+    policy_name: str
+    status: str  # ACTIVE
+    enforcement_mode: str  # BLOCK, WARN, AUDIT, DISABLED
+    scope: str  # GLOBAL, TENANT, PROJECT, AGENT
+    source: str  # MANUAL, SYSTEM, LEARNED
+    created_at: datetime
+    # Facade reference (navigable)
+    facade_ref: str  # "/policy/active/{policy_id}"
+    # Governance metadata (PIN-447 — aos_sdk-grade traceability)
+    metadata: Optional[PolicyMetadata] = None
+
+
+class ActivePoliciesResponse(BaseModel):
+    """GET /policy/active response — What governs execution now?"""
+
+    items: List[PolicyContextSummary]
+    total: int
+    has_more: bool
+    # Cross-domain navigation hint
+    library_ref: str = "/policy/library"
+
+
+class PolicyLibrarySummary(BaseModel):
+    """Summary of a policy rule in the library."""
+
+    rule_id: str
+    name: str
+    enforcement_mode: str
+    scope: str
+    source: str
+    status: str  # ACTIVE, RETIRED
+    rule_type: Optional[str] = None  # SYSTEM, SAFETY, ETHICAL, TEMPORAL
+    created_at: datetime
+    facade_ref: str  # "/policy/library/{rule_id}"
+    # Governance metadata (PIN-447 — aos_sdk-grade traceability)
+    metadata: Optional[PolicyMetadata] = None
+
+
+class PolicyLibraryResponse(BaseModel):
+    """GET /policy/library response — What patterns are available?"""
+
+    items: List[PolicyLibrarySummary]
+    total: int
+    has_more: bool
+
+
+class PolicyLessonSummary(BaseModel):
+    """Summary of a lesson or draft for cross-domain consumption."""
+
+    lesson_id: str
+    title: str
+    lesson_type: str  # failure, near_threshold, critical_success
+    status: str  # pending, converted_to_draft, deferred, dismissed
+    severity: Optional[str] = None  # CRITICAL, HIGH, MEDIUM, LOW
+    source_event_type: str
+    has_proposed_action: bool
+    created_at: datetime
+    facade_ref: str  # "/policy/lessons/{lesson_id}"
+    # Governance metadata (PIN-447 — aos_sdk-grade traceability)
+    metadata: Optional[PolicyMetadata] = None
+
+
+class LessonsResponse(BaseModel):
+    """GET /policy/lessons response — What governance emerged?"""
+
+    items: List[PolicyLessonSummary]
+    total: int
+    has_more: bool
+    pending_count: int
+    converted_count: int
+
+
+class ThresholdSummary(BaseModel):
+    """Summary of an enforced limit/threshold."""
+
+    threshold_id: str
+    name: str
+    limit_category: str  # BUDGET, RATE, THRESHOLD
+    limit_type: str  # COST_USD, TOKENS_*, etc.
+    scope: str
+    enforcement: str  # BLOCK, WARN, REJECT, etc.
+    max_value: str  # String for Decimal serialization
+    status: str  # ACTIVE, DISABLED
+    facade_ref: str  # "/policy/thresholds/{threshold_id}"
+    # Governance metadata (PIN-447 — aos_sdk-grade traceability)
+    metadata: Optional[PolicyMetadata] = None
+
+
+class ThresholdsResponse(BaseModel):
+    """GET /policy/thresholds response — What limits are enforced?"""
+
+    items: List[ThresholdSummary]
+    total: int
+    has_more: bool
+
+
+class ViolationSummary(BaseModel):
+    """Summary of a policy violation for cross-domain consumption."""
+
+    violation_id: str
+    policy_id: Optional[str] = None
+    policy_name: Optional[str] = None
+    violation_type: str
+    severity: float
+    source: str  # guard, sim, runtime
+    occurred_at: datetime
+    facade_ref: str  # "/policy/violations/{violation_id}"
+    # Cross-domain linking
+    run_id: Optional[str] = None
+    # Governance metadata (PIN-447 — aos_sdk-grade traceability)
+    metadata: Optional[PolicyMetadata] = None
+
+
+class ViolationsResponse(BaseModel):
+    """GET /policy/violations response — What enforcement occurred?"""
+
+    items: List[ViolationSummary]
+    total: int
+    has_more: bool
+
+
+# =============================================================================
+# V2 Facade: GET /policy/active
+# =============================================================================
+
+
+@router.get(
+    "/active",
+    response_model=ActivePoliciesResponse,
+    summary="Active policies (V2 Facade)",
+    description="""
+    Returns currently active policies that govern execution.
+
+    **Cross-Domain Usage:** Activity and Incidents domains use this
+    endpoint to embed policy_context in their responses.
+
+    Reference: PIN-447, CROSS_DOMAIN_POLICY_CONTRACT.md
+    """,
+    tags=["policy-v2-facade"],
+)
+async def get_active_policies(
+    scope: Optional[str] = None,
+    enforcement_mode: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_async_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+) -> ActivePoliciesResponse:
+    """V2 Facade: What governs execution now?"""
+    from sqlalchemy import and_, select
+
+    from app.models.policy_control_plane import PolicyRule
+
+    try:
+        # Build query for active policies
+        stmt = select(PolicyRule).where(
+            and_(
+                PolicyRule.tenant_id == ctx.tenant_id,
+                PolicyRule.status == "ACTIVE",
+            )
+        )
+
+        if scope:
+            stmt = stmt.where(PolicyRule.scope == scope)
+        if enforcement_mode:
+            stmt = stmt.where(PolicyRule.enforcement_mode == enforcement_mode)
+
+        # Count total
+        from sqlalchemy import func
+
+        count_stmt = select(func.count(PolicyRule.id)).where(
+            and_(
+                PolicyRule.tenant_id == ctx.tenant_id,
+                PolicyRule.status == "ACTIVE",
+            )
+        )
+        if scope:
+            count_stmt = count_stmt.where(PolicyRule.scope == scope)
+        if enforcement_mode:
+            count_stmt = count_stmt.where(PolicyRule.enforcement_mode == enforcement_mode)
+
+        count_result = await session.execute(count_stmt)
+        total = count_result.scalar() or 0
+
+        # Execute with pagination
+        stmt = stmt.order_by(PolicyRule.created_at.desc()).limit(limit).offset(offset)
+        result = await session.execute(stmt)
+        rules = result.scalars().all()
+
+        items = [
+            PolicyContextSummary(
+                policy_id=str(rule.id),
+                policy_name=rule.name,
+                status=rule.status,
+                enforcement_mode=rule.enforcement_mode,
+                scope=rule.scope,
+                source=rule.source,
+                created_at=rule.created_at,
+                facade_ref=f"/policy/active/{rule.id}",
+                metadata=_build_policy_metadata_from_rule(rule),
+            )
+            for rule in rules
+        ]
+
+        return ActivePoliciesResponse(
+            items=items,
+            total=total,
+            has_more=(offset + len(items)) < total,
+            library_ref="/policy/library",
+        )
+
+    except Exception as e:
+        logger.exception("Failed to get active policies")
+        raise HTTPException(status_code=500, detail={"error": "query_failed", "message": str(e)})
+
+
+# =============================================================================
+# V2 Facade: GET /policy/active/{policy_id}
+# =============================================================================
+
+
+@router.get(
+    "/active/{policy_id}",
+    summary="Active policy detail (V2 Facade)",
+    description="Returns detail of a specific active policy.",
+    tags=["policy-v2-facade"],
+)
+async def get_active_policy_detail(
+    policy_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+) -> dict:
+    """V2 Facade: Policy detail for cross-domain navigation."""
+    from sqlalchemy import and_, select
+
+    from app.models.policy_control_plane import PolicyRule, PolicyRuleIntegrity
+
+    try:
+        stmt = (
+            select(PolicyRule, PolicyRuleIntegrity.integrity_status, PolicyRuleIntegrity.integrity_score)
+            .outerjoin(PolicyRuleIntegrity, PolicyRuleIntegrity.rule_id == PolicyRule.id)
+            .where(
+                and_(
+                    PolicyRule.id == policy_id,
+                    PolicyRule.tenant_id == ctx.tenant_id,
+                )
+            )
+        )
+
+        result = await session.execute(stmt)
+        row = result.first()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Policy not found")
+
+        rule = row[0]
+
+        return wrap_dict(
+            {
+                "policy_id": str(rule.id),
+                "policy_name": rule.name,
+                "description": getattr(rule, "description", None),
+                "status": rule.status,
+                "enforcement_mode": rule.enforcement_mode,
+                "scope": rule.scope,
+                "source": rule.source,
+                "rule_type": getattr(rule, "rule_type", None),
+                "rule_definition": getattr(rule, "rule_definition", None),
+                "created_at": rule.created_at.isoformat() if rule.created_at else None,
+                "updated_at": rule.updated_at.isoformat() if getattr(rule, "updated_at", None) else None,
+                "integrity_status": row[1] if row[1] else "UNKNOWN",
+                "integrity_score": str(row[2]) if row[2] else "0",
+                "facade_ref": f"/policy/active/{rule.id}",
+                # Cross-domain references
+                "thresholds_ref": "/policy/thresholds",
+                "violations_ref": "/policy/violations",
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to get policy detail")
+        raise HTTPException(status_code=500, detail={"error": "query_failed", "message": str(e)})
+
+
+# =============================================================================
+# V2 Facade: GET /policy/library
+# =============================================================================
+
+
+@router.get(
+    "/library",
+    response_model=PolicyLibraryResponse,
+    summary="Policy library (V2 Facade)",
+    description="""
+    Returns all available policy patterns (active and retired).
+
+    **Cross-Domain Usage:** Provides the policy catalog for reference.
+
+    Reference: PIN-447
+    """,
+    tags=["policy-v2-facade"],
+)
+async def get_policy_library(
+    status: Optional[str] = None,  # None = all, ACTIVE, RETIRED
+    rule_type: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_async_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+) -> PolicyLibraryResponse:
+    """V2 Facade: What patterns are available?"""
+    from sqlalchemy import select
+
+    from app.models.policy_control_plane import PolicyRule
+
+    try:
+        stmt = select(PolicyRule).where(PolicyRule.tenant_id == ctx.tenant_id)
+
+        if status:
+            stmt = stmt.where(PolicyRule.status == status)
+        if rule_type:
+            stmt = stmt.where(PolicyRule.rule_type == rule_type)
+
+        # Count
+        from sqlalchemy import func
+
+        count_stmt = select(func.count(PolicyRule.id)).where(PolicyRule.tenant_id == ctx.tenant_id)
+        if status:
+            count_stmt = count_stmt.where(PolicyRule.status == status)
+        if rule_type:
+            count_stmt = count_stmt.where(PolicyRule.rule_type == rule_type)
+
+        count_result = await session.execute(count_stmt)
+        total = count_result.scalar() or 0
+
+        stmt = stmt.order_by(PolicyRule.created_at.desc()).limit(limit).offset(offset)
+        result = await session.execute(stmt)
+        rules = result.scalars().all()
+
+        items = [
+            PolicyLibrarySummary(
+                rule_id=str(rule.id),
+                name=rule.name,
+                enforcement_mode=rule.enforcement_mode,
+                scope=rule.scope,
+                source=rule.source,
+                status=rule.status,
+                rule_type=getattr(rule, "rule_type", None),
+                created_at=rule.created_at,
+                facade_ref=f"/policy/library/{rule.id}",
+                metadata=_build_policy_metadata_from_rule(rule),
+            )
+            for rule in rules
+        ]
+
+        return PolicyLibraryResponse(
+            items=items,
+            total=total,
+            has_more=(offset + len(items)) < total,
+        )
+
+    except Exception as e:
+        logger.exception("Failed to get policy library")
+        raise HTTPException(status_code=500, detail={"error": "query_failed", "message": str(e)})
+
+
+# =============================================================================
+# V2 Facade: GET /policy/lessons
+# =============================================================================
+
+
+@router.get(
+    "/lessons",
+    response_model=LessonsResponse,
+    summary="Policy lessons (V2 Facade)",
+    description="""
+    Returns lessons learned and governance that emerged from execution.
+
+    **Cross-Domain Usage:** Incidents domain links to lessons via lesson_ref
+    when resolving incidents.
+
+    Reference: PIN-447, CROSS_DOMAIN_POLICY_CONTRACT.md
+    """,
+    tags=["policy-v2-facade"],
+)
+async def get_policy_lessons(
+    status: Optional[str] = None,  # pending, converted_to_draft, deferred, dismissed
+    lesson_type: Optional[str] = None,  # failure, near_threshold, critical_success
+    limit: int = 50,
+    offset: int = 0,
+    ctx: TenantContext = Depends(get_tenant_context),
+) -> LessonsResponse:
+    """V2 Facade: What governance emerged?"""
+    from app.services.lessons_learned_engine import get_lessons_learned_engine
+
+    try:
+        engine = get_lessons_learned_engine()
+        lessons = engine.list_lessons(
+            tenant_id=ctx.tenant_id,
+            lesson_type=lesson_type,
+            status=status,
+            limit=limit,
+            offset=offset,
+        )
+
+        # Get stats for counts
+        stats = engine.get_lesson_stats(tenant_id=ctx.tenant_id)
+
+        items = [
+            PolicyLessonSummary(
+                lesson_id=lesson["id"],
+                title=lesson["title"],
+                lesson_type=lesson["lesson_type"],
+                status=lesson["status"],
+                severity=lesson.get("severity"),
+                source_event_type=lesson["source_event_type"],
+                has_proposed_action=lesson["has_proposed_action"],
+                created_at=datetime.fromisoformat(lesson["created_at"]) if lesson["created_at"] else datetime.utcnow(),
+                facade_ref=f"/policy/lessons/{lesson['id']}",
+                metadata=_build_policy_metadata_from_lesson(lesson),
+            )
+            for lesson in lessons
+        ]
+
+        return LessonsResponse(
+            items=items,
+            total=len(items),
+            has_more=len(items) == limit,
+            pending_count=stats.get("by_status", {}).get("pending", 0),
+            converted_count=stats.get("by_status", {}).get("converted_to_draft", 0),
+        )
+
+    except Exception as e:
+        logger.exception("Failed to get lessons")
+        raise HTTPException(status_code=500, detail={"error": "query_failed", "message": str(e)})
+
+
+# =============================================================================
+# V2 Facade: GET /policy/lessons/{lesson_id}
+# =============================================================================
+
+
+@router.get(
+    "/lessons/{lesson_id}",
+    summary="Lesson detail (V2 Facade)",
+    description="Returns detail of a specific lesson.",
+    tags=["policy-v2-facade"],
+)
+async def get_policy_lesson_detail(
+    lesson_id: str,
+    ctx: TenantContext = Depends(get_tenant_context),
+) -> dict:
+    """V2 Facade: Lesson detail for cross-domain navigation."""
+    from uuid import UUID
+
+    from app.services.lessons_learned_engine import get_lessons_learned_engine
+
+    try:
+        engine = get_lessons_learned_engine()
+        lesson = engine.get_lesson(lesson_id=UUID(lesson_id), tenant_id=ctx.tenant_id)
+
+        if not lesson:
+            raise HTTPException(status_code=404, detail="Lesson not found")
+
+        return wrap_dict(
+            {
+                "lesson_id": lesson["id"],
+                "title": lesson["title"],
+                "description": lesson["description"],
+                "lesson_type": lesson["lesson_type"],
+                "status": lesson["status"],
+                "severity": lesson.get("severity"),
+                "source_event_id": lesson.get("source_event_id"),
+                "source_event_type": lesson["source_event_type"],
+                "source_run_id": lesson.get("source_run_id"),
+                "proposed_action": lesson.get("proposed_action"),
+                "detected_pattern": lesson.get("detected_pattern"),
+                "draft_proposal_id": lesson.get("draft_proposal_id"),
+                "created_at": lesson["created_at"],
+                "converted_at": lesson.get("converted_at"),
+                "deferred_until": lesson.get("deferred_until"),
+                "facade_ref": f"/policy/lessons/{lesson['id']}",
+                # Cross-domain reference
+                "source_incident_ref": f"/incidents/{lesson['source_event_id']}" if lesson.get("source_event_id") else None,
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to get lesson detail")
+        raise HTTPException(status_code=500, detail={"error": "query_failed", "message": str(e)})
+
+
+# =============================================================================
+# V2 Facade: GET /policy/thresholds
+# =============================================================================
+
+
+@router.get(
+    "/thresholds",
+    response_model=ThresholdsResponse,
+    summary="Policy thresholds (V2 Facade)",
+    description="""
+    Returns enforced limits and thresholds.
+
+    **Cross-Domain Usage:** Activity domain embeds threshold_ref in
+    policy_context for runs near limits.
+
+    Reference: PIN-447, CROSS_DOMAIN_POLICY_CONTRACT.md
+    """,
+    tags=["policy-v2-facade"],
+)
+async def get_policy_thresholds(
+    limit_category: Optional[str] = None,  # BUDGET, RATE, THRESHOLD
+    scope: Optional[str] = None,
+    status: str = "ACTIVE",
+    limit: int = 50,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_async_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+) -> ThresholdsResponse:
+    """V2 Facade: What limits are enforced?"""
+    from sqlalchemy import and_, func, select
+
+    from app.models.policy_control_plane import Limit
+
+    try:
+        stmt = select(Limit).where(
+            and_(
+                Limit.tenant_id == ctx.tenant_id,
+                Limit.status == status,
+            )
+        )
+
+        if limit_category:
+            stmt = stmt.where(Limit.limit_category == limit_category)
+        if scope:
+            stmt = stmt.where(Limit.scope == scope)
+
+        # Count
+        count_stmt = select(func.count(Limit.id)).where(
+            and_(
+                Limit.tenant_id == ctx.tenant_id,
+                Limit.status == status,
+            )
+        )
+        if limit_category:
+            count_stmt = count_stmt.where(Limit.limit_category == limit_category)
+        if scope:
+            count_stmt = count_stmt.where(Limit.scope == scope)
+
+        count_result = await session.execute(count_stmt)
+        total = count_result.scalar() or 0
+
+        stmt = stmt.order_by(Limit.created_at.desc()).limit(limit).offset(offset)
+        result = await session.execute(stmt)
+        limits = result.scalars().all()
+
+        items = [
+            ThresholdSummary(
+                threshold_id=str(lim.id),
+                name=lim.name,
+                limit_category=lim.limit_category,
+                limit_type=lim.limit_type,
+                scope=lim.scope,
+                enforcement=lim.enforcement,
+                max_value=str(lim.max_value),
+                status=lim.status,
+                facade_ref=f"/policy/thresholds/{lim.id}",
+                metadata=_build_policy_metadata_from_limit(lim),
+            )
+            for lim in limits
+        ]
+
+        return ThresholdsResponse(
+            items=items,
+            total=total,
+            has_more=(offset + len(items)) < total,
+        )
+
+    except Exception as e:
+        logger.exception("Failed to get thresholds")
+        raise HTTPException(status_code=500, detail={"error": "query_failed", "message": str(e)})
+
+
+# =============================================================================
+# V2 Facade: GET /policy/thresholds/{threshold_id}
+# =============================================================================
+
+
+@router.get(
+    "/thresholds/{threshold_id}",
+    summary="Threshold detail (V2 Facade)",
+    description="Returns detail of a specific threshold/limit.",
+    tags=["policy-v2-facade"],
+)
+async def get_policy_threshold_detail(
+    threshold_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+) -> dict:
+    """V2 Facade: Threshold detail for cross-domain navigation."""
+    from sqlalchemy import and_, select
+
+    from app.models.policy_control_plane import Limit, LimitIntegrity
+
+    try:
+        stmt = (
+            select(Limit, LimitIntegrity.integrity_status, LimitIntegrity.integrity_score)
+            .outerjoin(LimitIntegrity, LimitIntegrity.limit_id == Limit.id)
+            .where(
+                and_(
+                    Limit.id == threshold_id,
+                    Limit.tenant_id == ctx.tenant_id,
+                )
+            )
+        )
+
+        result = await session.execute(stmt)
+        row = result.first()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Threshold not found")
+
+        lim = row[0]
+
+        return wrap_dict(
+            {
+                "threshold_id": str(lim.id),
+                "name": lim.name,
+                "description": getattr(lim, "description", None),
+                "limit_category": lim.limit_category,
+                "limit_type": lim.limit_type,
+                "scope": lim.scope,
+                "enforcement": lim.enforcement,
+                "max_value": str(lim.max_value),
+                "window_seconds": lim.window_seconds,
+                "reset_period": lim.reset_period,
+                "status": lim.status,
+                "created_at": lim.created_at.isoformat() if lim.created_at else None,
+                "updated_at": lim.updated_at.isoformat() if getattr(lim, "updated_at", None) else None,
+                "integrity_status": row[1] if row[1] else "UNKNOWN",
+                "integrity_score": str(row[2]) if row[2] else "0",
+                "facade_ref": f"/policy/thresholds/{lim.id}",
+                # Cross-domain references
+                "violations_ref": f"/policy/violations?threshold_id={lim.id}",
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to get threshold detail")
+        raise HTTPException(status_code=500, detail={"error": "query_failed", "message": str(e)})
+
+
+# =============================================================================
+# V2 Facade: GET /policy/violations
+# =============================================================================
+
+
+@router.get(
+    "/violations",
+    response_model=ViolationsResponse,
+    summary="Policy violations (V2 Facade)",
+    description="""
+    Returns policy enforcement events (violations).
+
+    **Cross-Domain Usage:** Incidents domain links to violations
+    when creating incidents from policy breaches.
+
+    **Invariant:** Violations MUST exist before incidents.
+
+    Reference: PIN-447, CROSS_DOMAIN_POLICY_CONTRACT.md
+    """,
+    tags=["policy-v2-facade"],
+)
+async def get_policy_violations_v2(
+    violation_type: Optional[str] = None,
+    severity_min: Optional[float] = None,
+    hours: int = 24,
+    limit: int = 50,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_async_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+) -> ViolationsResponse:
+    """V2 Facade: What enforcement occurred?"""
+    from app.policy.engine import get_policy_engine
+
+    try:
+        engine = get_policy_engine()
+
+        # Convert string violation_type to enum if provided
+        from app.policy.models import ViolationType as ViolationTypeEnum
+
+        violation_type_enum = None
+        if violation_type:
+            type_mapping = {
+                "cost": ViolationTypeEnum.RISK_CEILING_BREACH,
+                "quota": ViolationTypeEnum.TEMPORAL_LIMIT_EXCEEDED,
+                "rate": ViolationTypeEnum.TEMPORAL_LIMIT_EXCEEDED,
+                "temporal": ViolationTypeEnum.TEMPORAL_LIMIT_EXCEEDED,
+                "safety": ViolationTypeEnum.SAFETY_RULE_TRIGGERED,
+                "ethical": ViolationTypeEnum.ETHICAL_VIOLATION,
+            }
+            violation_type_enum = type_mapping.get(violation_type)
+
+        violations = await engine.get_violations(
+            session,
+            tenant_id=ctx.tenant_id,
+            violation_type=violation_type_enum,
+            severity_min=severity_min,
+            since=datetime.now(timezone.utc) - timedelta(hours=hours),
+            limit=limit + 1,
+        )
+
+        has_more = len(violations) > limit
+        violations = violations[:limit]
+
+        items = [
+            ViolationSummary(
+                violation_id=str(v.id),
+                policy_id=getattr(v, "policy_id", None),
+                policy_name=getattr(v, "policy_name", None),
+                violation_type=str(v.violation_type.value) if hasattr(v.violation_type, "value") else str(v.violation_type),
+                severity=v.severity,
+                source=getattr(v, "source", "runtime"),
+                occurred_at=v.detected_at,
+                facade_ref=f"/policy/violations/{v.id}",
+                run_id=getattr(v, "run_id", None),
+                metadata=_build_policy_metadata_from_violation(v),
+            )
+            for v in violations
+        ]
+
+        return ViolationsResponse(
+            items=items,
+            total=len(items),
+            has_more=has_more,
+        )
+
+    except Exception as e:
+        logger.exception("Failed to get violations")
+        raise HTTPException(status_code=500, detail={"error": "query_failed", "message": str(e)})
+
+
+# =============================================================================
+# V2 Facade: GET /policy/violations/{violation_id}
+# =============================================================================
+
+
+@router.get(
+    "/violations/{violation_id}",
+    summary="Violation detail (V2 Facade)",
+    description="Returns detail of a specific violation.",
+    tags=["policy-v2-facade"],
+)
+async def get_policy_violation_detail(
+    violation_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+) -> dict:
+    """V2 Facade: Violation detail for cross-domain navigation."""
+    from app.policy.engine import get_policy_engine
+
+    try:
+        engine = get_policy_engine()
+
+        # Get violation by ID
+        violations = await engine.get_violations(
+            session,
+            tenant_id=ctx.tenant_id,
+            limit=1000,  # Search all recent
+        )
+
+        violation = None
+        for v in violations:
+            if str(v.id) == violation_id:
+                violation = v
+                break
+
+        if not violation:
+            raise HTTPException(status_code=404, detail="Violation not found")
+
+        return wrap_dict(
+            {
+                "violation_id": str(violation.id),
+                "policy_id": getattr(violation, "policy_id", None),
+                "policy_name": getattr(violation, "policy_name", None),
+                "violation_type": (
+                    str(violation.violation_type.value)
+                    if hasattr(violation.violation_type, "value")
+                    else str(violation.violation_type)
+                ),
+                "severity": violation.severity,
+                "source": getattr(violation, "source", "runtime"),
+                "description": getattr(violation, "description", None),
+                "run_id": getattr(violation, "run_id", None),
+                "agent_id": violation.agent_id,
+                "detected_at": violation.detected_at.isoformat() if violation.detected_at else None,
+                "context": getattr(violation, "context", {}),
+                "facade_ref": f"/policy/violations/{violation.id}",
+                # Cross-domain references
+                "run_ref": f"/activity/runs/{violation.run_id}" if getattr(violation, "run_id", None) else None,
+                "policy_ref": (
+                    f"/policy/active/{violation.policy_id}" if getattr(violation, "policy_id", None) else None
+                ),
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to get violation detail")
+        raise HTTPException(status_code=500, detail={"error": "query_failed", "message": str(e)})

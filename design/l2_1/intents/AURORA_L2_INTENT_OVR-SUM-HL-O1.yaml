@@ -33,11 +33,10 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: overview.activity_snapshot
-  status: ASSUMED
-  assumed_endpoint: null
+  id: overview.highlights
+  status: OBSERVED
+  assumed_endpoint: /api/v1/activity/summary/by-status
   assumed_method: GET
-  facade_note: "Changed from /api/v1/activity/summary to overview facade - API Audit 2026-01-16"
 sdsr:
   scenario: observe_overview_activity_snapshot
   verified: false

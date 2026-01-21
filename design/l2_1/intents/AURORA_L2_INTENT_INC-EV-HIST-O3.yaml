@@ -33,9 +33,9 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: incidents.v1_list
+  id: incidents.recurring
   status: ASSUMED
-  assumed_endpoint: /v1/incidents
+  assumed_endpoint: /api/v1/incidents/recurring
   assumed_method: GET
 sdsr:
   scenario: SDSR-INC-EV-HIST-O3-001

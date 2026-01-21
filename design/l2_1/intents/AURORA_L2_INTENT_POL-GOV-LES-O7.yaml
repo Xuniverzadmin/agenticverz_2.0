@@ -1,0 +1,66 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: POL-GOV-LES-O7
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-GOV-LES-O7
+version: 1.0.0
+panel_class: interpretation
+metadata:
+  domain: POLICIES
+  subdomain: GOVERNANCE
+  topic: LESSONS
+  topic_id: POLICIES.GOVERNANCE.LESSONS
+  order: O7
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: policy_governance
+  facet_criticality: HIGH
+display:
+  name: POL-GOV-LES-O7
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: lessons.get
+  status: ASSUMED
+  assumed_endpoint: /api/v1/policy-layer/lessons/{lesson_id}
+  assumed_method: GET
+sdsr:
+  scenario: SDSR-POL-GOV-DFT-O3-001
+  verified: false
+notes: 'Show draft policy proposals derived from lessons — awaiting human approval
+  or rejection.
+
+
+  What it shows:
+
+  - Machine-proposed policy drafts based on observed lessons
+
+  - Each proposal linked to source lessons (evidence chain)
+
+  - Expected benefit: incidents prevented, costs saved
+
+  - Known risks: false positives, friction
+
+  - Proposal status: pending, approved, rejected, deferred
+
+
+  What it explicitly does NOT show:
+
+  - No auto-activation
+
+  - No enforcement
+
+  - No silent decisions'

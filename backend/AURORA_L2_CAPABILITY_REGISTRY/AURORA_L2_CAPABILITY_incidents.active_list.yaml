@@ -1,0 +1,43 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
+#
+capability_id: incidents.active_list
+status: OBSERVED
+source_panels:
+- INC-EV-ACT-O5
+domain: INCIDENTS
+metadata:
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
+  declared_by: intent-ledger
+  declared_on: '2026-01-20'
+  observed_by: SDSR-INC-EV-ACT-O1-001
+assumption:
+  endpoint: /api/v1/incidents/active
+  method: GET
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: /api/v1/incidents/active
+  observed_method: GET
+  observed_at: '2026-01-18T14:00:00+00:00'
+  observation_id: OBS-PHASE4-INC-ACTIVE-001
+acceptance_criteria:
+- Returns incident attribution data
+- Response includes escalation eligibility
+observation:
+  scenario_id: PHASE4-INC-MIGRATION
+  observed_at: '2026-01-18T14:00:00+00:00'
+  trace_id: null
+  invariants_passed: 3
+  invariants_total: 3
+  evidence:
+  - Phase 2 shadow validation passed (2 ACTIVE incidents, identity parity)
+  - Phase 3 panel rebinding complete (OpenIncidentsList → fetchActiveIncidents())
+  - No frontend calls to deprecated /incidents endpoint
+coherency:
+  last_checked: '2026-01-18T14:00:00+00:00'
+  status: PASSED
+  checked_by: phase4-migration

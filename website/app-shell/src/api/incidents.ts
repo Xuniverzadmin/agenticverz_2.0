@@ -94,9 +94,192 @@ export interface IncidentsSummaryParams {
   include_synthetic?: boolean;
 }
 
+// =============================================================================
+// Phase 3 Migration: Topic-Scoped Fetch Functions
+// Reference: INCIDENTS_DOMAIN_MIGRATION_PLAN.md
+// =============================================================================
+
+export interface TopicScopedIncidentsParams {
+  limit?: number;
+  offset?: number;
+  severity?: string;
+  category?: string;
+  cause_type?: string;
+  is_synthetic?: boolean;
+}
+
+export interface TopicScopedIncidentsResponse {
+  items: IncidentSummary[];
+  total: number;
+  has_more: boolean;
+  filters_applied: Record<string, unknown>;
+  pagination: {
+    limit: number;
+    offset: number;
+    next_offset: number | null;
+  };
+}
+
 /**
- * Fetch incidents from the backend
- * This uses the real /api/v1/incidents endpoint
+ * Fetch ACTIVE incidents (topic-scoped endpoint)
+ * Topic enforced at endpoint boundary - no state/topic params needed
+ * Reference: Phase 3.1 ACTIVE Topic Rebinding
+ */
+export async function fetchActiveIncidents(params: TopicScopedIncidentsParams = {}): Promise<TopicScopedIncidentsResponse> {
+  const queryParams = new URLSearchParams();
+
+  if (params.limit !== undefined) queryParams.set('limit', params.limit.toString());
+  if (params.offset !== undefined) queryParams.set('offset', params.offset.toString());
+  if (params.severity !== undefined) queryParams.set('severity', params.severity);
+  if (params.category !== undefined) queryParams.set('category', params.category);
+  if (params.cause_type !== undefined) queryParams.set('cause_type', params.cause_type);
+  if (params.is_synthetic !== undefined) queryParams.set('is_synthetic', params.is_synthetic.toString());
+
+  const url = `/api/v1/incidents/active${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+  const response = await apiClient.get<TopicScopedIncidentsResponse>(url);
+  return response.data;
+}
+
+/**
+ * Fetch RESOLVED incidents (topic-scoped endpoint)
+ * Topic enforced at endpoint boundary - no state/topic params needed
+ * Reference: Phase 3.2 RESOLVED Topic Rebinding
+ */
+export async function fetchResolvedIncidents(params: TopicScopedIncidentsParams = {}): Promise<TopicScopedIncidentsResponse> {
+  const queryParams = new URLSearchParams();
+
+  if (params.limit !== undefined) queryParams.set('limit', params.limit.toString());
+  if (params.offset !== undefined) queryParams.set('offset', params.offset.toString());
+  if (params.severity !== undefined) queryParams.set('severity', params.severity);
+  if (params.category !== undefined) queryParams.set('category', params.category);
+  if (params.cause_type !== undefined) queryParams.set('cause_type', params.cause_type);
+  if (params.is_synthetic !== undefined) queryParams.set('is_synthetic', params.is_synthetic.toString());
+
+  const url = `/api/v1/incidents/resolved${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+  const response = await apiClient.get<TopicScopedIncidentsResponse>(url);
+  return response.data;
+}
+
+/**
+ * Fetch HISTORICAL incidents (topic-scoped endpoint)
+ * Topic enforced at endpoint boundary - RESOLVED beyond retention window
+ * Reference: Phase 3.3 HISTORICAL Topic Rebinding
+ */
+export async function fetchHistoricalIncidents(params: TopicScopedIncidentsParams & { retention_days?: number } = {}): Promise<TopicScopedIncidentsResponse> {
+  const queryParams = new URLSearchParams();
+
+  if (params.limit !== undefined) queryParams.set('limit', params.limit.toString());
+  if (params.offset !== undefined) queryParams.set('offset', params.offset.toString());
+  if (params.severity !== undefined) queryParams.set('severity', params.severity);
+  if (params.category !== undefined) queryParams.set('category', params.category);
+  if (params.cause_type !== undefined) queryParams.set('cause_type', params.cause_type);
+  if (params.retention_days !== undefined) queryParams.set('retention_days', params.retention_days.toString());
+
+  const url = `/api/v1/incidents/historical${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+  const response = await apiClient.get<TopicScopedIncidentsResponse>(url);
+  return response.data;
+}
+
+// =============================================================================
+// Phase 3 Migration: Historical Analytics (Backend-Computed)
+// =============================================================================
+
+export interface HistoricalTrendDataPoint {
+  period: string;
+  incident_count: number;
+  resolved_count: number;
+  avg_resolution_time_ms: number | null;
+}
+
+export interface HistoricalTrendResponse {
+  data_points: HistoricalTrendDataPoint[];
+  granularity: string;
+  window_days: number;
+  total_incidents: number;
+  generated_at: string;
+}
+
+export interface HistoricalDistributionEntry {
+  dimension: string;
+  value: string;
+  count: number;
+  percentage: number;
+}
+
+export interface HistoricalDistributionResponse {
+  by_category: HistoricalDistributionEntry[];
+  by_severity: HistoricalDistributionEntry[];
+  by_cause_type: HistoricalDistributionEntry[];
+  window_days: number;
+  total_incidents: number;
+  generated_at: string;
+}
+
+export interface CostTrendDataPoint {
+  period: string;
+  total_cost: number;
+  incident_count: number;
+  avg_cost_per_incident: number;
+}
+
+export interface CostTrendResponse {
+  data_points: CostTrendDataPoint[];
+  granularity: string;
+  window_days: number;
+  total_cost: number;
+  total_incidents: number;
+  generated_at: string;
+}
+
+/**
+ * Fetch historical incident trend (backend-computed analytics)
+ * Reference: Phase 3.3 HISTORICAL Topic Rebinding - HIST-O1
+ */
+export async function fetchHistoricalTrend(params: { window_days?: number; granularity?: string } = {}): Promise<HistoricalTrendResponse> {
+  const queryParams = new URLSearchParams();
+  if (params.window_days !== undefined) queryParams.set('window_days', params.window_days.toString());
+  if (params.granularity !== undefined) queryParams.set('granularity', params.granularity);
+
+  const url = `/api/v1/incidents/historical/trend${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+  const response = await apiClient.get<HistoricalTrendResponse>(url);
+  return response.data;
+}
+
+/**
+ * Fetch historical incident distribution (backend-computed analytics)
+ * Reference: Phase 3.3 HISTORICAL Topic Rebinding - HIST-O2
+ */
+export async function fetchHistoricalDistribution(params: { window_days?: number } = {}): Promise<HistoricalDistributionResponse> {
+  const queryParams = new URLSearchParams();
+  if (params.window_days !== undefined) queryParams.set('window_days', params.window_days.toString());
+
+  const url = `/api/v1/incidents/historical/distribution${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+  const response = await apiClient.get<HistoricalDistributionResponse>(url);
+  return response.data;
+}
+
+/**
+ * Fetch historical cost trend (backend-computed analytics)
+ * Reference: Phase 3.3 HISTORICAL Topic Rebinding - HIST-O4
+ */
+export async function fetchHistoricalCostTrend(params: { window_days?: number; granularity?: string } = {}): Promise<CostTrendResponse> {
+  const queryParams = new URLSearchParams();
+  if (params.window_days !== undefined) queryParams.set('window_days', params.window_days.toString());
+  if (params.granularity !== undefined) queryParams.set('granularity', params.granularity);
+
+  const url = `/api/v1/incidents/historical/cost-trend${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+  const response = await apiClient.get<CostTrendResponse>(url);
+  return response.data;
+}
+
+// =============================================================================
+// Legacy Fetch Functions (Kept for backward compatibility during migration)
+// These will be deprecated after Phase 5
+// =============================================================================
+
+/**
+ * @deprecated Use fetchActiveIncidents() or fetchResolvedIncidents() instead
+ * Fetch incidents from the backend using generic endpoint
  */
 export async function fetchIncidents(params: IncidentsQueryParams = {}): Promise<IncidentsResponse> {
   const queryParams = new URLSearchParams();

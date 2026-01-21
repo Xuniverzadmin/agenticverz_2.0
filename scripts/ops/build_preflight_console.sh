@@ -92,10 +92,12 @@ npm install --silent
 echo ""
 
 # Step 4: Copy projection lock to public assets
-echo "Step 4/5: Copying projection lock to build..."
+# V2 CONSTITUTION SOURCE - Decoupled from AURORA pipeline (2026-01-20)
+# DO NOT change back to design/l2_1/ui_contract/ - that is AURORA-generated
+echo "Step 4/5: Copying V2 Constitution projection lock to build..."
 mkdir -p "$APP_SHELL/public/projection"
-cp "$REPO_ROOT/design/l2_1/ui_contract/ui_projection_lock.json" "$APP_SHELL/public/projection/"
-echo "Copied ui_projection_lock.json to public/projection/"
+cp "$REPO_ROOT/design/v2_constitution/ui_projection_lock.json" "$APP_SHELL/public/projection/"
+echo "Copied V2 Constitution ui_projection_lock.json to public/projection/"
 echo ""
 
 # Step 5: Build with preflight environment

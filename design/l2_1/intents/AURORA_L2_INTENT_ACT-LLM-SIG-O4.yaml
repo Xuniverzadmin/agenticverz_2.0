@@ -33,10 +33,13 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: activity.discovery_list
-  status: ASSUMED
-  assumed_endpoint: null
+  id: activity.cost_analysis
+  status: DECLARED
+  assumed_endpoint: /api/v1/activity/cost-analysis
   assumed_method: GET
+sdsr:
+  scenario: SDSR-ACT-LLM-SIG-O4-001
+  verified: false
 notes: 'Surface economic deviations — where money is being lost or saved unexpectedly.
 
 

@@ -1,12 +1,23 @@
-# Layer: L2 — Product APIs
+# Layer: L2a — Internal/SDK API (NOT domain authority)
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: sync
 # Role: Trace storage, indexing, query, and determinism validation
 # Authority: WRITE trace mismatch reports (via store abstraction)
-# Callers: External clients, SDK, Customer Console, Replay system
+# Callers: SDK, Replay system, Internal services
+# Allowed Imports: L3, L4, L6
+# Forbidden Imports: L1
 # Reference: M8 Trace System
+#
+# GOVERNANCE NOTE (LOGS Domain V2):
+# This is NOT the canonical LOGS domain facade.
+# The canonical facade is /api/v1/logs/* (logs.py).
+# This file provides SDK-facing trace APIs for:
+# - Trace ingestion from SDK
+# - Replay verification
+# - Determinism validation
+# Console users should use /api/v1/logs/llm-runs/* for log viewing.
 
 """
 Trace Query API

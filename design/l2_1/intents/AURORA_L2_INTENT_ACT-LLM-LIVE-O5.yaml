@@ -33,18 +33,35 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: activity.health_status
-  status: ASSUMED
+  id: activity.runs_by_dimension
+  status: DECLARED
   assumed_endpoint: null
   assumed_method: GET
+sdsr:
+  scenario: SDSR-ACT-LLM-LIVE-O5-001
+  verified: false
 notes: 'Provide a coarse distribution of live runs by major dimension.
 
 
   What it shows:
 
-  - Distribution by LLM provider, agent, or trigger type
+  - Distribution by LLM provider, agent, source, risk level, status, or cost
 
-  (exact dimension decided later)
+  - Dimension selector buttons to switch views (LIVE topic-scoped):
+
+  - By Provider → /runs/live/by-dimension?dim=provider_type
+
+  - By Source → /runs/live/by-dimension?dim=source
+
+  - By Agent → /runs/live/by-dimension?dim=agent_id
+
+  - By Risk → /runs/live/by-dimension?dim=risk_level
+
+  - By Status → /summary/by-status (future: /summary/live/by-status)
+
+  - By Cost → /cost-analysis (future: /cost-analysis/live)
+
+  - NOTE: Per Policy TOPIC-SCOPED-ENDPOINT-001, state=LIVE is hardcoded at endpoint
 
 
   What it explicitly does NOT show:

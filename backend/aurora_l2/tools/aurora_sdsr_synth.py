@@ -4,24 +4,29 @@ AURORA L2 SDSR Scenario Synthesizer (Phase 4 Automation)
 
 Generates SDSR scenario YAML from intent and capability.
 Scenario defines what to inject and what to expect.
-Human may optionally refine invariants.
+
+ARCHITECTURE (3-Layer Model):
+    L0 — Transport (synth-owned)     → Endpoint reachable, auth works, response exists
+    L1 — Domain (domain-owned)       → policy_context, EvidenceMetadata, etc.
+    L2 — Capability (optional)       → Specific business rules
+
+DOMAIN AUTHORITY:
+    - Synth ATTACHES invariants, does not INVENT them
+    - Domain invariants loaded from backend/sdsr/invariants/
+    - Invariant IDs stored in YAML, executed at runtime
 
 Usage:
     python aurora_sdsr_synth.py --panel OVR-SUM-HL-O2
-    python aurora_sdsr_synth.py --panel OVR-SUM-HL-O2 --invariants strict
+    python aurora_sdsr_synth.py --panel OVR-SUM-HL-O2 --required-only
 
 What gets generated:
     - scenario_id (derived from panel_id)
-    - inject block (API call definition)
+    - inject block (API call with domain-specific params)
     - expect block (response shape assertions)
-    - invariants (default set from capability type)
-
-Human may optionally:
-    - Add domain-specific invariants
-    - Tighten response expectations
-    - Add custom checks
+    - invariants (L0 transport + L1 domain, by ID reference)
 
 Author: AURORA L2 Automation
+Reference: PIN-370, SDSR Layered Architecture
 """
 
 import yaml
@@ -33,16 +38,38 @@ from typing import Dict, Optional, List
 
 # Paths
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
+BACKEND_ROOT = REPO_ROOT / "backend"
 INTENTS_DIR = REPO_ROOT / "design/l2_1/intents"
 CAPABILITY_REGISTRY = REPO_ROOT / "backend/AURORA_L2_CAPABILITY_REGISTRY"
 SDSR_SCENARIOS_DIR = REPO_ROOT / "backend/scripts/sdsr/scenarios"
 
+# Add backend to path for invariant imports
+sys.path.insert(0, str(BACKEND_ROOT))
+
+# Import domain invariant loader
+try:
+    from sdsr.invariants import (
+        load_domain_invariants,
+        get_invariant_ids_for_domain,
+        get_default_params,
+        get_transport_invariant_ids,
+    )
+    INVARIANTS_AVAILABLE = True
+except ImportError as e:
+    print(f"WARNING: Could not import domain invariants: {e}", file=sys.stderr)
+    print("Falling back to legacy invariant generation", file=sys.stderr)
+    INVARIANTS_AVAILABLE = False
+
 
 def load_intent_yaml(panel_id: str) -> Optional[Dict]:
     """Load intent YAML for a panel."""
-    intent_path = INTENTS_DIR / f"{panel_id}.yaml"
+    # Try AURORA_L2_INTENT_{panel_id}.yaml naming convention first
+    intent_path = INTENTS_DIR / f"AURORA_L2_INTENT_{panel_id}.yaml"
     if not intent_path.exists():
-        return None
+        # Fallback to {panel_id}.yaml for legacy files
+        intent_path = INTENTS_DIR / f"{panel_id}.yaml"
+        if not intent_path.exists():
+            return None
     with open(intent_path) as f:
         return yaml.safe_load(f)
 
@@ -62,44 +89,98 @@ def generate_scenario_id(panel_id: str) -> str:
     return f"SDSR-{panel_id}-001"
 
 
-def generate_default_invariants(panel_class: str, has_provenance: bool = False) -> List[Dict]:
-    """Generate default invariants based on panel type."""
-    invariants = [
-        {
-            'id': 'INV-001',
-            'name': 'response_shape',
-            'description': 'Response has expected top-level structure',
-            'assertion': 'response is dict and response is not empty',
-        },
-        {
-            'id': 'INV-002',
-            'name': 'status_code',
-            'description': 'API returns 200 OK',
-            'assertion': 'status_code == 200',
-        },
-        {
-            'id': 'INV-003',
-            'name': 'auth_works',
-            'description': 'Authenticated request succeeds',
-            'assertion': 'status_code != 401 and status_code != 403',
-        },
+def generate_invariant_ids(
+    domain: str,
+    panel_class: str,
+    required_only: bool = False,
+) -> List[str]:
+    """
+    Generate list of invariant IDs for a scenario.
+
+    NEW ARCHITECTURE:
+    - Invariant IDs are stored in YAML (not full definitions)
+    - Invariants are executed at runtime by the runner
+    - Domain invariants loaded from backend/sdsr/invariants/
+
+    Args:
+        domain: Domain name (ACTIVITY, LOGS, INCIDENTS, POLICIES)
+        panel_class: Panel class (execution, interpretation, evidence)
+        required_only: If True, only include required invariants
+
+    Returns:
+        List of invariant IDs to include in the scenario
+    """
+    if INVARIANTS_AVAILABLE:
+        # NEW: Use domain invariant loader
+        invariant_ids = []
+
+        # Add L0 transport invariants
+        invariant_ids.extend(get_transport_invariant_ids())
+
+        # Add L1 domain invariants
+        try:
+            domain_ids = get_invariant_ids_for_domain(domain)
+            invariant_ids.extend(domain_ids)
+        except ValueError:
+            # Unknown domain - use transport only
+            print(f"WARNING: Unknown domain '{domain}', using transport invariants only", file=sys.stderr)
+
+        return invariant_ids
+    else:
+        # LEGACY: Fall back to old behavior
+        return generate_legacy_invariant_ids(panel_class)
+
+
+def generate_legacy_invariant_ids(panel_class: str) -> List[str]:
+    """
+    LEGACY: Generate default invariant IDs based on panel type.
+
+    DEPRECATED: Use generate_invariant_ids() with domain invariants instead.
+    This is kept for backwards compatibility when invariants module not available.
+
+    Note: These IDs are placeholders - the actual invariant definitions
+    must be provided by the runner at execution time.
+    """
+    # Basic L0-equivalent invariant IDs (legacy naming)
+    invariant_ids = [
+        'INV-LEGACY-001',  # response_shape
+        'INV-LEGACY-002',  # status_code
+        'INV-LEGACY-003',  # auth_works
     ]
 
     if panel_class == 'interpretation':
-        invariants.append({
-            'id': 'INV-004',
-            'name': 'provenance_present',
-            'description': 'Interpretation panel has provenance metadata',
-            'assertion': '"provenance" in response',
-        })
-        invariants.append({
-            'id': 'INV-005',
-            'name': 'aggregation_type_present',
-            'description': 'Provenance includes aggregation type',
-            'assertion': '"aggregation" in response.get("provenance", {})',
-        })
+        invariant_ids.extend([
+            'INV-LEGACY-004',  # provenance_present
+            'INV-LEGACY-005',  # aggregation_type_present
+        ])
 
-    return invariants
+    return invariant_ids
+
+
+def get_domain_default_params(domain: str, subdomain: str, topic: str) -> Dict:
+    """
+    Get domain-specific default query parameters.
+
+    NEW ARCHITECTURE:
+    - Params are domain-owned, not hardcoded in synth
+    - Loaded from backend/sdsr/invariants/<domain>.py
+
+    Args:
+        domain: Domain name (ACTIVITY, LOGS, INCIDENTS, POLICIES)
+        subdomain: Subdomain (e.g., LLM_RUNS, RECORDS, EVENTS)
+        topic: Topic (e.g., LIVE, COMPLETED, ACTIVE)
+
+    Returns:
+        Dict of query parameters
+    """
+    if INVARIANTS_AVAILABLE:
+        try:
+            return get_default_params(domain, subdomain, topic)
+        except Exception:
+            pass
+
+    # LEGACY: Return empty dict (no hardcoded params)
+    return {}
 
 
 def scaffold_scenario(
@@ -110,10 +191,18 @@ def scaffold_scenario(
     panel_class: str,
     domain: str,
     auth_mode: str = 'OBSERVER',
+    subdomain: str = '',
+    topic: str = '',
 ) -> Dict:
     """Generate SDSR scenario YAML structure."""
     scenario_id = generate_scenario_id(panel_id)
-    invariants = generate_default_invariants(panel_class)
+
+    # NEW: Get invariant IDs (not full definitions)
+    # Invariants are executed at runtime by the runner
+    invariant_ids = generate_invariant_ids(domain, panel_class)
+
+    # NEW: Get domain-specific default params
+    domain_params = get_domain_default_params(domain, subdomain, topic)
 
     # Headers based on auth mode - SDSR runner will resolve credentials
     headers = {'Content-Type': 'application/json'}
@@ -145,9 +234,8 @@ def scaffold_scenario(
             'endpoint': endpoint,
             'method': method,
             'headers': headers,
-            'params': {
-                'window': '24h',  # Default for summary endpoints
-            },
+            # NEW: Use domain-specific params, not hardcoded defaults
+            'params': domain_params if domain_params else {'window': '24h'},
         },
         'expect': {
             'status_code': 200,
@@ -156,7 +244,9 @@ def scaffold_scenario(
                 '_note': 'Define expected response structure here',
             },
         },
-        'invariants': invariants,
+        # NEW: Store invariant IDs only (not full definitions)
+        # Invariants are executed at runtime by looking up IDs in the registry
+        'invariant_ids': invariant_ids,
         'cleanup': {
             'required': False,
             'note': 'Read-only observation, no cleanup needed',
@@ -239,12 +329,14 @@ def main():
         print(f"ERROR: No valid capability ID in intent", file=sys.stderr)
         return 1
 
-    endpoint = capability_ref.get('endpoint')
+    # Check both 'endpoint' and 'assumed_endpoint' (AURORA naming convention)
+    endpoint = capability_ref.get('endpoint') or capability_ref.get('assumed_endpoint')
     if not endpoint or endpoint.startswith('[TODO'):
         print(f"ERROR: No valid endpoint in intent", file=sys.stderr)
         return 1
 
-    method = capability_ref.get('method', 'GET')
+    # Check both 'method' and 'assumed_method' (AURORA naming convention)
+    method = capability_ref.get('method') or capability_ref.get('assumed_method', 'GET')
     panel_class = intent.get('panel_class', 'execution')
     domain = intent.get('metadata', {}).get('domain', 'UNKNOWN')
 
@@ -294,7 +386,7 @@ def main():
         print(f"   Scenario ID: {scenario_id}")
         print(f"   Capability: {capability_id}")
         print(f"   Endpoint: {endpoint}")
-        print(f"   Invariants: {len(scenario['invariants'])}")
+        print(f"   Invariants: {len(scenario['invariant_ids'])}")
         print()
         print("Next steps:")
         print(f"  1. (Optional) Edit scenario to add custom invariants")

@@ -34,11 +34,11 @@ controls:
   confirmation_required: false
 capability:
   id: activity.completed_runs
-  status: ASSUMED
+  status: DECLARED
   assumed_endpoint: /api/v1/activity/runs
   assumed_method: GET
 sdsr:
-  scenario: SDSR-ACT-LLM-COMP-O1-001
+  scenario: PENDING
   verified: false
 notes: 'Show how many LLM runs have completed in the selected window.
 

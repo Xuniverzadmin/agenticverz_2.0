@@ -108,6 +108,38 @@ from app.models.logs_records import (
     SystemRecord,
     SystemSeverity,
 )
+# Run Lifecycle Models (BACKEND_REMEDIATION_PLAN GAP-002, GAP-007)
+from app.models.run_lifecycle import (
+    PolicyViolationType,
+    RunLifecycleState,
+    RunStatus,
+    RunTerminationInfo,
+    RunTerminationReason,
+    RunViolationInfo,
+    SEVERITY_PRIORITY,
+    TERMINATION_TO_STATUS,
+    ViolationSeverity,
+    get_lifecycle_state,
+)
+# Policy Snapshot Model (BACKEND_REMEDIATION_PLAN GAP-006)
+from app.models.policy_snapshot import (
+    PolicySnapshot,
+    PolicySnapshotCreate,
+    PolicySnapshotResponse,
+    ThresholdSnapshot,
+)
+# Export Bundle Models (BACKEND_REMEDIATION_PLAN GAP-008)
+from app.models.export_bundles import (
+    DEFAULT_SOC2_CONTROLS,
+    EvidenceBundle,
+    ExecutiveDebriefBundle,
+    ExportBundleRequest,
+    ExportBundleResponse,
+    PolicyContext,
+    SOC2Bundle,
+    SOC2ControlMapping,
+    TraceStepEvidence,
+)
 
 __all__ = [
     "Base",
@@ -201,4 +233,30 @@ __all__ = [
     "SystemEventType",
     "SystemSeverity",
     "SystemCausedBy",
+    # Run Lifecycle Models (BACKEND_REMEDIATION_PLAN GAP-002, GAP-007)
+    "RunTerminationReason",
+    "RunStatus",
+    "RunLifecycleState",
+    "PolicyViolationType",
+    "ViolationSeverity",
+    "RunViolationInfo",
+    "RunTerminationInfo",
+    "TERMINATION_TO_STATUS",
+    "SEVERITY_PRIORITY",
+    "get_lifecycle_state",
+    # Policy Snapshot Model (BACKEND_REMEDIATION_PLAN GAP-006)
+    "PolicySnapshot",
+    "PolicySnapshotCreate",
+    "PolicySnapshotResponse",
+    "ThresholdSnapshot",
+    # Export Bundle Models (BACKEND_REMEDIATION_PLAN GAP-008)
+    "TraceStepEvidence",
+    "PolicyContext",
+    "EvidenceBundle",
+    "SOC2ControlMapping",
+    "SOC2Bundle",
+    "ExecutiveDebriefBundle",
+    "ExportBundleRequest",
+    "ExportBundleResponse",
+    "DEFAULT_SOC2_CONTROLS",
 ]

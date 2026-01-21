@@ -1,0 +1,154 @@
+# SDSR Verification Scenario
+# Scenario: SDSR-ACT-V2-MULTI-LIMIT-001
+# Generated: 2026-01-19
+#
+# PURPOSE:
+#   Verify "most severe wins" determinism when multiple limits apply.
+#   This is the GUARDRAIL scenario against multi-limit regression.
+#
+# REFERENCE:
+#   - ACTIVITY_DOMAIN_CONTRACT.md Section 16 (MOST-SEVERE-WINS-001)
+#   - Design recommendation: "One meta-scenario for multi-limit"
+#
+# EXPECTED BEHAVIOR:
+#   When a run triggers both COST (NEAR_THRESHOLD) and TIME (BREACH):
+#   - policy_context.evaluation_outcome = BREACH
+#   - policy_context.risk_type = TIME
+#   - Severity order: BREACH > OVERRIDDEN > NEAR_THRESHOLD > OK > ADVISORY
+
+scenario_id: SDSR-ACT-V2-MULTI-LIMIT-001
+version: 1.0.0
+name: Multi-limit run with most-severe-wins resolution
+description: |
+  Proves the "most severe wins" determinism rule (MOST-SEVERE-WINS-001).
+
+  Scenario: Run triggers both COST and TIME thresholds
+  - COST = NEAR_THRESHOLD (at 85%)
+  - TIME = BREACH (at 105%)
+
+  Expected resolution:
+  - evaluation_outcome = BREACH (most severe)
+  - risk_type = TIME (because TIME triggered BREACH)
+
+  This scenario prevents regression in multi-limit handling.
+capability: activity.policy_context_v2
+panel_id: ACT-LLM-SIG-O2
+domain: ACTIVITY
+metadata:
+  generated_by: manual
+  generated_at: '2026-01-19T00:00:00+00:00'
+  panel_class: guardrail
+  migration_phase: Phase1_Schema_Enhancement
+  rule_reference: MOST-SEVERE-WINS-001
+
+# This scenario requires synthetic data injection
+# A run must be created that triggers both COST and TIME thresholds
+preconditions:
+  - description: Tenant has COST limit at $1.00
+    table: limits
+    check: "scope = 'TENANT' AND limit_type = 'COST_USD' AND status = 'ACTIVE'"
+  - description: Tenant has TIME limit at 30000ms
+    table: limits
+    check: "scope = 'TENANT' AND limit_type = 'TIME_MS' AND status = 'ACTIVE'"
+  - description: Run exists with cost at 85% and time at 105%
+    table: runs
+    check: |
+      estimated_cost_usd >= 0.85 AND estimated_cost_usd < 1.00
+      AND duration_ms >= 31500
+
+inject:
+  type: api_call
+  endpoint: /api/v1/activity/threshold-signals
+  method: GET
+  headers:
+    Authorization: Bearer ${AUTH_TOKEN}
+    Content-Type: application/json
+  params:
+    limit: 50
+
+expect:
+  status_code: 200
+  response_type: json
+  response_shape:
+    signals: list
+    total: int
+    generated_at: string
+
+invariants:
+  - id: INV-MULTI-001
+    name: most_severe_wins
+    description: When run has multiple limit triggers, BREACH takes precedence
+    assertion: |
+      # Find signals for runs that should have multi-limit triggers
+      multi_limit_signals = [
+        s for s in response.get('signals', [])
+        if s.get('policy_context', {}).get('proximity_pct', 0) > 0
+      ]
+      # For any signal with BREACH, verify it's reflected
+      breach_signals = [
+        s for s in multi_limit_signals
+        if s.get('evaluation_outcome') == 'BREACH'
+      ]
+      # If we have breach signals, they should have risk_type set
+      all(
+        s.get('policy_context', {}).get('risk_type') is not None
+        for s in breach_signals
+      )
+
+  - id: INV-MULTI-002
+    name: severity_order_enforced
+    description: Signals are ordered by severity (BREACH > NEAR_THRESHOLD > OK)
+    assertion: |
+      signals = response.get('signals', [])
+      outcomes = [s.get('evaluation_outcome') for s in signals]
+      # All BREACH signals should appear before NEAR_THRESHOLD
+      breach_indices = [i for i, o in enumerate(outcomes) if o == 'BREACH']
+      near_indices = [i for i, o in enumerate(outcomes) if o == 'NEAR_THRESHOLD']
+      ok_indices = [i for i, o in enumerate(outcomes) if o == 'OK']
+      # Verify ordering
+      (not breach_indices or not near_indices or max(breach_indices) < min(near_indices)) and
+      (not near_indices or not ok_indices or max(near_indices) < min(ok_indices))
+
+  - id: INV-MULTI-003
+    name: policy_context_deterministic
+    description: Same run always produces same policy_context resolution
+    assertion: |
+      # Check that signals with same run_id have same evaluation_outcome
+      signals = response.get('signals', [])
+      run_ids = {}
+      for s in signals:
+        rid = s.get('run_id')
+        outcome = s.get('evaluation_outcome')
+        if rid in run_ids and run_ids[rid] != outcome:
+          return False  # Same run has different outcomes = non-deterministic
+        run_ids[rid] = outcome
+      True
+
+  - id: INV-MULTI-004
+    name: risk_type_consistent_with_breach
+    description: When BREACH, risk_type matches the limit that breached
+    assertion: |
+      breach_signals = [
+        s for s in response.get('signals', [])
+        if s.get('evaluation_outcome') == 'BREACH'
+      ]
+      all(
+        s.get('policy_context', {}).get('risk_type') in ['COST', 'TIME', 'TOKENS', 'RATE']
+        for s in breach_signals
+      )
+
+cleanup:
+  required: false
+  note: Read-only observation, no cleanup needed
+
+on_success:
+  update_capability_status: OBSERVED
+  emit_observation: true
+
+on_failure:
+  update_capability_status: null
+  emit_observation: true
+  failure_taxonomy:
+    severity_order_broken: Most severe wins rule violated
+    non_deterministic: Same run produces different outcomes
+    risk_type_mismatch: risk_type doesn't match breaching limit

@@ -85,6 +85,53 @@ class UpdateLimitRequest(BaseModel):
     status: Optional[str] = Field(default=None, description="ACTIVE or DISABLED")
 
 
+class ThresholdParamsRequest(BaseModel):
+    """
+    API request to set execution threshold parameters.
+
+    Used for: Policies → Limits → Thresholds → Set Params panel.
+
+    These params drive LLM run governance:
+    - Activity → LLM Runs → Live → Signals
+    - Activity → LLM Runs → Completed → Signals
+    """
+
+    max_execution_time_ms: Optional[int] = Field(
+        default=None,
+        ge=1000,
+        le=300_000,
+        description="Maximum execution time in milliseconds (1s-5min)",
+    )
+    max_tokens: Optional[int] = Field(
+        default=None,
+        ge=256,
+        le=200_000,
+        description="Maximum tokens allowed (256-200k)",
+    )
+    max_cost_usd: Optional[float] = Field(
+        default=None,
+        ge=0.01,
+        le=100.0,
+        description="Maximum cost in USD (0.01-100)",
+    )
+    failure_signal: Optional[bool] = Field(
+        default=None,
+        description="Emit signal on run failure",
+    )
+
+    model_config = {"extra": "forbid"}
+
+
+class ThresholdParamsResponse(BaseModel):
+    """Response with effective threshold params."""
+
+    limit_id: str
+    tenant_id: str
+    params: dict = Field(description="Threshold parameters")
+    effective_params: dict = Field(description="Resolved params with defaults applied")
+    updated_at: datetime
+
+
 class LimitDetail(BaseModel):
     """Full limit response."""
 
@@ -289,6 +336,180 @@ async def delete_limit(
             status_code=400,
             detail={"error": "delete_error", "message": str(e)},
         )
+
+
+# =============================================================================
+# Threshold Params Endpoints
+# =============================================================================
+
+
+@router.get(
+    "/limits/{limit_id}/params",
+    response_model=ThresholdParamsResponse,
+    summary="Get threshold params",
+    description="Get threshold parameters for a THRESHOLD category limit.",
+)
+async def get_threshold_params(
+    request: Request,
+    limit_id: str,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> ThresholdParamsResponse:
+    """
+    Get threshold parameters for a limit.
+
+    Returns both raw params and effective params (with defaults applied).
+    Only valid for limits with limit_category = THRESHOLD.
+    """
+    from app.models.policy_control_plane import Limit, LimitCategory
+    from app.services.llm_threshold_service import (
+        DEFAULT_LLM_RUN_PARAMS,
+        ThresholdParams,
+    )
+    from sqlmodel import select
+
+    auth_context = get_auth_context(request)
+    tenant_id = auth_context.tenant_id
+
+    # Fetch the limit
+    stmt = select(Limit).where(
+        Limit.id == limit_id,
+        Limit.tenant_id == tenant_id,
+    )
+    result = await session.execute(stmt)
+    limit = result.scalar_one_or_none()
+
+    if not limit:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "limit_not_found", "message": f"Limit {limit_id} not found"},
+        )
+
+    if limit.limit_category != LimitCategory.THRESHOLD.value:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "invalid_limit_category",
+                "message": f"Limit {limit_id} is not a THRESHOLD category limit",
+            },
+        )
+
+    # Compute effective params
+    raw_params = limit.params or {}
+    effective = DEFAULT_LLM_RUN_PARAMS.copy()
+    for key, value in raw_params.items():
+        if key in effective and value is not None:
+            effective[key] = value
+
+    return ThresholdParamsResponse(
+        limit_id=limit.id,
+        tenant_id=limit.tenant_id,
+        params=raw_params,
+        effective_params=effective,
+        updated_at=limit.updated_at,
+    )
+
+
+@router.put(
+    "/limits/{limit_id}/params",
+    response_model=ThresholdParamsResponse,
+    summary="Set threshold params",
+    description="Set threshold parameters for a THRESHOLD category limit.",
+)
+async def set_threshold_params(
+    request: Request,
+    limit_id: str,
+    body: ThresholdParamsRequest,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> ThresholdParamsResponse:
+    """
+    Set threshold parameters for a limit.
+
+    This is the authoritative input surface for:
+    - Policies → Limits → Thresholds → Set Params panel
+
+    These params drive LLM run governance signals.
+
+    Validation Rules (Hard Stop):
+    - max_execution_time_ms: 1000-300000 (1s to 5min)
+    - max_tokens: 256-200000
+    - max_cost_usd: 0.01-100.00
+    - failure_signal: boolean
+
+    No partial garbage. No unknown keys. No absurd values.
+    """
+    from datetime import timezone
+
+    from app.models.policy_control_plane import Limit, LimitCategory
+    from app.services.llm_threshold_service import (
+        DEFAULT_LLM_RUN_PARAMS,
+        ThresholdParams,
+    )
+    from sqlmodel import select
+
+    auth_context = get_auth_context(request)
+    tenant_id = auth_context.tenant_id
+
+    # Fetch the limit
+    stmt = select(Limit).where(
+        Limit.id == limit_id,
+        Limit.tenant_id == tenant_id,
+    )
+    result = await session.execute(stmt)
+    limit = result.scalar_one_or_none()
+
+    if not limit:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "limit_not_found", "message": f"Limit {limit_id} not found"},
+        )
+
+    if limit.limit_category != LimitCategory.THRESHOLD.value:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "invalid_limit_category",
+                "message": f"Limit {limit_id} is not a THRESHOLD category limit",
+            },
+        )
+
+    # Build new params (merge with existing)
+    current_params = limit.params or {}
+    update_data = body.model_dump(exclude_none=True)
+
+    new_params = {**current_params, **update_data}
+
+    # Validate complete params
+    try:
+        ThresholdParams(**{**DEFAULT_LLM_RUN_PARAMS, **new_params})
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "invalid_params",
+                "message": f"Invalid threshold params: {str(e)}",
+            },
+        )
+
+    # Update the limit
+    limit.params = new_params
+    limit.updated_at = datetime.now(timezone.utc)
+    session.add(limit)
+    await session.commit()
+    await session.refresh(limit)
+
+    # Compute effective params
+    effective = DEFAULT_LLM_RUN_PARAMS.copy()
+    for key, value in new_params.items():
+        if key in effective and value is not None:
+            effective[key] = value
+
+    return ThresholdParamsResponse(
+        limit_id=limit.id,
+        tenant_id=limit.tenant_id,
+        params=new_params,
+        effective_params=effective,
+        updated_at=limit.updated_at,
+    )
 
 
 # =============================================================================

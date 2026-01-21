@@ -1,0 +1,22 @@
+{
+  "observation_id": "OBS-SDSR-POL-GOV-LES-O4-001-20260119145848",
+  "scenario_id": "SDSR-POL-GOV-LES-O4-001",
+  "capability_id": "lessons.dismiss_or_defer",
+  "panel_id": "POL-GOV-LES-O4",
+  "status": "BLOCKED",
+  "observed_at": "2026-01-19T14:58:48.698130+00:00",
+  "assumed_endpoint": "/api/v1/policy-layer/lessons/{lesson_id}/dismiss",
+  "observed_endpoint": "/api/v1/policy-layer/lessons/test-lesson/dismiss",
+  "assumed_method": "POST",
+  "observed_method": "POST",
+  "response_status_code": null,
+  "response_time_ms": null,
+  "invariants_total": 3,
+  "invariants_passed": 0,
+  "invariants_failed": 0,
+  "invariant_results": [],
+  "failure_reason": "Coherency gate failed: COH-001",
+  "failure_taxonomy": "COHERENCY_VIOLATION",
+  "coherency_verified": false,
+  "trace_id": null
+}

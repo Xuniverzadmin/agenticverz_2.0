@@ -1,11 +1,19 @@
-# GENERATED FILE - DO NOT EDIT MANUALLY
-# Source: design/l2_1/INTENT_LEDGER.md
-# Generator: scripts/tools/sync_from_intent_ledger.py
+# AURORA L2 Capability Registry Entry
+# Capability: incidents.historical_list
+# Last Updated: 2026-01-18T12:07:11.486119+00:00
+# Updated By: aurora_apply_observation.py
 #
-# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
+# STATUS: OBSERVED
+#
+# WARNING: Status transitions are MACHINE-OWNED.
+#          Do NOT manually edit the status field.
 #
 capability_id: incidents.historical_list
-status: OBSERVED
+status: DEPRECATED
+# MIGRATION NOTE: Do NOT bind panels to this capability.
+# Replaced by: incidents.historical_list_v2, incidents.historical_trend,
+#              incidents.historical_distribution, incidents.historical_cost_trend
+# Reference: INCIDENTS_DOMAIN_MIGRATION_PLAN.md Phase 4
 source_panels:
 - INC-EV-HIST-O1
 domain: INCIDENTS
@@ -14,27 +22,27 @@ metadata:
   generated_on: '2026-01-16'
   declared_by: intent-ledger
   declared_on: '2026-01-16'
-  observed_by: SDSR-INC-EV-HIST-O1-001
-  observed_on: '2026-01-15'
+  observed_by: SDSR-INC-EV-HIST-O2-001
+  observed_on: '2026-01-18'
 assumption:
-  endpoint: /api/v1/incidents
+  endpoint: null
   method: GET
   source: INTENT_LEDGER
 binding:
   observed_endpoint: /api/v1/incidents
   observed_method: GET
-  observed_at: '2026-01-15T16:56:47.707395+00:00'
-  observation_id: OBS-SDSR-INC-EV-HIST-O1-001-20260115165645
+  observed_at: '2026-01-18T12:01:32.679053+00:00'
+  observation_id: OBS-SDSR-INC-EV-HIST-O2-001-20260118120124
 acceptance_criteria:
 - Returns historical incident counts
 - Response includes trend direction
 observation:
-  scenario_id: SDSR-INC-EV-HIST-O1-001
-  observed_at: '2026-01-15T16:56:47.707395+00:00'
+  scenario_id: SDSR-INC-EV-HIST-O2-001
+  observed_at: '2026-01-18T12:01:32.679053+00:00'
   trace_id: null
   invariants_passed: 3
   invariants_total: 3
 coherency:
-  last_checked: '2026-01-15T16:56:47.707395+00:00'
+  last_checked: '2026-01-18T12:01:32.679053+00:00'
   status: PASSED
   checked_by: aurora_sdsr_runner.py

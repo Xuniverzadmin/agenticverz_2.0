@@ -1,15 +1,24 @@
 # AURORA L2 Capability Registry Entry
 # Capability: activity.queued_runs
-# Last Updated: 2026-01-15T17:38:08.170860+00:00
-# Updated By: aurora_apply_observation.py
+# Last Updated: 2026-01-19T00:00:00+00:00
+# Updated By: Phase 4 Registry Rebinding
 #
-# STATUS: OBSERVED
+# STATUS: DEPRECATED
+#
+# DEPRECATION NOTE:
+#   This capability is DEPRECATED as of Activity Domain V2 Migration.
+#   Use activity.live_v2 with risk filters instead.
+#   Reference: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md (Phase 4)
 #
 # WARNING: Status transitions are MACHINE-OWNED.
 #          Do NOT manually edit the status field.
 #
 capability_id: activity.queued_runs
-status: OBSERVED
+status: DEPRECATED
+deprecated_at: '2026-01-19'
+deprecated_by: Phase 4 Registry Rebinding
+replacement: activity.live_v2
+migration_path: "Use /api/v1/activity/live with risk_level filter instead of /api/v1/activity/runs?state=LIVE&risk=true"
 source_panels:
 - ACT-LLM-LIVE-O3
 domain: ACTIVITY
@@ -23,16 +32,16 @@ metadata:
   declared_by: CLAUDE_GOVERNANCE
   declared_on: '2026-01-15'
   observed_by: SDSR-ACT-LLM-LIVE-O3-001
-  observed_on: '2026-01-15'
+  observed_on: '2026-01-18'
 coherency:
-  last_checked: '2026-01-15T08:57:19.542325+00:00'
+  last_checked: '2026-01-18T10:04:48.589432+00:00'
   status: PASSED
   checked_by: aurora_sdsr_runner.py
 observation:
   scenario_id: SDSR-ACT-LLM-LIVE-O3-001
-  observed_at: '2026-01-15T08:57:19.542325+00:00'
+  observed_at: '2026-01-18T10:04:48.589432+00:00'
   trace_id: null
-  invariants_passed: 3
+  invariants_passed: 0
   invariants_total: 3
 acceptance_criteria:
 - Endpoint exists and responds
@@ -41,11 +50,11 @@ acceptance_criteria:
 - Auth works correctly
 - Data is real (not mock)
 binding:
-  observed_endpoint: null
-  observed_method: null
-  observed_at: '2026-01-15T08:57:19.542325+00:00'
-  observation_id: OBS-SDSR-ACT-LLM-LIVE-O3-001-20260115085716
+  observed_endpoint: /api/v1/activity/runs
+  observed_method: GET
+  observed_at: '2026-01-18T10:04:48.589432+00:00'
+  observation_id: OBS-SDSR-ACT-LLM-LIVE-O3-001-20260118100448
 assumption:
   endpoint: null
-  method: null
+  method: GET
   source: INTENT_LEDGER

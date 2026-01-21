@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-01-18T10:14:00.430278",
+  "total": 10,
+  "pass": [
+    "OVR-SUM-DC-O1",
+    "OVR-SUM-DC-O2",
+    "OVR-SUM-DC-O3",
+    "OVR-SUM-HL-O2"
+  ],
+  "fail": [
+    "OVR-SUM-DC-O4",
+    "OVR-SUM-HL-O4"
+  ],
+  "error": [
+    "OVR-SUM-CI-O1",
+    "OVR-SUM-CI-O2",
+    "OVR-SUM-CI-O3",
+    "OVR-SUM-CI-O4"
+  ]
+}

@@ -5,8 +5,8 @@
 # To modify: Edit INTENT_LEDGER.md and re-run generator
 #
 version: 1.0.0
-created_at: '2026-01-16T13:40:02Z'
-amended_at: '2026-01-16T13:40:02Z'
+created_at: '2026-01-20T11:40:50Z'
+amended_at: '2026-01-20T11:40:50Z'
 status: LOCKED_UNTIL_TERMINAL_STATE
 authority: design/l2_1/INTENT_LEDGER.md
 topology: design/l2_1/UI_TOPOLOGY_TEMPLATE.yaml
@@ -40,19 +40,19 @@ domains:
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_OVR-SUM-CI-O2.yaml
-        expected_capability: overview.cost_by_feature
+        expected_capability: overview.costs
       - panel_id: OVR-SUM-CI-O3
         slot: 3
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_OVR-SUM-CI-O3.yaml
-        expected_capability: overview.cost_by_model
+        expected_capability: overview.costs
       - panel_id: OVR-SUM-CI-O4
         slot: 4
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_OVR-SUM-CI-O4.yaml
-        expected_capability: overview.cost_anomalies
+        expected_capability: overview.costs
     - id: DECISIONS
       panels:
       - panel_id: OVR-SUM-DC-O1
@@ -78,7 +78,7 @@ domains:
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_OVR-SUM-DC-O4.yaml
-        expected_capability: overview.feedback_summary
+        expected_capability: overview.decisions
     - id: HIGHLIGHTS
       panels:
       - panel_id: OVR-SUM-HL-O1
@@ -86,7 +86,7 @@ domains:
         panel_class: interpretation
         state: BOUND
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_OVR-SUM-HL-O1.yaml
-        expected_capability: overview.activity_snapshot
+        expected_capability: overview.highlights
       - panel_id: OVR-SUM-HL-O2
         slot: 2
         panel_class: interpretation
@@ -122,25 +122,25 @@ domains:
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_ACT-LLM-COMP-O2.yaml
-        expected_capability: activity.summary
+        expected_capability: activity.summary_by_status
       - panel_id: ACT-LLM-COMP-O3
         slot: 3
         panel_class: interpretation
-        state: EMPTY
-        intent_spec: null
-        expected_capability: null
+        state: DRAFT
+        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_ACT-LLM-COMP-O3.yaml
+        expected_capability: activity.summary_by_status
       - panel_id: ACT-LLM-COMP-O4
         slot: 4
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_ACT-LLM-COMP-O4.yaml
-        expected_capability: activity.customer_activity
+        expected_capability: activity.completed_runs
       - panel_id: ACT-LLM-COMP-O5
         slot: 5
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_ACT-LLM-COMP-O5.yaml
-        expected_capability: activity.runtime_traces
+        expected_capability: activity.run_detail
     - id: LIVE
       panels:
       - panel_id: ACT-LLM-LIVE-O1
@@ -152,27 +152,27 @@ domains:
       - panel_id: ACT-LLM-LIVE-O2
         slot: 2
         panel_class: interpretation
-        state: EMPTY
-        intent_spec: null
-        expected_capability: null
+        state: DRAFT
+        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_ACT-LLM-LIVE-O2.yaml
+        expected_capability: activity.risk_signals
       - panel_id: ACT-LLM-LIVE-O3
         slot: 3
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_ACT-LLM-LIVE-O3.yaml
-        expected_capability: activity.jobs_list
+        expected_capability: activity.live_runs
       - panel_id: ACT-LLM-LIVE-O4
         slot: 4
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_ACT-LLM-LIVE-O4.yaml
-        expected_capability: activity.worker_runs
+        expected_capability: activity.runtime_traces
       - panel_id: ACT-LLM-LIVE-O5
         slot: 5
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_ACT-LLM-LIVE-O5.yaml
-        expected_capability: activity.health_status
+        expected_capability: activity.runs_by_dimension
     - id: SIGNALS
       panels:
       - panel_id: ACT-LLM-SIG-O1
@@ -186,25 +186,25 @@ domains:
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_ACT-LLM-SIG-O2.yaml
-        expected_capability: activity.predictions_list
+        expected_capability: activity.signals
       - panel_id: ACT-LLM-SIG-O3
         slot: 3
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_ACT-LLM-SIG-O3.yaml
-        expected_capability: activity.predictions_summary
+        expected_capability: activity.patterns
       - panel_id: ACT-LLM-SIG-O4
         slot: 4
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_ACT-LLM-SIG-O4.yaml
-        expected_capability: activity.discovery_list
+        expected_capability: activity.cost_analysis
       - panel_id: ACT-LLM-SIG-O5
         slot: 5
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_ACT-LLM-SIG-O5.yaml
-        expected_capability: activity.discovery_stats
+        expected_capability: activity.signals
 - id: INCIDENTS
   subdomains:
   - id: EVENTS
@@ -216,31 +216,31 @@ domains:
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_INC-EV-ACT-O1.yaml
-        expected_capability: incidents.list
+        expected_capability: incidents.active_list
       - panel_id: INC-EV-ACT-O2
         slot: 2
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_INC-EV-ACT-O2.yaml
-        expected_capability: incidents.summary
+        expected_capability: incidents.active_list
       - panel_id: INC-EV-ACT-O3
         slot: 3
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_INC-EV-ACT-O3.yaml
-        expected_capability: incidents.metrics
+        expected_capability: incidents.metrics_v2
       - panel_id: INC-EV-ACT-O4
         slot: 4
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_INC-EV-ACT-O4.yaml
-        expected_capability: incidents.patterns
+        expected_capability: incidents.cost_impact
       - panel_id: INC-EV-ACT-O5
         slot: 5
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_INC-EV-ACT-O5.yaml
-        expected_capability: incidents.infra_summary
+        expected_capability: incidents.active_list
     - id: HISTORICAL
       panels:
       - panel_id: INC-EV-HIST-O1
@@ -248,31 +248,31 @@ domains:
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_INC-EV-HIST-O1.yaml
-        expected_capability: incidents.historical_list
+        expected_capability: incidents.historical_trend
       - panel_id: INC-EV-HIST-O2
         slot: 2
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_INC-EV-HIST-O2.yaml
-        expected_capability: incidents.guard_list
+        expected_capability: incidents.historical_distribution
       - panel_id: INC-EV-HIST-O3
         slot: 3
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_INC-EV-HIST-O3.yaml
-        expected_capability: incidents.v1_list
+        expected_capability: incidents.recurring
       - panel_id: INC-EV-HIST-O4
         slot: 4
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_INC-EV-HIST-O4.yaml
-        expected_capability: incidents.ops_list
+        expected_capability: incidents.historical_cost_trend
       - panel_id: INC-EV-HIST-O5
         slot: 5
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_INC-EV-HIST-O5.yaml
-        expected_capability: incidents.integration_stats
+        expected_capability: incidents.patterns
     - id: RESOLVED
       panels:
       - panel_id: INC-EV-RES-O1
@@ -280,31 +280,31 @@ domains:
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_INC-EV-RES-O1.yaml
-        expected_capability: incidents.resolved_list
+        expected_capability: incidents.resolved_list_v2
       - panel_id: INC-EV-RES-O2
         slot: 2
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_INC-EV-RES-O2.yaml
-        expected_capability: incidents.recovery_actions
+        expected_capability: incidents.learnings
       - panel_id: INC-EV-RES-O3
         slot: 3
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_INC-EV-RES-O3.yaml
-        expected_capability: incidents.recovery_candidates
+        expected_capability: incidents.metrics_v2
       - panel_id: INC-EV-RES-O4
         slot: 4
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_INC-EV-RES-O4.yaml
-        expected_capability: incidents.graduation_list
+        expected_capability: incidents.resolved_list_v2
       - panel_id: INC-EV-RES-O5
         slot: 5
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_INC-EV-RES-O5.yaml
-        expected_capability: incidents.replay_summary
+        expected_capability: incidents.learnings
 - id: POLICIES
   subdomains:
   - id: GOVERNANCE
@@ -316,19 +316,19 @@ domains:
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-ACT-O1.yaml
-        expected_capability: policies.proposals_list
+        expected_capability: policies.active_policies
       - panel_id: POL-GOV-ACT-O2
         slot: 2
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-ACT-O2.yaml
-        expected_capability: policies.proposals_summary
+        expected_capability: policies.metrics
       - panel_id: POL-GOV-ACT-O3
         slot: 3
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-ACT-O3.yaml
-        expected_capability: policies.requests_list
+        expected_capability: policies.requests
       - panel_id: POL-GOV-ACT-O4
         slot: 4
         panel_class: interpretation
@@ -340,39 +340,51 @@ domains:
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-ACT-O5.yaml
-        expected_capability: policies.layer_metrics
-    - id: DRAFTS
+        expected_capability: policies.metrics
+    - id: LESSONS
       panels:
       - panel_id: POL-GOV-DFT-O1
         slot: 1
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-DFT-O1.yaml
-        expected_capability: policies.drafts_list
+        expected_capability: lessons.list
       - panel_id: POL-GOV-DFT-O2
         slot: 2
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-DFT-O2.yaml
-        expected_capability: policies.versions_list
+        expected_capability: lessons.stats
       - panel_id: POL-GOV-DFT-O3
         slot: 3
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-DFT-O3.yaml
-        expected_capability: policies.current_version
+        expected_capability: lessons.get
       - panel_id: POL-GOV-DFT-O4
         slot: 4
         panel_class: execution
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-DFT-O4.yaml
-        expected_capability: policies.conflicts_list
+        expected_capability: lessons.convert_to_draft
       - panel_id: POL-GOV-DFT-O5
         slot: 5
         panel_class: execution
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-DFT-O5.yaml
-        expected_capability: policies.dependencies_list
+        expected_capability: lessons.dismiss_or_defer
+      - panel_id: POL-GOV-LES-O6
+        slot: 6
+        panel_class: evidence
+        state: DRAFT
+        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LES-O6.yaml
+        expected_capability: lessons.list
+      - panel_id: POL-GOV-LES-O7
+        slot: 7
+        panel_class: interpretation
+        state: DRAFT
+        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LES-O7.yaml
+        expected_capability: lessons.get
     - id: POLICY_LIBRARY
       panels:
       - panel_id: POL-GOV-LIB-O1
@@ -380,97 +392,65 @@ domains:
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LIB-O1.yaml
-        expected_capability: policies.safety_rules
+        expected_capability: policies.rules
       - panel_id: POL-GOV-LIB-O2
         slot: 2
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LIB-O2.yaml
-        expected_capability: policies.ethical_constraints
+        expected_capability: policies.rules
       - panel_id: POL-GOV-LIB-O3
         slot: 3
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LIB-O3.yaml
-        expected_capability: policies.active_policies
+        expected_capability: policies.rules
       - panel_id: POL-GOV-LIB-O4
         slot: 4
         panel_class: execution
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LIB-O4.yaml
-        expected_capability: policies.guard_policies
+        expected_capability: policies.rules
       - panel_id: POL-GOV-LIB-O5
         slot: 5
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LIB-O5.yaml
-        expected_capability: policies.temporal_policies
-    - id: LESSONS
-      panels:
-      - panel_id: POL-GOV-LES-O1
-        slot: 1
-        panel_class: evidence
-        state: DRAFT
-        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LES-O1.yaml
-        expected_capability: lessons.list
-      - panel_id: POL-GOV-LES-O2
-        slot: 2
-        panel_class: evidence
-        state: DRAFT
-        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LES-O2.yaml
-        expected_capability: lessons.get
-      - panel_id: POL-GOV-LES-O3
-        slot: 3
-        panel_class: execution
-        state: DRAFT
-        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LES-O3.yaml
-        expected_capability: lessons.convert_to_draft
-      - panel_id: POL-GOV-LES-O4
-        slot: 4
-        panel_class: execution
-        state: DRAFT
-        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LES-O4.yaml
-        expected_capability: lessons.dismiss_or_defer
-      - panel_id: POL-GOV-LES-O5
-        slot: 5
-        panel_class: evidence
-        state: DRAFT
-        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LES-O5.yaml
-        expected_capability: lessons.history
+        expected_capability: policies.rules
   - id: LIMITS
     topics:
-    - id: THRESHOLDS
+    - id: CONTROLS
       panels:
-      - panel_id: POL-LIM-THR-O1
+      - panel_id: POL-LIM-CTR-O1
         slot: 1
         panel_class: evidence
         state: DRAFT
-        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-LIM-THR-O1.yaml
-        expected_capability: policies.risk_ceilings
-      - panel_id: POL-LIM-THR-O2
+        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-LIM-CTR-O1.yaml
+        expected_capability: policies.limits
+      - panel_id: POL-LIM-CTR-O2
         slot: 2
         panel_class: execution
         state: DRAFT
-        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-LIM-THR-O2.yaml
-        expected_capability: policies.budgets_list
-      - panel_id: POL-LIM-THR-O3
+        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-LIM-CTR-O2.yaml
+        expected_capability: policies.budgets
+      - panel_id: POL-LIM-CTR-O3
         slot: 3
-        panel_class: execution
+        panel_class: configuration
         state: DRAFT
-        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-LIM-THR-O3.yaml
-        expected_capability: policies.quota_runs
-      - panel_id: POL-LIM-THR-O4
+        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-LIM-CTR-O3.yaml
+        expected_capability: policies.limits.threshold_params
+      - panel_id: POL-LIM-CTR-O4
         slot: 4
         panel_class: execution
         state: DRAFT
-        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-LIM-THR-O4.yaml
-        expected_capability: policies.quota_tokens
-      - panel_id: POL-LIM-THR-O5
+        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-LIM-CTR-O4.yaml
+        expected_capability: policies.limits
+      - panel_id: POL-LIM-CTR-O5
         slot: 5
         panel_class: execution
         state: DRAFT
-        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-LIM-THR-O5.yaml
-        expected_capability: policies.cooldowns_list
+        intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-LIM-CTR-O5.yaml
+        expected_capability: policies.limits
     - id: VIOLATIONS
       panels:
       - panel_id: POL-LIM-VIO-O1
@@ -478,31 +458,31 @@ domains:
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-LIM-VIO-O1.yaml
-        expected_capability: policies.violations_list
+        expected_capability: policies.violations
       - panel_id: POL-LIM-VIO-O2
         slot: 2
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-LIM-VIO-O2.yaml
-        expected_capability: policies.cost_incidents
+        expected_capability: policies.violations
       - panel_id: POL-LIM-VIO-O3
         slot: 3
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-LIM-VIO-O3.yaml
-        expected_capability: policies.simulated_incidents
+        expected_capability: policies.violations
       - panel_id: POL-LIM-VIO-O4
         slot: 4
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-LIM-VIO-O4.yaml
-        expected_capability: policies.anomalies_list
+        expected_capability: policies.violations
       - panel_id: POL-LIM-VIO-O5
         slot: 5
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_POL-LIM-VIO-O5.yaml
-        expected_capability: policies.divergence_report
+        expected_capability: policies.violations
 - id: LOGS
   subdomains:
   - id: RECORDS
@@ -514,31 +494,31 @@ domains:
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_LOG-REC-AUD-O1.yaml
-        expected_capability: logs.traces_list
+        expected_capability: logs.audit
       - panel_id: LOG-REC-AUD-O2
         slot: 2
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_LOG-REC-AUD-O2.yaml
-        expected_capability: logs.rbac_audit
+        expected_capability: logs.audit
       - panel_id: LOG-REC-AUD-O3
         slot: 3
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_LOG-REC-AUD-O3.yaml
-        expected_capability: logs.ops_audit
+        expected_capability: logs.audit
       - panel_id: LOG-REC-AUD-O4
         slot: 4
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_LOG-REC-AUD-O4.yaml
-        expected_capability: logs.status_history
+        expected_capability: logs.audit
       - panel_id: LOG-REC-AUD-O5
         slot: 5
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_LOG-REC-AUD-O5.yaml
-        expected_capability: null
+        expected_capability: logs.audit
     - id: LLM_RUNS
       panels:
       - panel_id: LOG-REC-LLM-O1
@@ -546,31 +526,31 @@ domains:
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_LOG-REC-LLM-O1.yaml
-        expected_capability: logs.runtime_traces
+        expected_capability: logs.llm_runs
       - panel_id: LOG-REC-LLM-O2
         slot: 2
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_LOG-REC-LLM-O2.yaml
-        expected_capability: logs.activity_runs
+        expected_capability: logs.llm_runs
       - panel_id: LOG-REC-LLM-O3
         slot: 3
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_LOG-REC-LLM-O3.yaml
-        expected_capability: logs.customer_runs
+        expected_capability: logs.llm_runs
       - panel_id: LOG-REC-LLM-O4
         slot: 4
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_LOG-REC-LLM-O4.yaml
-        expected_capability: logs.tenant_runs
+        expected_capability: logs.llm_runs
       - panel_id: LOG-REC-LLM-O5
         slot: 5
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_LOG-REC-LLM-O5.yaml
-        expected_capability: logs.mismatch_list
+        expected_capability: logs.llm_runs
     - id: SYSTEM_LOGS
       panels:
       - panel_id: LOG-REC-SYS-O1
@@ -578,28 +558,28 @@ domains:
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_LOG-REC-SYS-O1.yaml
-        expected_capability: logs.guard_logs
+        expected_capability: logs.system
       - panel_id: LOG-REC-SYS-O2
         slot: 2
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_LOG-REC-SYS-O2.yaml
-        expected_capability: logs.health_check
+        expected_capability: logs.system
       - panel_id: LOG-REC-SYS-O3
         slot: 3
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_LOG-REC-SYS-O3.yaml
-        expected_capability: logs.ready_check
+        expected_capability: logs.system
       - panel_id: LOG-REC-SYS-O4
         slot: 4
         panel_class: evidence
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_LOG-REC-SYS-O4.yaml
-        expected_capability: logs.adapters_health
+        expected_capability: logs.system
       - panel_id: LOG-REC-SYS-O5
         slot: 5
         panel_class: interpretation
         state: DRAFT
         intent_spec: design/l2_1/intents/AURORA_L2_INTENT_LOG-REC-SYS-O5.yaml
-        expected_capability: logs.skills_health
+        expected_capability: logs.system

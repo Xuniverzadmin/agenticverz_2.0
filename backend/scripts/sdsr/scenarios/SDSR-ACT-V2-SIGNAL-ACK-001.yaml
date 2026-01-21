@@ -1,144 +1,139 @@
-# SDSR Scenario: Signal Acknowledgment
-# Reference: Attention Feedback Loop Implementation Plan
-# Invariants Tested:
-#   - SIGNAL-ID-001: Canonical fingerprint derivation
-#   - SIGNAL-ACK-001: Acknowledgement records responsibility
-#   - ATTN-DAMP-001: Idempotent dampening (0.6x)
-#   - AUDIT-SIGNAL-CTX-001: Structured context
-
+# SDSR Verification Scenario
+# Scenario: SDSR-ACT-V2-SIGNAL-ACK-001
+# Generated: 2026-01-19
+#
+# PURPOSE:
+#   Verifies the Signal Acknowledgment capability:
+#   1. Acknowledge a signal via POST /activity/signals/{fp}/ack
+#   2. Verify audit_ledger entry created
+#   3. Verify signal still visible with feedback.acknowledged = true
+#   4. Verify attention score dampening (0.6x) applied
+#
+# INVARIANTS:
+#   - SIGNAL-ID-001: Fingerprint validated server-side
+#   - SIGNAL-ACK-001: Acknowledgment records responsibility
+#   - ATTN-DAMP-001: Dampening is idempotent (0.6x)
+#
+# EXECUTION:
+#   python aurora_sdsr_runner.py --scenario SDSR-ACT-V2-SIGNAL-ACK-001
+#
 scenario_id: SDSR-ACT-V2-SIGNAL-ACK-001
+version: 1.0.0
+name: Verify Signal Acknowledgment
+description: SDSR verification for signal acknowledgment feedback loop
+capability: activity.signals.ack
+panel_id: ACT-V2-SIGNAL-FEEDBACK
 domain: ACTIVITY
-capability: activity.signal_acknowledge
-status: DECLARED
-
+auth:
+  mode: MUTATE  # Writes to audit_ledger
 metadata:
-  title: "Signal Acknowledgment"
-  description: "Validates that signal acknowledgment creates audit entry, dampens ranking, but keeps signal visible"
-  author: "Claude Opus 4.5"
-  created: "2026-01-19"
-  version: "1.0"
+  generated_by: manual
+  generated_at: '2026-01-19T00:00:00.000000+00:00'
+  reference: Attention Feedback Loop Implementation Plan
+  invariants:
+    - SIGNAL-ID-001
+    - SIGNAL-ACK-001
+    - ATTN-DAMP-001
 
-# Prerequisites
-prerequisites:
-  - type: run_with_signal
-    description: "A run with COST_RISK signal must exist"
-    state: COMPLETED
-    risk_level: VIOLATED
-    evaluation_outcome: BREACH
+# Prerequisites: Create a run with a signal first
+setup:
+  - type: create_synthetic_run
+    params:
+      state: LIVE
+      risk_level: AT_RISK
+      evaluation_outcome: NEAR_THRESHOLD
+      risk_type: COST
+    capture:
+      run_id: created_run_id
 
-# Synthetic data injection
-injection:
-  tenant:
-    id: "tenant-sdsr-ack-001"
-    name: "SDSR Signal Ack Test Tenant"
-
-  run:
-    id: "run-sdsr-ack-001"
-    state: COMPLETED
-    status: succeeded
-    risk_level: VIOLATED
-    evaluation_outcome: BREACH
+inject:
+  type: api_call
+  endpoint: /api/v1/activity/signals/{signal_fingerprint}/ack
+  method: POST
+  headers:
+    Content-Type: application/json
+  path_params:
+    signal_fingerprint: "{{computed_fingerprint}}"
+  body:
+    run_id: "{{created_run_id}}"
+    signal_type: COST_RISK
     risk_type: COST
-    started_at: "2026-01-19T10:00:00Z"
-    completed_at: "2026-01-19T10:05:00Z"
+    comment: "Acknowledged via SDSR scenario"
 
-# Actions to execute
-actions:
-  - action: api_call
-    order: 1
-    description: "Get signals to verify signal exists"
-    endpoint: "GET /api/v1/activity/signals"
-    headers:
-      Authorization: "Bearer {test_jwt}"
-    expected:
-      status_code: 200
-      body:
-        signals:
-          - signal_type: "COST_RISK"
-            feedback: null
+expect:
+  status_code: 200
+  response_type: json
+  response_shape:
+    signal_fingerprint:
+      type: string
+      pattern: "^sig-[a-f0-9]{16}$"
+    acknowledged:
+      type: boolean
+      value: true
+    acknowledged_by:
+      type: string
+      not_null: true
+    acknowledged_at:
+      type: datetime
+      not_null: true
 
-  - action: api_call
-    order: 2
-    description: "Acknowledge the signal"
-    endpoint: "POST /api/v1/activity/signals/{signal_fingerprint}/ack"
-    headers:
-      Authorization: "Bearer {test_jwt}"
-    body:
-      run_id: "run-sdsr-ack-001"
-      signal_type: "COST_RISK"
-      risk_type: "COST"
-      comment: "Acknowledged for SDSR testing"
-    expected:
-      status_code: 200
-      body:
-        acknowledged: true
+invariants:
+  - id: INV-001
+    name: response_success
+    description: API returns 200 OK
+    assertion: status_code == 200
 
-  - action: db_verify
-    order: 3
-    description: "Verify audit_ledger entry created"
-    query: |
-      SELECT event_type, entity_type, actor_id, action_reason, after_state
-      FROM audit_ledger
-      WHERE tenant_id = 'tenant-sdsr-ack-001'
-        AND entity_type = 'SIGNAL'
-      ORDER BY created_at DESC
-      LIMIT 1
-    expected:
-      event_type: "SignalAcknowledged"
-      entity_type: "SIGNAL"
-      action_reason: "Acknowledged for SDSR testing"
+  - id: INV-002
+    name: fingerprint_format
+    description: Fingerprint matches canonical format (SIGNAL-ID-001)
+    assertion: response.signal_fingerprint matches "^sig-[a-f0-9]{16}$"
 
-  - action: api_call
-    order: 4
-    description: "Verify signal still visible with feedback"
-    endpoint: "GET /api/v1/activity/signals"
-    headers:
-      Authorization: "Bearer {test_jwt}"
-    expected:
-      status_code: 200
-      body:
-        signals:
-          - signal_type: "COST_RISK"
-            feedback:
-              acknowledged: true
+  - id: INV-003
+    name: acknowledged_true
+    description: Acknowledged flag is true (SIGNAL-ACK-001)
+    assertion: response.acknowledged == true
 
-  - action: api_call
-    order: 5
-    description: "Verify attention queue has dampened score"
-    endpoint: "GET /api/v1/activity/attention-queue"
-    headers:
-      Authorization: "Bearer {test_jwt}"
-    expected:
-      status_code: 200
-      body:
-        queue:
-          - run_id: "run-sdsr-ack-001"
-            acknowledged: true
-            # effective_attention_score should be 0.6x of attention_score
+  - id: INV-004
+    name: audit_entry_created
+    description: Audit ledger entry exists for acknowledgment
+    assertion: |
+      SELECT COUNT(*) FROM audit_ledger
+      WHERE entity_type = 'SIGNAL'
+        AND event_type = 'SignalAcknowledged'
+        AND entity_id = response.signal_fingerprint
+      > 0
 
-# Assertions
-assertions:
-  - assert: signal_visible_after_ack
-    description: "Signal must remain visible after acknowledgment"
-    condition: "signals[0].signal_type == 'COST_RISK'"
+  - id: INV-005
+    name: signal_still_visible
+    description: Acknowledged signal remains visible (SIGNAL-ACK-001)
+    assertion: |
+      GET /api/v1/activity/signals returns signal with feedback.acknowledged = true
 
-  - assert: feedback_populated
-    description: "Feedback field must be populated"
-    condition: "signals[0].feedback.acknowledged == true"
+  - id: INV-006
+    name: dampening_applied
+    description: Attention score dampened by 0.6x (ATTN-DAMP-001)
+    assertion: |
+      Attention queue effective_score = base_score * 0.6 for acknowledged signals
 
-  - assert: audit_entry_created
-    description: "Audit entry must exist in audit_ledger"
-    condition: "audit_ledger.event_type == 'SignalAcknowledged'"
-
-  - assert: dampening_applied
-    description: "Effective score must be 0.6x of base score"
-    condition: "attention_queue[0].effective_attention_score == attention_queue[0].attention_score * 0.6"
-
-# Cleanup
 cleanup:
-  - type: delete_audit_entries
-    tenant_id: "tenant-sdsr-ack-001"
-  - type: delete_run
-    run_id: "run-sdsr-ack-001"
-  - type: delete_tenant
-    tenant_id: "tenant-sdsr-ack-001"
+  required: true
+  note: Remove synthetic run after verification
+  steps:
+    - type: delete_synthetic_run
+      params:
+        run_id: "{{created_run_id}}"
+
+on_success:
+  update_capability_status: OBSERVED
+  emit_observation: true
+
+on_failure:
+  update_capability_status: null
+  emit_observation: true
+  failure_taxonomy:
+    endpoint_missing: Backend route does not exist
+    auth_failed: Authentication/authorization issue
+    schema_mismatch: Response shape does not match contract
+    invariant_violated: One or more invariants failed
+    signal_not_visible: Signal was incorrectly hidden after acknowledgment
+    dampening_not_applied: Attention score not dampened

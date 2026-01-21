@@ -32,6 +32,8 @@ from datetime import date, datetime, timezone
 from enum import Enum
 from typing import Optional
 
+from sqlalchemy import Column
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 
@@ -154,7 +156,7 @@ class CusIntegration(SQLModel, table=True):
     credential_ref: str = Field(description="Encrypted credential or vault pointer")
 
     # Configuration (provider-specific settings as JSON)
-    config: dict = Field(default_factory=dict, sa_type_kwargs={"astext_type": None})
+    config: Optional[dict] = Field(default=None, sa_column=Column(JSONB, nullable=True))
 
     # Lifecycle status
     status: CusIntegrationStatus = Field(default=CusIntegrationStatus.CREATED, max_length=20)
@@ -313,8 +315,8 @@ class CusLLMUsage(SQLModel, table=True):
     error_code: Optional[str] = Field(default=None, max_length=50)
     error_message: Optional[str] = Field(default=None)
 
-    # Extensible metadata
-    metadata: dict = Field(default_factory=dict, sa_type_kwargs={"astext_type": None})
+    # Extensible metadata (named 'extra_data' to avoid SQLAlchemy reserved name 'metadata')
+    extra_data: Optional[dict] = Field(default=None, sa_column=Column(JSONB, nullable=True))
 
     # Timestamp
     created_at: datetime = Field(default_factory=utc_now)
@@ -367,7 +369,7 @@ class CusUsageDaily(SQLModel, table=True):
     # Composite primary key (no separate id field)
     tenant_id: str = Field(max_length=100, primary_key=True)
     integration_id: str = Field(primary_key=True)
-    date: date = Field(primary_key=True)
+    usage_date: date = Field(primary_key=True)  # Renamed from 'date' to avoid shadowing the type
 
     # Aggregated metrics
     total_calls: int = Field(default=0, ge=0)

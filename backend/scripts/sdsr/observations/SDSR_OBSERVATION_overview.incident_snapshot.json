@@ -1,51 +1,22 @@
 {
-  "observation_id": "OBS-SDSR-OVR-SUM-HL-O2-001-20260115053728",
+  "observation_id": "OBS-SDSR-OVR-SUM-HL-O2-001-20260118100430",
   "scenario_id": "SDSR-OVR-SUM-HL-O2-001",
   "capability_id": "overview.incident_snapshot",
   "panel_id": "OVR-SUM-HL-O2",
   "status": "PASS",
-  "observed_at": "2026-01-15T05:37:29.653762+00:00",
-  "endpoint": "/api/v1/incidents/summary",
-  "method": "GET",
-  "response_status_code": 200,
-  "response_time_ms": 1043.013095855713,
+  "observed_at": "2026-01-18T10:04:30.974254+00:00",
+  "assumed_endpoint": null,
+  "observed_endpoint": "/api/v1/incidents/summary",
+  "assumed_method": "GET",
+  "observed_method": "GET",
+  "response_status_code": 401,
+  "response_time_ms": 9.777069091796875,
   "invariants_total": 5,
-  "invariants_passed": 5,
+  "invariants_passed": 0,
   "invariants_failed": 0,
-  "invariant_results": [
-    {
-      "id": "INV-001",
-      "name": "response_shape",
-      "status": "PASS",
-      "message": "Assertion passed: response is dict and response is not empty"
-    },
-    {
-      "id": "INV-002",
-      "name": "status_code",
-      "status": "PASS",
-      "message": "Assertion passed: status_code == 200"
-    },
-    {
-      "id": "INV-003",
-      "name": "auth_works",
-      "status": "PASS",
-      "message": "Assertion passed: status_code != 401 and status_code != 403"
-    },
-    {
-      "id": "INV-004",
-      "name": "provenance_present",
-      "status": "PASS",
-      "message": "Assertion passed: \"provenance\" in response"
-    },
-    {
-      "id": "INV-005",
-      "name": "aggregation_type_present",
-      "status": "PASS",
-      "message": "Assertion passed: \"aggregation\" in response.get(\"provenance\", {})"
-    }
-  ],
-  "failure_reason": null,
-  "failure_taxonomy": null,
+  "invariant_results": [],
+  "failure_reason": "Access restricted (HTTP 401) - visibility limited but endpoint exists",
+  "failure_taxonomy": "VISIBILITY_RESTRICTED",
   "coherency_verified": true,
   "trace_id": null
 }

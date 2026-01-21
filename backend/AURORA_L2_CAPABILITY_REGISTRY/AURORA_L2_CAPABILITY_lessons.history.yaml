@@ -1,0 +1,42 @@
+# AURORA L2 Capability Registry Entry
+# Capability: lessons.history
+# Last Updated: 2026-01-18T09:17:05.491382+00:00
+# Updated By: aurora_apply_observation.py
+#
+# STATUS: OBSERVED
+#
+# WARNING: Status transitions are MACHINE-OWNED.
+#          Do NOT manually edit the status field.
+#
+capability_id: lessons.history
+status: OBSERVED
+source_panels: []
+domain: POLICIES
+endpoint: /api/v1/policies/lessons/stats
+method: GET
+metadata:
+  generated_by: aurora_capability_scaffold.py
+  generated_on: '2026-01-18'
+  declared_by: AURORA_AUTOMATION
+  declared_on: '2026-01-18'
+  observed_by: SDSR-POL-GOV-LES-O5-001
+  observed_on: '2026-01-18'
+coherency:
+  last_checked: '2026-01-18T09:14:52.961808+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py
+binding:
+  observed_endpoint: /api/v1/policies/lessons/stats
+  observed_method: GET
+  observed_at: '2026-01-18T09:14:52.961808+00:00'
+  observation_id: OBS-SDSR-POL-GOV-LES-O5-001-20260118091452
+assumption:
+  endpoint: /api/v1/policies/lessons/stats
+  method: GET
+  source: INTENT_LEDGER
+observation:
+  scenario_id: SDSR-POL-GOV-LES-O5-001
+  observed_at: '2026-01-18T09:14:52.961808+00:00'
+  trace_id: null
+  invariants_passed: 0
+  invariants_total: 3

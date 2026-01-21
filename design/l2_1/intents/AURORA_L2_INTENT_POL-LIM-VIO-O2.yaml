@@ -35,9 +35,8 @@ controls:
 capability:
   id: policies.violations
   status: ASSUMED
-  assumed_endpoint: /api/v1/policy-layer/violations
+  assumed_endpoint: /api/v1/policy/violations
   assumed_method: GET
-  facade_note: "Unified facade - replaces direct /guard/costs/incidents"
 sdsr:
   scenario: SDSR-POL-LIM-VIO-O2-001
   verified: false

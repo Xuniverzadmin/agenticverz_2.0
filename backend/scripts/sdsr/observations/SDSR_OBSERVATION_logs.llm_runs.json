@@ -1,0 +1,22 @@
+{
+  "observation_id": "OBS-SDSR-LOG-REC-LLM-O1-001-20260119145924",
+  "scenario_id": "SDSR-LOG-REC-LLM-O1-001",
+  "capability_id": "logs.llm_runs",
+  "panel_id": "LOG-REC-LLM-O1",
+  "status": "PASS",
+  "observed_at": "2026-01-19T14:59:24.568653+00:00",
+  "assumed_endpoint": "/api/v1/logs/llm-runs/{run_id}/envelope",
+  "observed_endpoint": "/api/v1/logs/llm-runs",
+  "assumed_method": "GET",
+  "observed_method": "GET",
+  "response_status_code": 401,
+  "response_time_ms": 14.96577262878418,
+  "invariants_total": 3,
+  "invariants_passed": 0,
+  "invariants_failed": 0,
+  "invariant_results": [],
+  "failure_reason": "Access restricted (HTTP 401) - visibility limited but endpoint exists",
+  "failure_taxonomy": "VISIBILITY_RESTRICTED",
+  "coherency_verified": true,
+  "trace_id": null
+}

@@ -33,12 +33,10 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: policies.violations_impact
+  id: policies.violations
   status: ASSUMED
-  assumed_endpoint: /api/v1/policy-layer/violations
+  assumed_endpoint: /api/v1/policy/violations/{violation_id}
   assumed_method: GET
-  query_params: "?include_impact=true"
-  facade_note: "Unified facade - replaces direct /cost/anomalies"
 sdsr:
   scenario: SDSR-POL-LIM-VIO-O4-001
   verified: false

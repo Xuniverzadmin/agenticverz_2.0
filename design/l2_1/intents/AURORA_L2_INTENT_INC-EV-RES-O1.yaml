@@ -33,12 +33,12 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: incidents.resolved_list
-  status: ASSUMED
-  assumed_endpoint: /api/v1/incidents
+  id: incidents.resolved_list_v2
+  status: DEFERRED
+  assumed_endpoint: 'null'
   assumed_method: GET
 sdsr:
-  scenario: SDSR-INC-EV-RES-O1-001
+  scenario: DEFERRED
   verified: false
 notes: 'Show the canonical list of recently resolved incidents.
 

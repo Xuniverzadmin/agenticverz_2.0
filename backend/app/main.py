@@ -371,6 +371,42 @@ async def lifespan(app: FastAPI):
     # Initialize database
     init_db()
 
+    # =========================================================================
+    # GAP-067: SPINE Component Validation (FAIL-FAST)
+    # =========================================================================
+    # Validate required governance components are available at startup.
+    # Missing SPINE components will crash the application (boot-fail policy).
+    from .startup.boot_guard import validate_spine_components, SpineValidationError
+
+    try:
+        spine_result = validate_spine_components()
+        logger.info("spine_components_validated", extra={
+            "components_checked": spine_result.components_checked,
+            "all_valid": spine_result.all_valid,
+        })
+    except SpineValidationError as e:
+        logger.critical(f"STARTUP ABORTED - SPINE validation failed: {e}")
+        raise
+
+    # =========================================================================
+    # GAP-046: EventReactor Initialization
+    # =========================================================================
+    # Initialize EventReactor before accepting requests.
+    # Failure to initialize blocks startup (boot-fail policy).
+    from .events.reactor_initializer import (
+        initialize_event_reactor,
+        get_reactor_status,
+        shutdown_event_reactor,
+    )
+
+    try:
+        event_reactor = initialize_event_reactor()
+        app.state.event_reactor = event_reactor
+        logger.info("event_reactor_initialized", extra=get_reactor_status())
+    except RuntimeError as e:
+        logger.critical(f"STARTUP ABORTED - EventReactor initialization failed: {e}")
+        raise
+
     # PIN-413: Create immutable system record for API startup
     _create_system_record(
         component=SystemComponent.API.value,
@@ -658,6 +694,13 @@ async def lifespan(app: FastAPI):
         summary="API server shutting down",
         caused_by=SystemCausedBy.SYSTEM.value,
     )
+
+    # GAP-046: Shutdown EventReactor
+    try:
+        shutdown_event_reactor()
+        logger.info("event_reactor_shutdown")
+    except Exception as e:
+        logger.error(f"event_reactor_shutdown_error: {e}")
 
     # Cleanup on shutdown
     task.cancel()
@@ -1333,11 +1376,29 @@ async def health_check():
 
     api_key_set = bool(os.getenv("AOS_API_KEY"))
 
+    # GAP-046: Include EventReactor status in health check
+    from .events.reactor_initializer import get_reactor_status
+    reactor_status = get_reactor_status()
+    reactor_healthy = reactor_status.get("healthy", False)
+
+    # GAP-069: Include governance state in health check
+    from .services.governance.runtime_switch import get_governance_state
+    governance_state = get_governance_state()
+
+    all_healthy = (
+        db_status == "connected"
+        and api_key_set
+        and reactor_healthy
+        and governance_state.get("governance_active", True)
+    )
+
     return {
-        "status": "healthy" if db_status == "connected" and api_key_set else "degraded",
+        "status": "healthy" if all_healthy else "degraded",
         "service": "nova_agent_manager",
         "database": db_status,
         "api_key_configured": api_key_set,
+        "event_reactor": reactor_status,  # GAP-046
+        "governance": governance_state,   # GAP-069
     }
 
 

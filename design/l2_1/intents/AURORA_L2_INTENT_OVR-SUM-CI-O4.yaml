@@ -33,10 +33,13 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: overview.cost_anomalies
-  status: ASSUMED
-  assumed_endpoint: null
+  id: overview.costs
+  status: DECLARED
+  assumed_endpoint: /api/v1/overview/costs
   assumed_method: GET
+sdsr:
+  scenario: PENDING
+  verified: false
 notes: 'Provide a near-term cost trajectory based on recent behavior,
 
   so the user can anticipate direction without detailed forecasting.

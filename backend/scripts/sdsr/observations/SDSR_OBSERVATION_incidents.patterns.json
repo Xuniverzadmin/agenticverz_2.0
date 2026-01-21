@@ -1,41 +1,22 @@
 {
-  "observation_id": "OBS-SDSR-INC-EV-ACT-O4-001-20260115165540",
-  "scenario_id": "SDSR-INC-EV-ACT-O4-001",
+  "observation_id": "OBS-SDSR-INC-EV-HIST-O5-001-20260119145831",
+  "scenario_id": "SDSR-INC-EV-HIST-O5-001",
   "capability_id": "incidents.patterns",
-  "panel_id": "INC-EV-ACT-O4",
-  "status": "FAIL",
-  "observed_at": "2026-01-15T16:55:40.840670+00:00",
+  "panel_id": "INC-EV-HIST-O5",
+  "status": "PASS",
+  "observed_at": "2026-01-19T14:58:31.768463+00:00",
   "assumed_endpoint": "/api/v1/ops/incidents/patterns",
-  "observed_endpoint": "/api/v1/ops/incidents/patterns",
+  "observed_endpoint": "/api/v1/incidents/patterns",
   "assumed_method": "GET",
   "observed_method": "GET",
-  "response_status_code": 404,
-  "response_time_ms": 24.641752243041992,
+  "response_status_code": 401,
+  "response_time_ms": 11.932373046875,
   "invariants_total": 3,
-  "invariants_passed": 2,
-  "invariants_failed": 1,
-  "invariant_results": [
-    {
-      "id": "INV-001",
-      "name": "response_shape",
-      "status": "PASS",
-      "message": "Assertion passed: response is dict and response is not empty"
-    },
-    {
-      "id": "INV-002",
-      "name": "status_code",
-      "status": "FAIL",
-      "message": "Assertion failed: status_code == 200"
-    },
-    {
-      "id": "INV-003",
-      "name": "auth_works",
-      "status": "PASS",
-      "message": "Assertion passed: status_code != 401 and status_code != 403"
-    }
-  ],
-  "failure_reason": "1 invariant(s) failed",
-  "failure_taxonomy": "INVARIANT_VIOLATED",
+  "invariants_passed": 0,
+  "invariants_failed": 0,
+  "invariant_results": [],
+  "failure_reason": "Access restricted (HTTP 401) - visibility limited but endpoint exists",
+  "failure_taxonomy": "VISIBILITY_RESTRICTED",
   "coherency_verified": true,
   "trace_id": null
 }

@@ -11,15 +11,18 @@ Any automation, AI agent, or engineer must follow this contract.
 
 ## 1. Environment Modes (Canonical)
 
-The system has exactly three modes:
+The system has exactly four modes:
 
-| Mode  | AOS_MODE | DB_AUTHORITY | Purpose |
-|-------|----------|--------------|---------|
-| LOCAL | local | local | Developer sandbox |
-| TEST  | test  | neon  | Customer-grade testing |
-| PROD  | prod  | neon  | Production |
+| Mode    | AOS_MODE | DB_AUTHORITY | Purpose |
+|---------|----------|--------------|---------|
+| LOCAL   | local    | local        | Developer sandbox |
+| TEST    | test     | neon         | Customer-grade testing |
+| PREPROD | preprod  | neon         | Pre-production staging (current) |
+| PROD    | prod     | neon         | Production |
 
 **No other combinations are valid.**
+
+**Current Environment:** This codebase runs as `AOS_MODE=preprod`. Production will be a separate deployment with `AOS_MODE=prod`.
 
 ---
 
@@ -39,6 +42,13 @@ The system has exactly three modes:
 - Neon test database only
 - No billing impact
 - All actions logged but non-billable
+
+### PREPROD
+- Same auth rules as PROD (Clerk JWT + machine keys)
+- Debug endpoints **enabled** (PIN-444)
+- Neon database (staging data)
+- Used for final validation before production
+- All actions logged, non-billable
 
 ### PROD
 - Sandbox auth **forbidden**
@@ -175,6 +185,11 @@ AOS_MODE=test
 DB_AUTHORITY=neon
 DATABASE_URL=<neon_test_connection_string>
 
+# PREPROD (current environment)
+AOS_MODE=preprod
+DB_AUTHORITY=neon
+DATABASE_URL=<neon_staging_connection_string>
+
 # PROD
 AOS_MODE=prod
 DB_AUTHORITY=neon
@@ -222,12 +237,51 @@ Report immediately. Do not proceed.
 
 ---
 
+## 11. Production-Gated Features (PIN-444)
+
+Some features are **disabled in production** (`AOS_MODE=prod`) for security or operational reasons.
+
+### Debug Endpoints
+
+| Endpoint | Purpose | Availability |
+|----------|---------|--------------|
+| `/__debug/openapi_nocache` | Force OpenAPI regeneration without cache | LOCAL, TEST, PREPROD only |
+| `/__debug/openapi_inspect` | Inspect schema for problematic patterns | LOCAL, TEST, PREPROD only |
+
+**Implementation:** These endpoints check `AOS_MODE` at runtime and return 404 if `AOS_MODE=prod`.
+
+**Why gated:**
+- Debug endpoints expose operational internals (schema structure, timing)
+- Not needed in production (schema should be stable)
+- Reduces attack surface
+
+**Reference:** `backend/app/main.py` (PIN-444)
+
+### Adding New Production-Gated Features
+
+If you need to add a feature that should be disabled in production:
+
+```python
+_FEATURE_ENABLED = os.getenv("AOS_MODE", "preprod").lower() != "prod"
+
+@app.get("/my-feature")
+async def my_feature():
+    if not _FEATURE_ENABLED:
+        return JSONResponse(status_code=404, content={"error": "not_found"})
+    # ... feature implementation
+```
+
+**Rule:** All production-gated features must be documented in this section.
+
+---
+
 ## Related Documents
 
 | Document | Purpose |
 |----------|---------|
 | `AUTH_ARCHITECTURE_BASELINE.md` | Auth implementation details |
 | `RBAC_AUTHORITY_SEPARATION_DESIGN.md` | Permission model |
+| `OPENAPI_SAFE_MODELS.md` | OpenAPI schema health rules (PIN-444) |
 | `customer_sandbox.py` | Sandbox auth (LOCAL only) |
 | `gateway_middleware.py` | Auth enforcement |
 

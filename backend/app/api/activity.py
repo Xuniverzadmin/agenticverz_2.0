@@ -14,6 +14,8 @@
 # All activity data flows through this API.
 # SDSR tests this same API - no separate SDSR endpoints.
 
+from __future__ import annotations
+
 """
 Unified Activity API (L2)
 
@@ -230,7 +232,12 @@ class PolicyContext(BaseModel):
     Advisory metadata showing why a run is at-risk.
     Derived at query time from limits table via v_runs_o2 view.
 
-    Reference: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
+    Cross-Domain Navigation (PIN-447):
+    - facade_ref: Links to /policy/active/{policy_id}
+    - threshold_ref: Links to /policy/thresholds/{id} (if limit-based)
+    - violation_ref: Links to /policy/violations/{id} (if violation exists)
+
+    Reference: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md, CROSS_DOMAIN_POLICY_CONTRACT.md
     """
 
     policy_id: str
@@ -244,6 +251,11 @@ class PolicyContext(BaseModel):
     actual_value: float | None = None
     risk_type: str | None = None
     proximity_pct: float | None = None
+
+    # Cross-domain navigation refs (PIN-447 - Policy V2 Facade)
+    facade_ref: str | None = None  # "/policy/active/{policy_id}"
+    threshold_ref: str | None = None  # "/policy/thresholds/{id}"
+    violation_ref: str | None = None  # "/policy/violations/{id}"
 
 
 class RunSummaryV2(BaseModel):
@@ -295,6 +307,14 @@ class RunSummaryV2(BaseModel):
         from_attributes = True
 
 
+class Pagination(BaseModel):
+    """Pagination metadata."""
+
+    limit: int
+    offset: int
+    next_offset: int | None = None
+
+
 class LiveRunsResponse(BaseModel):
     """
     GET /activity/live response (V2).
@@ -308,7 +328,7 @@ class LiveRunsResponse(BaseModel):
     items: list[RunSummaryV2]
     total: int
     has_more: bool
-    pagination: "Pagination"
+    pagination: Pagination
     generated_at: datetime
 
 
@@ -325,7 +345,7 @@ class CompletedRunsResponse(BaseModel):
     items: list[RunSummaryV2]
     total: int
     has_more: bool
-    pagination: "Pagination"
+    pagination: Pagination
     generated_at: datetime
 
 
@@ -534,14 +554,6 @@ class RunSummary(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-class Pagination(BaseModel):
-    """Pagination metadata."""
-
-    limit: int
-    offset: int
-    next_offset: int | None = None
 
 
 class RunListResponse(BaseModel):
@@ -1636,9 +1648,25 @@ def _extract_policy_context(row: dict) -> PolicyContext:
 
     The v_runs_o2 view includes policy context fields from migration 107.
     This helper converts DB row to PolicyContext model.
+
+    Cross-Domain Navigation (PIN-447):
+    - facade_ref: Always populated if policy_id exists
+    - threshold_ref: Populated if limit_id exists
+    - violation_ref: Populated if violation_id exists
     """
+    policy_id = row.get("policy_id") or "SYSTEM_DEFAULT"
+
+    # Build cross-domain navigation refs (PIN-447 - Policy V2 Facade)
+    facade_ref = f"/policy/active/{policy_id}" if policy_id != "SYSTEM_DEFAULT" else None
+    threshold_ref = (
+        f"/policy/thresholds/{row['limit_id']}" if row.get("limit_id") else None
+    )
+    violation_ref = (
+        f"/policy/violations/{row['violation_id']}" if row.get("violation_id") else None
+    )
+
     return PolicyContext(
-        policy_id=row.get("policy_id") or "SYSTEM_DEFAULT",
+        policy_id=policy_id,
         policy_name=row.get("policy_name") or "Default Safety Thresholds",
         policy_scope=row.get("policy_scope") or "GLOBAL",
         limit_type=row.get("limit_type"),
@@ -1649,6 +1677,10 @@ def _extract_policy_context(row: dict) -> PolicyContext:
         actual_value=float(row["actual_value"]) if row.get("actual_value") else None,
         risk_type=row.get("risk_type"),
         proximity_pct=float(row["proximity_pct"]) if row.get("proximity_pct") else None,
+        # Cross-domain navigation refs (PIN-447)
+        facade_ref=facade_ref,
+        threshold_ref=threshold_ref,
+        violation_ref=violation_ref,
     )
 
 

@@ -37,9 +37,8 @@ capability:
   status: ASSUMED
   assumed_endpoint: /api/v1/policy-layer/metrics
   assumed_method: GET
-  facade_note: "Unified facade - replaces direct /api/v1/policy-proposals/stats/summary"
 sdsr:
-  scenario: SDSR-POL-GOV-ACT-O2-001
+  scenario: SDSR-POL-GOV-ACT-O5-001
   verified: false
 notes: 'Show enforcement effectiveness — are policies actually doing anything.
 

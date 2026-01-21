@@ -1,0 +1,73 @@
+# AURORA L2 Capability Registry Entry
+# Capability: policy.lessons
+# Last Updated: 2026-01-19
+# Created By: Policy V2 Facade Implementation (PIN-447)
+#
+# STATUS: DECLARED
+#
+# V2 FACADE CAPABILITY - CROSS-DOMAIN VISIBLE
+# This capability is part of the Policy V2 facade layer.
+# Incidents domain links to lessons via lesson_ref when resolving incidents.
+#
+# Reference: PIN-447, POLICY_DOMAIN_V2_DESIGN.md
+# Contract: CROSS_DOMAIN_POLICY_CONTRACT.md
+#
+capability_id: policy.lessons
+status: DECLARED
+source_panels:
+- POL-FACADE-LESSONS-O2
+domain: POLICIES
+subdomain: GOVERNANCE
+topic: LESSONS
+cross_domain: true
+facade_layer: v2
+
+metadata:
+  generated_by: manual-pin447
+  generated_on: '2026-01-19'
+  declared_by: PIN-447
+  declared_on: '2026-01-19'
+  observed_by: null
+  observed_on: null
+
+assumption:
+  endpoint: /api/v1/policy/lessons
+  method: GET
+  source: POLICY_V2_DESIGN
+  description: "What governance emerged?"
+
+binding:
+  observed_endpoint: null
+  observed_method: null
+  observed_at: null
+  observation_id: null
+
+acceptance_criteria:
+- Returns lessons learned and drafts
+- Includes facade_ref for navigation
+- Includes pending_count and converted_count
+- Supports status and lesson_type filters
+- Tenant-scoped via auth_context
+
+cross_domain_rules:
+  allowed_callers:
+  - Incidents domain (for lesson_ref on resolution)
+  - Customer Console
+  invariants:
+  - Lesson references source incident
+  - source_incident_ref included in detail response
+  response_includes:
+  - facade_ref for each lesson
+  - source_incident_ref in detail
+
+observation:
+  scenario_id: null
+  observed_at: null
+  trace_id: null
+  invariants_passed: 0
+  invariants_total: 0
+
+coherency:
+  last_checked: null
+  status: PENDING
+  checked_by: null

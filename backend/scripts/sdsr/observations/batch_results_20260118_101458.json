@@ -1,0 +1,39 @@
+{
+  "timestamp": "2026-01-18T10:14:58.558851",
+  "total": 30,
+  "pass": [
+    "POL-GOV-ACT-O1",
+    "POL-GOV-ACT-O2",
+    "POL-GOV-ACT-O3",
+    "POL-GOV-DFT-O1",
+    "POL-GOV-LES-O1",
+    "POL-GOV-LES-O2",
+    "POL-GOV-LES-O5",
+    "POL-GOV-LIB-O3",
+    "POL-GOV-LIB-O4",
+    "POL-LIM-VIO-O2",
+    "POL-LIM-VIO-O3",
+    "POL-LIM-VIO-O5"
+  ],
+  "fail": [
+    "POL-GOV-ACT-O4",
+    "POL-GOV-ACT-O5",
+    "POL-GOV-DFT-O2",
+    "POL-GOV-DFT-O3",
+    "POL-GOV-DFT-O4",
+    "POL-GOV-DFT-O5",
+    "POL-GOV-LES-O3",
+    "POL-GOV-LES-O4",
+    "POL-GOV-LIB-O1",
+    "POL-GOV-LIB-O2",
+    "POL-GOV-LIB-O5",
+    "POL-LIM-THR-O1",
+    "POL-LIM-THR-O2",
+    "POL-LIM-THR-O3",
+    "POL-LIM-THR-O4",
+    "POL-LIM-THR-O5",
+    "POL-LIM-VIO-O1",
+    "POL-LIM-VIO-O4"
+  ],
+  "error": []
+}

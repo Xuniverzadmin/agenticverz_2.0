@@ -142,7 +142,15 @@ class TraceStep:
 
 @dataclass
 class TraceSummary:
-    """Summary of a trace for listing purposes."""
+    """
+    Summary of a trace for listing purposes.
+
+    Inflection Fields (BACKEND_REMEDIATION_PLAN GAP-003):
+    - violation_step_index: Step where policy violation occurred
+    - violation_timestamp: When the violation was detected
+    - violation_policy_id: ID of the violated policy
+    - violation_reason: Human-readable violation description
+    """
 
     run_id: str
     correlation_id: str
@@ -156,6 +164,12 @@ class TraceSummary:
     started_at: datetime
     completed_at: datetime | None
     status: str  # "running", "completed", "failed"
+
+    # Inflection point fields (GAP-003: mark exact step/timestamp of violation)
+    violation_step_index: int | None = None
+    violation_timestamp: datetime | None = None
+    violation_policy_id: str | None = None
+    violation_reason: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -172,6 +186,11 @@ class TraceSummary:
             "started_at": self.started_at.isoformat(),
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "status": self.status,
+            # Inflection point fields
+            "violation_step_index": self.violation_step_index,
+            "violation_timestamp": self.violation_timestamp.isoformat() if self.violation_timestamp else None,
+            "violation_policy_id": self.violation_policy_id,
+            "violation_reason": self.violation_reason,
         }
 
 

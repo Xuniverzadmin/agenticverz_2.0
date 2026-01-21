@@ -1,41 +1,22 @@
 {
-  "observation_id": "OBS-SDSR-POL-GOV-DFT-O1-001-20260115171608",
+  "observation_id": "OBS-SDSR-POL-GOV-DFT-O1-001-20260119145845",
   "scenario_id": "SDSR-POL-GOV-DFT-O1-001",
   "capability_id": "policies.drafts_list",
   "panel_id": "POL-GOV-DFT-O1",
-  "status": "PASS",
-  "observed_at": "2026-01-15T17:16:10.160331+00:00",
-  "assumed_endpoint": "/api/v1/policy-proposals",
+  "status": "BLOCKED",
+  "observed_at": "2026-01-19T14:58:45.163066+00:00",
+  "assumed_endpoint": null,
   "observed_endpoint": "/api/v1/policy-proposals",
   "assumed_method": "GET",
   "observed_method": "GET",
-  "response_status_code": 200,
-  "response_time_ms": 1510.6830596923828,
+  "response_status_code": null,
+  "response_time_ms": null,
   "invariants_total": 3,
-  "invariants_passed": 3,
+  "invariants_passed": 0,
   "invariants_failed": 0,
-  "invariant_results": [
-    {
-      "id": "INV-001",
-      "name": "response_shape",
-      "status": "PASS",
-      "message": "Assertion passed: response is dict and response is not empty"
-    },
-    {
-      "id": "INV-002",
-      "name": "status_code",
-      "status": "PASS",
-      "message": "Assertion passed: status_code == 200"
-    },
-    {
-      "id": "INV-003",
-      "name": "auth_works",
-      "status": "PASS",
-      "message": "Assertion passed: status_code != 401 and status_code != 403"
-    }
-  ],
-  "failure_reason": null,
-  "failure_taxonomy": null,
-  "coherency_verified": true,
+  "invariant_results": [],
+  "failure_reason": "Coherency gate failed: COH-009",
+  "failure_taxonomy": "REALITY_MISMATCH",
+  "coherency_verified": false,
   "trace_id": null
 }

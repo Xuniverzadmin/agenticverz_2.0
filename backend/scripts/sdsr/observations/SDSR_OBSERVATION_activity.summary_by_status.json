@@ -1,0 +1,22 @@
+{
+  "observation_id": "OBS-SDSR-ACT-LLM-COMP-O2-001-20260119145811",
+  "scenario_id": "SDSR-ACT-LLM-COMP-O2-001",
+  "capability_id": "activity.summary_by_status",
+  "panel_id": "ACT-LLM-COMP-O2",
+  "status": "PASS",
+  "observed_at": "2026-01-19T14:58:11.622062+00:00",
+  "assumed_endpoint": "/api/v1/activity/summary/by-status",
+  "observed_endpoint": "/api/v1/activity/summary/by-status",
+  "assumed_method": "GET",
+  "observed_method": "GET",
+  "response_status_code": 401,
+  "response_time_ms": 39.396047592163086,
+  "invariants_total": 3,
+  "invariants_passed": 0,
+  "invariants_failed": 0,
+  "invariant_results": [],
+  "failure_reason": "Access restricted (HTTP 401) - visibility limited but endpoint exists",
+  "failure_taxonomy": "VISIBILITY_RESTRICTED",
+  "coherency_verified": true,
+  "trace_id": null
+}

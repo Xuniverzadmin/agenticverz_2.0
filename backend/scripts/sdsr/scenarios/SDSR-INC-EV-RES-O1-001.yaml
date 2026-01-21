@@ -20,10 +20,12 @@
 scenario_id: SDSR-INC-EV-RES-O1-001
 version: 1.0.0
 name: Observe INC-EV-RES-O1 capability
-description: SDSR verification scenario for incidents.resolved_list
+description: SDSR verification scenario for incidents.resolved_list (resolved incidents)
 capability: incidents.resolved_list
 panel_id: INC-EV-RES-O1
 domain: INCIDENTS
+auth:
+  mode: OBSERVER
 metadata:
   generated_by: aurora_sdsr_synth.py
   generated_at: '2026-01-15T06:42:03.023382+00:00'
@@ -33,10 +35,10 @@ inject:
   endpoint: /api/v1/incidents
   method: GET
   headers:
-    Authorization: Bearer ${AUTH_TOKEN}
     Content-Type: application/json
   params:
-    window: 24h
+    lifecycle_state: RESOLVED
+    limit: 20
 expect:
   status_code: 200
   response_type: json

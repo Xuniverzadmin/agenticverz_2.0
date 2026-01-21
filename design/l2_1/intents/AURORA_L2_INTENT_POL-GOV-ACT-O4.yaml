@@ -34,12 +34,11 @@ controls:
   confirmation_required: false
 capability:
   id: policies.layer_state
-  status: ASSUMED
+  status: DECLARED
   assumed_endpoint: /api/v1/policy-layer/state
   assumed_method: GET
-  facade_note: "Added /api/v1 prefix - API Audit 2026-01-16"
 sdsr:
-  scenario: SDSR-POL-GOV-ACT-O4-001
+  scenario: PENDING
   verified: false
 notes: 'Show cost and performance side effects — what governance is costing us.
 

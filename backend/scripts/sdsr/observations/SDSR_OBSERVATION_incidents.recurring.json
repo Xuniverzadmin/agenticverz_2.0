@@ -1,0 +1,22 @@
+{
+  "observation_id": "OBS-SDSR-INC-EV-HIST-O3-001-20260119145828",
+  "scenario_id": "SDSR-INC-EV-HIST-O3-001",
+  "capability_id": "incidents.recurring",
+  "panel_id": "INC-EV-HIST-O3",
+  "status": "PASS",
+  "observed_at": "2026-01-19T14:58:30.887735+00:00",
+  "assumed_endpoint": null,
+  "observed_endpoint": "/api/v1/incidents/recurring",
+  "assumed_method": "GET",
+  "observed_method": "GET",
+  "response_status_code": 401,
+  "response_time_ms": 2080.538511276245,
+  "invariants_total": 3,
+  "invariants_passed": 0,
+  "invariants_failed": 0,
+  "invariant_results": [],
+  "failure_reason": "Access restricted (HTTP 401) - visibility limited but endpoint exists",
+  "failure_taxonomy": "VISIBILITY_RESTRICTED",
+  "coherency_verified": true,
+  "trace_id": null
+}

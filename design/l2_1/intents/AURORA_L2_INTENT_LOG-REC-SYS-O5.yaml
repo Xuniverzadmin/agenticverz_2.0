@@ -33,11 +33,11 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: logs.skills_health
-  status: ASSUMED
-  assumed_endpoint: /health/skills
+  id: logs.system
+  status: DEFERRED
+  assumed_endpoint: 'null'
   assumed_method: GET
 sdsr:
-  scenario: SDSR-LOG-REC-SYS-O5-001
+  scenario: DEFERRED
   verified: false
 notes: Show infra audit and attribution record — who is responsible.

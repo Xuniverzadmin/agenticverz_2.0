@@ -1,0 +1,131 @@
+# SDSR Loop Assertion Scenario
+# Scenario: SDSR-POL-LOOP-002
+# Created: 2026-01-19
+# Reference: PIN-447, POLICY_DOMAIN_V2_DESIGN.md
+#
+# PURPOSE:
+#   LOOP INVARIANT: Lesson references source
+#
+#   This scenario verifies that:
+#   1. Every lesson has a source_event_type
+#   2. Lessons created from incidents have source_incident_ref
+#   3. The lesson → incident link is traceable
+#
+# CROSS-DOMAIN RULE:
+#   Policy → Incidents: READ incident data for lesson creation
+#
+# EXECUTION:
+#   python aurora_sdsr_runner.py --scenario SDSR-POL-LOOP-002
+#
+scenario_id: SDSR-POL-LOOP-002
+version: 1.0.0
+name: Lesson references source (Loop Invariant)
+description: >
+  Verifies the SDSR loop invariant that lessons must reference
+  their source incident. Ensures provenance from incident resolution
+  to governance learning is traceable.
+
+capability: policy.lessons
+panel_id: POL-FACADE-LESSONS-O2
+domain: POLICIES
+subdomain: GOVERNANCE
+topic: LESSONS
+
+auth:
+  mode: OBSERVER
+
+metadata:
+  generated_by: manual-pin447
+  generated_at: '2026-01-19'
+  loop_invariant: LESSON_REFERENCES_SOURCE
+  cross_domain_rule: Lessons link to source incidents
+  contract_ref: CROSS_DOMAIN_POLICY_CONTRACT.md Section 2.4
+
+# Step 1: Query existing lessons
+inject:
+  type: api_call
+  endpoint: /api/v1/policy/lessons
+  method: GET
+  headers:
+    Content-Type: application/json
+  params:
+    limit: 10
+
+expect:
+  status_code: 200
+  response_type: json
+  response_shape:
+    items: list
+    total: int
+    has_more: bool
+    pending_count: int
+    converted_count: int
+
+invariants:
+- id: INV-LOOP-001
+  name: lesson_has_source_type
+  description: Every lesson has source_event_type
+  assertion: >
+    all('source_event_type' in lesson for lesson in response.get('items', []))
+    or len(response.get('items', [])) == 0
+  severity: BLOCKING
+
+- id: INV-LOOP-002
+  name: lesson_has_facade_ref
+  description: Every lesson has facade_ref for cross-domain navigation
+  assertion: >
+    all('facade_ref' in lesson for lesson in response.get('items', []))
+    or len(response.get('items', [])) == 0
+  severity: BLOCKING
+
+- id: INV-LOOP-003
+  name: lesson_has_lesson_type
+  description: Every lesson has lesson_type classification
+  assertion: >
+    all('lesson_type' in lesson for lesson in response.get('items', []))
+    or len(response.get('items', [])) == 0
+  severity: BLOCKING
+
+- id: INV-LOOP-004
+  name: lessons_endpoint_exists
+  description: V2 facade lessons endpoint is functional
+  assertion: status_code == 200
+  severity: BLOCKING
+
+# Detail endpoint check for source_incident_ref
+chain_scenarios:
+- scenario_id: SDSR-POL-LOOP-002-DETAIL
+  description: Verify lesson detail includes source_incident_ref
+  condition: len(response.get('items', [])) > 0
+  inject:
+    type: api_call
+    endpoint_template: /api/v1/policy/lessons/{lesson_id}
+    endpoint_params:
+      lesson_id: response['items'][0]['lesson_id']
+    method: GET
+  expect:
+    status_code: 200
+  invariants:
+  - id: INV-DETAIL-001
+    name: detail_has_source_ref
+    description: Lesson detail includes source_incident_ref if from incident
+    assertion: >
+      'source_incident_ref' in response or
+      response.get('source_event_type') != 'incident'
+
+cleanup:
+  required: false
+  note: Read-only observation, no cleanup needed
+
+on_success:
+  update_capability_status: OBSERVED
+  emit_observation: true
+  loop_assertion_passed: LESSON_REFERENCES_SOURCE
+
+on_failure:
+  update_capability_status: null
+  emit_observation: true
+  failure_taxonomy:
+    loop_invariant_violated: Lesson-references-source contract broken
+    endpoint_missing: V2 facade endpoint not available
+    auth_failed: Authentication/authorization issue

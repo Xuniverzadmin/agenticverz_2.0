@@ -313,6 +313,55 @@ class Incident(SQLModel, table=True):
     resolution_method: Optional[str] = Field(default=None, max_length=20)  # auto, manual, rollback
     cost_impact: Optional[Decimal] = Field(default=None)  # USD impact, null if unknown
 
+    # GAP-024: Inflection point metadata
+    # Captures the exact moment when an incident was triggered
+    inflection_step_index: Optional[int] = Field(
+        default=None,
+        description="Step index where incident was triggered (GAP-024)"
+    )
+    inflection_timestamp: Optional[datetime] = Field(
+        default=None,
+        description="Exact timestamp when inflection was detected (GAP-024)"
+    )
+    inflection_context_json: Optional[str] = Field(
+        default=None,
+        description="JSON context about what was happening at inflection (GAP-024)"
+    )
+
+    def get_inflection_context(self) -> dict:
+        """Get inflection context from JSON (GAP-024)."""
+        if self.inflection_context_json:
+            return json.loads(self.inflection_context_json)
+        return {}
+
+    def set_inflection_context(self, context: dict) -> None:
+        """Set inflection context as JSON (GAP-024)."""
+        self.inflection_context_json = json.dumps(context)
+
+    def set_inflection_point(
+        self,
+        step_index: Optional[int] = None,
+        timestamp: Optional[datetime] = None,
+        context: Optional[dict] = None,
+    ) -> None:
+        """
+        Set inflection point metadata (GAP-024).
+
+        Args:
+            step_index: Which step triggered the incident
+            timestamp: When the inflection was detected
+            context: Additional context about the inflection point
+        """
+        if step_index is not None:
+            self.inflection_step_index = step_index
+        if timestamp is not None:
+            self.inflection_timestamp = timestamp
+        elif self.inflection_timestamp is None:
+            # Default to now if not provided
+            self.inflection_timestamp = utc_now()
+        if context is not None:
+            self.set_inflection_context(context)
+
     def add_related_call(self, call_id: str):
         """Add a related call ID."""
         ids = self.get_related_call_ids()

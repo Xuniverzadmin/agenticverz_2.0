@@ -1,19 +1,19 @@
 {
-  "observation_id": "OBS-SDSR-ACT-LLM-COMP-O4-001-20260115183622",
+  "observation_id": "OBS-SDSR-ACT-LLM-COMP-O4-001-20260119145812",
   "scenario_id": "SDSR-ACT-LLM-COMP-O4-001",
   "capability_id": "activity.customer_activity",
   "panel_id": "ACT-LLM-COMP-O4",
-  "status": "PASS",
-  "observed_at": "2026-01-15T18:36:26.199858+00:00",
+  "status": "FAIL",
+  "observed_at": "2026-01-19T14:58:12.838831+00:00",
   "assumed_endpoint": null,
   "observed_endpoint": "/api/v1/customer/activity",
   "assumed_method": "GET",
   "observed_method": "GET",
-  "response_status_code": 200,
-  "response_time_ms": 3381.556749343872,
+  "response_status_code": 404,
+  "response_time_ms": 19.93107795715332,
   "invariants_total": 3,
-  "invariants_passed": 3,
-  "invariants_failed": 0,
+  "invariants_passed": 2,
+  "invariants_failed": 1,
   "invariant_results": [
     {
       "id": "INV-001",
@@ -24,8 +24,8 @@
     {
       "id": "INV-002",
       "name": "status_code",
-      "status": "PASS",
-      "message": "Assertion passed: status_code == 200"
+      "status": "FAIL",
+      "message": "Assertion failed: status_code == 200"
     },
     {
       "id": "INV-003",
@@ -34,8 +34,8 @@
       "message": "Assertion passed: status_code != 401 and status_code != 403"
     }
   ],
-  "failure_reason": null,
-  "failure_taxonomy": null,
+  "failure_reason": "1 invariant(s) failed",
+  "failure_taxonomy": "INVARIANT_VIOLATED",
   "coherency_verified": true,
   "trace_id": null
 }

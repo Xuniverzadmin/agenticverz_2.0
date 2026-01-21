@@ -433,6 +433,169 @@ class LLMRunEvaluator:
 
 
 # =============================================================================
+# Sync Versions (for Worker Context)
+# =============================================================================
+# The async versions above are for API/async contexts.
+# These sync versions are for the Worker (ThreadPoolExecutor) which runs sync.
+# =============================================================================
+
+
+class LLMRunThresholdResolverSync:
+    """
+    Sync version of LLMRunThresholdResolver for worker context.
+
+    Uses raw SQL queries with a sync Session since the worker runs
+    in a ThreadPoolExecutor which doesn't support async.
+    """
+
+    def __init__(self, session):
+        """Accept a sync SQLAlchemy Session."""
+        self._session = session
+
+    def resolve(
+        self,
+        tenant_id: str,
+        agent_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+    ) -> ThresholdParams:
+        """
+        Resolve effective threshold params for a run (sync version).
+
+        Same logic as async version but uses sync session.
+        """
+        from sqlalchemy import text
+
+        # Start with safe defaults
+        effective_params = DEFAULT_LLM_RUN_PARAMS.copy()
+
+        try:
+            # Query for active threshold limits
+            result = self._session.execute(
+                text("""
+                    SELECT scope, scope_id, params
+                    FROM limits
+                    WHERE tenant_id = :tenant_id
+                      AND limit_category = 'THRESHOLD'
+                      AND status = 'ACTIVE'
+                    ORDER BY created_at
+                """),
+                {"tenant_id": tenant_id},
+            )
+            limits = result.fetchall()
+
+            if not limits:
+                logger.debug(
+                    "No active threshold limits for tenant %s, using defaults",
+                    tenant_id,
+                )
+                return ThresholdParams(**effective_params)
+
+            # Apply limits in precedence order
+            for row in limits:
+                scope, scope_id, params = row
+                if not params:
+                    continue
+
+                # Determine if this limit applies
+                applies = False
+                if scope == "GLOBAL":
+                    applies = True
+                elif scope == "TENANT":
+                    applies = True
+                elif scope == "PROJECT" and scope_id == project_id:
+                    applies = True
+                elif scope == "AGENT" and scope_id == agent_id:
+                    applies = True
+
+                if applies:
+                    for key, value in params.items():
+                        if key in effective_params and value is not None:
+                            effective_params[key] = value
+
+            return ThresholdParams(**effective_params)
+
+        except Exception as e:
+            logger.warning(
+                "Sync threshold resolution failed for tenant %s: %s, using defaults",
+                tenant_id,
+                str(e),
+            )
+            return ThresholdParams(**DEFAULT_LLM_RUN_PARAMS)
+
+
+class LLMRunEvaluatorSync:
+    """
+    Sync version of LLMRunEvaluator for worker context.
+
+    Uses LLMRunThresholdResolverSync instead of the async resolver.
+    """
+
+    def __init__(self, resolver: LLMRunThresholdResolverSync):
+        self._resolver = resolver
+
+    def evaluate_completed_run(
+        self,
+        run_id: str,
+        tenant_id: str,
+        status: str,
+        execution_time_ms: int,
+        tokens_used: int,
+        cost_usd: float,
+        agent_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+    ) -> ThresholdEvaluationResult:
+        """
+        Evaluate a completed LLM run (sync version).
+
+        Same logic as async version but uses sync resolver.
+        """
+        params = self._resolver.resolve(tenant_id, agent_id, project_id)
+        signals: list[ThresholdSignal] = []
+
+        # Check failure
+        if status == "failed" and params.failure_signal:
+            signals.append(ThresholdSignal.RUN_FAILED)
+            logger.info("Run %s failed, emitting signal", run_id)
+
+        # Check execution time
+        if execution_time_ms > params.max_execution_time_ms:
+            signals.append(ThresholdSignal.EXECUTION_TIME_EXCEEDED)
+            logger.info(
+                "Run %s exceeded execution time: %dms > %dms",
+                run_id,
+                execution_time_ms,
+                params.max_execution_time_ms,
+            )
+
+        # Check tokens
+        if tokens_used > params.max_tokens:
+            signals.append(ThresholdSignal.TOKEN_LIMIT_EXCEEDED)
+            logger.info(
+                "Run %s exceeded token limit: %d > %d",
+                run_id,
+                tokens_used,
+                params.max_tokens,
+            )
+
+        # Check cost
+        if cost_usd > params.max_cost_usd:
+            signals.append(ThresholdSignal.COST_LIMIT_EXCEEDED)
+            logger.info(
+                "Run %s exceeded cost limit: $%.4f > $%.4f",
+                run_id,
+                cost_usd,
+                params.max_cost_usd,
+            )
+
+        return ThresholdEvaluationResult(
+            run_id=run_id,
+            signals=signals,
+            params_used=params.model_dump(),
+            evaluated_at=datetime.now(timezone.utc),
+        )
+
+
+# =============================================================================
 # Activity Signal Emitter (Minimal Extension)
 # =============================================================================
 

@@ -1,5 +1,5 @@
 /**
- * UI Plan Scaffolding — Structural Authority from ui_plan.yaml
+ * UI Plan Scaffolding — Structural Authority from V2 Constitution
  *
  * Layer: L1 — Product Experience (UI)
  * Product: system-wide
@@ -7,36 +7,20 @@
  *   Trigger: build-time (static data)
  *   Execution: sync
  * Role: Provide domain/subdomain/topic structure when projection is incomplete
- * Reference: UI-as-Constraint Doctrine, ARCHITECTURE_CONSTRAINTS_V1.yaml
+ * Reference: CUSTOMER_CONSOLE_V2_CONSTITUTION.md
  *
  * AUTHORITY MODEL:
  * ┌─────────────────────────────────────────────────────────────┐
- * │ ui_plan.yaml (human constraint) — HIGHEST AUTHORITY        │
+ * │ V2 Constitution (human constraint) — HIGHEST AUTHORITY      │
  * │      ↓                                                      │
  * │ ui_projection_lock.json (machine mirror, partial)           │
  * │      ↓                                                      │
  * │ Frontend renderer (dumb consumer)                           │
  * └─────────────────────────────────────────────────────────────┘
  *
- * RULE (CONSTITUTIONAL):
- * If a domain/subdomain/topic exists in ui_plan.yaml but not in projection,
- * the UI MUST render structural scaffolding using this file as fallback authority.
- *
- * WHAT THIS FILE PROVIDES:
- * - Domain existence
- * - Subdomain existence
- * - Topic existence
- * - Navigation structure
- *
- * WHAT THIS FILE DOES NOT PROVIDE:
- * - Panel instances (projection only)
- * - Binding states (projection only)
- * - Data rendering (projection only)
- *
  * SYNC NOTICE:
- * This file is derived from: design/l2_1/ui_plan.yaml
- * Keep in sync when ui_plan.yaml structure changes.
- * Last synced: 2026-01-14
+ * This file is derived from: docs/contracts/CUSTOMER_CONSOLE_V2_CONSTITUTION.md
+ * Last synced: 2026-01-20
  */
 
 import type { DomainName } from './ui_projection_types';
@@ -47,11 +31,14 @@ import type { DomainName } from './ui_projection_types';
 
 export interface ScaffoldingTopic {
   id: string;
+  name: string;
+  description: string;
   display_order: number;
 }
 
 export interface ScaffoldingSubdomain {
   id: string;
+  name: string;
   topics: ScaffoldingTopic[];
 }
 
@@ -65,7 +52,7 @@ export interface ScaffoldingDomain {
 }
 
 // ============================================================================
-// Domain Scaffolding Data (derived from ui_plan.yaml)
+// Domain Scaffolding Data (derived from V2 Constitution)
 // ============================================================================
 
 export const UI_PLAN_SCAFFOLDING: ScaffoldingDomain[] = [
@@ -73,14 +60,15 @@ export const UI_PLAN_SCAFFOLDING: ScaffoldingDomain[] = [
     id: "Overview",
     question: "Is the system okay right now?",
     primary_object: "Health",
-    order: 1,
-    route: "/precus/overview",
+    order: 0,
+    route: "/overview",
     subdomains: [
       {
-        id: "SYSTEM_HEALTH",
+        id: "summary",
+        name: "Summary",
         topics: [
-          { id: "CURRENT_STATUS", display_order: 1 },
-          { id: "HEALTH_METRICS", display_order: 2 },
+          { id: "highlights", name: "Highlights", description: "System pulse, status", display_order: 0 },
+          { id: "decisions", name: "Decisions", description: "Pending actions, approvals", display_order: 1 },
         ],
       },
     ],
@@ -89,17 +77,16 @@ export const UI_PLAN_SCAFFOLDING: ScaffoldingDomain[] = [
     id: "Activity",
     question: "What ran / is running?",
     primary_object: "Run",
-    order: 2,
-    route: "/precus/activity",
+    order: 1,
+    route: "/activity",
     subdomains: [
       {
-        id: "EXECUTIONS",
+        id: "llm_runs",
+        name: "LLM Runs",
         topics: [
-          { id: "ACTIVE_RUNS", display_order: 1 },
-          { id: "COMPLETED_RUNS", display_order: 2 },
-          { id: "RUN_DETAILS", display_order: 3 },
-          { id: "LIVE_RUNS", display_order: 4 },
-          { id: "SUMMARY", display_order: 5 },
+          { id: "live", name: "Live", description: "Currently executing", display_order: 0 },
+          { id: "completed", name: "Completed", description: "Finished runs", display_order: 1 },
+          { id: "signals", name: "Signals", description: "Predictions, anomalies, risks", display_order: 2 },
         ],
       },
     ],
@@ -108,21 +95,16 @@ export const UI_PLAN_SCAFFOLDING: ScaffoldingDomain[] = [
     id: "Incidents",
     question: "What went wrong?",
     primary_object: "Incident",
-    order: 3,
-    route: "/precus/incidents",
+    order: 2,
+    route: "/incidents",
     subdomains: [
       {
-        id: "ACTIVE_INCIDENTS",
+        id: "events",
+        name: "Events",
         topics: [
-          { id: "INCIDENT_DETAILS", display_order: 1 },
-          { id: "OPEN_INCIDENTS", display_order: 2 },
-          { id: "SUMMARY", display_order: 3 },
-        ],
-      },
-      {
-        id: "HISTORICAL_INCIDENTS",
-        topics: [
-          { id: "RESOLVED_INCIDENTS", display_order: 1 },
+          { id: "active", name: "Active", description: "Requires attention", display_order: 0 },
+          { id: "resolved", name: "Resolved", description: "Acknowledged, closed", display_order: 1 },
+          { id: "historical", name: "Historical", description: "Audit trail", display_order: 2 },
         ],
       },
     ],
@@ -131,28 +113,24 @@ export const UI_PLAN_SCAFFOLDING: ScaffoldingDomain[] = [
     id: "Policies",
     question: "How is behavior defined?",
     primary_object: "Policy",
-    order: 4,
-    route: "/precus/policies",
+    order: 3,
+    route: "/policies",
     subdomains: [
       {
-        id: "ACTIVE_POLICIES",
+        id: "governance",
+        name: "Governance",
         topics: [
-          { id: "APPROVAL_RULES", display_order: 1 },
-          { id: "BUDGET_POLICIES", display_order: 2 },
-          { id: "RATE_LIMITS", display_order: 3 },
-          { id: "SUMMARY", display_order: 4 },
+          { id: "active", name: "Active", description: "Enforced policies", display_order: 0 },
+          { id: "lessons", name: "Lessons", description: "Learned patterns, proposals", display_order: 1 },
+          { id: "policy_library", name: "Policy Library", description: "Templates, ethical constraints", display_order: 2 },
         ],
       },
       {
-        id: "POLICY_AUDIT",
+        id: "limits",
+        name: "Limits",
         topics: [
-          { id: "POLICY_CHANGES", display_order: 1 },
-        ],
-      },
-      {
-        id: "PROPOSALS",
-        topics: [
-          { id: "PENDING_PROPOSALS", display_order: 1 },
+          { id: "controls", name: "Controls", description: "Configured limits", display_order: 0 },
+          { id: "violations", name: "Violations", description: "Limit breaches", display_order: 1 },
         ],
       },
     ],
@@ -161,62 +139,40 @@ export const UI_PLAN_SCAFFOLDING: ScaffoldingDomain[] = [
     id: "Logs",
     question: "What is the raw truth?",
     primary_object: "Trace",
-    order: 5,
-    route: "/precus/logs",
+    order: 4,
+    route: "/logs",
     subdomains: [
       {
-        id: "AUDIT_LOGS",
+        id: "records",
+        name: "Records",
         topics: [
-          { id: "SYSTEM_AUDIT", display_order: 1 },
-          { id: "USER_AUDIT", display_order: 2 },
-          { id: "SUMMARY", display_order: 3 },
-        ],
-      },
-      {
-        id: "EXECUTION_TRACES",
-        topics: [
-          { id: "TRACE_DETAILS", display_order: 1 },
-          { id: "LIVE_STREAMS", display_order: 2 },
+          { id: "llm_runs", name: "LLM Runs", description: "Execution records", display_order: 0 },
+          { id: "system_logs", name: "System Logs", description: "Worker events", display_order: 1 },
+          { id: "audit_logs", name: "Audit Logs", description: "Governance actions", display_order: 2 },
         ],
       },
     ],
   },
   {
-    id: "Account",
-    question: "Who am I and what do I own?",
-    primary_object: "Account",
-    order: 6,
-    route: "/precus/account",
+    id: "Analytics",
+    question: "What can we learn?",
+    primary_object: "Metric",
+    order: 5,
+    route: "/analytics",
     subdomains: [
       {
-        id: "PROFILE",
+        id: "insights",
+        name: "Insights",
         topics: [
-          { id: "ACCOUNT_INFO", display_order: 1 },
-          { id: "SECURITY_SETTINGS", display_order: 2 },
+          { id: "cost_intelligence", name: "Cost Intelligence", description: "Spend, anomalies, forecasts", display_order: 0 },
         ],
       },
       {
-        id: "BILLING",
+        id: "usage_statistics",
+        name: "Usage Stats",
         topics: [
-          { id: "PAYMENT_METHODS", display_order: 1 },
-          { id: "INVOICES", display_order: 2 },
-          { id: "USAGE_SUMMARY", display_order: 3 },
-        ],
-      },
-      {
-        id: "PLANS_SUBSCRIPTIONS",
-        topics: [
-          { id: "CURRENT_PLAN", display_order: 1 },
-          { id: "PLAN_LIMITS", display_order: 2 },
-          { id: "UPGRADE_OPTIONS", display_order: 3 },
-        ],
-      },
-      {
-        id: "SUBUSERS",
-        topics: [
-          { id: "SUBUSER_LIST", display_order: 1 },
-          { id: "PERMISSIONS", display_order: 2 },
-          { id: "INVITE_SUBUSER", display_order: 3 },
+          { id: "policies_usage", name: "Policies Usage", description: "Effectiveness, coverage", display_order: 0 },
+          { id: "productivity", name: "Productivity", description: "Saved time, efficiency gains", display_order: 1 },
         ],
       },
     ],
@@ -225,23 +181,59 @@ export const UI_PLAN_SCAFFOLDING: ScaffoldingDomain[] = [
     id: "Connectivity",
     question: "How does the system connect?",
     primary_object: "Connection",
-    order: 7,
-    route: "/precus/connectivity",
+    order: 6,
+    route: "/connectivity",
     subdomains: [
       {
-        id: "INTEGRATIONS",
+        id: "integrations",
+        name: "Integrations",
         topics: [
-          { id: "CONNECTED_SERVICES", display_order: 1 },
-          { id: "AVAILABLE_INTEGRATIONS", display_order: 2 },
-          { id: "INTEGRATION_HEALTH", display_order: 3 },
+          { id: "sdk_integration", name: "SDK Integration", description: "aos_sdk setup, future platforms", display_order: 0 },
         ],
       },
       {
-        id: "API",
+        id: "api",
+        name: "API",
         topics: [
-          { id: "API_KEYS", display_order: 1 },
-          { id: "WEBHOOKS", display_order: 2 },
-          { id: "API_USAGE", display_order: 3 },
+          { id: "api_keys", name: "API Keys", description: "Create, rotate, revoke", display_order: 0 },
+        ],
+      },
+    ],
+  },
+  {
+    id: "Account",
+    question: "Who am I and what do I own?",
+    primary_object: "Account",
+    order: 7,
+    route: "/account",
+    subdomains: [
+      {
+        id: "profile",
+        name: "Profile",
+        topics: [
+          { id: "overview", name: "Overview", description: "Organization identity", display_order: 0 },
+        ],
+      },
+      {
+        id: "billing",
+        name: "Billing",
+        topics: [
+          { id: "subscription", name: "Subscription", description: "Plan details", display_order: 0 },
+          { id: "invoices", name: "Invoices", description: "Payment history", display_order: 1 },
+        ],
+      },
+      {
+        id: "team",
+        name: "Team",
+        topics: [
+          { id: "members", name: "Members", description: "Team members, RBAC (admin only)", display_order: 0 },
+        ],
+      },
+      {
+        id: "settings",
+        name: "Settings",
+        topics: [
+          { id: "account_management", name: "Account Management", description: "Suspend, terminate", display_order: 0 },
         ],
       },
     ],
@@ -277,6 +269,15 @@ export function getScaffoldingSubdomains(domainName: DomainName): string[] {
 }
 
 /**
+ * Get subdomain objects for a domain from scaffolding.
+ */
+export function getScaffoldingSubdomainObjects(domainName: DomainName): ScaffoldingSubdomain[] {
+  const domain = getScaffoldingDomain(domainName);
+  if (!domain) return [];
+  return domain.subdomains;
+}
+
+/**
  * Get topics for a subdomain from scaffolding.
  */
 export function getScaffoldingTopics(domainName: DomainName, subdomainId: string): ScaffoldingTopic[] {
@@ -292,4 +293,14 @@ export function getScaffoldingTopics(domainName: DomainName, subdomainId: string
  */
 export function hasScaffoldingDomain(domainName: DomainName): boolean {
   return UI_PLAN_SCAFFOLDING.some(d => d.id === domainName);
+}
+
+/**
+ * Get subdomain display name.
+ */
+export function getSubdomainName(domainName: DomainName, subdomainId: string): string {
+  const domain = getScaffoldingDomain(domainName);
+  if (!domain) return subdomainId;
+  const subdomain = domain.subdomains.find(s => s.id === subdomainId);
+  return subdomain?.name || subdomainId;
 }

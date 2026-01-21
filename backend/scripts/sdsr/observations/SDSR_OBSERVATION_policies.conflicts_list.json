@@ -1,41 +1,22 @@
 {
-  "observation_id": "OBS-SDSR-POL-GOV-DFT-O4-001-20260115171611",
+  "observation_id": "OBS-SDSR-POL-GOV-DFT-O4-001-20260118131218",
   "scenario_id": "SDSR-POL-GOV-DFT-O4-001",
   "capability_id": "policies.conflicts_list",
   "panel_id": "POL-GOV-DFT-O4",
-  "status": "FAIL",
-  "observed_at": "2026-01-15T17:16:11.557140+00:00",
-  "assumed_endpoint": "/policy-layer/conflicts",
-  "observed_endpoint": "/policy-layer/conflicts",
+  "status": "BLOCKED",
+  "observed_at": "2026-01-18T13:12:18.942907+00:00",
+  "assumed_endpoint": "/api/v1/policy-layer/conflicts",
+  "observed_endpoint": "/api/v1/policy-layer/conflicts",
   "assumed_method": "GET",
   "observed_method": "GET",
-  "response_status_code": 404,
-  "response_time_ms": 15.787124633789062,
+  "response_status_code": null,
+  "response_time_ms": null,
   "invariants_total": 3,
-  "invariants_passed": 2,
-  "invariants_failed": 1,
-  "invariant_results": [
-    {
-      "id": "INV-001",
-      "name": "response_shape",
-      "status": "PASS",
-      "message": "Assertion passed: response is dict and response is not empty"
-    },
-    {
-      "id": "INV-002",
-      "name": "status_code",
-      "status": "FAIL",
-      "message": "Assertion failed: status_code == 200"
-    },
-    {
-      "id": "INV-003",
-      "name": "auth_works",
-      "status": "PASS",
-      "message": "Assertion passed: status_code != 401 and status_code != 403"
-    }
-  ],
-  "failure_reason": "1 invariant(s) failed",
-  "failure_taxonomy": "INVARIANT_VIOLATED",
-  "coherency_verified": true,
+  "invariants_passed": 0,
+  "invariants_failed": 0,
+  "invariant_results": [],
+  "failure_reason": "Coherency gate failed: COH-004",
+  "failure_taxonomy": "COHERENCY_VIOLATION",
+  "coherency_verified": false,
   "trace_id": null
 }

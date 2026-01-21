@@ -33,10 +33,13 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: overview.cost_by_model
-  status: ASSUMED
-  assumed_endpoint: null
+  id: overview.costs
+  status: DECLARED
+  assumed_endpoint: /api/v1/overview/costs
   assumed_method: GET
+sdsr:
+  scenario: PENDING
+  verified: false
 notes: 'Provide a short-horizon view of cost movement so the user can tell
 
   whether spend is trending up, flat, or down.

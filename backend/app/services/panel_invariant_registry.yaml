@@ -173,11 +173,11 @@ panels:
     notes: "Zero temporal rules is valid"
 
   # ==========================================================================
-  # LIMITS - THRESHOLDS Topic
+  # LIMITS - CONTROLS Topic
   # ==========================================================================
 
-  POL-LIM-THR-O1:
-    panel_id: POL-LIM-THR-O1
+  POL-LIM-CTR-O1:
+    panel_id: POL-LIM-CTR-O1
     panel_question: "What risk ceilings are set?"
     endpoint: /api/v1/policies/limits
     filters:
@@ -190,8 +190,8 @@ panels:
     alert_enabled: false
     notes: "Zero risk ceilings is valid"
 
-  POL-LIM-THR-O2:
-    panel_id: POL-LIM-THR-O2
+  POL-LIM-CTR-O2:
+    panel_id: POL-LIM-CTR-O2
     panel_question: "What budgets are configured?"
     endpoint: /api/v1/policies/budgets
     filters: {}
@@ -203,8 +203,8 @@ panels:
     alert_enabled: false
     notes: "Zero budgets is valid"
 
-  POL-LIM-THR-O3:
-    panel_id: POL-LIM-THR-O3
+  POL-LIM-CTR-O3:
+    panel_id: POL-LIM-CTR-O3
     panel_question: "What run quotas exist?"
     endpoint: /api/v1/policies/limits
     filters:
@@ -217,8 +217,8 @@ panels:
     alert_enabled: false
     notes: "Zero run quotas is valid"
 
-  POL-LIM-THR-O5:
-    panel_id: POL-LIM-THR-O5
+  POL-LIM-CTR-O5:
+    panel_id: POL-LIM-CTR-O5
     panel_question: "What cooldowns are configured?"
     endpoint: /api/v1/policies/limits
     filters:

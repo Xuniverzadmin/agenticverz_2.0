@@ -33,9 +33,9 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: incidents.historical_list
+  id: incidents.historical_trend
   status: ASSUMED
-  assumed_endpoint: /api/v1/incidents
+  assumed_endpoint: /api/v1/incidents/historical/trend
   assumed_method: GET
 sdsr:
   scenario: SDSR-INC-EV-HIST-O1-001

@@ -1,0 +1,43 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
+#
+capability_id: incidents.historical_trend
+status: OBSERVED
+source_panels:
+- INC-EV-HIST-O1
+domain: INCIDENTS
+metadata:
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
+  declared_by: intent-ledger
+  declared_on: '2026-01-20'
+  observed_by: SDSR-INC-EV-HIST-O1-001
+assumption:
+  endpoint: /api/v1/incidents/historical/trend
+  method: GET
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: /api/v1/incidents/historical/trend
+  observed_method: GET
+  observed_at: '2026-01-18T14:00:00+00:00'
+  observation_id: OBS-PHASE4-INC-TREND-001
+acceptance_criteria:
+- Returns historical incident counts
+- Response includes trend direction
+observation:
+  scenario_id: PHASE4-INC-MIGRATION
+  observed_at: '2026-01-18T14:00:00+00:00'
+  trace_id: null
+  invariants_passed: 3
+  invariants_total: 3
+  evidence:
+  - Phase 2 shadow validation passed (trend/distribution equivalence)
+  - Backend-computed analytics (no frontend aggregation)
+  - Returns time-series with period, incident_count, resolved_count
+coherency:
+  last_checked: '2026-01-18T14:00:00+00:00'
+  status: PASSED
+  checked_by: phase4-migration

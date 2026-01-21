@@ -1,0 +1,18 @@
+# AURORA L2 Capability: logs.audit.evidence
+# Status: DECLARED (unverified claim)
+#
+capability_id: logs.audit.evidence
+status: DECLARED
+source_panels: [LOG-REC-AUD-O5]
+domain: LOGS
+endpoint: /api/v1/logs/audit
+method: GET
+metadata:
+  generated_by: manual
+  generated_on: '2026-01-18'
+  declared_by: AURORA_AUTOMATION
+  declared_on: '2026-01-18'
+coherency:
+  endpoint_verified: false
+  schema_verified: false
+  last_verified: null

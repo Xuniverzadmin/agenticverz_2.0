@@ -1,5 +1,6 @@
-# Panel Intent: Lessons Learned List
-# Source: PIN-411 (Lessons Learned Engine)
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
 # Panel: POL-GOV-LES-O1
 # Naming: AURORA_L2_INTENT_{panel_id}.yaml
 #
@@ -13,12 +14,12 @@ metadata:
   topic_id: POLICIES.GOVERNANCE.LESSONS
   order: O1
   action_layer: L2_1
-  source: PIN-411
-  review_status: DRAFT
-  facet: lessons_learned
-  facet_criticality: MEDIUM
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: null
+  facet_criticality: null
 display:
-  name: Lessons Pending
+  name: POL-GOV-LES-O1
   visible_by_default: true
   nav_required: false
   expansion_mode: INLINE
@@ -26,31 +27,39 @@ data:
   read: true
   download: false
   write: false
-  replay: false
+  replay: true
 controls:
-  filtering: true
+  filtering: false
   activate: false
   confirmation_required: false
 capability:
   id: lessons.list
-  status: DECLARED
-  assumed_endpoint: /api/v1/lessons
+  status: ASSUMED
+  assumed_endpoint: null
   assumed_method: GET
-  facade_note: "List lessons with status filter (pending by default)"
-sdsr:
-  scenario: SDSR-POL-GOV-LES-O1-001
-  verified: false
-notes: |
-  Show pending lessons that need human attention.
+notes: 'Show lessons learned from system behavior — observed patterns that inform
+  governance.
+
 
   What it shows:
-  - List of pending lessons
-  - Lesson type (failure, near_threshold, critical_success)
-  - Severity (CRITICAL, HIGH, MEDIUM, LOW)
-  - Source event info
-  - Created date
+
+  - Critical failures and their root causes
+
+  - Near-threshold runs and recurring patterns
+
+  - Cost overruns and cost-saving behaviors
+
+  - High override frequency signals
+
+  - Grouped by: LLM, Agent, Human actor, Policy gap type
+
+  - Evidence links: incident IDs, run IDs, trace IDs
+
 
   What it explicitly does NOT show:
-  - No converted or dismissed lessons (use O5 for history)
-  - No lesson content details (use O2 for detail)
-  - No action buttons (use O3/O4 for actions)
+
+  - No recommendations or synthesis
+
+  - No draft policies
+
+  - No actions or controls'

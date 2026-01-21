@@ -10,8 +10,8 @@ panel_class: evidence
 metadata:
   domain: POLICIES
   subdomain: GOVERNANCE
-  topic: DRAFTS
-  topic_id: POLICIES.GOVERNANCE.DRAFTS
+  topic: LESSONS
+  topic_id: POLICIES.GOVERNANCE.LESSONS
   order: O1
   action_layer: L2_1
   source: INTENT_LEDGER
@@ -33,11 +33,10 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: policies.versions
+  id: lessons.list
   status: ASSUMED
-  assumed_endpoint: /api/v1/policy-layer/versions
+  assumed_endpoint: /api/v1/policy-layer/lessons
   assumed_method: GET
-  facade_note: "Unified facade - replaces direct /api/v1/policy-proposals"
 sdsr:
   scenario: SDSR-POL-GOV-DFT-O1-001
   verified: false

@@ -33,10 +33,13 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: activity.worker_runs
-  status: ASSUMED
-  assumed_endpoint: null
+  id: activity.runtime_traces
+  status: DEFERRED
+  assumed_endpoint: 'null'
   assumed_method: GET
+sdsr:
+  scenario: DEFERRED
+  verified: false
 notes: 'Indicate whether telemetry, logs, and traces are flowing for live runs.
 
 

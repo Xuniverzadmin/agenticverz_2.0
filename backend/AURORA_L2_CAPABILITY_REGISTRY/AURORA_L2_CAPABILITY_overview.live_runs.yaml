@@ -1,39 +1,30 @@
-# AURORA L2 Capability Registry Entry
-# Capability: overview.live_runs
-# Last Updated: 2026-01-17
-# Updated By: Manual (Activity domain integration)
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
 #
-# STATUS: DECLARED
-#
-# NOTE: This capability derives from Activity domain (worker_runs table)
-# and is exposed via the /highlights endpoint in the pulse.
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
 #
 capability_id: overview.live_runs
 status: DECLARED
 source_panels:
 - OVR-SUM-HL-O1
 domain: OVERVIEW
-endpoint: /api/v1/overview/highlights
-method: GET
 metadata:
-  generated_by: manual_activity_integration
-  generated_on: '2026-01-17'
-  declared_by: CLAUDE_GOVERNANCE
-  declared_on: '2026-01-17'
-domain_lineage:
-  source_domain: ACTIVITY
-  source_table: worker_runs
-  drill_through: /precus/activity
-acceptance_criteria:
-- Returns count of currently running executions (status='running')
-- Included in SystemPulse.live_runs field
-- Tenant-scoped query
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
+  declared_by: intent-ledger
+  declared_on: '2026-01-20'
+  observed_by: PENDING (SDSR to be created)
+assumption:
+  endpoint: /api/v1/overview/highlights
+  method: GET
+  source: INTENT_LEDGER
 binding:
   observed_endpoint: null
   observed_method: null
   observed_at: null
   observation_id: null
-assumption:
-  endpoint: /api/v1/overview/highlights
-  method: GET
-  source: ACTIVITY_DOMAIN_INTEGRATION
+acceptance_criteria:
+- Returns count of currently running executions
+- Included in SystemPulse.live_runs field
+- Tenant-scoped query

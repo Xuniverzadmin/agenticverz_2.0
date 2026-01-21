@@ -34,9 +34,12 @@ controls:
   confirmation_required: false
 capability:
   id: overview.policy_snapshot
-  status: ASSUMED
-  assumed_endpoint: null
+  status: DEFERRED
+  assumed_endpoint: 'null'
   assumed_method: GET
+sdsr:
+  scenario: DEFERRED
+  verified: false
 notes: 'Expose rare but high-impact clusters — low-frequency, high-cost events
 
   invisible in averages.

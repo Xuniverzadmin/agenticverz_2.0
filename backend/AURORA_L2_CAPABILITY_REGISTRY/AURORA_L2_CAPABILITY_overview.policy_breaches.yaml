@@ -1,40 +1,31 @@
-# AURORA L2 Capability Registry Entry
-# Capability: overview.policy_breaches
-# Last Updated: 2026-01-17
-# Updated By: Manual (Policies domain integration)
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
 #
-# STATUS: DECLARED
-#
-# NOTE: This capability derives from Policies domain (limit_breaches table)
-# and is exposed via the /highlights endpoint in domain_counts.
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
 #
 capability_id: overview.policy_breaches
 status: DECLARED
 source_panels:
 - OVR-SUM-HL-O2
 domain: OVERVIEW
-endpoint: /api/v1/overview/highlights
-method: GET
 metadata:
-  generated_by: manual_policies_integration
-  generated_on: '2026-01-17'
-  declared_by: CLAUDE_GOVERNANCE
-  declared_on: '2026-01-17'
-domain_lineage:
-  source_domain: POLICIES
-  source_table: limit_breaches
-  drill_through: /precus/policies
-acceptance_criteria:
-- Returns count of recent limit breaches (last 24h)
-- Included in SystemPulse.recent_breaches field
-- Also shown in Policies domain_count.critical
-- Tenant-scoped query
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
+  declared_by: intent-ledger
+  declared_on: '2026-01-20'
+  observed_by: PENDING (SDSR to be created)
+assumption:
+  endpoint: /api/v1/overview/highlights
+  method: GET
+  source: INTENT_LEDGER
 binding:
   observed_endpoint: null
   observed_method: null
   observed_at: null
   observation_id: null
-assumption:
-  endpoint: /api/v1/overview/highlights
-  method: GET
-  source: POLICIES_DOMAIN_INTEGRATION
+acceptance_criteria:
+- Returns count of recent limit breaches (last 24h)
+- Included in SystemPulse.recent_breaches field
+- Also shown in Policies domain_count.critical
+- Tenant-scoped query

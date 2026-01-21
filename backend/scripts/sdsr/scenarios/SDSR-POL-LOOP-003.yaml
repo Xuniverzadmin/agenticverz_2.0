@@ -1,0 +1,115 @@
+# SDSR Loop Assertion Scenario
+# Scenario: SDSR-POL-LOOP-003
+# Created: 2026-01-19
+# Reference: PIN-447, POLICY_DOMAIN_V2_DESIGN.md
+#
+# PURPOSE:
+#   LOOP INVARIANT: Active policy has origin
+#
+#   This scenario verifies that:
+#   1. Every active policy has a known source (MANUAL, SYSTEM, LEARNED)
+#   2. Policies have proper status (ACTIVE)
+#   3. The policy → source link is traceable
+#
+# CROSS-DOMAIN RULE:
+#   Activity/Incidents: READ active policies, never WRITE
+#
+# EXECUTION:
+#   python aurora_sdsr_runner.py --scenario SDSR-POL-LOOP-003
+#
+scenario_id: SDSR-POL-LOOP-003
+version: 1.0.0
+name: Active policy has origin (Loop Invariant)
+description: >
+  Verifies the SDSR loop invariant that active policies must have
+  a known origin (source). Ensures policy provenance is traceable
+  for governance audit.
+
+capability: policy.active
+panel_id: POL-FACADE-ACTIVE-O2
+domain: POLICIES
+subdomain: GOVERNANCE
+topic: ACTIVE
+
+auth:
+  mode: OBSERVER
+
+metadata:
+  generated_by: manual-pin447
+  generated_at: '2026-01-19'
+  loop_invariant: ACTIVE_POLICY_HAS_ORIGIN
+  cross_domain_rule: Policies have traceable source
+  contract_ref: CROSS_DOMAIN_POLICY_CONTRACT.md Section 1
+
+# Step 1: Query active policies
+inject:
+  type: api_call
+  endpoint: /api/v1/policy/active
+  method: GET
+  headers:
+    Content-Type: application/json
+  params:
+    limit: 10
+
+expect:
+  status_code: 200
+  response_type: json
+  response_shape:
+    items: list
+    total: int
+    has_more: bool
+    library_ref: str
+
+invariants:
+- id: INV-LOOP-001
+  name: policy_has_source
+  description: Every active policy has source (MANUAL, SYSTEM, LEARNED)
+  assertion: >
+    all(p.get('source') in ['MANUAL', 'SYSTEM', 'LEARNED'] for p in response.get('items', []))
+    or len(response.get('items', [])) == 0
+  severity: BLOCKING
+
+- id: INV-LOOP-002
+  name: policy_has_facade_ref
+  description: Every active policy has facade_ref for cross-domain navigation
+  assertion: >
+    all('facade_ref' in p for p in response.get('items', []))
+    or len(response.get('items', [])) == 0
+  severity: BLOCKING
+
+- id: INV-LOOP-003
+  name: policy_is_active
+  description: All returned policies have status ACTIVE
+  assertion: >
+    all(p.get('status') == 'ACTIVE' for p in response.get('items', []))
+    or len(response.get('items', [])) == 0
+  severity: BLOCKING
+
+- id: INV-LOOP-004
+  name: response_has_library_ref
+  description: Response includes library_ref for navigation
+  assertion: "'library_ref' in response"
+  severity: WARNING
+
+- id: INV-LOOP-005
+  name: active_endpoint_exists
+  description: V2 facade active endpoint is functional
+  assertion: status_code == 200
+  severity: BLOCKING
+
+cleanup:
+  required: false
+  note: Read-only observation, no cleanup needed
+
+on_success:
+  update_capability_status: OBSERVED
+  emit_observation: true
+  loop_assertion_passed: ACTIVE_POLICY_HAS_ORIGIN
+
+on_failure:
+  update_capability_status: null
+  emit_observation: true
+  failure_taxonomy:
+    loop_invariant_violated: Active-policy-has-origin contract broken
+    endpoint_missing: V2 facade endpoint not available
+    auth_failed: Authentication/authorization issue

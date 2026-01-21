@@ -23,7 +23,22 @@ Usage:
     trace.save("run.trace.json")
 """
 
-from .client import AOSClient, AOSError
+from .client import AOSClient, AOSError, SafetyBlockedError
+
+# Attribution Enforcement (Phase 3)
+from .attribution import (
+    ActorType,
+    AttributionContext,
+    AttributionError,
+    AttributionErrorCode,
+    EnforcementMode,
+    create_human_attribution,
+    create_service_attribution,
+    create_system_attribution,
+    get_enforcement_mode,
+    is_legacy_override_enabled,
+    validate_attribution,
+)
 
 # Customer Integrations - Phase 2: Telemetry Reporter
 from .cus_reporter import (
@@ -95,6 +110,19 @@ __all__ = [
     # Client
     "AOSClient",
     "AOSError",
+    "SafetyBlockedError",
+    # Attribution Enforcement (Phase 3)
+    "ActorType",
+    "AttributionContext",
+    "AttributionError",
+    "AttributionErrorCode",
+    "EnforcementMode",
+    "create_human_attribution",
+    "create_service_attribution",
+    "create_system_attribution",
+    "get_enforcement_mode",
+    "is_legacy_override_enabled",
+    "validate_attribution",
     # Customer Integrations - Phase 2: Telemetry Reporter
     "CusReporter",
     "CusUsageRecord",

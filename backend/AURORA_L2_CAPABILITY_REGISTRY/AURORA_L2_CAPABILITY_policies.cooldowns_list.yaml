@@ -7,14 +7,14 @@
 capability_id: policies.cooldowns_list
 status: ASSUMED
 source_panels:
-- POL-LIM-THR-O5
+- POL-LIM-CTR-O5
 domain: POLICIES
 metadata:
   generated_by: sync_from_intent_ledger.py
   generated_on: '2026-01-16'
   declared_by: intent-ledger
   declared_on: '2026-01-16'
-  observed_by: SDSR-POL-LIM-THR-O5-001
+  observed_by: SDSR-POL-LIM-CTR-O5-001
 assumption:
   endpoint: /policy-layer/cooldowns
   method: GET

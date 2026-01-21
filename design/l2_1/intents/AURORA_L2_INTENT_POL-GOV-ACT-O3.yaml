@@ -33,11 +33,10 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: policies.evaluation_state
+  id: policies.requests
   status: ASSUMED
-  assumed_endpoint: /api/v1/policy-layer/state
+  assumed_endpoint: /api/v1/policies/requests
   assumed_method: GET
-  facade_note: "Unified facade - replaces direct /api/v1/policy/requests (path was also wrong: /policies/ vs /policy/)"
 sdsr:
   scenario: SDSR-POL-GOV-ACT-O3-001
   verified: false

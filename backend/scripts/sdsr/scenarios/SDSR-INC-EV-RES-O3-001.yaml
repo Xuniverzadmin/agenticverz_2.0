@@ -20,23 +20,24 @@
 scenario_id: SDSR-INC-EV-RES-O3-001
 version: 1.0.0
 name: Observe INC-EV-RES-O3 capability
-description: SDSR verification scenario for incidents.recovery_candidates
-capability: incidents.recovery_candidates
+description: SDSR verification scenario for incidents.metrics (resolution metrics)
+capability: incidents.metrics
 panel_id: INC-EV-RES-O3
 domain: INCIDENTS
+auth:
+  mode: OBSERVER
 metadata:
   generated_by: aurora_sdsr_synth.py
   generated_at: '2026-01-15T06:42:08.978550+00:00'
-  panel_class: evidence
+  panel_class: interpretation
 inject:
   type: api_call
-  endpoint: /api/v1/recovery/candidates
+  endpoint: /api/v1/incidents/cost-impact
   method: GET
   headers:
-    Authorization: Bearer ${AUTH_TOKEN}
     Content-Type: application/json
   params:
-    window: 24h
+    baseline_days: 30
 expect:
   status_code: 200
   response_type: json

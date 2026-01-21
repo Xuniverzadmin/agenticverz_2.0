@@ -34,11 +34,11 @@ controls:
   confirmation_required: false
 capability:
   id: activity.live_runs
-  status: ASSUMED
+  status: DECLARED
   assumed_endpoint: /api/v1/activity/runs
   assumed_method: GET
 sdsr:
-  scenario: SDSR-ACT-LLM-LIVE-O1-001
+  scenario: PENDING
   verified: false
 notes: 'Show how many LLM runs are currently in progress.
 

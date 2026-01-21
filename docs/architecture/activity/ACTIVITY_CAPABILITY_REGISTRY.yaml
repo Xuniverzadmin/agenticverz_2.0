@@ -2,7 +2,8 @@
 #
 # Status: AUTHORITATIVE
 # Created: 2026-01-17
-# Reference: Activity Domain System Design
+# Updated: 2026-01-19 (V2 Migration Phase 4)
+# Reference: Activity Domain System Design, ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
 #
 # This registry is the SINGLE SOURCE OF TRUTH for:
 # - Capability → Endpoint mapping
@@ -11,8 +12,19 @@
 #
 # Claude Rule: No endpoint exists unless declared here.
 # CI Rule: Undeclared capabilities are violations.
+#
+# V2 MIGRATION NOTE:
+#   As of 2026-01-19, all capabilities bound to /api/v1/activity/runs are DEPRECATED.
+#   Use V2 topic-scoped endpoints instead:
+#   - /activity/live (state=LIVE hardcoded)
+#   - /activity/completed (state=COMPLETED hardcoded)
+#   - /activity/signals (projection layer)
+#   - /activity/metrics (aggregates)
+#   - /activity/threshold-signals (limit tracking)
+#
+#   Reference: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
 
-schema_version: "1.0"
+schema_version: "2.0"
 domain: activity
 layer: L2
 
@@ -23,11 +35,14 @@ layer: L2
 metadata:
   description: "Activity domain capabilities for runs, traces, and signals"
   owner: "activity-team"
-  last_updated: "2026-01-17"
+  last_updated: "2026-01-19"
+  v2_migration_status: "PHASE 4 COMPLETE"
   governance:
     - "Capabilities must be declared before implementation"
     - "Endpoints must have exactly one capability"
     - "Capabilities must have exactly one service"
+    - "Multi-topic capabilities require topic-scoped endpoints (TOPIC-SCOPED-ENDPOINT-001)"
+    - "V2: All /runs bindings are DEPRECATED - use topic-scoped endpoints"
 
 # =============================================================================
 # Capability Definitions
@@ -144,17 +159,35 @@ capabilities:
     cache_ttl_seconds: 0
 
   activity.runs_by_dimension:
-    status: TODO
-    panel_id: ACT-LLM-LIVE-O5
-    question: "Distribution of live runs by dimension?"
-    endpoint:
+    status: DECLARED
+    panel_ids:
+      - ACT-LLM-LIVE-O5
+      - ACT-LLM-COMP-O5
+    question: "Distribution of runs by dimension?"
+    policy: TOPIC-SCOPED-ENDPOINT-001
+    topics_served:
+      LIVE:
+        endpoint:
+          path: /api/v1/activity/runs/live/by-dimension
+          method: GET
+          state_binding: implicit  # LIVE hardcoded at endpoint
+        panel_id: ACT-LLM-LIVE-O5
+      COMPLETED:
+        endpoint:
+          path: /api/v1/activity/runs/completed/by-dimension
+          method: GET
+          state_binding: implicit  # COMPLETED hardcoded at endpoint
+        panel_id: ACT-LLM-COMP-O5
+    generic_endpoint:
       path: /api/v1/activity/runs/by-dimension
       method: GET
-      parameters:
-        dim:
-          type: enum
-          allowed: [provider_type, source, agent_id]
-          required: true
+      status: DEPRECATED
+      note: "INTERNAL/ADMIN ONLY - NOT FOR PANEL USE"
+    parameters:
+      dim:
+        type: enum
+        allowed: [provider_type, source, agent_id, risk_level, status]
+        required: true
     service: ActivityDimensionService
     source_table: v_runs_o2
     query_type: aggregate
@@ -318,6 +351,105 @@ capabilities:
     cache_ttl_seconds: 60
 
 # =============================================================================
+# V2 Capabilities (Topic-Scoped with Policy Context)
+# =============================================================================
+# Added: 2026-01-19 (Phase 4 Registry Rebinding)
+# Reference: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
+# Evidence: Phase 3 Shadow Validation (shadow_validate_v2.py)
+# =============================================================================
+
+v2_capabilities:
+
+  activity.live_v2:
+    status: OBSERVED
+    panel_ids:
+      - ACT-LLM-LIVE-O1
+      - ACT-LLM-LIVE-O3
+      - ACT-LLM-LIVE-O5
+    topic: LIVE
+    question: "What runs are currently executing?"
+    endpoint:
+      path: /api/v1/activity/live
+      method: GET
+      state_binding: implicit  # LIVE hardcoded
+    service: CustomerActivityReadService
+    source_table: v_runs_o2
+    query_type: list
+    cache_ttl_seconds: 0
+    policy_context_included: true
+    replaces: activity.live_runs
+
+  activity.completed_v2:
+    status: OBSERVED
+    panel_ids:
+      - ACT-LLM-COMP-O2
+      - ACT-LLM-COMP-O5
+    topic: COMPLETED
+    question: "What runs have finished?"
+    endpoint:
+      path: /api/v1/activity/completed
+      method: GET
+      state_binding: implicit  # COMPLETED hardcoded
+    service: CustomerActivityReadService
+    source_table: v_runs_o2
+    query_type: list
+    cache_ttl_seconds: 0
+    policy_context_included: true
+    replaces: activity.completed_runs
+
+  activity.signals_v2:
+    status: OBSERVED
+    panel_ids:
+      - ACT-LLM-SIG-O1
+    topic: SIGNALS
+    projection: true  # NOT a state - computed layer
+    question: "What attention signals need review?"
+    endpoint:
+      path: /api/v1/activity/signals
+      method: GET
+    service: CustomerActivityReadService
+    source_table: v_runs_o2
+    query_type: projection
+    cache_ttl_seconds: 0
+    policy_context_included: true
+    replaces: activity.signals
+
+  activity.metrics_v2:
+    status: OBSERVED
+    panel_ids:
+      - ACT-LLM-LIVE-O1
+      - ACT-LLM-LIVE-O2
+      - ACT-LLM-LIVE-O4
+      - ACT-LLM-COMP-O1
+      - ACT-LLM-COMP-O3
+    question: "What are the aggregated risk and topic metrics?"
+    endpoint:
+      path: /api/v1/activity/metrics
+      method: GET
+    service: ActivitySummaryService
+    source_table: v_runs_o2
+    query_type: aggregate
+    cache_ttl_seconds: 30
+    extends: activity.risk_signals
+
+  activity.threshold_signals_v2:
+    status: OBSERVED
+    panel_ids:
+      - ACT-LLM-LIVE-O2
+      - ACT-LLM-COMP-O4
+      - ACT-LLM-SIG-O2
+    question: "Which runs are approaching or exceeding limits?"
+    endpoint:
+      path: /api/v1/activity/threshold-signals
+      method: GET
+    service: CustomerActivityReadService
+    source_table: v_runs_o2
+    query_type: list
+    cache_ttl_seconds: 0
+    policy_context_included: true
+    replaces: activity.threshold_signals
+
+# =============================================================================
 # Service Definitions
 # =============================================================================
 
@@ -417,85 +549,132 @@ services:
       - "Modify trace data"
 
 # =============================================================================
-# Panel → Capability Binding
+# Panel → Capability Binding (V2 - Updated 2026-01-19)
+# =============================================================================
+# All bindings updated to use V2 topic-scoped capabilities.
+# Legacy capabilities (bound to /runs) are DEPRECATED.
 # =============================================================================
 
 panel_bindings:
 
+  # ---------------------------------------------------------------------------
+  # COMPLETED Topic (V2 bindings)
+  # ---------------------------------------------------------------------------
+
   ACT-LLM-COMP-O1:
-    capability: activity.completed_runs
+    capability: activity.metrics_v2
     topic: COMPLETED
     order: O1
+    endpoint: /api/v1/activity/metrics
+    v2_migration: true
 
   ACT-LLM-COMP-O2:
-    capability: activity.runs_list
+    capability: activity.completed_v2
     topic: COMPLETED
     order: O2
+    endpoint: /api/v1/activity/completed
+    v2_migration: true
 
   ACT-LLM-COMP-O3:
-    capability: activity.summary_by_status
+    capability: activity.metrics_v2
     topic: COMPLETED
     order: O3
+    endpoint: /api/v1/activity/metrics
+    v2_migration: true
 
   ACT-LLM-COMP-O4:
-    capability: activity.threshold_signals
+    capability: activity.threshold_signals_v2
     topic: COMPLETED
     order: O4
+    endpoint: /api/v1/activity/threshold-signals
+    v2_migration: true
 
   ACT-LLM-COMP-O5:
-    capability: activity.runtime_traces
+    capability: activity.completed_v2
     topic: COMPLETED
     order: O5
+    endpoint: /api/v1/activity/completed
+    v2_migration: true
+
+  # ---------------------------------------------------------------------------
+  # LIVE Topic (V2 bindings)
+  # ---------------------------------------------------------------------------
 
   ACT-LLM-LIVE-O1:
-    capability: activity.live_runs
+    capability: activity.live_v2
     topic: LIVE
     order: O1
+    endpoint: /api/v1/activity/live
+    v2_migration: true
 
   ACT-LLM-LIVE-O2:
-    capability: activity.runs_list
+    capability: activity.threshold_signals_v2
     topic: LIVE
     order: O2
+    endpoint: /api/v1/activity/threshold-signals
+    v2_migration: true
 
   ACT-LLM-LIVE-O3:
-    capability: activity.queued_runs
+    capability: activity.live_v2
     topic: LIVE
     order: O3
+    endpoint: /api/v1/activity/live
+    note: "Use risk_level filter for at-risk runs"
+    v2_migration: true
 
   ACT-LLM-LIVE-O4:
-    capability: activity.evidence_health
+    capability: activity.metrics_v2
     topic: LIVE
     order: O4
+    endpoint: /api/v1/activity/metrics
+    v2_migration: true
 
   ACT-LLM-LIVE-O5:
-    capability: activity.runs_by_dimension
+    capability: activity.live_v2
     topic: LIVE
     order: O5
+    endpoint: /api/v1/activity/live/by-dimension
+    policy: TOPIC-SCOPED-ENDPOINT-001
+    v2_migration: true
+
+  # ---------------------------------------------------------------------------
+  # SIGNALS Topic (V2 bindings)
+  # ---------------------------------------------------------------------------
 
   ACT-LLM-SIG-O1:
-    capability: activity.signals
+    capability: activity.signals_v2
     topic: SIGNALS
     order: O1
+    endpoint: /api/v1/activity/signals
+    v2_migration: true
 
   ACT-LLM-SIG-O2:
-    capability: activity.threshold_signals
+    capability: activity.threshold_signals_v2
     topic: SIGNALS
     order: O2
+    endpoint: /api/v1/activity/threshold-signals
+    v2_migration: true
 
   ACT-LLM-SIG-O3:
     capability: activity.patterns
     topic: SIGNALS
     order: O3
+    endpoint: /api/v1/activity/patterns
+    note: "Legacy endpoint - pattern detection not affected by V2 migration"
 
   ACT-LLM-SIG-O4:
     capability: activity.cost_analysis
     topic: SIGNALS
     order: O4
+    endpoint: /api/v1/activity/cost-analysis
+    note: "Legacy endpoint - cost analysis not affected by V2 migration"
 
   ACT-LLM-SIG-O5:
     capability: activity.attention_queue
     topic: SIGNALS
     order: O5
+    endpoint: /api/v1/activity/attention-queue
+    note: "Legacy endpoint - attention queue not affected by V2 migration"
 
 # =============================================================================
 # Validation Rules (CI Enforced)
@@ -526,3 +705,15 @@ validation_rules:
   - rule: "todo_capability_no_endpoint"
     description: "TODO capabilities should not have implemented endpoints"
     severity: WARNING
+
+  - rule: "topic_scoped_endpoint_required"
+    description: "Multi-topic capabilities must use topic-scoped endpoints per TOPIC-SCOPED-ENDPOINT-001"
+    severity: ERROR
+
+  - rule: "no_generic_endpoint_for_panels"
+    description: "Generic endpoints marked DEPRECATED must not be bound to panels"
+    severity: ERROR
+
+  - rule: "implicit_state_binding"
+    description: "Topic-scoped endpoints must have state_binding: implicit"
+    severity: ERROR

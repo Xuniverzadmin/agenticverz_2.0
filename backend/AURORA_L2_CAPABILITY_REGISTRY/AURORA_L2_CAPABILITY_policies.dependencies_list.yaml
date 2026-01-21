@@ -16,7 +16,7 @@ metadata:
   declared_on: '2026-01-16'
   observed_by: SDSR-POL-GOV-DFT-O5-001
 assumption:
-  endpoint: /policy-layer/dependencies
+  endpoint: /api/v1/policy-layer/dependencies
   method: GET
   source: INTENT_LEDGER
 binding:

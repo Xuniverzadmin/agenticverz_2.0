@@ -1,0 +1,41 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
+#
+capability_id: logs.audit
+status: OBSERVED
+source_panels:
+- LOG-REC-AUD-O5
+domain: LOGS
+metadata:
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
+  declared_by: intent-ledger
+  declared_on: '2026-01-20'
+  observed_by: SDSR-LOG-REC-AUD-O5-001
+  observed_on: '2026-01-18'
+assumption:
+  endpoint: /api/v1/logs/audit/exports
+  method: GET
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: /api/v1/logs/audit
+  observed_method: GET
+  observed_at: '2026-01-18T12:16:42.887582+00:00'
+  observation_id: OBS-SDSR-LOG-REC-AUD-O5-001-20260118121642
+acceptance_criteria:
+- Returns compliance export records
+- Response includes EvidenceMetadata (INV-LOG-META-001)
+- Tenant-scoped query
+observation:
+  scenario_id: SDSR-LOG-REC-AUD-O5-001
+  observed_at: '2026-01-18T12:16:42.887582+00:00'
+  trace_id: null
+  invariants_passed: 0
+  invariants_total: 3
+coherency:
+  last_checked: '2026-01-18T12:16:42.887582+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py

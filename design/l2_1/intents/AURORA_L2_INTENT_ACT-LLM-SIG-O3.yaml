@@ -33,10 +33,13 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: activity.predictions_summary
-  status: ASSUMED
-  assumed_endpoint: null
+  id: activity.patterns
+  status: OBSERVED
+  assumed_endpoint: /api/v1/activity/patterns
   assumed_method: GET
+sdsr:
+  scenario: SDSR-ACT-LLM-SIG-O3-001
+  verified: false
 notes: 'Surface temporal signals — behavior patterns over time indicating instability.
 
 

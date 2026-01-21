@@ -1,0 +1,40 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
+#
+capability_id: overview.costs
+status: OBSERVED
+source_panels:
+- OVR-SUM-CI-O2, OVR-SUM-CI-O3, OVR-SUM-CI-O4
+domain: OVERVIEW
+metadata:
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
+  declared_by: intent-ledger
+  declared_on: '2026-01-20'
+  observed_by: SDSR-OVR-SUM-CI-O2-001
+  observed_on: '2026-01-18'
+assumption:
+  endpoint: /api/v1/overview/costs
+  method: GET
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: /api/v1/overview/costs
+  observed_method: GET
+  observed_at: '2026-01-18T10:46:54.609961+00:00'
+  observation_id: OBS-SDSR-OVR-SUM-CI-O2-001-20260118104654
+acceptance_criteria:
+- Returns cost breakdown by feature/model/anomaly
+- Tenant-scoped query
+observation:
+  scenario_id: SDSR-OVR-SUM-CI-O2-001
+  observed_at: '2026-01-18T10:46:54.609961+00:00'
+  trace_id: null
+  invariants_passed: 0
+  invariants_total: 3
+coherency:
+  last_checked: '2026-01-18T10:46:54.609961+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py

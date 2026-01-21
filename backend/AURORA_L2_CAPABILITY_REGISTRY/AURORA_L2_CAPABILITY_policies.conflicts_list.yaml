@@ -16,7 +16,7 @@ metadata:
   declared_on: '2026-01-16'
   observed_by: SDSR-POL-GOV-DFT-O4-001
 assumption:
-  endpoint: /policy-layer/conflicts
+  endpoint: /api/v1/policy-layer/conflicts
   method: GET
   source: INTENT_LEDGER
 binding:

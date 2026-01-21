@@ -33,9 +33,9 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: logs.rbac_audit
-  status: ASSUMED
-  assumed_endpoint: /api/v1/rbac/audit
+  id: logs.audit
+  status: DECLARED
+  assumed_endpoint: /api/v1/logs/audit/authorization
   assumed_method: GET
 sdsr:
   scenario: SDSR-LOG-REC-AUD-O2-001

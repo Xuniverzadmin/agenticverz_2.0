@@ -26,7 +26,10 @@ const VALID_STAGES = [
 ];
 
 const PROJECTION_FILE = path.join(__dirname, '..', 'public', 'projection', 'ui_projection_lock.json');
-const DESIGN_FILE = path.join(__dirname, '..', '..', '..', 'design', 'l2_1', 'ui_contract', 'ui_projection_lock.json');
+// V2 CONSTITUTION SOURCE - Decoupled from AURORA pipeline (2026-01-20)
+// This is the authoritative source for V2 Constitution structure
+// DO NOT change back to design/l2_1/ui_contract/ - that is AURORA-generated
+const DESIGN_FILE = path.join(__dirname, '..', '..', '..', 'design', 'v2_constitution', 'ui_projection_lock.json');
 const LOADER_FILE = path.join(__dirname, '..', 'src', 'contracts', 'ui_projection_loader.ts');
 
 // ============== MAIN ==============

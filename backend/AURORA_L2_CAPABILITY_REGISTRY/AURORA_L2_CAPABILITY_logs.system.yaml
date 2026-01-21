@@ -1,0 +1,39 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
+#
+capability_id: logs.system
+status: OBSERVED
+source_panels:
+- LOG-REC-SYS-O1, LOG-REC-SYS-O2, LOG-REC-SYS-O3, LOG-REC-SYS-O4, LOG-REC-SYS-O5
+domain: LOGS
+metadata:
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
+  declared_by: intent-ledger
+  declared_on: '2026-01-20'
+  observed_by: SDSR-LOG-REC-SYS-O5-001
+  observed_on: '2026-01-18'
+assumption:
+  endpoint: 'null'
+  method: GET
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: /api/v1/logs/system
+  observed_method: GET
+  observed_at: '2026-01-18T12:16:59.624001+00:00'
+  observation_id: OBS-SDSR-LOG-REC-SYS-O5-001-20260118121659
+acceptance_criteria:
+- Capability behavior verified
+observation:
+  scenario_id: SDSR-LOG-REC-SYS-O5-001
+  observed_at: '2026-01-18T12:16:59.624001+00:00'
+  trace_id: null
+  invariants_passed: 0
+  invariants_total: 3
+coherency:
+  last_checked: '2026-01-18T12:16:59.624001+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py

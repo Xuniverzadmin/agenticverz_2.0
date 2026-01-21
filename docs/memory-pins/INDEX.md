@@ -436,6 +436,19 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-444](PIN-444-test-methods-design-document.md) | **Test Methods Design Document** | Documentation / Testing | **✅ COMPLETE** | 2026-01-18 |
 | [PIN-445](PIN-445-incidents-domain-v2-migration-complete.md) | **Incidents Domain V2 Migration Complete** | Architecture / Domain Migration | **🏗️ LOCKED** | 2026-01-18 |
 | [PIN-446](PIN-446-attention-feedback-loop-implementation.md) | **Attention Feedback Loop Implementation** | Activity Domain / Signal Feedback | **✅ COMPLETE** | 2026-01-19 |
+| [PIN-447](PIN-447-policy-domain-v2-design.md) | **Policy Domain V2 Design** | Architecture / Domain Design | **✅ APPROVED** | 2026-01-19 |
+| [PIN-448](PIN-448-attention-feedback-loop-implementation-complete.md) | **Attention Feedback Loop Implementation Complete** | Activity Domain / Signal Feedback | **✅ COMPLETE** | 2026-01-19 |
+| [PIN-449](PIN-449-logs-domain-v2-implementation.md) | **LOGS Domain V2 Implementation** | Architecture / Domain Migration | **🏗️ LOCKED** | 2026-01-19 |
+| [PIN-450](PIN-450-sdsr-system-hardening-complete.md) | **SDSR System Hardening Complete** | SDSR / System Hardening | **✅ COMPLETE** | 2026-01-19 |
+| [PIN-451](PIN-451-sidebar-domain-expansion---analytics-account-connectivity.md) | **Sidebar Domain Expansion - Analytics, Account, Connectivity** | Frontend / UI | **✅ COMPLETE** | 2026-01-19 |
+| [PIN-452](PIN-452-policy-control-lever-system-implementation.md) | **Policy Control Lever System Implementation** | Backend / Policy Governance | **✅ COMPLETE** | 2026-01-20 |
+| [PIN-453](PIN-453-policies-domain-topic-rename-thresholds-to-controls.md) | **Policies Domain Topic Rename: Thresholds to Controls** | Architecture / UI Projection | **✅ COMPLETE** | 2026-01-20 |
+| [PIN-454](PIN-454-cross-domain-orchestration-audit---pending-fixes.md) | **Cross-Domain Orchestration Audit - Pending Fixes** | Architecture / Orchestration | **🏗️ PENDING** | 2026-01-20 |
+| [PIN-455](PIN-455-phase-2-rac-audit-infrastructure-complete.md) | **Phase 2 RAC Audit Infrastructure Complete** | Architecture / Cross-Domain Orchestration | **✅ COMPLETE** | 2026-01-20 |
+| [PIN-456](PIN-456-pin-454-phase-3-run-orchestration-kernel-rok-implementation.md) | **PIN-454 Phase 3: Run Orchestration Kernel (ROK) Implementation** | Architecture / Cross-Domain Orchestration | **✅ COMPLETE** | 2026-01-20 |
+| [PIN-457](PIN-457-phase-4-transaction-coordination-complete.md) | **Phase 4 — Transaction Coordination Complete** | Architecture / Cross-Domain Orchestration | **✅ COMPLETE** | 2026-01-20 |
+| [PIN-458](PIN-458-phase-5-enhancements-complete-pin-454-final.md) | **Phase 5 — Enhancements Complete (PIN-454 Final)** | Architecture / Cross-Domain Orchestration | **✅ COMPLETE** | 2026-01-20 |
+| [PIN-459](PIN-459-t1-governance-tier-complete.md) | **T1 Governance Tier Complete — Explainability & Proof** | Governance / Implementation | **✅ COMPLETE** | 2026-01-21 |
 
 ---
 
@@ -1205,6 +1218,17 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-21 | **PIN-459 T1 Governance Tier Complete** - All 11 T1 gaps implemented with 333 tests passing. |
+| 2026-01-20 | **PIN-458 Phase 5 — Enhancements Complete (PIN-454 Final)** - Created via memory_trail. |
+| 2026-01-20 | **PIN-457 Phase 4 — Transaction Coordination Complete** - Created via memory_trail. |
+| 2026-01-20 | **PIN-456 PIN-454 Phase 3: Run Orchestration Kernel (ROK) Implementation** - Created via memory_trail. |
+| 2026-01-20 | **PIN-455 Phase 2 RAC Audit Infrastructure Complete** - Created via memory_trail. |
+| 2026-01-20 | **PIN-454 Cross-Domain Orchestration Audit - Pending Fixes** - Created via memory_trail. |
+| 2026-01-20 | **PIN-453 Policies Domain Topic Rename: Thresholds to Controls** - Created via memory_trail. |
+| 2026-01-20 | **PIN-452 Policy Control Lever System Implementation** - Created via memory_trail. |
+| 2026-01-19 | **PIN-451 Sidebar Domain Expansion - Analytics, Account, Connectivity** - Created via memory_trail. |
+| 2026-01-19 | **PIN-450 SDSR System Hardening Complete** - Created via memory_trail. |
+| 2026-01-19 | **PIN-448 Attention Feedback Loop Implementation Complete** - Created via memory_trail. |
 | 2026-01-19 | **PIN-446 Attention Feedback Loop Implementation** - Created via memory_trail. |
 | 2026-01-18 | **PIN-445 Incidents Domain V2 Migration Complete** - Created via memory_trail. |
 | 2026-01-18 | **PIN-444 Test Methods Design Document** - Created via memory_trail. |

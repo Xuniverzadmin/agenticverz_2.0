@@ -285,6 +285,34 @@ class Run(SQLModel, table=True):
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     agent_id: str = Field(index=True)
+
+    # =========================================================================
+    # Attribution Fields (Attribution as Run Invariant)
+    # Per AOS_SDK_ATTRIBUTION_CONTRACT, RUN_VALIDATION_RULES, SDSR_ATTRIBUTION_INVARIANT
+    # =========================================================================
+
+    # actor_type: HUMAN | SYSTEM | SERVICE
+    # Per RUN_VALIDATION_RULES R3: actor_type MUST be from closed set
+    actor_type: str = Field(
+        default="SYSTEM",
+        description="Actor classification: HUMAN, SYSTEM, or SERVICE"
+    )
+
+    # actor_id: Human identity (only required for HUMAN actors)
+    # Per RUN_VALIDATION_RULES R4: actor_id REQUIRED if actor_type=HUMAN
+    # Per RUN_VALIDATION_RULES R5: actor_id MUST be NULL if actor_type=SYSTEM
+    actor_id: Optional[str] = Field(
+        default=None,
+        description="Human actor identity (required for HUMAN, null for SYSTEM)"
+    )
+
+    # origin_system_id: Where the run originated
+    # Per AOS_SDK_ATTRIBUTION_CONTRACT: origin_system_id is REQUIRED
+    origin_system_id: str = Field(
+        default="legacy-migration",
+        description="Originating system identifier for accountability"
+    )
+
     goal: str
     status: str = Field(default="queued")  # queued, running, succeeded, failed, retry
     attempts: int = Field(default=0)
@@ -340,6 +368,46 @@ class Run(SQLModel, table=True):
     authorized_by: Optional[str] = Field(
         default=None,
         description="Principal that authorized: user_id, api_key_id, system",
+    )
+
+    # =========================================================================
+    # Governance Fields (BACKEND_REMEDIATION_PLAN: GAP-001, GAP-002, GAP-006)
+    # Runtime governance for policy enforcement and violation tracking
+    # =========================================================================
+
+    # Policy snapshot reference (GAP-006)
+    policy_snapshot_id: Optional[str] = Field(
+        default=None,
+        index=True,
+        description="Reference to PolicySnapshot captured at run start"
+    )
+
+    # Termination tracking (GAP-002, GAP-007)
+    termination_reason: Optional[str] = Field(
+        default=None,
+        description="RunTerminationReason value: policy_block, budget_exceeded, etc."
+    )
+    stopped_at_step: Optional[int] = Field(
+        default=None,
+        description="Step index where run was stopped (if terminated early)"
+    )
+    violation_policy_id: Optional[str] = Field(
+        default=None,
+        description="ID of policy that caused violation (if terminated by policy)"
+    )
+
+    # =========================================================================
+    # Observability Status (PIN-454 FIX-004: Observability Guard)
+    # Tracks whether full tracing was available during run execution
+    # =========================================================================
+
+    observability_status: str = Field(
+        default="FULL",
+        description="Observability status: FULL, DEGRADED, NONE"
+    )
+    observability_error: Optional[str] = Field(
+        default=None,
+        description="Error message if observability was degraded"
     )
 
     # =========================================================================
@@ -1407,6 +1475,57 @@ class SDSRIncident(SQLModel, table=True):
     is_synthetic: bool = Field(default=False, description="True if created during synthetic scenario")
     synthetic_scenario_id: Optional[str] = Field(default=None, description="Scenario ID for traceability")
 
+    # GAP-024: Inflection point metadata
+    # Captures the exact moment when an incident was triggered
+    inflection_step_index: Optional[int] = Field(
+        default=None,
+        description="Step index where incident was triggered (GAP-024)"
+    )
+    inflection_timestamp: Optional[datetime] = Field(
+        default=None,
+        description="Exact timestamp when inflection was detected (GAP-024)"
+    )
+    inflection_context_json: Optional[str] = Field(
+        default=None,
+        description="JSON context about what was happening at inflection (GAP-024)"
+    )
+
+    def get_inflection_context(self) -> dict:
+        """Get inflection context from JSON (GAP-024)."""
+        import json
+        if self.inflection_context_json:
+            return json.loads(self.inflection_context_json)
+        return {}
+
+    def set_inflection_context(self, context: dict) -> None:
+        """Set inflection context as JSON (GAP-024)."""
+        import json
+        self.inflection_context_json = json.dumps(context)
+
+    def set_inflection_point(
+        self,
+        step_index: Optional[int] = None,
+        timestamp: Optional[datetime] = None,
+        context: Optional[dict] = None,
+    ) -> None:
+        """
+        Set inflection point metadata (GAP-024).
+
+        Args:
+            step_index: Which step triggered the incident
+            timestamp: When the inflection was detected
+            context: Additional context about the inflection point
+        """
+        if step_index is not None:
+            self.inflection_step_index = step_index
+        if timestamp is not None:
+            self.inflection_timestamp = timestamp
+        elif self.inflection_timestamp is None:
+            # Default to now if not provided
+            self.inflection_timestamp = utc_now()
+        if context is not None:
+            self.set_inflection_context(context)
+
     def get_metadata(self) -> dict:
         """Parse metadata JSON."""
         import json
@@ -1468,4 +1587,8 @@ class SDSRIncident(SQLModel, table=True):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "is_synthetic": self.is_synthetic,
             "synthetic_scenario_id": self.synthetic_scenario_id,
+            # GAP-024: Inflection point metadata
+            "inflection_step_index": self.inflection_step_index,
+            "inflection_timestamp": self.inflection_timestamp.isoformat() if self.inflection_timestamp else None,
+            "inflection_context": self.get_inflection_context(),
         }

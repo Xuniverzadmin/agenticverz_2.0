@@ -1,41 +1,22 @@
 {
-  "observation_id": "OBS-SDSR-LOG-REC-LLM-O2-001-20260115173132",
+  "observation_id": "OBS-SDSR-LOG-REC-LLM-O2-001-20260118120756",
   "scenario_id": "SDSR-LOG-REC-LLM-O2-001",
   "capability_id": "logs.activity_runs",
   "panel_id": "LOG-REC-LLM-O2",
-  "status": "PASS",
-  "observed_at": "2026-01-15T17:31:34.888885+00:00",
-  "assumed_endpoint": "/api/v1/activity/runs",
+  "status": "BLOCKED",
+  "observed_at": "2026-01-18T12:07:56.635474+00:00",
+  "assumed_endpoint": "/api/v1/runtime/traces",
   "observed_endpoint": "/api/v1/activity/runs",
   "assumed_method": "GET",
   "observed_method": "GET",
-  "response_status_code": 200,
-  "response_time_ms": 2509.8366737365723,
+  "response_status_code": null,
+  "response_time_ms": null,
   "invariants_total": 3,
-  "invariants_passed": 3,
+  "invariants_passed": 0,
   "invariants_failed": 0,
-  "invariant_results": [
-    {
-      "id": "INV-001",
-      "name": "response_shape",
-      "status": "PASS",
-      "message": "Assertion passed: response is dict and response is not empty"
-    },
-    {
-      "id": "INV-002",
-      "name": "status_code",
-      "status": "PASS",
-      "message": "Assertion passed: status_code == 200"
-    },
-    {
-      "id": "INV-003",
-      "name": "auth_works",
-      "status": "PASS",
-      "message": "Assertion passed: status_code != 401 and status_code != 403"
-    }
-  ],
-  "failure_reason": null,
-  "failure_taxonomy": null,
-  "coherency_verified": true,
+  "invariant_results": [],
+  "failure_reason": "Coherency gate failed: COH-004",
+  "failure_taxonomy": "COHERENCY_VIOLATION",
+  "coherency_verified": false,
   "trace_id": null
 }

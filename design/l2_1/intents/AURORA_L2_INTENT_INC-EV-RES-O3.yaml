@@ -33,13 +33,12 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: incidents.recovery_candidates
-  status: ASSUMED
-  assumed_endpoint: null
+  id: incidents.metrics_v2
+  status: DEFERRED
+  assumed_endpoint: 'null'
   assumed_method: GET
-  facade_note: "Decoupled from /api/v1/recovery/* (FOPS auth) - API Audit 2026-01-16"
 sdsr:
-  scenario: SDSR-INC-EV-RES-O3-001
+  scenario: DEFERRED
   verified: false
 notes: 'Show time-to-resolution (TTR) and SLA compliance.
 

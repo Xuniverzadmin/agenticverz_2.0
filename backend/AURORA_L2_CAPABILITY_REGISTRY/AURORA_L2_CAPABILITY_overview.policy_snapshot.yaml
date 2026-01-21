@@ -1,48 +1,39 @@
-# AURORA L2 Capability Registry Entry
-# Capability: overview.policy_snapshot
-# Last Updated: 2026-01-15T17:38:15.774789+00:00
-# Updated By: aurora_apply_observation.py
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
 #
-# STATUS: OBSERVED
-#
-# WARNING: Status transitions are MACHINE-OWNED.
-#          Do NOT manually edit the status field.
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
 #
 capability_id: overview.policy_snapshot
 status: OBSERVED
 source_panels:
 - OVR-SUM-HL-O4
 domain: OVERVIEW
-endpoint: /api/v1/policy-proposals/stats/summary
-method: GET
 metadata:
-  generated_by: aurora_capability_scaffold.py
-  generated_on: '2026-01-15'
-  declared_by: AURORA_AUTOMATION
-  declared_on: '2026-01-15'
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
+  declared_by: intent-ledger
+  declared_on: '2026-01-20'
   observed_by: SDSR-OVR-SUM-HL-O4-001
   observed_on: '2026-01-15'
-coherency:
-  last_checked: '2026-01-15T05:58:35.640778+00:00'
-  status: PASSED
-  checked_by: aurora_sdsr_runner.py
+assumption:
+  endpoint: 'null'
+  method: GET
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: null
+  observed_method: null
+  observed_at: '2026-01-15T05:58:35.640778+00:00'
+  observation_id: OBS-SDSR-OVR-SUM-HL-O4-001-20260115055834
+acceptance_criteria:
+- Capability behavior verified
 observation:
   scenario_id: SDSR-OVR-SUM-HL-O4-001
   observed_at: '2026-01-15T05:58:35.640778+00:00'
   trace_id: null
   invariants_passed: 5
   invariants_total: 5
-acceptance_criteria:
-- Endpoint exists and responds
-- Response schema matches contract
-- Auth works correctly
-- Data is real (not mock)
-binding:
-  observed_endpoint: null
-  observed_method: null
-  observed_at: '2026-01-15T05:58:35.640778+00:00'
-  observation_id: OBS-SDSR-OVR-SUM-HL-O4-001-20260115055834
-assumption:
-  endpoint: null
-  method: null
-  source: INTENT_LEDGER
+coherency:
+  last_checked: '2026-01-15T05:58:35.640778+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py

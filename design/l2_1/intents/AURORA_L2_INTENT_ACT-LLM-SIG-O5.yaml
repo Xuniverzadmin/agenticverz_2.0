@@ -33,10 +33,13 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: activity.discovery_stats
-  status: ASSUMED
-  assumed_endpoint: null
+  id: activity.signals
+  status: OBSERVED
+  assumed_endpoint: /api/v1/activity/attention-queue
   assumed_method: GET
+sdsr:
+  scenario: SDSR-ACT-LLM-SIG-O5-001
+  verified: false
 notes: 'Synthesize attention priority — what to look at first and why.
 
 

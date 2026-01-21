@@ -1,11 +1,22 @@
-# M19 Policy Layer API
-# Constitutional governance for multi-agent systems
+# Layer: L2 — Product APIs
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: async
+# Role: Policy Layer API - Constitutional governance for multi-agent systems
+# Callers: Customer Console, SDSR validation, agent runtime
+# Allowed Imports: L3, L4 (via facade), L6 (models only)
+# Forbidden Imports: L4 engine directly (use facade)
+# Reference: API-001 Guardrail (Domain Facade Required), M19 Policy Engine
 #
 # These endpoints allow agents and subsystems to:
 # 1. Evaluate proposed actions against policies
 # 2. Query policy state and violations
 # 3. Simulate policy evaluation for testing
 # 4. Manage risk ceilings and safety rules
+#
+# NOTE: This file uses PolicyFacade per API-001 governance.
+# Direct imports of PolicyEngine are forbidden.
 
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
@@ -23,8 +34,8 @@ from app.policy import (
     PolicyState,
     PolicyViolation,
     ViolationType,
-    get_policy_engine,
 )
+from app.services.policy.facade import get_policy_facade
 
 router = APIRouter(prefix="/policy-layer", tags=["policy-layer"])
 
@@ -142,7 +153,7 @@ async def evaluate_action(
 
     Returns ALLOW, BLOCK, or MODIFY with detailed reasoning.
     """
-    engine = get_policy_engine()
+    facade = get_policy_facade()
 
     eval_request = PolicyEvaluationRequest(
         action_type=request.action_type,
@@ -158,7 +169,7 @@ async def evaluate_action(
         proposed_modification=request.proposed_modification,
     )
 
-    result = await engine.evaluate(eval_request, db)
+    result = await facade.evaluate(eval_request, db)
     return wrap_dict(result.model_dump())
 
 
@@ -181,7 +192,7 @@ async def simulate_evaluation(
     - Create violation records
     - Route to governor
     """
-    engine = get_policy_engine()
+    facade = get_policy_facade()
 
     eval_request = PolicyEvaluationRequest(
         action_type=request.action_type,
@@ -194,7 +205,7 @@ async def simulate_evaluation(
     )
 
     # Simulate with dry_run=True
-    result = await engine.evaluate(eval_request, db, dry_run=True)
+    result = await facade.evaluate(eval_request, db, dry_run=True)
     return wrap_dict(result.model_dump())
 
 
@@ -211,8 +222,8 @@ async def get_policy_state(
     - Violation counts
     - Risk ceiling status
     """
-    engine = get_policy_engine()
-    state = await engine.get_state(db)
+    facade = get_policy_facade()
+    state = await facade.get_state(db)
     return wrap_dict(state.model_dump())
 
 
@@ -226,8 +237,8 @@ async def reload_policies(
     Use this after updating policies to apply changes immediately
     without restarting the service.
     """
-    engine = get_policy_engine()
-    result = await engine.reload_policies(db)
+    facade = get_policy_facade()
+    result = await facade.reload_policies(db)
     return wrap_dict({
         "success": True,
         "policies_loaded": result.policies_loaded,
@@ -245,7 +256,7 @@ async def reload_policies(
 # =============================================================================
 
 
-@router.get("/violations", response_model=List[PolicyViolation])
+@router.get("/violations")
 async def list_violations(
     violation_type: Optional[ViolationType] = None,
     agent_id: Optional[str] = None,
@@ -254,16 +265,16 @@ async def list_violations(
     hours: int = Query(24, ge=1, le=720),
     limit: int = Query(100, ge=1, le=1000),
     db: AsyncSession = Depends(get_async_session),
-) -> List[PolicyViolation]:
+) -> Dict[str, Any]:
     """
     List policy violations with filtering.
 
     Default: violations from last 24 hours.
     """
-    engine = get_policy_engine()
+    facade = get_policy_facade()
 
     since = datetime.now(timezone.utc) - timedelta(hours=hours)
-    violations = await engine.get_violations(
+    violations = await facade.get_violations(
         db,
         violation_type=violation_type,
         agent_id=agent_id,
@@ -281,8 +292,8 @@ async def get_violation(
     db: AsyncSession = Depends(get_async_session),
 ) -> PolicyViolation:
     """Get a specific violation by ID."""
-    engine = get_policy_engine()
-    violation = await engine.get_violation(db, violation_id)
+    facade = get_policy_facade()
+    violation = await facade.get_violation(db, violation_id)
     if not violation:
         raise HTTPException(status_code=404, detail="Violation not found")
     return wrap_dict(violation.model_dump())
@@ -300,8 +311,8 @@ async def acknowledge_violation(
     This does NOT dismiss the violation - it records that
     a human has reviewed it.
     """
-    engine = get_policy_engine()
-    success = await engine.acknowledge_violation(db, violation_id, notes)
+    facade = get_policy_facade()
+    success = await facade.acknowledge_violation(db, violation_id, notes)
     if not success:
         raise HTTPException(status_code=404, detail="Violation not found")
     return wrap_dict({"acknowledged": True, "violation_id": violation_id})
@@ -317,10 +328,10 @@ async def list_risk_ceilings(
     tenant_id: Optional[str] = None,
     include_inactive: bool = False,
     db: AsyncSession = Depends(get_async_session),
-) -> List[Dict[str, Any]]:
+) -> Dict[str, Any]:
     """List all risk ceilings with current values."""
-    engine = get_policy_engine()
-    ceilings = await engine.get_risk_ceilings(db, tenant_id=tenant_id, include_inactive=include_inactive)
+    facade = get_policy_facade()
+    ceilings = await facade.get_risk_ceilings(db, tenant_id=tenant_id, include_inactive=include_inactive)
     items = [
         {
             "id": c.id,
@@ -345,8 +356,8 @@ async def get_risk_ceiling(
     db: AsyncSession = Depends(get_async_session),
 ) -> Dict[str, Any]:
     """Get a specific risk ceiling with current utilization."""
-    engine = get_policy_engine()
-    ceiling = await engine.get_risk_ceiling(db, ceiling_id)
+    facade = get_policy_facade()
+    ceiling = await facade.get_risk_ceiling(db, ceiling_id)
     if not ceiling:
         raise HTTPException(status_code=404, detail="Risk ceiling not found")
 
@@ -373,8 +384,8 @@ async def update_risk_ceiling(
     db: AsyncSession = Depends(get_async_session),
 ) -> Dict[str, Any]:
     """Update a risk ceiling configuration."""
-    engine = get_policy_engine()
-    ceiling = await engine.update_risk_ceiling(db, ceiling_id, update.model_dump(exclude_none=True))
+    facade = get_policy_facade()
+    ceiling = await facade.update_risk_ceiling(db, ceiling_id, update.model_dump(exclude_none=True))
     if not ceiling:
         raise HTTPException(status_code=404, detail="Risk ceiling not found")
 
@@ -392,8 +403,8 @@ async def reset_risk_ceiling(
     db: AsyncSession = Depends(get_async_session),
 ) -> Dict[str, Any]:
     """Reset a risk ceiling's current value to 0."""
-    engine = get_policy_engine()
-    success = await engine.reset_risk_ceiling(db, ceiling_id)
+    facade = get_policy_facade()
+    success = await facade.reset_risk_ceiling(db, ceiling_id)
     if not success:
         raise HTTPException(status_code=404, detail="Risk ceiling not found")
 
@@ -412,8 +423,8 @@ async def list_safety_rules(
     db: AsyncSession = Depends(get_async_session),
 ) -> List[Dict[str, Any]]:
     """List all safety rules."""
-    engine = get_policy_engine()
-    rules = await engine.get_safety_rules(db, tenant_id=tenant_id, include_inactive=include_inactive)
+    facade = get_policy_facade()
+    rules = await facade.get_safety_rules(db, tenant_id=tenant_id, include_inactive=include_inactive)
     items = [
         {
             "id": r.id,
@@ -437,8 +448,8 @@ async def update_safety_rule(
     db: AsyncSession = Depends(get_async_session),
 ) -> Dict[str, Any]:
     """Update a safety rule configuration."""
-    engine = get_policy_engine()
-    rule = await engine.update_safety_rule(db, rule_id, update.model_dump(exclude_none=True))
+    facade = get_policy_facade()
+    rule = await facade.update_safety_rule(db, rule_id, update.model_dump(exclude_none=True))
     if not rule:
         raise HTTPException(status_code=404, detail="Safety rule not found")
 
@@ -460,8 +471,8 @@ async def list_ethical_constraints(
     db: AsyncSession = Depends(get_async_session),
 ) -> List[Dict[str, Any]]:
     """List all ethical constraints."""
-    engine = get_policy_engine()
-    constraints = await engine.get_ethical_constraints(db, include_inactive=include_inactive)
+    facade = get_policy_facade()
+    constraints = await facade.get_ethical_constraints(db, include_inactive=include_inactive)
     items = [
         {
             "id": c.id,
@@ -488,8 +499,8 @@ async def list_active_cooldowns(
     db: AsyncSession = Depends(get_async_session),
 ) -> List[CooldownInfo]:
     """List all active cooldowns."""
-    engine = get_policy_engine()
-    cooldowns = await engine.get_active_cooldowns(db, agent_id=agent_id)
+    facade = get_policy_facade()
+    cooldowns = await facade.get_active_cooldowns(db, agent_id=agent_id)
     return wrap_dict({"items": [c.model_dump() for c in cooldowns], "total": len(cooldowns)})
 
 
@@ -504,8 +515,8 @@ async def clear_cooldowns(
 
     Use with caution - bypasses safety cooldowns.
     """
-    engine = get_policy_engine()
-    count = await engine.clear_cooldowns(db, agent_id, rule_name)
+    facade = get_policy_facade()
+    count = await facade.clear_cooldowns(db, agent_id, rule_name)
     return wrap_dict({"cleared": count, "agent_id": agent_id})
 
 
@@ -520,8 +531,8 @@ async def get_policy_metrics(
     db: AsyncSession = Depends(get_async_session),
 ) -> PolicyMetrics:
     """Get policy engine metrics for the specified time window."""
-    engine = get_policy_engine()
-    metrics = await engine.get_metrics(db, hours=hours)
+    facade = get_policy_facade()
+    metrics = await facade.get_metrics(db, hours=hours)
     return metrics
 
 
@@ -544,7 +555,7 @@ async def evaluate_batch(
     if len(requests) > 50:
         raise HTTPException(status_code=400, detail="Batch size limited to 50 requests")
 
-    engine = get_policy_engine()
+    facade = get_policy_facade()
     results = []
 
     for req in requests:
@@ -559,7 +570,7 @@ async def evaluate_batch(
             data_categories=req.data_categories,
             external_endpoints=req.external_endpoints,
         )
-        result = await engine.evaluate(eval_request, db)
+        result = await facade.evaluate(eval_request, db)
         results.append(result)
 
     return wrap_dict({"items": [r.model_dump() for r in results], "total": len(results)})
@@ -596,8 +607,8 @@ async def list_policy_versions(
 
     Returns version history for audit and rollback purposes.
     """
-    engine = get_policy_engine()
-    versions = await engine.get_policy_versions(db, limit=limit, include_inactive=include_inactive)
+    facade = get_policy_facade()
+    versions = await facade.get_policy_versions(db, limit=limit, include_inactive=include_inactive)
     return wrap_dict({"items": versions, "total": len(versions)})
 
 
@@ -610,8 +621,8 @@ async def get_current_version(
 
     This is the version being used for all evaluations.
     """
-    engine = get_policy_engine()
-    version = await engine.get_current_version(db)
+    facade = get_policy_facade()
+    version = await facade.get_current_version(db)
     if not version:
         return wrap_dict({"version": "1.0.0", "is_active": True, "description": "Default"})
     return wrap_dict(version)
@@ -628,8 +639,8 @@ async def create_policy_version(
     This captures the current state of all policies for audit
     and potential rollback.
     """
-    engine = get_policy_engine()
-    version = await engine.create_policy_version(
+    facade = get_policy_facade()
+    version = await facade.create_policy_version(
         db,
         description=request.description,
         created_by=request.created_by,
@@ -653,8 +664,8 @@ async def rollback_to_version(
     This restores all policies to the state captured in
     the specified version.
     """
-    engine = get_policy_engine()
-    result = await engine.rollback_to_version(
+    facade = get_policy_facade()
+    result = await facade.rollback_to_version(
         db,
         target_version=request.target_version,
         reason=request.reason,
@@ -677,8 +688,8 @@ async def get_version_provenance(
 
     Shows what changes were made and by whom.
     """
-    engine = get_policy_engine()
-    provenance = await engine.get_version_provenance(db, version_id)
+    facade = get_policy_facade()
+    provenance = await facade.get_version_provenance(db, version_id)
     return wrap_dict({"items": provenance, "total": len(provenance)})
 
 
@@ -696,8 +707,8 @@ async def get_dependency_graph(
 
     Shows relationships and potential conflicts between policies.
     """
-    engine = get_policy_engine()
-    graph = await engine.get_dependency_graph(db)
+    facade = get_policy_facade()
+    graph = await facade.get_dependency_graph(db)
     return wrap_dict({
         "nodes": len(graph.nodes),
         "edges": len(graph.edges),
@@ -738,8 +749,8 @@ async def list_conflicts(
 
     Conflicts occur when policies have contradictory rules.
     """
-    engine = get_policy_engine()
-    conflicts = await engine.get_policy_conflicts(db, include_resolved=include_resolved)
+    facade = get_policy_facade()
+    conflicts = await facade.get_policy_conflicts(db, include_resolved=include_resolved)
     items = [
         {
             "id": c.id,
@@ -776,8 +787,8 @@ async def resolve_conflict(
 
     Documents how the conflict should be handled during evaluation.
     """
-    engine = get_policy_engine()
-    result = await engine.resolve_conflict(
+    facade = get_policy_facade()
+    result = await facade.resolve_conflict(
         db,
         conflict_id=conflict_id,
         resolution=request.resolution,
@@ -821,8 +832,8 @@ async def list_temporal_policies(
 
     These policies track cumulative metrics over time windows.
     """
-    engine = get_policy_engine()
-    policies = await engine.get_temporal_policies(db, metric=metric, include_inactive=include_inactive)
+    facade = get_policy_facade()
+    policies = await facade.get_temporal_policies(db, metric=metric, include_inactive=include_inactive)
     items = [
         {
             "id": p.id,
@@ -850,8 +861,8 @@ async def create_temporal_policy(
 
     Temporal policies track cumulative metrics over sliding windows.
     """
-    engine = get_policy_engine()
-    policy = await engine.create_temporal_policy(db, request.model_dump())
+    facade = get_policy_facade()
+    policy = await facade.create_temporal_policy(db, request.model_dump())
 
     return wrap_dict({
         "created": True,
@@ -871,8 +882,8 @@ async def get_temporal_utilization(
 
     Shows how much of the limit has been consumed in the current window.
     """
-    engine = get_policy_engine()
-    utilization = await engine.get_temporal_utilization(db, policy_id=policy_id, agent_id=agent_id)
+    facade = get_policy_facade()
+    utilization = await facade.get_temporal_utilization(db, policy_id=policy_id, agent_id=agent_id)
     return wrap_dict(utilization)
 
 
@@ -924,7 +935,7 @@ async def evaluate_with_context(
     """
     from app.policy import PolicyContext
 
-    engine = get_policy_engine()
+    facade = get_policy_facade()
 
     # Build policy context
     policy_context = PolicyContext(
@@ -939,7 +950,7 @@ async def evaluate_with_context(
     )
 
     # Evaluate with context
-    result = await engine.evaluate_with_context(
+    result = await facade.evaluate_with_context(
         db,
         action_type=request.action_type,
         policy_context=policy_context,
@@ -1002,8 +1013,8 @@ async def validate_dependency_dag(
     - cycles: List of detected cycles (if any)
     - topological_order: Evaluation order (if DAG is valid)
     """
-    engine = get_policy_engine()
-    result = await engine.validate_dependency_dag(db)
+    facade = get_policy_facade()
+    result = await facade.validate_dependency_dag(db)
     return wrap_dict(result)
 
 
@@ -1036,8 +1047,8 @@ async def add_dependency_with_dag_check(
     - blocked: True if cycle detected
     - cycle_path: The path that would form a cycle
     """
-    engine = get_policy_engine()
-    result = await engine.add_dependency_with_dag_check(
+    facade = get_policy_facade()
+    result = await facade.add_dependency_with_dag_check(
         db,
         source_policy=request.source_policy,
         target_policy=request.target_policy,
@@ -1072,8 +1083,8 @@ async def get_evaluation_order(
     based on their dependencies. Policies that depend on
     others are evaluated after their dependencies.
     """
-    engine = get_policy_engine()
-    dag_result = await engine.validate_dependency_dag(db)
+    facade = get_policy_facade()
+    dag_result = await facade.validate_dependency_dag(db)
 
     if not dag_result.get("is_dag"):
         return wrap_dict({
@@ -1118,8 +1129,8 @@ async def prune_temporal_metrics(
 
     Should be run periodically (e.g., via cron job).
     """
-    engine = get_policy_engine()
-    result = await engine.prune_temporal_metrics(
+    facade = get_policy_facade()
+    result = await facade.prune_temporal_metrics(
         db,
         retention_hours=request.retention_hours,
         compact_older_than_hours=request.compact_older_than_hours,
@@ -1142,8 +1153,8 @@ async def get_temporal_storage_stats(
     Use this to monitor storage growth and determine
     when pruning is needed.
     """
-    engine = get_policy_engine()
-    stats = await engine.get_temporal_storage_stats(db)
+    facade = get_policy_facade()
+    stats = await facade.get_temporal_storage_stats(db)
     return wrap_dict(stats)
 
 
@@ -1184,8 +1195,8 @@ async def activate_policy_version(
     - checks: Detailed results of each check
     - activated_version: The version that was activated
     """
-    engine = get_policy_engine()
-    result = await engine.activate_policy_version(
+    facade = get_policy_facade()
+    result = await facade.activate_policy_version(
         db,
         version_id=request.version_id,
         activated_by=request.activated_by,
@@ -1218,8 +1229,8 @@ async def check_version_integrity(
     Shortcut for activate with dry_run=True.
     Useful for validating a version before scheduling activation.
     """
-    engine = get_policy_engine()
-    result = await engine.activate_policy_version(
+    facade = get_policy_facade()
+    result = await facade.activate_policy_version(
         db,
         version_id=version_id,
         activated_by="check-only",

@@ -1,0 +1,22 @@
+{
+  "observation_id": "OBS-SDSR-OVR-SUM-CI-O4-001-20260118104737",
+  "scenario_id": "SDSR-OVR-SUM-CI-O4-001",
+  "capability_id": "overview.costs",
+  "panel_id": "OVR-SUM-CI-O4",
+  "status": "PASS",
+  "observed_at": "2026-01-18T10:47:37.410084+00:00",
+  "assumed_endpoint": null,
+  "observed_endpoint": "/api/v1/overview/costs",
+  "assumed_method": "GET",
+  "observed_method": "GET",
+  "response_status_code": 401,
+  "response_time_ms": 7.153749465942383,
+  "invariants_total": 3,
+  "invariants_passed": 0,
+  "invariants_failed": 0,
+  "invariant_results": [],
+  "failure_reason": "Access restricted (HTTP 401) - visibility limited but endpoint exists",
+  "failure_taxonomy": "VISIBILITY_RESTRICTED",
+  "coherency_verified": true,
+  "trace_id": null
+}

@@ -6,6 +6,7 @@
 capability_id: policies.lessons_stats
 status: DECLARED
 source_panels:
+- POL-GOV-DFT-O1
 - POL-GOV-LRN-O2
 domain: POLICIES
 metadata:
@@ -16,7 +17,7 @@ metadata:
   observed_by: null
   observed_on: null
 assumption:
-  endpoint: /policy-layer/lessons/stats
+  endpoint: /api/v1/policy-layer/lessons/stats
   method: GET
   source: PIN-411
 binding:
@@ -38,3 +39,5 @@ coherency:
   last_checked: null
   status: PENDING
   checked_by: null
+endpoint: /api/v1/policies/lessons/stats
+method: GET

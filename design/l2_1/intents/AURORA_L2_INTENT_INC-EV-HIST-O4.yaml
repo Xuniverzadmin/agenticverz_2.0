@@ -33,13 +33,12 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: incidents.ops_list
-  status: ASSUMED
-  assumed_endpoint: /api/v1/incidents
+  id: incidents.historical_cost_trend
+  status: DEFERRED
+  assumed_endpoint: 'null'
   assumed_method: GET
-  facade_note: "Decoupled from /ops/* (founder-only) - uses standard incidents API - API Audit 2026-01-16"
 sdsr:
-  scenario: SDSR-INC-EV-HIST-O4-001
+  scenario: DEFERRED
   verified: false
 notes: 'Show cost and impact over time — true economic footprint.
 

@@ -10,14 +10,14 @@ panel_class: execution
 metadata:
   domain: POLICIES
   subdomain: GOVERNANCE
-  topic: DRAFTS
-  topic_id: POLICIES.GOVERNANCE.DRAFTS
+  topic: LESSONS
+  topic_id: POLICIES.GOVERNANCE.LESSONS
   order: O4
   action_layer: L2_1
   source: INTENT_LEDGER
   review_status: UNREVIEWED
-  facet: null
-  facet_criticality: null
+  facet: policy_governance
+  facet_criticality: HIGH
 display:
   name: POL-GOV-DFT-O4
   visible_by_default: true
@@ -33,10 +33,10 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: policies.conflicts_list
+  id: lessons.convert_to_draft
   status: ASSUMED
-  assumed_endpoint: /api/v1/policy-layer/conflicts
-  assumed_method: GET
+  assumed_endpoint: /api/v1/policy-layer/lessons/{lesson_id}/convert
+  assumed_method: POST
 sdsr:
   scenario: SDSR-POL-GOV-DFT-O4-001
   verified: false

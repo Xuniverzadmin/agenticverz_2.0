@@ -1,0 +1,98 @@
+# SDSR Verification Scenario
+# Scenario: SDSR-ACT-V2-COMPLETED-BREACH-001
+# Generated: 2026-01-19
+#
+# PURPOSE:
+#   Verify /activity/completed returns runs with policy context
+#   showing BREACH evaluation for runs that exceeded limits.
+#
+# REFERENCE:
+#   - ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md (Phase 0 SDSR Scenarios)
+#   - ACTIVITY_DOMAIN_CONTRACT.md (V2 Policy Context sections)
+
+scenario_id: SDSR-ACT-V2-COMPLETED-BREACH-001
+version: 1.0.0
+name: COMPLETED run with BREACH evaluation
+description: |
+  Verifies that /activity/completed endpoint returns COMPLETED runs with:
+  - policy_context embedded showing BREACH evaluation
+  - actual_value exceeding threshold_value
+  - Historical breaches properly reflected
+capability: activity.completed_runs_v2
+panel_id: ACT-LLM-COMP-O2
+domain: ACTIVITY
+metadata:
+  generated_by: manual
+  generated_at: '2026-01-19T00:00:00+00:00'
+  panel_class: evidence
+  migration_phase: Phase1_Schema_Enhancement
+
+inject:
+  type: api_call
+  endpoint: /api/v1/activity/completed
+  method: GET
+  headers:
+    Authorization: Bearer ${AUTH_TOKEN}
+    Content-Type: application/json
+  params:
+    risk_level: VIOLATED
+
+expect:
+  status_code: 200
+  response_type: json
+  response_shape:
+    items: list
+    total: int
+    has_more: bool
+    pagination:
+      limit: int
+      offset: int
+    generated_at: string
+
+invariants:
+  - id: INV-V2-010
+    name: policy_context_present
+    description: Every run has policy_context embedded
+    assertion: |
+      all(item.get('policy_context') is not None for item in response.get('items', []))
+  - id: INV-V2-011
+    name: state_is_completed
+    description: All returned runs have state=COMPLETED (topic boundary)
+    assertion: |
+      all(item.get('state') == 'COMPLETED' for item in response.get('items', []))
+  - id: INV-V2-012
+    name: breach_evaluation_present
+    description: Violated runs have BREACH evaluation outcome
+    assertion: |
+      all(
+        item.get('policy_context', {}).get('evaluation_outcome') in ['BREACH', 'OVERRIDDEN']
+        for item in response.get('items', [])
+        if item.get('risk_level') == 'VIOLATED'
+      )
+  - id: INV-V2-013
+    name: actual_exceeds_threshold
+    description: For BREACH, actual_value >= threshold_value
+    assertion: |
+      all(
+        (item.get('policy_context', {}).get('actual_value') or 0) >=
+        (item.get('policy_context', {}).get('threshold_value') or float('inf'))
+        for item in response.get('items', [])
+        if item.get('policy_context', {}).get('evaluation_outcome') == 'BREACH' and
+           item.get('policy_context', {}).get('threshold_value') is not None
+      )
+
+cleanup:
+  required: false
+  note: Read-only observation, no cleanup needed
+
+on_success:
+  update_capability_status: OBSERVED
+  emit_observation: true
+
+on_failure:
+  update_capability_status: null
+  emit_observation: true
+  failure_taxonomy:
+    endpoint_missing: V2 /activity/completed route does not exist
+    breach_not_reflected: BREACH evaluation not properly derived
+    schema_mismatch: Response shape does not match V2 contract

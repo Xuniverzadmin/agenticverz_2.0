@@ -33,11 +33,10 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: incidents.integration_stats
+  id: incidents.patterns
   status: ASSUMED
-  assumed_endpoint: null
+  assumed_endpoint: /api/v1/incidents/patterns
   assumed_method: GET
-  facade_note: "Decoupled from /integration/* (FOPS auth) - API Audit 2026-01-16"
 sdsr:
   scenario: SDSR-INC-EV-HIST-O5-001
   verified: false

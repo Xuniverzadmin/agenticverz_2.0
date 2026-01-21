@@ -33,7 +33,7 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: policies.safety_rules
+  id: policies.rules
   status: ASSUMED
   assumed_endpoint: /api/v1/policy-layer/safety-rules
   assumed_method: GET

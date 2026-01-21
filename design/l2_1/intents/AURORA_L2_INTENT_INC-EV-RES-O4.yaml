@@ -33,13 +33,12 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: incidents.graduation_list
-  status: ASSUMED
-  assumed_endpoint: null
+  id: incidents.resolved_list_v2
+  status: DEFERRED
+  assumed_endpoint: 'null'
   assumed_method: GET
-  facade_note: "Decoupled from /integration/* (FOPS auth) - API Audit 2026-01-16"
 sdsr:
-  scenario: SDSR-INC-EV-RES-O4-001
+  scenario: DEFERRED
   verified: false
 notes: 'Show outcome and impact post-resolution — the final reality.
 

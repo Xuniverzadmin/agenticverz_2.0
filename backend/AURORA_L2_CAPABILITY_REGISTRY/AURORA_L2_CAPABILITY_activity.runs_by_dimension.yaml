@@ -1,0 +1,31 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
+#
+capability_id: activity.runs_by_dimension
+status: DECLARED
+source_panels:
+- ACT-LLM-LIVE-O5, ACT-LLM-COMP-O5
+domain: ACTIVITY
+metadata:
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
+  declared_by: intent-ledger
+  declared_on: '2026-01-20'
+  observed_by: SDSR-ACT-LLM-LIVE-O5-001
+assumption:
+  endpoint: null
+  method: GET
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: null
+  observed_method: null
+  observed_at: null
+  observation_id: null
+acceptance_criteria:
+- Returns run counts grouped by specified dimension
+- Response includes dimension, groups array, total_runs
+- State binding is IMPLICIT (injected by endpoint, not caller-controlled)
+- Frontend calls topic-scoped endpoint directly (no state param needed)

@@ -58,6 +58,11 @@ access_tiers:
     description: "Permission or role required."
     requires_auth: true
     requires_permissions: true
+  MACHINE:
+    description: "SDK / programmatic access only. No console/browser."
+    requires_auth: true
+    requires_permissions: true
+    console_blocked: true
   SYSTEM:
     description: "Engine / SDSR / control-plane only."
     requires_auth: true
@@ -176,6 +181,30 @@ rules:
     description: "ReDoc documentation."
 
   # ===========================================================================
+  # DEBUG ENDPOINTS (PIN-444)
+  # ===========================================================================
+  # OpenAPI health monitoring endpoints for diagnosing schema generation issues.
+  # These are PUBLIC for operational debugging but do not expose sensitive data.
+
+  - rule_id: DEBUG_OPENAPI_NOCACHE
+    path_prefix: /__debug/openapi_nocache
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "PIN-444: Cache-free OpenAPI generation for debugging schema hangs."
+    pin: PIN-444
+
+  - rule_id: DEBUG_OPENAPI_INSPECT
+    path_prefix: /__debug/openapi_inspect
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "PIN-444: Inspect OpenAPI schema for problematic patterns."
+    pin: PIN-444
+
+  # ===========================================================================
   # AUTHENTICATION
   # ===========================================================================
 
@@ -287,7 +316,7 @@ rules:
 
   - rule_id: POLICY_LAYER_READ_PREFLIGHT
     pin: PIN-427
-    path_prefix: /policy-layer/
+    path_prefix: /api/v1/policy-layer/
     methods: [GET]
     access_tier: PUBLIC
     allow_console: [customer]
@@ -592,6 +621,56 @@ rules:
       TEMPORARY - must be SESSION tier in production.
 
   # ===========================================================================
+  # LOGS DOMAIN V2 (LOGS_DOMAIN_V2_CONTRACT.md)
+  # ===========================================================================
+  #
+  # Unified LOGS facade: /api/v1/logs/*
+  # Topics: LLM_RUNS, SYSTEM_LOGS, AUDIT
+  # All endpoints are GET-only (no mutations).
+  # Export URLs include time-bound signed tokens.
+  #
+  # ===========================================================================
+
+  - rule_id: LOGS_READ_PREFLIGHT
+    pin: LOGS_DOMAIN_V2
+    path_prefix: /api/v1/logs/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    query_authority:
+      include_synthetic: true
+      max_rows: 500
+      max_time_range_days: 30
+      aggregation: "BASIC"
+      export_allowed: true
+    description: >
+      LOGS Domain V2 unified facade for preflight SDSR validation.
+      Covers LLM_RUNS, SYSTEM_LOGS, and AUDIT topics.
+      All endpoints are GET-only (immutable records).
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: LOGS_READ_PRODUCTION
+    pin: LOGS_DOMAIN_V2
+    path_prefix: /api/v1/logs/
+    methods: [GET]
+    access_tier: SESSION
+    allow_console: [customer, founder]
+    allow_environment: [production]
+    required_permissions: [logs.read]
+    query_authority:
+      include_synthetic: false
+      max_rows: 100
+      max_time_range_days: 7
+      aggregation: "NONE"
+      export_allowed: true
+    description: >
+      LOGS Domain V2 production endpoints.
+      Requires authentication. Tenant-scoped access only.
+
+  # ===========================================================================
   # FOUNDER CONSOLE
   # ===========================================================================
 
@@ -782,6 +861,339 @@ rules:
     allow_environment: [preflight, production]
     required_permissions: [agent.write]
     description: "Agent mutations - requires agent.write permission."
+
+  # ===========================================================================
+  # CUSTOMER INTEGRATIONS (PIN-440)
+  # ===========================================================================
+  # Customer LLM integration management APIs. Supports three-mode authority:
+  # - LOCAL: Sandbox auth (X-AOS-Customer-Key) with local DB
+  # - TEST: Sandbox or JWT auth against Neon test
+  # - PROD: JWT only against Neon prod
+  #
+  # Shared conventions:
+  #   access_tier: SESSION (requires authenticated principal)
+  #   allow_console: [customer] (never callable by operator implicitly)
+  #   allow_environment: [local, preflight, production]
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # Integrations — List & Read
+  # ---------------------------------------------------------------------------
+
+  - rule_id: CUS_INTEGRATIONS_LIST
+    pin: PIN-440
+    path_prefix: /api/v1/cus/integrations
+    methods: [GET]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:integrations:read]
+    query_authority:
+      include_synthetic: false
+      max_rows: 100
+      max_time_range_days: 30
+      aggregation: "BASIC"
+    description: "List customer LLM integrations."
+
+  - rule_id: CUS_INTEGRATIONS_GET
+    pin: PIN-440
+    path_prefix: /api/v1/cus/integrations/
+    methods: [GET]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:integrations:read]
+    description: "Get details of a customer LLM integration."
+
+  # ---------------------------------------------------------------------------
+  # Integrations — Create / Update / Delete
+  # ---------------------------------------------------------------------------
+
+  - rule_id: CUS_INTEGRATIONS_CREATE
+    pin: PIN-440
+    path_prefix: /api/v1/cus/integrations
+    methods: [POST]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:integrations:write]
+    description: "Create a new customer LLM integration."
+
+  - rule_id: CUS_INTEGRATIONS_UPDATE
+    pin: PIN-440
+    path_prefix: /api/v1/cus/integrations/
+    methods: [PUT]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:integrations:write]
+    description: "Update an existing customer LLM integration."
+
+  - rule_id: CUS_INTEGRATIONS_DELETE
+    pin: PIN-440
+    path_prefix: /api/v1/cus/integrations/
+    methods: [DELETE]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:integrations:write]
+    description: "Soft delete a customer LLM integration."
+
+  # ---------------------------------------------------------------------------
+  # Integrations — Lifecycle Control
+  # ---------------------------------------------------------------------------
+
+  - rule_id: CUS_INTEGRATIONS_ENABLE
+    pin: PIN-440
+    path_prefix: /api/v1/cus/integrations/
+    path_suffix: /enable
+    methods: [POST]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:integrations:control]
+    description: "Enable a customer LLM integration."
+
+  - rule_id: CUS_INTEGRATIONS_DISABLE
+    pin: PIN-440
+    path_prefix: /api/v1/cus/integrations/
+    path_suffix: /disable
+    methods: [POST]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:integrations:control]
+    description: "Disable a customer LLM integration."
+
+  # ---------------------------------------------------------------------------
+  # Integrations — Health & Validation
+  # ---------------------------------------------------------------------------
+
+  - rule_id: CUS_INTEGRATIONS_HEALTH_GET
+    pin: PIN-440
+    path_prefix: /api/v1/cus/integrations/
+    path_suffix: /health
+    methods: [GET]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:integrations:read]
+    description: "Get cached health state of an integration."
+
+  - rule_id: CUS_INTEGRATIONS_HEALTH_TEST
+    pin: PIN-440
+    path_prefix: /api/v1/cus/integrations/
+    path_suffix: /test
+    methods: [POST]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:integrations:control]
+    description: "Actively test credentials for a customer integration."
+
+  # ---------------------------------------------------------------------------
+  # Integrations — Limits & Usage
+  # ---------------------------------------------------------------------------
+
+  - rule_id: CUS_INTEGRATIONS_LIMITS_GET
+    pin: PIN-440
+    path_prefix: /api/v1/cus/integrations/
+    path_suffix: /limits
+    methods: [GET]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:integrations:read]
+    description: "Get usage and limit status for an integration."
+
+  # ===========================================================================
+  # CUSTOMER TELEMETRY (PIN-440) — Read-Only for Customers
+  # ===========================================================================
+  # Write paths are SDK-only and authenticated separately (MACHINE tier).
+
+  - rule_id: CUS_TELEMETRY_SUMMARY
+    pin: PIN-440
+    path_prefix: /api/v1/telemetry/usage-summary
+    methods: [GET]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:telemetry:read]
+    query_authority:
+      include_synthetic: false
+      max_rows: 100
+      max_time_range_days: 30
+      aggregation: "FULL"
+    description: "Get aggregated LLM usage summary."
+
+  - rule_id: CUS_TELEMETRY_HISTORY
+    pin: PIN-440
+    path_prefix: /api/v1/telemetry/usage-history
+    methods: [GET]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:telemetry:read]
+    query_authority:
+      include_synthetic: false
+      max_rows: 1000
+      max_time_range_days: 30
+      aggregation: "FULL"
+    description: "Get detailed LLM usage history."
+
+  - rule_id: CUS_TELEMETRY_DAILY
+    pin: PIN-440
+    path_prefix: /api/v1/telemetry/daily-aggregates
+    methods: [GET]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:telemetry:read]
+    query_authority:
+      include_synthetic: false
+      max_rows: 365
+      max_time_range_days: 365
+      aggregation: "FULL"
+    description: "Get daily aggregated LLM usage."
+
+  # ===========================================================================
+  # CUSTOMER ENFORCEMENT (PIN-440) — Preflight & Status
+  # ===========================================================================
+
+  - rule_id: CUS_ENFORCEMENT_CHECK
+    pin: PIN-440
+    path_prefix: /api/v1/enforcement/check
+    methods: [POST]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:enforcement:check]
+    description: "Run a preflight enforcement check."
+
+  - rule_id: CUS_ENFORCEMENT_STATUS
+    pin: PIN-440
+    path_prefix: /api/v1/enforcement/status
+    methods: [GET]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:enforcement:read]
+    query_authority:
+      include_synthetic: false
+      max_rows: 100
+      max_time_range_days: 7
+      aggregation: "BASIC"
+    description: "Get current enforcement and limit status."
+
+  - rule_id: CUS_ENFORCEMENT_BATCH
+    pin: PIN-440
+    path_prefix: /api/v1/enforcement/batch
+    methods: [POST]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:enforcement:check]
+    description: "Batch preflight enforcement checks."
+
+  # ===========================================================================
+  # CUSTOMER VISIBILITY (PIN-440)
+  # ===========================================================================
+
+  - rule_id: CUS_VISIBILITY_READ
+    pin: PIN-440
+    path_prefix: /api/v1/cus/visibility
+    methods: [GET]
+    access_tier: SESSION
+    allow_console: [customer]
+    allow_environment: [local, preflight, production]
+    required_permissions: [customer:visibility:read]
+    query_authority:
+      include_synthetic: false
+      max_rows: 100
+      max_time_range_days: 7
+      aggregation: "BASIC"
+    description: "Read customer visibility settings and status."
+
+  # ===========================================================================
+  # MACHINE-ONLY RULES (SDK Telemetry & Signals)
+  # ===========================================================================
+  # Scope: SDK → Backend (programmatic only)
+  # Caller Type: Machine / SDK
+  # Guarantee: Write-only, append-only, no visibility
+  #
+  # INVARIANT: Machines report truth; humans decide.
+  # INVARIANT: Machines may report facts and request decisions,
+  #            but they must never observe governance state.
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # Machine Telemetry Ingest
+  # ---------------------------------------------------------------------------
+
+  - rule_id: MACHINE_CUS_TELEMETRY_INGEST
+    pin: PIN-440
+    path_prefix: /api/v1/telemetry/llm-usage
+    methods: [POST]
+    access_tier: MACHINE
+    allow_console: []
+    allow_environment: [local, preflight, production]
+    required_permissions: [machine:telemetry:write]
+    description: "SDK telemetry ingest (single LLM call). Write-only."
+
+  - rule_id: MACHINE_CUS_TELEMETRY_BATCH_INGEST
+    pin: PIN-440
+    path_prefix: /api/v1/telemetry/llm-usage/batch
+    methods: [POST]
+    access_tier: MACHINE
+    allow_console: []
+    allow_environment: [local, preflight, production]
+    required_permissions: [machine:telemetry:write]
+    description: "SDK telemetry ingest (batch). Write-only."
+
+  # ---------------------------------------------------------------------------
+  # Machine Enforcement Checks
+  # ---------------------------------------------------------------------------
+
+  - rule_id: MACHINE_CUS_ENFORCEMENT_PREFLIGHT
+    pin: PIN-440
+    path_prefix: /api/v1/enforcement/check
+    methods: [POST]
+    access_tier: MACHINE
+    allow_console: []
+    allow_environment: [local, preflight, production]
+    required_permissions: [machine:enforcement:check]
+    description: "SDK preflight enforcement check. Decision-only."
+
+  - rule_id: MACHINE_CUS_ENFORCEMENT_BATCH
+    pin: PIN-440
+    path_prefix: /api/v1/enforcement/batch
+    methods: [POST]
+    access_tier: MACHINE
+    allow_console: []
+    allow_environment: [local, preflight, production]
+    required_permissions: [machine:enforcement:check]
+    description: "SDK batch preflight enforcement checks."
+
+# =============================================================================
+# PERMISSION VOCABULARY (CANONICAL)
+# =============================================================================
+#
+# Customer permissions:
+#   customer:integrations:read
+#   customer:integrations:write
+#   customer:integrations:control
+#   customer:telemetry:read
+#   customer:enforcement:read
+#   customer:enforcement:check
+#   customer:visibility:read
+#
+# Machine permissions (distinct from customer):
+#   machine:telemetry:write
+#   machine:enforcement:check
+#
+# No overlap between customer:* and machine:*
+#
+# =============================================================================
 
 # =============================================================================
 # END OF RULES

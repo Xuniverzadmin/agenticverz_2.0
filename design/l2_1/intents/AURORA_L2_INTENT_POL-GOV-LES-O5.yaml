@@ -1,7 +1,6 @@
-# Panel Intent: Lessons History
-# Source: PIN-411 (Lessons Learned Engine)
-# Panel: POL-GOV-LES-O5
-# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+# AURORA_L2 Intent Spec: POL-GOV-LES-O5
+# Last Updated: 2026-01-18
+# Updated By: manual
 #
 panel_id: POL-GOV-LES-O5
 version: 1.0.0
@@ -13,12 +12,12 @@ metadata:
   topic_id: POLICIES.GOVERNANCE.LESSONS
   order: O5
   action_layer: L2_1
-  source: PIN-411
-  review_status: DRAFT
-  facet: lessons_learned
-  facet_criticality: LOW
+  source: INTENT_LEDGER
+  review_status: REVIEWED
+  facet: null
+  facet_criticality: null
 display:
-  name: Lessons History
+  name: POL-GOV-LES-O5
   visible_by_default: true
   nav_required: false
   expansion_mode: INLINE
@@ -26,7 +25,7 @@ data:
   read: true
   download: true
   write: false
-  replay: false
+  replay: true
 controls:
   filtering: true
   activate: false
@@ -34,28 +33,18 @@ controls:
 capability:
   id: lessons.history
   status: DECLARED
-  assumed_endpoint: /api/v1/lessons
+  assumed_endpoint: /api/v1/policies/lessons/stats
   assumed_method: GET
-  facade_note: "List all lessons including converted and dismissed (full history)"
+notes: 'Show lessons history and statistics.
+
+  Historical view of all lessons learned, conversions, and dismissals.'
 sdsr:
-  scenario: SDSR-POL-GOV-LES-O5-001
   verified: false
-notes: |
-  Show full history of all lessons.
-
-  What it shows:
-  - All lessons regardless of status
-  - Status filter (pending, converted_to_draft, deferred, dismissed)
-  - Conversion/dismissal timestamps
-  - Linked draft ID (for converted lessons)
-  - Deferred until time (for deferred lessons)
-  - Dismissal reason (for dismissed lessons)
-
-  Use Cases:
-  - Audit trail for policy evolution
-  - Review of dismissed patterns
-  - Tracking conversion rate
-  - Pattern analysis over time
-
-  What it explicitly does NOT show:
-  - No action buttons (history is read-only)
+  verification_date: null
+  scenario: SDSR-POL-GOV-LES-O5-001
+  observation_trace: null
+  checks:
+    endpoint_exists: PENDING
+    schema_matches: PENDING
+    auth_works: PENDING
+    data_is_real: PENDING

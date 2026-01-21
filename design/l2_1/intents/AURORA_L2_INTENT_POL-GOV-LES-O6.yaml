@@ -1,0 +1,68 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: POL-GOV-LES-O6
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-GOV-LES-O6
+version: 1.0.0
+panel_class: evidence
+metadata:
+  domain: POLICIES
+  subdomain: GOVERNANCE
+  topic: LESSONS
+  topic_id: POLICIES.GOVERNANCE.LESSONS
+  order: O6
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: policy_governance
+  facet_criticality: HIGH
+display:
+  name: POL-GOV-LES-O6
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: lessons.list
+  status: ASSUMED
+  assumed_endpoint: /api/v1/policy-layer/lessons
+  assumed_method: GET
+sdsr:
+  scenario: SDSR-POL-GOV-DFT-O1-001
+  verified: false
+notes: 'Show lessons learned from system behavior — observed patterns that inform
+  governance.
+
+
+  What it shows:
+
+  - Critical failures and their root causes
+
+  - Near-threshold runs and recurring patterns
+
+  - Cost overruns and cost-saving behaviors
+
+  - High override frequency signals
+
+  - Grouped by: LLM, Agent, Human actor, Policy gap type
+
+  - Evidence links: incident IDs, run IDs, trace IDs
+
+
+  What it explicitly does NOT show:
+
+  - No recommendations or synthesis
+
+  - No draft policies
+
+  - No actions or controls'

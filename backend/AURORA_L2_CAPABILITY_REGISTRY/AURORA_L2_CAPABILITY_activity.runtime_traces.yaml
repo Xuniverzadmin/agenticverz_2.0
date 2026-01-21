@@ -1,48 +1,39 @@
-# AURORA L2 Capability Registry Entry
-# Capability: activity.runtime_traces
-# Last Updated: 2026-01-15T17:38:08.445735+00:00
-# Updated By: aurora_apply_observation.py
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
 #
-# STATUS: OBSERVED
-#
-# WARNING: Status transitions are MACHINE-OWNED.
-#          Do NOT manually edit the status field.
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
 #
 capability_id: activity.runtime_traces
 status: OBSERVED
 source_panels:
-- ACT-LLM-COMP-O5
+- ACT-LLM-LIVE-O4
 domain: ACTIVITY
-endpoint: /api/v1/runtime/traces
-method: GET
 metadata:
-  generated_by: aurora_capability_scaffold.py
-  generated_on: '2026-01-15'
-  declared_by: AURORA_AUTOMATION
-  declared_on: '2026-01-15'
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
+  declared_by: intent-ledger
+  declared_on: '2026-01-20'
   observed_by: SDSR-ACT-LLM-COMP-O5-001
-  observed_on: '2026-01-15'
-coherency:
-  last_checked: '2026-01-15T06:58:27.563446+00:00'
-  status: PASSED
-  checked_by: aurora_sdsr_runner.py
+  observed_on: '2026-01-18'
+assumption:
+  endpoint: 'null'
+  method: GET
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: /api/v1/runtime/traces
+  observed_method: GET
+  observed_at: '2026-01-18T10:04:43.002647+00:00'
+  observation_id: OBS-SDSR-ACT-LLM-COMP-O5-001-20260118100440
+acceptance_criteria:
+- Capability behavior verified
 observation:
   scenario_id: SDSR-ACT-LLM-COMP-O5-001
-  observed_at: '2026-01-15T06:58:27.563446+00:00'
+  observed_at: '2026-01-18T10:04:43.002647+00:00'
   trace_id: null
   invariants_passed: 3
   invariants_total: 3
-acceptance_criteria:
-- Endpoint exists and responds
-- Response schema matches contract
-- Auth works correctly
-- Data is real (not mock)
-binding:
-  observed_endpoint: null
-  observed_method: null
-  observed_at: '2026-01-15T06:58:27.563446+00:00'
-  observation_id: OBS-SDSR-ACT-LLM-COMP-O5-001-20260115065822
-assumption:
-  endpoint: null
-  method: null
-  source: INTENT_LEDGER
+coherency:
+  last_checked: '2026-01-18T10:04:43.002647+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py

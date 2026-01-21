@@ -228,8 +228,9 @@ export function getDomains(): Domain[] {
   const projectionDomains = projection ? [...projection.domains] : [];
 
   // Get all scaffolding domains not in projection
+  // NOTE: Case-insensitive comparison - projection uses UPPERCASE, scaffolding uses Title Case
   const scaffoldingDomains = getAllScaffoldingDomains()
-    .filter(s => !projectionDomains.some(p => p.domain === s.id))
+    .filter(s => !projectionDomains.some(p => p.domain.toUpperCase() === s.id.toUpperCase()))
     .map(scaffoldingToDomain);
 
   // Merge and sort by order

@@ -31,7 +31,19 @@ import { useNavigate } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import { Activity, CheckCircle, AlertTriangle, AlertOctagon, History, FileCheck, Shield, FilePlus, Archive, DollarSign, Gauge, SlidersHorizontal, Clock, TrendingUp, Info } from 'lucide-react';
 import { fetchActivityRuns, fetchActivitySummary, type RunSummary, type ActivitySummaryResponse } from '@/api/activity';
-import { fetchIncidents, fetchIncidentsMetrics, fetchIncidentsSummary, type IncidentSummary, type IncidentsSummaryResponse } from '@/api/incidents';
+import {
+  // Phase 3 Migration: Topic-scoped functions
+  fetchActiveIncidents,
+  fetchResolvedIncidents,
+  // Legacy (kept for backward compatibility)
+  fetchIncidents,
+  fetchIncidentsMetrics,
+  fetchIncidentsSummary,
+  // Types
+  type IncidentSummary,
+  type IncidentsSummaryResponse,
+  type TopicScopedIncidentsResponse,
+} from '@/api/incidents';
 import { fetchProposals, approveProposal, rejectProposal, type ProposalSummary } from '@/api/proposals';
 import { getTraces, getTrace, type Trace, type TraceStep, type LogLevel } from '@/api/traces';
 import {
@@ -983,29 +995,32 @@ function ResolvedIncidentsNavigation({ panel }: PanelContentProps) {
  * Open Incidents List (O2) - Shows list of open incidents
  */
 function OpenIncidentsList({ panel }: PanelContentProps) {
+  // Phase 3.1 Migration: Rebind to topic-scoped /incidents/active endpoint
+  // Topic enforced at endpoint boundary - no status param needed
+  // Reference: INCIDENTS_DOMAIN_MIGRATION_PLAN.md Phase 3.1
   const { data, isLoading, error } = useQuery({
-    queryKey: ['incidents', 'open', 'list'],
-    queryFn: () => fetchIncidents({
-      status: 'OPEN',
-      include_synthetic: true,
-      per_page: 10
+    queryKey: ['incidents', 'active', 'list'],
+    queryFn: () => fetchActiveIncidents({
+      is_synthetic: true,
+      limit: 10
     }),
     refetchInterval: 15000,
     staleTime: 5000,
   });
 
   if (isLoading) {
-    return <div className="text-slate-400 text-sm">Loading open incidents...</div>;
+    return <div className="text-slate-400 text-sm">Loading active incidents...</div>;
   }
 
   if (error) {
-    return <div className="text-red-400 text-sm">Failed to load open incidents</div>;
+    return <div className="text-red-400 text-sm">Failed to load active incidents</div>;
   }
 
-  const incidents = data?.incidents ?? [];
+  // TopicScopedIncidentsResponse uses 'items' not 'incidents'
+  const incidents = data?.items ?? [];
 
   if (incidents.length === 0) {
-    return <div className="text-slate-500 text-sm">No open incidents</div>;
+    return <div className="text-slate-500 text-sm">No active incidents</div>;
   }
 
   return (
@@ -1026,12 +1041,14 @@ function OpenIncidentsList({ panel }: PanelContentProps) {
  * Resolved Incidents List (O2) - Shows list of resolved incidents
  */
 function ResolvedIncidentsList({ panel }: PanelContentProps) {
+  // Phase 3.2 Migration: Rebind to topic-scoped /incidents/resolved endpoint
+  // Topic enforced at endpoint boundary - no status param needed
+  // Reference: INCIDENTS_DOMAIN_MIGRATION_PLAN.md Phase 3.2
   const { data, isLoading, error } = useQuery({
     queryKey: ['incidents', 'resolved', 'list'],
-    queryFn: () => fetchIncidents({
-      status: 'RESOLVED',
-      include_synthetic: true,
-      per_page: 10
+    queryFn: () => fetchResolvedIncidents({
+      is_synthetic: true,
+      limit: 10
     }),
     refetchInterval: 30000,
     staleTime: 10000,
@@ -1045,7 +1062,8 @@ function ResolvedIncidentsList({ panel }: PanelContentProps) {
     return <div className="text-red-400 text-sm">Failed to load resolved incidents</div>;
   }
 
-  const incidents = data?.incidents ?? [];
+  // TopicScopedIncidentsResponse uses 'items' not 'incidents'
+  const incidents = data?.items ?? [];
 
   if (incidents.length === 0) {
     return <div className="text-slate-500 text-sm">No resolved incidents</div>;
@@ -1999,19 +2017,21 @@ function RateLimitsNavigation({ panel }: PanelContentProps) {
 }
 
 /**
- * Threshold Limits Navigation (O1) - Navigation-only panel for Threshold Limits
+ * Control Limits Navigation (O1) - Navigation-only panel for Control Limits
  *
  * PIN-412 O1 BINDING RULES (INV-DOMAIN-001):
  * - NO data fetching (instant render)
  * - NO counts rendered
  * - Navigation only with filters
  * - O2 loads data AFTER navigation
+ *
+ * Note: Renamed from ThresholdLimitsNavigation (2026-01-20)
  */
-function ThresholdLimitsNavigation({ panel }: PanelContentProps) {
+function ControlLimitsNavigation({ panel }: PanelContentProps) {
   const navigate = useNavigate();
 
-  const handleViewThresholdLimits = () => {
-    navigate('/precus/policies/limits?type=THRESHOLD');
+  const handleViewControlLimits = () => {
+    navigate('/precus/policies/limits/controls');
   };
 
   return (
@@ -2020,11 +2040,11 @@ function ThresholdLimitsNavigation({ panel }: PanelContentProps) {
         <p className="text-sm">Quality and performance constraints for latency, duration, and retries.</p>
       </div>
       <button
-        onClick={handleViewThresholdLimits}
+        onClick={handleViewControlLimits}
         className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors"
       >
         <SlidersHorizontal size={16} />
-        View Threshold Limits
+        View Controls
       </button>
     </div>
   );
@@ -2270,9 +2290,9 @@ const PANEL_CONTENT_REGISTRY: Record<string, ContentRenderer> = {
   // Topic: RATE_LIMITS
   // O1: Navigation-only (instant render, no data fetch) - INV-DOMAIN-001
   'POL-LIM-RL-O1': RateLimitsNavigation,
-  // Topic: THRESHOLD_LIMITS
+  // Topic: CONTROLS (renamed from THRESHOLD_LIMITS 2026-01-20)
   // O1: Navigation-only (instant render, no data fetch) - INV-DOMAIN-001
-  'POL-LIM-TL-O1': ThresholdLimitsNavigation,
+  'POL-LIM-CTR-O1': ControlLimitsNavigation,
 
   // Logs Domain - EXECUTION_TRACES Subdomain (L2.1 intent: PIN-378)
   // Topic: TRACE_DETAILS

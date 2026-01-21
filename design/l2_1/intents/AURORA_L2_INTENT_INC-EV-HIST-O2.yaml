@@ -33,13 +33,12 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: incidents.guard_list
-  status: ASSUMED
-  assumed_endpoint: /guard/incidents
+  id: incidents.historical_distribution
+  status: DEFERRED
+  assumed_endpoint: 'null'
   assumed_method: GET
-  facade_note: "Fixed path - removed /api/v1 prefix - API Audit 2026-01-16"
 sdsr:
-  scenario: SDSR-INC-EV-HIST-O2-001
+  scenario: DEFERRED
   verified: false
 notes: 'Show incident type distribution over time.
 

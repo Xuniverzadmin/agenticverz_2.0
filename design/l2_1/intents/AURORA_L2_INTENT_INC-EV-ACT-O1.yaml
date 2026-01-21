@@ -33,9 +33,9 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: incidents.list
+  id: incidents.active_list
   status: ASSUMED
-  assumed_endpoint: /api/v1/incidents
+  assumed_endpoint: /api/v1/incidents/active
   assumed_method: GET
 sdsr:
   scenario: SDSR-INC-EV-ACT-O1-001

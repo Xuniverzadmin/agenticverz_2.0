@@ -1,12 +1,8 @@
-# AURORA L2 Capability Registry Entry
-# Capability: activity.risk_signals
-# Last Updated: 2026-01-18T19:30:00.000000+00:00
-# Updated By: manual
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
 #
-# STATUS: DECLARED
-#
-# WARNING: Status transitions are MACHINE-OWNED.
-#          Do NOT manually edit the status field.
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
 #
 capability_id: activity.risk_signals
 status: DECLARED
@@ -14,12 +10,13 @@ source_panels:
 - ACT-LLM-LIVE-O2
 domain: ACTIVITY
 metadata:
-  generated_by: manual
-  generated_on: '2026-01-18'
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
   declared_by: intent-ledger
-  declared_on: '2026-01-18'
+  declared_on: '2026-01-20'
+  observed_by: PENDING
 assumption:
-  endpoint: /api/v1/activity/risk-signals
+  endpoint: /api/v1/activity/attention-queue
   method: GET
   source: INTENT_LEDGER
 binding:
@@ -28,6 +25,5 @@ binding:
   observed_at: null
   observation_id: null
 acceptance_criteria:
-- Returns aggregated risk signal counts
-- Response includes at_risk_count, violated_count, near_threshold_count
-- Filters to LIVE runs or recent completed runs (24h window)
+- Returns executions with risk signals
+- Tenant-scoped query

@@ -33,12 +33,12 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: incidents.metrics
-  status: ASSUMED
-  assumed_endpoint: /api/v1/incidents/metrics
+  id: incidents.metrics_v2
+  status: DEFERRED
+  assumed_endpoint: 'null'
   assumed_method: GET
 sdsr:
-  scenario: SDSR-INC-EV-ACT-O3-001
+  scenario: DEFERRED
   verified: false
 notes: 'Show control state — whether each incident is contained or still dangerous.
 

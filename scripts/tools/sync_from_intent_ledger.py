@@ -93,6 +93,8 @@ class CapabilityEntry:
     # Implementation block (human assumption)
     assumed_endpoint: Optional[str] = None
     assumed_method: str = "GET"
+    # Explicit domain override (if different from capability_id prefix)
+    domain: Optional[str] = None
 
 
 @dataclass
@@ -353,6 +355,9 @@ def parse_capabilities_section(section: str) -> List[CapabilityEntry]:
         assumed_endpoint = implementation.get("endpoint")
         assumed_method = implementation.get("method", "GET")
 
+        # Handle explicit domain override
+        explicit_domain = fields.get("domain")
+
         capabilities.append(
             CapabilityEntry(
                 capability_id=cap_id,
@@ -365,6 +370,7 @@ def parse_capabilities_section(section: str) -> List[CapabilityEntry]:
                 observed=observed,
                 assumed_endpoint=assumed_endpoint,
                 assumed_method=assumed_method,
+                domain=explicit_domain,
             )
         )
 
@@ -658,12 +664,19 @@ def generate_capability_yaml(cap: CapabilityEntry, existing: Optional[Dict] = No
             if "coherency" in existing:
                 coherency = existing["coherency"]
 
+    # Determine domain: use explicit domain if provided, otherwise extract from capability_id
+    if cap.domain:
+        domain = cap.domain.upper()
+    elif "." in cap.capability_id:
+        domain = cap.capability_id.split(".")[0].upper()
+    else:
+        domain = "UNKNOWN"
+
     yaml_content = {
         "capability_id": cap.capability_id,
         "status": status,
         "source_panels": [cap.panel],
-        # Domain extracted from capability_id (e.g., "overview.activity_snapshot" → "OVERVIEW")
-        "domain": cap.capability_id.split(".")[0].upper() if "." in cap.capability_id else "UNKNOWN",
+        "domain": domain,
         "metadata": {
             "generated_by": "sync_from_intent_ledger.py",
             "generated_on": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
@@ -718,13 +731,20 @@ def generate_intent_yaml(
         capabilities: List of all capabilities
         panel_facet_mapping: Optional dict of panel_id -> (facet_id, criticality)
     """
-    # Find matching capability if any
+    # Find matching capability if any (must match both capability_id AND panel)
     cap_entry = None
     if panel.capability:
+        # First try exact match (capability_id + panel)
         for cap in capabilities:
-            if cap.capability_id == panel.capability:
+            if cap.capability_id == panel.capability and cap.panel == panel.panel_id:
                 cap_entry = cap
                 break
+        # Fallback to capability_id only if no exact match
+        if cap_entry is None:
+            for cap in capabilities:
+                if cap.capability_id == panel.capability:
+                    cap_entry = cap
+                    break
 
     # Build topic_id
     topic_id = f"{panel.domain}.{panel.subdomain}.{panel.topic}"

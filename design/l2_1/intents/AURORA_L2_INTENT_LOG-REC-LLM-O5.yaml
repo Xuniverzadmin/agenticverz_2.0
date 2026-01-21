@@ -33,9 +33,9 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: logs.mismatch_list
-  status: ASSUMED
-  assumed_endpoint: /api/v1/traces/mismatches
+  id: logs.llm_runs
+  status: DECLARED
+  assumed_endpoint: /api/v1/logs/llm-runs/{run_id}/export
   assumed_method: GET
 sdsr:
   scenario: SDSR-LOG-REC-LLM-O5-001

@@ -1,11 +1,18 @@
-# GENERATED FILE - DO NOT EDIT MANUALLY
-# Source: design/l2_1/INTENT_LEDGER.md
-# Generator: scripts/tools/sync_from_intent_ledger.py
+# AURORA L2 Capability Registry Entry
+# Capability: incidents.summary
+# Last Updated: 2026-01-18T12:07:13.232321+00:00
+# Updated By: aurora_apply_observation.py
 #
-# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
+# STATUS: OBSERVED
+#
+# WARNING: Status transitions are MACHINE-OWNED.
+#          Do NOT manually edit the status field.
 #
 capability_id: incidents.summary
-status: OBSERVED
+status: DEPRECATED
+# MIGRATION NOTE: Do NOT bind panels to this capability.
+# Replaced by: incidents.active_list (for summary of active incidents)
+# Reference: INCIDENTS_DOMAIN_MIGRATION_PLAN.md Phase 4
 source_panels:
 - INC-EV-ACT-O2
 domain: INCIDENTS
@@ -14,27 +21,27 @@ metadata:
   generated_on: '2026-01-16'
   declared_by: intent-ledger
   declared_on: '2026-01-16'
-  observed_by: SDSR-INC-EV-ACT-O2-001
-  observed_on: '2026-01-15'
+  observed_by: SDSR-INC-EV-ACT-O5-001
+  observed_on: '2026-01-18'
 assumption:
-  endpoint: /api/v1/incidents/summary
+  endpoint: null
   method: GET
   source: INTENT_LEDGER
 binding:
-  observed_endpoint: /api/v1/incidents/summary
+  observed_endpoint: /api/v1/incidents
   observed_method: GET
-  observed_at: '2026-01-15T16:55:32.635727+00:00'
-  observation_id: OBS-SDSR-INC-EV-ACT-O2-001-20260115165531
+  observed_at: '2026-01-18T11:58:51.651489+00:00'
+  observation_id: OBS-SDSR-INC-EV-ACT-O5-001-20260118115839
 acceptance_criteria:
 - Returns incident summary with counts by type
 - Response includes cause classification
 observation:
-  scenario_id: SDSR-INC-EV-ACT-O2-001
-  observed_at: '2026-01-15T16:55:32.635727+00:00'
+  scenario_id: SDSR-INC-EV-ACT-O5-001
+  observed_at: '2026-01-18T11:58:51.651489+00:00'
   trace_id: null
   invariants_passed: 3
   invariants_total: 3
 coherency:
-  last_checked: '2026-01-15T16:55:32.635727+00:00'
+  last_checked: '2026-01-18T11:58:51.651489+00:00'
   status: PASSED
   checked_by: aurora_sdsr_runner.py

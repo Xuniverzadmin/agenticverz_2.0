@@ -1420,6 +1420,81 @@ All changes must conform to AUTH_ARCHITECTURE_BASELINE.md.
 Claude must not alter auth architecture without explicit approval.
 ```
 
+### Source Chain Discovery (BL-SOURCE-CHAIN-001) — HARD BLOCK
+
+**Status:** BLOCKING
+**Effective:** 2026-01-18
+**Trigger:** Any edit to files in `design/` or `backend/AURORA_L2_CAPABILITY_REGISTRY/`
+**Reference:** `design/SOURCE_CHAIN_REGISTRY.yaml`
+
+**Core Principle:**
+
+> **Never edit generated files directly. Always edit the SOURCE, then run the GENERATOR.**
+
+Many files in the codebase are **generated** from authoritative sources. Editing these files directly
+bypasses the pipeline and causes drift between source and output.
+
+**Generated File Detection:**
+
+Files are generated if they contain these header markers:
+- `# GENERATED FILE - DO NOT EDIT MANUALLY`
+- `# AUTO-GENERATED`
+- `# Source: design/l2_1/INTENT_LEDGER.md`
+- `"generated_by":`
+
+**Key Generation Chains:**
+
+| Source | Generator | Output |
+|--------|-----------|--------|
+| `design/l2_1/INTENT_LEDGER.md` | `sync_from_intent_ledger.py` | `intents/*.yaml`, `ui_plan.yaml`, capabilities |
+| `design/l2_1/intents/*.yaml` | `SDSR_UI_AURORA_compiler.py` | `ui_projection_lock.json` |
+| `design/l2_1/ui_contract/ui_projection_lock.json` | `run_aurora_l2_pipeline.sh` | `public/projection/` |
+
+**Mandatory Pre-Check:**
+
+Before editing ANY file in `design/l2_1/` or `backend/AURORA_L2_CAPABILITY_REGISTRY/`:
+
+```
+SOURCE CHAIN CHECK
+
+1. Check file header for GENERATED markers
+2. If generated → STOP, do not edit directly
+3. Consult: design/SOURCE_CHAIN_REGISTRY.yaml
+4. Find the source chain and source file
+5. Edit the SOURCE file instead
+6. Run the generator command
+7. Verify the output
+```
+
+**Hard Failure Response:**
+
+If Claude is about to edit a generated file directly:
+```
+BL-SOURCE-CHAIN-001 VIOLATION: Cannot edit generated file directly.
+
+File: {file_path}
+Chain: {chain_id}
+Source: {source_file}
+Generator: {generator_script}
+
+Correct action:
+1. Edit: {source_file}
+2. Run: {generator_command}
+3. Verify generated output
+
+Reference: design/SOURCE_CHAIN_REGISTRY.yaml
+```
+
+**Example - Adding a New Panel Intent:**
+
+❌ **WRONG:** Create `design/l2_1/intents/AURORA_L2_INTENT_NEW-PANEL.yaml` directly
+✅ **RIGHT:**
+1. Edit `design/l2_1/INTENT_LEDGER.md` to add panel definition
+2. Run `python scripts/tools/sync_from_intent_ledger.py`
+3. Verify `design/l2_1/intents/AURORA_L2_INTENT_NEW-PANEL.yaml` was generated
+
+**Registry Location:** `design/SOURCE_CHAIN_REGISTRY.yaml`
+
 ### Response Validation
 
 Responses are validated by `scripts/ops/claude_response_validator.py`:

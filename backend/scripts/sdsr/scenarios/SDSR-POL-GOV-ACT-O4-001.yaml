@@ -1,6 +1,6 @@
 # SDSR Verification Scenario
 # Scenario: SDSR-POL-GOV-ACT-O4-001
-# Generated: 2026-01-15T06:42:20.177809+00:00
+# Generated: 2026-01-19T18:19:45.828830+00:00
 # Generator: aurora_sdsr_synth.py
 #
 # PURPOSE:
@@ -24,16 +24,17 @@ description: SDSR verification scenario for policies.layer_state
 capability: policies.layer_state
 panel_id: POL-GOV-ACT-O4
 domain: POLICIES
+auth:
+  mode: OBSERVER
 metadata:
   generated_by: aurora_sdsr_synth.py
-  generated_at: '2026-01-15T06:42:20.177560+00:00'
-  panel_class: evidence
+  generated_at: '2026-01-19T18:19:45.828644+00:00'
+  panel_class: interpretation
 inject:
   type: api_call
-  endpoint: /policy-layer/state
+  endpoint: /api/v1/policy-layer/state
   method: GET
   headers:
-    Authorization: Bearer ${AUTH_TOKEN}
     Content-Type: application/json
   params:
     window: 24h
@@ -42,19 +43,26 @@ expect:
   response_type: json
   response_shape:
     _note: Define expected response structure here
-invariants:
-- id: INV-001
-  name: response_shape
-  description: Response has expected top-level structure
-  assertion: response is dict and response is not empty
-- id: INV-002
-  name: status_code
-  description: API returns 200 OK
-  assertion: status_code == 200
-- id: INV-003
-  name: auth_works
-  description: Authenticated request succeeds
-  assertion: status_code != 401 and status_code != 403
+invariant_ids:
+- INV-L0-001
+- INV-L0-002
+- INV-L0-003
+- INV-L0-004
+- INV-L0-005
+- INV-L0-006
+- INV-L0-007
+- INV-L0-008
+- INV-POL-001
+- INV-POL-002
+- INV-POL-003
+- INV-POL-004
+- INV-POL-005
+- INV-POL-006
+- INV-POL-007
+- INV-POL-008
+- INV-POL-009
+- INV-POL-010
+- INV-POL-011
 cleanup:
   required: false
   note: Read-only observation, no cleanup needed

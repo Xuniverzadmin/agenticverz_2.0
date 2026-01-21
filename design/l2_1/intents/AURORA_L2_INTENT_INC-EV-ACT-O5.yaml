@@ -33,11 +33,10 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: incidents.infra_summary
+  id: incidents.active_list
   status: ASSUMED
-  assumed_endpoint: null
+  assumed_endpoint: /api/v1/incidents/active
   assumed_method: GET
-  facade_note: "Decoupled from /ops/* (founder-only) - API Audit 2026-01-16"
 sdsr:
   scenario: SDSR-INC-EV-ACT-O5-001
   verified: false

@@ -33,11 +33,10 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: policies.violations_list
+  id: policies.violations
   status: ASSUMED
-  assumed_endpoint: /api/v1/policy-layer/violations
+  assumed_endpoint: /api/v1/policy/violations
   assumed_method: GET
-  facade_note: "Added /api/v1 prefix - API Audit 2026-01-16"
 sdsr:
   scenario: SDSR-POL-LIM-VIO-O1-001
   verified: false

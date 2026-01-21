@@ -44,9 +44,15 @@ from ..metrics import (
     nova_skill_attempts_total,
     nova_skill_duration_seconds,
 )
+# L4 Domain Facades (PIN-454 FIX-002: L5 must use facades, not direct engine imports)
 from ..services.incidents.facade import get_incident_facade
-from ..services.lessons_learned_engine import get_lessons_learned_engine
-from ..services.policy_violation_service import create_policy_evaluation_sync
+from ..services.governance.run_governance_facade import get_run_governance_facade
+# PIN-454 FIX-001: Transaction Coordinator for atomic cross-domain writes
+from ..services.governance.transaction_coordinator import (
+    get_transaction_coordinator,
+    TransactionFailed,
+    TRANSACTION_COORDINATOR_ENABLED,
+)
 from ..skills import get_skill_config
 from ..skills.executor import (
     SkillExecutionError,
@@ -54,6 +60,17 @@ from ..skills.executor import (
 )
 from ..traces.pg_store import PostgresTraceStore
 from ..utils.budget_tracker import deduct_budget
+
+# GAP-030: Enforcement guard to ensure enforcement is never skipped
+from ..worker.enforcement.enforcement_guard import (
+    enforcement_guard,
+    EnforcementSkippedError,
+)
+# GAP-016: Step enforcement integration
+from ..worker.enforcement.step_enforcement import (
+    enforce_before_step_completion,
+    EnforcementResult,
+)
 
 # Evidence Architecture v1.1: ExecutionCursor structural authority
 from ..core.execution_context import ExecutionCursor, ExecutionPhase, EvidenceSource
@@ -379,10 +396,12 @@ class RunRunner:
         - Every run produces a policy evaluation record with explicit outcome
         - This is NOT limited to failures - successful runs also get records
 
+        PIN-454 FIX-001: Uses Transaction Coordinator for atomic writes
+        - When TRANSACTION_COORDINATOR_ENABLED=true, uses atomic transactions
+        - Events are published ONLY after successful commit
+        - Partial failures trigger rollback
+
         This method is called from both success and failure paths.
-        Failure path already calls _create_incident_for_failure(), but we
-        use this unified method for success to ensure both incident + policy
-        are created together.
         """
         try:
             run = self._get_run()
@@ -390,54 +409,115 @@ class RunRunner:
                 logger.warning("governance_records_skip_no_run", extra={"run_id": self.run_id})
                 return
 
-            # PIN-407: Create incident record (SUCCESS, FAILURE, BLOCKED, etc.)
-            incident_facade = get_incident_facade()
-            incident_id = incident_facade.create_incident_for_run(
-                run_id=self.run_id,
-                tenant_id=run.tenant_id,
-                run_status=run_status,
-                error_code=None,
-                error_message=None,
-                agent_id=run.agent_id,
-                is_synthetic=run.is_synthetic or False,
-                synthetic_scenario_id=run.synthetic_scenario_id,
-            )
-
-            if incident_id:
-                logger.info(
-                    "governance_incident_created",
-                    extra={"run_id": self.run_id, "incident_id": incident_id, "outcome": run_status},
-                )
-                self.publisher.publish(
-                    "incident.created",
-                    {"run_id": self.run_id, "incident_id": incident_id, "outcome": run_status},
-                )
-
-            # PIN-407: Create policy evaluation record
-            policy_id = create_policy_evaluation_sync(
-                run_id=self.run_id,
-                tenant_id=run.tenant_id,
-                run_status=run_status,
-                policies_checked=0,  # Can be enhanced later
-                is_synthetic=run.is_synthetic or False,
-                synthetic_scenario_id=run.synthetic_scenario_id,
-            )
-
-            if policy_id:
-                logger.info(
-                    "governance_policy_created",
-                    extra={"run_id": self.run_id, "policy_id": policy_id, "outcome": run_status},
-                )
-                self.publisher.publish(
-                    "policy.evaluated",
-                    {"run_id": self.run_id, "policy_id": policy_id, "outcome": run_status},
-                )
+            # PIN-454 FIX-001: Use Transaction Coordinator for atomic cross-domain writes
+            if TRANSACTION_COORDINATOR_ENABLED:
+                self._create_governance_records_atomic(run, run_status)
+            else:
+                self._create_governance_records_legacy(run, run_status)
 
         except Exception as e:
             # Don't fail the run because of governance record creation failure
             logger.error(
                 "governance_records_creation_failed",
                 extra={"run_id": self.run_id, "status": run_status, "error": str(e)},
+            )
+
+    def _create_governance_records_atomic(self, run: Run, run_status: str):
+        """
+        Create governance records atomically using Transaction Coordinator.
+
+        PIN-454 FIX-001: Atomic cross-domain writes
+        - All domain operations in single transaction
+        - Events published ONLY after commit
+        - Rollback on any failure
+        """
+        try:
+            coordinator = get_transaction_coordinator()
+            result = coordinator.execute(
+                run_id=self.run_id,
+                tenant_id=run.tenant_id or "",
+                run_status=run_status,
+                agent_id=run.agent_id,
+                is_synthetic=run.is_synthetic or False,
+                synthetic_scenario_id=run.synthetic_scenario_id,
+                skip_events=False,  # Let coordinator handle events
+            )
+
+            logger.info(
+                "governance_records_created_atomic",
+                extra={
+                    "run_id": self.run_id,
+                    "outcome": run_status,
+                    "incident_id": result.incident_result.result_id if result.incident_result else None,
+                    "policy_id": result.policy_result.result_id if result.policy_result else None,
+                    "duration_ms": result.duration_ms,
+                    "events_published": result.events_published,
+                },
+            )
+
+        except TransactionFailed as e:
+            logger.error(
+                "governance_records_transaction_failed",
+                extra={
+                    "run_id": self.run_id,
+                    "status": run_status,
+                    "phase": e.phase.value,
+                    "error": str(e),
+                },
+            )
+            # Fall back to legacy method on transaction failure
+            logger.info("governance_records_fallback_to_legacy", extra={"run_id": self.run_id})
+            self._create_governance_records_legacy(run, run_status)
+
+    def _create_governance_records_legacy(self, run: Run, run_status: str):
+        """
+        Create governance records using legacy non-atomic approach.
+
+        This is the original implementation kept as fallback.
+        """
+        # PIN-407: Create incident record (SUCCESS, FAILURE, BLOCKED, etc.)
+        incident_facade = get_incident_facade()
+        incident_id = incident_facade.create_incident_for_run(
+            run_id=self.run_id,
+            tenant_id=run.tenant_id,
+            run_status=run_status,
+            error_code=None,
+            error_message=None,
+            agent_id=run.agent_id,
+            is_synthetic=run.is_synthetic or False,
+            synthetic_scenario_id=run.synthetic_scenario_id,
+        )
+
+        if incident_id:
+            logger.info(
+                "governance_incident_created",
+                extra={"run_id": self.run_id, "incident_id": incident_id, "outcome": run_status},
+            )
+            self.publisher.publish(
+                "incident.created",
+                {"run_id": self.run_id, "incident_id": incident_id, "outcome": run_status},
+            )
+
+        # PIN-407: Create policy evaluation record
+        # PIN-454 FIX-002: Use governance facade instead of direct service import
+        governance_facade = get_run_governance_facade()
+        policy_id = governance_facade.create_policy_evaluation(
+            run_id=self.run_id,
+            tenant_id=run.tenant_id or "",
+            run_status=run_status,
+            policies_checked=0,  # Can be enhanced later
+            is_synthetic=run.is_synthetic or False,
+            synthetic_scenario_id=run.synthetic_scenario_id,
+        )
+
+        if policy_id:
+            logger.info(
+                "governance_policy_created",
+                extra={"run_id": self.run_id, "policy_id": policy_id, "outcome": run_status},
+            )
+            self.publisher.publish(
+                "policy.evaluated",
+                {"run_id": self.run_id, "policy_id": policy_id, "outcome": run_status},
             )
 
     def _evaluate_and_emit_threshold_signals(
@@ -477,19 +557,19 @@ class RunRunner:
             if hasattr(run, "estimated_cost_usd") and run.estimated_cost_usd:
                 total_cost_usd = max(total_cost_usd, float(run.estimated_cost_usd or 0))
 
-            # Import threshold service
+            # Import sync threshold service (worker runs in ThreadPoolExecutor, not async)
             from app.services.llm_threshold_service import (
-                LLMRunThresholdResolver,
-                LLMRunEvaluator,
+                LLMRunThresholdResolverSync,
+                LLMRunEvaluatorSync,
                 emit_and_persist_threshold_signal,
             )
 
             # Get a sync session for threshold operations
             with Session(engine) as session:
-                resolver = LLMRunThresholdResolver(session)
-                evaluator = LLMRunEvaluator(resolver)
+                resolver = LLMRunThresholdResolverSync(session)
+                evaluator = LLMRunEvaluatorSync(resolver)
 
-                # Evaluate the completed run
+                # Evaluate the completed run (sync version)
                 evaluation = evaluator.evaluate_completed_run(
                     run_id=self.run_id,
                     tenant_id=run.tenant_id or "",
@@ -566,9 +646,10 @@ class RunRunner:
             utilization = (total_consumed / limit_cents) * 100
 
             # Near-threshold detection: 85% <= utilization < 100%
+            # PIN-454 FIX-002: Use governance facade instead of direct engine import
             if 85.0 <= utilization < 100.0:
-                engine = get_lessons_learned_engine()
-                lesson_id = engine.emit_near_threshold(
+                governance_facade = get_run_governance_facade()
+                lesson_id = governance_facade.emit_near_threshold_lesson(
                     tenant_id=run.tenant_id or "",
                     metric="budget",
                     utilization=utilization,
@@ -602,8 +683,9 @@ class RunRunner:
                     "efficiency_score": (100.0 - utilization) * (1000.0 / max(duration_ms, 1)),
                 }
 
-                engine = get_lessons_learned_engine()
-                lesson_id = engine.emit_critical_success(
+                # PIN-454 FIX-002: Use governance facade instead of direct engine import
+                governance_facade = get_run_governance_facade()
+                lesson_id = governance_facade.emit_critical_success_lesson(
                     tenant_id=run.tenant_id or "",
                     success_type="cost_efficiency",
                     metrics=efficiency_metrics,
@@ -1081,6 +1163,98 @@ class RunRunner:
                     # Don't fail the run if step recording fails
                     logger.warning(
                         "trace_step_record_failed", extra={"run_id": self.run_id, "step_id": step_id, "error": str(e)}
+                    )
+
+                # =============================================================
+                # GAP-016: Step Enforcement Integration (CHOKE POINT)
+                # Evaluate policies AFTER each step completion, BEFORE next step
+                # Uses enforcement guard to ensure enforcement is never skipped
+                # =============================================================
+                try:
+                    step_index_for_enforcement = steps.index(step)
+                    step_cost = result.get("side_effects", {}).get("cost_cents", 0) if result else 0
+                    step_tokens = result.get("side_effects", {}).get("tokens", 0) if result else 0
+
+                    with enforcement_guard(
+                        run_context={"run_id": self.run_id, "tenant_id": run.tenant_id},
+                        step_number=step_index_for_enforcement,
+                    ) as guard:
+                        # Build run context for enforcement
+                        run_ctx = type("RunContext", (), {
+                            "run_id": self.run_id,
+                            "tenant_id": run.tenant_id or "",
+                            "step_index": step_index_for_enforcement,
+                            "cost_cents": run_consumed_cents,
+                        })()
+
+                        enforcement_result = enforce_before_step_completion(
+                            run_context=run_ctx,
+                            step_result=result,
+                            prevention_engine=None,  # Will use default
+                        )
+                        guard.mark_enforced()
+
+                        # Handle enforcement result
+                        if enforcement_result.should_halt:
+                            # Policy violation - halt the run immediately
+                            logger.warning(
+                                "step_enforcement_blocked",
+                                extra={
+                                    "run_id": self.run_id,
+                                    "step_id": step_id,
+                                    "policy_id": enforcement_result.policy_id,
+                                    "halt_reason": enforcement_result.halt_reason,
+                                    "message": enforcement_result.message,
+                                },
+                            )
+                            # Set halted status and exit
+                            duration_ms = (time.time() - start_time) * 1000
+                            completed_at = datetime.now(timezone.utc)
+                            self._update_run(
+                                status="halted",
+                                attempts=run.attempts,
+                                completed_at=completed_at,
+                                error_message=f"Policy violation: {enforcement_result.message}",
+                            )
+                            self.publisher.publish(
+                                "run.halted",
+                                {
+                                    "run_id": self.run_id,
+                                    "status": "halted",
+                                    "halt_reason": str(enforcement_result.halt_reason),
+                                    "policy_id": enforcement_result.policy_id,
+                                    "message": enforcement_result.message,
+                                },
+                            )
+                            return  # Exit run execution
+                        # EnforcementResult has binary state: halt or continue
+                        # If not halting, execution proceeds normally
+
+                except EnforcementSkippedError as e:
+                    # GAP-030: Enforcement was skipped - critical governance failure
+                    logger.critical(
+                        "enforcement_skipped_violation",
+                        extra={
+                            "run_id": self.run_id,
+                            "step_id": step_id,
+                            "error": str(e),
+                        },
+                    )
+                    # Fail-closed: halt the run
+                    duration_ms = (time.time() - start_time) * 1000
+                    self._update_run(
+                        status="halted",
+                        attempts=run.attempts,
+                        completed_at=datetime.now(timezone.utc),
+                        error_message=f"Enforcement skipped: {str(e)}",
+                    )
+                    return
+                except Exception as e:
+                    # Don't fail the run if enforcement fails - log and continue
+                    # (fail-open for enforcement errors to avoid blocking legitimate runs)
+                    logger.error(
+                        "step_enforcement_error",
+                        extra={"run_id": self.run_id, "step_id": step_id, "error": str(e)},
                     )
 
                 # Store memory

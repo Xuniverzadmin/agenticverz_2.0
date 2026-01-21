@@ -314,6 +314,10 @@ class Limit(SQLModel, table=True):
     # Threshold-specific
     measurement_window_seconds: Optional[int] = None
 
+    # Threshold params (JSONB) - customer-configurable execution limits
+    # Schema: {max_execution_time_ms, max_tokens, max_cost_usd, failure_signal}
+    params: Optional[dict] = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False, server_default="{}"))
+
     # Enforcement behavior
     enforcement: str = Field(
         max_length=16, default=LimitEnforcement.BLOCK.value

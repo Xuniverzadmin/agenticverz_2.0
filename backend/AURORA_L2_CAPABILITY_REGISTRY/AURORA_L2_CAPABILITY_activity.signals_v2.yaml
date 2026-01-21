@@ -1,0 +1,64 @@
+# AURORA L2 Capability Registry Entry
+# Capability: activity.signals_v2
+# Last Updated: 2026-01-19T00:00:00+00:00
+# Updated By: Phase 4 Registry Rebinding
+#
+# STATUS: OBSERVED
+#
+# V2 ENDPOINT: Signal projection with policy context
+# Replaces: activity.signals (DEPRECATED)
+#
+# IMPORTANT: SIGNALS is a PROJECTION LAYER, not a run state.
+# Signals are synthesized from LIVE + COMPLETED runs.
+#
+# Reference: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
+# Evidence: Phase 3 Shadow Validation
+#
+capability_id: activity.signals_v2
+status: OBSERVED
+source_panels:
+  - ACT-LLM-SIG-O1
+domain: ACTIVITY
+topic: SIGNALS
+projection: true  # NOT a run state - computed layer
+metadata:
+  generated_by: Phase 4 Registry Rebinding
+  generated_on: '2026-01-19'
+  declared_by: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
+  declared_on: '2026-01-19'
+  observed_by: shadow_validate_v2.py
+  observed_on: '2026-01-19'
+  migration_note: "Replaces activity.signals - projection layer with policy context"
+  policy_context_included: true
+  critical_note: "SIGNALS is NOT a state - it is a projection over LIVE+COMPLETED"
+assumption:
+  endpoint: /api/v1/activity/signals
+  method: GET
+  source: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN
+binding:
+  observed_endpoint: /api/v1/activity/signals
+  observed_method: GET
+  observed_at: '2026-01-19T00:00:00+00:00'
+  observation_id: OBS-PHASE3-SHADOW-VALIDATION-SIGNALS
+acceptance_criteria:
+  - Returns SignalProjection[], NOT runs
+  - Each signal includes policy_context (POLICY-CONTEXT-001)
+  - Signals ranked by severity (BREACH > NEAR_THRESHOLD > OK)
+  - Signal types: COST_RISK, TIME_RISK, TOKEN_RISK, RATE_RISK, EVIDENCE_DEGRADED, POLICY_BREACH
+observation:
+  scenario_id: SDSR-ACT-V2-SIGNALS-001
+  observed_at: '2026-01-19T00:00:00+00:00'
+  trace_id: null
+  invariants_passed: 6
+  invariants_total: 6
+  phase3_evidence:
+    - signals-order: PASSED
+    - policy-context: PASSED
+coherency:
+  last_checked: '2026-01-19T00:00:00+00:00'
+  status: PASSED
+  checked_by: shadow_validate_v2.py
+replaces:
+  - capability_id: activity.signals
+    reason: "Legacy endpoint uses /runs?risk=true"
+    migration_path: "Use /activity/signals instead"

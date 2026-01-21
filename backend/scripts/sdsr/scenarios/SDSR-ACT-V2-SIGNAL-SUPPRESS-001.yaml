@@ -1,180 +1,143 @@
-# SDSR Scenario: Signal Suppression
-# Reference: Attention Feedback Loop Implementation Plan
-# Invariants Tested:
-#   - SIGNAL-SUPPRESS-001: Temporary suppression (15-1440 minutes)
-#   - SIGNAL-SCOPE-001: Tenant-scoped suppression
-#   - SIGNAL-ID-001: Canonical fingerprint derivation
-
+# SDSR Verification Scenario
+# Scenario: SDSR-ACT-V2-SIGNAL-SUPPRESS-001
+# Generated: 2026-01-19
+#
+# PURPOSE:
+#   Verifies the Signal Suppression capability:
+#   1. Suppress a signal via POST /activity/signals/{fp}/suppress
+#   2. Verify audit_ledger entry created with suppress_until
+#   3. Verify signal NOT in attention-queue while suppressed
+#   4. Verify signal reappears after TTL expires
+#
+# INVARIANTS:
+#   - SIGNAL-ID-001: Fingerprint validated server-side
+#   - SIGNAL-SUPPRESS-001: Suppression is temporary (15-1440 min)
+#   - SIGNAL-SCOPE-001: Suppression is tenant-scoped
+#
+# EXECUTION:
+#   python aurora_sdsr_runner.py --scenario SDSR-ACT-V2-SIGNAL-SUPPRESS-001
+#
 scenario_id: SDSR-ACT-V2-SIGNAL-SUPPRESS-001
+version: 1.0.0
+name: Verify Signal Suppression
+description: SDSR verification for signal suppression feedback loop
+capability: activity.signals.suppress
+panel_id: ACT-V2-SIGNAL-FEEDBACK
 domain: ACTIVITY
-capability: activity.signal_suppress
-status: DECLARED
-
+auth:
+  mode: MUTATE  # Writes to audit_ledger
 metadata:
-  title: "Signal Suppression"
-  description: "Validates that signal suppression creates audit entry with TTL, removes from attention queue, and reappears after expiry"
-  author: "Claude Opus 4.5"
-  created: "2026-01-19"
-  version: "1.0"
+  generated_by: manual
+  generated_at: '2026-01-19T00:00:00.000000+00:00'
+  reference: Attention Feedback Loop Implementation Plan
+  invariants:
+    - SIGNAL-ID-001
+    - SIGNAL-SUPPRESS-001
+    - SIGNAL-SCOPE-001
 
-# Prerequisites
-prerequisites:
-  - type: run_with_signal
-    description: "A run with TIME_RISK signal must exist"
-    state: LIVE
-    risk_level: AT_RISK
-    evaluation_outcome: NEAR_THRESHOLD
+# Prerequisites: Create a run with a signal first
+setup:
+  - type: create_synthetic_run
+    params:
+      state: LIVE
+      risk_level: AT_RISK
+      evaluation_outcome: NEAR_THRESHOLD
+      risk_type: COST
+    capture:
+      run_id: created_run_id
 
-# Synthetic data injection
-injection:
-  tenant:
-    id: "tenant-sdsr-suppress-001"
-    name: "SDSR Signal Suppress Test Tenant"
+inject:
+  type: api_call
+  endpoint: /api/v1/activity/signals/{signal_fingerprint}/suppress
+  method: POST
+  headers:
+    Content-Type: application/json
+  path_params:
+    signal_fingerprint: "{{computed_fingerprint}}"
+  body:
+    run_id: "{{created_run_id}}"
+    signal_type: COST_RISK
+    risk_type: COST
+    duration_minutes: 15  # Minimum allowed
+    reason: "Suppressed via SDSR scenario"
 
-  run:
-    id: "run-sdsr-suppress-001"
-    state: LIVE
-    status: running
-    risk_level: AT_RISK
-    evaluation_outcome: NEAR_THRESHOLD
-    risk_type: TIME
-    started_at: "2026-01-19T11:00:00Z"
+expect:
+  status_code: 200
+  response_type: json
+  response_shape:
+    signal_fingerprint:
+      type: string
+      pattern: "^sig-[a-f0-9]{16}$"
+    suppressed_until:
+      type: datetime
+      not_null: true
 
-# Actions to execute
-actions:
-  - action: api_call
-    order: 1
-    description: "Get attention queue to verify signal exists"
-    endpoint: "GET /api/v1/activity/attention-queue"
-    headers:
-      Authorization: "Bearer {test_jwt}"
-    expected:
-      status_code: 200
-      body:
-        queue:
-          - run_id: "run-sdsr-suppress-001"
-            suppressed_until: null
+invariants:
+  - id: INV-001
+    name: response_success
+    description: API returns 200 OK
+    assertion: status_code == 200
 
-  - action: api_call
-    order: 2
-    description: "Suppress the signal for 60 minutes"
-    endpoint: "POST /api/v1/activity/signals/{signal_fingerprint}/suppress"
-    headers:
-      Authorization: "Bearer {test_jwt}"
-    body:
-      run_id: "run-sdsr-suppress-001"
-      signal_type: "TIME_RISK"
-      risk_type: "TIME"
-      duration_minutes: 60
-      reason: "Known issue, suppressing for SDSR testing"
-    expected:
-      status_code: 200
-      body:
-        suppressed_until: "{computed_expiry}"
+  - id: INV-002
+    name: fingerprint_format
+    description: Fingerprint matches canonical format (SIGNAL-ID-001)
+    assertion: response.signal_fingerprint matches "^sig-[a-f0-9]{16}$"
 
-  - action: db_verify
-    order: 3
-    description: "Verify audit_ledger entry with suppress_until"
-    query: |
-      SELECT event_type, entity_type, after_state
-      FROM audit_ledger
-      WHERE tenant_id = 'tenant-sdsr-suppress-001'
-        AND entity_type = 'SIGNAL'
-      ORDER BY created_at DESC
-      LIMIT 1
-    expected:
-      event_type: "SignalSuppressed"
-      entity_type: "SIGNAL"
-      after_state_has: "suppress_until"
+  - id: INV-003
+    name: suppress_until_set
+    description: suppressed_until is set to future time
+    assertion: response.suppressed_until > NOW()
 
-  - action: api_call
-    order: 4
-    description: "Verify signal NOT in attention queue"
-    endpoint: "GET /api/v1/activity/attention-queue"
-    headers:
-      Authorization: "Bearer {test_jwt}"
-    expected:
-      status_code: 200
-      body:
-        queue: []  # Empty because signal is suppressed
+  - id: INV-004
+    name: audit_entry_created
+    description: Audit ledger entry exists with suppress_until
+    assertion: |
+      SELECT COUNT(*) FROM audit_ledger
+      WHERE entity_type = 'SIGNAL'
+        AND event_type = 'SignalSuppressed'
+        AND entity_id = response.signal_fingerprint
+        AND after_state->>'suppress_until' IS NOT NULL
+      > 0
 
-  - action: api_call
-    order: 5
-    description: "Verify signal still in signals list with feedback"
-    endpoint: "GET /api/v1/activity/signals"
-    headers:
-      Authorization: "Bearer {test_jwt}"
-    expected:
-      status_code: 200
-      body:
-        signals:
-          - signal_type: "TIME_RISK"
-            feedback:
-              suppressed_until: "{computed_expiry}"
+  - id: INV-005
+    name: signal_not_in_attention_queue
+    description: Suppressed signal excluded from attention queue
+    assertion: |
+      GET /api/v1/activity/attention-queue does NOT include suppressed signal
+      (unless include_suppressed=true)
 
-  - action: api_call
-    order: 6
-    description: "Test invalid duration (too short)"
-    endpoint: "POST /api/v1/activity/signals/{signal_fingerprint}/suppress"
-    headers:
-      Authorization: "Bearer {test_jwt}"
-    body:
-      run_id: "run-sdsr-suppress-001"
-      signal_type: "TIME_RISK"
-      risk_type: "TIME"
-      duration_minutes: 5  # Invalid: less than 15
-      reason: "Should fail"
-    expected:
-      status_code: 400
-      body:
-        error: "invalid_duration"
-        constraint: "SIGNAL-SUPPRESS-001"
+  - id: INV-006
+    name: duration_constraints
+    description: Duration validated (SIGNAL-SUPPRESS-001)
+    assertion: |
+      POST with duration_minutes < 15 returns 400
+      POST with duration_minutes > 1440 returns 400
 
-  - action: api_call
-    order: 7
-    description: "Test invalid duration (too long)"
-    endpoint: "POST /api/v1/activity/signals/{signal_fingerprint}/suppress"
-    headers:
-      Authorization: "Bearer {test_jwt}"
-    body:
-      run_id: "run-sdsr-suppress-001"
-      signal_type: "TIME_RISK"
-      risk_type: "TIME"
-      duration_minutes: 1500  # Invalid: more than 1440
-      reason: "Should fail"
-    expected:
-      status_code: 400
-      body:
-        error: "invalid_duration"
-        constraint: "SIGNAL-SUPPRESS-001"
+  - id: INV-007
+    name: tenant_scoped
+    description: Suppression applies to entire tenant (SIGNAL-SCOPE-001)
+    assertion: |
+      Signal hidden for all tenant users, not just suppressing actor
 
-# Assertions
-assertions:
-  - assert: signal_removed_from_attention_queue
-    description: "Suppressed signal must not appear in attention queue"
-    condition: "attention_queue.length == 0"
-
-  - assert: signal_visible_in_signals_list
-    description: "Suppressed signal still visible in signals list with feedback"
-    condition: "signals[0].feedback.suppressed_until != null"
-
-  - assert: audit_entry_has_suppress_until
-    description: "Audit entry must have suppress_until in after_state"
-    condition: "audit_ledger.after_state.suppress_until != null"
-
-  - assert: duration_constraint_enforced
-    description: "Duration must be validated (15-1440 minutes)"
-    condition: "invalid_short_duration_rejected AND invalid_long_duration_rejected"
-
-  - assert: tenant_scoped
-    description: "Suppression applies to entire tenant (SIGNAL-SCOPE-001)"
-    condition: "audit_ledger.tenant_id == 'tenant-sdsr-suppress-001'"
-
-# Cleanup
 cleanup:
-  - type: delete_audit_entries
-    tenant_id: "tenant-sdsr-suppress-001"
-  - type: delete_run
-    run_id: "run-sdsr-suppress-001"
-  - type: delete_tenant
-    tenant_id: "tenant-sdsr-suppress-001"
+  required: true
+  note: Remove synthetic run after verification
+  steps:
+    - type: delete_synthetic_run
+      params:
+        run_id: "{{created_run_id}}"
+
+on_success:
+  update_capability_status: OBSERVED
+  emit_observation: true
+
+on_failure:
+  update_capability_status: null
+  emit_observation: true
+  failure_taxonomy:
+    endpoint_missing: Backend route does not exist
+    auth_failed: Authentication/authorization issue
+    schema_mismatch: Response shape does not match contract
+    invariant_violated: One or more invariants failed
+    signal_still_visible: Signal not correctly hidden after suppression
+    duration_not_enforced: Duration constraints not enforced

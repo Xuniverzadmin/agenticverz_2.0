@@ -33,11 +33,11 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: logs.ready_check
-  status: ASSUMED
-  assumed_endpoint: /health/ready
+  id: logs.system
+  status: DEFERRED
+  assumed_endpoint: 'null'
   assumed_method: GET
 sdsr:
-  scenario: SDSR-LOG-REC-SYS-O3-001
+  scenario: DEFERRED
   verified: false
 notes: Show infra interrupts and degradation events — what infra did to the run.

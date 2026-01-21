@@ -15,8 +15,20 @@
       "INC-EV-RES-O5",
       "INC-EV-HIST-O3",
       "INC-EV-HIST-O5",
-      "INC-EV-HIST-O2"
+      "INC-EV-HIST-O2",
+      "POL-GOV-LES-O1",
+      "POL-GOV-LES-O2",
+      "POL-GOV-LES-O5",
+      "OVR-SUM-CI-O2",
+      "OVR-SUM-DC-O4",
+      "ACT-LLM-COMP-O2",
+      "ACT-LLM-COMP-O5",
+      "ACT-LLM-SIG-O5",
+      "INC-EV-ACT-O4",
+      "LOG-REC-AUD-O5",
+      "LOG-REC-LLM-O5",
+      "LOG-REC-SYS-O5"
     ]
   },
-  "note": "USG panels renamed to ANA-CST-USG-* as part of ANALYTICS domain creation. PDG-003 allowlisted for new Incidents BOUND transitions from SDSR verification. Auto-added INC-EV-HIST-O2 to PDG-003 on 2026-01-15: SDSR observation promoted incidents.guard_list to OBSERVED."
+  "note": "USG panels renamed to ANA-CST-USG-* as part of ANALYTICS domain creation. PDG-003 allowlisted for new Incidents BOUND transitions from SDSR verification. Auto-added INC-EV-HIST-O2 to PDG-003 on 2026-01-15: SDSR observation promoted incidents.guard_list to OBSERVED. Auto-added POL-GOV-LES-O1 to PDG-003 on 2026-01-18: SDSR observation promoted lessons.list to OBSERVED. Auto-added POL-GOV-LES-O2 to PDG-003 on 2026-01-18: SDSR observation promoted lessons.get to OBSERVED. Auto-added POL-GOV-LES-O5 to PDG-003 on 2026-01-18: SDSR observation promoted lessons.history to OBSERVED. Auto-added OVR-SUM-CI-O2 to PDG-003 on 2026-01-18: SDSR observation promoted overview.costs to OBSERVED. Auto-added OVR-SUM-DC-O4 to PDG-003 on 2026-01-18: SDSR observation promoted overview.decisions to OBSERVED. Auto-added ACT-LLM-COMP-O2 to PDG-003 on 2026-01-18: SDSR observation promoted activity.summary_by_status to OBSERVED. Auto-added ACT-LLM-COMP-O5 to PDG-003 on 2026-01-18: SDSR observation promoted activity.run_detail to OBSERVED. Auto-added ACT-LLM-SIG-O5 to PDG-003 on 2026-01-18: SDSR observation promoted activity.patterns to OBSERVED. Auto-added INC-EV-ACT-O4 to PDG-003 on 2026-01-18: SDSR observation promoted incidents.cost_impact to OBSERVED. Auto-added LOG-REC-AUD-O5 to PDG-003 on 2026-01-18: SDSR observation promoted logs.audit to OBSERVED. Auto-added LOG-REC-LLM-O5 to PDG-003 on 2026-01-18: SDSR observation promoted logs.llm_runs to OBSERVED. Auto-added LOG-REC-SYS-O5 to PDG-003 on 2026-01-18: SDSR observation promoted logs.system to OBSERVED."
 }

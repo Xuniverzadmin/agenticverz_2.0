@@ -1,0 +1,79 @@
+# SDSR Verification Scenario
+# Scenario: SDSR-POL-LIM-CTR-O2-001
+# Generated: 2026-01-19T18:19:49.029190+00:00
+# Generator: aurora_sdsr_synth.py
+#
+# PURPOSE:
+#   This scenario verifies the capability by:
+#   1. Injecting an API call (cause)
+#   2. Observing the response (effect)
+#   3. Checking invariants (verification)
+#
+# EXECUTION:
+#   python aurora_sdsr_runner.py --scenario SDSR-POL-LIM-CTR-O2-001
+#
+# HUMAN MAY OPTIONALLY:
+#   - Add domain-specific invariants
+#   - Tighten response expectations
+#   - Add custom checks
+#
+scenario_id: SDSR-POL-LIM-CTR-O2-001
+version: 1.0.0
+name: Observe POL-LIM-CTR-O2 capability
+description: SDSR verification scenario for policies.budgets
+capability: policies.budgets
+panel_id: POL-LIM-CTR-O2
+domain: POLICIES
+auth:
+  mode: OBSERVER
+metadata:
+  generated_by: aurora_sdsr_synth.py
+  generated_at: '2026-01-19T18:19:49.028997+00:00'
+  panel_class: execution
+inject:
+  type: api_call
+  endpoint: /cost/budgets
+  method: GET
+  headers:
+    Content-Type: application/json
+  params:
+    window: 24h
+expect:
+  status_code: 200
+  response_type: json
+  response_shape:
+    _note: Define expected response structure here
+invariant_ids:
+- INV-L0-001
+- INV-L0-002
+- INV-L0-003
+- INV-L0-004
+- INV-L0-005
+- INV-L0-006
+- INV-L0-007
+- INV-L0-008
+- INV-POL-001
+- INV-POL-002
+- INV-POL-003
+- INV-POL-004
+- INV-POL-005
+- INV-POL-006
+- INV-POL-007
+- INV-POL-008
+- INV-POL-009
+- INV-POL-010
+- INV-POL-011
+cleanup:
+  required: false
+  note: Read-only observation, no cleanup needed
+on_success:
+  update_capability_status: OBSERVED
+  emit_observation: true
+on_failure:
+  update_capability_status: null
+  emit_observation: true
+  failure_taxonomy:
+    endpoint_missing: Backend route does not exist
+    auth_failed: Authentication/authorization issue
+    schema_mismatch: Response shape does not match contract
+    invariant_violated: One or more invariants failed

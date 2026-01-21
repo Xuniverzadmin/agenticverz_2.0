@@ -33,9 +33,9 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: logs.status_history
-  status: ASSUMED
-  assumed_endpoint: /status_history
+  id: logs.audit
+  status: DECLARED
+  assumed_endpoint: /api/v1/logs/audit/integrity
   assumed_method: GET
 sdsr:
   scenario: SDSR-LOG-REC-AUD-O4-001

@@ -1,0 +1,108 @@
+# SDSR Verification Scenario
+# Scenario: SDSR-ACT-V2-SIGNALS-001
+# Generated: 2026-01-19
+#
+# PURPOSE:
+#   Verify /activity/signals returns synthesized signals (projection)
+#   with policy context for attention-worthy runs.
+#
+# REFERENCE:
+#   - ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
+#   - Design Principle: SIGNALS is a projection layer, NOT a lifecycle state
+
+scenario_id: SDSR-ACT-V2-SIGNALS-001
+version: 1.0.0
+name: Signals projection with policy context
+description: |
+  Verifies that /activity/signals endpoint:
+  - Returns SignalProjection[], NOT runs
+  - Each signal includes policy_context
+  - Signals are ranked by severity (BREACH first)
+  - Covers runs from both LIVE and COMPLETED states
+capability: activity.signals_v2
+panel_id: ACT-LLM-SIG-O1
+domain: ACTIVITY
+metadata:
+  generated_by: manual
+  generated_at: '2026-01-19T00:00:00+00:00'
+  panel_class: evidence
+  migration_phase: Phase2_Endpoint_Addition
+
+inject:
+  type: api_call
+  endpoint: /api/v1/activity/signals
+  method: GET
+  headers:
+    Authorization: Bearer ${AUTH_TOKEN}
+    Content-Type: application/json
+  params:
+    limit: 20
+
+expect:
+  status_code: 200
+  response_type: json
+  response_shape:
+    signals: list
+    total: int
+    generated_at: string
+
+invariants:
+  - id: INV-SIG-001
+    name: signals_not_runs
+    description: Response contains signals array, not items/runs
+    assertion: |
+      'signals' in response and isinstance(response.get('signals'), list)
+  - id: INV-SIG-002
+    name: signal_has_required_fields
+    description: Each signal has signal_id, run_id, signal_type, severity, policy_context
+    assertion: |
+      all(
+        'signal_id' in sig and
+        'run_id' in sig and
+        'signal_type' in sig and
+        'severity' in sig and
+        'policy_context' in sig
+        for sig in response.get('signals', [])
+      )
+  - id: INV-SIG-003
+    name: severity_ranking
+    description: Signals are ordered by severity (HIGH first)
+    assertion: |
+      signals = response.get('signals', [])
+      severities = [s.get('severity') for s in signals]
+      severity_order = {'HIGH': 0, 'MEDIUM': 1, 'LOW': 2}
+      ordered_severities = sorted(severities, key=lambda x: severity_order.get(x, 3))
+      severities == ordered_severities or len(signals) <= 1
+  - id: INV-SIG-004
+    name: policy_context_in_signal
+    description: Each signal includes embedded policy_context
+    assertion: |
+      all(
+        sig.get('policy_context', {}).get('evaluation_outcome') is not None
+        for sig in response.get('signals', [])
+      )
+  - id: INV-SIG-005
+    name: signal_types_valid
+    description: Signal types are from known set
+    assertion: |
+      valid_types = {'COST_RISK', 'TIME_RISK', 'TOKEN_RISK', 'RATE_RISK', 'EVIDENCE_DEGRADED', 'POLICY_BREACH', 'UNKNOWN'}
+      all(
+        sig.get('signal_type') in valid_types
+        for sig in response.get('signals', [])
+      )
+
+cleanup:
+  required: false
+  note: Read-only observation, no cleanup needed
+
+on_success:
+  update_capability_status: OBSERVED
+  emit_observation: true
+
+on_failure:
+  update_capability_status: null
+  emit_observation: true
+  failure_taxonomy:
+    endpoint_missing: V2 /activity/signals route does not exist
+    not_projection: Response returns runs instead of signals
+    ranking_broken: Signals not properly ranked by severity

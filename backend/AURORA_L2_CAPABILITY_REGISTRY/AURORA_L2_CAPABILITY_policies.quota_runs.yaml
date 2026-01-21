@@ -7,14 +7,14 @@
 capability_id: policies.quota_runs
 status: ASSUMED
 source_panels:
-- POL-LIM-THR-O3
+- POL-LIM-CTR-O3
 domain: POLICIES
 metadata:
   generated_by: sync_from_intent_ledger.py
   generated_on: '2026-01-16'
   declared_by: intent-ledger
   declared_on: '2026-01-16'
-  observed_by: SDSR-POL-LIM-THR-O3-001
+  observed_by: SDSR-POL-LIM-CTR-O3-001
 assumption:
   endpoint: /api/v1/tenants/tenant/quota/runs
   method: GET

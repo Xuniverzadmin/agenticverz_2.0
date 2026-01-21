@@ -15,10 +15,17 @@
       "rule": "NC-001",
       "message": "Context suffix '_current' in field name",
       "code": "cost_current: int      # VIOLATION: context suffix"
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/alembic/versions/ce967f70c95d_invitations_and_support_tickets.py",
+      "line": 1,
+      "rule": "MIG-001",
+      "message": "Missing MIGRATION_CONTRACT header",
+      "code": ""
     }
   ],
   "files_watched": 895,
-  "checks_run": 1,
+  "checks_run": 2,
   "started_at": "2026-01-17T07:36:52.667402",
   "pid": 3139164
 }

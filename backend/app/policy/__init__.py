@@ -12,6 +12,15 @@
 # - GAP 5: Enhanced Violation Classifications
 
 from app.policy.engine import PolicyEngine, get_policy_engine
+from app.policy.prevention_engine import (
+    PreventionAction,
+    PreventionContext,
+    PreventionEngine,
+    PreventionResult,
+    PolicyViolationError,
+    ViolationType as PreventionViolationType,
+    create_policy_snapshot_for_run,
+)
 from app.policy.models import (
     # Core enums
     ActionType,
@@ -61,6 +70,14 @@ __all__ = [
     # Engine
     "PolicyEngine",
     "get_policy_engine",
+    # Prevention Engine (GAP-001, GAP-002)
+    "PreventionAction",
+    "PreventionContext",
+    "PreventionEngine",
+    "PreventionResult",
+    "PolicyViolationError",
+    "PreventionViolationType",
+    "create_policy_snapshot_for_run",
     # Core enums
     "ActionType",
     "BusinessRuleType",

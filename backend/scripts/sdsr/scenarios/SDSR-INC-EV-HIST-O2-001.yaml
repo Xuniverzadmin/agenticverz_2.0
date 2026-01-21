@@ -20,23 +20,25 @@
 scenario_id: SDSR-INC-EV-HIST-O2-001
 version: 1.0.0
 name: Observe INC-EV-HIST-O2 capability
-description: SDSR verification scenario for incidents.guard_list
-capability: incidents.guard_list
+description: SDSR verification scenario for incidents.historical_list (resolved incidents detail)
+capability: incidents.historical_list
 panel_id: INC-EV-HIST-O2
 domain: INCIDENTS
+auth:
+  mode: OBSERVER
 metadata:
   generated_by: aurora_sdsr_synth.py
   generated_at: '2026-01-15T06:41:55.885625+00:00'
   panel_class: evidence
 inject:
   type: api_call
-  endpoint: /api/v1/guard/incidents
+  endpoint: /api/v1/incidents
   method: GET
   headers:
-    Authorization: Bearer ${AUTH_TOKEN}
     Content-Type: application/json
   params:
-    window: 24h
+    topic: RESOLVED
+    limit: 50
 expect:
   status_code: 200
   response_type: json

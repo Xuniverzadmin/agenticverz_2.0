@@ -34,10 +34,12 @@ controls:
   confirmation_required: false
 capability:
   id: overview.incident_snapshot
-  status: ASSUMED
-  assumed_endpoint: null
+  status: DEFERRED
+  assumed_endpoint: 'null'
   assumed_method: GET
-  facade_note: "Bound to overview facade - API Audit 2026-01-16"
+sdsr:
+  scenario: DEFERRED
+  verified: false
 notes: 'Surface non-ignorable signals that require human attention,
 
   without requiring navigation into domains.

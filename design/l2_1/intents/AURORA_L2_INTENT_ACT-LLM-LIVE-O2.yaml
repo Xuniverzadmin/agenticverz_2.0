@@ -34,9 +34,12 @@ controls:
   confirmation_required: false
 capability:
   id: activity.risk_signals
-  status: ASSUMED
-  assumed_endpoint: null
+  status: DECLARED
+  assumed_endpoint: /api/v1/activity/attention-queue
   assumed_method: GET
+sdsr:
+  scenario: PENDING
+  verified: false
 notes: 'Surface live runs exceeding expected execution time.
 
 

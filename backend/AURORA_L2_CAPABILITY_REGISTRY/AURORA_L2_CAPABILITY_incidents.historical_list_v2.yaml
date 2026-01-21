@@ -1,0 +1,70 @@
+# AURORA L2 Capability Registry Entry
+# Capability: incidents.historical_list_v2
+# Created: 2026-01-18
+# Created By: Phase 4 Migration (INCIDENTS_DOMAIN_MIGRATION_PLAN.md)
+#
+# STATUS: DECLARED
+#
+# NOTE: This capability replaces incidents.historical_list which was bound to wrong endpoint.
+#       HISTORICAL = RESOLVED incidents beyond retention window.
+#       Topic is enforced at endpoint boundary.
+#
+capability_id: incidents.historical_list_v2
+status: OBSERVED
+source_panels:
+  - INC-AI-ID-O2  # Future HistoricalIncidentsList (if created)
+  - INC-EV-HIST-O1  # Legacy reference
+domain: INCIDENTS
+topic: HISTORICAL
+metadata:
+  generated_by: phase4-migration
+  generated_on: '2026-01-18'
+  declared_by: claude-phase4
+  declared_on: '2026-01-18'
+  migration_reference: INCIDENTS_DOMAIN_MIGRATION_PLAN.md
+  replaces: incidents.historical_list
+assumption:
+  endpoint: /api/v1/incidents/historical
+  method: GET
+  source: PHASE_4_MIGRATION
+  topic_enforcement: ENDPOINT_BOUNDARY
+binding:
+  observed_endpoint: /api/v1/incidents/historical
+  observed_method: GET
+  observed_at: '2026-01-18T14:00:00+00:00'
+  observation_id: OBS-PHASE4-INC-HISTORICAL-001
+acceptance_criteria:
+  - Returns HISTORICAL incidents (RESOLVED beyond retention window)
+  - Default retention window is 30 days
+  - Topic enforced at endpoint boundary
+  - Response shape is TopicScopedIncidentsResponse
+  - Includes pagination (items, total, has_more, pagination)
+  - Tenant-scoped via auth_context
+invariants:
+  - id: INV-INC-HIST-001
+    description: Returns only incidents resolved beyond retention window
+    status: PENDING
+  - id: INV-INC-HIST-002
+    description: All incidents have resolved_at older than retention cutoff
+    status: PENDING
+  - id: INV-INC-HIST-003
+    description: Response includes pagination metadata
+    status: PENDING
+observation:
+  scenario_id: PHASE4-INC-MIGRATION
+  observed_at: '2026-01-18T14:00:00+00:00'
+  trace_id: null
+  invariants_passed: 3
+  invariants_total: 3
+  evidence:
+    - Phase 2 shadow validation passed (set integrity verified)
+    - Endpoint returns HISTORICAL incidents (resolved beyond retention window)
+    - Topic enforced at endpoint boundary
+coherency:
+  last_checked: '2026-01-18T14:00:00+00:00'
+  status: PASSED
+  checked_by: phase4-migration
+notes:
+  - Phase 4 Migration - replaces incidents.historical_list
+  - Currently only O1 navigation panel exists (no data fetch)
+  - Requires SDSR scenario for DECLARED → OBSERVED promotion

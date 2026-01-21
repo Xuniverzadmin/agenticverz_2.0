@@ -38,6 +38,7 @@ Architecture:
 - SDSR validates this same production API
 """
 
+import logging
 import os
 from datetime import datetime
 from enum import Enum
@@ -54,9 +55,10 @@ from app.models.killswitch import Incident
 from app.schemas.response import wrap_dict
 
 # =============================================================================
-# Environment Configuration
+# Module Configuration
 # =============================================================================
 
+logger = logging.getLogger(__name__)
 _CURRENT_ENVIRONMENT = os.getenv("AOS_ENVIRONMENT", "preflight")
 
 
@@ -147,6 +149,12 @@ class IncidentSummary(BaseModel):
     resolved_at: Optional[datetime] = None
     is_synthetic: bool = False
 
+    # Cross-domain navigation refs (PIN-447 - Policy V2 Facade)
+    # These are navigational links, not operational data.
+    # Incidents are narrators, not judges (INV-DOM-001).
+    policy_ref: Optional[str] = None  # "/policy/active/{policy_id}"
+    violation_ref: Optional[str] = None  # "/policy/violations/{violation_id}"
+
     class Config:
         from_attributes = True
 
@@ -190,6 +198,16 @@ class IncidentDetailResponse(BaseModel):
     resolved_at: Optional[datetime] = None
     is_synthetic: bool = False
     synthetic_scenario_id: Optional[str] = None
+
+    # Cross-domain navigation refs (PIN-447 - Policy V2 Facade)
+    # These are navigational links for cross-domain traversal.
+    # Incidents are narrators, not judges (INV-DOM-001).
+    # Reference: docs/contracts/CROSS_DOMAIN_INVARIANTS.md
+    policy_id: Optional[str] = None  # Policy that was violated
+    policy_ref: Optional[str] = None  # "/policy/active/{policy_id}"
+    violation_id: Optional[str] = None  # Violation record ID
+    violation_ref: Optional[str] = None  # "/policy/violations/{violation_id}"
+    lesson_ref: Optional[str] = None  # "/policy/lessons/{lesson_id}" (if lesson created)
 
     class Config:
         from_attributes = True
@@ -280,6 +298,103 @@ class CostImpactResponse(BaseModel):
 
 
 # =============================================================================
+# Topic-Scoped Response Models (Phase 1 Migration)
+# =============================================================================
+
+
+class IncidentMetricsResponse(BaseModel):
+    """GET /incidents/metrics response - Dedicated metrics capability."""
+
+    # Counts by state
+    active_count: int
+    acked_count: int
+    resolved_count: int
+    total_count: int
+
+    # Containment metrics
+    avg_time_to_containment_ms: Optional[int] = None
+    median_time_to_containment_ms: Optional[int] = None
+
+    # Resolution metrics
+    avg_time_to_resolution_ms: Optional[int] = None
+    median_time_to_resolution_ms: Optional[int] = None
+
+    # SLA metrics
+    sla_met_count: int = 0
+    sla_breached_count: int = 0
+    sla_compliance_rate: Optional[float] = None
+
+    # Severity breakdown
+    critical_count: int = 0
+    high_count: int = 0
+    medium_count: int = 0
+    low_count: int = 0
+
+    # Time window
+    window_days: int
+    generated_at: datetime
+
+
+class HistoricalTrendDataPoint(BaseModel):
+    """A single data point in a historical trend."""
+
+    period: str  # ISO date or date range
+    incident_count: int
+    resolved_count: int
+    avg_resolution_time_ms: Optional[int] = None
+
+
+class HistoricalTrendResponse(BaseModel):
+    """GET /incidents/historical/trend response."""
+
+    data_points: List[HistoricalTrendDataPoint]
+    granularity: str  # day, week, month
+    window_days: int
+    total_incidents: int
+    generated_at: datetime
+
+
+class HistoricalDistributionEntry(BaseModel):
+    """A single entry in the distribution."""
+
+    dimension: str  # category, severity, cause_type
+    value: str
+    count: int
+    percentage: float
+
+
+class HistoricalDistributionResponse(BaseModel):
+    """GET /incidents/historical/distribution response."""
+
+    by_category: List[HistoricalDistributionEntry]
+    by_severity: List[HistoricalDistributionEntry]
+    by_cause_type: List[HistoricalDistributionEntry]
+    window_days: int
+    total_incidents: int
+    generated_at: datetime
+
+
+class CostTrendDataPoint(BaseModel):
+    """A single data point in the cost trend."""
+
+    period: str  # ISO date or date range
+    total_cost: float
+    incident_count: int
+    avg_cost_per_incident: float
+
+
+class CostTrendResponse(BaseModel):
+    """GET /incidents/historical/cost-trend response."""
+
+    data_points: List[CostTrendDataPoint]
+    granularity: str  # day, week, month
+    window_days: int
+    total_cost: float
+    total_incidents: int
+    generated_at: datetime
+
+
+# =============================================================================
 # Learnings Response Models
 # =============================================================================
 
@@ -357,21 +472,38 @@ def get_tenant_id_from_auth(request: Request) -> str:
 
 
 # =============================================================================
-# GET /incidents - O2 List
+# GET /incidents - DEPRECATED (Phase 5 Migration Lockdown)
+# =============================================================================
+# WARNING: This endpoint is DEPRECATED and should NOT be used by UI panels.
+#
+# Use topic-scoped endpoints instead:
+#   - /api/v1/incidents/active     (ACTIVE topic)
+#   - /api/v1/incidents/resolved   (RESOLVED topic)
+#   - /api/v1/incidents/historical (HISTORICAL topic)
+#
+# Reference: INCIDENTS_DOMAIN_MIGRATION_PLAN.md Phase 5
 # =============================================================================
 
 
 @router.get(
     "",
     response_model=IncidentListResponse,
-    summary="List incidents (O2)",
+    summary="[DEPRECATED] List incidents - Use topic-scoped endpoints",
+    deprecated=True,
     description="""
-    Returns paginated list of incidents matching filter criteria.
-    Tenant isolation enforced via auth_context.
+    ⚠️ **DEPRECATED** - Do NOT use for UI panels.
 
-    Topic mapping:
-    - ACTIVE topic: includes ACTIVE + ACKED lifecycle states
-    - RESOLVED topic: includes RESOLVED state only
+    This endpoint is maintained for backward compatibility only.
+    New code MUST use topic-scoped endpoints:
+
+    - **ACTIVE incidents**: `/api/v1/incidents/active`
+    - **RESOLVED incidents**: `/api/v1/incidents/resolved`
+    - **HISTORICAL incidents**: `/api/v1/incidents/historical`
+
+    Topic-scoped endpoints enforce semantics at the boundary,
+    eliminating caller-controlled topic filtering.
+
+    Reference: INCIDENTS_DOMAIN_MIGRATION_PLAN.md
     """,
 )
 async def list_incidents(
@@ -398,6 +530,18 @@ async def list_incidents(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> IncidentListResponse:
     """List incidents with unified query filters. Tenant-scoped."""
+
+    # Phase 5 Runtime Warning: Log deprecation access
+    # Reference: INCIDENTS_DOMAIN_MIGRATION_PLAN.md
+    user_agent = request.headers.get("user-agent", "unknown")
+    referer = request.headers.get("referer", "unknown")
+    logger.warning(
+        "DEPRECATED ENDPOINT ACCESS: /api/v1/incidents called directly. "
+        "Migrate to topic-scoped endpoints (/incidents/active, /incidents/resolved). "
+        "User-Agent: %s, Referer: %s",
+        user_agent[:100] if user_agent else "unknown",
+        referer[:100] if referer else "unknown",
+    )
 
     tenant_id = get_tenant_id_from_auth(request)
 
@@ -764,6 +908,852 @@ async def analyze_cost_impact(
 
 
 # =============================================================================
+# PHASE 1 MIGRATION: Topic-Scoped Endpoints
+# =============================================================================
+# These endpoints enforce topic semantics at the boundary level.
+# No topic= or state= query params - the endpoint IS the topic.
+# Reference: INCIDENTS_DOMAIN_MIGRATION_PLAN.md
+# =============================================================================
+
+
+# =============================================================================
+# GET /incidents/active - Topic: ACTIVE (ACTIVE + ACKED states)
+# =============================================================================
+
+
+@router.get(
+    "/active",
+    response_model=IncidentListResponse,
+    summary="List active incidents (Topic-Scoped)",
+    description="""
+    Returns paginated list of ACTIVE incidents.
+    Topic is hardcoded - includes ACTIVE + ACKED lifecycle states.
+    No topic= or state= query params accepted.
+    """,
+)
+async def list_active_incidents(
+    request: Request,
+    # Filters (no topic/state params - topic is enforced by endpoint)
+    severity: Annotated[Severity | None, Query(description="Filter by severity")] = None,
+    category: Annotated[str | None, Query(description="Filter by category")] = None,
+    cause_type: Annotated[CauseType | None, Query(description="Filter by cause type")] = None,
+    is_synthetic: Annotated[bool | None, Query(description="Filter by synthetic data flag")] = None,
+    # Time filters
+    created_after: Annotated[datetime | None, Query(description="Filter incidents created after")] = None,
+    created_before: Annotated[datetime | None, Query(description="Filter incidents created before")] = None,
+    # Pagination
+    limit: Annotated[int, Query(ge=1, le=100, description="Max incidents to return")] = 20,
+    offset: Annotated[int, Query(ge=0, description="Number of incidents to skip")] = 0,
+    # Sorting
+    sort_by: Annotated[SortField, Query(description="Field to sort by")] = SortField.CREATED_AT,
+    sort_order: Annotated[SortOrder, Query(description="Sort direction")] = SortOrder.DESC,
+    # Dependencies
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> IncidentListResponse:
+    """List ACTIVE incidents. Topic enforced at endpoint boundary."""
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    # Build filters - topic is HARDCODED to ACTIVE
+    filters_applied: dict[str, Any] = {
+        "tenant_id": tenant_id,
+        "topic": "ACTIVE",  # Hardcoded - endpoint IS the topic
+    }
+
+    # Base query with tenant isolation + ACTIVE topic (ACTIVE + ACKED states)
+    stmt = (
+        select(Incident)
+        .where(Incident.tenant_id == tenant_id)
+        .where(Incident.lifecycle_state.in_(["ACTIVE", "ACKED"]))
+    )
+
+    # Count query with same topic constraint
+    count_stmt = (
+        select(func.count(Incident.id))
+        .where(Incident.tenant_id == tenant_id)
+        .where(Incident.lifecycle_state.in_(["ACTIVE", "ACKED"]))
+    )
+
+    # Apply additional filters
+    if severity:
+        stmt = stmt.where(Incident.severity == severity.value)
+        count_stmt = count_stmt.where(Incident.severity == severity.value)
+        filters_applied["severity"] = severity.value
+
+    if category:
+        stmt = stmt.where(Incident.category == category)
+        count_stmt = count_stmt.where(Incident.category == category)
+        filters_applied["category"] = category
+
+    if cause_type:
+        stmt = stmt.where(Incident.cause_type == cause_type.value)
+        count_stmt = count_stmt.where(Incident.cause_type == cause_type.value)
+        filters_applied["cause_type"] = cause_type.value
+
+    if is_synthetic is not None:
+        stmt = stmt.where(Incident.is_synthetic == is_synthetic)
+        count_stmt = count_stmt.where(Incident.is_synthetic == is_synthetic)
+        filters_applied["is_synthetic"] = is_synthetic
+
+    if created_after:
+        stmt = stmt.where(Incident.created_at >= created_after)
+        count_stmt = count_stmt.where(Incident.created_at >= created_after)
+        filters_applied["created_after"] = created_after.isoformat()
+
+    if created_before:
+        stmt = stmt.where(Incident.created_at <= created_before)
+        count_stmt = count_stmt.where(Incident.created_at <= created_before)
+        filters_applied["created_before"] = created_before.isoformat()
+
+    # Sorting
+    sort_column = getattr(Incident, sort_by.value)
+    if sort_order == SortOrder.DESC:
+        stmt = stmt.order_by(sort_column.desc())
+    else:
+        stmt = stmt.order_by(sort_column.asc())
+
+    # Pagination
+    stmt = stmt.limit(limit).offset(offset)
+
+    try:
+        count_result = await session.execute(count_stmt)
+        total = count_result.scalar() or 0
+
+        result = await session.execute(stmt)
+        incidents = result.scalars().all()
+
+        items = [
+            IncidentSummary(
+                incident_id=inc.id,
+                tenant_id=inc.tenant_id,
+                lifecycle_state=inc.lifecycle_state or "ACTIVE",
+                severity=inc.severity or "medium",
+                category=inc.category or "UNKNOWN",
+                title=inc.title or "Untitled Incident",
+                description=inc.description,
+                llm_run_id=inc.llm_run_id,
+                cause_type=inc.cause_type or "SYSTEM",
+                error_code=inc.error_code,
+                error_message=inc.error_message,
+                created_at=inc.created_at,
+                resolved_at=inc.resolved_at,
+                is_synthetic=inc.is_synthetic or False,
+            )
+            for inc in incidents
+        ]
+
+        has_more = offset + len(items) < total
+        next_offset = offset + limit if has_more else None
+
+        return IncidentListResponse(
+            items=items,
+            total=total,
+            has_more=has_more,
+            filters_applied=filters_applied,
+            pagination=Pagination(limit=limit, offset=offset, next_offset=next_offset),
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "query_failed", "message": str(e)},
+        )
+
+
+# =============================================================================
+# GET /incidents/resolved - Topic: RESOLVED
+# =============================================================================
+
+
+@router.get(
+    "/resolved",
+    response_model=IncidentListResponse,
+    summary="List resolved incidents (Topic-Scoped)",
+    description="""
+    Returns paginated list of RESOLVED incidents.
+    Topic is hardcoded - only RESOLVED lifecycle state.
+    No topic= or state= query params accepted.
+    """,
+)
+async def list_resolved_incidents(
+    request: Request,
+    # Filters (no topic/state params - topic is enforced by endpoint)
+    severity: Annotated[Severity | None, Query(description="Filter by severity")] = None,
+    category: Annotated[str | None, Query(description="Filter by category")] = None,
+    cause_type: Annotated[CauseType | None, Query(description="Filter by cause type")] = None,
+    is_synthetic: Annotated[bool | None, Query(description="Filter by synthetic data flag")] = None,
+    # Time filters
+    resolved_after: Annotated[datetime | None, Query(description="Filter incidents resolved after")] = None,
+    resolved_before: Annotated[datetime | None, Query(description="Filter incidents resolved before")] = None,
+    # Pagination
+    limit: Annotated[int, Query(ge=1, le=100, description="Max incidents to return")] = 20,
+    offset: Annotated[int, Query(ge=0, description="Number of incidents to skip")] = 0,
+    # Sorting
+    sort_by: Annotated[SortField, Query(description="Field to sort by")] = SortField.RESOLVED_AT,
+    sort_order: Annotated[SortOrder, Query(description="Sort direction")] = SortOrder.DESC,
+    # Dependencies
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> IncidentListResponse:
+    """List RESOLVED incidents. Topic enforced at endpoint boundary."""
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    filters_applied: dict[str, Any] = {
+        "tenant_id": tenant_id,
+        "topic": "RESOLVED",  # Hardcoded
+    }
+
+    # Base query with RESOLVED topic
+    stmt = (
+        select(Incident)
+        .where(Incident.tenant_id == tenant_id)
+        .where(Incident.lifecycle_state == "RESOLVED")
+    )
+
+    count_stmt = (
+        select(func.count(Incident.id))
+        .where(Incident.tenant_id == tenant_id)
+        .where(Incident.lifecycle_state == "RESOLVED")
+    )
+
+    # Apply filters
+    if severity:
+        stmt = stmt.where(Incident.severity == severity.value)
+        count_stmt = count_stmt.where(Incident.severity == severity.value)
+        filters_applied["severity"] = severity.value
+
+    if category:
+        stmt = stmt.where(Incident.category == category)
+        count_stmt = count_stmt.where(Incident.category == category)
+        filters_applied["category"] = category
+
+    if cause_type:
+        stmt = stmt.where(Incident.cause_type == cause_type.value)
+        count_stmt = count_stmt.where(Incident.cause_type == cause_type.value)
+        filters_applied["cause_type"] = cause_type.value
+
+    if is_synthetic is not None:
+        stmt = stmt.where(Incident.is_synthetic == is_synthetic)
+        count_stmt = count_stmt.where(Incident.is_synthetic == is_synthetic)
+        filters_applied["is_synthetic"] = is_synthetic
+
+    if resolved_after:
+        stmt = stmt.where(Incident.resolved_at >= resolved_after)
+        count_stmt = count_stmt.where(Incident.resolved_at >= resolved_after)
+        filters_applied["resolved_after"] = resolved_after.isoformat()
+
+    if resolved_before:
+        stmt = stmt.where(Incident.resolved_at <= resolved_before)
+        count_stmt = count_stmt.where(Incident.resolved_at <= resolved_before)
+        filters_applied["resolved_before"] = resolved_before.isoformat()
+
+    # Sorting
+    sort_column = getattr(Incident, sort_by.value)
+    if sort_order == SortOrder.DESC:
+        stmt = stmt.order_by(sort_column.desc())
+    else:
+        stmt = stmt.order_by(sort_column.asc())
+
+    stmt = stmt.limit(limit).offset(offset)
+
+    try:
+        count_result = await session.execute(count_stmt)
+        total = count_result.scalar() or 0
+
+        result = await session.execute(stmt)
+        incidents = result.scalars().all()
+
+        items = [
+            IncidentSummary(
+                incident_id=inc.id,
+                tenant_id=inc.tenant_id,
+                lifecycle_state=inc.lifecycle_state or "RESOLVED",
+                severity=inc.severity or "medium",
+                category=inc.category or "UNKNOWN",
+                title=inc.title or "Untitled Incident",
+                description=inc.description,
+                llm_run_id=inc.llm_run_id,
+                cause_type=inc.cause_type or "SYSTEM",
+                error_code=inc.error_code,
+                error_message=inc.error_message,
+                created_at=inc.created_at,
+                resolved_at=inc.resolved_at,
+                is_synthetic=inc.is_synthetic or False,
+            )
+            for inc in incidents
+        ]
+
+        has_more = offset + len(items) < total
+        next_offset = offset + limit if has_more else None
+
+        return IncidentListResponse(
+            items=items,
+            total=total,
+            has_more=has_more,
+            filters_applied=filters_applied,
+            pagination=Pagination(limit=limit, offset=offset, next_offset=next_offset),
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "query_failed", "message": str(e)},
+        )
+
+
+# =============================================================================
+# GET /incidents/historical - Topic: HISTORICAL (resolved beyond retention)
+# =============================================================================
+
+
+@router.get(
+    "/historical",
+    response_model=IncidentListResponse,
+    summary="List historical incidents (Topic-Scoped)",
+    description="""
+    Returns paginated list of HISTORICAL incidents.
+    Historical = RESOLVED incidents beyond retention window (default 30 days).
+    Topic is hardcoded - endpoint IS the topic.
+    """,
+)
+async def list_historical_incidents(
+    request: Request,
+    # Historical window config
+    retention_days: Annotated[int, Query(ge=7, le=365, description="Retention window in days")] = 30,
+    # Filters
+    severity: Annotated[Severity | None, Query(description="Filter by severity")] = None,
+    category: Annotated[str | None, Query(description="Filter by category")] = None,
+    cause_type: Annotated[CauseType | None, Query(description="Filter by cause type")] = None,
+    # Pagination
+    limit: Annotated[int, Query(ge=1, le=100, description="Max incidents to return")] = 20,
+    offset: Annotated[int, Query(ge=0, description="Number of incidents to skip")] = 0,
+    # Sorting
+    sort_by: Annotated[SortField, Query(description="Field to sort by")] = SortField.RESOLVED_AT,
+    sort_order: Annotated[SortOrder, Query(description="Sort direction")] = SortOrder.DESC,
+    # Dependencies
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> IncidentListResponse:
+    """List HISTORICAL incidents (resolved beyond retention). Topic enforced."""
+    from datetime import timezone
+    from sqlalchemy import text
+
+    tenant_id = get_tenant_id_from_auth(request)
+    cutoff_date = datetime.now(timezone.utc) - __import__("datetime").timedelta(days=retention_days)
+
+    filters_applied: dict[str, Any] = {
+        "tenant_id": tenant_id,
+        "topic": "HISTORICAL",  # Hardcoded
+        "retention_days": retention_days,
+        "cutoff_date": cutoff_date.isoformat(),
+    }
+
+    # HISTORICAL = RESOLVED + resolved_at < cutoff
+    stmt = (
+        select(Incident)
+        .where(Incident.tenant_id == tenant_id)
+        .where(Incident.lifecycle_state == "RESOLVED")
+        .where(Incident.resolved_at < cutoff_date)
+    )
+
+    count_stmt = (
+        select(func.count(Incident.id))
+        .where(Incident.tenant_id == tenant_id)
+        .where(Incident.lifecycle_state == "RESOLVED")
+        .where(Incident.resolved_at < cutoff_date)
+    )
+
+    if severity:
+        stmt = stmt.where(Incident.severity == severity.value)
+        count_stmt = count_stmt.where(Incident.severity == severity.value)
+        filters_applied["severity"] = severity.value
+
+    if category:
+        stmt = stmt.where(Incident.category == category)
+        count_stmt = count_stmt.where(Incident.category == category)
+        filters_applied["category"] = category
+
+    if cause_type:
+        stmt = stmt.where(Incident.cause_type == cause_type.value)
+        count_stmt = count_stmt.where(Incident.cause_type == cause_type.value)
+        filters_applied["cause_type"] = cause_type.value
+
+    # Sorting
+    sort_column = getattr(Incident, sort_by.value)
+    if sort_order == SortOrder.DESC:
+        stmt = stmt.order_by(sort_column.desc())
+    else:
+        stmt = stmt.order_by(sort_column.asc())
+
+    stmt = stmt.limit(limit).offset(offset)
+
+    try:
+        count_result = await session.execute(count_stmt)
+        total = count_result.scalar() or 0
+
+        result = await session.execute(stmt)
+        incidents = result.scalars().all()
+
+        items = [
+            IncidentSummary(
+                incident_id=inc.id,
+                tenant_id=inc.tenant_id,
+                lifecycle_state=inc.lifecycle_state or "RESOLVED",
+                severity=inc.severity or "medium",
+                category=inc.category or "UNKNOWN",
+                title=inc.title or "Untitled Incident",
+                description=inc.description,
+                llm_run_id=inc.llm_run_id,
+                cause_type=inc.cause_type or "SYSTEM",
+                error_code=inc.error_code,
+                error_message=inc.error_message,
+                created_at=inc.created_at,
+                resolved_at=inc.resolved_at,
+                is_synthetic=inc.is_synthetic or False,
+            )
+            for inc in incidents
+        ]
+
+        has_more = offset + len(items) < total
+        next_offset = offset + limit if has_more else None
+
+        return IncidentListResponse(
+            items=items,
+            total=total,
+            has_more=has_more,
+            filters_applied=filters_applied,
+            pagination=Pagination(limit=limit, offset=offset, next_offset=next_offset),
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "query_failed", "message": str(e)},
+        )
+
+
+# =============================================================================
+# GET /incidents/metrics - Dedicated Metrics Capability
+# =============================================================================
+
+
+@router.get(
+    "/metrics",
+    response_model=IncidentMetricsResponse,
+    summary="Get incident metrics (Dedicated Capability)",
+    description="""
+    Returns aggregated incident metrics for ACT-O3, RES-O3 panels.
+    Dedicated metrics capability - not derived from cost-impact.
+    Includes: counts, containment time, resolution time, SLA compliance.
+    """,
+)
+async def get_incident_metrics(
+    request: Request,
+    window_days: Annotated[int, Query(ge=1, le=90, description="Window in days")] = 30,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> IncidentMetricsResponse:
+    """Get incident metrics. Backend-computed, deterministic."""
+    from datetime import timezone
+    from sqlalchemy import text
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    # Single comprehensive query for all metrics
+    # NOTE: contained_at and sla_target_seconds columns don't exist yet.
+    # Using resolved_at - created_at for resolution time. Containment and SLA
+    # will be added when those columns are created (Phase 1 is additive only).
+    sql = text("""
+        WITH incident_stats AS (
+            SELECT
+                lifecycle_state,
+                severity,
+                -- Containment time: will be NULL until contained_at column is added
+                NULL::bigint AS time_to_containment_ms,
+                -- Resolution time: resolved_at - created_at
+                CASE WHEN resolved_at IS NOT NULL
+                     THEN EXTRACT(EPOCH FROM (resolved_at - created_at)) * 1000
+                     ELSE NULL
+                END AS time_to_resolution_ms,
+                -- SLA: NULL until sla_target_seconds column is added
+                NULL::boolean AS sla_met
+            FROM incidents
+            WHERE tenant_id = :tenant_id
+              AND created_at >= NOW() - INTERVAL '1 day' * :window_days
+        )
+        SELECT
+            -- Counts by state
+            COUNT(*) FILTER (WHERE lifecycle_state IN ('ACTIVE', 'ACKED')) AS active_count,
+            COUNT(*) FILTER (WHERE lifecycle_state = 'ACKED') AS acked_count,
+            COUNT(*) FILTER (WHERE lifecycle_state = 'RESOLVED') AS resolved_count,
+            COUNT(*) AS total_count,
+
+            -- Containment metrics (NULL until contained_at column exists)
+            NULL::bigint AS avg_time_to_containment_ms,
+            NULL::bigint AS median_time_to_containment_ms,
+
+            -- Resolution metrics
+            AVG(time_to_resolution_ms)::bigint AS avg_time_to_resolution_ms,
+            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY time_to_resolution_ms)::bigint AS median_time_to_resolution_ms,
+
+            -- SLA metrics (NULL until sla_target_seconds column exists)
+            0 AS sla_met_count,
+            0 AS sla_breached_count,
+
+            -- Severity breakdown
+            COUNT(*) FILTER (WHERE severity = 'critical') AS critical_count,
+            COUNT(*) FILTER (WHERE severity = 'high') AS high_count,
+            COUNT(*) FILTER (WHERE severity = 'medium') AS medium_count,
+            COUNT(*) FILTER (WHERE severity = 'low') AS low_count
+
+        FROM incident_stats
+    """)
+
+    result = await session.execute(sql, {
+        "tenant_id": tenant_id,
+        "window_days": window_days,
+    })
+
+    row = result.mappings().first()
+
+    if not row:
+        # No incidents - return zeros
+        return IncidentMetricsResponse(
+            active_count=0,
+            acked_count=0,
+            resolved_count=0,
+            total_count=0,
+            window_days=window_days,
+            generated_at=datetime.now(timezone.utc),
+        )
+
+    # Calculate SLA compliance rate
+    sla_total = (row["sla_met_count"] or 0) + (row["sla_breached_count"] or 0)
+    sla_compliance_rate = None
+    if sla_total > 0:
+        sla_compliance_rate = round((row["sla_met_count"] or 0) / sla_total * 100, 2)
+
+    return IncidentMetricsResponse(
+        active_count=row["active_count"] or 0,
+        acked_count=row["acked_count"] or 0,
+        resolved_count=row["resolved_count"] or 0,
+        total_count=row["total_count"] or 0,
+        avg_time_to_containment_ms=row["avg_time_to_containment_ms"],
+        median_time_to_containment_ms=row["median_time_to_containment_ms"],
+        avg_time_to_resolution_ms=row["avg_time_to_resolution_ms"],
+        median_time_to_resolution_ms=row["median_time_to_resolution_ms"],
+        sla_met_count=row["sla_met_count"] or 0,
+        sla_breached_count=row["sla_breached_count"] or 0,
+        sla_compliance_rate=sla_compliance_rate,
+        critical_count=row["critical_count"] or 0,
+        high_count=row["high_count"] or 0,
+        medium_count=row["medium_count"] or 0,
+        low_count=row["low_count"] or 0,
+        window_days=window_days,
+        generated_at=datetime.now(timezone.utc),
+    )
+
+
+# =============================================================================
+# GET /incidents/historical/trend - Backend-Computed Trend Analytics
+# =============================================================================
+
+
+@router.get(
+    "/historical/trend",
+    response_model=HistoricalTrendResponse,
+    summary="Get historical incident trend (Backend Analytics)",
+    description="""
+    Returns time-series trend data for historical incidents.
+    Backend-computed - frontend does NOT aggregate this.
+    Granularity: day, week, or month.
+    """,
+)
+async def get_historical_trend(
+    request: Request,
+    window_days: Annotated[int, Query(ge=7, le=365, description="Window in days")] = 90,
+    granularity: Annotated[str, Query(description="Aggregation granularity")] = "week",
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> HistoricalTrendResponse:
+    """Get historical trend. Backend-computed, deterministic."""
+    from datetime import timezone
+    from sqlalchemy import text
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    # Validate granularity
+    if granularity not in ("day", "week", "month"):
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "invalid_granularity", "message": "Must be: day, week, month"},
+        )
+
+    # Use date_trunc for grouping
+    trunc_unit = granularity
+    if granularity == "day":
+        trunc_unit = "day"
+    elif granularity == "week":
+        trunc_unit = "week"
+    elif granularity == "month":
+        trunc_unit = "month"
+
+    sql = text(f"""
+        SELECT
+            DATE_TRUNC(:trunc_unit, created_at) AS period,
+            COUNT(*) AS incident_count,
+            COUNT(*) FILTER (WHERE lifecycle_state = 'RESOLVED') AS resolved_count,
+            AVG(
+                CASE WHEN resolved_at IS NOT NULL
+                THEN EXTRACT(EPOCH FROM (resolved_at - created_at)) * 1000
+                ELSE NULL END
+            )::bigint AS avg_resolution_time_ms
+        FROM incidents
+        WHERE tenant_id = :tenant_id
+          AND created_at >= NOW() - INTERVAL '1 day' * :window_days
+        GROUP BY DATE_TRUNC(:trunc_unit, created_at)
+        ORDER BY period ASC
+    """)
+
+    result = await session.execute(sql, {
+        "tenant_id": tenant_id,
+        "window_days": window_days,
+        "trunc_unit": trunc_unit,
+    })
+
+    data_points: List[HistoricalTrendDataPoint] = []
+    total_incidents = 0
+
+    for row in result.mappings():
+        period_date = row["period"]
+        period_str = period_date.strftime("%Y-%m-%d") if period_date else "unknown"
+        count = row["incident_count"] or 0
+        total_incidents += count
+
+        data_points.append(HistoricalTrendDataPoint(
+            period=period_str,
+            incident_count=count,
+            resolved_count=row["resolved_count"] or 0,
+            avg_resolution_time_ms=row["avg_resolution_time_ms"],
+        ))
+
+    return HistoricalTrendResponse(
+        data_points=data_points,
+        granularity=granularity,
+        window_days=window_days,
+        total_incidents=total_incidents,
+        generated_at=datetime.now(timezone.utc),
+    )
+
+
+# =============================================================================
+# GET /incidents/historical/distribution - Backend-Computed Distribution
+# =============================================================================
+
+
+@router.get(
+    "/historical/distribution",
+    response_model=HistoricalDistributionResponse,
+    summary="Get historical incident distribution (Backend Analytics)",
+    description="""
+    Returns distribution breakdown for historical incidents.
+    Backend-computed - frontend does NOT aggregate this.
+    Dimensions: category, severity, cause_type.
+    """,
+)
+async def get_historical_distribution(
+    request: Request,
+    window_days: Annotated[int, Query(ge=7, le=365, description="Window in days")] = 90,
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> HistoricalDistributionResponse:
+    """Get historical distribution. Backend-computed, deterministic."""
+    from datetime import timezone
+    from sqlalchemy import text
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    # Total count for percentage calculation
+    total_sql = text("""
+        SELECT COUNT(*) as total
+        FROM incidents
+        WHERE tenant_id = :tenant_id
+          AND created_at >= NOW() - INTERVAL '1 day' * :window_days
+    """)
+
+    total_result = await session.execute(total_sql, {
+        "tenant_id": tenant_id,
+        "window_days": window_days,
+    })
+    total_incidents = total_result.scalar() or 0
+
+    # Category distribution
+    category_sql = text("""
+        SELECT COALESCE(category, 'uncategorized') as value, COUNT(*) as count
+        FROM incidents
+        WHERE tenant_id = :tenant_id
+          AND created_at >= NOW() - INTERVAL '1 day' * :window_days
+        GROUP BY category
+        ORDER BY count DESC
+    """)
+
+    category_result = await session.execute(category_sql, {
+        "tenant_id": tenant_id,
+        "window_days": window_days,
+    })
+
+    by_category: List[HistoricalDistributionEntry] = []
+    for row in category_result.mappings():
+        count = row["count"] or 0
+        pct = round(count / total_incidents * 100, 2) if total_incidents > 0 else 0
+        by_category.append(HistoricalDistributionEntry(
+            dimension="category",
+            value=row["value"],
+            count=count,
+            percentage=pct,
+        ))
+
+    # Severity distribution
+    severity_sql = text("""
+        SELECT COALESCE(severity, 'unknown') as value, COUNT(*) as count
+        FROM incidents
+        WHERE tenant_id = :tenant_id
+          AND created_at >= NOW() - INTERVAL '1 day' * :window_days
+        GROUP BY severity
+        ORDER BY count DESC
+    """)
+
+    severity_result = await session.execute(severity_sql, {
+        "tenant_id": tenant_id,
+        "window_days": window_days,
+    })
+
+    by_severity: List[HistoricalDistributionEntry] = []
+    for row in severity_result.mappings():
+        count = row["count"] or 0
+        pct = round(count / total_incidents * 100, 2) if total_incidents > 0 else 0
+        by_severity.append(HistoricalDistributionEntry(
+            dimension="severity",
+            value=row["value"],
+            count=count,
+            percentage=pct,
+        ))
+
+    # Cause type distribution
+    cause_sql = text("""
+        SELECT COALESCE(cause_type, 'unknown') as value, COUNT(*) as count
+        FROM incidents
+        WHERE tenant_id = :tenant_id
+          AND created_at >= NOW() - INTERVAL '1 day' * :window_days
+        GROUP BY cause_type
+        ORDER BY count DESC
+    """)
+
+    cause_result = await session.execute(cause_sql, {
+        "tenant_id": tenant_id,
+        "window_days": window_days,
+    })
+
+    by_cause_type: List[HistoricalDistributionEntry] = []
+    for row in cause_result.mappings():
+        count = row["count"] or 0
+        pct = round(count / total_incidents * 100, 2) if total_incidents > 0 else 0
+        by_cause_type.append(HistoricalDistributionEntry(
+            dimension="cause_type",
+            value=row["value"],
+            count=count,
+            percentage=pct,
+        ))
+
+    return HistoricalDistributionResponse(
+        by_category=by_category,
+        by_severity=by_severity,
+        by_cause_type=by_cause_type,
+        window_days=window_days,
+        total_incidents=total_incidents,
+        generated_at=datetime.now(timezone.utc),
+    )
+
+
+# =============================================================================
+# GET /incidents/historical/cost-trend - Backend-Computed Cost Trend
+# =============================================================================
+
+
+@router.get(
+    "/historical/cost-trend",
+    response_model=CostTrendResponse,
+    summary="Get historical cost trend (Backend Analytics)",
+    description="""
+    Returns time-series cost trend for historical incidents.
+    Backend-computed - frontend does NOT aggregate this.
+    """,
+)
+async def get_historical_cost_trend(
+    request: Request,
+    window_days: Annotated[int, Query(ge=7, le=365, description="Window in days")] = 90,
+    granularity: Annotated[str, Query(description="Aggregation granularity")] = "week",
+    session: AsyncSession = Depends(get_async_session_dep),
+) -> CostTrendResponse:
+    """Get historical cost trend. Backend-computed, deterministic."""
+    from datetime import timezone
+    from sqlalchemy import text
+
+    tenant_id = get_tenant_id_from_auth(request)
+
+    if granularity not in ("day", "week", "month"):
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "invalid_granularity", "message": "Must be: day, week, month"},
+        )
+
+    sql = text(f"""
+        SELECT
+            DATE_TRUNC(:granularity, created_at) AS period,
+            COALESCE(SUM(cost_impact), 0) AS total_cost,
+            COUNT(*) AS incident_count
+        FROM incidents
+        WHERE tenant_id = :tenant_id
+          AND created_at >= NOW() - INTERVAL '1 day' * :window_days
+        GROUP BY DATE_TRUNC(:granularity, created_at)
+        ORDER BY period ASC
+    """)
+
+    result = await session.execute(sql, {
+        "tenant_id": tenant_id,
+        "window_days": window_days,
+        "granularity": granularity,
+    })
+
+    data_points: List[CostTrendDataPoint] = []
+    total_cost = 0.0
+    total_incidents = 0
+
+    for row in result.mappings():
+        period_date = row["period"]
+        period_str = period_date.strftime("%Y-%m-%d") if period_date else "unknown"
+        cost = float(row["total_cost"]) if row["total_cost"] else 0.0
+        count = row["incident_count"] or 0
+
+        total_cost += cost
+        total_incidents += count
+
+        avg_cost = cost / count if count > 0 else 0.0
+
+        data_points.append(CostTrendDataPoint(
+            period=period_str,
+            total_cost=round(cost, 2),
+            incident_count=count,
+            avg_cost_per_incident=round(avg_cost, 2),
+        ))
+
+    return CostTrendResponse(
+        data_points=data_points,
+        granularity=granularity,
+        window_days=window_days,
+        total_cost=round(total_cost, 2),
+        total_incidents=total_incidents,
+        generated_at=datetime.now(timezone.utc),
+    )
+
+
+# =============================================================================
 # GET /incidents/{incident_id} - O3 Detail
 # =============================================================================
 
@@ -943,3 +1933,217 @@ async def get_incident_learnings(
         ],
         generated_at=result.generated_at,
     )
+
+
+# =============================================================================
+# Export Endpoints (BACKEND_REMEDIATION_PLAN GAP-004, GAP-005, GAP-008)
+# =============================================================================
+
+
+class ExportFormat(str, Enum):
+    """Export format options."""
+
+    JSON = "json"
+    PDF = "pdf"
+
+
+class ExportRequest(BaseModel):
+    """Request for export with optional parameters."""
+
+    format: ExportFormat = ExportFormat.JSON
+    export_reason: Optional[str] = None
+    prepared_for: Optional[str] = None  # For executive debrief
+
+
+@router.post(
+    "/{incident_id}/export/evidence",
+    summary="Export evidence bundle",
+    description="""
+    Export incident evidence bundle.
+
+    Formats:
+    - json: Structured EvidenceBundle as JSON
+    - pdf: Formatted PDF with trace timeline
+
+    Reference: BACKEND_REMEDIATION_PLAN.md GAP-008
+    """,
+)
+async def export_evidence(
+    request: Request,
+    incident_id: str,
+    export_request: ExportRequest,
+) -> Any:
+    """Export incident evidence bundle."""
+    from fastapi.responses import Response
+
+    from app.services.export_bundle_service import get_export_bundle_service
+    from app.services.pdf_renderer import get_pdf_renderer
+
+    tenant_id = get_tenant_id_from_auth(request)
+    auth_ctx = get_auth_context(request)
+    exported_by = getattr(auth_ctx, "user_id", "system") if auth_ctx else "system"
+
+    service = get_export_bundle_service()
+
+    try:
+        bundle = await service.create_evidence_bundle(
+            incident_id=incident_id,
+            exported_by=exported_by,
+            export_reason=export_request.export_reason,
+        )
+
+        # Verify tenant access
+        if bundle.tenant_id != tenant_id:
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "forbidden", "message": "Access denied to this incident"},
+            )
+
+        if export_request.format == ExportFormat.PDF:
+            renderer = get_pdf_renderer()
+            pdf_bytes = renderer.render_evidence_pdf(bundle)
+            return Response(
+                content=pdf_bytes,
+                media_type="application/pdf",
+                headers={
+                    "Content-Disposition": f'attachment; filename="evidence_{incident_id}.pdf"'
+                },
+            )
+
+        return wrap_dict(bundle.model_dump(mode="json"))
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "not_found", "message": str(e)},
+        )
+
+
+@router.post(
+    "/{incident_id}/export/soc2",
+    summary="Export SOC2 compliance bundle",
+    description="""
+    Export SOC2-compliant evidence bundle with control mappings.
+
+    Always returns PDF format with:
+    - Trust Service Criteria mappings (CC7.2, CC7.3, CC7.4)
+    - Attestation statement
+    - Full evidence trace
+
+    Reference: BACKEND_REMEDIATION_PLAN.md GAP-004
+    """,
+)
+async def export_soc2(
+    request: Request,
+    incident_id: str,
+    export_request: ExportRequest,
+) -> Any:
+    """Export SOC2-compliant bundle as PDF."""
+    from fastapi.responses import Response
+
+    from app.services.export_bundle_service import get_export_bundle_service
+    from app.services.pdf_renderer import get_pdf_renderer
+
+    tenant_id = get_tenant_id_from_auth(request)
+    auth_ctx = get_auth_context(request)
+    exported_by = getattr(auth_ctx, "user_id", "system") if auth_ctx else "system"
+
+    service = get_export_bundle_service()
+
+    try:
+        bundle = await service.create_soc2_bundle(
+            incident_id=incident_id,
+            exported_by=exported_by,
+        )
+
+        # Verify tenant access
+        if bundle.tenant_id != tenant_id:
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "forbidden", "message": "Access denied to this incident"},
+            )
+
+        if export_request.format == ExportFormat.PDF:
+            renderer = get_pdf_renderer()
+            pdf_bytes = renderer.render_soc2_pdf(bundle)
+            return Response(
+                content=pdf_bytes,
+                media_type="application/pdf",
+                headers={
+                    "Content-Disposition": f'attachment; filename="soc2_{incident_id}.pdf"'
+                },
+            )
+
+        return wrap_dict(bundle.model_dump(mode="json"))
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "not_found", "message": str(e)},
+        )
+
+
+@router.post(
+    "/{incident_id}/export/executive-debrief",
+    summary="Export executive debrief",
+    description="""
+    Export non-technical executive summary.
+
+    Always returns PDF format with:
+    - Incident summary (plain English)
+    - Business impact assessment
+    - Recommended actions
+    - Key metrics
+
+    Reference: BACKEND_REMEDIATION_PLAN.md GAP-005
+    """,
+)
+async def export_executive_debrief(
+    request: Request,
+    incident_id: str,
+    export_request: ExportRequest,
+) -> Any:
+    """Export executive debrief as PDF."""
+    from fastapi.responses import Response
+
+    from app.services.export_bundle_service import get_export_bundle_service
+    from app.services.pdf_renderer import get_pdf_renderer
+
+    tenant_id = get_tenant_id_from_auth(request)
+    auth_ctx = get_auth_context(request)
+    prepared_by = getattr(auth_ctx, "user_id", "system") if auth_ctx else "system"
+
+    service = get_export_bundle_service()
+
+    try:
+        bundle = await service.create_executive_debrief(
+            incident_id=incident_id,
+            prepared_for=export_request.prepared_for,
+            prepared_by=prepared_by,
+        )
+
+        # Verify tenant access
+        if bundle.tenant_id != tenant_id:
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "forbidden", "message": "Access denied to this incident"},
+            )
+
+        if export_request.format == ExportFormat.PDF:
+            renderer = get_pdf_renderer()
+            pdf_bytes = renderer.render_executive_debrief_pdf(bundle)
+            return Response(
+                content=pdf_bytes,
+                media_type="application/pdf",
+                headers={
+                    "Content-Disposition": f'attachment; filename="debrief_{incident_id}.pdf"'
+                },
+            )
+
+        return wrap_dict(bundle.model_dump(mode="json"))
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "not_found", "message": str(e)},
+        )

@@ -88,11 +88,16 @@ RBAC_RULES_PATH = Path(__file__).parent.parent.parent.parent / "design/auth/RBAC
 
 
 class AccessTier(str, Enum):
-    """Authorization access tiers."""
+    """Authorization access tiers.
+
+    PIN-440: MACHINE tier added for SDK/CLI machine-to-machine authentication.
+    Machine callers use API keys (X-AOS-Key) and have capabilities, not roles.
+    """
 
     PUBLIC = "PUBLIC"
     SESSION = "SESSION"
     PRIVILEGED = "PRIVILEGED"
+    MACHINE = "MACHINE"  # PIN-440: For SDK/CLI with X-AOS-Key auth
     SYSTEM = "SYSTEM"
 
 

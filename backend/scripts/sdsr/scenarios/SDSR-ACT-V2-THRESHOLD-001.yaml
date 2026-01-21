@@ -1,0 +1,112 @@
+# SDSR Verification Scenario
+# Scenario: SDSR-ACT-V2-THRESHOLD-001
+# Generated: 2026-01-19
+#
+# PURPOSE:
+#   Verify /activity/threshold-signals returns runs with
+#   typed threshold proximity information.
+#
+# REFERENCE:
+#   - ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
+#   - Panels: LIVE-O2, COMP-O4, SIG-O2
+
+scenario_id: SDSR-ACT-V2-THRESHOLD-001
+version: 1.0.0
+name: Threshold proximity signals with risk types
+description: |
+  Verifies that /activity/threshold-signals endpoint returns:
+  - Runs approaching or exceeding limits
+  - Typed by limit category (COST, TIME, TOKENS, RATE)
+  - Includes proximity_pct for NEAR_THRESHOLD assessment
+  - Ranked by severity (BREACH first, then by proximity)
+capability: activity.threshold_signals_v2
+panel_id: ACT-LLM-SIG-O2
+domain: ACTIVITY
+metadata:
+  generated_by: manual
+  generated_at: '2026-01-19T00:00:00+00:00'
+  panel_class: evidence
+  migration_phase: Phase2_Endpoint_Addition
+
+inject:
+  type: api_call
+  endpoint: /api/v1/activity/threshold-signals
+  method: GET
+  headers:
+    Authorization: Bearer ${AUTH_TOKEN}
+    Content-Type: application/json
+  params:
+    limit: 20
+
+expect:
+  status_code: 200
+  response_type: json
+  response_shape:
+    signals: list
+    total: int
+    risk_type_filter: null
+    generated_at: string
+
+invariants:
+  - id: INV-THR-001
+    name: signal_has_required_fields
+    description: Each signal has run_id, limit_type, proximity_pct, evaluation_outcome, policy_context
+    assertion: |
+      all(
+        'run_id' in sig and
+        'limit_type' in sig and
+        'proximity_pct' in sig and
+        'evaluation_outcome' in sig and
+        'policy_context' in sig
+        for sig in response.get('signals', [])
+      )
+  - id: INV-THR-002
+    name: proximity_pct_valid
+    description: proximity_pct is a number >= 0
+    assertion: |
+      all(
+        isinstance(sig.get('proximity_pct'), (int, float)) and sig.get('proximity_pct') >= 0
+        for sig in response.get('signals', [])
+      )
+  - id: INV-THR-003
+    name: evaluation_outcome_valid
+    description: evaluation_outcome is from valid set
+    assertion: |
+      valid_outcomes = {'OK', 'NEAR_THRESHOLD', 'BREACH', 'OVERRIDDEN'}
+      all(
+        sig.get('evaluation_outcome') in valid_outcomes
+        for sig in response.get('signals', [])
+      )
+  - id: INV-THR-004
+    name: no_advisory_signals
+    description: ADVISORY outcomes are excluded (no actual limit)
+    assertion: |
+      all(
+        sig.get('evaluation_outcome') != 'ADVISORY'
+        for sig in response.get('signals', [])
+      )
+  - id: INV-THR-005
+    name: breach_ranked_first
+    description: BREACH signals appear before NEAR_THRESHOLD
+    assertion: |
+      signals = response.get('signals', [])
+      outcomes = [s.get('evaluation_outcome') for s in signals]
+      breach_indices = [i for i, o in enumerate(outcomes) if o == 'BREACH']
+      near_indices = [i for i, o in enumerate(outcomes) if o == 'NEAR_THRESHOLD']
+      not breach_indices or not near_indices or max(breach_indices) < min(near_indices)
+
+cleanup:
+  required: false
+  note: Read-only observation, no cleanup needed
+
+on_success:
+  update_capability_status: OBSERVED
+  emit_observation: true
+
+on_failure:
+  update_capability_status: null
+  emit_observation: true
+  failure_taxonomy:
+    endpoint_missing: V2 /activity/threshold-signals route does not exist
+    missing_proximity: proximity_pct not computed
+    ranking_broken: Signals not properly ranked by severity

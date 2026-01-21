@@ -1,38 +1,40 @@
-# AURORA_L2 Capability Registry - Incidents Pattern Detection
-# Status: DECLARED (awaiting E2E validation per CAP-E2E-001)
-# Reference: docs/architecture/incidents/INCIDENTS_DOMAIN_SQL.md#5-act-o4
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
 #
 capability_id: incidents.patterns
-status: DECLARED
+status: OBSERVED
 source_panels:
-  - INC-EV-ACT-O4
+- INC-EV-HIST-O5
 domain: INCIDENTS
 metadata:
-  generated_by: manual
-  generated_on: '2026-01-17'
-  declared_by: claude-implementation
-  declared_on: '2026-01-17'
-  # observed_by: null  # Set by SDSR only
-  # observed_on: null  # Set by SDSR only
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
+  declared_by: intent-ledger
+  declared_on: '2026-01-20'
+  observed_by: SDSR-INC-EV-HIST-O5-001
+  observed_on: '2026-01-18'
 assumption:
   endpoint: /api/v1/incidents/patterns
   method: GET
-  source: INCIDENTS_DOMAIN_SQL
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: /api/v1/incidents/patterns
+  observed_method: GET
+  observed_at: '2026-01-18T12:02:00.057255+00:00'
+  observation_id: OBS-SDSR-INC-EV-HIST-O5-001-20260118120151
 acceptance_criteria:
-  - Returns detected incident patterns
-  - Includes category_cluster patterns
-  - Includes severity_spike patterns
-  - Includes cascade_failure patterns
-  - Response includes confidence scores
-implementation:
-  endpoint: /api/v1/incidents/patterns
-  method: GET
-  handler: app.api.incidents.detect_patterns
-  service: app.services.incidents.IncidentPatternService
-auth:
-  roles: [admin, member]
-  permissions: [incidents:read]
-notes:
-  - "L4 service: IncidentPatternService"
-  - "Read-only analytics, no writes"
-  - "Tenant-scoped via auth_context"
+- Returns integration statistics
+- Response includes policy associations
+observation:
+  scenario_id: SDSR-INC-EV-HIST-O5-001
+  observed_at: '2026-01-18T12:02:00.057255+00:00'
+  trace_id: null
+  invariants_passed: 3
+  invariants_total: 3
+coherency:
+  last_checked: '2026-01-18T12:02:00.057255+00:00'
+  status: PASSED
+  checked_by: aurora_sdsr_runner.py

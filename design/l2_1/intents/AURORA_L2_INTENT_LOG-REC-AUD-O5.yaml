@@ -32,7 +32,13 @@ controls:
   filtering: false
   activate: false
   confirmation_required: false
-capability: null
-sdsr: null
+capability:
+  id: logs.audit
+  status: DECLARED
+  assumed_endpoint: /api/v1/logs/audit/exports
+  assumed_method: GET
+sdsr:
+  scenario: SDSR-LOG-REC-AUD-O5-001
+  verified: false
 notes: Show compliance and export record — what audit evidence was produced, shared,
   or certified.

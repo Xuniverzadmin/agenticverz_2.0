@@ -1,0 +1,42 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
+#
+capability_id: incidents.metrics_v2
+status: OBSERVED
+source_panels:
+- INC-EV-ACT-O3, INC-EV-RES-O3
+domain: INCIDENTS
+metadata:
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
+  declared_by: intent-ledger
+  declared_on: '2026-01-20'
+  observed_by: DEFERRED
+assumption:
+  endpoint: 'null'
+  method: GET
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: /api/v1/incidents/metrics
+  observed_method: GET
+  observed_at: '2026-01-18T14:00:00+00:00'
+  observation_id: OBS-PHASE4-INC-METRICS-001
+acceptance_criteria:
+- Capability behavior verified
+observation:
+  scenario_id: PHASE4-INC-MIGRATION
+  observed_at: '2026-01-18T14:00:00+00:00'
+  trace_id: null
+  invariants_passed: 3
+  invariants_total: 3
+  evidence:
+  - Phase 2 shadow validation passed (shape correct, NULLs documented)
+  - Returns dedicated metrics (total_active, total_resolved, by_severity)
+  - Schema gaps documented (contained_at, sla_target_seconds)
+coherency:
+  last_checked: '2026-01-18T14:00:00+00:00'
+  status: PASSED
+  checked_by: phase4-migration

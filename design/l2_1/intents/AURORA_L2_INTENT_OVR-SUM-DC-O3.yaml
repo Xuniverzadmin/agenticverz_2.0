@@ -34,9 +34,12 @@ controls:
   confirmation_required: false
 capability:
   id: overview.recovery_stats
-  status: ASSUMED
-  assumed_endpoint: null
+  status: DECLARED
+  assumed_endpoint: /api/v1/overview/recovery-stats
   assumed_method: GET
+sdsr:
+  scenario: PENDING
+  verified: false
 notes: 'Identify recurrent human decisions that should become policy —
 
   where humans are acting as rate limiters instead of governance.

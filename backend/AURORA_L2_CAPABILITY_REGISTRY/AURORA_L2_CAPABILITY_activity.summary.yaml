@@ -1,6 +1,6 @@
 # AURORA L2 Capability Registry Entry
 # Capability: activity.summary
-# Last Updated: 2026-01-15T17:38:08.791574+00:00
+# Last Updated: 2026-01-18T10:07:50.239736+00:00
 # Updated By: aurora_apply_observation.py
 #
 # STATUS: OBSERVED
@@ -21,16 +21,16 @@ metadata:
   declared_by: AURORA_AUTOMATION
   declared_on: '2026-01-15'
   observed_by: SDSR-ACT-LLM-COMP-O2-001
-  observed_on: '2026-01-15'
+  observed_on: '2026-01-18'
 coherency:
-  last_checked: '2026-01-15T06:41:08.371887+00:00'
+  last_checked: '2026-01-18T10:04:39.131558+00:00'
   status: PASSED
   checked_by: aurora_sdsr_runner.py
 observation:
   scenario_id: SDSR-ACT-LLM-COMP-O2-001
-  observed_at: '2026-01-15T06:41:08.371887+00:00'
+  observed_at: '2026-01-18T10:04:39.131558+00:00'
   trace_id: null
-  invariants_passed: 3
+  invariants_passed: 0
   invariants_total: 3
 acceptance_criteria:
 - Endpoint exists and responds
@@ -38,11 +38,11 @@ acceptance_criteria:
 - Auth works correctly
 - Data is real (not mock)
 binding:
-  observed_endpoint: null
-  observed_method: null
-  observed_at: '2026-01-15T06:41:08.371887+00:00'
-  observation_id: OBS-SDSR-ACT-LLM-COMP-O2-001-20260115064107
+  observed_endpoint: /api/v1/activity/summary
+  observed_method: GET
+  observed_at: '2026-01-18T10:04:39.131558+00:00'
+  observation_id: OBS-SDSR-ACT-LLM-COMP-O2-001-20260118100439
 assumption:
   endpoint: null
-  method: null
+  method: GET
   source: INTENT_LEDGER

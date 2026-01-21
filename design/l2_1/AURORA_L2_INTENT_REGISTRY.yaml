@@ -1,6 +1,6 @@
 # AURORA L2 Intent Registry
 # Generated/Updated by: aurora_intent_registry_sync.py
-# Last Updated: 2026-01-15T15:19:01.447277+00:00
+# Last Updated: 2026-01-19T18:30:12.363274+00:00
 #
 # Status values:
 #   DRAFT    - Intent created, awaiting human review
@@ -32,7 +32,7 @@ intents:
     topic: HIGHLIGHTS
     order: O1
     capability: overview.activity_snapshot
-    sdsr_verified: true
+    sdsr_verified: false
   OVW-SH-CS-O1:
     status: UNREVIEWED
     spec_path: design/l2_1/intents/OVW-SH-CS-O1.yaml
@@ -593,7 +593,7 @@ intents:
     topic: HIGHLIGHTS
     order: O2
     capability: overview.incident_snapshot
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 3ebaa31279b706a7c4b980204cd3ed0aa26354fedcda5734d11b82953938fe4e
   OVR-SUM-HL-O3:
@@ -619,7 +619,7 @@ intents:
     topic: HIGHLIGHTS
     order: O4
     capability: overview.policy_snapshot
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: d37e7e7a2eece2fdbed4bcf91d317699311b9479ac7b0d713347f50a0db05fd1
   OVR-SUM-CI-O1:
@@ -632,7 +632,7 @@ intents:
     topic: COST_INTELLIGENCE
     order: O1
     capability: overview.cost_summary
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 2148d5d4100795b6d2c1d936fec1e80163e51189b71b81649424653e09e54ea2
   ACT-LLM-COMP-O1:
@@ -658,7 +658,7 @@ intents:
     topic: ACTIVE
     order: O1
     capability: incidents.list
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 6e57ff58cd5f13442d776b3722133a594ae845ea79fb4af920474739e29054cb
   POL-GOV-ACT-O1:
@@ -671,7 +671,7 @@ intents:
     topic: ACTIVE
     order: O1
     capability: policies.proposals_list
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 89774f0544126036f0fcf707a65769329c43d159c55d4c09452358859ae1f04e
   LOG-REC-AUD-O1:
@@ -684,7 +684,7 @@ intents:
     topic: AUDIT
     order: O1
     capability: logs.traces_list
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 1af8782834bcc80be13bb0c7fd2b532025463bc961644a786a435aa482a94be8
   OVR-SUM-CI-O2:
@@ -697,7 +697,7 @@ intents:
     topic: CI
     order: O2
     capability: overview.cost_by_feature
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 127b2bb03fb1fdf4888d3893cba3299090a12bd6e4e27fb94541f9365fb129d0
   OVR-SUM-CI-O3:
@@ -710,7 +710,7 @@ intents:
     topic: CI
     order: O3
     capability: overview.cost_by_model
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: a13425e191d612113b417bde1f06aafc929713f202d3b2a02f3afa67174c6931
   OVR-SUM-CI-O4:
@@ -723,7 +723,7 @@ intents:
     topic: CI
     order: O4
     capability: overview.cost_anomalies
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: b25fb368994a03859b8a83f6723cbef2c1259aac1e2bfb2955af1edafb3b629d
   OVR-SUM-DC-O1:
@@ -736,7 +736,7 @@ intents:
     topic: DC
     order: O1
     capability: overview.decisions_list
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 62635c9345ff159a42672f752be30ddea47c490d5a03612a8aff154bb10bad9b
   OVR-SUM-DC-O2:
@@ -749,7 +749,7 @@ intents:
     topic: DC
     order: O2
     capability: overview.decisions_count
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 914d9fd4cd75bd94cec3dd00b05f27b1c7128f2cd3ed1522e4a3d04f023a08c0
   OVR-SUM-DC-O3:
@@ -762,7 +762,7 @@ intents:
     topic: DC
     order: O3
     capability: overview.recovery_stats
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: e03b573d2ab3718dc1358b4168c18882777f3e4d7bd83c6d79b3454a716ee07c
   OVR-SUM-DC-O4:
@@ -775,7 +775,7 @@ intents:
     topic: DC
     order: O4
     capability: overview.feedback_summary
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 14103de9dfdeaedb08b3502d4ca9e6517ee89934d6da3f4f27b89fac1ab75a46
   ACT-LLM-COMP-O2:
@@ -788,7 +788,7 @@ intents:
     topic: COMP
     order: O2
     capability: activity.summary
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 4bb14dc8d50733a1f51a900ac362fd6fbe6127361df43a9e43a14b3eaadad607
   ACT-LLM-COMP-O3:
@@ -814,7 +814,7 @@ intents:
     topic: COMP
     order: O4
     capability: activity.customer_activity
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: ff224b7c5bedf2e1f4454ed9214d8a3faeca2432d0d4c663aea2af1424d31d4c
   ACT-LLM-COMP-O5:
@@ -827,7 +827,7 @@ intents:
     topic: COMP
     order: O5
     capability: activity.runtime_traces
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 12e2f1cc3ad1a40a1487559ae135b1fa5f5f18c9c3ff9cedc33b65101ab27df8
   ACT-LLM-LIVE-O1:
@@ -866,7 +866,7 @@ intents:
     topic: LIVE
     order: O3
     capability: activity.jobs_list
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: c17784c7dc00a274f9fdf10bd1b30e1dcf670ea886eae53bbe8839b639d41a1b
   ACT-LLM-LIVE-O4:
@@ -879,7 +879,7 @@ intents:
     topic: LIVE
     order: O4
     capability: activity.worker_runs
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: c26ae0267ab3e52987c162d3a6d9c1f273fcaedb3c4eac9c3594d66227748c80
   ACT-LLM-LIVE-O5:
@@ -892,7 +892,7 @@ intents:
     topic: LIVE
     order: O5
     capability: activity.health_status
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: ef95a25eacdb4ca6b67da7875f672dad3ba2684287f454c68b5b19612429dfdf
   ACT-LLM-SIG-O1:
@@ -905,7 +905,7 @@ intents:
     topic: SIG
     order: O1
     capability: activity.feedback_list
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: a64d24b1d222b2cffb1772d40595393d40111b1bcf3d96f7649d531231ecc8ea
   ACT-LLM-SIG-O2:
@@ -918,7 +918,7 @@ intents:
     topic: SIG
     order: O2
     capability: activity.predictions_list
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 16066c29291bed89265cf67f53d226414d641c329a73df8c126f126980cb5d97
   ACT-LLM-SIG-O3:
@@ -931,7 +931,7 @@ intents:
     topic: SIG
     order: O3
     capability: activity.predictions_summary
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 382ccf8eab2d1cdcac1f3cb220d51aca8580de2ce9691988d8ca7dd2cb672ca9
   ACT-LLM-SIG-O4:
@@ -957,7 +957,7 @@ intents:
     topic: SIG
     order: O5
     capability: activity.discovery_stats
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: abc07a6813771050face9fb92b2097d9e730e5395fb434fc12da1f482a19e224
   INC-EV-ACT-O2:
@@ -970,7 +970,7 @@ intents:
     topic: ACT
     order: O2
     capability: incidents.summary
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: eb2ad7015e6f8511fa2a08b99459cd3e783314ab9923ca6152172f1a4a8ea10d
   INC-EV-ACT-O3:
@@ -983,7 +983,7 @@ intents:
     topic: ACT
     order: O3
     capability: incidents.metrics
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 9cb0efca63e0f75a70708e86f93c865753e2b1c9c847dc9714a5567955e0a107
   INC-EV-ACT-O4:
@@ -1022,7 +1022,7 @@ intents:
     topic: HIST
     order: O1
     capability: incidents.historical_list
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 8c6cbf9cda356583bf9927dd8abd96b155e87445487ce8c9bd58a91e9024721a
   INC-EV-HIST-O2:
@@ -1074,7 +1074,7 @@ intents:
     topic: HIST
     order: O5
     capability: incidents.integration_stats
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 38fb3fe00c22199aad1cdb4c78cfd0bd29fea7dd0f39e43834bbd9d787942ee6
   INC-EV-RES-O1:
@@ -1087,7 +1087,7 @@ intents:
     topic: RES
     order: O1
     capability: incidents.resolved_list
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 99a45d3038ef5f6b794fb530816398ffeccd47b9470bcc138f2ec455c67d82da
   INC-EV-RES-O2:
@@ -1100,7 +1100,7 @@ intents:
     topic: RES
     order: O2
     capability: incidents.recovery_actions
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: bd2c44a2556a384c64dd70e563e62e05c6715a43a66e6f391b0896f81d5423fc
   INC-EV-RES-O3:
@@ -1113,7 +1113,7 @@ intents:
     topic: RES
     order: O3
     capability: incidents.recovery_candidates
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 738ad01536ad7e9eca6ea6951ecfaefc4075c2232dd5fddbcf6b28b991103c6f
   INC-EV-RES-O4:
@@ -1126,7 +1126,7 @@ intents:
     topic: RES
     order: O4
     capability: incidents.graduation_list
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 54db3c8d58e2f6d4adda5edbe2b951168d2ac0b226a235d9aee6fca50fc6011f
   INC-EV-RES-O5:
@@ -1152,7 +1152,7 @@ intents:
     topic: ACT
     order: O2
     capability: policies.proposals_summary
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 163e247e359a7dd8b1f3c8aa4e1c6586a939a4e0d89be5f4ea77897eb0786cf9
   POL-GOV-ACT-O3:
@@ -1204,7 +1204,7 @@ intents:
     topic: DFT
     order: O1
     capability: policies.drafts_list
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: a1bf514c8f0c78779bcbbf8daceb3fc76d93f6d336368fcf9d432df9f2bf0c53
   POL-GOV-DFT-O2:
@@ -1529,7 +1529,7 @@ intents:
     topic: AUD
     order: O2
     capability: logs.rbac_audit
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: ae0c0f45d6e126b29501b5a8159aa395874abcf9fdbce2252d98c1b51bcb00e2
   LOG-REC-AUD-O3:
@@ -1542,7 +1542,7 @@ intents:
     topic: AUD
     order: O3
     capability: logs.ops_audit
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 2129b1966f7be8a20298c021bccdb7352452316977c874076613d83f905bbc4e
   LOG-REC-AUD-O4:
@@ -1555,7 +1555,7 @@ intents:
     topic: AUD
     order: O4
     capability: logs.status_history
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 06eec78f565dc266578e8d2a988641e0f30c8edea27d03e2bf3fba297d28c219
   LOG-REC-AUD-O5:
@@ -1568,7 +1568,7 @@ intents:
     topic: AUD
     order: O5
     capability: logs.status_stats
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 0cde9c533f5565c778475e37fb8c6a2a2457afb2472ca69c9948f6d846929769
   LOG-REC-LLM-O1:
@@ -1581,7 +1581,7 @@ intents:
     topic: LLM
     order: O1
     capability: logs.runtime_traces
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 9dd86a66e48d3c23fdd812abc4093cc5a7fad3f995a182838c9dc1cc7f99af6f
   LOG-REC-LLM-O2:
@@ -1594,7 +1594,7 @@ intents:
     topic: LLM
     order: O2
     capability: logs.activity_runs
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 650209034bc4775cd207c9205feb80ef2c831a56b3ad47d81c3440ef2c39fbab
   LOG-REC-LLM-O3:
@@ -1607,7 +1607,7 @@ intents:
     topic: LLM
     order: O3
     capability: logs.customer_runs
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: bb08a872ca94eb395228cec1ad4941b9d9b207fd590f612588a16060b961a54c
   LOG-REC-LLM-O4:
@@ -1633,7 +1633,7 @@ intents:
     topic: LLM
     order: O5
     capability: logs.mismatch_report
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 1a266349db8b8d6b002967a5e1b6981f9527e80da07f4554e08d1230356fa3c6
   LOG-REC-SYS-O1:
@@ -1646,7 +1646,7 @@ intents:
     topic: SYS
     order: O1
     capability: logs.guard_logs
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 75bbba9420a1c95188cc2bee1e80e2822adf789643d5cc14461fb2d534a58e3a
   LOG-REC-SYS-O2:
@@ -1659,7 +1659,7 @@ intents:
     topic: SYS
     order: O2
     capability: logs.health_check
-    sdsr_verified: true
+    sdsr_verified: false
     approved_at: '2026-01-15'
     frozen_hash: 255841f172531c8b945f48fe4de2444f223bbd30b5e592daf9022b0a653ef244
   LOG-REC-SYS-O3:
@@ -1777,3 +1777,80 @@ intents:
     sdsr_verified: true
     approved_at: '2026-01-15'
     frozen_hash: 52d4ec6f8aadb14caf5f3dd94798141a1789a9f9c19cdefb99044eea20dfba64
+  POL-GOV-LES-O5:
+    status: DRAFT
+    spec_path: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LES-O5.yaml
+    added_at: '2026-01-18'
+    reviewed_by: null
+    domain: POLICIES
+    subdomain: GOVERNANCE
+    topic: LESSONS
+    order: O5
+    capability: lessons.history
+    sdsr_verified: false
+  POL-GOV-LES-O1:
+    status: DRAFT
+    spec_path: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LES-O1.yaml
+    added_at: '2026-01-18'
+    reviewed_by: null
+    domain: POLICIES
+    subdomain: GOVERNANCE
+    topic: LESSONS
+    order: O1
+    capability: lessons.list
+    sdsr_verified: false
+  POL-GOV-LES-O3:
+    status: DRAFT
+    spec_path: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LES-O3.yaml
+    added_at: '2026-01-18'
+    reviewed_by: null
+    domain: POLICIES
+    subdomain: GOVERNANCE
+    topic: LESSONS
+    order: O3
+    capability: lessons.convert_to_draft
+    sdsr_verified: false
+  POL-GOV-LES-O4:
+    status: DRAFT
+    spec_path: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LES-O4.yaml
+    added_at: '2026-01-18'
+    reviewed_by: null
+    domain: POLICIES
+    subdomain: GOVERNANCE
+    topic: LESSONS
+    order: O4
+    capability: lessons.dismiss_or_defer
+    sdsr_verified: false
+  POL-GOV-LES-O2:
+    status: DRAFT
+    spec_path: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LES-O2.yaml
+    added_at: '2026-01-18'
+    reviewed_by: null
+    domain: POLICIES
+    subdomain: GOVERNANCE
+    topic: LESSONS
+    order: O2
+    capability: lessons.get
+    sdsr_verified: false
+  POL-GOV-LES-O6:
+    status: DRAFT
+    spec_path: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LES-O6.yaml
+    added_at: '2026-01-19'
+    reviewed_by: null
+    domain: POLICIES
+    subdomain: GOVERNANCE
+    topic: LESSONS
+    order: O6
+    capability: lessons.list
+    sdsr_verified: false
+  POL-GOV-LES-O7:
+    status: DRAFT
+    spec_path: design/l2_1/intents/AURORA_L2_INTENT_POL-GOV-LES-O7.yaml
+    added_at: '2026-01-19'
+    reviewed_by: null
+    domain: POLICIES
+    subdomain: GOVERNANCE
+    topic: LESSONS
+    order: O7
+    capability: lessons.get
+    sdsr_verified: false

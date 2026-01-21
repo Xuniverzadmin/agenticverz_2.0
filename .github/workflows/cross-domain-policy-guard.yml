@@ -1,0 +1,166 @@
+name: Cross-Domain Policy Guard
+
+# Enforces cross-domain boundary invariants for Policy V2 Facade
+# Reference: docs/contracts/CROSS_DOMAIN_INVARIANTS.md, PIN-447
+#
+# Invariants enforced:
+# - INV-BOUND-001: Facade-only cross-domain access
+# - INV-BOUND-002: No internal import leakage
+# - INV-CAP-001: Five cross-domain capabilities only
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/app/api/activity.py'
+      - 'backend/app/api/incidents.py'
+      - 'backend/app/api/policy.py'
+      - 'backend/app/api/policies.py'
+      - 'backend/AURORA_L2_CAPABILITY_REGISTRY/**'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/app/api/activity.py'
+      - 'backend/app/api/incidents.py'
+      - 'backend/app/api/policy.py'
+      - 'backend/app/api/policies.py'
+      - 'backend/AURORA_L2_CAPABILITY_REGISTRY/**'
+
+jobs:
+  cross-domain-guard:
+    name: Cross-Domain Policy Boundaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: "INV-BOUND-002: Activity cannot import internal policy"
+        run: |
+          echo "Checking Activity domain for forbidden policy imports..."
+          cd backend
+
+          VIOLATIONS=$(grep -n "from app.services.policy" app/api/activity.py 2>/dev/null || true)
+          VIOLATIONS+=$(grep -n "from app.models.policy_control_plane" app/api/activity.py 2>/dev/null || true)
+          VIOLATIONS+=$(grep -n "internal\.policy" app/api/activity.py 2>/dev/null || true)
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::INV-BOUND-002 VIOLATION: Activity imports internal policy services"
+            echo "Activity domain must only use Policy V2 facade (policy_context refs)"
+            echo ""
+            echo "Violations found:"
+            echo "$VIOLATIONS"
+            echo ""
+            echo "Reference: docs/contracts/CROSS_DOMAIN_INVARIANTS.md"
+            exit 1
+          fi
+
+          echo "Activity domain: No forbidden policy imports found"
+
+      - name: "INV-BOUND-002: Incidents cannot import internal policy"
+        run: |
+          echo "Checking Incidents domain for forbidden policy imports..."
+          cd backend
+
+          VIOLATIONS=$(grep -n "from app.services.policy" app/api/incidents.py 2>/dev/null || true)
+          VIOLATIONS+=$(grep -n "from app.models.policy_control_plane" app/api/incidents.py 2>/dev/null || true)
+          VIOLATIONS+=$(grep -n "internal\.policy" app/api/incidents.py 2>/dev/null || true)
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::INV-BOUND-002 VIOLATION: Incidents imports internal policy services"
+            echo "Incidents domain must only use Policy V2 facade (policy_ref, violation_ref)"
+            echo ""
+            echo "Violations found:"
+            echo "$VIOLATIONS"
+            echo ""
+            echo "Reference: docs/contracts/CROSS_DOMAIN_INVARIANTS.md"
+            exit 1
+          fi
+
+          echo "Incidents domain: No forbidden policy imports found"
+
+      - name: "INV-CAP-001: Only five cross-domain policy capabilities"
+        run: |
+          echo "Checking capability registry for policy.* capabilities..."
+          cd backend
+
+          # Count policy.* capabilities (should be exactly 5)
+          POLICY_CAPS=$(ls AURORA_L2_CAPABILITY_REGISTRY/AURORA_L2_CAPABILITY_policy.*.yaml 2>/dev/null | wc -l)
+
+          if [ "$POLICY_CAPS" -gt 5 ]; then
+            echo "::error::INV-CAP-001 VIOLATION: More than 5 policy.* capabilities found"
+            echo "Only these 5 cross-domain capabilities are allowed:"
+            echo "  - policy.active"
+            echo "  - policy.library"
+            echo "  - policy.lessons"
+            echo "  - policy.thresholds"
+            echo "  - policy.violations"
+            echo ""
+            echo "Found $POLICY_CAPS capabilities:"
+            ls AURORA_L2_CAPABILITY_REGISTRY/AURORA_L2_CAPABILITY_policy.*.yaml
+            echo ""
+            echo "Adding new capabilities requires SDSR + architectural approval."
+            echo "Reference: docs/contracts/CROSS_DOMAIN_INVARIANTS.md"
+            exit 1
+          fi
+
+          echo "Policy capabilities count: $POLICY_CAPS (allowed: 5)"
+
+      - name: "INV-BOUND-001: Validate facade endpoints are read-only"
+        run: |
+          echo "Checking Policy V2 facade for mutation endpoints..."
+          cd backend
+
+          # Check for POST/PUT/DELETE/PATCH in policy.py facade endpoints
+          # (Approval workflow endpoints are allowed, but new mutations need review)
+          MUTATION_PATTERNS=$(grep -n "@router\.\(post\|put\|delete\|patch\)" app/api/policy.py 2>/dev/null | grep -v "approval" | grep -v "policy-v2-facade" || true)
+
+          if [ -n "$MUTATION_PATTERNS" ]; then
+            echo "::warning::INV-BOUND-001: Policy facade has mutation endpoints"
+            echo "Cross-domain consumers should only READ from policy facade."
+            echo ""
+            echo "Mutation endpoints found (review required):"
+            echo "$MUTATION_PATTERNS"
+            echo ""
+            echo "Reference: docs/contracts/CROSS_DOMAIN_INVARIANTS.md"
+            # Warning only - some mutation endpoints may be intentional for governance
+          fi
+
+          echo "Facade endpoint check complete"
+
+      - name: "Cross-Domain Reference Validation"
+        run: |
+          echo "Validating cross-domain reference patterns..."
+          cd backend
+
+          # Check that Activity uses facade_ref pattern
+          if grep -q "facade_ref" app/api/activity.py; then
+            echo "Activity: facade_ref pattern found (correct)"
+          else
+            echo "::warning::Activity may be missing facade_ref for policy navigation"
+          fi
+
+          # Check that Incidents uses policy_ref/violation_ref pattern
+          if grep -q "policy_ref\|violation_ref" app/api/incidents.py; then
+            echo "Incidents: policy_ref/violation_ref patterns found (correct)"
+          else
+            echo "::warning::Incidents may be missing policy_ref/violation_ref for navigation"
+          fi
+
+          echo "Reference validation complete"
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "=================================="
+          echo "Cross-Domain Policy Guard Summary"
+          echo "=================================="
+          echo ""
+          echo "Invariants checked:"
+          echo "  - INV-BOUND-001: Facade-only access"
+          echo "  - INV-BOUND-002: No internal imports"
+          echo "  - INV-CAP-001: Five capabilities only"
+          echo ""
+          echo "Reference: docs/contracts/CROSS_DOMAIN_INVARIANTS.md"
+          echo "Reference: PIN-447, POLICY_DOMAIN_V2_DESIGN.md"

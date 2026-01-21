@@ -1,17 +1,19 @@
 {
-  "observation_id": "OBS-SDSR-OVR-SUM-DC-O4-001-20260115072908",
+  "observation_id": "OBS-SDSR-OVR-SUM-DC-O4-001-20260118100430",
   "scenario_id": "SDSR-OVR-SUM-DC-O4-001",
   "capability_id": "overview.feedback_summary",
   "panel_id": "OVR-SUM-DC-O4",
-  "status": "PASS",
-  "observed_at": "2026-01-15T07:29:09.439869+00:00",
-  "endpoint": "/api/v1/feedback/stats/summary",
-  "method": "GET",
-  "response_status_code": 200,
-  "response_time_ms": 1003.2284259796143,
+  "status": "FAIL",
+  "observed_at": "2026-01-18T10:04:30.560649+00:00",
+  "assumed_endpoint": null,
+  "observed_endpoint": "/api/v1/feedback/stats/summary",
+  "assumed_method": "GET",
+  "observed_method": "GET",
+  "response_status_code": 422,
+  "response_time_ms": 15.433073043823242,
   "invariants_total": 3,
-  "invariants_passed": 3,
-  "invariants_failed": 0,
+  "invariants_passed": 2,
+  "invariants_failed": 1,
   "invariant_results": [
     {
       "id": "INV-001",
@@ -22,8 +24,8 @@
     {
       "id": "INV-002",
       "name": "status_code",
-      "status": "PASS",
-      "message": "Assertion passed: status_code == 200"
+      "status": "FAIL",
+      "message": "Assertion failed: status_code == 200"
     },
     {
       "id": "INV-003",
@@ -32,8 +34,8 @@
       "message": "Assertion passed: status_code != 401 and status_code != 403"
     }
   ],
-  "failure_reason": null,
-  "failure_taxonomy": null,
+  "failure_reason": "1 invariant(s) failed",
+  "failure_taxonomy": "INVARIANT_VIOLATED",
   "coherency_verified": true,
   "trace_id": null
 }

@@ -33,10 +33,13 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: activity.runtime_traces
-  status: ASSUMED
-  assumed_endpoint: null
+  id: activity.run_detail
+  status: DECLARED
+  assumed_endpoint: /api/v1/activity/runs/{run_id}
   assumed_method: GET
+sdsr:
+  scenario: PENDING
+  verified: false
 notes: 'Show runs that ended intentionally before completion.
 
 

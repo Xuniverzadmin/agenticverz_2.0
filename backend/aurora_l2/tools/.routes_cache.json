@@ -1,4 +1,55 @@
 {
+  "/api/v1/overview/highlights": [
+    "GET"
+  ],
+  "/api/v1/overview/decisions": [
+    "GET"
+  ],
+  "/api/v1/overview/costs": [
+    "GET"
+  ],
+  "/api/v1/overview/decisions/count": [
+    "GET"
+  ],
+  "/api/v1/overview/recovery-stats": [
+    "GET"
+  ],
+  "/enforcement/check": [
+    "POST"
+  ],
+  "/enforcement/status": [
+    "GET"
+  ],
+  "/enforcement/batch": [
+    "POST"
+  ],
+  "/api/v1/connectivity/integrations": [
+    "GET"
+  ],
+  "/api/v1/connectivity/integrations/{integration_id}": [
+    "GET"
+  ],
+  "/api/v1/connectivity/api-keys": [
+    "GET"
+  ],
+  "/api/v1/connectivity/api-keys/{key_id}": [
+    "GET"
+  ],
+  "/telemetry/llm-usage": [
+    "POST"
+  ],
+  "/telemetry/llm-usage/batch": [
+    "POST"
+  ],
+  "/telemetry/usage-summary": [
+    "GET"
+  ],
+  "/telemetry/usage-history": [
+    "GET"
+  ],
+  "/telemetry/daily-aggregates": [
+    "GET"
+  ],
   "/guard/costs/summary": [
     "GET"
   ],
@@ -85,23 +136,61 @@
   "/guard/logs/{log_id}": [
     "GET"
   ],
-  "/api/v1/incidents/summary": [
-    "GET"
-  ],
   "/api/v1/incidents": [
-    "GET"
-  ],
-  "/api/v1/incidents/metrics": [
-    "GET"
-  ],
-  "/api/v1/incidents/{incident_id}": [
     "GET"
   ],
   "/api/v1/incidents/by-run/{run_id}": [
     "GET"
   ],
-  "/api/v1/incidents/trigger": [
-    "POST"
+  "/api/v1/incidents/patterns": [
+    "GET"
+  ],
+  "/api/v1/incidents/recurring": [
+    "GET"
+  ],
+  "/api/v1/incidents/cost-impact": [
+    "GET"
+  ],
+  "/api/v1/incidents/active": [
+    "GET"
+  ],
+  "/api/v1/incidents/resolved": [
+    "GET"
+  ],
+  "/api/v1/incidents/historical": [
+    "GET"
+  ],
+  "/api/v1/incidents/metrics": [
+    "GET"
+  ],
+  "/api/v1/incidents/historical/trend": [
+    "GET"
+  ],
+  "/api/v1/incidents/historical/distribution": [
+    "GET"
+  ],
+  "/api/v1/incidents/historical/cost-trend": [
+    "GET"
+  ],
+  "/api/v1/incidents/{incident_id}": [
+    "GET"
+  ],
+  "/api/v1/incidents/{incident_id}/evidence": [
+    "GET"
+  ],
+  "/api/v1/incidents/{incident_id}/proof": [
+    "GET"
+  ],
+  "/api/v1/incidents/{incident_id}/learnings": [
+    "GET"
+  ],
+  "/api/v1/policies/rules": [
+    "POST",
+    "GET"
+  ],
+  "/api/v1/policies/rules/{rule_id}": [
+    "PUT",
+    "GET"
   ],
   "/api/v1/predictions": [
     "GET"
@@ -130,12 +219,6 @@
   "/internal/authz/alert-rules": [
     "GET"
   ],
-  "/api/v1/customer/activity": [
-    "GET"
-  ],
-  "/api/v1/customer/activity/{run_id}": [
-    "GET"
-  ],
   "/api/v1/onboarding/status": [
     "GET"
   ],
@@ -151,8 +234,56 @@
   "/api/v1/activity/runs/{run_id}": [
     "GET"
   ],
-  "/api/v1/activity/summary": [
+  "/api/v1/activity/runs/{run_id}/evidence": [
     "GET"
+  ],
+  "/api/v1/activity/runs/{run_id}/proof": [
+    "GET"
+  ],
+  "/api/v1/activity/summary/by-status": [
+    "GET"
+  ],
+  "/api/v1/activity/runs/live/by-dimension": [
+    "GET"
+  ],
+  "/api/v1/activity/runs/completed/by-dimension": [
+    "GET"
+  ],
+  "/api/v1/activity/runs/by-dimension": [
+    "GET"
+  ],
+  "/api/v1/activity/patterns": [
+    "GET"
+  ],
+  "/api/v1/activity/cost-analysis": [
+    "GET"
+  ],
+  "/api/v1/activity/attention-queue": [
+    "GET"
+  ],
+  "/api/v1/activity/risk-signals": [
+    "GET"
+  ],
+  "/api/v1/activity/live": [
+    "GET"
+  ],
+  "/api/v1/activity/completed": [
+    "GET"
+  ],
+  "/api/v1/activity/signals": [
+    "GET"
+  ],
+  "/api/v1/activity/metrics": [
+    "GET"
+  ],
+  "/api/v1/activity/threshold-signals": [
+    "GET"
+  ],
+  "/api/v1/activity/signals/{signal_fingerprint}/ack": [
+    "POST"
+  ],
+  "/api/v1/activity/signals/{signal_fingerprint}/suppress": [
+    "POST"
   ],
   "/costsim/v2/status": [
     "GET"
@@ -187,6 +318,63 @@
   "/costsim/datasets/validate-all": [
     "POST"
   ],
+  "/api/v1/logs/llm-runs": [
+    "GET"
+  ],
+  "/api/v1/logs/llm-runs/{run_id}/envelope": [
+    "GET"
+  ],
+  "/api/v1/logs/llm-runs/{run_id}/trace": [
+    "GET"
+  ],
+  "/api/v1/logs/llm-runs/{run_id}/governance": [
+    "GET"
+  ],
+  "/api/v1/logs/llm-runs/{run_id}/replay": [
+    "GET"
+  ],
+  "/api/v1/logs/llm-runs/{run_id}/export": [
+    "GET"
+  ],
+  "/api/v1/logs/system": [
+    "GET"
+  ],
+  "/api/v1/logs/system/{run_id}/snapshot": [
+    "GET"
+  ],
+  "/api/v1/logs/system/{run_id}/telemetry": [
+    "GET"
+  ],
+  "/api/v1/logs/system/{run_id}/events": [
+    "GET"
+  ],
+  "/api/v1/logs/system/{run_id}/replay": [
+    "GET"
+  ],
+  "/api/v1/logs/system/audit": [
+    "GET"
+  ],
+  "/api/v1/logs/audit": [
+    "GET"
+  ],
+  "/api/v1/logs/audit/{entry_id}": [
+    "GET"
+  ],
+  "/api/v1/logs/audit/identity": [
+    "GET"
+  ],
+  "/api/v1/logs/audit/authorization": [
+    "GET"
+  ],
+  "/api/v1/logs/audit/access": [
+    "GET"
+  ],
+  "/api/v1/logs/audit/integrity": [
+    "GET"
+  ],
+  "/api/v1/logs/audit/exports": [
+    "GET"
+  ],
   "/customer/pre-run": [
     "POST"
   ],
@@ -204,6 +392,48 @@
   ],
   "/founder/onboarding/stalled": [
     "GET"
+  ],
+  "/api/v1/accounts/projects": [
+    "GET"
+  ],
+  "/api/v1/accounts/projects/{project_id}": [
+    "GET"
+  ],
+  "/api/v1/accounts/users": [
+    "GET"
+  ],
+  "/api/v1/accounts/users/{user_id}": [
+    "GET",
+    "DELETE"
+  ],
+  "/api/v1/accounts/profile": [
+    "GET",
+    "PUT"
+  ],
+  "/api/v1/accounts/billing": [
+    "GET"
+  ],
+  "/api/v1/accounts/billing/invoices": [
+    "GET"
+  ],
+  "/api/v1/accounts/support": [
+    "GET"
+  ],
+  "/api/v1/accounts/support/tickets": [
+    "POST",
+    "GET"
+  ],
+  "/api/v1/accounts/users/invite": [
+    "POST"
+  ],
+  "/api/v1/accounts/invitations": [
+    "GET"
+  ],
+  "/api/v1/accounts/invitations/{invitation_id}/accept": [
+    "POST"
+  ],
+  "/api/v1/accounts/users/{user_id}/role": [
+    "PUT"
   ],
   "/api/v1/guard/status": [
     "GET"
@@ -347,6 +577,51 @@
   "/health/skills": [
     "GET"
   ],
+  "/api/v1/policies/limits": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/policies/limits/{limit_id}": [
+    "GET",
+    "PUT",
+    "DELETE"
+  ],
+  "/api/v1/policies/rules/{rule_id}/evidence": [
+    "GET"
+  ],
+  "/api/v1/policies/limits/{limit_id}/evidence": [
+    "GET"
+  ],
+  "/api/v1/policies/lessons": [
+    "GET"
+  ],
+  "/api/v1/policies/lessons/stats": [
+    "GET"
+  ],
+  "/api/v1/policies/lessons/{lesson_id}": [
+    "GET"
+  ],
+  "/api/v1/policies/state": [
+    "GET"
+  ],
+  "/api/v1/policies/metrics": [
+    "GET"
+  ],
+  "/api/v1/policies/conflicts": [
+    "GET"
+  ],
+  "/api/v1/policies/dependencies": [
+    "GET"
+  ],
+  "/api/v1/policies/violations": [
+    "GET"
+  ],
+  "/api/v1/policies/budgets": [
+    "GET"
+  ],
+  "/api/v1/policies/requests": [
+    "GET"
+  ],
   "/cost/features": [
     "POST",
     "GET"
@@ -486,6 +761,30 @@
   "/v1/status": [
     "GET"
   ],
+  "/analytics/statistics/usage": [
+    "GET"
+  ],
+  "/analytics/_status": [
+    "GET"
+  ],
+  "/analytics/statistics/cost": [
+    "GET"
+  ],
+  "/analytics/health": [
+    "GET"
+  ],
+  "/analytics/statistics/usage/export.csv": [
+    "GET"
+  ],
+  "/analytics/statistics/usage/export.json": [
+    "GET"
+  ],
+  "/analytics/statistics/cost/export.csv": [
+    "GET"
+  ],
+  "/analytics/statistics/cost/export.json": [
+    "GET"
+  ],
   "/platform/health": [
     "GET"
   ],
@@ -504,109 +803,127 @@
   "/status": [
     "GET"
   ],
-  "/policy-layer/evaluate": [
+  "/api/v1/policy-layer/evaluate": [
     "POST"
   ],
-  "/policy-layer/simulate": [
+  "/api/v1/policy-layer/simulate": [
     "POST"
   ],
-  "/policy-layer/state": [
+  "/api/v1/policy-layer/state": [
     "GET"
   ],
-  "/policy-layer/reload": [
+  "/api/v1/policy-layer/reload": [
     "POST"
   ],
-  "/policy-layer/violations": [
+  "/api/v1/policy-layer/violations": [
     "GET"
   ],
-  "/policy-layer/violations/{violation_id}": [
+  "/api/v1/policy-layer/violations/{violation_id}": [
     "GET"
   ],
-  "/policy-layer/violations/{violation_id}/acknowledge": [
+  "/api/v1/policy-layer/violations/{violation_id}/acknowledge": [
     "POST"
   ],
-  "/policy-layer/risk-ceilings": [
+  "/api/v1/policy-layer/risk-ceilings": [
     "GET"
   ],
-  "/policy-layer/risk-ceilings/{ceiling_id}": [
+  "/api/v1/policy-layer/risk-ceilings/{ceiling_id}": [
     "GET",
     "PATCH"
   ],
-  "/policy-layer/risk-ceilings/{ceiling_id}/reset": [
+  "/api/v1/policy-layer/risk-ceilings/{ceiling_id}/reset": [
     "POST"
   ],
-  "/policy-layer/safety-rules": [
+  "/api/v1/policy-layer/safety-rules": [
     "GET"
   ],
-  "/policy-layer/safety-rules/{rule_id}": [
+  "/api/v1/policy-layer/safety-rules/{rule_id}": [
     "PATCH"
   ],
-  "/policy-layer/ethical-constraints": [
+  "/api/v1/policy-layer/ethical-constraints": [
     "GET"
   ],
-  "/policy-layer/cooldowns": [
+  "/api/v1/policy-layer/cooldowns": [
     "GET"
   ],
-  "/policy-layer/cooldowns/{agent_id}": [
+  "/api/v1/policy-layer/cooldowns/{agent_id}": [
     "DELETE"
   ],
-  "/policy-layer/metrics": [
+  "/api/v1/policy-layer/metrics": [
     "GET"
   ],
-  "/policy-layer/evaluate/batch": [
+  "/api/v1/policy-layer/evaluate/batch": [
     "POST"
   ],
-  "/policy-layer/versions": [
+  "/api/v1/policy-layer/versions": [
     "GET",
     "POST"
   ],
-  "/policy-layer/versions/current": [
+  "/api/v1/policy-layer/versions/current": [
     "GET"
   ],
-  "/policy-layer/versions/rollback": [
+  "/api/v1/policy-layer/versions/rollback": [
     "POST"
   ],
-  "/policy-layer/versions/{version_id}/provenance": [
+  "/api/v1/policy-layer/versions/{version_id}/provenance": [
     "GET"
   ],
-  "/policy-layer/dependencies": [
+  "/api/v1/policy-layer/dependencies": [
     "GET"
   ],
-  "/policy-layer/conflicts": [
+  "/api/v1/policy-layer/conflicts": [
     "GET"
   ],
-  "/policy-layer/conflicts/{conflict_id}/resolve": [
+  "/api/v1/policy-layer/conflicts/{conflict_id}/resolve": [
     "POST"
   ],
-  "/policy-layer/temporal-policies": [
+  "/api/v1/policy-layer/temporal-policies": [
     "GET",
     "POST"
   ],
-  "/policy-layer/temporal-policies/{policy_id}/utilization": [
+  "/api/v1/policy-layer/temporal-policies/{policy_id}/utilization": [
     "GET"
   ],
-  "/policy-layer/evaluate/context-aware": [
+  "/api/v1/policy-layer/evaluate/context-aware": [
     "POST"
   ],
-  "/policy-layer/dependencies/dag/validate": [
+  "/api/v1/policy-layer/dependencies/dag/validate": [
     "GET"
   ],
-  "/policy-layer/dependencies/add": [
+  "/api/v1/policy-layer/dependencies/add": [
     "POST"
   ],
-  "/policy-layer/dependencies/evaluation-order": [
+  "/api/v1/policy-layer/dependencies/evaluation-order": [
     "GET"
   ],
-  "/policy-layer/temporal-metrics/prune": [
+  "/api/v1/policy-layer/temporal-metrics/prune": [
     "POST"
   ],
-  "/policy-layer/temporal-metrics/storage-stats": [
+  "/api/v1/policy-layer/temporal-metrics/storage-stats": [
     "GET"
   ],
-  "/policy-layer/versions/activate": [
+  "/api/v1/policy-layer/versions/activate": [
     "POST"
   ],
-  "/policy-layer/versions/{version_id}/check": [
+  "/api/v1/policy-layer/versions/{version_id}/check": [
+    "POST"
+  ],
+  "/api/v1/policy-layer/lessons": [
+    "GET"
+  ],
+  "/api/v1/policy-layer/lessons/stats": [
+    "GET"
+  ],
+  "/api/v1/policy-layer/lessons/{lesson_id}": [
+    "GET"
+  ],
+  "/api/v1/policy-layer/lessons/{lesson_id}/convert": [
+    "POST"
+  ],
+  "/api/v1/policy-layer/lessons/{lesson_id}/defer": [
+    "POST"
+  ],
+  "/api/v1/policy-layer/lessons/{lesson_id}/dismiss": [
     "POST"
   ],
   "/api/v1/runtime/simulate": [
@@ -634,6 +951,30 @@
     "GET"
   ],
   "/api/v1/runtime/traces/{run_id}": [
+    "GET"
+  ],
+  "/integrations": [
+    "GET",
+    "POST"
+  ],
+  "/integrations/{integration_id}": [
+    "GET",
+    "PUT",
+    "DELETE"
+  ],
+  "/integrations/{integration_id}/enable": [
+    "POST"
+  ],
+  "/integrations/{integration_id}/disable": [
+    "POST"
+  ],
+  "/integrations/{integration_id}/health": [
+    "GET"
+  ],
+  "/integrations/{integration_id}/test": [
+    "POST"
+  ],
+  "/integrations/{integration_id}/limits": [
     "GET"
   ],
   "/embedding/quota": [
@@ -761,6 +1102,15 @@
   "/v1/calls/{call_id}": [
     "GET"
   ],
+  "/debug/auth/context": [
+    "GET"
+  ],
+  "/debug/auth/planes": [
+    "GET"
+  ],
+  "/debug/auth/tenant-states": [
+    "GET"
+  ],
   "/api/v1/memory/pins": [
     "POST",
     "GET"
@@ -772,21 +1122,48 @@
   "/api/v1/memory/pins/cleanup": [
     "POST"
   ],
-  "/api/v1/policies/eval": [
+  "/api/v1/policy/eval": [
     "POST"
   ],
-  "/api/v1/policies/requests": [
+  "/api/v1/policy/requests": [
     "POST",
     "GET"
   ],
-  "/api/v1/policies/requests/{request_id}": [
+  "/api/v1/policy/requests/{request_id}": [
     "GET"
   ],
-  "/api/v1/policies/requests/{request_id}/approve": [
+  "/api/v1/policy/requests/{request_id}/approve": [
     "POST"
   ],
-  "/api/v1/policies/requests/{request_id}/reject": [
+  "/api/v1/policy/requests/{request_id}/reject": [
     "POST"
+  ],
+  "/api/v1/policy/active": [
+    "GET"
+  ],
+  "/api/v1/policy/active/{policy_id}": [
+    "GET"
+  ],
+  "/api/v1/policy/library": [
+    "GET"
+  ],
+  "/api/v1/policy/lessons": [
+    "GET"
+  ],
+  "/api/v1/policy/lessons/{lesson_id}": [
+    "GET"
+  ],
+  "/api/v1/policy/thresholds": [
+    "GET"
+  ],
+  "/api/v1/policy/thresholds/{threshold_id}": [
+    "GET"
+  ],
+  "/api/v1/policy/violations": [
+    "GET"
+  ],
+  "/api/v1/policy/violations/{violation_id}": [
+    "GET"
   ],
   "/api/v1/discovery": [
     "GET"
@@ -1085,6 +1462,10 @@
   ],
   "/guard/policies/guardrails/{guardrail_id}": [
     "GET"
+  ],
+  "/api/v1/policies/limits/{limit_id}/params": [
+    "GET",
+    "PUT"
   ],
   "/api/v1/session/context": [
     "GET"

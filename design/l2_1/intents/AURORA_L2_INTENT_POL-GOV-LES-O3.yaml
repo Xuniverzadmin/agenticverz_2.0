@@ -1,11 +1,10 @@
-# Panel Intent: Convert Lesson to Draft
-# Source: PIN-411 (Lessons Learned Engine)
-# Panel: POL-GOV-LES-O3
-# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+# AURORA_L2 Intent Spec: POL-GOV-LES-O3
+# Last Updated: 2026-01-18
+# Updated By: manual
 #
 panel_id: POL-GOV-LES-O3
 version: 1.0.0
-panel_class: execution
+panel_class: action
 metadata:
   domain: POLICIES
   subdomain: GOVERNANCE
@@ -13,17 +12,17 @@ metadata:
   topic_id: POLICIES.GOVERNANCE.LESSONS
   order: O3
   action_layer: L2_1
-  source: PIN-411
-  review_status: DRAFT
-  facet: lessons_learned
-  facet_criticality: HIGH
+  source: INTENT_LEDGER
+  review_status: REVIEWED
+  facet: null
+  facet_criticality: null
 display:
-  name: Convert to Draft
+  name: POL-GOV-LES-O3
   visible_by_default: true
   nav_required: false
   expansion_mode: INLINE
 data:
-  read: false
+  read: true
   download: false
   write: true
   replay: false
@@ -34,25 +33,18 @@ controls:
 capability:
   id: lessons.convert_to_draft
   status: DECLARED
-  assumed_endpoint: /api/v1/lessons/{lesson_id}/convert-to-draft
+  assumed_endpoint: /api/v1/policy-layer/lessons/{lesson_id}/convert
   assumed_method: POST
-  facade_note: "Convert lesson to policy draft - creates draft and transitions lesson"
+notes: 'Convert a lesson learned into a draft policy rule.
+
+  This action converts observed patterns into actionable policy suggestions.'
 sdsr:
-  scenario: SDSR-POL-GOV-LES-O3-001
   verified: false
-notes: |
-  Convert a pending lesson to a policy draft.
-
-  What it does:
-  - Creates a policy draft based on lesson content
-  - Transitions lesson status: pending -> converted_to_draft
-  - Links the draft to the source lesson
-  - Terminal state (cannot be undone)
-
-  State Machine:
-  - Only valid for pending lessons
-  - converted_to_draft is a terminal state
-
-  Requirements:
-  - Requires human confirmation
-  - Lesson must be in pending status
+  verification_date: null
+  scenario: SDSR-POL-GOV-LES-O3-001
+  observation_trace: null
+  checks:
+    endpoint_exists: PENDING
+    schema_matches: PENDING
+    auth_works: PENDING
+    data_is_real: PENDING

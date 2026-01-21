@@ -1,8 +1,12 @@
-# GENERATED FILE - DO NOT EDIT MANUALLY
-# Source: design/l2_1/INTENT_LEDGER.md
-# Generator: scripts/tools/sync_from_intent_ledger.py
+# AURORA L2 Capability Registry Entry
+# Capability: policies.requests_list
+# Last Updated: 2026-01-18T10:07:54.807661+00:00
+# Updated By: aurora_apply_observation.py
 #
-# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
+# STATUS: OBSERVED
+#
+# WARNING: Status transitions are MACHINE-OWNED.
+#          Do NOT manually edit the status field.
 #
 capability_id: policies.requests_list
 status: OBSERVED
@@ -15,7 +19,7 @@ metadata:
   declared_by: intent-ledger
   declared_on: '2026-01-16'
   observed_by: SDSR-POL-GOV-ACT-O3-001
-  observed_on: '2026-01-15'
+  observed_on: '2026-01-18'
 assumption:
   endpoint: /api/v1/policies/requests
   method: GET
@@ -23,18 +27,18 @@ assumption:
 binding:
   observed_endpoint: /api/v1/policies/requests
   observed_method: GET
-  observed_at: '2026-01-15T17:16:07.108336+00:00'
-  observation_id: OBS-SDSR-POL-GOV-ACT-O3-001-20260115171607
+  observed_at: '2026-01-18T10:05:05.182646+00:00'
+  observation_id: OBS-SDSR-POL-GOV-ACT-O3-001-20260118100505
 acceptance_criteria:
 - Returns policy requests
 - Response includes request status
 observation:
   scenario_id: SDSR-POL-GOV-ACT-O3-001
-  observed_at: '2026-01-15T17:16:07.108336+00:00'
+  observed_at: '2026-01-18T10:05:05.182646+00:00'
   trace_id: null
   invariants_passed: 0
   invariants_total: 3
 coherency:
-  last_checked: '2026-01-15T17:16:07.108336+00:00'
+  last_checked: '2026-01-18T10:05:05.182646+00:00'
   status: PASSED
   checked_by: aurora_sdsr_runner.py

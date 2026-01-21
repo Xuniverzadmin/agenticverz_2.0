@@ -33,11 +33,11 @@ controls:
   activate: false
   confirmation_required: false
 capability:
-  id: logs.adapters_health
-  status: ASSUMED
-  assumed_endpoint: /health/adapters
+  id: logs.system
+  status: DEFERRED
+  assumed_endpoint: 'null'
   assumed_method: GET
 sdsr:
-  scenario: SDSR-LOG-REC-SYS-O4-001
+  scenario: DEFERRED
   verified: false
 notes: Show run-aligned infra replay window — infra state at moment of anomaly.

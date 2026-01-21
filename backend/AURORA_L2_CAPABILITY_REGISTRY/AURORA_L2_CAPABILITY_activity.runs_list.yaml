@@ -1,15 +1,24 @@
 # AURORA L2 Capability Registry Entry
 # Capability: activity.runs_list
-# Last Updated: 2026-01-15T17:38:08.311971+00:00
-# Updated By: aurora_apply_observation.py
+# Last Updated: 2026-01-19T00:00:00+00:00
+# Updated By: Phase 4 Registry Rebinding
 #
-# STATUS: OBSERVED
+# STATUS: DEPRECATED
+#
+# DEPRECATION NOTE:
+#   This capability is DEPRECATED as of Activity Domain V2 Migration.
+#   Use activity.completed_v2 or activity.live_v2 instead.
+#   Reference: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md (Phase 4)
 #
 # WARNING: Status transitions are MACHINE-OWNED.
 #          Do NOT manually edit the status field.
 #
 capability_id: activity.runs_list
-status: OBSERVED
+status: DEPRECATED
+deprecated_at: '2026-01-19'
+deprecated_by: Phase 4 Registry Rebinding
+replacement: activity.completed_v2
+migration_path: "Use /api/v1/activity/completed or /api/v1/activity/live instead of /api/v1/activity/runs"
 source_panels:
 - ACT-LLM-COMP-O1
 domain: ACTIVITY
@@ -21,7 +30,7 @@ metadata:
   declared_by: AURORA_AUTOMATION
   declared_on: '2026-01-15'
   observed_by: SDSR-ACT-LLM-COMP-O1-001
-  observed_on: '2026-01-15'
+  observed_on: '2026-01-18'
 coherency:
   last_checked: '2026-01-15T16:36:06.598138+00:00'
   status: PASSED

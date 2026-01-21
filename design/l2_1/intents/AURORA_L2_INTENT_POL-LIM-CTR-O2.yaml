@@ -1,0 +1,63 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# Panel: POL-LIM-CTR-O2
+# Naming: AURORA_L2_INTENT_{panel_id}.yaml
+#
+panel_id: POL-LIM-CTR-O2
+version: 1.0.0
+panel_class: execution
+metadata:
+  domain: POLICIES
+  subdomain: LIMITS
+  topic: CONTROLS
+  topic_id: POLICIES.LIMITS.CONTROLS
+  order: O2
+  action_layer: L2_1
+  source: INTENT_LEDGER
+  review_status: UNREVIEWED
+  facet: limit_violations
+  facet_criticality: HIGH
+display:
+  name: POL-LIM-CTR-O2
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: false
+  activate: false
+  confirmation_required: false
+capability:
+  id: policies.budgets
+  status: ASSUMED
+  assumed_endpoint: /cost/budgets
+  assumed_method: GET
+sdsr:
+  scenario: SDSR-POL-LIM-CTR-O2-001
+  verified: false
+notes: 'Provide threshold configuration and fine-tuning controls.
+
+
+  What it shows:
+
+  - Per policy: hard limit (enforced), soft limit (warn/flag)
+
+  - Grace window: time-based, count-based
+
+  - Cool-down/reset logic
+
+  - Dimensions: by LLM, by agent class, by human role, by time
+
+  - Live preview: "At current usage, this would have blocked X runs yesterday"
+
+
+  What it explicitly does NOT show:
+
+  - No usage analytics
+
+  - No violation history'

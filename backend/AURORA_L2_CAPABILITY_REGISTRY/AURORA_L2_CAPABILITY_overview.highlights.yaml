@@ -1,0 +1,28 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+# NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
+#
+capability_id: overview.highlights
+status: OBSERVED
+source_panels:
+- OVR-SUM-HL-O1
+domain: OVERVIEW
+metadata:
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-20'
+  declared_by: intent-ledger
+  declared_on: '2026-01-20'
+  observed_by: observe_overview_activity_snapshot
+assumption:
+  endpoint: /api/v1/activity/summary/by-status
+  method: GET
+  source: INTENT_LEDGER
+binding:
+  observed_endpoint: null
+  observed_method: null
+  observed_at: null
+  observation_id: null
+acceptance_criteria:
+- Capability behavior verified
