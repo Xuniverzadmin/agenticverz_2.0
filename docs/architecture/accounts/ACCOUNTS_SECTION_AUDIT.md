@@ -40,7 +40,7 @@
 
 ### Primary Facade: `/api/v1/accounts/*`
 
-**File:** `backend/app/api/accounts.py` (~1600 lines, 17 routes)
+**File:** `backend/app/api/aos_accounts.py` (~1600 lines, 17 routes)
 
 | Endpoint | Method | Purpose | Status |
 |----------|--------|---------|--------|
@@ -409,7 +409,7 @@ alembic upgrade head
 
 | File | Purpose | Lines |
 |------|---------|-------|
-| `backend/app/api/accounts.py` | Accounts facade (L2) | ~1600 |
+| `backend/app/api/aos_accounts.py` | Accounts facade (L2) | ~1600 |
 | `backend/app/api/tenants.py` | API keys, workers (L2) | 625 |
 | `backend/app/models/tenant.py` | Account models (L6) | ~700 |
 | `backend/alembic/versions/ce967f70c95d_*.py` | Migration | 98 |

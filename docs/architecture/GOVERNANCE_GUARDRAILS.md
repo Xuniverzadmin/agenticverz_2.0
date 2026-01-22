@@ -86,7 +86,7 @@ def assert_domain_ownership(caller_domain: str, table: str):
 **Enforcement:**
 
 ```python
-# backend/app/api/accounts.py
+# backend/app/api/aos_accounts.py
 
 FORBIDDEN_IMPORTS_IN_ACCOUNTS = [
     "app.models.incident",
@@ -102,9 +102,9 @@ FORBIDDEN_IMPORTS_IN_ACCOUNTS = [
 
 ```bash
 # scripts/ci/check_account_boundaries.sh
-grep -r "from app.models.incident" backend/app/api/accounts.py && exit 1
-grep -r "from app.models.policy" backend/app/api/accounts.py && exit 1
-grep -r "from app.models.worker_runs" backend/app/api/accounts.py && exit 1
+grep -r "from app.models.incident" backend/app/api/aos_accounts.py && exit 1
+grep -r "from app.models.policy" backend/app/api/aos_accounts.py && exit 1
+grep -r "from app.models.worker_runs" backend/app/api/aos_accounts.py && exit 1
 echo "Account boundary check passed"
 ```
 

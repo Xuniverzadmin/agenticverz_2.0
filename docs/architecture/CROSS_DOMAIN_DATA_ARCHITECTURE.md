@@ -963,7 +963,7 @@ Logs      ──┘
 
 | File | Layer | Purpose | Imports | Exports |
 |------|-------|---------|---------|---------|
-| `backend/app/api/accounts.py` | L2 | Account API endpoints | Account models | Account endpoints |
+| `backend/app/api/aos_accounts.py` | L2 | Account API endpoints | Account models | Account endpoints |
 | `backend/app/api/users.py` | L2 | User management | `User` | User endpoints |
 | `backend/app/api/teams.py` | L2 | Team management | `Team` | Team endpoints |
 | `backend/app/api/billing.py` | L2 | Billing API | Billing models | Billing endpoints |

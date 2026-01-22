@@ -1,4 +1,6 @@
-# api/health.py
+# Layer: L2 — Product APIs
+# AUDIENCE: INTERNAL
+# Role: Health and determinism status endpoints - operational visibility
 """
 Health and Determinism Status Endpoints
 

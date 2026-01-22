@@ -25,7 +25,8 @@ All runtime projection endpoints have been moved to unified domain facades:
 | Logs         | /api/v1/runtime/logs/*        | /api/v1/logs/*                  |
 
 Additional unified facades:
-- /api/v1/connectivity/* (integrations, api-keys)
+- /api/v1/integrations/* (SDK/worker integrations) → aos_cus_integrations.py
+- /api/v1/api-keys/* (API key management) → aos_api_key.py
 - /api/v1/accounts/* (projects, users, profile, billing)
 
 This package is preserved for reference only.
@@ -39,7 +40,8 @@ The /api/v1/runtime/* prefix is no longer served.
 #   app/api/overview.py      → /api/v1/overview/*
 #   app/api/policies.py      → /api/v1/policies/*
 #   app/api/logs.py          → /api/v1/logs/*
-#   app/api/connectivity.py  → /api/v1/connectivity/*
-#   app/api/accounts.py      → /api/v1/accounts/*
+#   app/api/aos_cus_integrations.py  → /api/v1/integrations/*
+#   app/api/aos_api_key.py  → /api/v1/api-keys/*
+#   app/api/aos_accounts.py  → /api/v1/accounts/*
 
 __all__: list[str] = []

@@ -1,12 +1,32 @@
 # Activity Domain Audit
 
 **Status:** IMPLEMENTATION READY
-**Last Updated:** 2026-01-17
-**Reference:** PIN-411 (Unified Facades)
+**Last Updated:** 2026-01-22
+**Reference:** PIN-411 (Unified Facades), PIN-463 (L4 Facade Pattern)
 
 ---
 
-## Related Documents (NEW)
+## Architecture Pattern
+
+This domain follows the **L4 Facade Pattern** for data access:
+
+| Layer | File | Role |
+|-------|------|------|
+| L2 API | `backend/app/api/aos_activity.py` | HTTP handling, response formatting |
+| L4 Facade | `backend/app/services/activity_facade.py` | Business logic, tenant isolation |
+
+**Data Flow:** `L1 (UI) → L2 (API) → L4 (Facade) → L6 (Database)`
+
+**Key Rules:**
+- L2 routes delegate to L4 facade (never direct SQL)
+- Facade returns typed dataclasses (never ORM models)
+- All operations are tenant-scoped
+
+**Full Reference:** [PIN-463: L4 Facade Architecture Pattern](../../memory-pins/PIN-463-l4-facade-architecture-pattern.md), [LAYER_MODEL.md](../LAYER_MODEL.md)
+
+---
+
+## Related Documents
 
 | Document | Purpose |
 |----------|---------|

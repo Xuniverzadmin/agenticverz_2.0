@@ -1,8 +1,8 @@
 # Connectivity Domain Audit
 
 **Status:** FULLY IMPLEMENTED
-**Last Updated:** 2026-01-17
-**Reference:** PIN-411 (Unified Facades), CUSTOMER_INTEGRATIONS_ARCHITECTURE.md
+**Last Updated:** 2026-01-22
+**Reference:** PIN-411 (Unified Facades), CUSTOMER_INTEGRATIONS_ARCHITECTURE.md, PIN-463 (L4 Facade Pattern)
 
 ---
 
@@ -133,7 +133,64 @@ Customer Console / SDK
 
 ---
 
-## 3. Lifecycle Management
+## 3. L4 Domain Facades
+
+The Connectivity domain has two L4 facades for its two sub-sections.
+
+### Integrations Facade
+
+**File:** `backend/app/services/integrations_facade.py`
+**Getter:** `get_integrations_facade()` (singleton)
+
+The Integrations Facade is the entry point for LLM integration management (BYOK).
+
+**Pattern:**
+```python
+from app.services.integrations_facade import get_integrations_facade
+
+facade = get_integrations_facade()
+result = await facade.list_integrations(tenant_id, ...)
+```
+
+**Operations Provided:**
+- `list_integrations()` - List integrations
+- `get_integration()` - Integration detail
+- `create_integration()` - Create new integration
+- `update_integration()` - Update integration
+- `delete_integration()` - Soft delete integration
+- `enable_integration()` - Enable integration
+- `disable_integration()` - Disable integration
+- `get_health_status()` - Get health status
+- `test_credentials()` - Test credentials
+- `get_limits_status()` - Get usage vs limits
+
+### API Keys Facade
+
+**File:** `backend/app/services/api_keys_facade.py`
+**Getter:** `get_api_keys_facade()` (singleton)
+
+The API Keys Facade is the entry point for API key management.
+
+**Pattern:**
+```python
+from app.services.api_keys_facade import get_api_keys_facade
+
+facade = get_api_keys_facade()
+result = await facade.list_api_keys(session, tenant_id, ...)
+```
+
+**Operations Provided:**
+- `list_api_keys()` - List API keys (O2)
+- `get_api_key_detail()` - API key detail (O3)
+
+**Facade Rules:**
+- L2 routes call facade methods, never direct SQL
+- Facade returns typed dataclass results
+- Facade handles tenant isolation internally
+
+---
+
+## 4. Lifecycle Management
 
 ### API Keys Lifecycle
 

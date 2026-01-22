@@ -42,18 +42,18 @@ Architecture:
 import csv
 import io
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from enum import Enum
-from typing import Annotated, Any, Dict, List
+from typing import Annotated, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
+from app.services.analytics_facade import get_analytics_facade
 
 logger = logging.getLogger(__name__)
 
@@ -213,605 +213,6 @@ class AnalyticsStatusResponse(BaseModel):
 
 
 # =============================================================================
-# Signal Adapters (Internal - Behind Facade)
-# =============================================================================
-
-
-class SignalAdapter:
-    """
-    Base class for signal adapters.
-
-    Contract: analytics.adapters.<signal>.fetch(window, resolution)
-
-    Facade owns:
-    - Time alignment
-    - Cardinality control
-    - Cross-signal reconciliation
-    - Forward compatibility
-    """
-
-    @staticmethod
-    async def fetch_cost_metrics(
-        session: AsyncSession,
-        tenant_id: str,
-        from_ts: datetime,
-        to_ts: datetime,
-        resolution: ResolutionType,
-    ) -> Dict[str, Any]:
-        """Fetch cost metrics from cost_records table."""
-        try:
-            # Time grouping based on resolution
-            if resolution == ResolutionType.HOUR:
-                time_trunc = "hour"
-            else:
-                time_trunc = "day"
-
-            query = text("""
-                SELECT
-                    DATE_TRUNC(:time_trunc, created_at) as ts,
-                    COUNT(*) as requests,
-                    COALESCE(SUM(input_tokens + output_tokens), 0) as tokens
-                FROM cost_records
-                WHERE tenant_id = :tenant_id
-                  AND created_at >= :from_ts
-                  AND created_at < :to_ts
-                GROUP BY DATE_TRUNC(:time_trunc, created_at)
-                ORDER BY ts
-            """)
-
-            result = await session.execute(
-                query,
-                {
-                    "time_trunc": time_trunc,
-                    "tenant_id": tenant_id,
-                    "from_ts": from_ts,
-                    "to_ts": to_ts,
-                },
-            )
-            rows = result.fetchall()
-
-            return {
-                "source": "cost_records",
-                "data": [
-                    {
-                        "ts": row.ts.isoformat() if row.ts else None,
-                        "requests": row.requests or 0,
-                        "tokens": row.tokens or 0,
-                    }
-                    for row in rows
-                ],
-            }
-        except Exception as e:
-            logger.warning(f"Cost metrics fetch failed: {e}")
-            return {"source": "cost_records", "data": [], "error": str(e)}
-
-    @staticmethod
-    async def fetch_llm_usage(
-        session: AsyncSession,
-        tenant_id: str,
-        from_ts: datetime,
-        to_ts: datetime,
-        resolution: ResolutionType,
-    ) -> Dict[str, Any]:
-        """Fetch LLM usage from runs table."""
-        try:
-            if resolution == ResolutionType.HOUR:
-                time_trunc = "hour"
-            else:
-                time_trunc = "day"
-
-            query = text("""
-                SELECT
-                    DATE_TRUNC(:time_trunc, created_at) as ts,
-                    COUNT(*) as requests,
-                    COALESCE(SUM(total_tokens), 0) as tokens
-                FROM runs
-                WHERE tenant_id = :tenant_id
-                  AND created_at >= :from_ts
-                  AND created_at < :to_ts
-                GROUP BY DATE_TRUNC(:time_trunc, created_at)
-                ORDER BY ts
-            """)
-
-            result = await session.execute(
-                query,
-                {
-                    "time_trunc": time_trunc,
-                    "tenant_id": tenant_id,
-                    "from_ts": from_ts,
-                    "to_ts": to_ts,
-                },
-            )
-            rows = result.fetchall()
-
-            return {
-                "source": "llm.usage",
-                "data": [
-                    {
-                        "ts": row.ts.isoformat() if row.ts else None,
-                        "requests": row.requests or 0,
-                        "tokens": row.tokens or 0,
-                    }
-                    for row in rows
-                ],
-            }
-        except Exception as e:
-            logger.warning(f"LLM usage fetch failed: {e}")
-            return {"source": "llm.usage", "data": [], "error": str(e)}
-
-    @staticmethod
-    async def fetch_worker_execution(
-        session: AsyncSession,
-        tenant_id: str,
-        from_ts: datetime,
-        to_ts: datetime,
-        resolution: ResolutionType,
-    ) -> Dict[str, Any]:
-        """Fetch worker execution metrics from aos_traces table."""
-        try:
-            if resolution == ResolutionType.HOUR:
-                time_trunc = "hour"
-            else:
-                time_trunc = "day"
-
-            query = text("""
-                SELECT
-                    DATE_TRUNC(:time_trunc, created_at) as ts,
-                    COUNT(*) as requests
-                FROM aos_traces
-                WHERE tenant_id = :tenant_id
-                  AND created_at >= :from_ts
-                  AND created_at < :to_ts
-                GROUP BY DATE_TRUNC(:time_trunc, created_at)
-                ORDER BY ts
-            """)
-
-            result = await session.execute(
-                query,
-                {
-                    "time_trunc": time_trunc,
-                    "tenant_id": tenant_id,
-                    "from_ts": from_ts,
-                    "to_ts": to_ts,
-                },
-            )
-            rows = result.fetchall()
-
-            return {
-                "source": "worker.execution",
-                "data": [
-                    {
-                        "ts": row.ts.isoformat() if row.ts else None,
-                        "requests": row.requests or 0,
-                    }
-                    for row in rows
-                ],
-            }
-        except Exception as e:
-            logger.warning(f"Worker execution fetch failed: {e}")
-            return {"source": "worker.execution", "data": [], "error": str(e)}
-
-    @staticmethod
-    async def fetch_gateway_metrics(
-        _session: AsyncSession,
-        _tenant_id: str,
-        _from_ts: datetime,
-        _to_ts: datetime,
-        _resolution: ResolutionType,
-    ) -> Dict[str, Any]:
-        """
-        Fetch gateway metrics.
-
-        Note: Gateway metrics may come from Prometheus/external source.
-        For now, we derive from runs table as proxy.
-        """
-        # Gateway metrics are currently derived from runs
-        # In future, this would query a dedicated gateway_metrics table
-        return {
-            "source": "gateway.metrics",
-            "data": [],
-            "note": "Derived from llm.usage signal",
-        }
-
-    # -------------------------------------------------------------------------
-    # Cost Topic Signal Adapters
-    # -------------------------------------------------------------------------
-
-    @staticmethod
-    async def fetch_cost_spend(
-        session: AsyncSession,
-        tenant_id: str,
-        from_ts: datetime,
-        to_ts: datetime,
-        resolution: ResolutionType,
-    ) -> Dict[str, Any]:
-        """
-        Fetch cost spend data from cost_records table.
-
-        Returns time series with spend_cents, requests, input_tokens, output_tokens.
-        """
-        try:
-            if resolution == ResolutionType.HOUR:
-                time_trunc = "hour"
-            else:
-                time_trunc = "day"
-
-            query = text("""
-                SELECT
-                    DATE_TRUNC(:time_trunc, created_at) as ts,
-                    COUNT(*) as requests,
-                    COALESCE(SUM(cost_cents), 0) as spend_cents,
-                    COALESCE(SUM(input_tokens), 0) as input_tokens,
-                    COALESCE(SUM(output_tokens), 0) as output_tokens
-                FROM cost_records
-                WHERE tenant_id = :tenant_id
-                  AND created_at >= :from_ts
-                  AND created_at < :to_ts
-                GROUP BY DATE_TRUNC(:time_trunc, created_at)
-                ORDER BY ts
-            """)
-
-            result = await session.execute(
-                query,
-                {
-                    "time_trunc": time_trunc,
-                    "tenant_id": tenant_id,
-                    "from_ts": from_ts,
-                    "to_ts": to_ts,
-                },
-            )
-            rows = result.fetchall()
-
-            return {
-                "source": "cost_records",
-                "data": [
-                    {
-                        "ts": row.ts.isoformat() if row.ts else None,
-                        "spend_cents": float(row.spend_cents or 0),
-                        "requests": row.requests or 0,
-                        "input_tokens": row.input_tokens or 0,
-                        "output_tokens": row.output_tokens or 0,
-                    }
-                    for row in rows
-                ],
-            }
-        except Exception as e:
-            logger.warning(f"Cost spend fetch failed: {e}")
-            return {"source": "cost_records", "data": [], "error": str(e)}
-
-    @staticmethod
-    async def fetch_cost_by_model(
-        session: AsyncSession,
-        tenant_id: str,
-        from_ts: datetime,
-        to_ts: datetime,
-    ) -> Dict[str, Any]:
-        """
-        Fetch cost breakdown by model from cost_records table.
-        """
-        try:
-            query = text("""
-                SELECT
-                    COALESCE(model, 'unknown') as model,
-                    COUNT(*) as requests,
-                    COALESCE(SUM(cost_cents), 0) as spend_cents,
-                    COALESCE(SUM(input_tokens), 0) as input_tokens,
-                    COALESCE(SUM(output_tokens), 0) as output_tokens
-                FROM cost_records
-                WHERE tenant_id = :tenant_id
-                  AND created_at >= :from_ts
-                  AND created_at < :to_ts
-                GROUP BY model
-                ORDER BY spend_cents DESC
-            """)
-
-            result = await session.execute(
-                query,
-                {
-                    "tenant_id": tenant_id,
-                    "from_ts": from_ts,
-                    "to_ts": to_ts,
-                },
-            )
-            rows = result.fetchall()
-
-            return {
-                "source": "cost_records",
-                "data": [
-                    {
-                        "model": row.model,
-                        "spend_cents": float(row.spend_cents or 0),
-                        "requests": row.requests or 0,
-                        "input_tokens": row.input_tokens or 0,
-                        "output_tokens": row.output_tokens or 0,
-                    }
-                    for row in rows
-                ],
-            }
-        except Exception as e:
-            logger.warning(f"Cost by model fetch failed: {e}")
-            return {"source": "cost_records", "data": [], "error": str(e)}
-
-    @staticmethod
-    async def fetch_cost_by_feature(
-        session: AsyncSession,
-        tenant_id: str,
-        from_ts: datetime,
-        to_ts: datetime,
-    ) -> Dict[str, Any]:
-        """
-        Fetch cost breakdown by feature tag from cost_records table.
-        """
-        try:
-            query = text("""
-                SELECT
-                    COALESCE(feature_tag, 'untagged') as feature_tag,
-                    COUNT(*) as requests,
-                    COALESCE(SUM(cost_cents), 0) as spend_cents
-                FROM cost_records
-                WHERE tenant_id = :tenant_id
-                  AND created_at >= :from_ts
-                  AND created_at < :to_ts
-                GROUP BY feature_tag
-                ORDER BY spend_cents DESC
-            """)
-
-            result = await session.execute(
-                query,
-                {
-                    "tenant_id": tenant_id,
-                    "from_ts": from_ts,
-                    "to_ts": to_ts,
-                },
-            )
-            rows = result.fetchall()
-
-            return {
-                "source": "cost_records",
-                "data": [
-                    {
-                        "feature_tag": row.feature_tag,
-                        "spend_cents": float(row.spend_cents or 0),
-                        "requests": row.requests or 0,
-                    }
-                    for row in rows
-                ],
-            }
-        except Exception as e:
-            logger.warning(f"Cost by feature fetch failed: {e}")
-            return {"source": "cost_records", "data": [], "error": str(e)}
-
-
-# =============================================================================
-# Signal Reconciliation
-# =============================================================================
-
-
-async def reconcile_usage_signals(
-    session: AsyncSession,
-    tenant_id: str,
-    from_ts: datetime,
-    to_ts: datetime,
-    resolution: ResolutionType,
-) -> tuple[UsageTotals, List[UsageDataPoint], UsageSignals]:
-    """
-    Reconcile multiple signal sources into unified usage data.
-
-    Facade owns:
-    - Time alignment
-    - Cardinality control
-    - Cross-signal reconciliation
-    - Forward compatibility
-    """
-    # Fetch from all signal sources
-    cost_data = await SignalAdapter.fetch_cost_metrics(
-        session, tenant_id, from_ts, to_ts, resolution
-    )
-    llm_data = await SignalAdapter.fetch_llm_usage(
-        session, tenant_id, from_ts, to_ts, resolution
-    )
-    worker_data = await SignalAdapter.fetch_worker_execution(
-        session, tenant_id, from_ts, to_ts, resolution
-    )
-    # Gateway metrics are derived from llm.usage, no separate fetch needed
-    # Future: await SignalAdapter.fetch_gateway_metrics(...)
-
-    # Collect sources that returned data
-    sources = []
-    if cost_data.get("data"):
-        sources.append("cost_records")
-    if llm_data.get("data"):
-        sources.append("llm.usage")
-    if worker_data.get("data"):
-        sources.append("worker.execution")
-    # Gateway is derived, always include if llm.usage present
-    if llm_data.get("data"):
-        sources.append("gateway.metrics")
-
-    # Time-align and merge data points
-    # Use LLM usage as primary source (most complete)
-    merged_by_ts: Dict[str, Dict[str, int]] = {}
-
-    # Process LLM data (primary for requests and tokens)
-    for point in llm_data.get("data", []):
-        ts = point.get("ts")
-        if ts:
-            if ts not in merged_by_ts:
-                merged_by_ts[ts] = {"requests": 0, "compute_units": 0, "tokens": 0}
-            merged_by_ts[ts]["requests"] += point.get("requests", 0)
-            merged_by_ts[ts]["tokens"] += point.get("tokens", 0)
-
-    # Enrich with cost data (tokens from cost_records may be more accurate)
-    for point in cost_data.get("data", []):
-        ts = point.get("ts")
-        if ts:
-            if ts not in merged_by_ts:
-                merged_by_ts[ts] = {"requests": 0, "compute_units": 0, "tokens": 0}
-            # Cost records may have more accurate token counts
-            if point.get("tokens", 0) > merged_by_ts[ts]["tokens"]:
-                merged_by_ts[ts]["tokens"] = point.get("tokens", 0)
-
-    # Enrich with worker execution (compute units = trace count as proxy)
-    for point in worker_data.get("data", []):
-        ts = point.get("ts")
-        if ts:
-            if ts not in merged_by_ts:
-                merged_by_ts[ts] = {"requests": 0, "compute_units": 0, "tokens": 0}
-            merged_by_ts[ts]["compute_units"] += point.get("requests", 0)
-
-    # Build sorted series
-    series = []
-    for ts in sorted(merged_by_ts.keys()):
-        data = merged_by_ts[ts]
-        # Format timestamp based on resolution
-        ts_formatted = ts.split("T")[0] if resolution == ResolutionType.DAY else ts
-        series.append(
-            UsageDataPoint(
-                ts=ts_formatted,
-                requests=data["requests"],
-                compute_units=data["compute_units"],
-                tokens=data["tokens"],
-            )
-        )
-
-    # Calculate totals
-    total_requests = sum(p.requests for p in series)
-    total_compute_units = sum(p.compute_units for p in series)
-    total_tokens = sum(p.tokens for p in series)
-
-    totals = UsageTotals(
-        requests=total_requests,
-        compute_units=total_compute_units,
-        tokens=total_tokens,
-    )
-
-    # Calculate freshness (seconds since last data point)
-    freshness_sec = 0
-    if series:
-        try:
-            last_ts = series[-1].ts
-            if "T" in last_ts:
-                last_dt = datetime.fromisoformat(last_ts.replace("Z", "+00:00"))
-            else:
-                last_dt = datetime.fromisoformat(last_ts + "T00:00:00+00:00")
-            freshness_sec = int((datetime.now(timezone.utc) - last_dt).total_seconds())
-        except Exception:
-            freshness_sec = 0
-
-    signals = UsageSignals(
-        sources=sources if sources else ["none"],
-        freshness_sec=max(0, freshness_sec),
-    )
-
-    return totals, series, signals
-
-
-async def reconcile_cost_signals(
-    session: AsyncSession,
-    tenant_id: str,
-    from_ts: datetime,
-    to_ts: datetime,
-    resolution: ResolutionType,
-) -> tuple[CostTotals, List[CostDataPoint], List[CostByModel], List[CostByFeature], CostSignals]:
-    """
-    Reconcile cost signals into unified cost data.
-
-    Primary source: cost_records table
-    """
-    # Fetch cost data from all perspectives
-    spend_data = await SignalAdapter.fetch_cost_spend(
-        session, tenant_id, from_ts, to_ts, resolution
-    )
-    model_data = await SignalAdapter.fetch_cost_by_model(
-        session, tenant_id, from_ts, to_ts
-    )
-    feature_data = await SignalAdapter.fetch_cost_by_feature(
-        session, tenant_id, from_ts, to_ts
-    )
-
-    # Collect sources
-    sources = ["cost_records"] if spend_data.get("data") else []
-
-    # Build time series
-    series = []
-    for point in spend_data.get("data", []):
-        ts = point.get("ts")
-        if ts:
-            ts_formatted = ts.split("T")[0] if resolution == ResolutionType.DAY else ts
-            series.append(
-                CostDataPoint(
-                    ts=ts_formatted,
-                    spend_cents=point.get("spend_cents", 0),
-                    requests=point.get("requests", 0),
-                    input_tokens=point.get("input_tokens", 0),
-                    output_tokens=point.get("output_tokens", 0),
-                )
-            )
-
-    # Calculate totals
-    total_spend_cents = sum(p.spend_cents for p in series)
-    total_requests = sum(p.requests for p in series)
-    total_input_tokens = sum(p.input_tokens for p in series)
-    total_output_tokens = sum(p.output_tokens for p in series)
-
-    totals = CostTotals(
-        spend_cents=total_spend_cents,
-        spend_usd=total_spend_cents / 100.0,
-        requests=total_requests,
-        input_tokens=total_input_tokens,
-        output_tokens=total_output_tokens,
-    )
-
-    # Build by-model breakdown with percentages
-    by_model = []
-    for item in model_data.get("data", []):
-        pct = (item.get("spend_cents", 0) / total_spend_cents * 100) if total_spend_cents > 0 else 0
-        by_model.append(
-            CostByModel(
-                model=item.get("model", "unknown"),
-                spend_cents=item.get("spend_cents", 0),
-                requests=item.get("requests", 0),
-                input_tokens=item.get("input_tokens", 0),
-                output_tokens=item.get("output_tokens", 0),
-                pct_of_total=round(pct, 2),
-            )
-        )
-
-    # Build by-feature breakdown with percentages
-    by_feature = []
-    for item in feature_data.get("data", []):
-        pct = (item.get("spend_cents", 0) / total_spend_cents * 100) if total_spend_cents > 0 else 0
-        by_feature.append(
-            CostByFeature(
-                feature_tag=item.get("feature_tag", "untagged"),
-                spend_cents=item.get("spend_cents", 0),
-                requests=item.get("requests", 0),
-                pct_of_total=round(pct, 2),
-            )
-        )
-
-    # Calculate freshness
-    freshness_sec = 0
-    if series:
-        try:
-            last_ts = series[-1].ts
-            if "T" in last_ts:
-                last_dt = datetime.fromisoformat(last_ts.replace("Z", "+00:00"))
-            else:
-                last_dt = datetime.fromisoformat(last_ts + "T00:00:00+00:00")
-            freshness_sec = int((datetime.now(timezone.utc) - last_dt).total_seconds())
-        except Exception:
-            freshness_sec = 0
-
-    signals = CostSignals(
-        sources=sources if sources else ["none"],
-        freshness_sec=max(0, freshness_sec),
-    )
-
-    return totals, series, by_model, by_feature, signals
-
-
-# =============================================================================
 # Endpoints
 # =============================================================================
 
@@ -864,11 +265,8 @@ async def get_usage_statistics(
     Get usage statistics for the specified time window.
 
     This is the primary read endpoint for the Usage topic.
-    Facade normalizes, aggregates, and enforces contracts.
+    READ-ONLY customer facade - delegates to L4 AnalyticsFacade.
     """
-    # Scope is declared for API contract, implementation pending
-    _ = scope  # Future: filter by project/env
-
     # Get tenant from auth context
     auth_context = get_auth_context(request)
     tenant_id: str | None = getattr(auth_context, "tenant_id", None)
@@ -891,24 +289,54 @@ async def get_usage_statistics(
             detail="Time window cannot exceed 90 days",
         )
 
-    # Reconcile signals
-    totals, series, signals = await reconcile_usage_signals(
+    # Delegate to L4 facade
+    from app.services.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+    facade = get_analytics_facade()
+
+    # Map L2 enums to L4 enums
+    facade_resolution = FacadeResolution.HOUR if resolution == ResolutionType.HOUR else FacadeResolution.DAY
+    facade_scope = FacadeScope.ORG
+    if scope == ScopeType.PROJECT:
+        facade_scope = FacadeScope.PROJECT
+    elif scope == ScopeType.ENV:
+        facade_scope = FacadeScope.ENV
+
+    result = await facade.get_usage_statistics(
         session=session,
         tenant_id=tenant_id,
         from_ts=from_ts,
         to_ts=to_ts,
-        resolution=resolution,
+        resolution=facade_resolution,
+        scope=facade_scope,
     )
+
+    # Map L4 result to L2 response
+    series = [
+        UsageDataPoint(
+            ts=point.ts,
+            requests=point.requests,
+            compute_units=point.compute_units,
+            tokens=point.tokens,
+        )
+        for point in result.series
+    ]
 
     return UsageStatisticsResponse(
         window=UsageWindow.model_validate({
-            "from": from_ts,
-            "to": to_ts,
+            "from": result.window.from_ts,
+            "to": result.window.to_ts,
             "resolution": resolution,
         }),
-        totals=totals,
+        totals=UsageTotals(
+            requests=result.totals.requests,
+            compute_units=result.totals.compute_units,
+            tokens=result.totals.tokens,
+        ),
         series=series,
-        signals=signals,
+        signals=UsageSignals(
+            sources=result.signals.sources,
+            freshness_sec=result.signals.freshness_sec,
+        ),
     )
 
 
@@ -932,24 +360,25 @@ async def get_analytics_status() -> AnalyticsStatusResponse:
 
     Used by console/clients to discover available capabilities
     before attempting to render panels.
+    READ-ONLY customer facade - delegates to L4 AnalyticsFacade.
     """
+    facade = get_analytics_facade()
+    result = facade.get_status()
+
+    # Map L4 result to L2 response
+    topics = {
+        name: TopicStatus(
+            read=status.read,
+            write=status.write,
+            signals_bound=status.signals_bound,
+        )
+        for name, status in result.topics.items()
+    }
+
     return AnalyticsStatusResponse(
-        domain="analytics",
-        subdomains=["statistics"],
-        topics={
-            "usage": TopicStatus(
-                read=True,
-                write=False,
-                signals_bound=3,  # cost_records, llm.usage, worker.execution
-            ),
-            "cost": TopicStatus(
-                read=True,
-                write=False,
-                signals_bound=1,  # cost_records
-            ),
-            # Future topics (declared but not yet bound)
-            # "anomalies": TopicStatus(read=False, write=False, signals_bound=0),
-        },
+        domain=result.domain,
+        subdomains=result.subdomains,
+        topics=topics,
     )
 
 
@@ -1009,10 +438,8 @@ async def get_cost_statistics(
     Get cost statistics for the specified time window.
 
     Primary endpoint for the Cost topic.
+    READ-ONLY customer facade - delegates to L4 AnalyticsFacade.
     """
-    # Scope is declared for API contract, implementation pending
-    _ = scope  # Future: filter by project/env
-
     # Get tenant from auth context
     auth_context = get_auth_context(request)
     tenant_id: str | None = getattr(auth_context, "tenant_id", None)
@@ -1035,26 +462,81 @@ async def get_cost_statistics(
             detail="Time window cannot exceed 90 days",
         )
 
-    # Reconcile cost signals
-    totals, series, by_model, by_feature, signals = await reconcile_cost_signals(
+    # Delegate to L4 facade
+    from app.services.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+    facade = get_analytics_facade()
+
+    # Map L2 enums to L4 enums
+    facade_resolution = FacadeResolution.HOUR if resolution == ResolutionType.HOUR else FacadeResolution.DAY
+    facade_scope = FacadeScope.ORG
+    if scope == ScopeType.PROJECT:
+        facade_scope = FacadeScope.PROJECT
+    elif scope == ScopeType.ENV:
+        facade_scope = FacadeScope.ENV
+
+    result = await facade.get_cost_statistics(
         session=session,
         tenant_id=tenant_id,
         from_ts=from_ts,
         to_ts=to_ts,
-        resolution=resolution,
+        resolution=facade_resolution,
+        scope=facade_scope,
     )
+
+    # Map L4 result to L2 response
+    series = [
+        CostDataPoint(
+            ts=point.ts,
+            spend_cents=point.spend_cents,
+            requests=point.requests,
+            input_tokens=point.input_tokens,
+            output_tokens=point.output_tokens,
+        )
+        for point in result.series
+    ]
+
+    by_model = [
+        CostByModel(
+            model=item.model,
+            spend_cents=item.spend_cents,
+            requests=item.requests,
+            input_tokens=item.input_tokens,
+            output_tokens=item.output_tokens,
+            pct_of_total=item.pct_of_total,
+        )
+        for item in result.by_model
+    ]
+
+    by_feature = [
+        CostByFeature(
+            feature_tag=item.feature_tag,
+            spend_cents=item.spend_cents,
+            requests=item.requests,
+            pct_of_total=item.pct_of_total,
+        )
+        for item in result.by_feature
+    ]
 
     return CostStatisticsResponse(
         window=TimeWindow.model_validate({
-            "from": from_ts,
-            "to": to_ts,
+            "from": result.window.from_ts,
+            "to": result.window.to_ts,
             "resolution": resolution,
         }),
-        totals=totals,
+        totals=CostTotals(
+            spend_cents=result.totals.spend_cents,
+            spend_usd=result.totals.spend_usd,
+            requests=result.totals.requests,
+            input_tokens=result.totals.input_tokens,
+            output_tokens=result.totals.output_tokens,
+        ),
         series=series,
         by_model=by_model,
         by_feature=by_feature,
-        signals=signals,
+        signals=CostSignals(
+            sources=result.signals.sources,
+            freshness_sec=result.signals.freshness_sec,
+        ),
     )
 
 
@@ -1089,10 +571,8 @@ async def _get_usage_data(
     Internal helper to get usage data (shared by read and export endpoints).
 
     Ensures export is bit-equivalent to read API - no alternate code paths.
+    Delegates to L4 AnalyticsFacade.
     """
-    # Scope is declared for API contract, implementation pending
-    _ = scope  # Future: filter by project/env
-
     # Get tenant from auth context
     auth_context = get_auth_context(request)
     tenant_id: str | None = getattr(auth_context, "tenant_id", None)
@@ -1115,24 +595,54 @@ async def _get_usage_data(
             detail="Time window cannot exceed 90 days",
         )
 
-    # Reconcile signals
-    totals, series, signals = await reconcile_usage_signals(
+    # Delegate to L4 facade
+    from app.services.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+    facade = get_analytics_facade()
+
+    # Map L2 enums to L4 enums
+    facade_resolution = FacadeResolution.HOUR if resolution == ResolutionType.HOUR else FacadeResolution.DAY
+    facade_scope = FacadeScope.ORG
+    if scope == ScopeType.PROJECT:
+        facade_scope = FacadeScope.PROJECT
+    elif scope == ScopeType.ENV:
+        facade_scope = FacadeScope.ENV
+
+    result = await facade.get_usage_statistics(
         session=session,
         tenant_id=tenant_id,
         from_ts=from_ts,
         to_ts=to_ts,
-        resolution=resolution,
+        resolution=facade_resolution,
+        scope=facade_scope,
     )
+
+    # Map L4 result to L2 response
+    series = [
+        UsageDataPoint(
+            ts=point.ts,
+            requests=point.requests,
+            compute_units=point.compute_units,
+            tokens=point.tokens,
+        )
+        for point in result.series
+    ]
 
     return UsageStatisticsResponse(
         window=UsageWindow.model_validate({
-            "from": from_ts,
-            "to": to_ts,
+            "from": result.window.from_ts,
+            "to": result.window.to_ts,
             "resolution": resolution,
         }),
-        totals=totals,
+        totals=UsageTotals(
+            requests=result.totals.requests,
+            compute_units=result.totals.compute_units,
+            tokens=result.totals.tokens,
+        ),
         series=series,
-        signals=signals,
+        signals=UsageSignals(
+            sources=result.signals.sources,
+            freshness_sec=result.signals.freshness_sec,
+        ),
     )
 
 
@@ -1301,10 +811,8 @@ async def _get_cost_data(
     Internal helper to get cost data (shared by read and export endpoints).
 
     Ensures export is bit-equivalent to read API - no alternate code paths.
+    Delegates to L4 AnalyticsFacade.
     """
-    # Scope is declared for API contract, implementation pending
-    _ = scope  # Future: filter by project/env
-
     # Get tenant from auth context
     auth_context = get_auth_context(request)
     tenant_id: str | None = getattr(auth_context, "tenant_id", None)
@@ -1327,26 +835,81 @@ async def _get_cost_data(
             detail="Time window cannot exceed 90 days",
         )
 
-    # Reconcile cost signals
-    totals, series, by_model, by_feature, signals = await reconcile_cost_signals(
+    # Delegate to L4 facade
+    from app.services.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+    facade = get_analytics_facade()
+
+    # Map L2 enums to L4 enums
+    facade_resolution = FacadeResolution.HOUR if resolution == ResolutionType.HOUR else FacadeResolution.DAY
+    facade_scope = FacadeScope.ORG
+    if scope == ScopeType.PROJECT:
+        facade_scope = FacadeScope.PROJECT
+    elif scope == ScopeType.ENV:
+        facade_scope = FacadeScope.ENV
+
+    result = await facade.get_cost_statistics(
         session=session,
         tenant_id=tenant_id,
         from_ts=from_ts,
         to_ts=to_ts,
-        resolution=resolution,
+        resolution=facade_resolution,
+        scope=facade_scope,
     )
+
+    # Map L4 result to L2 response
+    series = [
+        CostDataPoint(
+            ts=point.ts,
+            spend_cents=point.spend_cents,
+            requests=point.requests,
+            input_tokens=point.input_tokens,
+            output_tokens=point.output_tokens,
+        )
+        for point in result.series
+    ]
+
+    by_model = [
+        CostByModel(
+            model=item.model,
+            spend_cents=item.spend_cents,
+            requests=item.requests,
+            input_tokens=item.input_tokens,
+            output_tokens=item.output_tokens,
+            pct_of_total=item.pct_of_total,
+        )
+        for item in result.by_model
+    ]
+
+    by_feature = [
+        CostByFeature(
+            feature_tag=item.feature_tag,
+            spend_cents=item.spend_cents,
+            requests=item.requests,
+            pct_of_total=item.pct_of_total,
+        )
+        for item in result.by_feature
+    ]
 
     return CostStatisticsResponse(
         window=TimeWindow.model_validate({
-            "from": from_ts,
-            "to": to_ts,
+            "from": result.window.from_ts,
+            "to": result.window.to_ts,
             "resolution": resolution,
         }),
-        totals=totals,
+        totals=CostTotals(
+            spend_cents=result.totals.spend_cents,
+            spend_usd=result.totals.spend_usd,
+            requests=result.totals.requests,
+            input_tokens=result.totals.input_tokens,
+            output_tokens=result.totals.output_tokens,
+        ),
         series=series,
         by_model=by_model,
         by_feature=by_feature,
-        signals=signals,
+        signals=CostSignals(
+            sources=result.signals.sources,
+            freshness_sec=result.signals.freshness_sec,
+        ),
     )
 
 

@@ -1,4 +1,6 @@
 # Layer: L6 — Platform Substrate
+# AUDIENCE: INTERNAL
+# PHASE: W0
 # Product: system-wide
 # Temporal:
 #   Trigger: api | worker | sdk
@@ -104,6 +106,13 @@ class ExecutionContext:
     source: EvidenceSource
     created_at: datetime
 
+    # ---- Governance Context (INV-W0-001) ----
+    tenant_id: Optional[str] = field(default=None)
+    policy_snapshot_id: Optional[str] = field(default=None)
+    budget_envelope_id: Optional[str] = field(default=None)
+    actor_id: Optional[str] = field(default=None)
+    actor_type: Optional[str] = field(default=None)  # human | machine | system
+
     # ---- Execution State (CONTROLLED MUTATION) ----
     step_index: int = field(default=0)
     execution_phase: ExecutionPhase = field(default=ExecutionPhase.CREATED)
@@ -120,6 +129,11 @@ class ExecutionContext:
         source: EvidenceSource,
         is_synthetic: bool = False,
         synthetic_scenario_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+        policy_snapshot_id: Optional[str] = None,
+        budget_envelope_id: Optional[str] = None,
+        actor_id: Optional[str] = None,
+        actor_type: Optional[str] = None,
     ) -> "ExecutionContext":
         """
         Create a new ExecutionContext at intent acceptance / run creation.
@@ -130,6 +144,11 @@ class ExecutionContext:
             source: Origin of this execution
             is_synthetic: True for SDSR/test executions
             synthetic_scenario_id: Required if is_synthetic=True
+            tenant_id: Tenant identifier (INV-W0-001)
+            policy_snapshot_id: Policy snapshot for this execution (INV-W0-001)
+            budget_envelope_id: Budget envelope for this execution (INV-W0-001)
+            actor_id: Actor who initiated this execution (INV-W0-001)
+            actor_type: Type of actor: human | machine | system (INV-W0-001)
 
         Returns:
             New ExecutionContext instance
@@ -160,6 +179,11 @@ class ExecutionContext:
             synthetic_scenario_id=synthetic_scenario_id,
             source=source,
             created_at=datetime.now(timezone.utc),
+            tenant_id=tenant_id,
+            policy_snapshot_id=policy_snapshot_id,
+            budget_envelope_id=budget_envelope_id,
+            actor_id=actor_id,
+            actor_type=actor_type,
             step_index=0,
             execution_phase=ExecutionPhase.CREATED,
         )
@@ -282,7 +306,51 @@ class ExecutionContext:
             "synthetic_scenario_id": self.synthetic_scenario_id,
             "source": self.source.value,
             "created_at": self.created_at.isoformat(),
+            "tenant_id": self.tenant_id,
+            "policy_snapshot_id": self.policy_snapshot_id,
+            "budget_envelope_id": self.budget_envelope_id,
+            "actor_id": self.actor_id,
+            "actor_type": self.actor_type,
         }
+
+    def to_audit_dict(self) -> dict:
+        """
+        Extract audit-relevant fields for compliance logging (INV-W0-001).
+
+        Returns minimal set needed for audit trail provenance.
+        """
+        return {
+            "tenant_id": self.tenant_id,
+            "run_id": self.run_id,
+            "step_index": self.step_index,
+            "trace_id": self.trace_id,
+            "actor_id": self.actor_id,
+            "actor_type": self.actor_type,
+            "policy_snapshot_id": self.policy_snapshot_id,
+        }
+
+    def with_governance(
+        self,
+        *,
+        tenant_id: Optional[str] = None,
+        policy_snapshot_id: Optional[str] = None,
+        budget_envelope_id: Optional[str] = None,
+        actor_id: Optional[str] = None,
+        actor_type: Optional[str] = None,
+    ) -> "ExecutionContext":
+        """
+        Create copy with governance context (INV-W0-001).
+
+        Use this to add governance metadata to an existing context.
+        """
+        return replace(
+            self,
+            tenant_id=tenant_id if tenant_id is not None else self.tenant_id,
+            policy_snapshot_id=policy_snapshot_id if policy_snapshot_id is not None else self.policy_snapshot_id,
+            budget_envelope_id=budget_envelope_id if budget_envelope_id is not None else self.budget_envelope_id,
+            actor_id=actor_id if actor_id is not None else self.actor_id,
+            actor_type=actor_type if actor_type is not None else self.actor_type,
+        )
 
 
 # =============================================================================
@@ -335,6 +403,11 @@ class ExecutionCursor:
         source: EvidenceSource,
         is_synthetic: bool = False,
         synthetic_scenario_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+        policy_snapshot_id: Optional[str] = None,
+        budget_envelope_id: Optional[str] = None,
+        actor_id: Optional[str] = None,
+        actor_type: Optional[str] = None,
     ) -> "ExecutionCursor":
         """
         Create a new ExecutionCursor for an execution.
@@ -348,6 +421,11 @@ class ExecutionCursor:
             source: Origin of this execution
             is_synthetic: True for SDSR/test executions
             synthetic_scenario_id: Required if is_synthetic=True
+            tenant_id: Tenant identifier (INV-W0-001)
+            policy_snapshot_id: Policy snapshot for governance (INV-W0-001)
+            budget_envelope_id: Budget envelope for this execution (INV-W0-001)
+            actor_id: Actor who initiated this execution (INV-W0-001)
+            actor_type: Type of actor: human | machine | system (INV-W0-001)
 
         Returns:
             New ExecutionCursor with authority over step advancement
@@ -358,6 +436,11 @@ class ExecutionCursor:
             source=source,
             is_synthetic=is_synthetic,
             synthetic_scenario_id=synthetic_scenario_id,
+            tenant_id=tenant_id,
+            policy_snapshot_id=policy_snapshot_id,
+            budget_envelope_id=budget_envelope_id,
+            actor_id=actor_id,
+            actor_type=actor_type,
         )
         return ExecutionCursor(ctx)
 

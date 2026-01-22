@@ -495,6 +495,13 @@ ENGINEERING AUTHORITY SELF-CHECK
    → If yes: STOP, fix the canonical structure instead
    → If canonical fix is unsafe: produce Fragmentation Escalation Report
    → NEVER create parallel structures without explicit approval
+
+10. Does this file have AUDIENCE and PURPOSE headers? (BL-AUD-001)
+    → If AUDIENCE missing: STOP, report to user, add header before proceeding
+    → If Role/PURPOSE missing: STOP, report to user, add header before proceeding
+    → If CUSTOMER importing FOUNDER: STOP, report violation
+    → Check ALL files read/written, ALWAYS ON
+    → Validation: python3 scripts/ops/audience_guard.py --ci
 ```
 
 ---
@@ -548,6 +555,135 @@ Which approach should I take?
 ```
 
 **Default:** Option 1 (PanelContentRegistry) unless user explicitly approves otherwise.
+
+---
+
+## 21. AUDIENCE CLASSIFICATION ENFORCEMENT (ALWAYS-ON)
+
+**RULE ID: BL-AUD-001**
+**Status:** ACTIVE (Always-On)
+**Reference:** `backend/AUDIENCE_REGISTRY.yaml`, `scripts/ops/audience_guard.py`
+
+### Core Principle
+
+> **Audience boundaries prevent accidental feature exposure.**
+> CUSTOMER code must never import FOUNDER code.
+
+### Always-On Behavior
+
+Claude MUST check AUDIENCE and PURPOSE on **EVERY** file read or write operation:
+
+1. **Read header** - Look for `# AUDIENCE:` and `# Role:` (PURPOSE) in first 50 lines
+2. **Validate imports** - Check if imports violate audience boundaries
+3. **Report to user** - If unclassified or violation found, REPORT immediately
+
+### Audience Types
+
+| Audience | Description | Example Files |
+|----------|-------------|---------------|
+| **CUSTOMER** | Customer-facing (SDK, Console, public APIs) | L2 APIs, facades |
+| **FOUNDER** | Founder/Admin-only (ops tools, admin dashboards) | founder_explorer.py |
+| **INTERNAL** | Internal infrastructure (workers, adapters, core) | workers, adapters |
+| **SHARED** | Shared utilities (logging, types, constants) | app/core/logging.py |
+
+### PURPOSE (Role) Requirement
+
+Every file MUST have a `# Role:` header describing its purpose:
+
+```python
+# Role: IAM service for identity and access management
+# Role: AWS Lambda serverless adapter
+# Role: High-level sandbox service with policy enforcement
+```
+
+This enables Claude to understand file intent before making changes.
+
+### Import Rules (HARD ENFORCEMENT)
+
+| From Audience | Forbidden Imports | Reason |
+|---------------|-------------------|--------|
+| **CUSTOMER** | FOUNDER | Customer code must never depend on admin features |
+| FOUNDER | (none) | Founder code can import anything |
+| INTERNAL | (none) | Internal code can import anything |
+| SHARED | (none) | Shared utilities can import anything |
+
+### Required File Header
+
+Every Python file in `app/` and `scripts/` MUST have:
+
+```python
+# Layer: L{x} — {Layer Name}
+# AUDIENCE: CUSTOMER | FOUNDER | INTERNAL | SHARED
+# Role: <single-line description of file purpose>
+# ...rest of header
+```
+
+### Self-Check Addition (Item 10)
+
+Add to the Engineering Authority Self-Check:
+
+```
+10. Does this file have AUDIENCE and PURPOSE headers? (BL-AUD-001)
+    → If AUDIENCE missing: STOP, report to user, add header before proceeding
+    → If Role/PURPOSE missing: STOP, report to user, add header before proceeding
+    → If CUSTOMER importing FOUNDER: STOP, report violation
+    → Validation: python3 scripts/ops/audience_guard.py --ci
+```
+
+### Reporting Format
+
+**Unclassified File:**
+```
+UNCLASSIFIED ARTIFACT DETECTED
+File: backend/app/api/new_endpoint.py
+Type: API Route
+
+Missing headers:
+- AUDIENCE: not declared
+- Role/PURPOSE: not declared
+
+Suggested classification:
+- AUDIENCE: CUSTOMER (public API endpoint)
+- Role: REST API for monitoring metrics and alerts
+
+Reference: backend/AUDIENCE_REGISTRY.yaml
+```
+
+**Import Violation:**
+```
+AUDIENCE IMPORT VIOLATION
+File: backend/app/api/monitors.py:15
+From audience: CUSTOMER
+To audience: FOUNDER
+Import: app.api.founder_explorer
+
+Rule violated: CUSTOMER code cannot import FOUNDER modules
+
+Fix options:
+1. Move shared logic to SHARED module
+2. Create facade in appropriate layer
+3. Re-architect to remove dependency
+```
+
+### Validation Commands
+
+```bash
+# Full validation (CI mode)
+python3 scripts/ops/audience_guard.py --ci
+
+# Summary of classified files
+python3 scripts/ops/audience_guard.py --summary
+
+# Strict mode (fail on missing headers)
+python3 scripts/ops/audience_guard.py --ci --strict
+```
+
+### Key Artifacts
+
+| Artifact | Location | Role |
+|----------|----------|------|
+| Audience Registry | `backend/AUDIENCE_REGISTRY.yaml` | Classification source of truth |
+| Audience Guard | `backend/scripts/ops/audience_guard.py` | CI enforcement script |
 
 ---
 

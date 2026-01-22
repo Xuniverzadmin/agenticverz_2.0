@@ -1,8 +1,30 @@
 # Analytics Domain Audit
 
 **Status:** ✅ LIVE (De Jure Console Domain)
-**Last Updated:** 2026-01-17
-**Reference:** PIN-411 (Unified Facades), Analytics Domain Declaration v1
+**Last Updated:** 2026-01-22
+**Reference:** PIN-411 (Unified Facades), PIN-463 (L4 Facade Pattern)
+
+---
+
+## Architecture Pattern
+
+This domain follows the **L4 Facade Pattern** for data access:
+
+| Layer | File | Role |
+|-------|------|------|
+| L2 API | `backend/app/api/aos_analytics.py` | HTTP handling, response formatting |
+| L4 Facade | `backend/app/services/analytics_facade.py` | Business logic, tenant isolation |
+
+**Data Flow:** `L1 (UI) → L2 (API) → L4 (Facade) → L6 (Database)`
+
+**Key Rules:**
+- L2 routes delegate to L4 facade (never direct SQL)
+- Facade returns typed dataclasses (never ORM models)
+- All operations are tenant-scoped
+
+**Full Reference:** [PIN-463: L4 Facade Architecture Pattern](../../memory-pins/PIN-463-l4-facade-architecture-pattern.md), [LAYER_MODEL.md](../LAYER_MODEL.md)
+
+---
 
 > **HARD COMMIT (2026-01-17):** Analytics is now a first-class, visible console domain.
 > - Domain: Analytics (6th primary domain)
@@ -79,7 +101,98 @@
 
 ---
 
-## 3. API Routes
+## 3. L4 Domain Facade
+
+### 3.1 Architecture Pattern
+
+The Analytics domain uses a **Read-Only Facade Pattern** where L2 API endpoints delegate all data access to the L4 `AnalyticsFacade`:
+
+```
+┌─────────────────────┐
+│   L2: analytics.py  │  (Endpoint handlers)
+│   - Auth extraction │
+│   - Request params  │
+│   - Response mapping│
+└──────────┬──────────┘
+           │ await facade.method()
+           ▼
+┌─────────────────────┐
+│  L4: AnalyticsFacade│  (Domain logic)
+│   - SignalAdapter   │
+│   - Reconciliation  │
+│   - Result mapping  │
+└──────────┬──────────┘
+           │ session.execute()
+           ▼
+┌─────────────────────┐
+│   L6: Database      │  (Data access)
+└─────────────────────┘
+```
+
+### 3.2 Facade Entry Point
+
+| Component | File | Pattern |
+|-----------|------|---------|
+| `AnalyticsFacade` | `backend/app/services/analytics_facade.py` | Singleton via `get_analytics_facade()` |
+
+**Usage Pattern:**
+```python
+from app.services.analytics_facade import get_analytics_facade
+
+facade = get_analytics_facade()
+result = await facade.get_usage_statistics(session, tenant_id, ...)
+```
+
+### 3.3 Operations Provided
+
+| Method | Purpose | Returns |
+|--------|---------|---------|
+| `get_usage_statistics()` | Usage statistics with time series | `UsageStatisticsResult` |
+| `get_cost_statistics()` | Cost statistics with breakdowns | `CostStatisticsResult` |
+| `get_status()` | Analytics domain capability status | `AnalyticsStatusResult` |
+
+### 3.4 L2-to-L4 Result Type Mapping
+
+All L4 facade methods return dataclass result types that L2 maps to Pydantic response models:
+
+| L4 Result Type | L2 Response Model | Purpose |
+|----------------|-------------------|---------|
+| `UsageStatisticsResult` | `UsageStatisticsResponse` | Usage statistics |
+| `TimeWindowResult` | `UsageWindow` / `TimeWindow` | Time window spec |
+| `UsageTotalsResult` | `UsageTotals` | Usage totals |
+| `UsageDataPointResult` | `UsageDataPoint` | Usage time series point |
+| `SignalSourceResult` | `UsageSignals` / `CostSignals` | Signal metadata |
+| `CostStatisticsResult` | `CostStatisticsResponse` | Cost statistics |
+| `CostTotalsResult` | `CostTotals` | Cost totals |
+| `CostDataPointResult` | `CostDataPoint` | Cost time series point |
+| `CostByModelResult` | `CostByModel` | Cost by model breakdown |
+| `CostByFeatureResult` | `CostByFeature` | Cost by feature breakdown |
+| `AnalyticsStatusResult` | `AnalyticsStatusResponse` | Domain status |
+| `TopicStatusResult` | `TopicStatus` | Topic capabilities |
+
+### 3.5 Signal Adapters (L4 Owned)
+
+The `SignalAdapter` class in the facade handles all data fetching from signal sources:
+
+| Adapter | Source Table | Output |
+|---------|--------------|--------|
+| `fetch_cost_metrics` | cost_records | requests, tokens |
+| `fetch_llm_usage` | runs | requests, tokens |
+| `fetch_worker_execution` | aos_traces | compute_units |
+| `fetch_cost_spend` | cost_records | spend_cents, requests, tokens |
+| `fetch_cost_by_model` | cost_records | model breakdowns |
+| `fetch_cost_by_feature` | cost_records | feature breakdowns |
+
+### 3.6 Key Characteristics
+
+- **Read-Only**: All facade methods are read operations (SELECT only)
+- **Tenant-Scoped**: All queries filter by tenant_id
+- **Signal Reconciliation**: Facade merges multiple signal sources
+- **No State Mutation**: Facade does not write analytics data
+
+---
+
+## 4. API Routes
 
 ### Unified Facade (v1) - LIVE
 
@@ -208,18 +321,12 @@ Analytics (bar-chart icon)
 
 | Service | File | Lines | Role |
 |---------|------|-------|------|
+| AnalyticsFacade | `analytics_facade.py` | 829 | Unified facade with SignalAdapter |
 | CostWriteService | `cost_write_service.py` | 181 | CRUD for tags, records, budgets |
 | CostAnomalyDetector | `cost_anomaly_detector.py` | 1,100+ | M29 anomaly detection engine |
 | CostModelEngine | `cost_model_engine.py` | 400+ | Cost calculation, token pricing |
 
-### Signal Adapters (analytics.py)
-
-| Adapter | Source | Output |
-|---------|--------|--------|
-| `fetch_cost_metrics` | cost_records | requests, tokens |
-| `fetch_llm_usage` | runs | requests, tokens |
-| `fetch_worker_execution` | aos_traces | compute_units |
-| `fetch_gateway_metrics` | (derived) | requests |
+**Note:** Signal Adapters (`fetch_cost_metrics`, `fetch_llm_usage`, etc.) are now in `analytics_facade.py` (see Section 3.5).
 
 ---
 

@@ -74,14 +74,13 @@ def initialize_event_reactor():
         _reactor = get_event_reactor()
         register_audit_handlers(_reactor)
 
-        # Start heartbeat monitoring if available
-        if hasattr(_reactor, 'start_heartbeat'):
-            _reactor.start_heartbeat()
+        # Start reactor in background thread to process events
+        _reactor.start_background()
 
         _initialized = True
 
         logger.info("event_reactor.initialized", extra={
-            "heartbeat_enabled": hasattr(_reactor, 'start_heartbeat'),
+            "background_thread_started": True,
             "audit_handlers_registered": True,
             "profile": config.profile.value,
         })
@@ -126,10 +125,9 @@ def shutdown_event_reactor() -> None:
 
     if _reactor is not None:
         try:
-            if hasattr(_reactor, 'stop_heartbeat'):
-                _reactor.stop_heartbeat()
-            if hasattr(_reactor, 'shutdown'):
-                _reactor.shutdown()
+            # Stop the reactor (handles background thread cleanup)
+            if hasattr(_reactor, 'stop'):
+                _reactor.stop(timeout=5.0)
             logger.info("event_reactor.shutdown_complete")
         except Exception as e:
             logger.error("event_reactor.shutdown_error", extra={"error": str(e)})

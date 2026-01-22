@@ -381,7 +381,7 @@ This document provides a complete inventory of backend resources mapped to the A
 
 | Resource Type | Path | Purpose |
 |--------------|------|---------|
-| **API Router** | `backend/app/api/accounts.py` | Unified facade for Accounts |
+| **API Router** | `backend/app/api/aos_accounts.py` | Unified facade for Accounts |
 | **Route Prefix** | `/api/v1/accounts/*` | All Account endpoints |
 
 **Endpoints:**

@@ -28,7 +28,7 @@ SEMANTIC:
 """
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date as DateType, datetime, timezone
 from enum import Enum
 from typing import Optional
 
@@ -150,7 +150,8 @@ class CusIntegration(SQLModel, table=True):
 
     # Integration identity
     name: str = Field(max_length=255)
-    provider_type: CusProviderType = Field(max_length=50)
+    # Note: Using str type since DB uses varchar with check constraint for valid values
+    provider_type: str = Field(max_length=50)
 
     # Credential storage (encrypted reference, NEVER raw key)
     credential_ref: str = Field(description="Encrypted credential or vault pointer")
@@ -159,10 +160,12 @@ class CusIntegration(SQLModel, table=True):
     config: Optional[dict] = Field(default=None, sa_column=Column(JSONB, nullable=True))
 
     # Lifecycle status
-    status: CusIntegrationStatus = Field(default=CusIntegrationStatus.CREATED, max_length=20)
+    # Note: Using str type since DB uses varchar with check constraint for valid values
+    status: str = Field(default=CusIntegrationStatus.CREATED.value, max_length=20)
 
     # Health monitoring
-    health_state: CusHealthState = Field(default=CusHealthState.UNKNOWN, max_length=20)
+    # Note: Using str type since DB uses varchar with check constraint for valid values
+    health_state: str = Field(default=CusHealthState.UNKNOWN.value, max_length=20)
     health_checked_at: Optional[datetime] = Field(default=None)
     health_message: Optional[str] = Field(default=None)
 
@@ -369,7 +372,8 @@ class CusUsageDaily(SQLModel, table=True):
     # Composite primary key (no separate id field)
     tenant_id: str = Field(max_length=100, primary_key=True)
     integration_id: str = Field(primary_key=True)
-    usage_date: date = Field(primary_key=True)  # Renamed from 'date' to avoid shadowing the type
+    # Note: Field named 'date' in DB, type aliased to avoid shadowing
+    date: DateType = Field(primary_key=True)
 
     # Aggregated metrics
     total_calls: int = Field(default=0, ge=0)

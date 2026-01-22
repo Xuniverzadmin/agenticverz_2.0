@@ -1,4 +1,6 @@
-# app/api/recovery.py
+# Layer: L2 — Product APIs
+# AUDIENCE: INTERNAL
+# Role: M10 Recovery Suggestion Engine - failure recovery suggestions for founders
 # capability_id: CAP-018
 """
 M10 Recovery Suggestion Engine API Endpoints (Enhanced)

@@ -1,3 +1,6 @@
+# Layer: L2 — Product APIs
+# AUDIENCE: INTERNAL
+# Role: Ops Console API - Founder Intelligence System for behavioral insights
 """Ops Console API - Founder Intelligence System
 
 PIN-105: Ops Console - Founder Intelligence System

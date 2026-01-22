@@ -52,6 +52,7 @@ SESSION_BOOTSTRAP_CONFIRMATION
   - behavior_library.yaml
   - visibility_contract.yaml
   - visibility_lifecycle.yaml
+  - AUDIENCE_REGISTRY.yaml
   - discovery_ledger.yaml
   - database_contract.yaml
   - LESSONS_ENFORCED.md
@@ -1110,7 +1111,7 @@ The `.github/workflows/architecture-constraints.yml` workflow enforces:
 
 **Status:** BLOCKING
 **Severity:** CRITICAL
-**Effective:** 2026-01-10
+**Effective:** 2026-01-10 (Updated 2026-01-21 with DB_ROLE)
 **Trigger:** Any database query, validation, script execution, or data access
 **Reference:** `docs/governance/DB_AUTH_001_INVARIANT.md`, `docs/runtime/DB_AUTHORITY.md`
 
@@ -1126,6 +1127,46 @@ Authority is **declared**, **validated**, and **enforced** — never discovered.
 
 Discovery is forbidden. Inference is a violation. Guessing is not intelligence.
 
+---
+
+#### Database Roles (Migration Governance) — PIN-462
+
+**Migrations are governed by `DB_ROLE`, not `DB_AUTHORITY`.**
+
+| DB_ROLE | Meaning | Migrations |
+|---------|---------|------------|
+| **staging** | Pre-prod / local / CI | ✅ Allowed |
+| **prod** | Production canonical | ✅ Allowed (with `CONFIRM_PROD_MIGRATIONS=true`) |
+| **replica** | Read-only / analytics | ❌ Blocked |
+
+**Environment Mapping:**
+
+| Environment | DB_AUTHORITY | DB_ROLE |
+|-------------|--------------|---------|
+| Local dev   | local        | staging |
+| Neon test   | neon         | staging |
+| Neon prod   | neon         | prod    |
+
+**Migration Commands:**
+
+```bash
+# Local staging (rehearsal)
+DB_AUTHORITY=local DB_ROLE=staging alembic upgrade head
+
+# Production (with confirmation)
+DB_AUTHORITY=neon DB_ROLE=prod CONFIRM_PROD_MIGRATIONS=true alembic upgrade head
+```
+
+**Migration Safety Rules:**
+
+1. **replica is always blocked** — Read-only databases never accept migrations
+2. **prod requires confirmation** — Set `CONFIRM_PROD_MIGRATIONS=true`
+3. **DB_ROLE is authoritative** — `DB_AUTHORITY` is informational only for migrations
+
+---
+
+#### Data Query Authority (Unchanged)
+
 **Authority Assignment (Static):**
 
 | Database | Authority Level | Role |
@@ -1140,7 +1181,8 @@ Claude MUST internally establish before any database operation:
 ```
 DB AUTHORITY DECLARATION
 - Declared Authority: <neon | local>
-- Intended Operation: <read | write | validate | test>
+- DB_ROLE (if migration): <staging | prod>
+- Intended Operation: <read | write | validate | test | migrate>
 - Justification: <single sentence>
 ```
 
@@ -1157,7 +1199,8 @@ If not established → **session invalid**.
 | SDSR scenario execution | ✅ | ❌ |
 | Trace/incident verification | ✅ | ❌ |
 | Schema experiments | ❌ | ✅ |
-| Migration dry-runs | ❌ | ✅ |
+| **Migration (staging)** | ✅ | ✅ |
+| **Migration (prod)** | ✅ (with confirm) | ❌ |
 | Disposable tests | ❌ | ✅ |
 | Unit tests | ❌ | ✅ |
 
@@ -1173,6 +1216,8 @@ The following are **governance violations**:
 6. Silent fallback from Neon → Local or vice-versa
 7. Querying Docker DB when task requires canonical truth
 8. Assuming localhost because "it's running"
+9. **Running migrations without declaring DB_ROLE**
+10. **Running prod migrations without CONFIRM_PROD_MIGRATIONS=true**
 
 **Conflict Resolution:**
 
@@ -1187,6 +1232,7 @@ If multiple databases are reachable, connectivity does not imply legitimacy.
 ❌ "I see Neon has more recent records, so..."
 ❌ "The Docker DB is running, let me query it"
 ❌ "Let me try local first, then Neon"
+❌ "DB_AUTHORITY=local alembic upgrade head" (missing DB_ROLE)
 ```
 
 **Always Do This:**
@@ -1195,6 +1241,8 @@ If multiple databases are reachable, connectivity does not imply legitimacy.
 ✅ "DB_AUTHORITY=neon, querying Neon for canonical truth"
 ✅ "This is a migration test, using local DB as declared"
 ✅ "SDSR verification requires Neon (authoritative)"
+✅ "DB_ROLE=staging for local migration rehearsal"
+✅ "DB_ROLE=prod CONFIRM_PROD_MIGRATIONS=true for production migration"
 ```
 
 **Hard Failure Response:**
@@ -1204,7 +1252,7 @@ DB-AUTH-001 VIOLATION: Database authority mismatch or inference detected.
 
 Expected authority: <declared>
 Attempted operation: <description>
-Violation type: <inference | mismatch | undeclared>
+Violation type: <inference | mismatch | undeclared | missing_role>
 
 STATUS: BLOCKED
 REQUIRED ACTION: Declare authority explicitly before proceeding.
@@ -1214,9 +1262,13 @@ Reference: docs/governance/DB_AUTH_001_INVARIANT.md
 **Environment Variables (Required):**
 
 ```env
+# For data queries
 DB_AUTHORITY=neon
-DB_ENV=prod-like
 DATABASE_URL=postgresql://...neon.tech/...
+
+# For migrations (additional)
+DB_ROLE=staging|prod
+CONFIRM_PROD_MIGRATIONS=true  # Required for DB_ROLE=prod
 ```
 
 **Key Artifacts:**
@@ -1224,8 +1276,10 @@ DATABASE_URL=postgresql://...neon.tech/...
 | Artifact | Location | Role |
 |----------|----------|------|
 | Authority Contract | `docs/runtime/DB_AUTHORITY.md` | Law |
+| Environment Contract | `docs/architecture/ENVIRONMENT_CONTRACT.md` | Section 4.5 |
 | Governance Invariant | `docs/governance/DB_AUTH_001_INVARIANT.md` | Formal specification |
-| Enforcement Script | `backend/scripts/_db_guard.py` | Hard gate |
+| Migration Gate | `backend/alembic/env.py` | Hard gate |
+| PIN-462 | `docs/memory-pins/PIN-462-db-role-migration-governance.md` | Reference |
 
 ### Auth Pattern Enforcement (BL-AUTH-001) — HARD BLOCK
 
@@ -1519,6 +1573,7 @@ Claude responses are validated against behavior rules derived from real incident
 | BL-DOCKER-001 | Docker Names | Docker commands | `DOCKER NAME CHECK` |
 | BL-TEST-001 | Test Prerequisites | Running tests | `TEST PREREQUISITES CHECK` |
 | BL-WEB-001 | Visibility Contract | New tables/models | `WEB_VISIBILITY_CONTRACT_CHECK` |
+| **BL-AUD-001** | **Audience Classification** | **ALWAYS-ON (all .py files)** | `AUDIENCE_CLASSIFICATION_CHECK` |
 
 **Example Behavior Rule Output:**
 ```
@@ -1546,7 +1601,116 @@ If a trigger is detected but the required section is missing, the response is **
 │  6. BLOCKED: Stop if conflict detected                      │
 │  7. ARCH-GOV: Layer, Temporal, Ownership gates (PIN-245)    │
 │  8. ARTIFACT: Every file has class + layer (PIN-248)        │
+│  9. AUDIENCE: Check AUDIENCE headers on ALL files (BL-AUD-001) │
 └─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Audience Classification Enforcement (BL-AUD-001) — ALWAYS-ON
+
+**Status:** ACTIVE (Always-On)
+**Effective:** 2026-01-21
+**Trigger:** EVERY Python file read/write operation
+**Reference:** `docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md` Section 21, `backend/AUDIENCE_REGISTRY.yaml`
+
+**Core Principle:**
+
+> **Audience boundaries prevent accidental feature exposure.**
+> CUSTOMER code must never import FOUNDER code.
+
+**Always-On Behavior:**
+
+Claude MUST check AUDIENCE and PURPOSE on **EVERY** file read or write operation:
+
+1. **Read header** - Look for `# AUDIENCE:` and `# Role:` (PURPOSE) in first 50 lines
+2. **Validate imports** - Check if imports violate audience boundaries
+3. **Report to user** - If unclassified or violation found, REPORT immediately
+
+**Audience Types:**
+
+| Audience | Description |
+|----------|-------------|
+| **CUSTOMER** | Customer-facing (SDK, APIs, Console) |
+| **FOUNDER** | Founder/Admin-only (ops tools) |
+| **INTERNAL** | Internal infrastructure (workers, adapters) |
+| **SHARED** | Shared utilities (logging, types) |
+
+**PURPOSE (Role) Requirement:**
+
+Every file MUST have a `# Role:` header describing its purpose.
+
+**Import Rules (HARD ENFORCEMENT):**
+
+| From Audience | Forbidden Imports | Reason |
+|---------------|-------------------|--------|
+| **CUSTOMER** | FOUNDER | Customer code must never depend on admin features |
+| All others | (none) | No restrictions |
+
+**Required File Header:**
+
+```python
+# Layer: L{x} — {Layer Name}
+# AUDIENCE: CUSTOMER | FOUNDER | INTERNAL | SHARED
+# Role: <single-line description of file purpose>
+```
+
+**Reporting Format:**
+
+When unclassified file detected:
+```
+UNCLASSIFIED ARTIFACT DETECTED
+File: backend/app/api/new_endpoint.py
+Type: API Route
+
+Missing headers:
+- AUDIENCE: not declared
+- Role/PURPOSE: not declared
+
+Suggested classification:
+- AUDIENCE: CUSTOMER (public API endpoint)
+- Role: REST API for monitoring metrics and alerts
+
+Reference: backend/AUDIENCE_REGISTRY.yaml
+```
+
+When import violation detected:
+```
+AUDIENCE IMPORT VIOLATION
+File: backend/app/api/monitors.py:15
+From audience: CUSTOMER
+To audience: FOUNDER
+Import: app.api.founder_explorer
+
+Rule violated: CUSTOMER code cannot import FOUNDER modules
+```
+
+**Validation:**
+
+```bash
+# CI validation
+python3 scripts/ops/audience_guard.py --ci
+
+# Summary
+python3 scripts/ops/audience_guard.py --summary
+```
+
+**Hard Failure Response:**
+
+If Claude reads/writes a Python file without checking AUDIENCE:
+```
+BL-AUD-001 VIOLATION: Audience classification not checked.
+
+Claude MUST check AUDIENCE and PURPOSE headers on EVERY .py file operation.
+This is ALWAYS-ON, not triggered by keywords.
+
+Required action:
+1. Check "# AUDIENCE:" header (first 50 lines)
+2. Check "# Role:" header (PURPOSE) (first 50 lines)
+3. If missing, REPORT before proceeding
+4. If import violation, BLOCK and report
+
+Reference: docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md Section 21
 ```
 
 ---

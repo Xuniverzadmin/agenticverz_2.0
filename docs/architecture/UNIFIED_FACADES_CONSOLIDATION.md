@@ -105,17 +105,29 @@ AFTER:  app/api/{domain}.py          → ONE facade, ONE truth
 
 ---
 
-### 6. CONNECTIVITY Domain (`/api/v1/connectivity/*`)
+### 6. CONNECTIVITY Domain (Split into Two Facades)
+
+> **Note:** The Connectivity domain has been split into two separate facades for cleaner separation of concerns.
+
+#### 6a. Integrations Facade (`/api/v1/integrations/*`)
 
 | Endpoint | Depth | Description |
 |----------|-------|-------------|
-| `GET /integrations` | O2 | List SDK/worker integrations |
-| `GET /integrations/{id}` | O3 | Integration detail |
-| `GET /api-keys` | O2 | List API keys |
-| `GET /api-keys/{id}` | O3 | API key detail |
+| `GET /` | O2 | List SDK/worker integrations |
+| `GET /{id}` | O3 | Integration detail |
 
-**File:** `backend/app/api/connectivity.py`
-**Tables Queried:** `worker_registry`, `worker_configs`, `api_keys`
+**File:** `backend/app/api/aos_cus_integrations.py`
+**Tables Queried:** `worker_registry`, `worker_configs`
+
+#### 6b. API Keys Facade (`/api/v1/api-keys/*`)
+
+| Endpoint | Depth | Description |
+|----------|-------|-------------|
+| `GET /` | O2 | List API keys |
+| `GET /{id}` | O3 | API key detail |
+
+**File:** `backend/app/api/aos_api_key.py`
+**Tables Queried:** `api_keys`
 
 ---
 
@@ -132,7 +144,7 @@ AFTER:  app/api/{domain}.py          → ONE facade, ONE truth
 | `GET /profile` | - | Current user profile |
 | `GET /billing` | - | Billing summary |
 
-**File:** `backend/app/api/accounts.py`
+**File:** `backend/app/api/aos_accounts.py`
 **Tables Queried:** `tenants`, `users`, `tenant_memberships`, `subscriptions`
 
 ---
@@ -182,8 +194,9 @@ from .api.incidents import router as incidents_router
 from .api.overview import router as overview_router
 from .api.policies import router as policies_router
 from .api.logs import router as logs_router
-from .api.connectivity import router as connectivity_router
-from .api.accounts import router as accounts_router
+from .api.aos_cus_integrations import router as aos_cus_integrations_router
+from .api.aos_api_key import router as aos_api_key_router
+from .api.aos_accounts import router as accounts_router
 
 # Registration
 app.include_router(activity_router)
@@ -191,7 +204,8 @@ app.include_router(incidents_router)
 app.include_router(overview_router)
 app.include_router(policies_router)
 app.include_router(logs_router)
-app.include_router(connectivity_router)
+app.include_router(aos_cus_integrations_router)
+app.include_router(aos_api_key_router)
 app.include_router(accounts_router)
 ```
 
@@ -210,8 +224,9 @@ app.include_router(accounts_router)
 | `backend/app/api/overview.py` | OVERVIEW domain facade | L2 |
 | `backend/app/api/policies.py` | POLICIES domain facade | L2 |
 | `backend/app/api/logs.py` | LOGS domain facade | L2 |
-| `backend/app/api/connectivity.py` | CONNECTIVITY domain facade | L2 |
-| `backend/app/api/accounts.py` | ACCOUNTS facade (non-domain) | L2 |
+| `backend/app/api/aos_cus_integrations.py` | CONNECTIVITY: Integrations facade | L2 |
+| `backend/app/api/aos_api_key.py` | CONNECTIVITY: API Keys facade | L2 |
+| `backend/app/api/aos_accounts.py` | ACCOUNTS facade (non-domain) | L2 |
 
 ---
 
@@ -226,7 +241,8 @@ app.include_router(accounts_router)
 ├── overview/           → Overview domain (health, metrics)
 ├── policies/           → Policies domain (rules, limits)
 ├── logs/               → Logs domain (audit, llm-runs, system)
-├── connectivity/       → Connectivity domain (integrations, api-keys)
+├── integrations/       → Connectivity domain: Integrations (SDK/workers)
+├── api-keys/           → Connectivity domain: API Keys (auth tokens)
 └── accounts/           → Accounts facade (projects, users, billing)
 ```
 
@@ -269,7 +285,7 @@ SDSR Assertions                   ← Verify via production endpoints
 All facades filter synthetic data from customer view:
 
 ```python
-# Example from connectivity.py
+# Example from aos_api_key.py
 stmt = stmt.where(APIKey.is_synthetic == False)
 ```
 
@@ -303,7 +319,7 @@ Panel renders data from Unified Facade
 | CAP-INCIDENTS-LIST | GET /incidents/ | IncidentListPanel |
 | CAP-POLICIES-RULES | GET /policies/rules | PolicyRulesPanel |
 | CAP-LOGS-AUDIT | GET /logs/audit | AuditLogPanel |
-| CAP-CONNECTIVITY-KEYS | GET /connectivity/api-keys | APIKeysPanel |
+| CAP-CONNECTIVITY-KEYS | GET /api-keys/ | APIKeysPanel |
 | CAP-ACCOUNTS-USERS | GET /accounts/users | UsersPanel |
 
 ### Pipeline Flow
@@ -382,12 +398,12 @@ All endpoints tested with real API key authentication against live database:
 | `GET /api/v1/accounts/profile` | ✅ PASS | Tenant profile returned (machine context = unknown user, which is correct) |
 | `GET /api/v1/accounts/billing` | ✅ PASS | `{"plan":"FREE","status":"ACTIVE","billing_period":"UNLIMITED",...}` |
 
-#### CONNECTIVITY Facade Results
+#### CONNECTIVITY Facade Results (Updated: Split into /integrations/* and /api-keys/*)
 
 | Endpoint | Status | Response |
 |----------|--------|----------|
-| `GET /api/v1/connectivity/integrations` | ✅ PASS | `{"items":[{"integration_id":"business-builder","name":"Business Builder","status":"AVAILABLE",...},...],"total":4}` |
-| `GET /api/v1/connectivity/api-keys` | ✅ PASS | `{"items":[{"key_id":"...","name":"facade-test-key","prefix":"aos_aPe-lJ","status":"ACTIVE","total_requests":9}],"total":1}` |
+| `GET /api/v1/integrations` | ✅ PASS | `{"items":[{"integration_id":"business-builder","name":"Business Builder","status":"AVAILABLE",...},...],"total":4}` |
+| `GET /api/v1/api-keys` | ✅ PASS | `{"items":[{"key_id":"...","name":"facade-test-key","prefix":"aos_aPe-lJ","status":"ACTIVE","total_requests":9}],"total":1}` |
 
 #### Test Summary
 
@@ -403,7 +419,7 @@ ACCOUNTS FACADE (/api/v1/accounts/*)
   ✅ GET /profile            → Tenant context returned
   ✅ GET /billing            → FREE plan, UNLIMITED period
 
-CONNECTIVITY FACADE (/api/v1/connectivity/*)
+CONNECTIVITY DOMAIN (Split: /api/v1/integrations/* and /api/v1/api-keys/*)
   ✅ GET /integrations       → 4 workers (Business Builder, etc.)
   ✅ GET /api-keys           → 1 active API key
 
@@ -425,9 +441,9 @@ UNIFIED FACADES - DATABASE QUERY TESTS
   GET /accounts/users:        ✓ Query executes (0 users in test tenant)
   GET /accounts/billing:      ✓ Free tier response
 
-[CONNECTIVITY FACADE]
-  GET /connectivity/integrations: ✓ Found 4 integration(s)
-  GET /connectivity/api-keys:     ✓ Query executes (0 keys in test tenant)
+[CONNECTIVITY DOMAIN - Split Facades]
+  GET /integrations: ✓ Found 4 integration(s)
+  GET /api-keys:     ✓ Query executes (0 keys in test tenant)
 
 ============================================================
 ALL QUERY TESTS PASSED
@@ -478,7 +494,7 @@ BLCA must report 0 violations before any merge.
 - ✓ OVERVIEW → `overview.py`
 - ✓ POLICIES → `policies.py`
 - ✓ LOGS → `logs.py`
-- ✓ CONNECTIVITY → `connectivity.py`
+- ✓ CONNECTIVITY → `aos_cus_integrations.py` + `aos_api_key.py` (split for separation of concerns)
 - ✓ ACCOUNTS → `accounts.py` (non-domain facade)
 
 ### No Dual APIs
@@ -501,7 +517,8 @@ BLCA must report 0 violations before any merge.
 | `/api/v1/runtime/overview/*` | `/api/v1/overview/*` | MIGRATED |
 | `/api/v1/runtime/policies/*` | `/api/v1/policies/*` | MIGRATED |
 | `/api/v1/runtime/logs/*` | `/api/v1/logs/*` | MIGRATED |
-| (new) | `/api/v1/connectivity/*` | CREATED |
+| (new) | `/api/v1/integrations/*` | CREATED (aos_cus_integrations.py) |
+| (new) | `/api/v1/api-keys/*` | CREATED (aos_api_key.py) |
 | (new) | `/api/v1/accounts/*` | CREATED |
 
 ---

@@ -1242,7 +1242,184 @@ section_templates:
 
     Truth anchor: 403 is truth, not error. Check before call, not after.
 
+  # =========================================================================
+  # BL-AUD-001: Audience Classification Enforcement (ALWAYS-ON)
+  # Incident: CUSTOMER code imported FOUNDER code, leaked admin features
+  # Solution: Read file headers, check AUDIENCE classification, report violations
+  # Principle: Audience boundaries prevent accidental feature exposure
+  # Reference: AUDIENCE_REGISTRY.yaml, scripts/ops/audience_guard.py
+  # =========================================================================
+  - id: BL-AUD-001
+    name: Audience Classification Enforcement
+    severity: BLOCKER
+    class: audience_classification
+    priority: 5
+    always_on: true  # Check on EVERY file read/write
+
+    triggers:
+      # Triggers on EVERY file operation involving code
+      always:
+        - file_glob: "backend/app/**/*.py"
+        - file_glob: "backend/scripts/**/*.py"
+      any_of:
+        - keyword: "import"
+        - keyword: "from"
+        - keyword: "# AUDIENCE:"
+        - keyword: "# PHASE:"
+        - keyword: "def "
+        - keyword: "class "
+        - keyword: "router"
+        - keyword: "APIRouter"
+        - keyword: "endpoint"
+        - file_type: ".py"
+
+    requires:
+      sections:
+        - AUDIENCE_CLASSIFICATION_CHECK
+      fields:
+        - file_path
+        - audience_declared
+        - purpose_declared
+        - imports_validated
+        - violations_found
+
+    audience_types:
+      - CUSTOMER    # Customer-facing (SDK, Console, public APIs)
+      - FOUNDER     # Founder/Admin-only (ops tools, admin dashboards)
+      - INTERNAL    # Internal infrastructure (workers, adapters, core)
+      - SHARED      # Shared utilities (logging, types, constants)
+
+    # PURPOSE is a free-text description of what the file does
+    # Example: "Role: IAM service for identity and access management"
+
+    import_rules:
+      # CUSTOMER code cannot import FOUNDER code
+      CUSTOMER:
+        forbidden_imports: [FOUNDER]
+        reason: "Customer code must never depend on founder-only features"
+      FOUNDER:
+        forbidden_imports: []
+        reason: "Founder code can import anything"
+      INTERNAL:
+        forbidden_imports: []
+        reason: "Internal code can import anything"
+      SHARED:
+        forbidden_imports: []
+        reason: "Shared utilities can import anything"
+
+    classification_source:
+      registry: "backend/AUDIENCE_REGISTRY.yaml"
+      validator: "backend/scripts/ops/audience_guard.py"
+
+    forbid:
+      - "CUSTOMER code importing FOUNDER modules"
+      - "creating files without AUDIENCE header"
+      - "creating files without PURPOSE/Role header"
+      - "mixing audience classifications without documentation"
+      - "assuming audience from directory structure"
+      - "bypassing audience validation"
+
+    evidence:
+      required_fields:
+        - file_path
+        - audience_declared
+        - audience_value
+        - purpose_declared
+        - purpose_value
+        - imports_list
+        - import_violations
+        - classification_source
+
+    validator:
+      script: scripts/ops/audience_guard.py
+      registry: backend/AUDIENCE_REGISTRY.yaml
+      commands:
+        - "python3 scripts/ops/audience_guard.py --ci"
+
+    report_format:
+      unclassified: |
+        UNCLASSIFIED ARTIFACT DETECTED
+        File: {file_path}
+        Type: {artifact_type}
+
+        Missing headers:
+        - AUDIENCE: not declared
+        - PURPOSE/Role: not declared
+
+        Action required:
+        1. Add "# AUDIENCE: <CUSTOMER|FOUNDER|INTERNAL|SHARED>" header
+        2. Add "# Role: <description of what this file does>" header
+        3. Re-run audience_guard.py to validate
+
+        Reference: backend/AUDIENCE_REGISTRY.yaml
+
+      violation: |
+        AUDIENCE IMPORT VIOLATION
+        File: {file_path}:{line_number}
+        From audience: {from_audience}
+        To audience: {to_audience}
+        Import: {imported_module}
+
+        Rule violated: {from_audience} code cannot import {to_audience} modules
+
+        Fix options:
+        1. Move shared logic to SHARED module
+        2. Create facade in appropriate layer
+        3. Re-architect to remove dependency
+
+        Reference: backend/AUDIENCE_REGISTRY.yaml
+
+    message_on_fail: |
+      BL-AUD-001 VIOLATION: Audience classification check failed.
+
+      Claude MUST read file headers and check AUDIENCE + PURPOSE for ALL code files.
+
+      Required action on EVERY file read/write:
+      1. Look for "# AUDIENCE:" header in first 50 lines
+      2. Look for "# Role:" header (PURPOSE) in first 50 lines
+      3. If missing, REPORT to user immediately
+      4. Check imports against audience rules
+      5. Report any violations before proceeding
+
+      Import rules:
+      - CUSTOMER cannot import FOUNDER (leaks admin features)
+      - All other combinations allowed
+
+      If unclassified:
+      - Report the file path and type
+      - Suggest appropriate AUDIENCE classification
+      - Suggest a PURPOSE/Role description
+      - Do NOT proceed with modifications until classified
+
+      Validation: python3 scripts/ops/audience_guard.py --ci
+      Registry: backend/AUDIENCE_REGISTRY.yaml
+
   # Section templates for architecture guardrails (BL-ARCH-*)
+  AUDIENCE_CLASSIFICATION_CHECK: |
+    AUDIENCE CLASSIFICATION CHECK (BL-AUD-001)
+    File: <path>
+
+    Header Detection:
+    - AUDIENCE declared: YES / NO
+    - AUDIENCE value: CUSTOMER / FOUNDER / INTERNAL / SHARED / MISSING
+    - PURPOSE/Role declared: YES / NO
+    - PURPOSE value: <description or MISSING>
+
+    Import Analysis:
+    - Imports from app.*: <list>
+    - Import violations: <list or "none">
+
+    Classification Status:
+    - Properly classified: YES / NO
+    - Needs AUDIENCE header: YES / NO
+    - Needs PURPOSE header: YES / NO
+    - Suggested audience: <recommendation if unclassified>
+    - Suggested purpose: <recommendation if missing>
+
+    If unclassified or violation detected:
+    - REPORT to user before proceeding
+    - Do NOT modify file without classification
+
   ARCHITECTURE_CORRECTNESS_CHECK: |
     ARCHITECTURE CORRECTNESS CHECK (BL-ARCH-001)
     - Change type: <feature / bugfix / refactor>

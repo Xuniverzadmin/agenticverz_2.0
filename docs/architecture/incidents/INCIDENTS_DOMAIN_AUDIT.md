@@ -1,8 +1,28 @@
 # Incidents Domain Audit
 
 **Status:** POST-MIGRATION (V2 Complete)
-**Last Updated:** 2026-01-18
-**Reference:** INCIDENTS_DOMAIN_MIGRATION_PLAN.md (LOCKED)
+**Last Updated:** 2026-01-22
+**Reference:** INCIDENTS_DOMAIN_MIGRATION_PLAN.md (LOCKED), PIN-463 (L4 Facade Pattern)
+
+---
+
+## Architecture Pattern
+
+This domain follows the **L4 Facade Pattern** for data access:
+
+| Layer | File | Role |
+|-------|------|------|
+| L2 API | `backend/app/api/aos_incidents.py` | HTTP handling, response formatting |
+| L4 Facade | `backend/app/services/incidents_facade.py` | Business logic, tenant isolation |
+
+**Data Flow:** `L1 (UI) → L2 (API) → L4 (Facade) → L6 (Database)`
+
+**Key Rules:**
+- L2 routes delegate to L4 facade (never direct SQL)
+- Facade returns typed dataclasses (never ORM models)
+- All operations are tenant-scoped
+
+**Full Reference:** [PIN-463: L4 Facade Architecture Pattern](../../memory-pins/PIN-463-l4-facade-architecture-pattern.md), [LAYER_MODEL.md](../LAYER_MODEL.md)
 
 ---
 
@@ -177,11 +197,65 @@ Failed Run (Activity) → IncidentEngine → Incident Created → Policy Trigger
 
 ---
 
-## 6. Related Files
+## 6. L4 Domain Facade
+
+**File:** `backend/app/services/incidents_facade.py`
+**Getter:** `get_incidents_facade()` (singleton)
+
+The Incidents Facade is the single entry point for all incident business logic. L2 API routes
+must call facade methods rather than implementing inline SQL queries or calling services directly.
+
+**Pattern:**
+```python
+from app.services.incidents_facade import get_incidents_facade
+
+facade = get_incidents_facade()
+result = await facade.list_active_incidents(session, tenant_id, ...)
+```
+
+**Operations Provided:**
+- `list_active_incidents()` - Active/ACKED incidents list (O2)
+- `list_resolved_incidents()` - Resolved incidents list
+- `list_historical_incidents()` - Archived incidents list
+- `get_incident_detail()` - Incident detail (O3)
+- `get_incidents_for_run()` - Incidents by run (cross-domain)
+- `get_metrics()` - Incident metrics
+- `analyze_cost_impact()` - Cost impact analysis (RES-O3)
+- `detect_patterns()` - Pattern detection (ACT-O4, HIST-O5)
+- `analyze_recurrence()` - Recurrence analysis (HIST-O3)
+- `get_incident_learnings()` - Post-mortem learnings (RES-O4)
+
+**Service Delegation:**
+
+| Facade Method | Delegated Service | Service Method |
+|---------------|-------------------|----------------|
+| `detect_patterns()` | `IncidentPatternService` | `detect_patterns()` |
+| `analyze_recurrence()` | `RecurrenceAnalysisService` | `analyze_recurrence()` |
+| `get_incident_learnings()` | `PostMortemService` | `get_learnings()` |
+
+**L2-to-L4 Result Type Mapping:**
+
+| L4 Service Result | L2 Response Model | Key Field Mappings |
+|-------------------|-------------------|-------------------|
+| `PatternDetectionResult` | `PatternDetectionResponse` | `patterns` → iterated with field extraction |
+| `RecurrenceAnalysisResult` | `RecurrenceAnalysisResponse` | `recurring_incidents` → iterated |
+| `LearningsResult` | `IncidentLearningsResponse` | `lessons` → iterated |
+
+**Facade Rules:**
+- L2 routes call facade methods, never direct SQL
+- Facade returns typed dataclass results (not ORM objects)
+- Facade handles tenant isolation internally
+- Topic boundaries are enforced at facade method level
+- L2 endpoints contain mapping logic from L4 results to L2 response models
+
+---
+
+## 7. Related Files
 
 | File | Purpose |
 |------|---------|
-| `backend/app/api/incidents.py` | Incidents facade (L2) |
+| `backend/app/api/incidents.py` | Incidents API routes (L2) |
+| `backend/app/services/incidents_facade.py` | Incidents domain facade (L4) |
 | `backend/app/services/incident_engine.py` | Incident creation (L4) |
 | `backend/app/services/incidents/` | Domain services (L4) |
 | `backend/app/models/killswitch.py` | Incident model (L6) |
@@ -193,7 +267,7 @@ Failed Run (Activity) → IncidentEngine → Incident Created → Policy Trigger
 
 ---
 
-## 7. Architecture Notes
+## 8. Architecture Notes
 
 ### Incidents Domain Question
 > "What went wrong?"
@@ -228,7 +302,7 @@ ACTIVE → ACKED → RESOLVED → (HISTORICAL after retention window)
 
 ---
 
-## 8. Migration History
+## 9. Migration History
 
 | Date | Change | Reference |
 |------|--------|-----------|
@@ -239,7 +313,7 @@ ACTIVE → ACKED → RESOLVED → (HISTORICAL after retention window)
 
 ---
 
-## 9. Maintenance Rules
+## 10. Maintenance Rules
 
 ### Do NOT
 - Use generic `/incidents` endpoint for new panels

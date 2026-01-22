@@ -372,26 +372,9 @@ async def lifespan(app: FastAPI):
     init_db()
 
     # =========================================================================
-    # GAP-067: SPINE Component Validation (FAIL-FAST)
-    # =========================================================================
-    # Validate required governance components are available at startup.
-    # Missing SPINE components will crash the application (boot-fail policy).
-    from .startup.boot_guard import validate_spine_components, SpineValidationError
-
-    try:
-        spine_result = validate_spine_components()
-        logger.info("spine_components_validated", extra={
-            "components_checked": spine_result.components_checked,
-            "all_valid": spine_result.all_valid,
-        })
-    except SpineValidationError as e:
-        logger.critical(f"STARTUP ABORTED - SPINE validation failed: {e}")
-        raise
-
-    # =========================================================================
     # GAP-046: EventReactor Initialization
     # =========================================================================
-    # Initialize EventReactor before accepting requests.
+    # Initialize EventReactor before SPINE validation (boot_guard checks reactor status).
     # Failure to initialize blocks startup (boot-fail policy).
     from .events.reactor_initializer import (
         initialize_event_reactor,
@@ -405,6 +388,25 @@ async def lifespan(app: FastAPI):
         logger.info("event_reactor_initialized", extra=get_reactor_status())
     except RuntimeError as e:
         logger.critical(f"STARTUP ABORTED - EventReactor initialization failed: {e}")
+        raise
+
+    # =========================================================================
+    # GAP-067: SPINE Component Validation (FAIL-FAST)
+    # =========================================================================
+    # Validate required governance components are available at startup.
+    # Missing SPINE components will crash the application (boot-fail policy).
+    # NOTE: Must run AFTER EventReactor initialization since boot_guard checks reactor status.
+    from .startup.boot_guard import validate_spine_components, SpineValidationError
+
+    try:
+        spine_result = validate_spine_components()
+        logger.info("spine_components_validated", extra={
+            "valid": spine_result.valid,
+            "failures": spine_result.failures,
+            "warnings": spine_result.warnings,
+        })
+    except SpineValidationError as e:
+        logger.critical(f"STARTUP ABORTED - SPINE validation failed: {e}")
         raise
 
     # PIN-413: Create immutable system record for API startup
@@ -888,14 +890,14 @@ async def openapi_inspect():
 
 
 # Include API routers
-from .api.accounts import router as accounts_router  # ACCOUNTS: Unified facade (/api/v1/accounts/*)
+from .api.aos_accounts import router as accounts_router  # ACCOUNTS: Unified facade (/api/v1/accounts/*)
 from .api.activity import router as activity_router  # ACTIVITY Domain: Unified facade (/api/v1/activity/*)
 from .api.analytics import router as analytics_router  # ANALYTICS Domain: Unified facade (/api/v1/analytics/*)
 from .api.agents import router as agents_router  # M12 Multi-Agent System
 from .api.authz_status import router as authz_status_router  # T5: Internal authz status
-from .api.connectivity import router as connectivity_router  # CONNECTIVITY: Unified facade (/api/v1/connectivity/*)
+from .api.aos_cus_integrations import router as aos_cus_integrations_router  # CONNECTIVITY: Customer LLM Integrations BYOK (/api/v1/integrations/*)
+from .api.aos_api_key import router as aos_api_key_router  # CONNECTIVITY: API Keys facade (/api/v1/api-keys/*)
 from .api.cus_telemetry import router as cus_telemetry_router  # Customer LLM telemetry ingestion
-from .api.cus_integrations import router as cus_integrations_router  # Customer LLM integration management
 from .api.cus_enforcement import router as cus_enforcement_router  # Customer LLM enforcement checks
 from .api.cost_guard import router as cost_guard_router  # /guard/costs/* - Customer cost visibility
 
@@ -932,7 +934,7 @@ from .api.health import router as health_router
 from .api.incidents import router as incidents_router  # INCIDENTS Domain: Unified facade (/api/v1/incidents/*)
 
 # M28: failures_router removed (PIN-145) - duplicates /ops/incidents/patterns
-from .api.integration import router as integration_router  # M25 Pillar Integration Loop
+from .api.M25_integrations import router as m25_integration_router  # M25 Pillar Integration Loop (INTERNAL)
 
 # M29 Category 7: Legacy Route Handlers (410 Gone)
 from .api.legacy_routes import router as legacy_routes_router  # 410 Gone for deprecated paths
@@ -977,6 +979,20 @@ from .api.v1_killswitch import router as v1_killswitch_router  # Kill switch, in
 from .api.v1_proxy import router as v1_proxy_router  # Drop-in OpenAI replacement
 from .api.workers import router as workers_router  # Business Builder Worker v0.2
 from .predictions.api import router as c2_predictions_router  # C2 Predictions (advisory only)
+
+# W4 Phase: L2 API Facades (GAP-090 to GAP-136)
+from .api.retrieval import router as retrieval_router  # RETRIEVAL: /api/v1/retrieval/* (GAP-094)
+from .api.detection import router as detection_router  # DETECTION: /api/v1/detection/* (GAP-102)
+from .api.compliance import router as compliance_router  # COMPLIANCE: /api/v1/compliance/* (GAP-103)
+from .api.evidence import router as evidence_router  # EVIDENCE: /api/v1/evidence/* (GAP-104, GAP-105)
+from .api.notifications import router as notifications_router  # NOTIFICATIONS: /api/v1/notifications/* (GAP-109)
+from .api.alerts import router as alerts_router  # ALERTS: /api/v1/alerts/* (GAP-110, GAP-111, GAP-124)
+from .api.scheduler import router as scheduler_router  # SCHEDULER: /api/v1/scheduler/* (GAP-112)
+from .api.datasources import router as datasources_router  # DATASOURCES: /api/v1/datasources/* (GAP-113)
+from .api.monitors import router as monitors_router  # MONITORS: /api/v1/monitors/* (GAP-120, GAP-121)
+from .api.rate_limits import router as rate_limits_router  # RATE_LIMITS: /api/v1/rate-limits/* (GAP-122)
+from .api.controls import router as controls_router  # CONTROLS: /api/v1/controls/* (GAP-123)
+from .api.lifecycle import router as lifecycle_router  # LIFECYCLE: /api/v1/lifecycle/* (GAP-131-136)
 
 # PIN-411: Aurora Runtime Projections - REMOVED (all domains now have unified facades)
 # Activity → /api/v1/activity/*, Incidents → /api/v1/incidents/*, Overview → /api/v1/overview/*
@@ -1026,9 +1042,9 @@ app.include_router(limits_simulate_router, prefix="/api/v1")  # PIN-LIM-04: Limi
 app.include_router(limits_override_router, prefix="/api/v1")  # PIN-LIM-05: Limit overrides
 
 app.include_router(logs_router)  # LOGS Domain: /api/v1/logs/* (unified facade)
-app.include_router(connectivity_router)  # CONNECTIVITY: /api/v1/connectivity/* (unified facade)
+app.include_router(aos_cus_integrations_router)  # CONNECTIVITY: /api/v1/integrations/* (Customer LLM BYOK)
+app.include_router(aos_api_key_router)  # CONNECTIVITY: /api/v1/api-keys/* (API keys facade)
 app.include_router(cus_telemetry_router, prefix="/api/v1")  # Customer LLM telemetry ingestion
-app.include_router(cus_integrations_router, prefix="/api/v1")  # Customer LLM integration management
 app.include_router(cus_enforcement_router, prefix="/api/v1")  # Customer LLM enforcement checks
 app.include_router(accounts_router)  # ACCOUNTS: /api/v1/accounts/* (unified facade)
 # M28: operator_router removed (PIN-145) - merged into /ops/*
@@ -1042,7 +1058,7 @@ app.include_router(
 app.include_router(founder_onboarding_router)  # PIN-399 Phase-4: /founder/onboarding/* - Force-complete (FOPS auth)
 app.include_router(customer_visibility_router)  # Phase 4C-2 Customer Visibility (predictability)
 app.include_router(onboarding_router)  # /api/v1/auth/* - M24 Customer Onboarding
-app.include_router(integration_router)  # /integration/* - M25 Pillar Integration Loop
+app.include_router(m25_integration_router)  # /integration/* - M25 Pillar Integration Loop (INTERNAL)
 app.include_router(cost_intelligence_router)  # /cost/* - M26 Cost Intelligence
 
 # M29 Category 4: Cost Intelligence Completion - Domain-separated cost visibility
@@ -1073,9 +1089,23 @@ from .api.discovery import router as discovery_router
 
 app.include_router(discovery_router)  # /api/v1/discovery - Discovery Ledger (read-only)
 
+# W4 Phase: L2 API Facades (GAP-090 to GAP-136) - Domain-unified facades
+app.include_router(retrieval_router, prefix="/api/v1")  # RETRIEVAL: /api/v1/retrieval/* (GAP-094)
+app.include_router(detection_router, prefix="/api/v1")  # DETECTION: /api/v1/detection/* (GAP-102)
+app.include_router(compliance_router, prefix="/api/v1")  # COMPLIANCE: /api/v1/compliance/* (GAP-103)
+app.include_router(evidence_router, prefix="/api/v1")  # EVIDENCE: /api/v1/evidence/* (GAP-104, GAP-105)
+app.include_router(notifications_router, prefix="/api/v1")  # NOTIFICATIONS: /api/v1/notifications/* (GAP-109)
+app.include_router(alerts_router, prefix="/api/v1")  # ALERTS: /api/v1/alerts/* (GAP-110, GAP-111, GAP-124)
+app.include_router(scheduler_router, prefix="/api/v1")  # SCHEDULER: /api/v1/scheduler/* (GAP-112)
+app.include_router(datasources_router, prefix="/api/v1")  # DATASOURCES: /api/v1/datasources/* (GAP-113)
+app.include_router(monitors_router, prefix="/api/v1")  # MONITORS: /api/v1/monitors/* (GAP-120, GAP-121)
+app.include_router(rate_limits_router, prefix="/api/v1")  # RATE_LIMITS: /api/v1/rate-limits/* (GAP-122)
+app.include_router(controls_router, prefix="/api/v1")  # CONTROLS: /api/v1/controls/* (GAP-123)
+app.include_router(lifecycle_router, prefix="/api/v1")  # LIFECYCLE: /api/v1/lifecycle/* (GAP-131-136)
+
 # PIN-411: Aurora Runtime Projections - REMOVED (all domains now have unified facades)
 # See unified facades: /api/v1/activity/*, /api/v1/incidents/*, /api/v1/overview/*,
-# /api/v1/policies/*, /api/v1/logs/*, /api/v1/connectivity/*, /api/v1/accounts/*
+# /api/v1/policies/*, /api/v1/logs/*, /api/v1/integrations/*, /api/v1/api-keys/*, /api/v1/accounts/*
 
 # CORS middleware
 app.add_middleware(

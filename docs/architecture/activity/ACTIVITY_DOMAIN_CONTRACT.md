@@ -47,6 +47,72 @@
 - Call other L4 services (except via L3 adapters)
 - Import from L1, L2, L3, L5
 
+### L4 — Activity Domain Facade
+
+**File:** `backend/app/services/activity_facade.py`
+**Getter:** `get_activity_facade()` (singleton)
+
+The Activity Facade is the single entry point for all activity business logic. L2 API routes
+must call facade methods rather than implementing inline SQL queries or calling services directly.
+
+**Pattern:**
+```python
+from app.services.activity_facade import get_activity_facade
+
+facade = get_activity_facade()
+result = await facade.get_runs(session, tenant_id, ...)
+```
+
+**Operations Provided:**
+- `get_runs()` - List runs with filters (V1)
+- `get_run_detail()` - Run detail O3
+- `get_run_evidence()` - Run evidence O4
+- `get_run_proof()` - Run integrity proof O5
+- `get_status_summary()` - Status breakdown
+- `get_live_runs()` - V2 live runs with policy context
+- `get_completed_runs()` - V2 completed runs with policy context
+- `get_signals()` - V2 synthesized attention signals
+- `get_metrics()` - V2 activity metrics
+- `get_threshold_signals()` - V2 threshold proximity signals
+- `get_risk_signals()` - Risk signal aggregates
+- `get_patterns()` - Pattern detection (SIG-O3)
+- `get_cost_analysis()` - Cost anomalies (SIG-O4)
+- `get_attention_queue()` - Attention ranking (SIG-O5)
+- `acknowledge_signal()` - Signal acknowledgment
+- `suppress_signal()` - Signal suppression
+
+**Facade Rules:**
+- L2 routes call facade methods, never direct SQL
+- Facade returns typed dataclass results (not ORM objects)
+- Facade handles tenant isolation internally
+- Facade delegates to specialized services where appropriate
+
+**Service Delegation:**
+
+The facade delegates signal analysis operations to specialized L4 services:
+
+| Facade Method | L4 Service | Service Method |
+|---------------|------------|----------------|
+| `get_patterns()` | `PatternDetectionService` | `detect_patterns()` |
+| `get_cost_analysis()` | `CostAnalysisService` | `analyze_costs()` |
+| `get_attention_queue()` | `AttentionRankingService` | `get_attention_queue()` |
+| `acknowledge_signal()` | `SignalFeedbackService` | `acknowledge_signal()` |
+| `suppress_signal()` | `SignalFeedbackService` | `suppress_signal()` |
+
+**L2-to-L4 Result Type Mapping:**
+
+L2 endpoints contain mapping logic to transform L4 domain results into L2 response models.
+This preserves API backwards compatibility while allowing L4 services to evolve independently.
+
+| L4 Service Result | L2 Response Model | Mapping Notes |
+|-------------------|-------------------|---------------|
+| `PatternDetectionResult` | `PatternDetectionResponse` | `window_start/end` computed from `generated_at + window_hours` |
+| `DetectedPattern` | `PatternMatchResponse` | `run_id` from `affected_run_ids[0]`, `details` built from fields |
+| `CostAnalysisResult` | `CostAnalysisResponse` | `anomalies` mapped to `agents` for backwards compat |
+| `AttentionQueueResult` | `AttentionQueueResponse` | `items` mapped to `queue` with field transformation |
+| `AcknowledgeResult` | `SignalAckResponse` | Direct field mapping |
+| `SuppressResult` | `SignalSuppressResponse` | `signal_id` → `signal_fingerprint` |
+
 ### L6 — Platform Substrate (Data)
 
 **Tables:**

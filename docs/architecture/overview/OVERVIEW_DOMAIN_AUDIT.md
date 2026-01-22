@@ -1,8 +1,31 @@
 # Overview Domain Audit
 
 **Status:** FULLY INTEGRATED — Activity/Policies candidates plugged in
-**Last Updated:** 2026-01-17
-**Reference:** PIN-411 (Unified Facades)
+**Last Updated:** 2026-01-22
+**Reference:** PIN-411 (Unified Facades), PIN-463 (L4 Facade Pattern)
+
+---
+
+## Architecture Pattern
+
+This domain follows the **L4 Facade Pattern** for data access:
+
+| Layer | File | Role |
+|-------|------|------|
+| L2 API | `backend/app/api/aos_overview.py` | HTTP handling, response formatting |
+| L4 Facade | `backend/app/services/overview_facade.py` | Business logic, tenant isolation |
+
+**Data Flow:** `L1 (UI) → L2 (API) → L4 (Facade) → L6 (Database)`
+
+**Key Rules:**
+- L2 routes delegate to L4 facade (never direct SQL)
+- Facade returns typed dataclasses (never ORM models)
+- All operations are tenant-scoped
+- Overview is PROJECTION-ONLY (aggregates from other domains)
+
+**Full Reference:** [PIN-463: L4 Facade Architecture Pattern](../../memory-pins/PIN-463-l4-facade-architecture-pattern.md), [LAYER_MODEL.md](../LAYER_MODEL.md)
+
+---
 
 > **INTEGRATION COMPLETE (2026-01-17):**
 > - ✅ Removed 4 wrong capabilities (cost breakdowns → Analytics, feedback → internal ops)
@@ -242,7 +265,39 @@ Total Panels:           11
 
 ---
 
-## 3. API Routes (Actual Overview Facade)
+## 3. L4 Domain Facade
+
+**File:** `backend/app/services/overview_facade.py`
+**Getter:** `get_overview_facade()` (singleton)
+
+The Overview Facade is the single entry point for all overview aggregation logic. L2 API routes
+must call facade methods rather than implementing inline SQL queries.
+
+**Pattern:**
+```python
+from app.services.overview_facade import get_overview_facade
+
+facade = get_overview_facade()
+result = await facade.get_highlights(session, tenant_id)
+```
+
+**Operations Provided:**
+- `get_highlights()` - System pulse & domain counts (O1, O2)
+- `get_decisions()` - Pending decisions queue (O1)
+- `get_decisions_count()` - Decisions count summary
+- `get_cost_summary()` - Cost intelligence summary
+- `get_recovery_stats()` - Recovery statistics (O3)
+
+**Architectural Rules:**
+- Overview is PROJECTION-ONLY (no owned tables)
+- All data derived from Activity, Incidents, Policies, Logs
+- L2 routes call facade methods, never direct SQL
+- Facade returns typed dataclass results
+- All operations are read-only
+
+---
+
+## 4. API Routes (Actual Overview Facade)
 
 ### Primary Facade: `/api/v1/overview/*`
 

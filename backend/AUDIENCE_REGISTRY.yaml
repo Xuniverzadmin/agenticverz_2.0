@@ -1,0 +1,673 @@
+# AUDIENCE_REGISTRY.yaml
+# Classification of files by intended audience
+#
+# AUDIENCE Types (ENFORCED):
+#   - CUSTOMER: APIs/services exposed to SDK users and console users (public product surface)
+#   - FOUNDER: APIs/services for platform founders/admins only (ops tools, admin panels)
+#   - INTERNAL: Infrastructure/backend services not exposed to customers (internal wiring)
+#   - SHARED: Common utilities used by multiple audiences (helpers, base classes)
+#
+# PURPOSE/Role (ENFORCED):
+#   Every file MUST have a "# Role:" header describing its purpose.
+#   Example: "# Role: IAM service for identity and access management"
+#
+# PHASE Types (INFORMATIONAL ONLY - NOT ENFORCED):
+#   - W4: Customer-facing APIs and SDK (T0-T4 tiers)
+#   - W3: Real adapter implementations
+#   - W2: Database & security infrastructure
+#   - W1: Job & lifecycle execution infrastructure
+#   - W0: Execution coupling infrastructure
+#
+# IMPORT RULES:
+#   - CUSTOMER code CANNOT import FOUNDER code (prevents leaking admin features)
+#   - All other import combinations are allowed
+#
+# Reference: GAP_IMPLEMENTATION_PLAN_V2.md, BL-AUD-001
+# Last Updated: 2026-01-21
+
+schema_version: "1.0"
+last_updated: "2026-01-21"
+maintainer: "Systems Architect"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AUDIENCE CLASSIFICATION RULES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+audience_rules:
+  CUSTOMER:
+    description: "Customer-facing product surface (SDK, Console, public APIs)"
+    allowed_importers: ["CUSTOMER", "SHARED"]
+    forbidden_importers: ["INTERNAL"]  # Internal code must not depend on customer code
+    header_pattern: "# AUDIENCE: CUSTOMER"
+
+  FOUNDER:
+    description: "Founder/admin operations (Ops Console, admin tools)"
+    allowed_importers: ["FOUNDER", "SHARED"]
+    forbidden_importers: ["CUSTOMER"]  # Customer code must not depend on founder-only code
+    header_pattern: "# AUDIENCE: FOUNDER"
+
+  INTERNAL:
+    description: "Internal infrastructure (not exposed to customers)"
+    allowed_importers: ["CUSTOMER", "FOUNDER", "INTERNAL", "SHARED"]
+    forbidden_importers: []
+    header_pattern: "# AUDIENCE: INTERNAL"
+
+  SHARED:
+    description: "Shared utilities (used by multiple audiences)"
+    allowed_importers: ["CUSTOMER", "FOUNDER", "INTERNAL", "SHARED"]
+    forbidden_importers: []
+    header_pattern: "# AUDIENCE: SHARED"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# W4 PHASE FILES — CUSTOMER AUDIENCE
+# ═══════════════════════════════════════════════════════════════════════════════
+# GAP-090 to GAP-136: L2 APIs & SDK
+
+w4_files:
+  customer:
+    # L2 API Routers (GAP-120 to GAP-136)
+    - path: app/api/monitors.py
+      audience: CUSTOMER
+      phase: W4
+      gaps: [GAP-120, GAP-121]
+      tier: T3
+      description: "Health monitoring API"
+
+    - path: app/api/rate_limits.py
+      audience: CUSTOMER
+      phase: W4
+      gaps: [GAP-122]
+      tier: T3
+      description: "Rate limits API (distinct from PIN-LIM policy limits)"
+
+    - path: app/api/controls.py
+      audience: CUSTOMER
+      phase: W4
+      gaps: [GAP-123]
+      tier: T3
+      description: "System controls API"
+
+    - path: app/api/lifecycle.py
+      audience: CUSTOMER
+      phase: W4
+      gaps: [GAP-131, GAP-132, GAP-133, GAP-134, GAP-135, GAP-136]
+      tier: T4
+      description: "Agent and run lifecycle API"
+
+    # L4 Service Facades (GAP-120 to GAP-136)
+    - path: app/services/monitors/facade.py
+      audience: CUSTOMER
+      phase: W4
+      gaps: [GAP-120, GAP-121]
+      tier: T3
+      description: "Monitors domain facade"
+
+    - path: app/services/monitors/__init__.py
+      audience: CUSTOMER
+      phase: W4
+      gaps: [GAP-120, GAP-121]
+      tier: T3
+      description: "Monitors package init"
+
+    - path: app/services/limits/facade.py
+      audience: CUSTOMER
+      phase: W4
+      gaps: [GAP-122]
+      tier: T3
+      description: "Rate limits domain facade"
+
+    - path: app/services/limits/__init__.py
+      audience: CUSTOMER
+      phase: W4
+      gaps: [GAP-122]
+      tier: T3
+      description: "Rate limits package init"
+
+    - path: app/services/controls/facade.py
+      audience: CUSTOMER
+      phase: W4
+      gaps: [GAP-123]
+      tier: T3
+      description: "Controls domain facade"
+
+    - path: app/services/controls/__init__.py
+      audience: CUSTOMER
+      phase: W4
+      gaps: [GAP-123]
+      tier: T3
+      description: "Controls package init"
+
+    - path: app/services/lifecycle/facade.py
+      audience: CUSTOMER
+      phase: W4
+      gaps: [GAP-131, GAP-132, GAP-133, GAP-134, GAP-135, GAP-136]
+      tier: T4
+      description: "Lifecycle domain facade"
+
+    - path: app/services/lifecycle/__init__.py
+      audience: CUSTOMER
+      phase: W4
+      gaps: [GAP-131, GAP-132, GAP-133, GAP-134, GAP-135, GAP-136]
+      tier: T4
+      description: "Lifecycle package init"
+
+    # Additional W4 L2 APIs
+    - path: app/api/datasources.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T1
+      description: "Data sources API"
+
+    - path: app/api/scheduler.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T1
+      description: "Scheduler API"
+
+    - path: app/api/alerts.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T2
+      description: "Alerts API"
+
+    - path: app/api/notifications.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T2
+      description: "Notifications API"
+
+    - path: app/api/evidence.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T1
+      description: "Evidence API"
+
+    - path: app/api/compliance.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T2
+      description: "Compliance API"
+
+    - path: app/api/detection.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T2
+      description: "Detection API"
+
+    - path: app/api/retrieval.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T1
+      description: "Retrieval API"
+
+    - path: app/api/connectors.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T1
+      description: "Connectors API"
+
+    - path: app/api/governance.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T2
+      description: "Governance API"
+
+    # W4 L4 Service Facades
+    - path: app/services/datasources/facade.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T1
+      description: "Data sources facade"
+
+    - path: app/services/scheduler/facade.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T1
+      description: "Scheduler facade"
+
+    - path: app/services/alerts/facade.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T2
+      description: "Alerts facade"
+
+    - path: app/services/notifications/facade.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T2
+      description: "Notifications facade"
+
+    - path: app/services/evidence/facade.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T1
+      description: "Evidence facade"
+
+    - path: app/services/compliance/facade.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T2
+      description: "Compliance facade"
+
+    - path: app/services/detection/facade.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T2
+      description: "Detection facade"
+
+    - path: app/services/retrieval/facade.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T1
+      description: "Retrieval facade"
+
+    - path: app/services/connectors/facade.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T1
+      description: "Connectors facade"
+
+    - path: app/services/governance/facade.py
+      audience: CUSTOMER
+      phase: W4
+      tier: T2
+      description: "Governance facade"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# W3 PHASE FILES — INTERNAL AUDIENCE
+# ═══════════════════════════════════════════════════════════════════════════════
+# GAP-144 to GAP-153: Real Adapters
+
+w3_files:
+  internal:
+    # Vector Store Adapters (GAP-144 to GAP-146)
+    - path: app/adapters/vector_stores/pinecone_adapter.py
+      audience: INTERNAL
+      phase: W3
+      gaps: [GAP-144]
+      description: "Pinecone vector store adapter"
+
+    - path: app/adapters/vector_stores/weaviate_adapter.py
+      audience: INTERNAL
+      phase: W3
+      gaps: [GAP-145]
+      description: "Weaviate vector store adapter"
+
+    - path: app/adapters/vector_stores/pgvector_adapter.py
+      audience: INTERNAL
+      phase: W3
+      gaps: [GAP-146]
+      description: "PGVector vector store adapter"
+
+    - path: app/adapters/vector_stores/base.py
+      audience: INTERNAL
+      phase: W3
+      description: "Vector store base adapter"
+
+    - path: app/adapters/vector_stores/__init__.py
+      audience: INTERNAL
+      phase: W3
+      description: "Vector stores package init"
+
+    # File Storage Adapters (GAP-147 to GAP-148)
+    - path: app/adapters/file_storage/s3_adapter.py
+      audience: INTERNAL
+      phase: W3
+      gaps: [GAP-147]
+      description: "S3 file storage adapter"
+
+    - path: app/adapters/file_storage/gcs_adapter.py
+      audience: INTERNAL
+      phase: W3
+      gaps: [GAP-148]
+      description: "GCS file storage adapter"
+
+    - path: app/adapters/file_storage/base.py
+      audience: INTERNAL
+      phase: W3
+      description: "File storage base adapter"
+
+    - path: app/adapters/file_storage/__init__.py
+      audience: INTERNAL
+      phase: W3
+      description: "File storage package init"
+
+    # Serverless Adapters (GAP-149 to GAP-150)
+    - path: app/adapters/serverless/lambda_adapter.py
+      audience: INTERNAL
+      phase: W3
+      gaps: [GAP-149]
+      description: "AWS Lambda serverless adapter"
+
+    - path: app/adapters/serverless/cloud_functions_adapter.py
+      audience: INTERNAL
+      phase: W3
+      gaps: [GAP-150]
+      description: "GCP Cloud Functions serverless adapter"
+
+    - path: app/adapters/serverless/base.py
+      audience: INTERNAL
+      phase: W3
+      description: "Serverless base adapter"
+
+    - path: app/adapters/serverless/__init__.py
+      audience: INTERNAL
+      phase: W3
+      description: "Serverless package init"
+
+    # Notification Adapters (GAP-151 to GAP-153)
+    - path: app/adapters/notifications/smtp_adapter.py
+      audience: INTERNAL
+      phase: W3
+      gaps: [GAP-151]
+      description: "SMTP notification adapter"
+
+    - path: app/adapters/notifications/slack_adapter.py
+      audience: INTERNAL
+      phase: W3
+      gaps: [GAP-152]
+      description: "Slack notification adapter"
+
+    - path: app/adapters/notifications/webhook_adapter.py
+      audience: INTERNAL
+      phase: W3
+      gaps: [GAP-153]
+      description: "Webhook notification adapter with retry"
+
+    - path: app/adapters/notifications/base.py
+      audience: INTERNAL
+      phase: W3
+      description: "Notification base adapter"
+
+    - path: app/adapters/notifications/__init__.py
+      audience: INTERNAL
+      phase: W3
+      description: "Notifications package init"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# W2 PHASE FILES — INTERNAL AUDIENCE
+# ═══════════════════════════════════════════════════════════════════════════════
+# GAP-165 to GAP-174: Database & Security Infrastructure
+
+w2_files:
+  internal:
+    # Security Services (GAP-171 to GAP-174)
+    - path: app/services/credentials/vault.py
+      audience: INTERNAL
+      phase: W2
+      gaps: [GAP-171]
+      description: "Credential vault integration"
+
+    - path: app/services/credentials/service.py
+      audience: INTERNAL
+      phase: W2
+      gaps: [GAP-171]
+      description: "Credential service"
+
+    - path: app/services/credentials/__init__.py
+      audience: INTERNAL
+      phase: W2
+      description: "Credentials package init"
+
+    - path: app/services/pools/pool_manager.py
+      audience: INTERNAL
+      phase: W2
+      gaps: [GAP-172]
+      description: "Connection pool manager"
+
+    - path: app/services/pools/__init__.py
+      audience: INTERNAL
+      phase: W2
+      description: "Pools package init"
+
+    - path: app/services/iam/iam_service.py
+      audience: INTERNAL
+      phase: W2
+      gaps: [GAP-173]
+      description: "IAM service"
+
+    - path: app/services/iam/identity_resolver.py
+      audience: INTERNAL
+      phase: W2
+      gaps: [GAP-173]
+      description: "Identity resolver"
+
+    - path: app/services/iam/__init__.py
+      audience: INTERNAL
+      phase: W2
+      description: "IAM package init"
+
+    - path: app/services/sandbox/sandbox_service.py
+      audience: INTERNAL
+      phase: W2
+      gaps: [GAP-174]
+      description: "Sandbox service"
+
+    - path: app/services/sandbox/sandbox_executor.py
+      audience: INTERNAL
+      phase: W2
+      gaps: [GAP-174]
+      description: "Sandbox executor"
+
+    - path: app/services/sandbox/__init__.py
+      audience: INTERNAL
+      phase: W2
+      description: "Sandbox package init"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# W1 PHASE FILES — INTERNAL AUDIENCE
+# ═══════════════════════════════════════════════════════════════════════════════
+# GAP-154 to GAP-164: Job & Lifecycle Execution Infrastructure
+
+w1_files:
+  internal:
+    # Job Infrastructure (GAP-154 to GAP-158)
+    - path: app/services/scheduler/executor.py
+      audience: INTERNAL
+      phase: W1
+      gaps: [GAP-154]
+      description: "APScheduler executor binding"
+
+    - path: app/worker/job_queue_worker.py
+      audience: INTERNAL
+      phase: W1
+      gaps: [GAP-155]
+      description: "Job queue worker"
+
+    - path: app/services/scheduler/job_execution.py
+      audience: INTERNAL
+      phase: W1
+      gaps: [GAP-156, GAP-157, GAP-158]
+      description: "Job retry, progress, and audit"
+
+    - path: app/services/scheduler/__init__.py
+      audience: INTERNAL
+      phase: W1
+      description: "Scheduler package init"
+
+    # Lifecycle Execution (GAP-159 to GAP-164)
+    - path: app/services/lifecycle_stages/execution.py
+      audience: INTERNAL
+      phase: W1
+      gaps: [GAP-159, GAP-160, GAP-161]
+      description: "Real execution handlers (ingest, index, classify)"
+
+    - path: app/services/lifecycle_stages/onboarding.py
+      audience: INTERNAL
+      phase: W1
+      description: "Onboarding stage handlers"
+
+    - path: app/services/lifecycle_stages/offboarding.py
+      audience: INTERNAL
+      phase: W1
+      description: "Offboarding stage handlers"
+
+    - path: app/services/lifecycle_stages/base.py
+      audience: INTERNAL
+      phase: W1
+      description: "Lifecycle stage base classes"
+
+    - path: app/services/lifecycle_stages/__init__.py
+      audience: INTERNAL
+      phase: W1
+      description: "Lifecycle stages package init"
+
+    - path: app/worker/lifecycle_worker.py
+      audience: INTERNAL
+      phase: W1
+      gaps: [GAP-162, GAP-163, GAP-164]
+      description: "Lifecycle worker orchestration"
+
+    - path: app/worker/__init__.py
+      audience: INTERNAL
+      phase: W1
+      description: "Worker package init"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# W0 PHASE FILES — INTERNAL AUDIENCE
+# ═══════════════════════════════════════════════════════════════════════════════
+# GAP-137 to GAP-143: Execution Coupling Infrastructure
+
+w0_files:
+  internal:
+    # Execution Hooks (GAP-137 to GAP-140)
+    - path: app/worker/hooks/retrieval_hook.py
+      audience: INTERNAL
+      phase: W0
+      gaps: [GAP-137]
+      description: "Retrieval mediator runner hook"
+
+    - path: app/worker/hooks/hallucination_hook.py
+      audience: INTERNAL
+      phase: W0
+      gaps: [GAP-138]
+      description: "Hallucination detector runner hook"
+
+    - path: app/worker/hooks/limit_hook.py
+      audience: INTERNAL
+      phase: W0
+      gaps: [GAP-139]
+      description: "Monitor/limit enforcement hook"
+
+    - path: app/worker/hooks/step_enforcement_hook.py
+      audience: INTERNAL
+      phase: W0
+      gaps: [GAP-140]
+      description: "Step enforcement event bus hook"
+
+    - path: app/worker/hooks/__init__.py
+      audience: INTERNAL
+      phase: W0
+      description: "Worker hooks package init"
+
+    # MCP Control Plane (GAP-141 to GAP-143)
+    - path: app/services/mcp/server_registry.py
+      audience: INTERNAL
+      phase: W0
+      gaps: [GAP-141]
+      description: "MCP server registration"
+
+    - path: app/services/mcp/policy_mapper.py
+      audience: INTERNAL
+      phase: W0
+      gaps: [GAP-142]
+      description: "MCP tool-to-policy mapping"
+
+    - path: app/services/mcp/audit_evidence.py
+      audience: INTERNAL
+      phase: W0
+      gaps: [GAP-143]
+      description: "MCP audit evidence emitter"
+
+    - path: app/services/mcp/__init__.py
+      audience: INTERNAL
+      phase: W0
+      description: "MCP package init"
+
+    # Execution Invariants (INV-W0)
+    - path: app/core/execution_context.py
+      audience: INTERNAL
+      phase: W0
+      invariant: INV-W0-001
+      description: "Execution context definition"
+
+    - path: app/worker/kill_switch_guard.py
+      audience: INTERNAL
+      phase: W0
+      invariant: INV-W0-002
+      description: "Kill switch propagation guard"
+
+    - path: app/worker/idempotency.py
+      audience: INTERNAL
+      phase: W0
+      invariant: INV-W0-003
+      description: "Idempotency key/store"
+
+    - path: app/core/failure_semantics.py
+      audience: INTERNAL
+      phase: W0
+      invariant: INV-W0-004
+      description: "Customer-visible failure semantics"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FOUNDER AUDIENCE FILES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+founder_files:
+  - path: app/api/ops.py
+    audience: FOUNDER
+    description: "Ops console API"
+
+  - path: app/api/founder_onboarding.py
+    audience: FOUNDER
+    description: "Founder onboarding API"
+
+  - path: app/api/founder_explorer.py
+    audience: FOUNDER
+    description: "Founder explorer API"
+
+  - path: app/services/ops/facade.py
+    audience: FOUNDER
+    description: "Ops facade"
+
+  - path: app/services/ops/__init__.py
+    audience: FOUNDER
+    description: "Ops package init"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# IMPORT RULES (CI ENFORCEMENT)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import_rules:
+  # CUSTOMER code must not import FOUNDER code
+  - rule: CUSTOMER_NO_FOUNDER
+    from_audience: CUSTOMER
+    cannot_import: FOUNDER
+    reason: "Customer-facing code must not depend on founder-only functionality"
+
+  # INTERNAL code must not be imported by CUSTOMER unless through facades
+  - rule: CUSTOMER_NO_DIRECT_INTERNAL
+    from_audience: CUSTOMER
+    cannot_import: INTERNAL
+    exceptions:
+      - "through L4 facades"
+    reason: "Customer code should use facades, not internal infrastructure"
+
+  # W4 code can import W0-W3, but not vice versa
+  - rule: PHASE_DEPENDENCY_ORDER
+    description: "Higher phases can import lower phases, not reverse"
+    order: [W0, W1, W2, W3, W4]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# HEADER TEMPLATE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+header_template: |
+  # AUDIENCE: {audience}
+  # PHASE: {phase}
+  # Reference: {gaps}
+  # Description: {description}
+  #
+  # Import Rules:
+  #   - This {audience} code can be imported by: {allowed_importers}
+  #   - This {audience} code CANNOT be imported by: {forbidden_importers}

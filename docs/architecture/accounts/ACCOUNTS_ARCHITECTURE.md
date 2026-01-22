@@ -1,8 +1,8 @@
 # Accounts Architecture
 
 **Status:** IMPLEMENTED
-**Last Updated:** 2026-01-18
-**Reference:** CUSTOMER_CONSOLE_V1_CONSTITUTION.md, PART2_CRM_WORKFLOW_CHARTER.md
+**Last Updated:** 2026-01-22
+**Reference:** CUSTOMER_CONSOLE_V1_CONSTITUTION.md, PART2_CRM_WORKFLOW_CHARTER.md, PIN-463 (L4 Facade Pattern)
 
 ---
 
@@ -53,7 +53,7 @@ The Accounts section is **secondary navigation** (top-right or footer), not side
 │                    /api/v1/accounts/* (ONE FACADE)                      │
 │                                                                          │
 │  L2 Product API Layer                                                   │
-│  File: backend/app/api/accounts.py                                      │
+│  File: backend/app/api/aos_accounts.py                                      │
 │                                                                          │
 │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐             │
 │  │ Projects       │  │ Users          │  │ Support        │             │
@@ -99,7 +99,108 @@ The Accounts section is **secondary navigation** (top-right or footer), not side
 
 ---
 
-## 3. Data Models
+## 3. L4 Domain Facade
+
+**File:** `backend/app/services/accounts_facade.py`
+**Getter:** `get_accounts_facade()` (singleton)
+
+The Accounts Facade is the single entry point for all account management logic. L2 API routes
+must call facade methods rather than implementing inline SQL queries.
+
+### 3.1 Architecture Pattern
+
+```
+┌─────────────────────┐
+│   L2: accounts.py   │  (Endpoint handlers)
+│   - Auth extraction │
+│   - Request params  │
+│   - Response mapping│
+└──────────┬──────────┘
+           │ await facade.method()
+           ▼
+┌─────────────────────┐
+│  L4: AccountsFacade │  (Domain logic)
+│   - Query building  │
+│   - Validation      │
+│   - Result mapping  │
+└──────────┬──────────┘
+           │ session.execute()
+           ▼
+┌─────────────────────┐
+│   L6: Database      │  (Data access)
+└─────────────────────┘
+```
+
+### 3.2 Usage Pattern
+
+```python
+from app.services.accounts_facade import get_accounts_facade, AccountsErrorResult
+
+facade = get_accounts_facade()
+result = await facade.list_projects(session, tenant_id)
+
+# For operations that can fail, check for error results
+if isinstance(result, AccountsErrorResult):
+    raise HTTPException(status_code=result.status_code, detail=result.message)
+```
+
+### 3.3 Operations Provided
+
+| Method | Purpose | Returns |
+|--------|---------|---------|
+| `list_projects()` | Projects list | `ProjectsListResult` |
+| `get_project_detail()` | Project detail | `ProjectDetailResult` |
+| `list_users()` | Users list (O2) | `UsersListResult` |
+| `get_user_detail()` | User detail (O3) | `UserDetailResult` |
+| `list_tenant_users()` | Tenant users list | `TenantUsersListResult` |
+| `invite_user()` | Send user invitation | `InvitationResult \| AccountsErrorResult` |
+| `update_user_role()` | Change user role | `TenantUserResult \| AccountsErrorResult` |
+| `remove_user()` | Remove user from tenant | `dict \| AccountsErrorResult` |
+| `get_profile()` | Current user profile | `ProfileResult` |
+| `update_profile()` | Update user profile | `ProfileUpdateResult` |
+| `get_billing_summary()` | Billing summary | `BillingSummaryResult` |
+| `get_billing_invoices()` | Invoice list | `InvoicesListResult` |
+| `get_support_contact()` | Support contact info | `SupportContactResult` |
+| `create_support_ticket()` | Create support ticket | `SupportTicketResult` |
+| `list_support_tickets()` | List support tickets | `SupportTicketsListResult` |
+| `list_invitations()` | Pending invitations | `InvitationsListResult` |
+| `accept_invitation()` | Accept an invitation | `AcceptInvitationResult` |
+
+### 3.4 L2-to-L4 Result Type Mapping
+
+All L4 facade methods return dataclass result types that L2 maps to Pydantic response models:
+
+| L4 Result Type | L2 Response Model | Purpose |
+|----------------|-------------------|---------|
+| `ProjectsListResult` | `ProjectsListResponse` | Projects list |
+| `ProjectDetailResult` | `ProjectDetailResponse` | Project detail |
+| `UsersListResult` | `UsersListResponse` | Users list |
+| `UserDetailResult` | `UserDetailResponse` | User detail |
+| `TenantUsersListResult` | `TenantUserListResponse` | Tenant users list |
+| `TenantUserResult` | `TenantUserResponse` | Tenant user |
+| `ProfileResult` | `ProfileResponse` | User profile |
+| `ProfileUpdateResult` | `ProfileUpdateResponse` | Profile update |
+| `BillingSummaryResult` | `BillingSummaryResponse` | Billing summary |
+| `InvoicesListResult` | `InvoicesListResponse` | Invoice list |
+| `SupportContactResult` | `SupportContactResponse` | Support contact |
+| `SupportTicketResult` | `SupportTicketResponse` | Support ticket |
+| `SupportTicketsListResult` | `SupportTicketsListResponse` | Tickets list |
+| `InvitationsListResult` | `InvitationsListResponse` | Invitations list |
+| `InvitationResult` | `InvitationResponse` | Invitation |
+| `AcceptInvitationResult` | `dict` | Invitation accept |
+| `AccountsErrorResult` | `HTTPException` | Error handling |
+
+### 3.5 Facade Rules
+
+- L2 routes call facade methods, never direct SQL
+- Facade returns typed dataclass results
+- Facade handles tenant isolation internally
+- Error cases return `AccountsErrorResult` for union types
+- Account does NOT display executions, incidents, policies, or logs
+
+---
+
+## 4. Data Models
 
 ### 3.1 Entity Relationship Diagram
 
@@ -537,7 +638,7 @@ CREATE INDEX ix_support_tickets_status ON support_tickets(status);
 
 | File | Layer | Purpose | Lines |
 |------|-------|---------|-------|
-| `backend/app/api/accounts.py` | L2 | API endpoints | ~1600 |
+| `backend/app/api/aos_accounts.py` | L2 | API endpoints | ~1600 |
 | `backend/app/models/tenant.py` | L6 | Data models | ~700 |
 | `backend/alembic/versions/ce967f70c95d_*.py` | L6 | Migration | 98 |
 
@@ -558,5 +659,6 @@ CREATE INDEX ix_support_tickets_status ON support_tickets(status);
 
 | Date | Change |
 |------|--------|
+| 2026-01-22 | Updated L4 facade section with architecture pattern and result type mapping |
 | 2026-01-18 | Added invitations, support_tickets, profile preferences |
 | 2026-01-16 | Initial audit completed (A- grade) |

@@ -1,13 +1,14 @@
-# Layer: L2 — Product APIs
-# Product: system-wide
+# Layer: L6 — Platform Substrate (Schemas)
+# AUDIENCE: CUSTOMER
+# Product: ai-console (Customer Console)
 # Temporal:
 #   Trigger: api
 #   Execution: sync
-# Role: Pydantic schemas for customer LLM integrations API
-# Callers: cus_telemetry.py, cus_integrations.py APIs
+# Role: Pydantic schemas for Customer Integration domain (LLM BYOK, SDK, RAG)
+# Callers: aos_cus_integrations.py, cus_telemetry.py APIs
 # Allowed Imports: cus_models.py (enums only)
-# Forbidden Imports: L1, L3, L4, L5, L6
-# Reference: docs/architecture/CUSTOMER_INTEGRATIONS_ARCHITECTURE.md
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Connectivity Domain - Customer Console v1 Constitution
 
 """Customer Integrations API Schemas
 

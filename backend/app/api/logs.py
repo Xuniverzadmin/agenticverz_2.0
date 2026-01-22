@@ -58,19 +58,16 @@ All records are:
 - Trust anchors for verification
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Annotated, Any, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
-from app.models.audit_ledger import AuditLedger
-from app.models.log_exports import LogExport
-from app.models.logs_records import LLMRunRecord, SystemRecord
+from app.services.logs_facade import get_logs_facade
 
 # =============================================================================
 # Router
@@ -528,73 +525,49 @@ async def list_llm_run_records(
     offset: Annotated[int, Query(ge=0)] = 0,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> LLMRunRecordsResponse:
-    """List LLM run records."""
+    """List LLM run records. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    filters_applied: dict[str, Any] = {"tenant_id": tenant_id}
+    facade = get_logs_facade()
 
-    stmt = select(LLMRunRecord).where(LLMRunRecord.tenant_id == tenant_id).order_by(LLMRunRecord.created_at.desc())
-
-    if run_id:
-        stmt = stmt.where(LLMRunRecord.run_id == run_id)
-        filters_applied["run_id"] = run_id
-    if provider:
-        stmt = stmt.where(LLMRunRecord.provider == provider)
-        filters_applied["provider"] = provider
-    if model:
-        stmt = stmt.where(LLMRunRecord.model == model)
-        filters_applied["model"] = model
-    if execution_status:
-        stmt = stmt.where(LLMRunRecord.execution_status == execution_status)
-        filters_applied["execution_status"] = execution_status
-    if is_synthetic is not None:
-        stmt = stmt.where(LLMRunRecord.is_synthetic == is_synthetic)
-        filters_applied["is_synthetic"] = is_synthetic
-    if created_after:
-        stmt = stmt.where(LLMRunRecord.created_at >= created_after)
-        filters_applied["created_after"] = created_after.isoformat()
-    if created_before:
-        stmt = stmt.where(LLMRunRecord.created_at <= created_before)
-        filters_applied["created_before"] = created_before.isoformat()
-
-    # Count
-    count_stmt = select(func.count(LLMRunRecord.id)).where(LLMRunRecord.tenant_id == tenant_id)
-    for key, val in filters_applied.items():
-        if key == "tenant_id":
-            continue
-        if hasattr(LLMRunRecord, key):
-            count_stmt = count_stmt.where(getattr(LLMRunRecord, key) == val)
-    count_result = await session.execute(count_stmt)
-    total = count_result.scalar() or 0
-
-    stmt = stmt.limit(limit).offset(offset)
-    result = await session.execute(stmt)
-    entries = result.scalars().all()
+    result = await facade.list_llm_run_records(
+        session=session,
+        tenant_id=tenant_id,
+        run_id=run_id,
+        provider=provider,
+        model=model,
+        execution_status=execution_status,
+        is_synthetic=is_synthetic,
+        created_after=created_after,
+        created_before=created_before,
+        limit=limit,
+        offset=offset,
+    )
 
     items = [
         LLMRunRecordItem(
-            id=e.id,
-            run_id=e.run_id,
-            trace_id=e.trace_id,
-            provider=e.provider,
-            model=e.model,
-            input_tokens=e.input_tokens,
-            output_tokens=e.output_tokens,
-            cost_cents=e.cost_cents,
-            execution_status=e.execution_status,
-            started_at=e.started_at,
-            completed_at=e.completed_at,
-            source=e.source,
-            is_synthetic=e.is_synthetic,
-            created_at=e.created_at,
+            id=item.id,
+            run_id=item.run_id,
+            trace_id=item.trace_id,
+            provider=item.provider,
+            model=item.model,
+            input_tokens=item.input_tokens,
+            output_tokens=item.output_tokens,
+            cost_cents=item.cost_cents,
+            execution_status=item.execution_status,
+            started_at=item.started_at,
+            completed_at=item.completed_at,
+            source=item.source,
+            is_synthetic=item.is_synthetic,
+            created_at=item.created_at,
         )
-        for e in entries
+        for item in result.items
     ]
 
     return LLMRunRecordsResponse(
         items=items,
-        total=total,
-        has_more=(offset + len(items)) < total,
-        filters_applied=filters_applied,
+        total=result.total,
+        has_more=result.has_more,
+        filters_applied=result.filters_applied,
     )
 
 
@@ -609,42 +582,41 @@ async def get_llm_run_envelope(
     run_id: str,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> LLMRunEnvelope:
-    """O1: Canonical immutable run record."""
+    """O1: Canonical immutable run record. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_logs_facade()
 
-    stmt = select(LLMRunRecord).where(LLMRunRecord.run_id == run_id, LLMRunRecord.tenant_id == tenant_id)
-    result = await session.execute(stmt)
-    entry = result.scalar_one_or_none()
+    result = await facade.get_llm_run_envelope(session, tenant_id, run_id)
 
-    if not entry:
+    if not result:
         raise HTTPException(status_code=404, detail="Run not found")
 
     metadata = EvidenceMetadata(
-        tenant_id=tenant_id,
-        run_id=run_id,
-        occurred_at=entry.started_at,
-        recorded_at=entry.created_at,
-        trace_id=entry.trace_id,
+        tenant_id=result.metadata.tenant_id,
+        run_id=result.metadata.run_id,
+        occurred_at=result.metadata.occurred_at,
+        recorded_at=result.metadata.recorded_at,
+        trace_id=result.metadata.trace_id,
         source_domain="LOGS",
-        source_component="LLMRunRecordStore",
+        source_component=result.metadata.source_component,
         origin="SYSTEM",
     )
 
     return LLMRunEnvelope(
-        id=entry.id,
-        run_id=entry.run_id,
-        trace_id=entry.trace_id,
-        provider=entry.provider,
-        model=entry.model,
-        input_tokens=entry.input_tokens,
-        output_tokens=entry.output_tokens,
-        cost_cents=entry.cost_cents,
-        execution_status=entry.execution_status,
-        started_at=entry.started_at,
-        completed_at=entry.completed_at,
-        source=entry.source,
-        is_synthetic=entry.is_synthetic,
-        created_at=entry.created_at,
+        id=result.id,
+        run_id=result.run_id,
+        trace_id=result.trace_id,
+        provider=result.provider,
+        model=result.model,
+        input_tokens=result.input_tokens,
+        output_tokens=result.output_tokens,
+        cost_cents=result.cost_cents,
+        execution_status=result.execution_status,
+        started_at=result.started_at,
+        completed_at=result.completed_at,
+        source=result.source,
+        is_synthetic=result.is_synthetic,
+        created_at=result.created_at,
         metadata=metadata,
     )
 
@@ -660,61 +632,44 @@ async def get_llm_run_trace(
     run_id: str,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> LLMRunTrace:
-    """O2: Step-by-step execution trace."""
+    """O2: Step-by-step execution trace. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_logs_facade()
 
-    # Get trace_id from aos_traces
-    trace_stmt = text("""
-        SELECT trace_id FROM aos_traces WHERE run_id = :run_id AND tenant_id = :tenant_id
-    """)
-    trace_result = await session.execute(trace_stmt, {"run_id": run_id, "tenant_id": tenant_id})
-    trace_row = trace_result.fetchone()
+    result = await facade.get_llm_run_trace(session, tenant_id, run_id)
 
-    if not trace_row:
+    if not result:
         raise HTTPException(status_code=404, detail="Trace not found")
-
-    trace_id = trace_row[0]
-
-    # Get trace steps
-    steps_stmt = text("""
-        SELECT step_index, timestamp, skill_name, status, outcome_category, cost_cents, duration_ms
-        FROM aos_trace_steps
-        WHERE trace_id = :trace_id
-        ORDER BY step_index
-    """)
-    steps_result = await session.execute(steps_stmt, {"trace_id": trace_id})
-    step_rows = steps_result.fetchall()
 
     steps = [
         TraceStep(
-            step_index=row[0],
-            timestamp=row[1],
-            skill_name=row[2],
-            status=row[3],
-            outcome_category=row[4] or "unknown",
-            cost_cents=int(row[5] or 0),
-            duration_ms=int(row[6] or 0),
+            step_index=step.step_index,
+            timestamp=step.timestamp,
+            skill_name=step.skill_name,
+            status=step.status,
+            outcome_category=step.outcome_category,
+            cost_cents=step.cost_cents,
+            duration_ms=step.duration_ms,
         )
-        for row in step_rows
+        for step in result.steps
     ]
 
-    now = datetime.now(timezone.utc)
     metadata = EvidenceMetadata(
-        tenant_id=tenant_id,
-        run_id=run_id,
-        trace_id=trace_id,
-        occurred_at=steps[0].timestamp if steps else now,
-        recorded_at=now,
+        tenant_id=result.metadata.tenant_id,
+        run_id=result.metadata.run_id,
+        trace_id=result.metadata.trace_id,
+        occurred_at=result.metadata.occurred_at,
+        recorded_at=result.metadata.recorded_at,
         source_domain="LOGS",
-        source_component="TraceStore",
+        source_component=result.metadata.source_component,
         origin="SYSTEM",
     )
 
     return LLMRunTrace(
-        run_id=run_id,
-        trace_id=trace_id,
+        run_id=result.run_id,
+        trace_id=result.trace_id,
         steps=steps,
-        total_steps=len(steps),
+        total_steps=result.total_steps,
         metadata=metadata,
     )
 
@@ -730,46 +685,39 @@ async def get_llm_run_governance(
     run_id: str,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> LLMRunGovernance:
-    """O3: Policy interaction trace."""
+    """O3: Policy interaction trace. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_logs_facade()
 
-    # Get governance events from audit_ledger related to this run
-    stmt = select(AuditLedger).where(
-        AuditLedger.tenant_id == tenant_id,
-        AuditLedger.entity_type.in_(["POLICY_RULE", "LIMIT", "POLICY_PROPOSAL"]),
-    ).order_by(AuditLedger.created_at.desc()).limit(100)
-
-    result = await session.execute(stmt)
-    entries = result.scalars().all()
+    result = await facade.get_llm_run_governance(session, tenant_id, run_id)
 
     events = [
         GovernanceEvent(
-            timestamp=e.created_at,
-            event_type=e.event_type,
-            policy_id=e.entity_id if e.entity_type == "POLICY_RULE" else None,
-            rule_id=e.entity_id,
-            decision="ENFORCED",
-            entity_type=e.entity_type,
-            entity_id=e.entity_id,
+            timestamp=event.timestamp,
+            event_type=event.event_type,
+            policy_id=event.policy_id,
+            rule_id=event.rule_id,
+            decision=event.decision,
+            entity_type=event.entity_type,
+            entity_id=event.entity_id,
         )
-        for e in entries
+        for event in result.events
     ]
 
-    now = datetime.now(timezone.utc)
     metadata = EvidenceMetadata(
-        tenant_id=tenant_id,
-        run_id=run_id,
-        occurred_at=events[0].timestamp if events else now,
-        recorded_at=now,
+        tenant_id=result.metadata.tenant_id,
+        run_id=result.metadata.run_id,
+        occurred_at=result.metadata.occurred_at,
+        recorded_at=result.metadata.recorded_at,
         source_domain="LOGS",
-        source_component="AuditLedger",
+        source_component=result.metadata.source_component,
         origin="SYSTEM",
     )
 
     return LLMRunGovernance(
-        run_id=run_id,
+        run_id=result.run_id,
         events=events,
-        total_events=len(events),
+        total_events=result.total_events,
         metadata=metadata,
     )
 
@@ -785,87 +733,42 @@ async def get_llm_run_replay(
     run_id: str,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> LLMRunReplay:
-    """O4: 60-second replay window."""
+    """O4: 60-second replay window. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_logs_facade()
 
-    # Get run to find inflection timestamp (use completed_at or started_at)
-    run_stmt = select(LLMRunRecord).where(LLMRunRecord.run_id == run_id, LLMRunRecord.tenant_id == tenant_id)
-    run_result = await session.execute(run_stmt)
-    run_entry = run_result.scalar_one_or_none()
+    result = await facade.get_llm_run_replay(session, tenant_id, run_id)
 
-    if not run_entry:
+    if not result:
         raise HTTPException(status_code=404, detail="Run not found")
-
-    inflection = run_entry.completed_at or run_entry.started_at
-    window_start = inflection - timedelta(seconds=30)
-    window_end = inflection + timedelta(seconds=30)
-
-    # Query trace steps in window
-    trace_id = run_entry.trace_id or f"trace_{run_id}"
-    replay_query = text("""
-        SELECT 'llm' as source, step_index, timestamp, skill_name as action, outcome_category as outcome
-        FROM aos_trace_steps
-        WHERE trace_id = :trace_id
-        AND timestamp BETWEEN :window_start AND :window_end
-
-        UNION ALL
-
-        SELECT 'system' as source, NULL as step_index, created_at as timestamp,
-               event_type as action, severity as outcome
-        FROM system_records
-        WHERE (tenant_id = :tenant_id OR tenant_id IS NULL)
-        AND created_at BETWEEN :window_start AND :window_end
-
-        UNION ALL
-
-        SELECT 'policy' as source, NULL as step_index, created_at as timestamp,
-               event_type as action, entity_type as outcome
-        FROM audit_ledger
-        WHERE tenant_id = :tenant_id
-        AND entity_type IN ('POLICY_RULE', 'LIMIT')
-        AND created_at BETWEEN :window_start AND :window_end
-
-        ORDER BY timestamp
-    """)
-
-    replay_result = await session.execute(
-        replay_query,
-        {
-            "trace_id": trace_id,
-            "tenant_id": tenant_id,
-            "window_start": window_start,
-            "window_end": window_end,
-        },
-    )
-    replay_rows = replay_result.fetchall()
 
     events = [
         ReplayEvent(
-            source=row[0],
-            step_index=row[1],
-            timestamp=row[2],
-            action=row[3] or "unknown",
-            outcome=row[4] or "unknown",
+            source=event.source,
+            step_index=event.step_index,
+            timestamp=event.timestamp,
+            action=event.action,
+            outcome=event.outcome,
         )
-        for row in replay_rows
+        for event in result.events
     ]
 
     metadata = EvidenceMetadata(
-        tenant_id=tenant_id,
-        run_id=run_id,
-        trace_id=trace_id,
-        occurred_at=inflection,
-        recorded_at=datetime.now(timezone.utc),
+        tenant_id=result.metadata.tenant_id,
+        run_id=result.metadata.run_id,
+        trace_id=result.metadata.trace_id,
+        occurred_at=result.metadata.occurred_at,
+        recorded_at=result.metadata.recorded_at,
         source_domain="LOGS",
-        source_component="ReplayService",
+        source_component=result.metadata.source_component,
         origin="SYSTEM",
     )
 
     return LLMRunReplay(
-        run_id=run_id,
-        inflection_timestamp=inflection,
-        window_start=window_start,
-        window_end=window_end,
+        run_id=result.run_id,
+        inflection_timestamp=result.inflection_timestamp,
+        window_start=result.window_start,
+        window_end=result.window_end,
         events=events,
         metadata=metadata,
     )
@@ -882,34 +785,31 @@ async def get_llm_run_export(
     run_id: str,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> LLMRunExport:
-    """O5: Export information."""
+    """O5: Export information. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_logs_facade()
 
-    # Check run exists
-    run_stmt = select(LLMRunRecord).where(LLMRunRecord.run_id == run_id, LLMRunRecord.tenant_id == tenant_id)
-    run_result = await session.execute(run_stmt)
-    run_entry = run_result.scalar_one_or_none()
+    result = await facade.get_llm_run_export(session, tenant_id, run_id)
 
-    if not run_entry:
+    if not result:
         raise HTTPException(status_code=404, detail="Run not found")
 
-    now = datetime.now(timezone.utc)
     metadata = EvidenceMetadata(
-        tenant_id=tenant_id,
-        run_id=run_id,
-        trace_id=run_entry.trace_id,
-        occurred_at=run_entry.started_at,
-        recorded_at=now,
+        tenant_id=result.metadata.tenant_id,
+        run_id=result.metadata.run_id,
+        trace_id=result.metadata.trace_id,
+        occurred_at=result.metadata.occurred_at,
+        recorded_at=result.metadata.recorded_at,
         source_domain="LOGS",
-        source_component="LogExportService",
+        source_component=result.metadata.source_component,
         origin="SYSTEM",
     )
 
     return LLMRunExport(
-        run_id=run_id,
-        available_formats=["json", "csv", "pdf", "zip"],
-        checksum=None,  # Computed on actual export
-        compliance_tags=["SOC2", "internal"],
+        run_id=result.run_id,
+        available_formats=result.available_formats,
+        checksum=result.checksum,
+        compliance_tags=result.compliance_tags,
         metadata=metadata,
     )
 
@@ -936,62 +836,42 @@ async def list_system_records(
     offset: Annotated[int, Query(ge=0)] = 0,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> SystemRecordsResponse:
-    """List system records."""
+    """List system records. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    filters_applied: dict[str, Any] = {"tenant_id": tenant_id}
+    facade = get_logs_facade()
 
-    stmt = (
-        select(SystemRecord)
-        .where((SystemRecord.tenant_id == tenant_id) | (SystemRecord.tenant_id.is_(None)))
-        .order_by(SystemRecord.created_at.desc())
+    result = await facade.list_system_records(
+        session=session,
+        tenant_id=tenant_id,
+        component=component,
+        event_type=event_type,
+        severity=severity,
+        created_after=created_after,
+        created_before=created_before,
+        limit=limit,
+        offset=offset,
     )
-
-    if component:
-        stmt = stmt.where(SystemRecord.component == component)
-        filters_applied["component"] = component
-    if event_type:
-        stmt = stmt.where(SystemRecord.event_type == event_type)
-        filters_applied["event_type"] = event_type
-    if severity:
-        stmt = stmt.where(SystemRecord.severity == severity)
-        filters_applied["severity"] = severity
-    if created_after:
-        stmt = stmt.where(SystemRecord.created_at >= created_after)
-        filters_applied["created_after"] = created_after.isoformat()
-    if created_before:
-        stmt = stmt.where(SystemRecord.created_at <= created_before)
-        filters_applied["created_before"] = created_before.isoformat()
-
-    count_stmt = select(func.count(SystemRecord.id)).where(
-        (SystemRecord.tenant_id == tenant_id) | (SystemRecord.tenant_id.is_(None))
-    )
-    count_result = await session.execute(count_stmt)
-    total = count_result.scalar() or 0
-
-    stmt = stmt.limit(limit).offset(offset)
-    result = await session.execute(stmt)
-    entries = result.scalars().all()
 
     items = [
         SystemRecordItem(
-            id=e.id,
-            tenant_id=e.tenant_id,
-            component=e.component,
-            event_type=e.event_type,
-            severity=e.severity,
-            summary=e.summary,
-            caused_by=e.caused_by,
-            correlation_id=e.correlation_id,
-            created_at=e.created_at,
+            id=item.id,
+            tenant_id=item.tenant_id,
+            component=item.component,
+            event_type=item.event_type,
+            severity=item.severity,
+            summary=item.summary,
+            caused_by=item.caused_by,
+            correlation_id=item.correlation_id,
+            created_at=item.created_at,
         )
-        for e in entries
+        for item in result.items
     ]
 
     return SystemRecordsResponse(
         items=items,
-        total=total,
-        has_more=(offset + len(items)) < total,
-        filters_applied=filters_applied,
+        total=result.total,
+        has_more=result.has_more,
+        filters_applied=result.filters_applied,
     )
 
 
@@ -1006,62 +886,35 @@ async def get_system_snapshot(
     run_id: str,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> SystemSnapshot:
-    """O1: Environment baseline snapshot."""
+    """O1: Environment baseline snapshot. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_logs_facade()
 
-    # Find system record closest to run start
-    stmt = (
-        select(SystemRecord)
-        .where((SystemRecord.tenant_id == tenant_id) | (SystemRecord.tenant_id.is_(None)))
-        .where(SystemRecord.correlation_id == run_id)
-        .order_by(SystemRecord.created_at.asc())
-        .limit(1)
-    )
-    result = await session.execute(stmt)
-    entry = result.scalar_one_or_none()
-
-    if not entry:
-        # Return a synthetic snapshot if no specific record exists
-        now = datetime.now(timezone.utc)
-        metadata = EvidenceMetadata(
-            tenant_id=tenant_id,
-            run_id=run_id,
-            occurred_at=now,
-            recorded_at=now,
-            source_domain="LOGS",
-            source_component="SystemRecordWriter",
-            origin="SYSTEM",
-        )
-        return SystemSnapshot(
-            run_id=run_id,
-            component="system",
-            event_type="SNAPSHOT",
-            severity="INFO",
-            summary="Environment baseline snapshot (no specific record)",
-            details={"note": "No correlated system record found for this run"},
-            created_at=now,
-            metadata=metadata,
-        )
-
-    metadata = EvidenceMetadata(
+    result = await facade.get_system_snapshot(
+        session=session,
         tenant_id=tenant_id,
         run_id=run_id,
-        correlation_id=entry.correlation_id,
-        occurred_at=entry.created_at,
-        recorded_at=entry.created_at,
-        source_domain="LOGS",
-        source_component="SystemRecordWriter",
-        origin="SYSTEM",
+    )
+
+    metadata = EvidenceMetadata(
+        tenant_id=result.metadata.tenant_id,
+        run_id=result.metadata.run_id,
+        correlation_id=result.metadata.correlation_id,
+        occurred_at=result.metadata.occurred_at,
+        recorded_at=result.metadata.recorded_at,
+        source_domain=result.metadata.source_domain,
+        source_component=result.metadata.source_component,
+        origin=result.metadata.origin,
     )
 
     return SystemSnapshot(
-        run_id=run_id,
-        component=entry.component,
-        event_type=entry.event_type,
-        severity=entry.severity,
-        summary=entry.summary,
-        details=entry.details,
-        created_at=entry.created_at,
+        run_id=result.run_id,
+        component=result.component,
+        event_type=result.event_type,
+        severity=result.severity,
+        summary=result.summary,
+        details=result.details,
+        created_at=result.created_at,
         metadata=metadata,
     )
 
@@ -1076,9 +929,12 @@ async def get_system_telemetry(
     request: Request,
     run_id: str,
 ) -> TelemetryStub:
-    """O2: Telemetry stub - producer not implemented."""
+    """O2: Telemetry stub - producer not implemented. READ-ONLY customer facade."""
     get_tenant_id_from_auth(request)  # Validate auth
-    return TelemetryStub(run_id=run_id)
+    facade = get_logs_facade()
+
+    result = facade.get_system_telemetry(run_id=run_id)
+    return TelemetryStub(run_id=result.run_id)
 
 
 @router.get(
@@ -1092,17 +948,15 @@ async def get_system_events(
     run_id: str,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> SystemEvents:
-    """O3: Infra events affecting run."""
+    """O3: Infra events affecting run. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_logs_facade()
 
-    stmt = (
-        select(SystemRecord)
-        .where((SystemRecord.tenant_id == tenant_id) | (SystemRecord.tenant_id.is_(None)))
-        .where(SystemRecord.correlation_id == run_id)
-        .order_by(SystemRecord.created_at)
+    result = await facade.get_system_events(
+        session=session,
+        tenant_id=tenant_id,
+        run_id=run_id,
     )
-    result = await session.execute(stmt)
-    entries = result.scalars().all()
 
     events = [
         SystemEvent(
@@ -1115,24 +969,23 @@ async def get_system_events(
             correlation_id=e.correlation_id,
             created_at=e.created_at,
         )
-        for e in entries
+        for e in result.events
     ]
 
-    now = datetime.now(timezone.utc)
     metadata = EvidenceMetadata(
-        tenant_id=tenant_id,
-        run_id=run_id,
-        occurred_at=events[0].created_at if events else now,
-        recorded_at=now,
-        source_domain="LOGS",
-        source_component="SystemRecordWriter",
-        origin="SYSTEM",
+        tenant_id=result.metadata.tenant_id,
+        run_id=result.metadata.run_id,
+        occurred_at=result.metadata.occurred_at,
+        recorded_at=result.metadata.recorded_at,
+        source_domain=result.metadata.source_domain,
+        source_component=result.metadata.source_component,
+        origin=result.metadata.origin,
     )
 
     return SystemEvents(
-        run_id=run_id,
+        run_id=result.run_id,
         events=events,
-        total_events=len(events),
+        total_events=result.total_events,
         metadata=metadata,
     )
 
@@ -1148,55 +1001,44 @@ async def get_system_replay(
     run_id: str,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> SystemReplay:
-    """O4: Infra replay window."""
+    """O4: Infra replay window. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_logs_facade()
 
-    # Get run timestamp for window
-    run_stmt = select(LLMRunRecord).where(LLMRunRecord.run_id == run_id, LLMRunRecord.tenant_id == tenant_id)
-    run_result = await session.execute(run_stmt)
-    run_entry = run_result.scalar_one_or_none()
-
-    if not run_entry:
-        raise HTTPException(status_code=404, detail="Run not found")
-
-    inflection = run_entry.completed_at or run_entry.started_at
-    window_start = inflection - timedelta(seconds=30)
-    window_end = inflection + timedelta(seconds=30)
-
-    stmt = (
-        select(SystemRecord)
-        .where((SystemRecord.tenant_id == tenant_id) | (SystemRecord.tenant_id.is_(None)))
-        .where(SystemRecord.created_at.between(window_start, window_end))
-        .order_by(SystemRecord.created_at)
+    result = await facade.get_system_replay(
+        session=session,
+        tenant_id=tenant_id,
+        run_id=run_id,
     )
-    result = await session.execute(stmt)
-    entries = result.scalars().all()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Run not found")
 
     events = [
         ReplayEvent(
-            source="system",
-            step_index=None,
-            timestamp=e.created_at,
-            action=e.event_type,
-            outcome=e.severity,
+            source=e.source,
+            step_index=e.step_index,
+            timestamp=e.timestamp,
+            action=e.action,
+            outcome=e.outcome,
         )
-        for e in entries
+        for e in result.events
     ]
 
     metadata = EvidenceMetadata(
-        tenant_id=tenant_id,
-        run_id=run_id,
-        occurred_at=inflection,
-        recorded_at=datetime.now(timezone.utc),
-        source_domain="LOGS",
-        source_component="SystemRecordWriter",
-        origin="SYSTEM",
+        tenant_id=result.metadata.tenant_id,
+        run_id=result.metadata.run_id,
+        occurred_at=result.metadata.occurred_at,
+        recorded_at=result.metadata.recorded_at,
+        source_domain=result.metadata.source_domain,
+        source_component=result.metadata.source_component,
+        origin=result.metadata.origin,
     )
 
     return SystemReplay(
-        run_id=run_id,
-        window_start=window_start,
-        window_end=window_end,
+        run_id=result.run_id,
+        window_start=result.window_start,
+        window_end=result.window_end,
         events=events,
         metadata=metadata,
     )
@@ -1214,24 +1056,16 @@ async def get_system_audit(
     offset: Annotated[int, Query(ge=0)] = 0,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> SystemAudit:
-    """O5: Infra attribution."""
+    """O5: Infra attribution. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_logs_facade()
 
-    stmt = (
-        select(SystemRecord)
-        .where((SystemRecord.tenant_id == tenant_id) | (SystemRecord.tenant_id.is_(None)))
-        .order_by(SystemRecord.created_at.desc())
-        .limit(limit)
-        .offset(offset)
+    result = await facade.get_system_audit(
+        session=session,
+        tenant_id=tenant_id,
+        limit=limit,
+        offset=offset,
     )
-    result = await session.execute(stmt)
-    entries = result.scalars().all()
-
-    count_stmt = select(func.count(SystemRecord.id)).where(
-        (SystemRecord.tenant_id == tenant_id) | (SystemRecord.tenant_id.is_(None))
-    )
-    count_result = await session.execute(count_stmt)
-    total = count_result.scalar() or 0
 
     items = [
         SystemEvent(
@@ -1244,22 +1078,21 @@ async def get_system_audit(
             correlation_id=e.correlation_id,
             created_at=e.created_at,
         )
-        for e in entries
+        for e in result.items
     ]
 
-    now = datetime.now(timezone.utc)
     metadata = EvidenceMetadata(
-        tenant_id=tenant_id,
-        occurred_at=items[0].created_at if items else now,
-        recorded_at=now,
-        source_domain="LOGS",
-        source_component="SystemRecordWriter",
-        origin="SYSTEM",
+        tenant_id=result.metadata.tenant_id,
+        occurred_at=result.metadata.occurred_at,
+        recorded_at=result.metadata.recorded_at,
+        source_domain=result.metadata.source_domain,
+        source_component=result.metadata.source_component,
+        origin=result.metadata.origin,
     )
 
     return SystemAudit(
         items=items,
-        total=total,
+        total=result.total,
         metadata=metadata,
     )
 
@@ -1286,55 +1119,41 @@ async def list_audit_entries(
     offset: Annotated[int, Query(ge=0)] = 0,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> AuditLedgerResponse:
-    """List audit entries."""
+    """List audit entries. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    filters_applied: dict[str, Any] = {"tenant_id": tenant_id}
+    facade = get_logs_facade()
 
-    stmt = select(AuditLedger).where(AuditLedger.tenant_id == tenant_id).order_by(AuditLedger.created_at.desc())
-
-    if event_type:
-        stmt = stmt.where(AuditLedger.event_type == event_type)
-        filters_applied["event_type"] = event_type
-    if entity_type:
-        stmt = stmt.where(AuditLedger.entity_type == entity_type)
-        filters_applied["entity_type"] = entity_type
-    if actor_type:
-        stmt = stmt.where(AuditLedger.actor_type == actor_type)
-        filters_applied["actor_type"] = actor_type
-    if created_after:
-        stmt = stmt.where(AuditLedger.created_at >= created_after)
-        filters_applied["created_after"] = created_after.isoformat()
-    if created_before:
-        stmt = stmt.where(AuditLedger.created_at <= created_before)
-        filters_applied["created_before"] = created_before.isoformat()
-
-    count_stmt = select(func.count(AuditLedger.id)).where(AuditLedger.tenant_id == tenant_id)
-    count_result = await session.execute(count_stmt)
-    total = count_result.scalar() or 0
-
-    stmt = stmt.limit(limit).offset(offset)
-    result = await session.execute(stmt)
-    entries = result.scalars().all()
+    result = await facade.list_audit_entries(
+        session=session,
+        tenant_id=tenant_id,
+        event_type=event_type,
+        entity_type=entity_type,
+        actor_type=actor_type,
+        created_after=created_after,
+        created_before=created_before,
+        limit=limit,
+        offset=offset,
+    )
 
     items = [
         AuditLedgerItem(
-            id=e.id,
-            event_type=e.event_type,
-            entity_type=e.entity_type,
-            entity_id=e.entity_id,
-            actor_type=e.actor_type,
-            actor_id=e.actor_id,
-            action_reason=e.action_reason,
-            created_at=e.created_at,
+            id=item.id,
+            event_type=item.event_type,
+            entity_type=item.entity_type,
+            entity_id=item.entity_id,
+            actor_type=item.actor_type,
+            actor_id=item.actor_id,
+            action_reason=item.action_reason,
+            created_at=item.created_at,
         )
-        for e in entries
+        for item in result.items
     ]
 
     return AuditLedgerResponse(
         items=items,
-        total=total,
-        has_more=(offset + len(items)) < total,
-        filters_applied=filters_applied,
+        total=result.total,
+        has_more=result.has_more,
+        filters_applied=result.filters_applied,
     )
 
 
@@ -1349,28 +1168,31 @@ async def get_audit_entry(
     entry_id: str,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> AuditLedgerDetailItem:
-    """Get audit entry detail."""
+    """Get audit entry detail. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_logs_facade()
 
-    stmt = select(AuditLedger).where(AuditLedger.id == entry_id, AuditLedger.tenant_id == tenant_id)
-    result = await session.execute(stmt)
-    entry = result.scalar_one_or_none()
+    result = await facade.get_audit_entry(
+        session=session,
+        tenant_id=tenant_id,
+        entry_id=entry_id,
+    )
 
-    if not entry:
+    if not result:
         raise HTTPException(status_code=404, detail="Audit entry not found")
 
     return AuditLedgerDetailItem(
-        id=entry.id,
-        event_type=entry.event_type,
-        entity_type=entry.entity_type,
-        entity_id=entry.entity_id,
-        actor_type=entry.actor_type,
-        actor_id=entry.actor_id,
-        action_reason=entry.action_reason,
-        created_at=entry.created_at,
-        before_state=entry.before_state,
-        after_state=entry.after_state,
-        correlation_id=getattr(entry, "correlation_id", None),
+        id=result.id,
+        event_type=result.event_type,
+        entity_type=result.entity_type,
+        entity_id=result.entity_id,
+        actor_type=result.actor_type,
+        actor_id=result.actor_id,
+        action_reason=result.action_reason,
+        created_at=result.created_at,
+        before_state=result.before_state,
+        after_state=result.after_state,
+        correlation_id=result.correlation_id,
     )
 
 
@@ -1385,18 +1207,15 @@ async def get_audit_identity(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> AuditIdentity:
-    """O1: Identity lifecycle."""
+    """O1: Identity lifecycle. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_logs_facade()
 
-    # Get identity-related events
-    stmt = (
-        select(AuditLedger)
-        .where(AuditLedger.tenant_id == tenant_id)
-        .order_by(AuditLedger.created_at.desc())
-        .limit(limit)
+    result = await facade.get_audit_identity(
+        session=session,
+        tenant_id=tenant_id,
+        limit=limit,
     )
-    result = await session.execute(stmt)
-    entries = result.scalars().all()
 
     events = [
         IdentityEvent(
@@ -1406,22 +1225,21 @@ async def get_audit_identity(
             actor_id=e.actor_id,
             created_at=e.created_at,
         )
-        for e in entries
+        for e in result.events
     ]
 
-    now = datetime.now(timezone.utc)
     metadata = EvidenceMetadata(
-        tenant_id=tenant_id,
-        occurred_at=events[0].created_at if events else now,
-        recorded_at=now,
-        source_domain="LOGS",
-        source_component="AuditLedger",
-        origin="SYSTEM",
+        tenant_id=result.metadata.tenant_id,
+        occurred_at=result.metadata.occurred_at,
+        recorded_at=result.metadata.recorded_at,
+        source_domain=result.metadata.source_domain,
+        source_component=result.metadata.source_component,
+        origin=result.metadata.origin,
     )
 
     return AuditIdentity(
         events=events,
-        total=len(events),
+        total=result.total,
         metadata=metadata,
     )
 
@@ -1437,44 +1255,41 @@ async def get_audit_authorization(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> AuditAuthorization:
-    """O2: Authorization decisions."""
+    """O2: Authorization decisions. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_logs_facade()
 
-    stmt = (
-        select(AuditLedger)
-        .where(AuditLedger.tenant_id == tenant_id)
-        .order_by(AuditLedger.created_at.desc())
-        .limit(limit)
+    result = await facade.get_audit_authorization(
+        session=session,
+        tenant_id=tenant_id,
+        limit=limit,
     )
-    result = await session.execute(stmt)
-    entries = result.scalars().all()
 
     decisions = [
         AuthorizationDecision(
-            id=e.id,
-            event_type=e.event_type,
-            entity_type=e.entity_type,
-            entity_id=e.entity_id,
-            actor_type=e.actor_type,
-            decision="ALLOW",  # Assuming logged events were allowed
-            created_at=e.created_at,
+            id=d.id,
+            event_type=d.event_type,
+            entity_type=d.entity_type,
+            entity_id=d.entity_id,
+            actor_type=d.actor_type,
+            decision=d.decision,
+            created_at=d.created_at,
         )
-        for e in entries
+        for d in result.decisions
     ]
 
-    now = datetime.now(timezone.utc)
     metadata = EvidenceMetadata(
-        tenant_id=tenant_id,
-        occurred_at=decisions[0].created_at if decisions else now,
-        recorded_at=now,
-        source_domain="LOGS",
-        source_component="AuditLedger",
-        origin="SYSTEM",
+        tenant_id=result.metadata.tenant_id,
+        occurred_at=result.metadata.occurred_at,
+        recorded_at=result.metadata.recorded_at,
+        source_domain=result.metadata.source_domain,
+        source_component=result.metadata.source_component,
+        origin=result.metadata.origin,
     )
 
     return AuditAuthorization(
         decisions=decisions,
-        total=len(decisions),
+        total=result.total,
         metadata=metadata,
     )
 
@@ -1490,17 +1305,15 @@ async def get_audit_access(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> AuditAccess:
-    """O3: Log access audit."""
+    """O3: Log access audit. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_logs_facade()
 
-    stmt = (
-        select(AuditLedger)
-        .where(AuditLedger.tenant_id == tenant_id)
-        .order_by(AuditLedger.created_at.desc())
-        .limit(limit)
+    result = await facade.get_audit_access(
+        session=session,
+        tenant_id=tenant_id,
+        limit=limit,
     )
-    result = await session.execute(stmt)
-    entries = result.scalars().all()
 
     events = [
         AccessEvent(
@@ -1512,22 +1325,21 @@ async def get_audit_access(
             entity_id=e.entity_id,
             created_at=e.created_at,
         )
-        for e in entries
+        for e in result.events
     ]
 
-    now = datetime.now(timezone.utc)
     metadata = EvidenceMetadata(
-        tenant_id=tenant_id,
-        occurred_at=events[0].created_at if events else now,
-        recorded_at=now,
-        source_domain="LOGS",
-        source_component="AuditLedger",
-        origin="SYSTEM",
+        tenant_id=result.metadata.tenant_id,
+        occurred_at=result.metadata.occurred_at,
+        recorded_at=result.metadata.recorded_at,
+        source_domain=result.metadata.source_domain,
+        source_component=result.metadata.source_component,
+        origin=result.metadata.origin,
     )
 
     return AuditAccess(
         events=events,
-        total=len(events),
+        total=result.total,
         metadata=metadata,
     )
 
@@ -1541,25 +1353,27 @@ async def get_audit_access(
 async def get_audit_integrity(
     request: Request,
 ) -> AuditIntegrity:
-    """O4: Tamper detection."""
+    """O4: Tamper detection. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_logs_facade()
 
-    now = datetime.now(timezone.utc)
+    result = facade.get_audit_integrity(tenant_id=tenant_id)
+
     metadata = EvidenceMetadata(
-        tenant_id=tenant_id,
-        occurred_at=now,
-        recorded_at=now,
-        source_domain="LOGS",
-        source_component="IntegrityService",
-        origin="SYSTEM",
+        tenant_id=result.metadata.tenant_id,
+        occurred_at=result.metadata.occurred_at,
+        recorded_at=result.metadata.recorded_at,
+        source_domain=result.metadata.source_domain,
+        source_component=result.metadata.source_component,
+        origin=result.metadata.origin,
     )
 
     return AuditIntegrity(
         integrity=IntegrityCheck(
-            status="verified",
-            last_verified=now,
-            anomalies_detected=0,
-            hash_chain_valid=True,
+            status=result.integrity.status,
+            last_verified=result.integrity.last_verified,
+            anomalies_detected=result.integrity.anomalies_detected,
+            hash_chain_valid=result.integrity.hash_chain_valid,
         ),
         metadata=metadata,
     )
@@ -1577,22 +1391,16 @@ async def get_audit_exports(
     offset: Annotated[int, Query(ge=0)] = 0,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> AuditExports:
-    """O5: Compliance exports."""
+    """O5: Compliance exports. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_logs_facade()
 
-    stmt = (
-        select(LogExport)
-        .where(LogExport.tenant_id == tenant_id)
-        .order_by(LogExport.created_at.desc())
-        .limit(limit)
-        .offset(offset)
+    result = await facade.get_audit_exports(
+        session=session,
+        tenant_id=tenant_id,
+        limit=limit,
+        offset=offset,
     )
-    result = await session.execute(stmt)
-    entries = result.scalars().all()
-
-    count_stmt = select(func.count(LogExport.id)).where(LogExport.tenant_id == tenant_id)
-    count_result = await session.execute(count_stmt)
-    total = count_result.scalar() or 0
 
     exports = [
         ExportRecord(
@@ -1605,21 +1413,20 @@ async def get_audit_exports(
             created_at=e.created_at,
             delivered_at=e.delivered_at,
         )
-        for e in entries
+        for e in result.exports
     ]
 
-    now = datetime.now(timezone.utc)
     metadata = EvidenceMetadata(
-        tenant_id=tenant_id,
-        occurred_at=exports[0].created_at if exports else now,
-        recorded_at=now,
-        source_domain="LOGS",
-        source_component="LogExportService",
-        origin="SYSTEM",
+        tenant_id=result.metadata.tenant_id,
+        occurred_at=result.metadata.occurred_at,
+        recorded_at=result.metadata.recorded_at,
+        source_domain=result.metadata.source_domain,
+        source_component=result.metadata.source_component,
+        origin=result.metadata.origin,
     )
 
     return AuditExports(
         exports=exports,
-        total=total,
+        total=result.total,
         metadata=metadata,
     )

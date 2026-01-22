@@ -1,13 +1,14 @@
 # Layer: L4 — Domain Engines
-# Product: system-wide
+# AUDIENCE: CUSTOMER
+# Product: ai-console (Customer Console)
 # Temporal:
 #   Trigger: api
 #   Execution: sync (with async DB operations)
-# Role: Business logic for customer LLM integration management
-# Callers: cus_integrations.py API router
+# Role: Business logic for Customer Integration domain (LLM BYOK, SDK, RAG)
+# Callers: aos_cus_integrations.py API router
 # Allowed Imports: L6 (models, db)
-# Forbidden Imports: L1, L2, L3
-# Reference: docs/architecture/CUSTOMER_INTEGRATIONS_ARCHITECTURE.md
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Connectivity Domain - Customer Console v1 Constitution
 
 """Customer Integration Service
 
@@ -64,7 +65,7 @@ class CusIntegrationService:
 
     async def create_integration(
         self,
-        tenant_id: str,
+        tenant_id: UUID,
         name: str,
         provider_type: str,
         credential_ref: str,
@@ -99,9 +100,10 @@ class CusIntegrationService:
 
         with Session(engine) as session:
             # Check for duplicate name
+            # Note: tenant_id is UUID from resolver, CusIntegration.tenant_id is str (VARCHAR)
             existing = session.exec(
                 select(CusIntegration).where(
-                    CusIntegration.tenant_id == UUID(tenant_id),
+                    CusIntegration.tenant_id == str(tenant_id),
                     CusIntegration.name == name,
                 )
             ).first()
@@ -110,20 +112,21 @@ class CusIntegrationService:
                 raise ValueError(f"Integration with name '{name}' already exists")
 
             # Create integration
+            # Model uses str fields, values must be lowercase to match DB constraints
             integration = CusIntegration(
-                id=uuid4(),
-                tenant_id=UUID(tenant_id),
+                id=str(uuid4()),
+                tenant_id=str(tenant_id),
                 name=name,
-                provider_type=provider_type,
+                provider_type=provider_type.lower() if isinstance(provider_type, str) else provider_type,
                 credential_ref=credential_ref,
                 config=config or {},
-                status=CusIntegrationStatus.CREATED,
-                health_state=CusHealthState.UNKNOWN,
+                status="created",
+                health_state="unknown",
                 default_model=default_model,
                 budget_limit_cents=budget_limit_cents,
                 token_limit_month=token_limit_month,
                 rate_limit_rpm=rate_limit_rpm,
-                created_by=UUID(created_by) if created_by else None,
+                created_by=str(created_by) if created_by else None,
             )
 
             session.add(integration)
@@ -142,7 +145,7 @@ class CusIntegrationService:
 
     async def get_integration(
         self,
-        tenant_id: str,
+        tenant_id: UUID,
         integration_id: str,
     ) -> Optional[CusIntegration]:
         """Get integration by ID.
@@ -160,7 +163,7 @@ class CusIntegrationService:
             integration = session.exec(
                 select(CusIntegration).where(
                     CusIntegration.id == UUID(integration_id),
-                    CusIntegration.tenant_id == UUID(tenant_id),
+                    CusIntegration.tenant_id == str(tenant_id),
                 )
             ).first()
 
@@ -168,7 +171,7 @@ class CusIntegrationService:
 
     async def list_integrations(
         self,
-        tenant_id: str,
+        tenant_id: UUID,
         offset: int = 0,
         limit: int = 20,
         status: Optional[str] = None,
@@ -177,7 +180,7 @@ class CusIntegrationService:
         """List integrations for a tenant.
 
         Args:
-            tenant_id: Tenant ID
+            tenant_id: Tenant UUID (already validated by resolver)
             offset: Pagination offset
             limit: Page size
             status: Filter by status (optional)
@@ -189,9 +192,9 @@ class CusIntegrationService:
         engine = get_engine()
 
         with Session(engine) as session:
-            # Build base query
+            # Build base query - convert UUID to str for VARCHAR column
             query = select(CusIntegration).where(
-                CusIntegration.tenant_id == UUID(tenant_id)
+                CusIntegration.tenant_id == str(tenant_id)
             )
 
             # Apply filters
@@ -218,7 +221,7 @@ class CusIntegrationService:
 
     async def update_integration(
         self,
-        tenant_id: str,
+        tenant_id: UUID,
         integration_id: str,
         **kwargs,
     ) -> Optional[CusIntegration]:
@@ -238,7 +241,7 @@ class CusIntegrationService:
             integration = session.exec(
                 select(CusIntegration).where(
                     CusIntegration.id == UUID(integration_id),
-                    CusIntegration.tenant_id == UUID(tenant_id),
+                    CusIntegration.tenant_id == str(tenant_id),
                 )
             ).first()
 
@@ -266,7 +269,7 @@ class CusIntegrationService:
 
     async def delete_integration(
         self,
-        tenant_id: str,
+        tenant_id: UUID,
         integration_id: str,
     ) -> bool:
         """Delete integration (soft delete via status).
@@ -286,7 +289,7 @@ class CusIntegrationService:
             integration = session.exec(
                 select(CusIntegration).where(
                     CusIntegration.id == UUID(integration_id),
-                    CusIntegration.tenant_id == UUID(tenant_id),
+                    CusIntegration.tenant_id == str(tenant_id),
                 )
             ).first()
 
@@ -315,7 +318,7 @@ class CusIntegrationService:
 
     async def enable_integration(
         self,
-        tenant_id: str,
+        tenant_id: UUID,
         integration_id: str,
     ) -> Optional[CusIntegration]:
         """Enable an integration.
@@ -338,7 +341,7 @@ class CusIntegrationService:
             integration = session.exec(
                 select(CusIntegration).where(
                     CusIntegration.id == UUID(integration_id),
-                    CusIntegration.tenant_id == UUID(tenant_id),
+                    CusIntegration.tenant_id == str(tenant_id),
                 )
             ).first()
 
@@ -368,7 +371,7 @@ class CusIntegrationService:
 
     async def disable_integration(
         self,
-        tenant_id: str,
+        tenant_id: UUID,
         integration_id: str,
     ) -> Optional[CusIntegration]:
         """Disable an integration.
@@ -386,7 +389,7 @@ class CusIntegrationService:
             integration = session.exec(
                 select(CusIntegration).where(
                     CusIntegration.id == UUID(integration_id),
-                    CusIntegration.tenant_id == UUID(tenant_id),
+                    CusIntegration.tenant_id == str(tenant_id),
                 )
             ).first()
 
@@ -410,7 +413,7 @@ class CusIntegrationService:
 
     async def test_credentials(
         self,
-        tenant_id: str,
+        tenant_id: UUID,
         integration_id: str,
     ) -> Optional[Dict[str, Any]]:
         """Test integration credentials.
@@ -430,7 +433,7 @@ class CusIntegrationService:
             integration = session.exec(
                 select(CusIntegration).where(
                     CusIntegration.id == UUID(integration_id),
-                    CusIntegration.tenant_id == UUID(tenant_id),
+                    CusIntegration.tenant_id == str(tenant_id),
                 )
             ).first()
 
@@ -463,7 +466,7 @@ class CusIntegrationService:
 
     async def get_limits_status(
         self,
-        tenant_id: str,
+        tenant_id: UUID,
         integration_id: str,
     ) -> Optional[CusLimitsStatus]:
         """Get current usage against configured limits.
@@ -483,7 +486,7 @@ class CusIntegrationService:
             integration = session.exec(
                 select(CusIntegration).where(
                     CusIntegration.id == UUID(integration_id),
-                    CusIntegration.tenant_id == UUID(tenant_id),
+                    CusIntegration.tenant_id == str(tenant_id),
                 )
             ).first()
 
@@ -504,7 +507,7 @@ class CusIntegrationService:
                 func.sum(CusUsageDaily.total_tokens_in + CusUsageDaily.total_tokens_out),
             ).where(
                 CusUsageDaily.integration_id == UUID(integration_id),
-                CusUsageDaily.tenant_id == UUID(tenant_id),
+                CusUsageDaily.tenant_id == str(tenant_id),
                 CusUsageDaily.date >= period_start,
                 CusUsageDaily.date < period_end,
             )

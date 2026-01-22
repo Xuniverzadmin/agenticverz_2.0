@@ -1150,10 +1150,388 @@ PHASE 5: Mediation Layer (ties everything together)
 
 ---
 
+### 7.15 Knowledge Lifecycle Orchestration Framework (GAP-086 to GAP-089)
+
+This section defines the **binding layer** that makes GAP-071 to GAP-085 coherent. Without this framework, lifecycle stages are scattered verbs without grammar.
+
+**Architectural Principle:**
+> **Lifecycle operations are governance-controlled, not user-controlled.**
+> SDK calls **request** transitions. LifecycleManager **decides**. Policy + state machine **arbitrate**.
+> Users never force transitions directly.
+
+#### 7.15.1 Framework Components
+
+| Gap ID | Component | Role | Current State | Required State | Priority | Tier |
+|--------|-----------|------|---------------|----------------|----------|------|
+| **GAP-086** | KnowledgeLifecycleManager | Single orchestrator owning entire lifecycle | **NOT IMPLEMENTED** | Service that enforces state transitions, emits audit events, blocks illegal transitions, coordinates async jobs | **CRITICAL** | T4 |
+| **GAP-087** | Lifecycle-Policy Integration | Policy gates for transitions | **NOT IMPLEMENTED** | Cannot ACTIVATE without policy, cannot DEACTIVATE while referenced, cannot PURGE without approval + retention check | **CRITICAL** | T4 |
+| **GAP-088** | Lifecycle Audit Events | Automatic audit emission | **NOT IMPLEMENTED** | Every lifecycle transition emits audit event — compliance-grade, not application logs | **HIGH** | T4 |
+| **GAP-089** | Lifecycle State Machine | Formal state definitions | **NOT IMPLEMENTED** | Explicit states with valid transitions, blocking rules, rollback support | **CRITICAL** | T4 |
+
+#### 7.15.2 Lifecycle State Machine (GAP-089)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        KNOWLEDGE PLANE LIFECYCLE                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ONBOARDING PATH                                                            │
+│  ══════════════                                                             │
+│                                                                             │
+│  DRAFT ──────► PENDING_VERIFY ──────► VERIFIED ──────► INGESTING            │
+│    │                 │                    │                │                │
+│    │ (register)      │ (verify)           │                │ (ingest)       │
+│    ▼                 ▼                    ▼                ▼                │
+│  [can cancel]    [can fail]          [can retry]      [async job]          │
+│                                                            │                │
+│                                           ┌────────────────┘                │
+│                                           ▼                                 │
+│                                       INDEXED ──────► CLASSIFIED            │
+│                                           │                │                │
+│                                           │ (index)        │ (classify)     │
+│                                           ▼                ▼                │
+│                                       [async job]     [async job]          │
+│                                                            │                │
+│                                           ┌────────────────┘                │
+│                                           ▼                                 │
+│                                   PENDING_ACTIVATE ──────► ACTIVE           │
+│                                           │                   │             │
+│                                           │ (policy gate)     │             │
+│                                           ▼                   ▼             │
+│                                   [requires policy]    [OPERATIONAL]        │
+│                                                               │             │
+├───────────────────────────────────────────────────────────────┼─────────────┤
+│                                                               │             │
+│  OFFBOARDING PATH                                             │             │
+│  ════════════════                                             ▼             │
+│                                                                             │
+│  ACTIVE ──────► PENDING_DEACTIVATE ──────► DEACTIVATED ──────► ARCHIVED     │
+│                        │                        │                  │        │
+│                        │ (deregister)           │ (soft-delete)    │        │
+│                        ▼                        ▼                  ▼        │
+│                [dependency check]        [stop new runs]    [export data]   │
+│                [grace period]            [preserve data]    [compress]      │
+│                                                                  │          │
+│                                              ┌───────────────────┘          │
+│                                              ▼                              │
+│                                           PURGED                            │
+│                                              │                              │
+│                                              │ (purge)                      │
+│                                              ▼                              │
+│                                     [GDPR compliance]                       │
+│                                     [cascade delete]                        │
+│                                     [audit preserved]                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Valid State Transitions:**
+
+| From State | To State | Trigger | Gate |
+|------------|----------|---------|------|
+| (none) | DRAFT | `register()` | None |
+| DRAFT | PENDING_VERIFY | `verify()` | None |
+| PENDING_VERIFY | VERIFIED | verify success | None |
+| PENDING_VERIFY | DRAFT | verify failure | Retry allowed |
+| VERIFIED | INGESTING | `ingest()` | None |
+| INGESTING | INDEXED | ingest complete | Async job |
+| INDEXED | CLASSIFIED | `classify()` | Async job |
+| CLASSIFIED | PENDING_ACTIVATE | `activate()` | None |
+| PENDING_ACTIVATE | ACTIVE | policy bound | **GAP-087 gate** |
+| ACTIVE | PENDING_DEACTIVATE | `deregister()` | Dependency check |
+| PENDING_DEACTIVATE | DEACTIVATED | grace period + clean | **GAP-087 gate** |
+| DEACTIVATED | ARCHIVED | `archive()` | None |
+| ARCHIVED | PURGED | `purge()` | **GAP-087 gate** (approval + retention) |
+
+**Illegal Transitions (BLOCKED):**
+
+| Attempted | Reason |
+|-----------|--------|
+| DRAFT → ACTIVE | Must complete verification + ingestion |
+| ACTIVE → PURGED | Must go through deactivate + archive |
+| PENDING_ACTIVATE → ACTIVE (no policy) | Policy binding required |
+| DEACTIVATED → PURGED (no archive) | Must archive first |
+| Any → PURGED (retention not met) | Retention policy not satisfied |
+
+#### 7.15.3 Lifecycle-Policy Integration (GAP-087)
+
+| Transition | Policy Gate | Blocking Condition |
+|------------|-------------|-------------------|
+| → ACTIVE | Policy binding required | No default policy attached |
+| → DEACTIVATED | Reference check | Active policies reference this plane |
+| → PURGED | Approval + retention | No approval OR retention period not met |
+| Any transition | Tenant policy | Tenant-level lifecycle policy violated |
+
+**Policy Gate Pseudo-code:**
+
+```python
+class LifecyclePolicyGate:
+    def can_activate(self, plane_id: str) -> GateResult:
+        # Must have at least one policy bound
+        policies = policy_registry.get_policies_for_plane(plane_id)
+        if not policies:
+            return GateResult.BLOCKED("No policy bound. Cannot activate.")
+        return GateResult.ALLOWED()
+
+    def can_deactivate(self, plane_id: str) -> GateResult:
+        # Check no active policies reference this plane
+        refs = policy_registry.get_references_to_plane(plane_id)
+        if refs:
+            return GateResult.BLOCKED(f"Policies still reference this plane: {refs}")
+        return GateResult.ALLOWED()
+
+    def can_purge(self, plane_id: str) -> GateResult:
+        # Check approval + retention
+        approval = approval_registry.get_purge_approval(plane_id)
+        if not approval:
+            return GateResult.BLOCKED("Purge requires explicit approval")
+        retention = retention_policy.check(plane_id)
+        if not retention.satisfied:
+            return GateResult.BLOCKED(f"Retention period not met: {retention.remaining}")
+        return GateResult.ALLOWED()
+```
+
+#### 7.15.4 Lifecycle Audit Events (GAP-088)
+
+Every lifecycle transition MUST emit an audit event. This is compliance-grade evidence, not application logs.
+
+| Event Type | Payload | Retention |
+|------------|---------|-----------|
+| `LIFECYCLE_TRANSITION` | `{plane_id, from_state, to_state, actor, timestamp, gate_result}` | Permanent |
+| `LIFECYCLE_BLOCKED` | `{plane_id, attempted_state, reason, actor, timestamp}` | Permanent |
+| `LIFECYCLE_ROLLBACK` | `{plane_id, from_state, to_state, reason, actor, timestamp}` | Permanent |
+| `LIFECYCLE_PURGE_APPROVED` | `{plane_id, approver, retention_check, timestamp}` | Permanent (survives purge) |
+
+**Critical Invariant:**
+> Audit events for PURGE operations MUST be preserved even after the plane data is deleted.
+> This is the proof that deletion was authorized and compliant.
+
+#### 7.15.5 Non-Goals & Explicit Exclusions
+
+These are **intentional constraints** on what the lifecycle system will NOT do:
+
+| Exclusion | Rationale |
+|-----------|-----------|
+| **No row-level data verification** | We verify *access path and intent*, not semantic correctness of LLM answers |
+| **No aggressive auto-policy binding** | Default DENY for private knowledge. Explicit owner activation required. |
+| **No forced transitions** | SDK requests transitions, LifecycleManager arbitrates. Users cannot bypass gates. |
+| **No silent state changes** | Every transition emits audit event. No background state mutations. |
+| **No retroactive compliance** | Cannot apply new retention policies to already-purged data. |
+
+**Why These Matter:**
+
+1. **Row-level verification** — Leads to massive complexity, privacy risk, and false confidence. Verify access paths instead.
+2. **Auto-binding** — Surprise enforcement is dangerous. Require explicit activation.
+3. **Forced transitions** — Governance means the system decides, not the user.
+
+#### 7.15.6 Framework Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     KnowledgeLifecycleManager (GAP-086)                     │
+│                           THE ORCHESTRATOR                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌───────────────────┐  ┌───────────────────┐  ┌───────────────────┐       │
+│  │  State Machine    │  │  Policy Gates     │  │  Audit Emitter    │       │
+│  │    (GAP-089)      │  │    (GAP-087)      │  │    (GAP-088)      │       │
+│  │                   │  │                   │  │                   │       │
+│  │ • Valid states    │  │ • ACTIVATE gate   │  │ • Transition log  │       │
+│  │ • Transitions     │  │ • DEACTIVATE gate │  │ • Block log       │       │
+│  │ • Blocking rules  │  │ • PURGE gate      │  │ • Rollback log    │       │
+│  │ • Rollback paths  │  │ • Tenant policy   │  │ • Purge approval  │       │
+│  └───────────────────┘  └───────────────────┘  └───────────────────┘       │
+│           │                      │                      │                   │
+│           └──────────────────────┼──────────────────────┘                   │
+│                                  │                                          │
+│                                  ▼                                          │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │                      Async Job Coordinator                            │  │
+│  │  • Ingest jobs (long-running)                                         │  │
+│  │  • Index jobs (long-running)                                          │  │
+│  │  • Classify jobs (long-running)                                       │  │
+│  │  • Archive jobs (long-running)                                        │  │
+│  │  • Purge jobs (cascade delete)                                        │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                  │                                          │
+└──────────────────────────────────┼──────────────────────────────────────────┘
+                                   │
+           ┌───────────────────────┼───────────────────────┐
+           │                       │                       │
+           ▼                       ▼                       ▼
+┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────────┐
+│   Section 7.16      │ │   Section 7.17      │ │   Section 7.18      │
+│   ONBOARDING        │ │   OFFBOARDING       │ │   SDK SURFACE       │
+│   (GAP-071→077)     │ │   (GAP-078→082)     │ │   (GAP-083→085)     │
+│                     │ │                     │ │                     │
+│ Individual stage    │ │ Individual stage    │ │ Thin façade that    │
+│ implementations     │ │ implementations     │ │ calls Lifecycle     │
+│ that plug into      │ │ that plug into      │ │ Manager             │
+│ the framework       │ │ the framework       │ │                     │
+└─────────────────────┘ └─────────────────────┘ └─────────────────────┘
+```
+
+#### 7.15.7 Implementation Order
+
+> **CRITICAL: Do NOT implement individual lifecycle stages (7.16-7.18) before the orchestrator (7.15) exists.**
+
+| Order | Component | Rationale |
+|-------|-----------|-----------|
+| 1 | GAP-089 (State Machine) | Defines valid states and transitions |
+| 2 | GAP-086 (LifecycleManager) | Orchestrator that enforces state machine |
+| 3 | GAP-088 (Audit Events) | Wire audit emission into manager |
+| 4 | GAP-087 (Policy Gates) | Add policy checks to transitions |
+| 5 | GAP-071-077 (Onboarding) | Individual stages plug in |
+| 6 | GAP-078-082 (Offboarding) | Individual stages plug in |
+| 7 | GAP-083-085 (SDK) | Thin façade over manager |
+
+---
+
+### 7.16 Customer Lifecycle Gaps — Onboarding (GAP-071 to GAP-077)
+
+These gaps cover the complete customer environment onboarding lifecycle. **They plug into the Lifecycle Orchestration Framework (Section 7.15).**
+
+**Lifecycle Stage:** `ONBOARD (Register → Verify → Ingest → Index → Classify → Activate → Govern)`
+
+**Dependency:** Requires GAP-086 (LifecycleManager) to exist first.
+
+| Gap ID | Stage | Component | Current State | Required State | Priority | Tier |
+|--------|-------|-----------|---------------|----------------|----------|------|
+| **GAP-071** | Register | Environment Registration SDK | Partial (`register_environment()` exists) | Complete `aos_sdk.register_environment()` with validation, idempotency, rollback | **HIGH** | T4 |
+| **GAP-072** | Verify | Environment Verification Gate | No formal gate | Pre-activation checks: connectivity test, credential validation, schema compatibility | **HIGH** | T4 |
+| **GAP-073** | Ingest | Data Ingestion Pipeline | No unified pipeline | `aos_sdk.ingest()` with streaming support, chunking, progress tracking | **CRITICAL** | T4 |
+| **GAP-074** | Index | Indexing Pipeline | Implicit in vector store | Explicit indexing stage: `aos_sdk.index()` with status tracking, re-index support | **HIGH** | T4 |
+| **GAP-075** | Classify | Data Classification | No classification | `aos_sdk.classify()` for semantic tagging, sensitivity detection, schema inference | **MEDIUM** | T4 |
+| **GAP-076** | Activate | Activation Gate | No formal gate | Pre-governance checks: policy binding verification, access control test | **HIGH** | T4 |
+| **GAP-077** | Govern | Policy Binding | Partial (via GAP-056) | Complete policy binding: auto-attach default policies, tenant policy inheritance | **HIGH** | T4 |
+
+**Onboarding Flow (via LifecycleManager):**
+
+```
+SDK Call                          LifecycleManager Action              State Transition
+════════                          ══════════════════════              ════════════════
+aos_sdk.register_environment() → validate + create plane           → DRAFT
+aos_sdk.verify_environment()   → run connectivity tests            → PENDING_VERIFY → VERIFIED
+aos_sdk.ingest(source)         → start async ingest job            → INGESTING → INDEXED
+aos_sdk.index()                → start async index job             → (already INDEXED)
+aos_sdk.classify()             → start async classify job          → CLASSIFIED
+aos_sdk.activate()             → check GAP-087 policy gate         → PENDING_ACTIVATE
+(policy bound)                 → gate passes                       → ACTIVE
+```
+
+---
+
+### 7.17 Customer Lifecycle Gaps — Offboarding (GAP-078 to GAP-082)
+
+These gaps cover the complete customer environment offboarding lifecycle (currently **MISSING**). **They plug into the Lifecycle Orchestration Framework (Section 7.15).**
+
+**Lifecycle Stage:** `OFFBOARD (Deregister → Verify → Deactivate → Archive → Purge)`
+
+**Dependency:** Requires GAP-086 (LifecycleManager) and GAP-087 (Policy Gates) to exist first.
+
+| Gap ID | Stage | Component | Current State | Required State | Priority | Tier |
+|--------|-------|-----------|---------------|----------------|----------|------|
+| **GAP-078** | Deregister | Environment Deregistration | **NOT IMPLEMENTED** | `aos_sdk.deregister_environment()` with dependency checks, grace period | **HIGH** | T4 |
+| **GAP-079** | Verify | Clean Verification Gate | **NOT IMPLEMENTED** | Pre-purge checks: no active runs, no pending policies, billing settled | **HIGH** | T4 |
+| **GAP-080** | Deactivate | Environment Deactivation | **NOT IMPLEMENTED** | Soft-delete: `aos_sdk.deactivate()` — mark inactive, stop new runs, preserve data | **HIGH** | T4 |
+| **GAP-081** | Archive | Data Archival | **NOT IMPLEMENTED** | `aos_sdk.archive()` with export, compression, retention policy | **MEDIUM** | T4 |
+| **GAP-082** | Purge | Data Purging | **NOT IMPLEMENTED** | `aos_sdk.purge()` with GDPR compliance, audit trail preservation, cascade rules | **CRITICAL** | T4 |
+
+**Offboarding Flow (via LifecycleManager):**
+
+```
+SDK Call                          LifecycleManager Action              State Transition
+════════                          ══════════════════════              ════════════════
+aos_sdk.deregister_environment() → dependency check + grace period   → PENDING_DEACTIVATE
+(grace period expires)           → verify no active refs             → check GAP-087 gate
+aos_sdk.deactivate()             → soft-delete, stop new runs        → DEACTIVATED
+aos_sdk.archive()                → export + compress                 → ARCHIVED
+aos_sdk.purge()                  → check GAP-087 approval + retention → PURGED
+(audit preserved)                → cascade delete complete           → (removed)
+```
+
+**Critical Notes:**
+- GAP-082 (Purge) is marked **CRITICAL** for GDPR/CCPA compliance
+- Audit trail MUST be preserved even after plane data is deleted (GAP-088 invariant)
+- Cascade rules must respect foreign key relationships
+- All transitions emit audit events (GAP-088)
+
+---
+
+### 7.18 SDK Coverage Gaps (GAP-083 to GAP-085)
+
+These gaps cover SDK method completeness identified during lifecycle analysis. **The SDK is a thin façade over the LifecycleManager (Section 7.15).**
+
+**Architectural Principle:**
+> SDK calls **request** transitions. SDK does NOT embed workflow logic.
+> The LifecycleManager orchestrates; the SDK exposes state and progress.
+
+**Dependency:** Requires GAP-086 (LifecycleManager) to exist first.
+
+| Gap ID | Component | Current State | Required State | Priority | Tier |
+|--------|-----------|---------------|----------------|----------|------|
+| **GAP-083** | Knowledge Plane SDK Methods | Partial coverage | Complete `aos_sdk.knowledge.*` namespace: `create_plane()`, `bind_source()`, `query()`, `update_binding()`, `delete_plane()` | **HIGH** | T4 |
+| **GAP-084** | Data Source SDK Methods | Partial coverage | Complete `aos_sdk.datasource.*` namespace: `connect()`, `test()`, `sync()`, `pause()`, `resume()`, `disconnect()` | **HIGH** | T4 |
+| **GAP-085** | Async/Streaming SDK Methods | Not implemented | `aos_sdk.stream.*` namespace: `ingest_stream()`, `query_stream()`, progress callbacks, cancellation tokens | **MEDIUM** | T4 |
+
+**SDK Method Coverage Matrix:**
+
+```
+aos_sdk.
+├── lifecycle.             ← Thin façade over GAP-086 (LifecycleManager)
+│   ├── get_state()        → Returns current lifecycle state
+│   ├── wait_until(state)  → Polls until state reached
+│   └── get_history()      → Returns transition audit log
+│
+├── environment.           ← GAP-071 to GAP-082 (Lifecycle stages)
+│   ├── register()         → Requests DRAFT state
+│   ├── verify()           → Requests VERIFIED state
+│   ├── activate()         → Requests ACTIVE state (via GAP-087 gate)
+│   ├── deactivate()       → Requests DEACTIVATED state
+│   ├── deregister()       → Requests PENDING_DEACTIVATE state
+│   ├── archive()          → Requests ARCHIVED state
+│   └── purge()            → Requests PURGED state (via GAP-087 gate)
+│
+├── knowledge.             ← GAP-083 (Knowledge Plane methods)
+│   ├── create_plane()
+│   ├── bind_source()
+│   ├── query()
+│   ├── update_binding()
+│   └── delete_plane()
+│
+├── datasource.            ← GAP-084 (Data Source methods)
+│   ├── connect()
+│   ├── test()
+│   ├── sync()
+│   ├── pause()
+│   ├── resume()
+│   └── disconnect()
+│
+└── stream.                ← GAP-085 (Async/Streaming methods)
+    ├── ingest_stream()    → Returns async iterator
+    ├── query_stream()     → Returns async iterator
+    ├── on_progress()      → Register progress callback
+    └── cancel()           → Cancel running async job
+```
+
+**SDK Design Principles:**
+
+| Principle | Implementation |
+|-----------|---------------|
+| State-driven | SDK exposes `wait_until(state)` not individual step methods |
+| Async-aware | Long-running operations return job handles, not blocking results |
+| Audit-accessible | SDK can retrieve transition history for debugging |
+| Gate-transparent | SDK surfaces gate failures with clear reasons |
+
+---
+
 ## Changelog
 
 | Date | Author | Change |
 |------|--------|--------|
+| 2026-01-21 | Systems Architect | Added Section 7.15: Lifecycle Orchestration Framework (GAP-086 to GAP-089) as binding layer |
+| 2026-01-21 | Systems Architect | Restructured 7.16-7.18 to plug into framework; updated SDK to be thin façade |
+| 2026-01-21 | Systems Architect | Added Section 7.16-7.18: Customer Lifecycle Gaps (GAP-071 to GAP-085) from mental map analysis |
 | 2026-01-20 | Systems Architect | Initial draft — Gap analysis from policy control lever review |
 | 2026-01-20 | Systems Architect | Added numbered Gap Ledger (GAP-001 to GAP-030) after reference design comparison |
 | 2026-01-20 | Systems Architect | Added Section 7.10: Policy Framing Gaps (GAP-031 to GAP-035) from GPT reference design analysis |

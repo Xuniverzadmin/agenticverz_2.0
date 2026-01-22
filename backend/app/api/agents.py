@@ -1,3 +1,7 @@
+# Layer: L2 — Product APIs
+# AUDIENCE: INTERNAL
+# Role: Multi-agent job execution API - worker coordination, SBA management
+#
 # M12 Agents API Routes
 # REST API for multi-agent job execution
 #

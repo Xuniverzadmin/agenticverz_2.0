@@ -97,6 +97,63 @@ The system has exactly four modes:
 
 ---
 
+## 4.5. Database Roles (Migration Governance)
+
+Databases have **roles** independent of location. Migrations are governed by `DB_ROLE`, not `DB_AUTHORITY`.
+
+### DB_ROLE Values
+
+| DB_ROLE | Meaning | Migrations Allowed |
+|---------|---------|-------------------|
+| **staging** | Pre-prod / local / CI authority | ✅ YES |
+| **prod** | Production canonical authority | ✅ YES (with confirmation) |
+| **replica** | Read-only / analytics | ❌ NO |
+
+### Environment Mapping
+
+| Environment | DB_AUTHORITY | DB_ROLE |
+|-------------|--------------|---------|
+| Local       | local        | staging |
+| Neon Test   | neon         | staging |
+| Neon Prod   | neon         | prod    |
+
+### Migration Commands
+
+**Local staging (rehearsal):**
+```bash
+export DB_AUTHORITY=local
+export DB_ROLE=staging
+export DATABASE_URL=postgresql://...
+alembic upgrade head
+```
+
+**Production (with confirmation):**
+```bash
+export DB_AUTHORITY=neon
+export DB_ROLE=prod
+export CONFIRM_PROD_MIGRATIONS=true
+export DATABASE_URL=postgresql://...neon.tech/...
+alembic upgrade head
+```
+
+### Safety Rules
+
+1. **replica is always blocked** — Read-only databases never accept migrations
+2. **prod requires confirmation** — Set `CONFIRM_PROD_MIGRATIONS=true`
+3. **DB_ROLE is authoritative** — `DB_AUTHORITY` is informational only
+
+### Why This Model
+
+The previous model assumed "only Neon is authoritative", which blocked local staging migrations. The correct model is:
+
+- **staging**: local/CI rehearsal, used to validate migrations before production
+- **prod**: production canonical, requires explicit confirmation for safety
+- **replica**: read-only, never accepts migrations
+
+This matches enterprise staging → prod pipelines.
+
+---
+
 ## 5. Absolute Prohibitions
 
 The following are **forbidden in all environments**:

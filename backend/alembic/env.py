@@ -13,97 +13,129 @@ from alembic import context
 
 
 # =============================================================================
-# DB AUTHORITY GATE (MANDATORY)
-# Reference: docs/architecture/contracts/AUTHORITY_CONTRACT.md
+# DB ROLE GATE (MANDATORY)
+# Reference: docs/architecture/ENVIRONMENT_CONTRACT.md
+#
+# Governance Model:
+#   - DB_ROLE determines migration eligibility, not DB_AUTHORITY
+#   - staging: local/CI rehearsal, migrations allowed
+#   - prod: production canonical, migrations require confirmation
+#   - replica: read-only, migrations blocked
+#
+# Mapping:
+#   Local (DB_AUTHORITY=local) → DB_ROLE=staging
+#   Neon (DB_AUTHORITY=neon)   → DB_ROLE=prod
 # =============================================================================
 
 def validate_db_authority() -> tuple[str, str]:
     """
-    Validate database authority before any migration runs.
+    Validate database role and authority before any migration runs.
 
     Rules:
-    - DB_AUTHORITY must be explicitly set (no inference)
-    - Only 'neon' authority is allowed for migrations
-    - DATABASE_URL must match declared authority
+    - DB_ROLE must be explicitly set (staging, prod, replica)
+    - Only 'staging' and 'prod' roles allow migrations
+    - 'prod' role requires CONFIRM_PROD_MIGRATIONS=true
+    - 'replica' role always blocked
+    - DATABASE_URL must be set
 
     Returns:
         Tuple of (db_authority, database_url)
 
     Raises:
-        RuntimeError if authority validation fails
+        RuntimeError if validation fails
     """
-    db_authority = os.getenv("DB_AUTHORITY")
+    db_authority = os.getenv("DB_AUTHORITY", "")
+    db_role = os.getenv("DB_ROLE", "")
     database_url = os.getenv("DATABASE_URL", "")
+    confirm_prod = os.getenv("CONFIRM_PROD_MIGRATIONS", "").lower() == "true"
 
-    # Rule 1: Authority must be declared
-    if not db_authority:
+    # Rule 1: DB_ROLE must be declared
+    if not db_role:
         print("\n" + "=" * 60)
-        print("DB AUTHORITY GATE: BLOCKED")
+        print("DB ROLE GATE: BLOCKED")
         print("=" * 60)
-        print("\nDB_AUTHORITY environment variable is not set.")
-        print("\nMigrations require explicit authority declaration:")
+        print("\nDB_ROLE environment variable is not set.")
+        print("\nMigrations are governed by DB_ROLE, not just DB_AUTHORITY.")
+        print("\nDatabase Roles:")
+        print("  staging - Pre-prod/local/CI authority (migrations allowed)")
+        print("  prod    - Production canonical (migrations require confirmation)")
+        print("  replica - Read-only/analytics (migrations blocked)")
+        print("\nExample for local staging:")
+        print("  export DB_AUTHORITY=local")
+        print("  export DB_ROLE=staging")
+        print("  export DATABASE_URL=postgresql://...")
+        print("\nExample for production:")
         print("  export DB_AUTHORITY=neon")
-        print("  export DATABASE_URL=<your-neon-connection-string>")
-        print("\nAllowed values: neon, local (local blocked for migrations), test")
+        print("  export DB_ROLE=prod")
+        print("  export CONFIRM_PROD_MIGRATIONS=true")
+        print("  export DATABASE_URL=postgresql://...neon.tech/...")
         print("=" * 60 + "\n")
-        raise RuntimeError("DB_AUTHORITY must be set (neon|local|test)")
+        raise RuntimeError("DB_ROLE must be set (staging|prod|replica)")
 
-    # Rule 2: Only 'neon' allowed for migrations
-    if db_authority not in ("neon", "local", "test"):
-        raise RuntimeError(f"DB_AUTHORITY={db_authority} is not valid. Use: neon|local|test")
+    # Rule 2: Validate DB_ROLE values
+    valid_roles = ("staging", "prod", "replica")
+    if db_role not in valid_roles:
+        raise RuntimeError(f"DB_ROLE={db_role} is not valid. Use: staging|prod|replica")
 
-    if db_authority != "neon":
+    # Rule 3: replica is always blocked
+    if db_role == "replica":
         print("\n" + "=" * 60)
-        print("DB AUTHORITY GATE: BLOCKED")
+        print("DB ROLE GATE: BLOCKED")
         print("=" * 60)
-        print(f"\nDB_AUTHORITY={db_authority}")
-        print("\nMigrations are only allowed against authoritative database (neon).")
-        print("Local and test databases are for development, not migrations.")
-        print("\nTo run migrations:")
-        print("  export DB_AUTHORITY=neon")
-        print("  export DATABASE_URL=<your-neon-connection-string>")
+        print(f"\nDB_ROLE={db_role}")
+        print("\nReplica databases are read-only. Migrations are not allowed.")
+        print("=" * 60 + "\n")
+        raise RuntimeError("DB_ROLE=replica does not allow migrations (read-only)")
+
+    # Rule 4: prod requires explicit confirmation
+    if db_role == "prod" and not confirm_prod:
+        print("\n" + "=" * 60)
+        print("DB ROLE GATE: BLOCKED (Production Safety)")
+        print("=" * 60)
+        print(f"\nDB_ROLE={db_role}")
+        print("\nProduction migrations require explicit confirmation.")
+        print("\nTo proceed:")
+        print("  export CONFIRM_PROD_MIGRATIONS=true")
+        print("\nThis is a safety measure to prevent accidental prod migrations.")
         print("=" * 60 + "\n")
         raise RuntimeError(
-            f"Alembic blocked: DB_AUTHORITY={db_authority} is not allowed for migrations. "
-            "Only DB_AUTHORITY=neon is permitted."
+            "DB_ROLE=prod requires CONFIRM_PROD_MIGRATIONS=true for safety"
         )
 
-    # Rule 3: DATABASE_URL must match authority
+    # Rule 5: DATABASE_URL must be set
     if not database_url:
-        raise RuntimeError("DATABASE_URL must be set when DB_AUTHORITY=neon")
+        raise RuntimeError("DATABASE_URL must be set for migrations")
 
-    # Verify it's actually a Neon URL
+    # Optional: Validate authority-URL consistency (warning only)
     url_lower = database_url.lower()
     is_neon = "neon" in url_lower or "neon.tech" in url_lower
     is_local = "localhost" in url_lower or "127.0.0.1" in url_lower or ":5432" in url_lower or ":5433" in url_lower
 
-    if is_local:
+    # Warn on mismatches (but don't block - trust DB_ROLE)
+    if db_role == "prod" and is_local:
         print("\n" + "=" * 60)
-        print("DB AUTHORITY GATE: BLOCKED")
+        print("DB ROLE GATE: WARNING")
         print("=" * 60)
-        print(f"\nDB_AUTHORITY=neon but DATABASE_URL points to localhost:")
-        print(f"  {database_url[:60]}...")
-        print("\nAuthority mismatch. Set correct DATABASE_URL for Neon.")
+        print(f"\nDB_ROLE=prod but DATABASE_URL points to localhost.")
+        print("Verify this is intentional (e.g., local prod mirror).")
         print("=" * 60 + "\n")
-        raise RuntimeError(
-            "DB_AUTHORITY=neon but DATABASE_URL contains localhost. "
-            "Authority and URL must match."
-        )
 
-    if not is_neon:
+    if db_role == "staging" and is_neon:
         print("\n" + "=" * 60)
-        print("DB AUTHORITY GATE: WARNING")
+        print("DB ROLE GATE: WARNING")
         print("=" * 60)
-        print(f"\nDB_AUTHORITY=neon but DATABASE_URL doesn't contain 'neon':")
-        print(f"  {database_url[:60]}...")
-        print("\nProceeding, but verify this is the correct authoritative database.")
+        print(f"\nDB_ROLE=staging but DATABASE_URL points to Neon.")
+        print("If this is production Neon, use DB_ROLE=prod instead.")
         print("=" * 60 + "\n")
 
     # Log authority for visibility
     print("\n" + "=" * 60)
     print("MIGRATION AUTHORITY CONFIRMED")
     print("=" * 60)
-    print(f"  DB_AUTHORITY = {db_authority}")
+    print(f"  DB_AUTHORITY = {db_authority or '(not set)'}")
+    print(f"  DB_ROLE      = {db_role}")
+    if db_role == "prod":
+        print(f"  CONFIRM_PROD = {confirm_prod}")
     # Mask password in URL for logging
     masked_url = database_url
     if "@" in database_url:
@@ -113,7 +145,7 @@ def validate_db_authority() -> tuple[str, str]:
     print(f"  DATABASE_URL = {masked_url[:70]}...")
     print("=" * 60 + "\n")
 
-    return db_authority, database_url
+    return db_authority or db_role, database_url
 
 
 # Validate authority BEFORE any migration work

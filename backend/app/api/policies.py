@@ -35,7 +35,7 @@ Architecture:
 
 import logging
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Any, List, Optional
 
@@ -43,20 +43,12 @@ logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
-from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
 from app.schemas.response import wrap_dict
-from app.models.policy_control_plane import (
-    Limit,
-    LimitBreach,
-    LimitIntegrity,
-    PolicyEnforcement,
-    PolicyRule,
-    PolicyRuleIntegrity,
-)
+from app.services.policies_facade import get_policies_facade
 
 # =============================================================================
 # Environment Configuration
@@ -292,137 +284,48 @@ async def list_policy_rules(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> RulesListResponse:
     """List policy rules with unified query filters. READ-ONLY."""
-
     tenant_id = get_tenant_id_from_auth(request)
-    filters_applied: dict[str, Any] = {"tenant_id": tenant_id, "status": status}
-
-    # Time window for trigger stats (30 days)
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    facade = get_policies_facade()
 
     try:
-        # Subquery: enforcement aggregation
-        enforcement_stats_subq = (
-            select(
-                PolicyEnforcement.rule_id.label("rule_id"),
-                func.count(PolicyEnforcement.id).label("trigger_count_30d"),
-                func.max(PolicyEnforcement.triggered_at).label("last_triggered_at"),
-            )
-            .where(PolicyEnforcement.triggered_at >= thirty_days_ago)
-            .group_by(PolicyEnforcement.rule_id)
-            .subquery()
+        result = await facade.list_policy_rules(
+            session=session,
+            tenant_id=tenant_id,
+            status=status,
+            enforcement_mode=enforcement_mode,
+            scope=scope,
+            source=source,
+            rule_type=rule_type,
+            created_after=created_after,
+            created_before=created_before,
+            limit=limit,
+            offset=offset,
         )
 
-        # Main query
-        stmt = (
-            select(
-                PolicyRule.id.label("rule_id"),
-                PolicyRule.name,
-                PolicyRule.enforcement_mode,
-                PolicyRule.scope,
-                PolicyRule.source,
-                PolicyRule.status,
-                PolicyRule.created_at,
-                PolicyRule.created_by,
-                PolicyRuleIntegrity.integrity_status,
-                PolicyRuleIntegrity.integrity_score,
-                func.coalesce(enforcement_stats_subq.c.trigger_count_30d, 0).label("trigger_count_30d"),
-                enforcement_stats_subq.c.last_triggered_at,
-            )
-            .join(
-                PolicyRuleIntegrity,
-                PolicyRuleIntegrity.rule_id == PolicyRule.id,
-            )
-            .outerjoin(
-                enforcement_stats_subq,
-                enforcement_stats_subq.c.rule_id == PolicyRule.id,
-            )
-            .where(
-                and_(
-                    PolicyRule.tenant_id == tenant_id,
-                    PolicyRule.status == status,
-                )
-            )
-            .order_by(
-                enforcement_stats_subq.c.last_triggered_at.desc().nullslast(),
-                PolicyRule.created_at.desc(),
-            )
-        )
-
-        # Optional filters
-        if enforcement_mode is not None:
-            stmt = stmt.where(PolicyRule.enforcement_mode == enforcement_mode)
-            filters_applied["enforcement_mode"] = enforcement_mode
-
-        if scope is not None:
-            stmt = stmt.where(PolicyRule.scope == scope)
-            filters_applied["scope"] = scope
-
-        if source is not None:
-            stmt = stmt.where(PolicyRule.source == source)
-            filters_applied["source"] = source
-
-        if rule_type is not None:
-            stmt = stmt.where(PolicyRule.rule_type == rule_type)
-            filters_applied["rule_type"] = rule_type
-
-        if created_after is not None:
-            stmt = stmt.where(PolicyRule.created_at >= created_after)
-            filters_applied["created_after"] = created_after.isoformat()
-
-        if created_before is not None:
-            stmt = stmt.where(PolicyRule.created_at <= created_before)
-            filters_applied["created_before"] = created_before.isoformat()
-
-        # Count query
-        count_stmt = (
-            select(func.count(PolicyRule.id))
-            .where(PolicyRule.tenant_id == tenant_id)
-            .where(PolicyRule.status == status)
-        )
-        if enforcement_mode:
-            count_stmt = count_stmt.where(PolicyRule.enforcement_mode == enforcement_mode)
-        if scope:
-            count_stmt = count_stmt.where(PolicyRule.scope == scope)
-        if source:
-            count_stmt = count_stmt.where(PolicyRule.source == source)
-        if rule_type:
-            count_stmt = count_stmt.where(PolicyRule.rule_type == rule_type)
-        if created_after:
-            count_stmt = count_stmt.where(PolicyRule.created_at >= created_after)
-        if created_before:
-            count_stmt = count_stmt.where(PolicyRule.created_at <= created_before)
-
-        count_result = await session.execute(count_stmt)
-        total = count_result.scalar() or 0
-
-        # Apply pagination
-        stmt = stmt.limit(limit).offset(offset)
-        result = await session.execute(stmt)
-        rows = [dict(row._mapping) for row in result.all()]
-
+        # Convert facade result to API response
         items = [
             PolicyRuleSummary(
-                rule_id=row["rule_id"],
-                name=row["name"],
-                enforcement_mode=row["enforcement_mode"],
-                scope=row["scope"],
-                source=row["source"],
-                status=row["status"],
-                created_at=row["created_at"],
-                created_by=row["created_by"],
-                integrity_status=row["integrity_status"],
-                integrity_score=row["integrity_score"],
-                trigger_count_30d=row["trigger_count_30d"],
-                last_triggered_at=row["last_triggered_at"],
+                rule_id=item.rule_id,
+                name=item.name,
+                enforcement_mode=item.enforcement_mode,
+                scope=item.scope,
+                source=item.source,
+                status=item.status,
+                created_at=item.created_at,
+                created_by=item.created_by,
+                integrity_status=item.integrity_status,
+                integrity_score=item.integrity_score,
+                trigger_count_30d=item.trigger_count_30d,
+                last_triggered_at=item.last_triggered_at,
             )
-            for row in rows
+            for item in result.items
         ]
 
         return RulesListResponse(
             items=items,
-            total=total,
-            has_more=(offset + len(items)) < total,
-            filters_applied=filters_applied,
+            total=result.total,
+            has_more=result.has_more,
+            filters_applied=result.filters_applied,
         )
 
     except Exception as e:
@@ -451,65 +354,35 @@ async def get_policy_rule_detail(
     """Get policy rule detail (O3). Tenant isolation enforced."""
 
     tenant_id = get_tenant_id_from_auth(request)
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    facade = get_policies_facade()
 
     try:
-        # Subquery for trigger stats
-        enforcement_stats_subq = (
-            select(
-                PolicyEnforcement.rule_id.label("rule_id"),
-                func.count(PolicyEnforcement.id).label("trigger_count_30d"),
-                func.max(PolicyEnforcement.triggered_at).label("last_triggered_at"),
-            )
-            .where(
-                PolicyEnforcement.rule_id == rule_id,
-                PolicyEnforcement.triggered_at >= thirty_days_ago,
-            )
-            .group_by(PolicyEnforcement.rule_id)
-            .subquery()
+        result = await facade.get_policy_rule_detail(
+            session=session,
+            tenant_id=tenant_id,
+            rule_id=rule_id,
         )
 
-        stmt = (
-            select(
-                PolicyRule,
-                PolicyRuleIntegrity.integrity_status,
-                PolicyRuleIntegrity.integrity_score,
-                func.coalesce(enforcement_stats_subq.c.trigger_count_30d, 0).label("trigger_count_30d"),
-                enforcement_stats_subq.c.last_triggered_at,
-            )
-            .join(PolicyRuleIntegrity, PolicyRuleIntegrity.rule_id == PolicyRule.id)
-            .outerjoin(enforcement_stats_subq, enforcement_stats_subq.c.rule_id == PolicyRule.id)
-            .where(
-                PolicyRule.id == rule_id,
-                PolicyRule.tenant_id == tenant_id,
-            )
-        )
-
-        result = await session.execute(stmt)
-        row = result.first()
-
-        if not row:
+        if not result:
             raise HTTPException(status_code=404, detail="Policy rule not found")
 
-        rule = row[0]  # PolicyRule model
-
         return PolicyRuleDetailResponse(
-            rule_id=rule.id,
-            name=rule.name,
-            description=getattr(rule, "description", None),
-            enforcement_mode=rule.enforcement_mode,
-            scope=rule.scope,
-            source=rule.source,
-            status=rule.status,
-            created_at=rule.created_at,
-            created_by=rule.created_by,
-            updated_at=getattr(rule, "updated_at", None),
-            integrity_status=row[1],
-            integrity_score=row[2],
-            trigger_count_30d=row[3],
-            last_triggered_at=row[4],
-            rule_definition=getattr(rule, "rule_definition", None),
-            violation_count_total=0,  # Could add total count query
+            rule_id=result.rule_id,
+            name=result.name,
+            description=result.description,
+            enforcement_mode=result.enforcement_mode,
+            scope=result.scope,
+            source=result.source,
+            status=result.status,
+            created_at=result.created_at,
+            created_by=result.created_by,
+            updated_at=result.updated_at,
+            integrity_status=result.integrity_status,
+            integrity_score=result.integrity_score,
+            trigger_count_30d=result.trigger_count_30d,
+            last_triggered_at=result.last_triggered_at,
+            rule_definition=result.rule_definition,
+            violation_count_total=result.violation_count_total,
         )
 
     except HTTPException:
@@ -585,147 +458,51 @@ async def list_limits(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> LimitsListResponse:
     """List limits with unified query filters. READ-ONLY."""
-
     tenant_id = get_tenant_id_from_auth(request)
-    filters_applied: dict[str, Any] = {
-        "tenant_id": tenant_id,
-        "category": category,
-        "status": status,
-    }
-
-    # Time window for breach stats (30 days)
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    facade = get_policies_facade()
 
     try:
-        # Subquery: breach aggregation
-        breach_agg_subq = (
-            select(
-                LimitBreach.limit_id.label("limit_id"),
-                func.count().label("breach_count_30d"),
-                func.max(LimitBreach.breached_at).label("last_breached_at"),
-            )
-            .where(LimitBreach.breached_at >= thirty_days_ago)
-            .group_by(LimitBreach.limit_id)
-            .subquery()
+        result = await facade.list_limits(
+            session=session,
+            tenant_id=tenant_id,
+            category=category,
+            status=status,
+            scope=scope,
+            enforcement=enforcement,
+            limit_type=limit_type,
+            created_after=created_after,
+            created_before=created_before,
+            limit=max_limit,
+            offset=offset,
         )
 
-        # Main query
-        stmt = (
-            select(
-                Limit.id.label("limit_id"),
-                Limit.name,
-                Limit.limit_category,
-                Limit.limit_type,
-                Limit.scope,
-                Limit.enforcement,
-                Limit.status,
-                Limit.max_value,
-                Limit.window_seconds,
-                Limit.reset_period,
-                LimitIntegrity.integrity_status,
-                LimitIntegrity.integrity_score,
-                func.coalesce(breach_agg_subq.c.breach_count_30d, 0).label("breach_count_30d"),
-                breach_agg_subq.c.last_breached_at,
-                Limit.created_at,
-            )
-            .select_from(Limit)
-            .join(LimitIntegrity, LimitIntegrity.limit_id == Limit.id)
-            .outerjoin(breach_agg_subq, breach_agg_subq.c.limit_id == Limit.id)
-            .where(
-                and_(
-                    Limit.tenant_id == tenant_id,
-                    Limit.limit_category == category,
-                    Limit.status == status,
-                )
-            )
-            .order_by(
-                breach_agg_subq.c.last_breached_at.desc().nullslast(),
-                Limit.created_at.desc(),
-            )
-        )
-
-        # Optional filters
-        if scope is not None:
-            stmt = stmt.where(Limit.scope == scope)
-            filters_applied["scope"] = scope
-
-        if enforcement is not None:
-            stmt = stmt.where(Limit.enforcement == enforcement)
-            filters_applied["enforcement"] = enforcement
-
-        if limit_type is not None:
-            # Support prefix match (e.g., RUNS_*, TOKENS_*)
-            if limit_type.endswith("*"):
-                prefix = limit_type[:-1]  # Remove the *
-                stmt = stmt.where(Limit.limit_type.startswith(prefix))
-            else:
-                stmt = stmt.where(Limit.limit_type == limit_type)
-            filters_applied["limit_type"] = limit_type
-
-        if created_after is not None:
-            stmt = stmt.where(Limit.created_at >= created_after)
-            filters_applied["created_after"] = created_after.isoformat()
-
-        if created_before is not None:
-            stmt = stmt.where(Limit.created_at <= created_before)
-            filters_applied["created_before"] = created_before.isoformat()
-
-        # Count query
-        count_stmt = (
-            select(func.count(Limit.id))
-            .where(Limit.tenant_id == tenant_id)
-            .where(Limit.limit_category == category)
-            .where(Limit.status == status)
-        )
-        if scope:
-            count_stmt = count_stmt.where(Limit.scope == scope)
-        if enforcement:
-            count_stmt = count_stmt.where(Limit.enforcement == enforcement)
-        if limit_type:
-            if limit_type.endswith("*"):
-                prefix = limit_type[:-1]
-                count_stmt = count_stmt.where(Limit.limit_type.startswith(prefix))
-            else:
-                count_stmt = count_stmt.where(Limit.limit_type == limit_type)
-        if created_after:
-            count_stmt = count_stmt.where(Limit.created_at >= created_after)
-        if created_before:
-            count_stmt = count_stmt.where(Limit.created_at <= created_before)
-
-        count_result = await session.execute(count_stmt)
-        total = count_result.scalar() or 0
-
-        # Apply pagination
-        stmt = stmt.limit(max_limit).offset(offset)
-        result = await session.execute(stmt)
-        rows = [dict(row._mapping) for row in result.all()]
-
+        # Convert facade result to API response
         items = [
             LimitSummary(
-                limit_id=row["limit_id"],
-                name=row["name"],
-                limit_category=row["limit_category"],
-                limit_type=row["limit_type"],
-                scope=row["scope"],
-                enforcement=row["enforcement"],
-                status=row["status"],
-                max_value=row["max_value"],
-                window_seconds=row["window_seconds"],
-                reset_period=row["reset_period"],
-                integrity_status=row["integrity_status"],
-                integrity_score=row["integrity_score"],
-                breach_count_30d=row["breach_count_30d"],
-                last_breached_at=row["last_breached_at"],
-                created_at=row["created_at"],
+                limit_id=item.limit_id,
+                name=item.name,
+                limit_category=item.limit_category,
+                limit_type=item.limit_type,
+                scope=item.scope,
+                enforcement=item.enforcement,
+                status=item.status,
+                max_value=item.max_value,
+                window_seconds=item.window_seconds,
+                reset_period=item.reset_period,
+                integrity_status=item.integrity_status,
+                integrity_score=item.integrity_score,
+                breach_count_30d=item.breach_count_30d,
+                last_breached_at=item.last_breached_at,
+                created_at=item.created_at,
             )
-            for row in rows
+            for item in result.items
         ]
 
         return LimitsListResponse(
             items=items,
-            total=total,
-            has_more=(offset + len(items)) < total,
-            filters_applied=filters_applied,
+            total=result.total,
+            has_more=result.has_more,
+            filters_applied=result.filters_applied,
         )
 
     except Exception as e:
@@ -754,68 +531,38 @@ async def get_limit_detail(
     """Get limit detail (O3). Tenant isolation enforced."""
 
     tenant_id = get_tenant_id_from_auth(request)
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    facade = get_policies_facade()
 
     try:
-        # Subquery for breach stats
-        breach_agg_subq = (
-            select(
-                LimitBreach.limit_id.label("limit_id"),
-                func.count().label("breach_count_30d"),
-                func.max(LimitBreach.breached_at).label("last_breached_at"),
-            )
-            .where(
-                LimitBreach.limit_id == limit_id,
-                LimitBreach.breached_at >= thirty_days_ago,
-            )
-            .group_by(LimitBreach.limit_id)
-            .subquery()
+        result = await facade.get_limit_detail(
+            session=session,
+            tenant_id=tenant_id,
+            limit_id=limit_id,
         )
 
-        stmt = (
-            select(
-                Limit,
-                LimitIntegrity.integrity_status,
-                LimitIntegrity.integrity_score,
-                func.coalesce(breach_agg_subq.c.breach_count_30d, 0).label("breach_count_30d"),
-                breach_agg_subq.c.last_breached_at,
-            )
-            .join(LimitIntegrity, LimitIntegrity.limit_id == Limit.id)
-            .outerjoin(breach_agg_subq, breach_agg_subq.c.limit_id == Limit.id)
-            .where(
-                Limit.id == limit_id,
-                Limit.tenant_id == tenant_id,
-            )
-        )
-
-        result = await session.execute(stmt)
-        row = result.first()
-
-        if not row:
+        if not result:
             raise HTTPException(status_code=404, detail="Limit not found")
 
-        lim = row[0]  # Limit model
-
         return LimitDetailResponse(
-            limit_id=lim.id,
-            name=lim.name,
-            description=getattr(lim, "description", None),
-            limit_category=lim.limit_category,
-            limit_type=lim.limit_type,
-            scope=lim.scope,
-            enforcement=lim.enforcement,
-            status=lim.status,
-            max_value=lim.max_value,
-            window_seconds=lim.window_seconds,
-            reset_period=lim.reset_period,
-            integrity_status=row[1],
-            integrity_score=row[2],
-            breach_count_30d=row[3],
-            last_breached_at=row[4],
-            created_at=lim.created_at,
-            updated_at=getattr(lim, "updated_at", None),
-            current_value=None,  # Could add current usage query
-            utilization_percent=None,
+            limit_id=result.limit_id,
+            name=result.name,
+            description=result.description,
+            limit_category=result.limit_category,
+            limit_type=result.limit_type,
+            scope=result.scope,
+            enforcement=result.enforcement,
+            status=result.status,
+            max_value=result.max_value,
+            window_seconds=result.window_seconds,
+            reset_period=result.reset_period,
+            integrity_status=result.integrity_status,
+            integrity_score=result.integrity_score,
+            breach_count_30d=result.breach_count_30d,
+            last_breached_at=result.last_breached_at,
+            created_at=result.created_at,
+            updated_at=result.updated_at,
+            current_value=result.current_value,
+            utilization_percent=result.utilization_percent,
         )
 
     except HTTPException:
@@ -975,20 +722,11 @@ async def list_lessons(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> LessonsListResponse:
     """List lessons learned (O2). READ-ONLY customer facade."""
-    from app.services.lessons_learned_engine import get_lessons_learned_engine
-
     tenant_id = get_tenant_id_from_auth(request)
-    filters_applied: dict[str, Any] = {"tenant_id": tenant_id}
+    facade = get_policies_facade()
 
-    if lesson_type:
-        filters_applied["lesson_type"] = lesson_type
-    if status:
-        filters_applied["status"] = status
-    if severity:
-        filters_applied["severity"] = severity
-
-    engine = get_lessons_learned_engine()
-    lessons = engine.list_lessons(
+    result = await facade.list_lessons(
+        session=session,
         tenant_id=tenant_id,
         lesson_type=lesson_type,
         status=status,
@@ -999,23 +737,23 @@ async def list_lessons(
 
     items = [
         LessonSummaryResponse(
-            id=lesson["id"],
-            lesson_type=lesson["lesson_type"],
-            severity=lesson["severity"],
-            title=lesson["title"],
-            status=lesson["status"],
-            source_event_type=lesson["source_event_type"],
-            created_at=datetime.fromisoformat(lesson["created_at"]) if lesson["created_at"] else datetime.utcnow(),
-            has_proposed_action=lesson["has_proposed_action"],
+            id=item.id,
+            lesson_type=item.lesson_type,
+            severity=item.severity,
+            title=item.title,
+            status=item.status,
+            source_event_type=item.source_event_type,
+            created_at=item.created_at,
+            has_proposed_action=item.has_proposed_action,
         )
-        for lesson in lessons
+        for item in result.items
     ]
 
     return LessonsListResponse(
         items=items,
-        total=len(items),
-        has_more=len(items) == limit,
-        filters_applied=filters_applied,
+        total=result.total,
+        has_more=result.has_more,
+        filters_applied=result.filters_applied,
     )
 
 
@@ -1030,16 +768,18 @@ async def get_lesson_stats(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> LessonStatsResponse:
     """Get lesson statistics (O1). READ-ONLY customer facade."""
-    from app.services.lessons_learned_engine import get_lessons_learned_engine
-
     tenant_id = get_tenant_id_from_auth(request)
-    engine = get_lessons_learned_engine()
-    stats = engine.get_lesson_stats(tenant_id=tenant_id)
+    facade = get_policies_facade()
+
+    result = await facade.get_lesson_stats(
+        session=session,
+        tenant_id=tenant_id,
+    )
 
     return LessonStatsResponse(
-        total=stats.get("total", 0),
-        by_type=stats.get("by_type", {}),
-        by_status=stats.get("by_status", {}),
+        total=result.total,
+        by_type=result.by_type,
+        by_status=result.by_status,
     )
 
 
@@ -1055,32 +795,34 @@ async def get_lesson_detail(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> LessonDetailResponse:
     """Get lesson detail (O3). READ-ONLY customer facade."""
-    from uuid import UUID
-    from app.services.lessons_learned_engine import get_lessons_learned_engine
-
     tenant_id = get_tenant_id_from_auth(request)
-    engine = get_lessons_learned_engine()
-    lesson = engine.get_lesson(lesson_id=UUID(lesson_id), tenant_id=tenant_id)
+    facade = get_policies_facade()
 
-    if not lesson:
+    result = await facade.get_lesson_detail(
+        session=session,
+        tenant_id=tenant_id,
+        lesson_id=lesson_id,
+    )
+
+    if not result:
         raise HTTPException(status_code=404, detail="Lesson not found")
 
     return LessonDetailResponse(
-        id=lesson["id"],
-        lesson_type=lesson["lesson_type"],
-        severity=lesson["severity"],
-        source_event_id=lesson["source_event_id"],
-        source_event_type=lesson["source_event_type"],
-        source_run_id=lesson["source_run_id"],
-        title=lesson["title"],
-        description=lesson["description"],
-        proposed_action=lesson["proposed_action"],
-        detected_pattern=lesson["detected_pattern"],
-        status=lesson["status"],
-        draft_proposal_id=lesson["draft_proposal_id"],
-        created_at=lesson["created_at"],
-        converted_at=lesson["converted_at"],
-        deferred_until=lesson["deferred_until"],
+        id=result.id,
+        lesson_type=result.lesson_type,
+        severity=result.severity,
+        source_event_id=result.source_event_id,
+        source_event_type=result.source_event_type,
+        source_run_id=result.source_run_id,
+        title=result.title,
+        description=result.description,
+        proposed_action=result.proposed_action,
+        detected_pattern=result.detected_pattern,
+        status=result.status,
+        draft_proposal_id=result.draft_proposal_id,
+        created_at=result.created_at,
+        converted_at=result.converted_at,
+        deferred_until=result.deferred_until,
     )
 
 
@@ -1115,51 +857,23 @@ async def get_policy_state(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> PolicyStateResponse:
     """Get policy layer state (ACT-O4). Customer facade."""
-    from app.policy.engine import get_policy_engine
-    from app.services.lessons_learned_engine import get_lessons_learned_engine
-
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_policies_facade()
 
     try:
-        # Get state from policy engine
-        engine = get_policy_engine()
-        state = await engine.get_state(session)
-
-        # Get pending lessons count
-        lessons_engine = get_lessons_learned_engine()
-        lessons_stats = lessons_engine.get_lesson_stats(tenant_id=tenant_id)
-        pending_lessons = lessons_stats.get("by_status", {}).get("pending", 0)
-
-        # Get drafts pending (from policy proposals)
-        drafts_count = 0
-        try:
-            from app.models.policy import PolicyProposal
-            drafts_result = await session.execute(
-                select(func.count(PolicyProposal.id)).where(
-                    PolicyProposal.tenant_id == tenant_id,
-                    PolicyProposal.status == "pending",
-                )
-            )
-            drafts_count = drafts_result.scalar() or 0
-        except Exception:
-            pass
-
-        # Get conflicts count
-        conflicts_count = 0
-        try:
-            conflicts = await engine.get_policy_conflicts(session, include_resolved=False)
-            conflicts_count = len(conflicts)
-        except Exception:
-            pass
+        result = await facade.get_policy_state(
+            session=session,
+            tenant_id=tenant_id,
+        )
 
         return PolicyStateResponse(
-            total_policies=state.total_policies,
-            active_policies=state.active_policies,
-            drafts_pending_review=drafts_count,
-            conflicts_detected=conflicts_count,
-            violations_24h=state.total_violations_today,
-            lessons_pending_action=pending_lessons,
-            last_updated=datetime.utcnow(),
+            total_policies=result.total_policies,
+            active_policies=result.active_policies,
+            drafts_pending_review=result.drafts_pending_review,
+            conflicts_detected=result.conflicts_detected,
+            violations_24h=result.violations_24h,
+            lessons_pending_action=result.lessons_pending_action,
+            last_updated=result.last_updated,
         )
 
     except Exception as e:
@@ -1202,23 +916,25 @@ async def get_policy_metrics(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> PolicyMetricsResponse:
     """Get policy metrics (ACT-O5). Customer facade."""
-    from app.policy.engine import get_policy_engine
-
-    _ = get_tenant_id_from_auth(request)  # Enforce auth
+    tenant_id = get_tenant_id_from_auth(request)
+    facade = get_policies_facade()
 
     try:
-        engine = get_policy_engine()
-        metrics = await engine.get_metrics(session, hours=hours)
+        result = await facade.get_policy_metrics(
+            session=session,
+            tenant_id=tenant_id,
+            hours=hours,
+        )
 
         return PolicyMetricsResponse(
-            total_evaluations=metrics.get("total_evaluations", 0),
-            total_blocks=metrics.get("total_blocks", 0),
-            total_allows=metrics.get("total_allows", 0),
-            block_rate=metrics.get("block_rate", 0.0),
-            avg_evaluation_ms=metrics.get("avg_evaluation_ms", 0.0),
-            violations_by_type=metrics.get("violations_by_type", {}),
-            evaluations_by_action=metrics.get("evaluations_by_action", {}),
-            window_hours=hours,
+            total_evaluations=result.total_evaluations,
+            total_blocks=result.total_blocks,
+            total_allows=result.total_allows,
+            block_rate=result.block_rate,
+            avg_evaluation_ms=result.avg_evaluation_ms,
+            violations_by_type=result.violations_by_type,
+            evaluations_by_action=result.evaluations_by_action,
+            window_hours=result.window_hours,
         )
 
     except Exception as e:
@@ -1289,47 +1005,37 @@ async def list_policy_conflicts(
     include_resolved: Annotated[bool, Query(description="Include resolved conflicts")] = False,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> ConflictsListResponse:
-    """Detect policy conflicts (DFT-O4). Uses PolicyConflictEngine."""
-    from app.services.policy_graph_engine import ConflictSeverity, get_conflict_engine
-
+    """Detect policy conflicts (DFT-O4). Uses PolicyConflictEngine via facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_policies_facade()
 
     try:
-        engine = get_conflict_engine(tenant_id)
-
-        # Parse severity filter
-        severity_filter = None
-        if severity:
-            try:
-                severity_filter = ConflictSeverity(severity.upper())
-            except ValueError:
-                pass
-
-        result = await engine.detect_conflicts(
+        result = await facade.list_policy_conflicts(
             session=session,
+            tenant_id=tenant_id,
             policy_id=policy_id,
-            severity_filter=severity_filter,
+            severity=severity,
             include_resolved=include_resolved,
         )
 
         items = [
             PolicyConflictResponse(
-                policy_a_id=c.policy_a_id,
-                policy_b_id=c.policy_b_id,
-                policy_a_name=c.policy_a_name,
-                policy_b_name=c.policy_b_name,
-                conflict_type=c.conflict_type.value,
-                severity=c.severity.value,
-                explanation=c.explanation,
-                recommended_action=c.recommended_action,
-                detected_at=c.detected_at,
+                policy_a_id=item.policy_a_id,
+                policy_b_id=item.policy_b_id,
+                policy_a_name=item.policy_a_name,
+                policy_b_name=item.policy_b_name,
+                conflict_type=item.conflict_type,
+                severity=item.severity,
+                explanation=item.explanation,
+                recommended_action=item.recommended_action,
+                detected_at=item.detected_at,
             )
-            for c in result.conflicts
+            for item in result.items
         ]
 
         return ConflictsListResponse(
             items=items,
-            total=len(items),
+            total=result.total,
             unresolved_count=result.unresolved_count,
             computed_at=result.computed_at,
         )
@@ -1421,14 +1127,16 @@ async def get_policy_dependencies(
     ] = None,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> DependencyGraphResponse:
-    """Get policy dependency graph (DFT-O5). Uses PolicyDependencyEngine."""
-    from app.services.policy_graph_engine import get_dependency_engine
-
+    """Get policy dependency graph (DFT-O5). Uses PolicyDependencyEngine via facade."""
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_policies_facade()
 
     try:
-        engine = get_dependency_engine(tenant_id)
-        result = await engine.compute_dependency_graph(session, policy_id=policy_id)
+        result = await facade.get_policy_dependencies(
+            session=session,
+            tenant_id=tenant_id,
+            policy_id=policy_id,
+        )
 
         nodes = [
             PolicyNodeResponse(
@@ -1440,19 +1148,19 @@ async def get_policy_dependencies(
                 enforcement_mode=n.enforcement_mode,
                 depends_on=[
                     PolicyDependencyRelation(
-                        policy_id=d["policy_id"],
-                        policy_name=d["policy_name"],
-                        dependency_type=d["type"],
-                        reason=d["reason"],
+                        policy_id=d.policy_id,
+                        policy_name=d.policy_name,
+                        dependency_type=d.dependency_type,
+                        reason=d.reason,
                     )
                     for d in n.depends_on
                 ],
                 required_by=[
                     PolicyDependencyRelation(
-                        policy_id=d["policy_id"],
-                        policy_name=d["policy_name"],
-                        dependency_type=d["type"],
-                        reason=d["reason"],
+                        policy_id=d.policy_id,
+                        policy_name=d.policy_name,
+                        dependency_type=d.dependency_type,
+                        reason=d.reason,
                     )
                     for d in n.required_by
                 ],
@@ -1466,7 +1174,7 @@ async def get_policy_dependencies(
                 depends_on_id=e.depends_on_id,
                 policy_name=e.policy_name,
                 depends_on_name=e.depends_on_name,
-                dependency_type=e.dependency_type.value,
+                dependency_type=e.dependency_type,
                 reason=e.reason,
             )
             for e in result.edges
@@ -1475,8 +1183,8 @@ async def get_policy_dependencies(
         return DependencyGraphResponse(
             nodes=nodes,
             edges=edges,
-            nodes_count=len(nodes),
-            edges_count=len(edges),
+            nodes_count=result.nodes_count,
+            edges_count=result.edges_count,
             computed_at=result.computed_at,
         )
 
@@ -1562,84 +1270,44 @@ async def list_policy_violations(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> ViolationsListResponse:
     """List policy violations (VIO-O1). Unified customer facade."""
-    from app.policy.engine import get_policy_engine
-
     tenant_id = get_tenant_id_from_auth(request)
-    filters_applied: dict[str, Any] = {"tenant_id": tenant_id, "hours": hours}
-
-    if violation_type:
-        filters_applied["violation_type"] = violation_type
-    if source:
-        filters_applied["source"] = source
-    if severity_min:
-        filters_applied["severity_min"] = severity_min
-    if violation_kind:
-        filters_applied["violation_kind"] = violation_kind
+    facade = get_policies_facade()
 
     try:
-        engine = get_policy_engine()
-
-        # Convert string violation_type to ViolationType enum if provided
-        from app.policy.models import ViolationType as ViolationTypeEnum
-        violation_type_enum = None
-        if violation_type:
-            # Map simplified types to enum values
-            type_mapping = {
-                "cost": ViolationTypeEnum.RISK_CEILING_BREACH,
-                "quota": ViolationTypeEnum.TEMPORAL_LIMIT_EXCEEDED,
-                "rate": ViolationTypeEnum.TEMPORAL_LIMIT_EXCEEDED,
-                "temporal": ViolationTypeEnum.TEMPORAL_LIMIT_EXCEEDED,
-                "safety": ViolationTypeEnum.SAFETY_RULE_TRIGGERED,
-                "ethical": ViolationTypeEnum.ETHICAL_VIOLATION,
-            }
-            violation_type_enum = type_mapping.get(violation_type)
-
-        violations = await engine.get_violations(
-            session,
+        result = await facade.list_policy_violations(
+            session=session,
             tenant_id=tenant_id,
-            violation_type=violation_type_enum,
+            violation_type=violation_type,
+            source=source,
             severity_min=severity_min,
-            since=datetime.utcnow() - timedelta(hours=hours),
-            limit=limit + 1,  # Fetch one extra to check has_more
+            violation_kind=violation_kind,
+            hours=hours,
+            include_synthetic=include_synthetic,
+            limit=limit,
+            offset=offset,
         )
-
-        # Filter by source if specified
-        if source:
-            violations = [v for v in violations if getattr(v, "source", "runtime") == source]
-
-        # Filter by violation_kind if specified (PIN-411 Gap Closure)
-        if violation_kind:
-            violations = [v for v in violations if getattr(v, "violation_kind", "STANDARD") == violation_kind]
-
-        # Filter synthetic
-        if not include_synthetic:
-            violations = [v for v in violations if not getattr(v, "is_synthetic", False)]
-
-        # Check has_more
-        has_more = len(violations) > limit
-        violations = violations[:limit]
 
         items = [
             PolicyViolationSummary(
-                id=str(v.id),
-                policy_id=getattr(v, "policy_id", None),
-                policy_name=getattr(v, "policy_name", None),
-                violation_type=str(v.violation_type.value) if hasattr(v.violation_type, "value") else str(v.violation_type),
-                severity=v.severity,
-                source=getattr(v, "source", "runtime"),
-                agent_id=v.agent_id,
-                description=getattr(v, "description", None),
-                occurred_at=v.detected_at,
-                is_synthetic=getattr(v, "is_synthetic", False),
+                id=item.id,
+                policy_id=item.policy_id,
+                policy_name=item.policy_name,
+                violation_type=item.violation_type,
+                severity=item.severity,
+                source=item.source,
+                agent_id=item.agent_id,
+                description=item.description,
+                occurred_at=item.occurred_at,
+                is_synthetic=item.is_synthetic,
             )
-            for v in violations
+            for item in result.items
         ]
 
         return ViolationsListResponse(
             items=items,
-            total=len(items),
-            has_more=has_more,
-            filters_applied=filters_applied,
+            total=result.total,
+            has_more=result.has_more,
+            filters_applied=result.filters_applied,
         )
 
     except Exception as e:
@@ -1708,51 +1376,38 @@ async def list_budget_definitions(
     """List budget definitions (THR-O2). Customer facade."""
 
     tenant_id = get_tenant_id_from_auth(request)
-    filters_applied: dict[str, Any] = {"tenant_id": tenant_id, "status": status}
-
-    if scope:
-        filters_applied["scope"] = scope
+    facade = get_policies_facade()
 
     try:
-        # Query limits where category is BUDGET
-        stmt = (
-            select(Limit)
-            .where(
-                and_(
-                    Limit.tenant_id == tenant_id,
-                    Limit.limit_category == "BUDGET",
-                    Limit.status == status,
-                )
-            )
-            .order_by(Limit.created_at.desc())
+        result = await facade.list_budgets(
+            session=session,
+            tenant_id=tenant_id,
+            scope=scope,
+            status=status,
+            limit=limit,
+            offset=offset,
         )
 
-        if scope:
-            stmt = stmt.where(Limit.scope == scope)
-
-        stmt = stmt.limit(limit).offset(offset)
-        result = await session.execute(stmt)
-        limits = result.scalars().all()
-
+        # Map facade result to API response
         items = [
             BudgetDefinitionSummary(
-                id=str(lim.id),
-                name=lim.name,
-                scope=lim.scope,
-                max_value=lim.max_value,
-                reset_period=lim.reset_period,
-                enforcement=lim.enforcement,
-                status=lim.status,
-                current_usage=None,  # Could add usage query
-                utilization_percent=None,
+                id=item.id,
+                name=item.name,
+                scope=item.scope,
+                max_value=item.max_value,
+                reset_period=item.reset_period,
+                enforcement=item.enforcement,
+                status=item.status,
+                current_usage=item.current_usage,
+                utilization_percent=item.utilization_percent,
             )
-            for lim in limits
+            for item in result.items
         ]
 
         return BudgetsListResponse(
             items=items,
-            total=len(items),
-            filters_applied=filters_applied,
+            total=result.total,
+            filters_applied=result.filters_applied,
         )
 
     except Exception as e:
@@ -1830,93 +1485,41 @@ async def list_policy_requests(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> PolicyRequestsListResponse:
     """List pending policy requests (ACT-O3). Customer facade."""
-
     tenant_id = get_tenant_id_from_auth(request)
-    filters_applied: dict[str, Any] = {"tenant_id": tenant_id, "status": status}
-
-    if proposal_type:
-        filters_applied["proposal_type"] = proposal_type
-    if days_old:
-        filters_applied["days_old"] = days_old
-    if include_synthetic:
-        filters_applied["include_synthetic"] = True
+    facade = get_policies_facade()
 
     try:
-        # Import here to avoid circular imports
-        from app.models.policy import PolicyProposal
-
-        now = datetime.now(timezone.utc)
-
-        # Build query for policy proposals
-        stmt = select(PolicyProposal).where(
-            and_(
-                PolicyProposal.tenant_id == tenant_id,
-                PolicyProposal.status == status,
-            )
+        result = await facade.list_policy_requests(
+            session=session,
+            tenant_id=tenant_id,
+            status=status,
+            proposal_type=proposal_type,
+            days_old=days_old,
+            include_synthetic=include_synthetic,
+            limit=limit,
+            offset=offset,
         )
 
-        # Filter synthetic data
-        if not include_synthetic:
-            stmt = stmt.where(
-                (PolicyProposal.is_synthetic == False) | (PolicyProposal.is_synthetic.is_(None))
+        items = [
+            PolicyRequestSummary(
+                id=item.id,
+                proposal_name=item.proposal_name,
+                proposal_type=item.proposal_type,
+                rationale=item.rationale,
+                proposed_rule=item.proposed_rule,
+                status=item.status,
+                created_at=item.created_at,
+                triggering_feedback_count=item.triggering_feedback_count,
+                days_pending=item.days_pending,
             )
-
-        # Filter by proposal type
-        if proposal_type:
-            stmt = stmt.where(PolicyProposal.proposal_type == proposal_type)
-
-        # Filter by age
-        if days_old:
-            cutoff = now - timedelta(days=days_old)
-            stmt = stmt.where(PolicyProposal.created_at <= cutoff)
-
-        # Count total pending (for the pending_count metric)
-        count_stmt = select(func.count()).select_from(PolicyProposal).where(
-            and_(
-                PolicyProposal.tenant_id == tenant_id,
-                PolicyProposal.status == "draft",
-                (PolicyProposal.is_synthetic == False) | (PolicyProposal.is_synthetic.is_(None)),
-            )
-        )
-        count_result = await session.execute(count_stmt)
-        pending_count = count_result.scalar() or 0
-
-        # Execute main query with pagination
-        stmt = stmt.order_by(PolicyProposal.created_at.desc()).limit(limit).offset(offset)
-        result = await session.execute(stmt)
-        proposals = result.scalars().all()
-
-        items = []
-        for prop in proposals:
-            # Calculate days pending
-            created = prop.created_at
-            if created.tzinfo is None:
-                created = created.replace(tzinfo=timezone.utc)
-            days_pending = (now - created).days
-
-            # Count triggering feedback
-            feedback_ids = prop.triggering_feedback_ids or []
-            feedback_count = len(feedback_ids) if isinstance(feedback_ids, list) else 0
-
-            items.append(
-                PolicyRequestSummary(
-                    id=str(prop.id),
-                    proposal_name=prop.proposal_name,
-                    proposal_type=prop.proposal_type,
-                    rationale=prop.rationale,
-                    proposed_rule=prop.proposed_rule or {},
-                    status=prop.status,
-                    created_at=prop.created_at,
-                    triggering_feedback_count=feedback_count,
-                    days_pending=days_pending,
-                )
-            )
+            for item in result.items
+        ]
 
         return PolicyRequestsListResponse(
             items=items,
-            total=len(items),
-            pending_count=pending_count,
-            filters_applied=filters_applied,
+            total=result.total,
+            pending_count=result.pending_count,
+            filters_applied=result.filters_applied,
         )
 
     except Exception as e:

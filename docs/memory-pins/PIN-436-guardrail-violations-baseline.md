@@ -41,7 +41,7 @@ Baseline capture of 10 guardrail violations detected after implementing the 17-s
 
 **Violations (3):**
 ```
-File: backend/app/api/accounts.py
+File: backend/app/api/aos_accounts.py
 
 Line 33: Forbidden table reference - Incidents
 Line 714: Reference to "runs" in tenant.runs_this_month

@@ -53,6 +53,7 @@ from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
 from app.models.killswitch import Incident
 from app.schemas.response import wrap_dict
+from app.services.incidents_facade import get_incidents_facade
 
 # =============================================================================
 # Module Configuration
@@ -747,17 +748,17 @@ async def detect_patterns(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> PatternDetectionResponse:
     """Detect incident patterns. Tenant-scoped."""
-    from app.services.incidents import IncidentPatternService
-
     tenant_id = get_tenant_id_from_auth(request)
 
-    service = IncidentPatternService(session)
-    result = await service.detect_patterns(
+    facade = get_incidents_facade()
+    result = await facade.detect_patterns(
+        session=session,
         tenant_id=tenant_id,
         window_hours=window_hours,
         limit=limit,
     )
 
+    # Map facade result to L2 response model
     return PatternDetectionResponse(
         patterns=[
             PatternMatchResponse(
@@ -800,18 +801,18 @@ async def analyze_recurrence(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> RecurrenceAnalysisResponse:
     """Analyze recurring incident patterns. Tenant-scoped."""
-    from app.services.incidents import RecurrenceAnalysisService
-
     tenant_id = get_tenant_id_from_auth(request)
 
-    service = RecurrenceAnalysisService(session)
-    result = await service.analyze_recurrence(
+    facade = get_incidents_facade()
+    result = await facade.analyze_recurrence(
+        session=session,
         tenant_id=tenant_id,
         baseline_days=baseline_days,
         recurrence_threshold=recurrence_threshold,
         limit=limit,
     )
 
+    # Map facade result to L2 response model
     return RecurrenceAnalysisResponse(
         groups=[
             RecurrenceGroupResponse(
@@ -951,106 +952,58 @@ async def list_active_incidents(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> IncidentListResponse:
     """List ACTIVE incidents. Topic enforced at endpoint boundary."""
-
     tenant_id = get_tenant_id_from_auth(request)
-
-    # Build filters - topic is HARDCODED to ACTIVE
-    filters_applied: dict[str, Any] = {
-        "tenant_id": tenant_id,
-        "topic": "ACTIVE",  # Hardcoded - endpoint IS the topic
-    }
-
-    # Base query with tenant isolation + ACTIVE topic (ACTIVE + ACKED states)
-    stmt = (
-        select(Incident)
-        .where(Incident.tenant_id == tenant_id)
-        .where(Incident.lifecycle_state.in_(["ACTIVE", "ACKED"]))
-    )
-
-    # Count query with same topic constraint
-    count_stmt = (
-        select(func.count(Incident.id))
-        .where(Incident.tenant_id == tenant_id)
-        .where(Incident.lifecycle_state.in_(["ACTIVE", "ACKED"]))
-    )
-
-    # Apply additional filters
-    if severity:
-        stmt = stmt.where(Incident.severity == severity.value)
-        count_stmt = count_stmt.where(Incident.severity == severity.value)
-        filters_applied["severity"] = severity.value
-
-    if category:
-        stmt = stmt.where(Incident.category == category)
-        count_stmt = count_stmt.where(Incident.category == category)
-        filters_applied["category"] = category
-
-    if cause_type:
-        stmt = stmt.where(Incident.cause_type == cause_type.value)
-        count_stmt = count_stmt.where(Incident.cause_type == cause_type.value)
-        filters_applied["cause_type"] = cause_type.value
-
-    if is_synthetic is not None:
-        stmt = stmt.where(Incident.is_synthetic == is_synthetic)
-        count_stmt = count_stmt.where(Incident.is_synthetic == is_synthetic)
-        filters_applied["is_synthetic"] = is_synthetic
-
-    if created_after:
-        stmt = stmt.where(Incident.created_at >= created_after)
-        count_stmt = count_stmt.where(Incident.created_at >= created_after)
-        filters_applied["created_after"] = created_after.isoformat()
-
-    if created_before:
-        stmt = stmt.where(Incident.created_at <= created_before)
-        count_stmt = count_stmt.where(Incident.created_at <= created_before)
-        filters_applied["created_before"] = created_before.isoformat()
-
-    # Sorting
-    sort_column = getattr(Incident, sort_by.value)
-    if sort_order == SortOrder.DESC:
-        stmt = stmt.order_by(sort_column.desc())
-    else:
-        stmt = stmt.order_by(sort_column.asc())
-
-    # Pagination
-    stmt = stmt.limit(limit).offset(offset)
+    facade = get_incidents_facade()
 
     try:
-        count_result = await session.execute(count_stmt)
-        total = count_result.scalar() or 0
+        result = await facade.list_active_incidents(
+            session=session,
+            tenant_id=tenant_id,
+            severity=severity.value if severity else None,
+            category=category,
+            cause_type=cause_type.value if cause_type else None,
+            is_synthetic=is_synthetic,
+            created_after=created_after,
+            created_before=created_before,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by.value,
+            sort_order=sort_order.value,
+        )
 
-        result = await session.execute(stmt)
-        incidents = result.scalars().all()
-
+        # Convert facade result to API response
         items = [
             IncidentSummary(
-                incident_id=inc.id,
-                tenant_id=inc.tenant_id,
-                lifecycle_state=inc.lifecycle_state or "ACTIVE",
-                severity=inc.severity or "medium",
-                category=inc.category or "UNKNOWN",
-                title=inc.title or "Untitled Incident",
-                description=inc.description,
-                llm_run_id=inc.llm_run_id,
-                cause_type=inc.cause_type or "SYSTEM",
-                error_code=inc.error_code,
-                error_message=inc.error_message,
-                created_at=inc.created_at,
-                resolved_at=inc.resolved_at,
-                is_synthetic=inc.is_synthetic or False,
+                incident_id=item.incident_id,
+                tenant_id=item.tenant_id,
+                lifecycle_state=item.lifecycle_state,
+                severity=item.severity,
+                category=item.category,
+                title=item.title,
+                description=item.description,
+                llm_run_id=item.llm_run_id,
+                cause_type=item.cause_type,
+                error_code=item.error_code,
+                error_message=item.error_message,
+                created_at=item.created_at,
+                resolved_at=item.resolved_at,
+                is_synthetic=item.is_synthetic,
+                policy_ref=item.policy_ref,
+                violation_ref=item.violation_ref,
             )
-            for inc in incidents
+            for item in result.items
         ]
-
-        has_more = offset + len(items) < total
-        next_offset = offset + limit if has_more else None
 
         return IncidentListResponse(
             items=items,
-            total=total,
-            has_more=has_more,
-            filters_applied=filters_applied,
-            pagination=Pagination(limit=limit, offset=offset, next_offset=next_offset),
+            total=result.total,
+            has_more=result.has_more,
+            filters_applied=result.filters_applied,
+            pagination=Pagination(
+                limit=result.pagination.limit,
+                offset=result.pagination.offset,
+                next_offset=result.pagination.next_offset,
+            ),
         )
 
     except Exception as e:
@@ -1095,103 +1048,58 @@ async def list_resolved_incidents(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> IncidentListResponse:
     """List RESOLVED incidents. Topic enforced at endpoint boundary."""
-
     tenant_id = get_tenant_id_from_auth(request)
-
-    filters_applied: dict[str, Any] = {
-        "tenant_id": tenant_id,
-        "topic": "RESOLVED",  # Hardcoded
-    }
-
-    # Base query with RESOLVED topic
-    stmt = (
-        select(Incident)
-        .where(Incident.tenant_id == tenant_id)
-        .where(Incident.lifecycle_state == "RESOLVED")
-    )
-
-    count_stmt = (
-        select(func.count(Incident.id))
-        .where(Incident.tenant_id == tenant_id)
-        .where(Incident.lifecycle_state == "RESOLVED")
-    )
-
-    # Apply filters
-    if severity:
-        stmt = stmt.where(Incident.severity == severity.value)
-        count_stmt = count_stmt.where(Incident.severity == severity.value)
-        filters_applied["severity"] = severity.value
-
-    if category:
-        stmt = stmt.where(Incident.category == category)
-        count_stmt = count_stmt.where(Incident.category == category)
-        filters_applied["category"] = category
-
-    if cause_type:
-        stmt = stmt.where(Incident.cause_type == cause_type.value)
-        count_stmt = count_stmt.where(Incident.cause_type == cause_type.value)
-        filters_applied["cause_type"] = cause_type.value
-
-    if is_synthetic is not None:
-        stmt = stmt.where(Incident.is_synthetic == is_synthetic)
-        count_stmt = count_stmt.where(Incident.is_synthetic == is_synthetic)
-        filters_applied["is_synthetic"] = is_synthetic
-
-    if resolved_after:
-        stmt = stmt.where(Incident.resolved_at >= resolved_after)
-        count_stmt = count_stmt.where(Incident.resolved_at >= resolved_after)
-        filters_applied["resolved_after"] = resolved_after.isoformat()
-
-    if resolved_before:
-        stmt = stmt.where(Incident.resolved_at <= resolved_before)
-        count_stmt = count_stmt.where(Incident.resolved_at <= resolved_before)
-        filters_applied["resolved_before"] = resolved_before.isoformat()
-
-    # Sorting
-    sort_column = getattr(Incident, sort_by.value)
-    if sort_order == SortOrder.DESC:
-        stmt = stmt.order_by(sort_column.desc())
-    else:
-        stmt = stmt.order_by(sort_column.asc())
-
-    stmt = stmt.limit(limit).offset(offset)
+    facade = get_incidents_facade()
 
     try:
-        count_result = await session.execute(count_stmt)
-        total = count_result.scalar() or 0
+        result = await facade.list_resolved_incidents(
+            session=session,
+            tenant_id=tenant_id,
+            severity=severity.value if severity else None,
+            category=category,
+            cause_type=cause_type.value if cause_type else None,
+            is_synthetic=is_synthetic,
+            resolved_after=resolved_after,
+            resolved_before=resolved_before,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by.value,
+            sort_order=sort_order.value,
+        )
 
-        result = await session.execute(stmt)
-        incidents = result.scalars().all()
-
+        # Convert facade result to API response
         items = [
             IncidentSummary(
-                incident_id=inc.id,
-                tenant_id=inc.tenant_id,
-                lifecycle_state=inc.lifecycle_state or "RESOLVED",
-                severity=inc.severity or "medium",
-                category=inc.category or "UNKNOWN",
-                title=inc.title or "Untitled Incident",
-                description=inc.description,
-                llm_run_id=inc.llm_run_id,
-                cause_type=inc.cause_type or "SYSTEM",
-                error_code=inc.error_code,
-                error_message=inc.error_message,
-                created_at=inc.created_at,
-                resolved_at=inc.resolved_at,
-                is_synthetic=inc.is_synthetic or False,
+                incident_id=item.incident_id,
+                tenant_id=item.tenant_id,
+                lifecycle_state=item.lifecycle_state,
+                severity=item.severity,
+                category=item.category,
+                title=item.title,
+                description=item.description,
+                llm_run_id=item.llm_run_id,
+                cause_type=item.cause_type,
+                error_code=item.error_code,
+                error_message=item.error_message,
+                created_at=item.created_at,
+                resolved_at=item.resolved_at,
+                is_synthetic=item.is_synthetic,
+                policy_ref=item.policy_ref,
+                violation_ref=item.violation_ref,
             )
-            for inc in incidents
+            for item in result.items
         ]
-
-        has_more = offset + len(items) < total
-        next_offset = offset + limit if has_more else None
 
         return IncidentListResponse(
             items=items,
-            total=total,
-            has_more=has_more,
-            filters_applied=filters_applied,
-            pagination=Pagination(limit=limit, offset=offset, next_offset=next_offset),
+            total=result.total,
+            has_more=result.has_more,
+            filters_applied=result.filters_applied,
+            pagination=Pagination(
+                limit=result.pagination.limit,
+                offset=result.pagination.offset,
+                next_offset=result.pagination.next_offset,
+            ),
         )
 
     except Exception as e:
@@ -1234,94 +1142,56 @@ async def list_historical_incidents(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> IncidentListResponse:
     """List HISTORICAL incidents (resolved beyond retention). Topic enforced."""
-    from datetime import timezone
-    from sqlalchemy import text
-
     tenant_id = get_tenant_id_from_auth(request)
-    cutoff_date = datetime.now(timezone.utc) - __import__("datetime").timedelta(days=retention_days)
-
-    filters_applied: dict[str, Any] = {
-        "tenant_id": tenant_id,
-        "topic": "HISTORICAL",  # Hardcoded
-        "retention_days": retention_days,
-        "cutoff_date": cutoff_date.isoformat(),
-    }
-
-    # HISTORICAL = RESOLVED + resolved_at < cutoff
-    stmt = (
-        select(Incident)
-        .where(Incident.tenant_id == tenant_id)
-        .where(Incident.lifecycle_state == "RESOLVED")
-        .where(Incident.resolved_at < cutoff_date)
-    )
-
-    count_stmt = (
-        select(func.count(Incident.id))
-        .where(Incident.tenant_id == tenant_id)
-        .where(Incident.lifecycle_state == "RESOLVED")
-        .where(Incident.resolved_at < cutoff_date)
-    )
-
-    if severity:
-        stmt = stmt.where(Incident.severity == severity.value)
-        count_stmt = count_stmt.where(Incident.severity == severity.value)
-        filters_applied["severity"] = severity.value
-
-    if category:
-        stmt = stmt.where(Incident.category == category)
-        count_stmt = count_stmt.where(Incident.category == category)
-        filters_applied["category"] = category
-
-    if cause_type:
-        stmt = stmt.where(Incident.cause_type == cause_type.value)
-        count_stmt = count_stmt.where(Incident.cause_type == cause_type.value)
-        filters_applied["cause_type"] = cause_type.value
-
-    # Sorting
-    sort_column = getattr(Incident, sort_by.value)
-    if sort_order == SortOrder.DESC:
-        stmt = stmt.order_by(sort_column.desc())
-    else:
-        stmt = stmt.order_by(sort_column.asc())
-
-    stmt = stmt.limit(limit).offset(offset)
+    facade = get_incidents_facade()
 
     try:
-        count_result = await session.execute(count_stmt)
-        total = count_result.scalar() or 0
+        result = await facade.list_historical_incidents(
+            session=session,
+            tenant_id=tenant_id,
+            retention_days=retention_days,
+            severity=severity.value if severity else None,
+            category=category,
+            cause_type=cause_type.value if cause_type else None,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by.value,
+            sort_order=sort_order.value,
+        )
 
-        result = await session.execute(stmt)
-        incidents = result.scalars().all()
-
+        # Convert facade result to API response
         items = [
             IncidentSummary(
-                incident_id=inc.id,
-                tenant_id=inc.tenant_id,
-                lifecycle_state=inc.lifecycle_state or "RESOLVED",
-                severity=inc.severity or "medium",
-                category=inc.category or "UNKNOWN",
-                title=inc.title or "Untitled Incident",
-                description=inc.description,
-                llm_run_id=inc.llm_run_id,
-                cause_type=inc.cause_type or "SYSTEM",
-                error_code=inc.error_code,
-                error_message=inc.error_message,
-                created_at=inc.created_at,
-                resolved_at=inc.resolved_at,
-                is_synthetic=inc.is_synthetic or False,
+                incident_id=item.incident_id,
+                tenant_id=item.tenant_id,
+                lifecycle_state=item.lifecycle_state,
+                severity=item.severity,
+                category=item.category,
+                title=item.title,
+                description=item.description,
+                llm_run_id=item.llm_run_id,
+                cause_type=item.cause_type,
+                error_code=item.error_code,
+                error_message=item.error_message,
+                created_at=item.created_at,
+                resolved_at=item.resolved_at,
+                is_synthetic=item.is_synthetic,
+                policy_ref=item.policy_ref,
+                violation_ref=item.violation_ref,
             )
-            for inc in incidents
+            for item in result.items
         ]
-
-        has_more = offset + len(items) < total
-        next_offset = offset + limit if has_more else None
 
         return IncidentListResponse(
             items=items,
-            total=total,
-            has_more=has_more,
-            filters_applied=filters_applied,
-            pagination=Pagination(limit=limit, offset=offset, next_offset=next_offset),
+            total=result.total,
+            has_more=result.has_more,
+            filters_applied=result.filters_applied,
+            pagination=Pagination(
+                limit=result.pagination.limit,
+                offset=result.pagination.offset,
+                next_offset=result.pagination.next_offset,
+            ),
         )
 
     except Exception as e:
@@ -1881,12 +1751,11 @@ async def get_incident_learnings(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> LearningsResponse:
     """Get post-mortem learnings for an incident. Tenant-scoped."""
-    from app.services.incidents import PostMortemService
-
     tenant_id = get_tenant_id_from_auth(request)
 
-    service = PostMortemService(session)
-    result = await service.get_incident_learnings(
+    facade = get_incidents_facade()
+    result = await facade.get_incident_learnings(
+        session=session,
         tenant_id=tenant_id,
         incident_id=incident_id,
     )
@@ -1897,6 +1766,7 @@ async def get_incident_learnings(
             detail={"error": "not_found", "message": f"Incident {incident_id} not found"},
         )
 
+    # Map facade result to L2 response model
     return LearningsResponse(
         incident_id=result.incident_id,
         resolution_summary=ResolutionSummaryResponse(

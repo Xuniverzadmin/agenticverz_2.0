@@ -1,9 +1,31 @@
 # Policies Domain Audit
 
 **Status:** ✅ COMPLETE
-**Last Updated:** 2026-01-17
+**Last Updated:** 2026-01-22
 **Commit:** `e28aa2ee` (PIN-411 Part A & B)
-**Reference:** PIN-411 (Unified Facades)
+**Reference:** PIN-411 (Unified Facades), PIN-463 (L4 Facade Pattern)
+
+---
+
+## Architecture Pattern
+
+This domain follows the **L4 Facade Pattern** for data access:
+
+| Layer | File | Role |
+|-------|------|------|
+| L2 API | `backend/app/api/aos_policies.py` | HTTP handling, response formatting |
+| L4 Facade | `backend/app/services/policies_facade.py` | Business logic, tenant isolation |
+
+**Data Flow:** `L1 (UI) → L2 (API) → L4 (Facade) → L6 (Database)`
+
+**Key Rules:**
+- L2 routes delegate to L4 facade (never direct SQL)
+- Facade returns typed dataclasses (never ORM models)
+- All operations are tenant-scoped
+
+**Full Reference:** [PIN-463: L4 Facade Architecture Pattern](../../memory-pins/PIN-463-l4-facade-architecture-pattern.md), [LAYER_MODEL.md](../LAYER_MODEL.md)
+
+---
 
 > **Final Update (2026-01-17):** All 25 panels COMPLETE. Pre-production checklist done.
 > - ACT-O3: `/api/v1/policies/requests` endpoint implemented
@@ -142,7 +164,79 @@
 
 ---
 
-## 3. API Routes (Policies Facade)
+## 3. L4 Domain Facade
+
+**File:** `backend/app/services/policies_facade.py`
+**Getter:** `get_policies_facade()` (singleton)
+
+The Policies Facade is the single entry point for all policy business logic. L2 API routes
+must call facade methods rather than implementing inline SQL queries or calling services directly.
+
+**Pattern:**
+```python
+from app.services.policies_facade import get_policies_facade
+
+facade = get_policies_facade()
+result = await facade.list_policy_rules(session, tenant_id, ...)
+```
+
+**Operations Provided:**
+
+| Category | Method | Purpose | Panel |
+|----------|--------|---------|-------|
+| **Rules** | `list_policy_rules()` | Policy rules list | LIB-O1, O2, O3, O5 |
+| **Rules** | `get_policy_rule_detail()` | Policy rule detail | Detail views |
+| **Limits** | `list_limits()` | Limits list | THR-O1, O3, O4, O5 |
+| **Limits** | `get_limit_detail()` | Limit detail | Detail views |
+| **Budgets** | `list_budgets()` | Budget definitions | THR-O2 |
+| **Lessons** | `list_lessons()` | List lessons learned | LRN-O1 |
+| **Lessons** | `get_lesson_detail()` | Lesson detail | LRN-O3 |
+| **Lessons** | `get_lesson_stats()` | Lesson statistics | LRN-O2 |
+| **State** | `get_policy_state()` | Policy layer state | ACT-O4 |
+| **Metrics** | `get_policy_metrics()` | Policy enforcement metrics | ACT-O5 |
+| **Violations** | `list_policy_violations()` | Violation history | VIO-O1 through O5 |
+| **Conflicts** | `list_policy_conflicts()` | Policy conflicts | DFT-O4 |
+| **Dependencies** | `get_policy_dependencies()` | Policy dependency graph | DFT-O5 |
+| **Requests** | `list_policy_requests()` | Pending policy requests | ACT-O3 |
+
+**Service Delegation:**
+
+| Facade Method | Delegated Service | Service Method |
+|---------------|-------------------|----------------|
+| `list_lessons()` | `LessonsLearnedEngine` | `list_lessons()` |
+| `get_lesson_detail()` | `LessonsLearnedEngine` | `get_lesson()` |
+| `get_lesson_stats()` | `LessonsLearnedEngine` | `get_lesson_stats()` |
+| `get_policy_state()` | `PolicyEngine` + `LessonsLearnedEngine` | `get_state()` + `get_lesson_stats()` |
+| `get_policy_metrics()` | `PolicyEngine` | `get_metrics()` |
+| `list_policy_violations()` | `PolicyEngine` | `list_violations()` |
+| `list_policy_conflicts()` | `PolicyConflictEngine` | `detect_conflicts()` |
+| `get_policy_dependencies()` | `PolicyDependencyEngine` | `compute_dependencies()` |
+| `list_policy_requests()` | (inline SQL) | `PolicyProposal` table query |
+
+**L2-to-L4 Result Type Mapping:**
+
+| L4 Service Result | L2 Response Model | Key Field Mappings |
+|-------------------|-------------------|-------------------|
+| `LessonsListResult` | `LessonsListResponse` | `items` → iterated with field extraction |
+| `LessonDetailResult` | `LessonDetailResponse` | Direct field mapping |
+| `LessonStatsResult` | `LessonStatsResponse` | Direct field mapping |
+| `PolicyStateResult` | `PolicyStateResponse` | Direct field mapping |
+| `PolicyMetricsResult` | `PolicyMetricsResponse` | Direct field mapping |
+| `ViolationsListResult` | `ViolationsListResponse` | `items` → iterated with field extraction |
+| `ConflictsListResult` | `PolicyConflictsResponse` | `conflicts` → iterated |
+| `DependencyGraphResult` | `PolicyDependenciesResponse` | `nodes`, `edges` → iterated |
+| `PolicyRequestsListResult` | `PolicyRequestsResponse` | `items` → iterated with field extraction |
+
+**Facade Rules:**
+- L2 routes call facade methods, never direct SQL
+- Facade returns typed dataclass results (not ORM objects)
+- Facade handles tenant isolation internally
+- Filters (rule_type, limit_type, violation_kind) are applied at facade level
+- Service delegation follows L4 engine ownership model
+
+---
+
+## 4. API Routes (Policies Facade)
 
 ### Primary Facade: `/api/v1/policies/*`
 
@@ -203,7 +297,7 @@
 
 ---
 
-## 4. Panel Coverage Matrix
+## 5. Panel Coverage Matrix
 
 | Panel | Question | Capability | Route | Status |
 |-------|----------|------------|-------|--------|
@@ -235,7 +329,7 @@
 
 ---
 
-## 5. Coverage Summary
+## 6. Coverage Summary
 
 ```
 ✅ ALL 25 PANELS NOW FULLY IMPLEMENTED (2026-01-17)
@@ -293,7 +387,7 @@ Remaining SDSR Work (DEFERRED):
 
 ---
 
-## 6. TODO: Missing Implementations
+## 7. TODO: Missing Implementations
 
 ### 6.1 New Endpoints Needed
 

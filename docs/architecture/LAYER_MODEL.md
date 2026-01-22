@@ -229,8 +229,137 @@ If any answer becomes "no", mixing has started. **Stop and fix.**
 
 ---
 
+---
+
+## 11. Full Layer Taxonomy (L1-L8)
+
+The complete AOS layer model defines eight layers with specific responsibilities:
+
+| Layer | Name | Purpose | Examples |
+|-------|------|---------|----------|
+| **L1** | Product Experience | UI (React frontend) | Pages, components |
+| **L2** | Product APIs | HTTP handling, validation | `app/api/aos_*.py` |
+| **L3** | Boundary Adapters | External system translation | Clerk, OpenAI adapters |
+| **L4** | Domain Engines | Business logic, facades | `app/services/*_facade.py` |
+| **L5** | Execution & Workers | Background/async processing | `app/worker/` |
+| **L6** | Platform Substrate | Database, Redis, external | Models, DB queries |
+| **L7** | Ops & Deployment | Infrastructure | Systemd, Docker |
+| **L8** | Catalyst / Meta | CI, tests, validators | `tests/`, `scripts/ci/` |
+
+### Layer Import Rules
+
+| Layer | Can Import | Cannot Import |
+|-------|------------|---------------|
+| L1 | - | L2-L8 |
+| L2 | L3, L4, L6 (schemas only) | L1, L5 |
+| L3 | L4, L6 | L1, L2, L5 |
+| L4 | L5, L6 | L1, L2, L3 |
+| L5 | L6 | L1, L2, L3, L4 |
+| L6 | - | L1-L5 |
+
+---
+
+## 12. Data Flow Paths
+
+Three primary data paths exist in the system:
+
+```
+                    ┌─────────────┐
+                    │  L1 - UI    │
+                    └──────┬──────┘
+                           │
+                           ▼
+                    ┌─────────────┐
+                    │  L2 - API   │
+                    └──────┬──────┘
+                           │
+          ┌────────────────┼────────────────┐
+          │                │                │
+          ▼                ▼                ▼
+   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+   │ L3 Adapter  │  │ L4 Facade   │  │ L5 Worker   │
+   │ (external)  │  │ (domain)    │  │ (async)     │
+   └──────┬──────┘  └──────┬──────┘  └──────┬──────┘
+          │                │                │
+          └────────────────┼────────────────┘
+                           │
+                           ▼
+                    ┌─────────────┐
+                    │ L6 Platform │
+                    └─────────────┘
+```
+
+| Path | When Used | Example |
+|------|-----------|---------|
+| **L2 → L4 → L6** | Sync reads/writes | `GET /api/v1/incidents` |
+| **L2 → L3 → L6** | External system calls | Clerk auth, LLM API calls |
+| **L2 → L5 → L4 → L6** | Background jobs | Run execution, telemetry |
+
+---
+
+## 13. L4 Domain Facade Pattern
+
+Customer-facing domains use a standardized facade pattern for data access.
+
+### File Naming
+
+| Layer | Pattern | Example |
+|-------|---------|---------|
+| L2 API | `app/api/aos_{domain}.py` | `aos_incidents.py` |
+| L4 Facade | `app/services/{domain}_facade.py` | `incidents_facade.py` |
+
+### Facade Structure
+
+```python
+# L4 Facade (app/services/{domain}_facade.py)
+
+@dataclass
+class ItemListResult:
+    items: list[ItemSummary]
+    total: int
+
+class DomainFacade:
+    async def list_items(self, session, tenant_id, ...) -> ItemListResult:
+        # Business logic, DB queries, tenant isolation
+        ...
+
+_instance = None
+def get_{domain}_facade() -> DomainFacade:
+    global _instance
+    if _instance is None:
+        _instance = DomainFacade()
+    return _instance
+```
+
+### L2 API Usage
+
+```python
+# L2 API (app/api/aos_{domain}.py)
+
+from app.services.{domain}_facade import get_{domain}_facade
+
+@router.get("")
+async def list_items(request: Request, session = Depends(...)):
+    facade = get_{domain}_facade()
+    result = await facade.list_items(session, tenant_id, ...)
+    return wrap_list([...], total=result.total)
+```
+
+### Key Rules
+
+1. **L2 never contains SQL** - All queries in L4 facade
+2. **Singleton pattern** - Use `get_{domain}_facade()` factory
+3. **Tenant isolation** - Every facade method takes `tenant_id`
+4. **Typed results** - Facade returns dataclasses, not ORM models
+5. **Response wrapping** - L2 uses `wrap_dict()` / `wrap_list()`
+
+**Full Reference:** `docs/memory-pins/PIN-463-l4-facade-architecture-pattern.md`
+
+---
+
 ## Related Documents
 
 - FREEZE.md: Design freeze status
 - PIN-399: Onboarding State Machine (master PIN)
+- PIN-463: L4 Facade Architecture Pattern (comprehensive guide)
 - PHASE_8_OBSERVABILITY_UNIFICATION.md: Observability design

@@ -1,6 +1,6 @@
 # Database Authority Contract
 
-**Status:** LOCKED
+**Status:** LOCKED (Updated 2026-01-21)
 **Effective:** 2026-01-10
 **Reference:** DB-AUTH-001
 
@@ -9,8 +9,32 @@
 ## Authority Declaration (Non-Negotiable)
 
 ```
-AUTHORITATIVE_DB = neon
-LOCAL_DB_ROLE = ephemeral, test-only
+AUTHORITATIVE_DB = neon (for production data)
+LOCAL_DB_ROLE = staging (for migration rehearsal)
+```
+
+---
+
+## Database Roles (Migration Governance)
+
+Migrations are governed by `DB_ROLE`, not `DB_AUTHORITY`.
+
+| DB_ROLE | Meaning | Migrations |
+|---------|---------|------------|
+| **staging** | Pre-prod / local / CI | ✅ Allowed |
+| **prod** | Production canonical | ✅ Allowed (with CONFIRM_PROD_MIGRATIONS=true) |
+| **replica** | Read-only / analytics | ❌ Blocked |
+
+### Migration Environment Setup
+
+**Local staging:**
+```bash
+DB_AUTHORITY=local DB_ROLE=staging alembic upgrade head
+```
+
+**Production:**
+```bash
+DB_AUTHORITY=neon DB_ROLE=prod CONFIRM_PROD_MIGRATIONS=true alembic upgrade head
 ```
 
 ---
@@ -27,9 +51,9 @@ LOCAL_DB_ROLE = ephemeral, test-only
 - Trace and incident records
 - Policy proposal state
 
-### Local DB is ONLY for:
+### Local DB is for:
 
-- Migration dry-runs
+- **Migration rehearsal** (staging role)
 - Unit/integration tests
 - Synthetic or disposable data
 - Schema experiments

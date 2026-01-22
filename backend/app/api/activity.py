@@ -53,7 +53,7 @@ Reference: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
 
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Annotated, Any
 
@@ -64,18 +64,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
+from app.services.activity_facade import get_activity_facade
 
 # =============================================================================
 # Logging
 # =============================================================================
 
 logger = logging.getLogger(__name__)
-from app.services.activity import (
-    PatternDetectionService,
-    CostAnalysisService,
-    AttentionRankingService,
-)
 from app.schemas.response import wrap_dict
+
+# NOTE: Services are accessed via facade (get_activity_facade())
+# Direct service imports removed per L4 facade architecture
 
 # =============================================================================
 # Environment Configuration
@@ -1031,46 +1030,43 @@ async def get_run_detail(
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> RunDetailResponse:
     """Get run detail (O3). Tenant isolation enforced."""
-
     tenant_id = get_tenant_id_from_auth(request)
+    facade = get_activity_facade()
 
-    sql = """
-        SELECT *
-        FROM v_runs_o2
-        WHERE run_id = :run_id AND tenant_id = :tenant_id
-    """
+    result = await facade.get_run_detail(
+        session=session,
+        tenant_id=tenant_id,
+        run_id=run_id,
+    )
 
-    result = await session.execute(text(sql), {"run_id": run_id, "tenant_id": tenant_id})
-    row = result.mappings().first()
-
-    if not row:
+    if not result:
         raise HTTPException(status_code=404, detail="Run not found")
 
     return RunDetailResponse(
-        run_id=row["run_id"],
-        tenant_id=row["tenant_id"],
-        project_id=row["project_id"],
-        is_synthetic=row["is_synthetic"],
-        source=row["source"],
-        provider_type=row["provider_type"],
-        state=row["state"],
-        status=row["status"],
-        started_at=row["started_at"],
-        last_seen_at=row["last_seen_at"],
-        completed_at=row["completed_at"],
-        duration_ms=float(row["duration_ms"]) if row["duration_ms"] else None,
-        risk_level=row["risk_level"],
-        latency_bucket=row["latency_bucket"],
-        evidence_health=row["evidence_health"],
-        integrity_status=row["integrity_status"],
-        incident_count=row["incident_count"] or 0,
-        policy_draft_count=row["policy_draft_count"] or 0,
-        policy_violation=row["policy_violation"] or False,
-        input_tokens=row["input_tokens"],
-        output_tokens=row["output_tokens"],
-        estimated_cost_usd=float(row["estimated_cost_usd"]) if row["estimated_cost_usd"] else None,
-        goal=row.get("goal"),
-        error_message=row.get("error_message"),
+        run_id=result.run_id,
+        tenant_id=result.tenant_id,
+        project_id=result.project_id,
+        is_synthetic=result.is_synthetic,
+        source=result.source,
+        provider_type=result.provider_type,
+        state=result.state,
+        status=result.status,
+        started_at=result.started_at,
+        last_seen_at=result.last_seen_at,
+        completed_at=result.completed_at,
+        duration_ms=result.duration_ms,
+        risk_level=result.risk_level,
+        latency_bucket=result.latency_bucket,
+        evidence_health=result.evidence_health,
+        integrity_status=result.integrity_status,
+        incident_count=result.incident_count,
+        policy_draft_count=result.policy_draft_count,
+        policy_violation=result.policy_violation,
+        input_tokens=result.input_tokens,
+        output_tokens=result.output_tokens,
+        estimated_cost_usd=result.estimated_cost_usd,
+        goal=result.goal,
+        error_message=result.error_message,
     )
 
 
@@ -1431,25 +1427,39 @@ async def get_patterns(
 
     tenant_id = get_tenant_id_from_auth(request)
 
-    service = PatternDetectionService(session)
-    result = await service.detect_patterns(
+    facade = get_activity_facade()
+    result = await facade.get_patterns(
+        session=session,
         tenant_id=tenant_id,
         window_hours=window_hours,
         limit=limit,
     )
 
+    # Map L4 PatternDetectionResult to L2 PatternDetectionResponse
+    # Compute window times from generated_at and window_hours
+    window_end = result.generated_at
+    window_start = window_end - timedelta(hours=result.window_hours)
+
     return PatternDetectionResponse(
         patterns=[
             PatternMatchResponse(
                 pattern_type=p.pattern_type,
-                run_id=p.run_id,
+                run_id=p.affected_run_ids[0] if p.affected_run_ids else "",
                 confidence=p.confidence,
-                details=p.details,
+                details={
+                    "title": p.title,
+                    "description": p.description,
+                    "dimension": p.dimension,
+                    "occurrence_count": p.occurrence_count,
+                    "severity": p.severity,
+                    "first_seen": p.first_seen.isoformat() if p.first_seen else None,
+                    "last_seen": p.last_seen.isoformat() if p.last_seen else None,
+                },
             )
             for p in result.patterns
         ],
-        window_start=result.window_start,
-        window_end=result.window_end,
+        window_start=window_start,
+        window_end=window_end,
         runs_analyzed=result.runs_analyzed,
     )
 
@@ -1471,37 +1481,40 @@ async def get_patterns(
 async def get_cost_analysis(
     request: Request,
     baseline_days: Annotated[int, Query(ge=1, le=30, description="Days for baseline")] = 7,
-    anomaly_threshold: Annotated[float, Query(ge=1.0, le=5.0, description="Z-score threshold")] = 2.0,
+    anomaly_threshold: Annotated[float, Query(ge=1.0, le=5.0, description="Threshold percentage")] = 50.0,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> CostAnalysisResponse:
     """Analyze cost anomalies (SIG-O4). READ-ONLY from runs table."""
 
     tenant_id = get_tenant_id_from_auth(request)
 
-    service = CostAnalysisService(session)
-    result = await service.analyze_costs(
+    facade = get_activity_facade()
+    result = await facade.get_cost_analysis(
+        session=session,
         tenant_id=tenant_id,
         baseline_days=baseline_days,
-        anomaly_threshold=anomaly_threshold,
+        threshold_pct=anomaly_threshold,
     )
 
+    # Map L4 CostAnalysisResult to L2 CostAnalysisResponse
+    # Adapt anomalies to agent-style response for backwards compatibility
     return CostAnalysisResponse(
         agents=[
             AgentCostResponse(
-                agent_id=a.agent_id,
-                current_cost_usd=a.current_cost_usd,
-                run_count=a.run_count,
-                baseline_avg_usd=a.baseline_avg_usd,
-                baseline_p95_usd=a.baseline_p95_usd,
-                z_score=a.z_score,
-                is_anomaly=a.is_anomaly,
+                agent_id=a.anomaly_id,
+                current_cost_usd=a.actual_cost_usd,
+                run_count=len(a.source_run_ids),
+                baseline_avg_usd=a.baseline_cost_usd,
+                baseline_p95_usd=None,
+                z_score=a.severity,  # Use severity as z-score proxy
+                is_anomaly=True,  # All items in anomalies list are anomalies
             )
-            for a in result.agents
+            for a in result.anomalies
         ],
-        total_anomalies=result.total_anomalies,
-        total_cost_usd=result.total_cost_usd,
-        window_current=result.window_current,
-        window_baseline=result.window_baseline,
+        total_anomalies=len(result.anomalies),
+        total_cost_usd=result.total_cost_analyzed_usd,
+        window_current=f"last_{baseline_days}_days",
+        window_baseline=f"baseline_{result.baseline_period_days}_days",
     )
 
 
@@ -1535,26 +1548,28 @@ async def get_attention_queue(
 
     tenant_id = get_tenant_id_from_auth(request)
 
-    service = AttentionRankingService(session)
-    result = await service.get_attention_queue(
+    facade = get_activity_facade()
+    result = await facade.get_attention_queue(
+        session=session,
         tenant_id=tenant_id,
         limit=limit,
     )
 
+    # Map L4 AttentionQueueResult to L2 AttentionQueueResponse
     return AttentionQueueResponse(
         queue=[
             AttentionItemResponse(
-                run_id=item.run_id,
+                run_id=item.source_run_id or item.signal_id,
                 attention_score=item.attention_score,
-                reasons=item.reasons,
-                state=item.state,
-                status=item.status,
-                started_at=item.started_at,
+                reasons=[item.attention_reason] if item.attention_reason else [],
+                state="COMPLETED",  # Default state for signals
+                status="ATTENTION",  # Signals are attention items
+                started_at=item.created_at,
             )
-            for item in result.queue
+            for item in result.items
         ],
-        total_attention_items=result.total_attention_items,
-        weights_version=result.weights_version,
+        total_attention_items=result.total,
+        weights_version="v1.0",  # Fixed version from L4 service
         generated_at=result.generated_at,
     )
 
@@ -2409,22 +2424,20 @@ async def acknowledge_signal(
     tenant_id = get_tenant_id_from_auth(request)
     actor_id = get_actor_id_from_auth(request)
 
-    from app.services.activity.signal_feedback_service import SignalFeedbackService
-
-    service = SignalFeedbackService(session)
+    # Use facade for signal feedback
+    facade = get_activity_facade()
 
     try:
-        result = await service.acknowledge_signal(
+        result = await facade.acknowledge_signal(
+            session=session,
             tenant_id=tenant_id,
-            run_id=body.run_id,
-            signal_type=body.signal_type,
-            risk_type=body.risk_type,
-            actor_id=actor_id,
-            reason=body.comment,
+            signal_id=signal_fingerprint,
+            acknowledged_by=actor_id,
         )
 
+        # Map L4 AcknowledgeResult to L2 SignalAckResponse
         return SignalAckResponse(
-            signal_fingerprint=result.signal_fingerprint,
+            signal_fingerprint=result.signal_id,
             acknowledged=result.acknowledged,
             acknowledged_by=result.acknowledged_by,
             acknowledged_at=result.acknowledged_at,
@@ -2496,23 +2509,25 @@ async def suppress_signal(
             },
         )
 
-    from app.services.activity.signal_feedback_service import SignalFeedbackService
+    # Use facade for signal feedback
+    facade = get_activity_facade()
 
-    service = SignalFeedbackService(session)
+    # Convert minutes to hours for facade
+    duration_hours = max(1, body.duration_minutes // 60)
 
     try:
-        result = await service.suppress_signal(
+        result = await facade.suppress_signal(
+            session=session,
             tenant_id=tenant_id,
-            run_id=body.run_id,
-            signal_type=body.signal_type,
-            risk_type=body.risk_type,
-            actor_id=actor_id,
-            duration_minutes=body.duration_minutes,
+            signal_id=signal_fingerprint,
+            suppressed_by=actor_id,
+            duration_hours=duration_hours,
             reason=body.reason,
         )
 
+        # Map L4 SuppressResult to L2 SignalSuppressResponse
         return SignalSuppressResponse(
-            signal_fingerprint=result.signal_fingerprint,
+            signal_fingerprint=result.signal_id,
             suppressed_until=result.suppressed_until,
         )
 

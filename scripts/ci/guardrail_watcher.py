@@ -31,7 +31,7 @@ IGNORE_PATTERNS = {'__pycache__', '.git', 'node_modules', '.pytest_cache', 'dist
 FILE_TO_GUARDRAILS: Dict[str, List[str]] = {
     # API routes
     'api/*.py': ['DOMAIN-001', 'DATA-002', 'API-001', 'API-002'],
-    'api/accounts.py': ['DOMAIN-002'],
+    'api/aos_accounts.py': ['DOMAIN-002'],
     'api/overview.py': ['DOMAIN-003'],
 
     # Services

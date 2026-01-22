@@ -18,7 +18,7 @@ from typing import Dict, List, Set
 # Map file patterns to relevant guardrails (same as watcher)
 FILE_TO_GUARDRAILS: Dict[str, List[str]] = {
     'api/*.py': ['DOMAIN-001', 'DATA-002', 'API-001', 'API-002'],
-    'api/accounts.py': ['DOMAIN-002'],
+    'api/aos_accounts.py': ['DOMAIN-002'],
     'api/overview.py': ['DOMAIN-003'],
     'services/*.py': ['DOMAIN-001', 'CROSS-001', 'API-001'],
     'services/limit*.py': ['LIMITS-001', 'LIMITS-002', 'LIMITS-003'],
