@@ -1,21 +1,25 @@
 # Layer: L4 — Domain Engines
-# Product: ai-console
+# AUDIENCE: INTERNAL
+# Product: system-wide
 # Temporal:
-#   Trigger: api
-#   Execution: async
+#   Trigger: api/worker
+#   Execution: sync/async
 # Role: Incidents domain services module
-# Callers: Incidents API (L2)
+# Callers: Incidents API (L2), worker runtime, governance services
 # Allowed Imports: L6
 # Forbidden Imports: L1, L2, L3, L5
-# Reference: docs/architecture/incidents/INCIDENTS_DOMAIN_SQL.md
+# Reference: docs/architecture/incidents/INCIDENTS_DOMAIN_SQL.md, FACADE_CONSOLIDATION_PLAN.md
 
 """
 Incidents Domain Services
 
 L4 services for incident analysis and post-mortem:
+- IncidentDriver: INTERNAL driver for worker/governance (use for internal callers)
 - IncidentPatternService: Detect structural patterns (category_cluster, severity_spike, cascade_failure)
 - RecurrenceAnalysisService: Analyze recurring incident types
 - PostMortemService: Extract learnings from resolved incidents
+
+For CUSTOMER API operations, use incidents_facade.py (at services root) instead.
 
 Design Rules:
 - All services are read-only (no writes)
@@ -23,9 +27,17 @@ Design Rules:
 - SQL-based analytics only
 """
 
-from app.services.incidents.facade import (
-    IncidentFacade,
-    get_incident_facade,
+# NEW: Driver for internal use (workers, governance)
+from app.services.incidents.incident_driver import (
+    IncidentDriver,
+    get_incident_driver,
+)
+
+# DEPRECATED: Backward compatibility aliases (will be removed)
+# Use get_incident_driver() instead
+from app.services.incidents.incident_driver import (
+    IncidentFacade,  # Alias for IncidentDriver
+    get_incident_facade,  # Alias for get_incident_driver
 )
 from app.services.incidents.incident_pattern_service import (
     IncidentPatternService,
@@ -46,9 +58,12 @@ from app.services.incidents.recurrence_analysis_service import (
 )
 
 __all__ = [
-    # Facade (external access point)
-    "IncidentFacade",
-    "get_incident_facade",
+    # Driver (INTERNAL access point - workers, governance)
+    "IncidentDriver",
+    "get_incident_driver",
+    # DEPRECATED: Backward compatibility aliases
+    "IncidentFacade",  # Use IncidentDriver instead
+    "get_incident_facade",  # Use get_incident_driver instead
     # Pattern Detection
     "IncidentPatternService",
     "PatternMatch",

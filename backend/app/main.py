@@ -214,7 +214,7 @@ async def reactivate_deferred_lessons():
 
     Runs every 60 seconds to balance responsiveness and efficiency.
     """
-    from .services.lessons_learned_engine import get_lessons_learned_engine
+    from .services.policy.lessons_engine import get_lessons_learned_engine
 
     while True:
         try:

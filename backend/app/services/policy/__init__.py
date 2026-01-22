@@ -1,7 +1,8 @@
 # Layer: L4 — Domain Engine
+# AUDIENCE: INTERNAL
 # Product: system-wide
 # Role: Policy domain services package
-# Reference: POLICY Domain Qualification, API-001 Guardrail
+# Reference: POLICY Domain Qualification, API-001 Guardrail, FACADE_CONSOLIDATION_PLAN.md
 
 """
 Policy Domain Services (L4)
@@ -10,9 +11,11 @@ This package provides domain-level services for policy operations.
 L3 adapters should import from this package, NOT from L6 models directly.
 
 Available services:
-- PolicyFacade: Primary facade for policy operations (API-001 compliant)
+- PolicyDriver: INTERNAL driver for policy evaluation (workers, governance)
 - CustomerPolicyReadService: Read operations for customer policy constraints
 - PolicySnapshotRegistry: Immutable policy snapshot management (GAP-029)
+
+For CUSTOMER API CRUD operations, use policies_facade.py (at services root) instead.
 """
 
 from app.services.policy.customer_policy_read_service import (
@@ -23,7 +26,27 @@ from app.services.policy.customer_policy_read_service import (
     RateLimit,
     get_customer_policy_read_service,
 )
-from app.services.policy.facade import PolicyFacade, get_policy_facade, reset_policy_facade
+
+# NEW: Driver for internal use (policy_layer, governance)
+from app.services.policy.policy_driver import (
+    PolicyDriver,
+    get_policy_driver,
+    reset_policy_driver,
+)
+
+# DEPRECATED: Backward compatibility aliases (will be removed)
+# Use PolicyDriver / get_policy_driver() instead
+from app.services.policy.policy_driver import (
+    PolicyFacade,  # Alias for PolicyDriver
+    get_policy_facade,  # Alias for get_policy_driver
+    reset_policy_facade,  # Alias for reset_policy_driver
+)
+# Lessons Learned Engine (moved from services root - Stage 2)
+from app.services.policy.lessons_engine import (
+    LessonsLearnedEngine,
+    get_lessons_learned_engine,
+)
+
 from app.services.policy.snapshot_service import (
     ImmutabilityViolation,
     PolicySnapshotData,
@@ -41,10 +64,17 @@ from app.services.policy.snapshot_service import (
 )
 
 __all__ = [
-    # Facade (API-001 compliant - use this for policy operations)
-    "PolicyFacade",
-    "get_policy_facade",
-    "reset_policy_facade",
+    # Driver (INTERNAL - for policy_layer, governance)
+    "PolicyDriver",
+    "get_policy_driver",
+    "reset_policy_driver",
+    # DEPRECATED: Backward compatibility aliases
+    "PolicyFacade",  # Use PolicyDriver instead
+    "get_policy_facade",  # Use get_policy_driver instead
+    "reset_policy_facade",  # Use reset_policy_driver instead
+    # Lessons Learned Engine (moved from services root - Stage 2)
+    "LessonsLearnedEngine",
+    "get_lessons_learned_engine",
     # Customer Policy Service
     "CustomerPolicyReadService",
     "get_customer_policy_read_service",

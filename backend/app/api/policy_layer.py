@@ -1281,7 +1281,7 @@ async def list_lessons(
 
     Reference: PIN-411, POLICIES_DOMAIN_AUDIT.md Section 11
     """
-    from app.services.lessons_learned_engine import get_lessons_learned_engine
+    from app.services.policy.lessons_engine import get_lessons_learned_engine
 
     if not tenant_id:
         return wrap_dict({"error": "tenant_id required", "items": [], "total": 0})
@@ -1321,7 +1321,7 @@ async def get_lesson_stats(
 
     Reference: PIN-411
     """
-    from app.services.lessons_learned_engine import get_lessons_learned_engine
+    from app.services.policy.lessons_engine import get_lessons_learned_engine
 
     engine = get_lessons_learned_engine()
     stats = engine.get_lesson_stats(tenant_id=tenant_id)
@@ -1343,7 +1343,7 @@ async def get_lesson(
     Reference: PIN-411
     """
     from uuid import UUID
-    from app.services.lessons_learned_engine import get_lessons_learned_engine
+    from app.services.policy.lessons_engine import get_lessons_learned_engine
 
     engine = get_lessons_learned_engine()
     lesson = engine.get_lesson(lesson_id=UUID(lesson_id), tenant_id=tenant_id)
@@ -1370,7 +1370,7 @@ async def convert_lesson_to_draft(
     Reference: PIN-411, PB-S4
     """
     from uuid import UUID
-    from app.services.lessons_learned_engine import get_lessons_learned_engine
+    from app.services.policy.lessons_engine import get_lessons_learned_engine
 
     engine = get_lessons_learned_engine()
     proposal_id = engine.convert_lesson_to_draft(
@@ -1404,7 +1404,7 @@ async def defer_lesson(
     Reference: PIN-411
     """
     from uuid import UUID
-    from app.services.lessons_learned_engine import get_lessons_learned_engine
+    from app.services.policy.lessons_engine import get_lessons_learned_engine
 
     engine = get_lessons_learned_engine()
     success = engine.defer_lesson(
@@ -1438,7 +1438,7 @@ async def dismiss_lesson(
     Reference: PIN-411
     """
     from uuid import UUID
-    from app.services.lessons_learned_engine import get_lessons_learned_engine
+    from app.services.policy.lessons_engine import get_lessons_learned_engine
 
     engine = get_lessons_learned_engine()
     success = engine.dismiss_lesson(

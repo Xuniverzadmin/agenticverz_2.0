@@ -1615,7 +1615,7 @@ async def get_policy_lessons(
     ctx: TenantContext = Depends(get_tenant_context),
 ) -> LessonsResponse:
     """V2 Facade: What governance emerged?"""
-    from app.services.lessons_learned_engine import get_lessons_learned_engine
+    from app.services.policy.lessons_engine import get_lessons_learned_engine
 
     try:
         engine = get_lessons_learned_engine()
@@ -1677,7 +1677,7 @@ async def get_policy_lesson_detail(
     """V2 Facade: Lesson detail for cross-domain navigation."""
     from uuid import UUID
 
-    from app.services.lessons_learned_engine import get_lessons_learned_engine
+    from app.services.policy.lessons_engine import get_lessons_learned_engine
 
     try:
         engine = get_lessons_learned_engine()
