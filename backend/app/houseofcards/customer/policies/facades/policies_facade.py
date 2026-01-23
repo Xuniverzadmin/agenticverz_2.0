@@ -38,6 +38,7 @@ from typing import Any, Optional
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.houseofcards.customer.general.utils.time import utc_now
 from app.models.policy_control_plane import (
     Limit,
     LimitBreach,
@@ -467,7 +468,7 @@ class PoliciesFacade:
     ) -> PolicyRulesListResult:
         """List policy rules for the tenant."""
         filters_applied: dict[str, Any] = {"tenant_id": tenant_id, "status": status}
-        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        thirty_days_ago = utc_now() - timedelta(days=30)
 
         # Subquery: enforcement aggregation
         enforcement_stats_subq = (
@@ -595,7 +596,7 @@ class PoliciesFacade:
         rule_id: str,
     ) -> Optional[PolicyRuleDetailResult]:
         """Get policy rule detail. Tenant isolation enforced."""
-        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        thirty_days_ago = utc_now() - timedelta(days=30)
 
         # Subquery for trigger stats
         enforcement_stats_subq = (
@@ -681,7 +682,7 @@ class PoliciesFacade:
             "status": status,
         }
 
-        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        thirty_days_ago = utc_now() - timedelta(days=30)
 
         # Subquery: breach aggregation
         breach_agg_subq = (
@@ -820,7 +821,7 @@ class PoliciesFacade:
         limit_id: str,
     ) -> Optional[LimitDetailResult]:
         """Get limit detail. Tenant isolation enforced."""
-        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        thirty_days_ago = utc_now() - timedelta(days=30)
 
         # Subquery for breach stats
         breach_agg_subq = (
@@ -927,7 +928,7 @@ class PoliciesFacade:
                 title=lesson["title"],
                 status=lesson["status"],
                 source_event_type=lesson["source_event_type"],
-                created_at=datetime.fromisoformat(lesson["created_at"]) if lesson["created_at"] else datetime.utcnow(),
+                created_at=datetime.fromisoformat(lesson["created_at"]) if lesson["created_at"] else utc_now(),
                 has_proposed_action=lesson["has_proposed_action"],
             )
             for lesson in lessons
@@ -1045,7 +1046,7 @@ class PoliciesFacade:
             conflicts_detected=conflicts_count,
             violations_24h=state.total_violations_today,
             lessons_pending_action=pending_lessons,
-            last_updated=datetime.utcnow(),
+            last_updated=utc_now(),
         )
 
     async def get_policy_metrics(
@@ -1127,7 +1128,7 @@ class PoliciesFacade:
             tenant_id=tenant_id,
             violation_type=violation_type_enum,
             severity_min=severity_min,
-            since=datetime.utcnow() - timedelta(hours=hours),
+            since=utc_now() - timedelta(hours=hours),
             limit=limit + 1,
         )
 

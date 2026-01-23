@@ -46,6 +46,8 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import and_, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.houseofcards.customer.general.utils.time import utc_now
+
 # L6 model imports (allowed for L4)
 from app.models.audit_ledger import AuditLedger
 from app.models.killswitch import Incident, IncidentLifecycleState
@@ -275,7 +277,7 @@ class OverviewFacade:
 
         Returns system pulse and domain counts.
         """
-        now = datetime.utcnow()
+        now = utc_now()
         last_24h = now - timedelta(hours=24)
 
         # Incident counts
@@ -503,7 +505,7 @@ class OverviewFacade:
 
         Returns realized costs and budget status.
         """
-        now = datetime.utcnow()
+        now = utc_now()
         period_start = now - timedelta(days=period_days)
 
         # 1. Calculate actual LLM cost from worker_runs
@@ -645,7 +647,7 @@ class OverviewFacade:
 
         Returns recovery statistics from incident lifecycle.
         """
-        now = datetime.utcnow()
+        now = utc_now()
         period_start = now - timedelta(days=period_days)
 
         # Count incidents by lifecycle state

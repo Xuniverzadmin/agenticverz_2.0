@@ -10,6 +10,8 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.houseofcards.customer.general.utils.time import utc_now
+
 
 @dataclass
 class AcknowledgeResult:
@@ -69,7 +71,7 @@ class SignalFeedbackService:
         return AcknowledgeResult(
             signal_id=signal_id,
             acknowledged=True,
-            acknowledged_at=datetime.utcnow(),
+            acknowledged_at=utc_now(),
             acknowledged_by=acknowledged_by,
             message="Signal acknowledged",
         )
@@ -86,12 +88,12 @@ class SignalFeedbackService:
         """Suppress a signal for a duration."""
         from datetime import timedelta
 
-        suppressed_until = datetime.utcnow() + timedelta(hours=duration_hours)
+        suppressed_until = utc_now() + timedelta(hours=duration_hours)
 
         return SuppressResult(
             signal_id=signal_id,
             suppressed=True,
-            suppressed_at=datetime.utcnow(),
+            suppressed_at=utc_now(),
             suppressed_by=suppressed_by,
             suppressed_until=suppressed_until,
             reason=reason,

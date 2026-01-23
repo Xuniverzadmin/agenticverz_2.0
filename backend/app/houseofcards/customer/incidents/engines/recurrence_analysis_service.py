@@ -30,6 +30,8 @@ from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.houseofcards.customer.general.utils.time import utc_now
+
 
 @dataclass
 class RecurrenceGroup:
@@ -155,7 +157,7 @@ class RecurrenceAnalysisService:
             groups=groups,
             baseline_days=baseline_days,
             total_recurring=total_recurring,
-            generated_at=datetime.utcnow(),
+            generated_at=utc_now(),
         )
 
     async def get_recurrence_for_category(

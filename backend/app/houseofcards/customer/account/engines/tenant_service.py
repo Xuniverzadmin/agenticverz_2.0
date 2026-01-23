@@ -17,11 +17,12 @@ Provides:
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any, List, Optional, Tuple, cast
 
 from sqlmodel import Session, func, select
 
+from app.houseofcards.customer.general.utils.time import utc_now
 from ..models.tenant import (
     PLAN_QUOTAS,
     APIKey,
@@ -34,10 +35,6 @@ from ..models.tenant import (
 )
 
 logger = logging.getLogger("nova.services.tenant")
-
-
-def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 class TenantServiceError(Exception):

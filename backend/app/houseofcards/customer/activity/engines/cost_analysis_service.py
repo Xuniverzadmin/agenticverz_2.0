@@ -10,6 +10,8 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.houseofcards.customer.general.utils.time import utc_now
+
 
 @dataclass
 class CostAnomaly:
@@ -64,7 +66,7 @@ class CostAnalysisService:
             anomalies=[],
             total_cost_analyzed_usd=0.0,
             baseline_period_days=baseline_days,
-            generated_at=datetime.utcnow(),
+            generated_at=utc_now(),
         )
 
     async def get_cost_breakdown(

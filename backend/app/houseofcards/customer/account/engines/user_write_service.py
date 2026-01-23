@@ -21,17 +21,12 @@ Constraints (enforced by PIN-250):
 - Call-path relocation only
 """
 
-from datetime import datetime, timezone
 from typing import Dict, Optional
 
 from sqlmodel import Session
 
+from app.houseofcards.customer.general.utils.time import utc_now
 from app.models.tenant import User
-
-
-def utc_now() -> datetime:
-    """Get current UTC time."""
-    return datetime.now(timezone.utc)
 
 
 class UserWriteService:

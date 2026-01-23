@@ -50,6 +50,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
+from app.houseofcards.customer.general.utils.time import utc_now
+
 logger = logging.getLogger("nova.services.governance.runtime_switch")
 
 
@@ -117,7 +119,7 @@ def disable_governance_runtime(reason: str, actor: str) -> None:
     with _lock:
         _state = GovernanceState(
             active=False,
-            last_changed=datetime.utcnow(),
+            last_changed=utc_now(),
             last_change_reason=reason,
             last_change_actor=actor,
             degraded_mode=False,
@@ -126,7 +128,7 @@ def disable_governance_runtime(reason: str, actor: str) -> None:
     logger.critical("governance.disabled_runtime", extra={
         "reason": reason,
         "actor": actor,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": utc_now().isoformat(),
     })
 
     # Emit event for monitoring
@@ -145,7 +147,7 @@ def enable_governance_runtime(actor: str) -> None:
     with _lock:
         _state = GovernanceState(
             active=True,
-            last_changed=datetime.utcnow(),
+            last_changed=utc_now(),
             last_change_reason="re-enabled",
             last_change_actor=actor,
             degraded_mode=False,
@@ -153,7 +155,7 @@ def enable_governance_runtime(actor: str) -> None:
 
     logger.info("governance.enabled_runtime", extra={
         "actor": actor,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": utc_now().isoformat(),
     })
 
     _emit_governance_event("governance_enabled", "re-enabled", actor)
@@ -177,7 +179,7 @@ def enter_degraded_mode(reason: str, actor: str) -> None:
     with _lock:
         _state = GovernanceState(
             active=True,  # Still active, but degraded
-            last_changed=datetime.utcnow(),
+            last_changed=utc_now(),
             last_change_reason=f"degraded: {reason}",
             last_change_actor=actor,
             degraded_mode=True,
@@ -186,7 +188,7 @@ def enter_degraded_mode(reason: str, actor: str) -> None:
     logger.warning("governance.degraded_mode_entered", extra={
         "reason": reason,
         "actor": actor,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": utc_now().isoformat(),
     })
 
     _emit_governance_event("governance_degraded", reason, actor)
@@ -204,7 +206,7 @@ def exit_degraded_mode(actor: str) -> None:
     with _lock:
         _state = GovernanceState(
             active=True,
-            last_changed=datetime.utcnow(),
+            last_changed=utc_now(),
             last_change_reason="exited_degraded",
             last_change_actor=actor,
             degraded_mode=False,
@@ -212,7 +214,7 @@ def exit_degraded_mode(actor: str) -> None:
 
     logger.info("governance.degraded_mode_exited", extra={
         "actor": actor,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": utc_now().isoformat(),
     })
 
     _emit_governance_event("governance_normal", "exited_degraded", actor)
@@ -267,7 +269,7 @@ def _emit_governance_event(event_type: str, reason: str, actor: str) -> None:
                 "event_type": event_type,
                 "reason": reason,
                 "actor": actor,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": utc_now().isoformat(),
             })
     except Exception as e:
         # Don't fail on event emission - just log

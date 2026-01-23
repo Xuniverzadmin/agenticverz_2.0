@@ -10,6 +10,8 @@ from typing import Any, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.houseofcards.customer.general.utils.time import utc_now
+
 
 @dataclass
 class AttentionSignal:
@@ -65,7 +67,7 @@ class AttentionRankingService:
         return AttentionQueueResult(
             items=[],
             total=0,
-            generated_at=datetime.utcnow(),
+            generated_at=utc_now(),
         )
 
     async def compute_attention_score(

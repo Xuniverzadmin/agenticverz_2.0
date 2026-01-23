@@ -10,6 +10,8 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.houseofcards.customer.general.utils.time import utc_now
+
 
 @dataclass
 class DetectedPattern:
@@ -65,7 +67,7 @@ class PatternDetectionService:
             patterns=[],
             runs_analyzed=0,
             window_hours=window_hours,
-            generated_at=datetime.utcnow(),
+            generated_at=utc_now(),
         )
 
     async def get_pattern_detail(

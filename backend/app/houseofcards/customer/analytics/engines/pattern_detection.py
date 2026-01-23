@@ -34,11 +34,13 @@ Pattern Types:
 import hashlib
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
+
+from app.houseofcards.customer.general.utils.time import utc_now
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_async_session
@@ -94,7 +96,7 @@ async def detect_failure_patterns(
     - run_ids: list of affected runs (provenance)
     - sample_error: example error message
     """
-    window_start = datetime.utcnow() - timedelta(hours=window_hours)
+    window_start = utc_now() - timedelta(hours=window_hours)
 
     # Query failed runs within window
     query = (
@@ -257,8 +259,8 @@ async def emit_feedback(
         time_window_minutes=feedback.time_window_minutes,
         threshold_used=feedback.threshold_used,
         extra_data=feedback.metadata,  # Maps to 'metadata' column in DB
-        detected_at=datetime.utcnow(),
-        created_at=datetime.utcnow(),
+        detected_at=utc_now(),
+        created_at=utc_now(),
     )
 
     session.add(record)

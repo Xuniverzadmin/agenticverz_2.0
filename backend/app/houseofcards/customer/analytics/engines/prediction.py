@@ -30,11 +30,13 @@ Rule: Advise, don't influence.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import func, select
+
+from app.houseofcards.customer.general.utils.time import utc_now
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_async_session
@@ -86,7 +88,7 @@ async def predict_failure_likelihood(
     runs_query = (
         select(WorkerRun)
         .where(WorkerRun.status == "failed")
-        .where(WorkerRun.created_at >= datetime.utcnow() - timedelta(days=7))
+        .where(WorkerRun.created_at >= utc_now() - timedelta(days=7))
         .order_by(WorkerRun.created_at.desc())
         .limit(100)
     )
@@ -113,7 +115,7 @@ async def predict_failure_likelihood(
     # Get total runs per worker for rate calculation
     total_runs_query = (
         select(WorkerRun.worker_id, func.count().label("total"))
-        .where(WorkerRun.created_at >= datetime.utcnow() - timedelta(days=7))
+        .where(WorkerRun.created_at >= utc_now() - timedelta(days=7))
         .group_by(WorkerRun.worker_id)
     )
 
@@ -201,7 +203,7 @@ async def predict_cost_overrun(
         .where(WorkerRun.status == "completed")
         .where(WorkerRun.cost_cents.isnot(None))
         .where(WorkerRun.cost_cents > 0)
-        .where(WorkerRun.created_at >= datetime.utcnow() - timedelta(days=7))
+        .where(WorkerRun.created_at >= utc_now() - timedelta(days=7))
         .order_by(WorkerRun.created_at.desc())
         .limit(200)
     )
@@ -302,8 +304,8 @@ async def emit_prediction(
         confidence_score=prediction.confidence_score,
         prediction_value=prediction.prediction_value,
         contributing_factors=prediction.contributing_factors,
-        valid_until=prediction.valid_until or (datetime.utcnow() + timedelta(hours=PREDICTION_VALIDITY_HOURS)),
-        created_at=datetime.utcnow(),
+        valid_until=prediction.valid_until or (utc_now() + timedelta(hours=PREDICTION_VALIDITY_HOURS)),
+        created_at=utc_now(),
         is_advisory=True,  # ALWAYS TRUE - enforced by design
         notes=prediction.notes,
     )
@@ -418,7 +420,7 @@ async def get_prediction_summary(
             query = query.where(PredictionEvent.prediction_type == prediction_type)
         if not include_expired:
             query = query.where(
-                (PredictionEvent.valid_until.is_(None)) | (PredictionEvent.valid_until > datetime.utcnow())
+                (PredictionEvent.valid_until.is_(None)) | (PredictionEvent.valid_until > utc_now())
             )
 
         query = query.limit(limit)

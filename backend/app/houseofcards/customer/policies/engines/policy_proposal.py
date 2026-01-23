@@ -20,11 +20,12 @@ Rule: Propose → Review → Decide (Human)
 
 import json
 import logging
-from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import func, select, text
+
+from app.houseofcards.customer.general.utils.time import utc_now
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_async_session
@@ -169,7 +170,7 @@ async def create_policy_proposal(
         proposed_rule=proposal.proposed_rule,
         triggering_feedback_ids=proposal.triggering_feedback_ids,
         status="draft",  # Always starts as draft
-        created_at=datetime.utcnow(),
+        created_at=utc_now(),
     )
 
     session.add(record)
@@ -222,7 +223,7 @@ async def _create_policy_rule_from_proposal(
     actions = proposed_rule.get("action", proposed_rule.get("actions", {}))
 
     # Build rule metadata
-    now = datetime.utcnow()
+    now = utc_now()
 
     # Check if rule already exists (idempotency)
     existing = await session.execute(
@@ -335,7 +336,7 @@ async def review_policy_proposal(
     # ATOMIC BLOCK: state change + audit must succeed together
     async with session.begin():
         # Update review metadata
-        proposal.reviewed_at = datetime.utcnow()
+        proposal.reviewed_at = utc_now()
         proposal.reviewed_by = review.reviewed_by
         proposal.review_notes = review.review_notes
 
@@ -377,7 +378,7 @@ async def review_policy_proposal(
             )
 
             proposal.status = "approved"
-            proposal.effective_from = review.effective_from or datetime.utcnow()
+            proposal.effective_from = review.effective_from or utc_now()
 
             # Create a version snapshot
             # Count existing versions for this proposal
@@ -390,7 +391,7 @@ async def review_policy_proposal(
                 proposal_id=proposal.id,
                 version=version_count + 1,
                 rule_snapshot=proposal.proposed_rule,
-                created_at=datetime.utcnow(),
+                created_at=utc_now(),
                 created_by=review.reviewed_by,
                 change_reason=f"Approved: {review.review_notes or 'No notes'}",
             )

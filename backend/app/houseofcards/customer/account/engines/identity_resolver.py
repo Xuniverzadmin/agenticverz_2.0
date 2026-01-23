@@ -23,7 +23,9 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
 
-from .iam_service import ActorType, Identity, IdentityProvider
+from app.houseofcards.internal.platform.iam.engines.iam_service import (
+    ActorType, Identity, IdentityProvider,
+)
 
 logger = logging.getLogger(__name__)
 

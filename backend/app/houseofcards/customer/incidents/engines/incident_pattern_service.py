@@ -31,6 +31,8 @@ from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.houseofcards.customer.general.utils.time import utc_now
+
 
 @dataclass
 class PatternMatch:
@@ -93,8 +95,8 @@ class IncidentPatternService:
             PatternResult with all detected patterns
         """
         window_hours = min(window_hours, 168)  # Cap at 7 days
-        window_start = datetime.utcnow() - timedelta(hours=window_hours)
-        window_end = datetime.utcnow()
+        window_start = utc_now() - timedelta(hours=window_hours)
+        window_end = utc_now()
 
         all_patterns: list[PatternMatch] = []
         incidents_analyzed = 0
