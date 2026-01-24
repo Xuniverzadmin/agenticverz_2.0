@@ -1,13 +1,15 @@
-# Layer: L4 — Domain Engines
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api/worker
 #   Execution: sync
-# Role: Phase-status invariant enforcement from GovernanceConfig
-# Callers: ROK (L5), worker runtime
-# Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
+# Role: Phase-status invariant enforcement from GovernanceConfig (pure business logic)
+# Callers: ROK, worker runtime
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
 # Reference: GAP-051 (Phase-Status Invariants)
+# NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 
 """
 Module: phase_status_invariants

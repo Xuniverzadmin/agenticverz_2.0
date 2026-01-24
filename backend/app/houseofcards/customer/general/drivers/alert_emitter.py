@@ -1,4 +1,4 @@
-# Layer: L3 — Boundary Adapter (Console → Platform)
+# Layer: L6 — Driver
 # Product: AI Console
 # Temporal:
 #   Trigger: worker

@@ -1,68 +1,66 @@
-# Layer: L4 — Domain Engine
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: AI Console (Guard)
 # Temporal:
 #   Trigger: api
-#   Execution: sync
-# Role: DB write delegation for Guard API (Phase 2B extraction)
+#   Execution: sync (delegates to L6 driver)
+# Role: Guard write operations (L5 engine delegating to L6 driver) - pure business logic
 # Callers: api/guard.py
-# Allowed Imports: L6 (models, db)
-# Forbidden Imports: L2 (api), L3 (adapters)
-# Reference: PIN-250 Phase 2B Batch 1
+# Allowed Imports: L6 (drivers only, NOT ORM models)
+# Forbidden Imports: L1, L2 (api), L3 (adapters), L4, sqlalchemy, sqlmodel
+# Reference: PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
+# NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 #
-# =============================================================================
-# PHASE 2 NOTE:
-# This is a TEMPORARY AGGREGATE service for Phase 2 structural extraction.
-# It bundles KillSwitch, Incident, and IncidentEvent writes together.
-# Post-alignment (Phase 3+), this may split into:
-#   - KillSwitchWriteService
-#   - IncidentWriteService
-# Do NOT split during Phase 2.
-# =============================================================================
+# GOVERNANCE NOTE:
+# This L4 engine delegates ALL database operations to GuardWriteDriver (L6).
+# NO direct database access - only driver calls.
+# Phase 2 extraction: DB operations moved to drivers/guard_write_driver.py
+#
+# EXTRACTION STATUS: COMPLETE (2026-01-23)
 
 """
-Guard Write Service - DB write operations for Guard API.
+Guard Write Service (L4)
 
-Phase 2B Batch 1: Extracted from api/guard.py.
+DB write operations for Guard API.
+Delegates to GuardWriteDriver (L6) for all database access.
 
-Constraints (enforced by PIN-250):
-- Write-only: No policy logic
-- No cross-service calls
-- No domain refactoring
-- Call-path relocation only
+L2 (API) → L4 (this service) → L6 (GuardWriteDriver)
+
+Responsibilities:
+- Delegate to L6 driver for data access
+- Maintain backward compatibility for callers
+
+Reference: PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
 """
 
-import uuid
-from datetime import datetime, timezone
 from decimal import Decimal
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
-from sqlalchemy import and_, select
-from sqlmodel import Session
-
-from app.models.killswitch import (
-    Incident,
-    IncidentEvent,
-    IncidentSeverity,
-    IncidentStatus,
-    KillSwitchState,
-    TriggerType,
+# L6 driver import (allowed)
+from app.houseofcards.customer.general.controls.drivers.guard_write_driver import (
+    GuardWriteDriver,
+    get_guard_write_driver,
 )
 
-
-def utc_now() -> datetime:
-    """Get current UTC time."""
-    return datetime.now(timezone.utc)
+if TYPE_CHECKING:
+    from sqlmodel import Session
+    from app.models.killswitch import (
+        Incident,
+        IncidentEvent,
+        KillSwitchState,
+    )
 
 
 class GuardWriteService:
     """
     DB write operations for Guard Console.
 
-    Write-only facade. No policy logic, no branching beyond DB operations.
+    Delegates all operations to GuardWriteDriver (L6).
+    NO DIRECT DB ACCESS - driver calls only.
     """
 
-    def __init__(self, session: Session):
-        self.session = session
+    def __init__(self, session: "Session"):
+        self._driver = get_guard_write_driver(session)
 
     # =========================================================================
     # KillSwitch Operations
@@ -73,109 +71,50 @@ class GuardWriteService:
         entity_type: str,
         entity_id: str,
         tenant_id: str,
-    ) -> Tuple[KillSwitchState, bool]:
-        """
-        Get existing KillSwitchState or create a new unfrozen one.
-
-        Returns:
-            Tuple of (state, is_new)
-        """
-        stmt = select(KillSwitchState).where(
-            and_(
-                KillSwitchState.entity_type == entity_type,
-                KillSwitchState.entity_id == entity_id,
-            )
-        )
-        row = self.session.exec(stmt).first()
-        state = row[0] if row else None
-
-        if state:
-            return state, False
-
-        state = KillSwitchState(
-            id=str(uuid.uuid4()),
+    ) -> Tuple["KillSwitchState", bool]:
+        """Delegate to driver."""
+        return self._driver.get_or_create_killswitch_state(
             entity_type=entity_type,
             entity_id=entity_id,
             tenant_id=tenant_id,
-            is_frozen=False,
         )
-        return state, True
 
     def freeze_killswitch(
         self,
-        state: KillSwitchState,
+        state: "KillSwitchState",
         by: str,
         reason: str,
         auto: bool = False,
         trigger: Optional[str] = None,
-    ) -> KillSwitchState:
-        """
-        Freeze a KillSwitchState and persist.
-
-        Args:
-            state: The state to freeze
-            by: Who triggered the freeze
-            reason: Why the freeze occurred
-            auto: Whether this was automatic
-            trigger: Trigger type (defaults to MANUAL)
-        """
-        state.freeze(
+    ) -> "KillSwitchState":
+        """Delegate to driver."""
+        return self._driver.freeze_killswitch(
+            state=state,
             by=by,
             reason=reason,
             auto=auto,
-            trigger=trigger or TriggerType.MANUAL.value,
+            trigger=trigger,
         )
-        self.session.add(state)
-        self.session.commit()
-        return state
 
     def unfreeze_killswitch(
         self,
-        state: KillSwitchState,
+        state: "KillSwitchState",
         by: str,
-    ) -> KillSwitchState:
-        """
-        Unfreeze a KillSwitchState and persist.
-
-        Args:
-            state: The state to unfreeze
-            by: Who triggered the unfreeze
-        """
-        state.unfreeze(by=by)
-        self.session.add(state)
-        self.session.commit()
-        return state
+    ) -> "KillSwitchState":
+        """Delegate to driver."""
+        return self._driver.unfreeze_killswitch(state=state, by=by)
 
     # =========================================================================
     # Incident Operations
     # =========================================================================
 
-    def acknowledge_incident(self, incident: Incident) -> Incident:
-        """
-        Mark an incident as acknowledged and persist.
+    def acknowledge_incident(self, incident: "Incident") -> "Incident":
+        """Delegate to driver."""
+        return self._driver.acknowledge_incident(incident=incident)
 
-        Args:
-            incident: The incident to acknowledge
-        """
-        incident.status = IncidentStatus.ACKNOWLEDGED.value
-        self.session.add(incident)
-        self.session.commit()
-        return incident
-
-    def resolve_incident(self, incident: Incident) -> Incident:
-        """
-        Mark an incident as resolved and persist.
-
-        Args:
-            incident: The incident to resolve
-        """
-        incident.status = IncidentStatus.RESOLVED.value
-        incident.ended_at = utc_now()
-        if incident.started_at:
-            incident.duration_seconds = int((incident.ended_at - incident.started_at).total_seconds())
-        self.session.add(incident)
-        self.session.commit()
-        return incident
+    def resolve_incident(self, incident: "Incident") -> "Incident":
+        """Delegate to driver."""
+        return self._driver.resolve_incident(incident=incident)
 
     def create_demo_incident(
         self,
@@ -186,63 +125,22 @@ class GuardWriteService:
         policy_id: str,
         auto_action: str,
         events: List[Tuple[str, str]],  # List of (event_type, description)
-        severity: str = IncidentSeverity.HIGH.value,
+        severity: str = "HIGH",
         calls_affected: int = 0,
         cost_delta_cents: Decimal = Decimal("0"),
         call_id: Optional[str] = None,
-    ) -> Tuple[Incident, List[IncidentEvent]]:
-        """
-        Create a demo incident with timeline events for onboarding verification.
-
-        Args:
-            incident_id: Pre-generated incident ID
-            tenant_id: Tenant ID
-            title: Incident title
-            trigger_type: What triggered this
-            policy_id: Policy that fired
-            auto_action: Automatic action taken
-            events: List of (event_type, description) tuples
-            severity: Incident severity
-            calls_affected: Number of calls affected
-            cost_delta_cents: Cost impact
-            call_id: Optional related call ID
-
-        Returns:
-            Tuple of (incident, list of events)
-        """
-        now = utc_now()
-
-        incident = Incident(
-            id=incident_id,
+    ) -> Tuple["Incident", List["IncidentEvent"]]:
+        """Delegate to driver."""
+        return self._driver.create_demo_incident(
+            incident_id=incident_id,
             tenant_id=tenant_id,
             title=title,
-            severity=severity,
-            status=IncidentStatus.RESOLVED.value,
             trigger_type=trigger_type,
             policy_id=policy_id,
+            auto_action=auto_action,
+            events=events,
+            severity=severity,
             calls_affected=calls_affected,
             cost_delta_cents=cost_delta_cents,
-            auto_action=auto_action,
-            started_at=now,
-            resolved_at=now,
+            call_id=call_id,
         )
-
-        if call_id:
-            incident.add_related_call(call_id)
-
-        self.session.add(incident)
-
-        created_events = []
-        for event_type, description in events:
-            event = IncidentEvent(
-                id=str(uuid.uuid4()),
-                incident_id=incident_id,
-                event_type=event_type,
-                description=description,
-            )
-            self.session.add(event)
-            created_events.append(event)
-
-        self.session.commit()
-
-        return incident, created_events

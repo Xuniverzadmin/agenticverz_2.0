@@ -1,13 +1,15 @@
-# Layer: L4 — Domain Engine
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
-# Role: Contract Service - stateful contract state machine
+# Role: Contract Service - stateful contract state machine (pure business logic)
 # Callers: L3 (adapters), L2 (governance APIs)
 # Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
+# Forbidden Imports: L1, L2, L3, L4
 # Reference: PIN-291, SYSTEM_CONTRACT_OBJECT.md, part2-design-v1
+# NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 #
 # ==============================================================================
 # GOVERNANCE RULE: CONTRACT-STATE-MACHINE (Non-Negotiable)

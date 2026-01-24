@@ -1,6 +1,9 @@
-# Layer: L4 — Domain Engines
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
+# Role: Alert fatigue management (pure in-memory business logic, no boundary crossing)
 # Reference: GAP-049 (AlertFatigueController)
+# NOTE: Reclassified L6→L5 (2026-01-24) - No DB/cache boundary, contains decision logic
 """
 AlertFatigueController - Alert fatigue management service.
 

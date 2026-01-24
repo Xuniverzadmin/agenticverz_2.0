@@ -1,13 +1,15 @@
-# Layer: L4 — Domain Engines
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: async
-# Role: Unified connection pool manager with health checking
+# Role: Unified connection pool manager with health checking (pure business logic)
 # Callers: Services, API routes
-# Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
 # Reference: GAP-172 (Connection Pool Management)
+# NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 
 """
 Connection Pool Manager (GAP-172)

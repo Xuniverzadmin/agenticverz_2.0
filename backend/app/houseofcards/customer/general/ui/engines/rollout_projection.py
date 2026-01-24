@@ -1,13 +1,15 @@
-# Layer: L4 — Domain Engine (Projection)
+# Layer: L5 — Domain Engine (Projection)
+# AUDIENCE: CUSTOMER
 # Product: system-wide (Part-2 CRM Workflow)
 # Temporal:
 #   Trigger: query-time
 #   Execution: sync (read-only projection)
-# Role: Rollout Projection - read-only projection of audited truth
+# Role: Rollout Projection - read-only projection of audited truth (pure business logic)
 # Callers: L2 (founder console, customer console)
 # Allowed Imports: L6 models only
-# Forbidden Imports: L1, L2, L3, L5
+# Forbidden Imports: L1, L2, L3, L4
 # Reference: PIN-296, GOVERNANCE_AUDIT_MODEL.md, part2-design-v1
+# NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 #
 # ==============================================================================
 # GOVERNANCE RULE: PROJECTION-AUTHORITY (Non-Negotiable)

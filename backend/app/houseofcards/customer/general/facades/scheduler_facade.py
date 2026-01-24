@@ -1,13 +1,15 @@
-# Layer: L4 — Domain Engine
+# Layer: L3 — Adapter (Facade)
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api or worker (scheduled execution)
 #   Execution: async
-# Role: Scheduler Facade - Centralized access to job scheduling operations
+# Role: Scheduler Facade - Thin translation layer for job scheduling operations
 # Callers: L2 scheduler.py API, SDK, Worker
-# Allowed Imports: L4 scheduler services, L6 (models, db)
-# Forbidden Imports: L1, L2, L3, L5
+# Allowed Imports: L5 (engines), L6 (drivers)
+# Forbidden Imports: L1, L2
 # Reference: GAP-112 (Scheduled Job API)
+# NOTE: Reclassified L4→L3 (2026-01-24) - Per HOC topology, facades are L3 (adapters)
 
 """
 Scheduler Facade (L4 Domain Logic)

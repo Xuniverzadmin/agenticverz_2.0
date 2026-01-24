@@ -1,13 +1,15 @@
-# Layer: L4 — Domain Engine
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api, worker
 #   Execution: sync (with async job coordination)
-# Role: GAP-086 Knowledge Lifecycle Manager (THE ORCHESTRATOR)
+# Role: GAP-086 Knowledge Lifecycle Manager (THE ORCHESTRATOR) - pure business logic
 # Callers: SDK facade, API endpoints, async workers
-# Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
 # Reference: GAP-086, DOMAINS_E2E_SCAFFOLD_V3.md Section 7.15
+# NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 
 """
 GAP-086: Knowledge Lifecycle Manager
@@ -170,13 +172,22 @@ class LifecycleAuditEvent:
 
 
 # =============================================================================
-# Knowledge Plane Entity (in-memory representation)
+# Knowledge Plane Lifecycle Entity (in-memory representation)
 # =============================================================================
 
 
 @dataclass
-class KnowledgePlane:
-    """In-memory representation of a knowledge plane."""
+class KnowledgePlaneLifecycle:
+    """
+    In-memory representation of a knowledge plane lifecycle.
+
+    Renamed from KnowledgePlane to KnowledgePlaneLifecycle (2026-01-23)
+    to avoid name collision with lifecycle/engines/knowledge_plane.py::KnowledgePlane
+    which represents the knowledge graph abstraction.
+
+    This class represents the LIFECYCLE state machine for knowledge planes.
+    Reference: GEN-DUP-002, HOC_general_deep_audit_report.md
+    """
     id: str
     tenant_id: str
     name: str
@@ -305,7 +316,7 @@ class KnowledgeLifecycleManager:
             job_scheduler: Function to schedule async jobs (plane_id, job_type, config) -> job_id
         """
         # In-memory storage (will be replaced with DB in production)
-        self._planes: Dict[str, KnowledgePlane] = {}
+        self._planes: Dict[str, KnowledgePlaneLifecycle] = {}
         self._audit_log: List[LifecycleAuditEvent] = []
 
         # Integration points
@@ -459,7 +470,7 @@ class KnowledgeLifecycleManager:
 
         # Create new plane in DRAFT state
         now = utc_now()
-        plane = KnowledgePlane(
+        plane = KnowledgePlaneLifecycle(
             id=plane_id,
             tenant_id=request.tenant_id,
             name=request.metadata.get("name", f"Knowledge Plane {plane_id}"),
@@ -506,7 +517,7 @@ class KnowledgeLifecycleManager:
         plane = self._planes.get(plane_id)
         return plane.state if plane else None
 
-    def get_plane(self, plane_id: str) -> Optional[KnowledgePlane]:
+    def get_plane(self, plane_id: str) -> Optional[KnowledgePlaneLifecycle]:
         """Get knowledge plane by ID."""
         return self._planes.get(plane_id)
 
@@ -629,7 +640,7 @@ class KnowledgeLifecycleManager:
 
     def _emit_transition_event(
         self,
-        plane: KnowledgePlane,
+        plane: KnowledgePlaneLifecycle,
         from_state: Optional[KnowledgePlaneLifecycleState],
         to_state: KnowledgePlaneLifecycleState,
         request: TransitionRequest,
@@ -656,7 +667,7 @@ class KnowledgeLifecycleManager:
 
     def _emit_blocked_event(
         self,
-        plane: KnowledgePlane,
+        plane: KnowledgePlaneLifecycle,
         target_state: Optional[KnowledgePlaneLifecycleState],
         request: TransitionRequest,
         reason: Optional[str],
@@ -698,7 +709,7 @@ class KnowledgeLifecycleManager:
 
     def _start_async_job(
         self,
-        plane: KnowledgePlane,
+        plane: KnowledgePlaneLifecycle,
         target_state: KnowledgePlaneLifecycleState,
         request: TransitionRequest,
     ) -> Optional[str]:
@@ -896,7 +907,7 @@ def reset_manager() -> None:
 
 __all__ = [
     "KnowledgeLifecycleManager",
-    "KnowledgePlane",
+    "KnowledgePlaneLifecycle",
     "TransitionRequest",
     "TransitionResponse",
     "GateDecision",

@@ -1,13 +1,19 @@
-# Layer: L2 — Product APIs
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api, sdk
 #   Execution: sync (with async wait support)
-# Role: GAP-083-085 Knowledge SDK Façade
+# Role: GAP-083-085 Knowledge SDK Façade (thin wrapper over KnowledgeLifecycleManager)
 # Callers: External SDK consumers, API endpoints
-# Allowed Imports: L4 (KnowledgeLifecycleManager)
-# Forbidden Imports: L1, L5, L6 (direct)
+# Allowed Imports: L5, L6, L7 (via manager)
+# Forbidden Imports: L1, L2, L3, L4
 # Reference: GAP-083-085, GAP_IMPLEMENTATION_PLAN_V1.md Section 7.18
+#
+# NOTE: This is a thin domain-level SDK facade.
+# It contains dataclass schemas and delegates all decisions to KnowledgeLifecycleManager.
+# Reclassified from L2 to L5 based on HOC_LAYER_TOPOLOGY_V1 evidence analysis (2026-01-24).
+# Full migration blocked until KnowledgeLifecycleManager moves from app.services to HOC.
 
 """
 GAP-083-085: Knowledge SDK Façade

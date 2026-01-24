@@ -1,6 +1,15 @@
-# Layer: L4 — Domain Engines
+# Layer: L5 — Domain Engine (Model)
+# AUDIENCE: CUSTOMER
 # Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: KnowledgePlane domain models and registry (pure dataclass definitions)
+# Callers: lifecycle engines, drivers
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L6 (no DB)
 # Reference: GAP-056 (KnowledgePlane model)
+# NOTE: Reclassified L6→L5 (2026-01-24) - Pure dataclass definitions, no DB imports
 """
 KnowledgePlane - Knowledge plane models and registry.
 

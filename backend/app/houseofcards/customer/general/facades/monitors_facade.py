@@ -1,15 +1,16 @@
-# Layer: L4 — Domain Engine
+# Layer: L3 — Adapter (Facade)
 # AUDIENCE: CUSTOMER
 # PHASE: W4
 # Product: system-wide
 # Temporal:
 #   Trigger: api or scheduler
 #   Execution: async
-# Role: Monitors Facade - Centralized access to monitoring operations
+# Role: Monitors Facade - Thin translation layer for monitoring operations
 # Callers: L2 monitors.py API, SDK, Scheduler
-# Allowed Imports: L4 monitor services, L6 (models, db)
-# Forbidden Imports: L1, L2, L3, L5
+# Allowed Imports: L5 (engines), L6 (drivers)
+# Forbidden Imports: L1, L2
 # Reference: GAP-120 (Health Check API), GAP-121 (Monitor Configuration API)
+# NOTE: Reclassified L4→L3 (2026-01-24) - Per HOC topology, facades are L3 (adapters)
 
 """
 Monitors Facade (L4 Domain Logic)

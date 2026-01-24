@@ -1,13 +1,15 @@
-# Layer: L4 — Domain Engines
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: scheduler
 #   Execution: async
-# Role: Monitor panel invariants and detect silent governance failures
+# Role: Monitor panel invariants and detect silent governance failures (in-memory logic)
 # Callers: main.py (scheduler), ops endpoints
-# Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
 # Reference: PIN-411 (Gap Closure - Part B)
+# NOTE: Reclassified L6→L5 (2026-01-24) - In-memory monitoring logic; YAML config load is initialization, not data access
 
 """
 Panel Invariant Monitor

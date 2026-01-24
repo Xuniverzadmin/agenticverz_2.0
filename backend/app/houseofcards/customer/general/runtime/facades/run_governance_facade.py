@@ -1,4 +1,4 @@
-# Layer: L4 — Domain Engine
+# Layer: L3 — Adapter
 # Product: system-wide
 # Temporal:
 #   Trigger: worker (run lifecycle events)

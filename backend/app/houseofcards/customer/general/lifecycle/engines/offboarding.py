@@ -1,13 +1,15 @@
-# Layer: L4 — Domain Engine
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: sync/async
-# Role: Offboarding Stage Handlers (GAP-078 to GAP-082)
+# Role: Offboarding Stage Handlers (GAP-078 to GAP-082) - pure business logic
 # Callers: KnowledgeLifecycleManager via StageRegistry
 # Allowed Imports: stdlib, L6
-# Forbidden Imports: L1, L2, L3, L5
+# Forbidden Imports: L1, L2, L3, L4
 # Reference: GAP-078-082, GAP_IMPLEMENTATION_PLAN_V1.md
+# NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 
 """
 Offboarding Stage Handlers

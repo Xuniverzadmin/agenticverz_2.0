@@ -1,13 +1,15 @@
-# Layer: L4 — Domain Engines
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: sync
-# Role: Enforce MonitorConfig inspection constraints before logging
+# Role: Enforce MonitorConfig inspection constraints before logging (pure business logic)
 # Callers: worker/runtime/trace_collector.py, services/logging_service.py
-# Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
 # Reference: GAP-033 (Inspection Constraints)
+# NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 
 """
 Module: constraint_checker

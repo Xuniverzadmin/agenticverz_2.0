@@ -1,15 +1,17 @@
-# Layer: L4 — Domain Engine
+# Layer: L3 — Adapter (Facade)
 # AUDIENCE: CUSTOMER
+# Role: Lifecycle Facade - Thin translation layer for lifecycle operations
 # PHASE: W4
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: async
-# Role: Lifecycle Facade - Centralized access to lifecycle operations
 # Callers: L2 lifecycle.py API, SDK
-# Allowed Imports: L4 lifecycle services, L6 (models, db)
-# Forbidden Imports: L1, L2, L3, L5
+# Allowed Imports: L5 (engines), L6 (drivers)
+# Forbidden Imports: L1, L2
 # Reference: GAP-131 to GAP-136 (Lifecycle APIs)
+# NOTE: Reclassified L6→L3 (2026-01-24) - Per HOC topology, facades are L3 (adapters)
+
 
 """
 Lifecycle Facade (L4 Domain Logic)

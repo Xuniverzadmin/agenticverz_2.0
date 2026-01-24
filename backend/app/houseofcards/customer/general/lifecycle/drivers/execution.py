@@ -1,4 +1,5 @@
-# Layer: L4 — Domain Engines
+# Layer: L5 — Domain Engine (Execution)
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Wiring Type: execution
 # Parent Gap: GAP-071-077 (Lifecycle Stages)
@@ -7,10 +8,11 @@
 # Temporal:
 #   Trigger: lifecycle orchestrator
 #   Execution: async
-# Role: Real execution implementations for lifecycle stage handlers
+# Role: Execution implementations for lifecycle stage handlers (pure business logic)
 # Callers: IngestHandler, IndexHandler, ClassifyHandler
 # Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
+# Forbidden Imports: L1, L2, L3, L4
+# NOTE: Reclassified L6→L5 (2026-01-24) - Business logic, no direct DB Session imports
 
 """
 Module: execution

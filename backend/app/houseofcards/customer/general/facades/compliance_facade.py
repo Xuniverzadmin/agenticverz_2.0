@@ -1,13 +1,16 @@
-# Layer: L4 — Domain Engine
+# Layer: L3 — Adapter (Facade)
+# AUDIENCE: CUSTOMER
+# Role: Compliance Facade - Thin translation layer for compliance operations
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: async
-# Role: Compliance Facade - Centralized access to compliance operations
 # Callers: L2 compliance.py API, SDK
-# Allowed Imports: L4 compliance services, L6 (models, db)
-# Forbidden Imports: L1, L2, L3, L5
+# Allowed Imports: L5 (engines), L6 (drivers)
+# Forbidden Imports: L1, L2
 # Reference: GAP-103 (Compliance Verification API)
+# NOTE: Reclassified L6→L3 (2026-01-24) - Per HOC topology, facades are L3 (adapters)
+
 
 """
 Compliance Facade (L4 Domain Logic)

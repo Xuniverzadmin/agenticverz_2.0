@@ -1,13 +1,15 @@
-# Layer: L4 — Domain Engines
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api/worker
 #   Execution: sync
-# Role: Link alerts to log records for explicit correlation
+# Role: Link alerts to log records for explicit correlation (pure business logic)
 # Callers: alert_emitter, incident_service, trace_service
-# Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
 # Reference: GAP-019 (Alert → Log Linking)
+# NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 
 """
 Module: alert_log_linker
