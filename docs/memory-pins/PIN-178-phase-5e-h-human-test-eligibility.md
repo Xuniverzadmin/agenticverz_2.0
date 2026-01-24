@@ -260,14 +260,14 @@ Phase 5E-H is complete when:
 ## Phase 5E-1: Founder Decision Timeline UI (Completed)
 
 **Status:** ✅ COMPLETE
-**Route:** `/console/founder/timeline`
+**Route:** `/console/fdr/timeline`
 
 ### Implementation
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
 | API Client | `console/src/api/timeline.ts` | Frontend API bindings |
-| UI Page | `console/src/pages/founder/FounderTimelinePage.tsx` | Read-only timeline view |
+| UI Page | `console/src/pages/fdr/FounderTimelinePage.tsx` | Read-only timeline view |
 | Route | `console/src/routes/index.tsx` | Route registration |
 | Backend | `backend/app/api/founder_timeline.py` | Already existed (Phase 4C-1) |
 
@@ -296,10 +296,10 @@ Per record:
 
 ```bash
 # Backend endpoints verified:
-curl -H "X-Roles: founder" http://localhost:8000/founder/timeline/count
+curl -H "X-Roles: founder" http://localhost:8000/fdr/timeline/count
 # Returns: {"count": 0}  (expected - no production runs yet)
 
-curl -H "X-Roles: founder" "http://localhost:8000/founder/timeline/decisions?limit=5"
+curl -H "X-Roles: founder" "http://localhost:8000/fdr/timeline/decisions?limit=5"
 # Returns: []  (expected - no production runs yet)
 
 # Frontend build verified:

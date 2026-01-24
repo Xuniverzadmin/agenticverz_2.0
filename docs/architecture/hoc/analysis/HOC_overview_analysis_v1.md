@@ -1,7 +1,7 @@
 # HOC Overview Domain Analysis v1
 
 **Date:** 2026-01-22
-**Domain:** `app/houseofcards/customer/overview/`
+**Domain:** `app/hoc/cus/overview/`
 **Status:** Analysis Complete — Governance Applied
 
 ---
@@ -23,7 +23,7 @@
 ## Directory Structure
 
 ```
-app/houseofcards/customer/overview/
+app/hoc/cus/overview/
 ├── __init__.py                           (47 LOC) ← governance added
 ├── facades/
 │   ├── __init__.py                       (11 LOC)

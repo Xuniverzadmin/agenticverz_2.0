@@ -1518,7 +1518,7 @@ def check_registry_diff_for_state_changes(
 
 # Route plane declarations
 HUMAN_ONLY_ROUTES = {
-    "/founder/",
+    "/fdr/",
     "/admin/",
     "/console/",
     "/guard/",

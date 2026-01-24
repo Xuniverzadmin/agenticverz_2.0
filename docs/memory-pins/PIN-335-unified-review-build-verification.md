@@ -87,9 +87,9 @@ Successfully built and tested the unified Founder Review page that combines AUTO
 | Route | Purpose | Auth |
 |-------|---------|------|
 | `/fops/review` | Unified tabbed dashboard | FounderRoute |
-| `/founder/contracts/review-queue` | Contract queue API | verify_fops_token |
-| `/founder/contracts/{id}` | Contract detail API | verify_fops_token |
-| `/founder/contracts/{id}/review` | Submit decision API | verify_fops_token |
+| `/fdr/contracts/review-queue` | Contract queue API | verify_fops_token |
+| `/fdr/contracts/{id}` | Contract detail API | verify_fops_token |
+| `/fdr/contracts/{id}/review` | Submit decision API | verify_fops_token |
 
 ---
 
@@ -97,7 +97,7 @@ Successfully built and tested the unified Founder Review page that combines AUTO
 
 **Auth Gateway Blocking Founder Routes**
 
-Direct API testing revealed that the auth gateway middleware blocks `/founder/` paths before they reach the route handler's `verify_fops_token`. This is tracked in PIN-336.
+Direct API testing revealed that the auth gateway middleware blocks `/fdr/` paths before they reach the route handler's `verify_fops_token`. This is tracked in PIN-336.
 
 ---
 

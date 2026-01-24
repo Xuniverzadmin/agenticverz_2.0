@@ -46,7 +46,7 @@ DRIVER_FORBIDDEN_PATTERNS = [
 
 # Patterns that indicate engine imports (forbidden in drivers)
 DRIVER_IMPORT_FORBIDDEN_PATTERNS = [
-    (r"from app\.houseofcards\.[^/]+\.engines", "engine import in driver"),
+    (r"from app\.hoc\.[^/]+\.engines", "engine import in driver"),
     (r"from app\.services\.[a-z_]+_engine import", "engine import in driver"),
 ]
 
@@ -112,7 +112,7 @@ def check_layer_header(filepath: Path) -> bool:
 def scan_directory(base_path: Path, subdir: str, file_pattern: str, forbidden_patterns: List[Tuple[str, str]]) -> dict:
     """Scan a directory for violations."""
     results = {}
-    search_path = base_path / "app" / "houseofcards"
+    search_path = base_path / "app" / "hoc"
 
     if not search_path.exists():
         return results
@@ -146,7 +146,7 @@ def scan_services_directory(base_path: Path, file_pattern: str, forbidden_patter
 def check_naming_violations(base_path: Path) -> List[str]:
     """Check for banned *_service.py files in engines directories."""
     violations = []
-    search_path = base_path / "app" / "houseofcards"
+    search_path = base_path / "app" / "hoc"
 
     if not search_path.exists():
         return violations
@@ -159,9 +159,9 @@ def check_naming_violations(base_path: Path) -> List[str]:
 
 
 def check_new_service_files(base_path: Path) -> List[str]:
-    """Check for any new *_service.py files in houseofcards (banned)."""
+    """Check for any new *_service.py files in hoc (banned)."""
     violations = []
-    search_path = base_path / "app" / "houseofcards"
+    search_path = base_path / "app" / "hoc"
 
     if not search_path.exists():
         return violations
@@ -176,7 +176,7 @@ def check_new_service_files(base_path: Path) -> List[str]:
 def check_missing_layer_headers(base_path: Path) -> List[str]:
     """Check for Python files missing Layer headers."""
     violations = []
-    search_path = base_path / "app" / "houseofcards"
+    search_path = base_path / "app" / "hoc"
 
     if not search_path.exists():
         return violations
@@ -309,7 +309,7 @@ def main():
     # Check 5: Service files banned entirely (strict mode)
     if args.strict:
         print("### Check 5: Service File Ban (strict)")
-        print("*_service.py files are banned in houseofcards")
+        print("*_service.py files are banned in hoc")
         print()
 
         service_violations = check_new_service_files(base_path)

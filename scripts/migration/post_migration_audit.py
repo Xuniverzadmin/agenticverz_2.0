@@ -22,7 +22,7 @@ from collections import defaultdict
 from typing import Set, Dict, List, Tuple
 
 # Paths
-HOC_ROOT = Path("backend/app/houseofcards")
+HOC_ROOT = Path("backend/app/hoc")
 CUSTOMER_ROOT = HOC_ROOT / "customer"
 DUPLICATE_ROOT = HOC_ROOT / "duplicate"
 

@@ -2,8 +2,9 @@
 """
 BLCA — Bidirectional Layer Consistency Auditor
 
-Reference: HOC_LAYER_TOPOLOGY_V1.md (v1.2.0)
+Reference: HOC_LAYER_TOPOLOGY_V1.md (v1.4.0)
 Reference: PIN-240 (Seven-Layer Codebase Mental Model)
+Reference: PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
 
 This tool enforces the HOC Layer Topology rules:
 
@@ -68,30 +69,75 @@ LAYERS = {
 # HOC Path-based Layer Classification
 # =============================================================================
 
+# Phase 3 renamed packages and audiences:
+#   hoc → hoc
+#   customer → cus, founder → fdr, internal → int
+# Both old and new patterns are supported during transition.
+
 HOC_LAYER_PATTERNS = {
-    # L2.1 — API Facades
-    "houseofcards/api/facades/": "L2.1",
-    # L2 — APIs
-    "houseofcards/api/customer/": "L2",
-    "houseofcards/api/founder/": "L2",
-    "houseofcards/api/internal/": "L2",
-    # L3 — Adapters
+    # ==========================================================================
+    # NEW Phase 3 Layer-Prefixed Patterns (hoc/{audience})
+    # ==========================================================================
+
+    # L2.1 — API Facades (new structure)
+    "hoc/api/facades/": "L2.1",
+    "hoc/api/cus/": "L2",
+    "hoc/api/fdr/": "L2",
+    "hoc/api/int/": "L2",
+
+    # L3 — Adapters (layer-prefixed)
+    "/L3_adapters/": "L3",
+    "/L3_mcp/": "L3",
+
+    # L4 — Runtime (layer-prefixed, centralized)
+    "/L4_runtime/": "L4",
+
+    # L5 — Engines, Schemas, Controls, etc. (layer-prefixed)
+    "/L5_engines/": "L5",
+    "/L5_schemas/": "L5",
+    "/L5_controls/": "L5",
+    "/L5_lifecycle/": "L5",
+    "/L5_workflow/": "L5",
+    "/L5_utils/": "L5",
+    "/L5_ui/": "L5",
+    "/L5_vault/": "L5",
+    "/L5_notifications/": "L5",
+    "/L5_support/": "L5",
+
+    # L6 — Drivers (layer-prefixed)
+    "/L6_drivers/": "L6",
+
+    # ==========================================================================
+    # LEGACY Patterns (hoc/{audience}) - kept for transition
+    # ==========================================================================
+
+    # L2.1 — API Facades (old structure)
+    "hoc/api/facades/": "L2.1",
+    # L2 — APIs (old structure)
+    "hoc/api/cus/": "L2",
+    "hoc/api/fdr/": "L2",
+    "hoc/api/int/": "L2",
+    # L3 — Adapters (old structure)
     "/adapters/": "L3",
-    # L4 — Runtime (in general/)
-    "/general/runtime/": "L4",
-    # L4 — Domain Facades (facades/ within domain, not api/facades)
-    # These are L4 because they orchestrate but don't touch HTTP
-    # L5 — Engines, Workers, Schemas
+    # L4 — Runtime (old structure, in general/)
+    "/general/L4_runtime/": "L4",
+    # L5 — Engines, Workers, Schemas (old structure)
     "/engines/": "L5",
     "/workers/": "L5",
     "/schemas/": "L5",
-    # L6 — Drivers
+    # L6 — Drivers (old structure)
     "/drivers/": "L6",
-    # L7 — Models
+
+    # ==========================================================================
+    # Models (unchanged - centralized at app/models/)
+    # ==========================================================================
     "app/models/": "L7",
-    "app/customer/models/": "L7",
-    "app/founder/models/": "L7",
-    "app/internal/models/": "L7",
+    "app/cus/models/": "L7",
+    "app/fdr/models/": "L7",
+    "app/int/models/": "L7",
+    "app/cus/models/": "L7",
+    "app/fdr/models/": "L7",
+    "app/int/models/": "L7",
 }
 
 # Legacy patterns (for backwards compatibility)
@@ -397,24 +443,35 @@ def validate_header_claim(
                 ))
 
     # L5 Engine in wrong location
-    if declared_layer == "L5" and "/engines/" not in rel_path:
-        if "/drivers/" in rel_path:
+    # Check both legacy (/engines/) and new (/L5_engines/, /L5_schemas/, etc.) paths
+    l5_valid_paths = [
+        "/engines/", "/L5_engines/", "/L5_schemas/", "/L5_controls/",
+        "/L5_lifecycle/", "/L5_workflow/", "/L5_utils/", "/L5_ui/",
+        "/schemas/", "/workers/",  # Legacy L5 paths
+    ]
+    is_l5_path = any(p in rel_path for p in l5_valid_paths)
+
+    if declared_layer == "L5" and not is_l5_path:
+        # Check if in drivers folder (L6 territory)
+        if "/drivers/" in rel_path or "/L6_drivers/" in rel_path:
             violations.append(Violation(
                 file=rel_path,
                 line_number=1,
                 violation_type="HEADER_LOCATION_MISMATCH",
                 message=(
                     f"File declares L5 (Engine) but is located in drivers/.\n"
-                    f"   L5 engines belong in engines/ directory.\n"
+                    f"   L5 engines belong in engines/ or L5_*/ directories.\n"
                     f"   Possible fix: Move file or reclassify header"
                 ),
                 severity="WARNING",
             ))
 
     # L6 Driver without DB evidence (may be misclassified)
+    # Check both legacy (/drivers/) and new (/L6_drivers/) paths
     if declared_layer == "L6":
         has_db = len(evidence["l6_evidence"]) > 0
-        if not has_db and "/drivers/" in rel_path:
+        is_driver_path = "/drivers/" in rel_path or "/L6_drivers/" in rel_path
+        if not has_db and is_driver_path:
             violations.append(Violation(
                 file=rel_path,
                 line_number=1,
@@ -429,15 +486,16 @@ def validate_header_claim(
             ))
 
     # L4/L5 claiming to be L2 (most common issue like knowledge_sdk.py)
-    if declared_layer == "L2" and "/engines/" in rel_path:
+    # Check both legacy (/engines/) and new (/L5_engines/) paths
+    if declared_layer == "L2" and ("/engines/" in rel_path or "/L5_engines/" in rel_path):
         violations.append(Violation(
             file=rel_path,
             line_number=1,
             violation_type="HEADER_LOCATION_MISMATCH",
             message=(
                 f"File declares L2 (Product APIs) but is located in engines/.\n"
-                f"   L2 APIs belong in houseofcards/api/**\n"
-                f"   engines/ directory is L5 territory.\n"
+                f"   L2 APIs belong in hoc/api/** (or hoc/api/**)\n"
+                f"   engines/ and L5_engines/ directories are L5 territory.\n"
                 f"   Possible fix: Change header to L5 or move to api/"
             ),
             severity="ERROR",
@@ -480,25 +538,91 @@ def extract_imports(file_path: Path) -> List[Tuple[int, str, bool]]:
 
 
 def get_import_target_layer(import_line: str) -> Optional[str]:
-    """Determine target layer of an import."""
-    # HOC import patterns
-    if "houseofcards/api/facades/" in import_line or "houseofcards.api.facades" in import_line:
+    """Determine target layer of an import.
+
+    Supports both old (hoc) and new (hoc) package names,
+    as well as layer-prefixed folder patterns (L3_adapters, L5_engines, etc.).
+    """
+    # ==========================================================================
+    # NEW Phase 3 Layer-Prefixed Patterns
+    # ==========================================================================
+
+    # L2.1 — API Facades (new)
+    if "hoc/api/facades/" in import_line or "hoc.api.facades" in import_line:
         return "L2.1"
-    if "houseofcards/api/" in import_line or "houseofcards.api." in import_line:
+
+    # L2 — APIs (new audience abbreviations)
+    if "hoc/api/cus/" in import_line or "hoc.api.cus." in import_line:
         return "L2"
-    if "/adapters/" in import_line or ".adapters." in import_line:
+    if "hoc/api/fdr/" in import_line or "hoc.api.fdr." in import_line:
+        return "L2"
+    if "hoc/api/int/" in import_line or "hoc.api.int." in import_line:
+        return "L2"
+    if "hoc/api/" in import_line or "hoc.api." in import_line:
+        return "L2"
+
+    # L3 — Layer-prefixed adapters
+    # Match both ".L3_adapters." and ".L3_adapters " (end of import path)
+    if "/L3_adapters/" in import_line or ".L3_adapters." in import_line or ".L3_adapters " in import_line:
         return "L3"
-    if "/general/runtime/" in import_line or ".general.runtime." in import_line:
+    if "/L3_mcp/" in import_line or ".L3_mcp." in import_line or ".L3_mcp " in import_line:
+        return "L3"
+
+    # L4 — Layer-prefixed runtime
+    if "/L4_runtime/" in import_line or ".L4_runtime." in import_line or ".L4_runtime " in import_line:
         return "L4"
-    if "/engines/" in import_line or ".engines." in import_line:
+
+    # L5 — Layer-prefixed engines, schemas, etc.
+    if "/L5_engines/" in import_line or ".L5_engines." in import_line or ".L5_engines " in import_line:
         return "L5"
-    if "/workers/" in import_line or ".workers." in import_line:
+    if "/L5_schemas/" in import_line or ".L5_schemas." in import_line or ".L5_schemas " in import_line:
         return "L5"
-    if "/drivers/" in import_line or ".drivers." in import_line:
+    if "/L5_controls/" in import_line or ".L5_controls." in import_line or ".L5_controls " in import_line:
+        return "L5"
+    if "/L5_lifecycle/" in import_line or ".L5_lifecycle." in import_line or ".L5_lifecycle " in import_line:
+        return "L5"
+    if "/L5_workflow/" in import_line or ".L5_workflow." in import_line or ".L5_workflow " in import_line:
+        return "L5"
+    if "/L5_utils/" in import_line or ".L5_utils." in import_line or ".L5_utils " in import_line:
+        return "L5"
+    if "/L5_ui/" in import_line or ".L5_ui." in import_line or ".L5_ui " in import_line:
+        return "L5"
+
+    # L6 — Layer-prefixed drivers
+    if "/L6_drivers/" in import_line or ".L6_drivers." in import_line or ".L6_drivers " in import_line:
         return "L6"
+
+    # ==========================================================================
+    # LEGACY Patterns (hoc)
+    # ==========================================================================
+
+    # HOC import patterns (old package name)
+    if "hoc/api/facades/" in import_line or "hoc.api.facades" in import_line:
+        return "L2.1"
+    if "hoc/api/" in import_line or "hoc.api." in import_line:
+        return "L2"
+
+    # Non-prefixed folder patterns (legacy)
+    # Match both ".engines." and ".engines " (end of import path)
+    if "/adapters/" in import_line or ".adapters." in import_line or ".adapters " in import_line:
+        return "L3"
+    if "/general/L4_runtime/" in import_line or ".general.L4_runtime." in import_line or ".general.L4_runtime " in import_line:
+        return "L4"
+    if "/engines/" in import_line or ".engines." in import_line or ".engines " in import_line:
+        return "L5"
+    if "/workers/" in import_line or ".workers." in import_line or ".workers " in import_line:
+        return "L5"
+    if "/schemas/" in import_line or ".schemas." in import_line or ".schemas " in import_line:
+        return "L5"
+    if "/drivers/" in import_line or ".drivers." in import_line or ".drivers " in import_line:
+        return "L6"
+
+    # Models
     if "app.models" in import_line or "app/models" in import_line:
         return "L7"
-    if "app.customer.models" in import_line or "app.founder.models" in import_line:
+    if "app.cus.models" in import_line or "app.fdr.models" in import_line:
+        return "L7"
+    if "app.cus.models" in import_line or "app.fdr.models" in import_line:
         return "L7"
 
     # Legacy patterns
@@ -540,11 +664,16 @@ def check_layer_import_violation(
     return target_layer not in ALLOWED_IMPORTS[source_layer]
 
 
-def validate_file(file_path: Path, verbose: bool = False) -> List[Violation]:
+def is_hoc_path(path: str) -> bool:
+    """Check if path is within HOC package (old or new name)."""
+    return "hoc" in path or "/hoc/" in path or "/app/hoc/" in path
+
+
+def validate_file(file_path: Path, _verbose: bool = False) -> List[Violation]:
     """Validate a single file for all HOC violations."""
     violations = []
     rel_path = str(file_path)
-    is_hoc_file = "houseofcards" in rel_path
+    is_hoc_file = is_hoc_path(rel_path)
 
     # 1. Check layer declaration in header
     layer, source = get_file_layer(file_path)
@@ -651,12 +780,12 @@ def validate_directory(
             continue
 
         # HOC-only filter
-        if hoc_only and "houseofcards" not in str(file_path):
+        if hoc_only and not is_hoc_path(str(file_path)):
             continue
 
         result.files_scanned += 1
 
-        violations = validate_file(file_path, verbose)
+        violations = validate_file(file_path, _verbose=verbose)
         result.violations.extend(violations)
 
     return result
@@ -672,16 +801,24 @@ def main():
         description="BLCA — Bidirectional Layer Consistency Auditor",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-HOC Layer Topology V1.2.0:
+HOC Layer Topology V1.4.0:
   L1    = Frontend
   L2.1  = API Facade (organizers)
   L2    = Product APIs
-  L3    = Boundary Adapters (cross-domain allowed)
-  L4    = Governed Runtime / Domain Engines
-  L5    = Engines / Workers / Schemas
-  L6    = Database Drivers
+  L3    = Boundary Adapters (L3_adapters/, cross-domain allowed)
+  L4    = Governed Runtime (L4_runtime/, centralized)
+  L5    = Engines / Workers / Schemas (L5_engines/, L5_schemas/, etc.)
+  L6    = Database Drivers (L6_drivers/)
   L7    = Models
   L8    = Database
+
+Package Structure (Phase 3):
+  OLD: hoc/cus/  →  NEW: hoc/cus/
+  OLD: hoc/fdr/   →  NEW: hoc/fdr/
+  OLD: hoc/int/  →  NEW: hoc/int/
+
+Layer-Prefixed Folders:
+  L3_adapters/  L4_runtime/  L5_engines/  L5_schemas/  L6_drivers/
 
 Critical Rules:
   - L4/L5 engines CANNOT import sqlalchemy at runtime (use TYPE_CHECKING)

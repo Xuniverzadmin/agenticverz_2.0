@@ -40,7 +40,7 @@ from app.auth.lifecycle_provider import (
     get_lifecycle_provider,
 )
 
-router = APIRouter(prefix="/founder/lifecycle", tags=["founder", "lifecycle"])
+router = APIRouter(prefix="/fdr/lifecycle", tags=["founder", "lifecycle"])
 
 
 # =============================================================================

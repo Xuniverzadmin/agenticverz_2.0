@@ -124,9 +124,9 @@ Fix files with wrong AUDIENCE header.
 
 | # | File | Current Header | Correct Header | Correct Path | Status |
 |---|------|----------------|----------------|--------------|--------|
-| 1 | `server_registry.py` | AUDIENCE: INTERNAL (wrong) | AUDIENCE: CUSTOMER | `customer/general/mcp/` | ✅ DONE |
+| 1 | `server_registry.py` | AUDIENCE: INTERNAL (wrong) | AUDIENCE: CUSTOMER | `customer/general/L3_mcp/` | ✅ DONE |
 
-**Note:** server_registry.py was in `customer/integrations/drivers/` with AUDIENCE: INTERNAL. Fixed to AUDIENCE: CUSTOMER and moved to `customer/general/mcp/` for cross-domain availability within customer audience.
+**Note:** server_registry.py was in `customer/integrations/L6_drivers/` with AUDIENCE: INTERNAL. Fixed to AUDIENCE: CUSTOMER and moved to `customer/general/L3_mcp/` for cross-domain availability within customer audience.
 
 ---
 
@@ -147,7 +147,7 @@ Update `__init__.py` exports after relocations.
 Run BLCA to verify 0 violations after each phase.
 
 ```bash
-python3 scripts/ops/layer_validator.py --path backend/app/houseofcards/customer/integrations --ci
+python3 scripts/ops/layer_validator.py --path backend/app/hoc/cus/integrations --ci
 ```
 
 | Phase | Expected Result | Status |
@@ -162,7 +162,7 @@ python3 scripts/ops/layer_validator.py --path backend/app/houseofcards/customer/
 
 ### BLCA Verification Results (2026-01-24)
 
-**Command:** `python3 scripts/ops/layer_validator.py --path backend/app/houseofcards/customer/integrations --ci`
+**Command:** `python3 scripts/ops/layer_validator.py --path backend/app/hoc/cus/integrations --ci`
 
 **Total Violations:** 55 (0 in Phase 2.5 scope that are actionable)
 
@@ -245,7 +245,7 @@ python3 scripts/ops/layer_validator.py --path backend/app/houseofcards/customer/
 
 | File | From | To | Status |
 |------|------|-----|--------|
-| `server_registry.py` | customer/integrations/drivers/ | customer/general/mcp/ | ✅ DONE |
+| `server_registry.py` | customer/integrations/L6_drivers/ | customer/general/L3_mcp/ | ✅ DONE |
 
 ### Needs Legacy Import Fix
 
@@ -304,7 +304,7 @@ The following files are marked **M25_FROZEN**:
 | 2026-01-24 | Phase III | cost_snapshots.py partial split | All schemas → schemas/cost_snapshot_schemas.py |
 | 2026-01-24 | Phase III | dispatcher.py header fix | Updated to L5/L6 HYBRID |
 | 2026-01-24 | Phase VI | Init file updates | All 3 init files updated with correct exports |
-| 2026-01-24 | Phase V | Audience correction | server_registry.py moved to customer/general/mcp/ with AUDIENCE: CUSTOMER |
+| 2026-01-24 | Phase V | Audience correction | server_registry.py moved to customer/general/L3_mcp/ with AUDIENCE: CUSTOMER |
 | 2026-01-24 | Phase VII | BLCA verification | 55 total violations; 0 actionable in scope; documented technical debt |
 
 ---

@@ -169,7 +169,7 @@ def main():
     parser.add_argument(
         "--hoc-root",
         type=Path,
-        default=Path("backend/app/houseofcards"),
+        default=Path("backend/app/hoc"),
         help="Root of HOC directory"
     )
     args = parser.parse_args()
@@ -201,7 +201,7 @@ def main():
             continue
 
         # Convert relative path to absolute
-        # rel_path is like "app/houseofcards/..."
+        # rel_path is like "app/hoc/..."
         file_path = Path("backend") / rel_path
 
         if not file_path.exists():

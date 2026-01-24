@@ -248,7 +248,7 @@ CREATE INDEX idx_signal_feedback_signal ON signal_feedback(signal_id);
 ## 2.8 Feedback API
 
 ```
-POST /api/customer/signals/{signal_id}/feedback
+POST /api/cus/signals/{signal_id}/feedback
 ```
 
 **Request:**
@@ -408,7 +408,7 @@ Any attempt to de-anonymize → **INCIDENT**
 ## 3.8 Benchmark API (Founder-Only)
 
 ```
-GET /api/founder/benchmarks
+GET /api/fdr/benchmarks
 ```
 
 **Headers:**

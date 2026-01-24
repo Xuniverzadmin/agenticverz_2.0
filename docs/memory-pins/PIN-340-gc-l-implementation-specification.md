@@ -199,7 +199,7 @@ Every GC_L write request **MUST** include:
 #### Create Policy (Draft)
 
 ```
-POST /api/customer/policies
+POST /api/cus/policies
 ```
 
 **Request:**
@@ -231,7 +231,7 @@ POST /api/customer/policies
 #### Simulate Policy
 
 ```
-POST /api/customer/policies/{policy_id}/simulate
+POST /api/cus/policies/{policy_id}/simulate
 ```
 
 **Request:**
@@ -262,7 +262,7 @@ POST /api/customer/policies/{policy_id}/simulate
 #### Activate Policy
 
 ```
-POST /api/customer/policies/{policy_id}/activate
+POST /api/cus/policies/{policy_id}/activate
 ```
 
 **Request:**
@@ -294,7 +294,7 @@ POST /api/customer/policies/{policy_id}/activate
 #### Disable Policy
 
 ```
-POST /api/customer/policies/{policy_id}/disable
+POST /api/cus/policies/{policy_id}/disable
 ```
 
 **Request:**
@@ -313,7 +313,7 @@ POST /api/customer/policies/{policy_id}/disable
 #### Engage Killswitch
 
 ```
-POST /api/customer/killswitch
+POST /api/cus/killswitch
 ```
 
 **Request:**
@@ -348,7 +348,7 @@ POST /api/customer/killswitch
 #### Release Killswitch
 
 ```
-POST /api/customer/killswitch/{killswitch_id}/release
+POST /api/cus/killswitch/{killswitch_id}/release
 ```
 
 **Request:**
@@ -367,7 +367,7 @@ POST /api/customer/killswitch/{killswitch_id}/release
 #### Update Spend Guard
 
 ```
-POST /api/customer/spend/guardrails
+POST /api/cus/spend/guardrails
 ```
 
 **Request:**
@@ -524,7 +524,7 @@ recommendation["pause_execution"] {
 #### Export API
 
 ```
-GET /api/customer/facilitation/rules/export
+GET /api/cus/facilitation/rules/export
 ```
 
 **Query Parameters:**
@@ -567,13 +567,13 @@ GET /api/customer/facilitation/rules/export
 
 ### Phase 3: GC_L API Routes
 
-- [ ] `POST /api/customer/policies`
-- [ ] `POST /api/customer/policies/{id}/simulate`
-- [ ] `POST /api/customer/policies/{id}/activate`
-- [ ] `POST /api/customer/policies/{id}/disable`
-- [ ] `POST /api/customer/killswitch`
-- [ ] `POST /api/customer/killswitch/{id}/release`
-- [ ] `POST /api/customer/spend/guardrails`
+- [ ] `POST /api/cus/policies`
+- [ ] `POST /api/cus/policies/{id}/simulate`
+- [ ] `POST /api/cus/policies/{id}/activate`
+- [ ] `POST /api/cus/policies/{id}/disable`
+- [ ] `POST /api/cus/killswitch`
+- [ ] `POST /api/cus/killswitch/{id}/release`
+- [ ] `POST /api/cus/spend/guardrails`
 
 ### Phase 4: FACILITATION Engine
 
@@ -603,9 +603,9 @@ GET /api/customer/facilitation/rules/export
 - `backend/app/models/policy_library.py`
 - `backend/app/services/policy_library_service.py`
 - `backend/app/services/facilitation_engine.py`
-- `backend/app/api/customer/policies.py`
-- `backend/app/api/customer/killswitch.py`
-- `backend/app/api/customer/spend.py`
+- `backend/app/api/cus/policies.py`
+- `backend/app/api/cus/killswitch.py`
+- `backend/app/api/cus/spend.py`
 - `backend/alembic/versions/XXX_create_policy_library.py`
 - `backend/tests/services/test_policy_library.py`
 - `backend/tests/api/test_customer_policies.py`

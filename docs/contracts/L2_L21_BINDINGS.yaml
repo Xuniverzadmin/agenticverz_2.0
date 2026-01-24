@@ -119,9 +119,9 @@ bound_clients:
     evidence_required:
       - audit_log
     routes_exercised:
-      - "GET /founder/timeline/*"
-      - "GET /founder/timeline/run/{run_id}"
-      - "GET /founder/timeline/decisions"
+      - "GET /fdr/timeline/*"
+      - "GET /fdr/timeline/run/{run_id}"
+      - "GET /fdr/timeline/decisions"
     status: BOUND
 
   # ---------------------------------------------------------------------------
@@ -216,7 +216,7 @@ bound_clients:
     evidence_required:
       - audit_log
     routes_exercised:
-      - "GET /founder/explorer/*"
+      - "GET /fdr/explorer/*"
     status: BOUND
 
   # ---------------------------------------------------------------------------

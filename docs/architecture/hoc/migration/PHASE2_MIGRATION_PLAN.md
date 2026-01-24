@@ -9,7 +9,7 @@
 
 ## Overview
 
-Phase 2 executes the physical migration of **821 files** from legacy locations to `app/houseofcards/` based on the approved classification inventory.
+Phase 2 executes the physical migration of **821 files** from legacy locations to `app/hoc/` based on the approved classification inventory.
 
 **Key Principle:** COPY first, then validate, then cleanup in Phase 5.
 
@@ -28,7 +28,7 @@ Phase 2 executes the physical migration of **821 files** from legacy locations t
 
 ### 0.2 Audit Document Cross-Reference ✅
 
-**Audit Documents Found:** 10 domain audit documents at `backend/app/houseofcards/customer/{domain}/HOC_{domain}_*_audit_report.md`
+**Audit Documents Found:** 10 domain audit documents at `backend/app/hoc/cus/{domain}/HOC_{domain}_*_audit_report.md`
 
 | Domain | Audit Document | Files in HOC | Files to Transfer | Status |
 |--------|---------------|--------------|-------------------|--------|
@@ -43,7 +43,7 @@ Phase 2 executes the physical migration of **821 files** from legacy locations t
 | overview | `HOC_overview_detailed_audit_report.md` | 1 | 8 | ✅ CLEAN |
 | general | `HOC_general_deep_audit_report.md` | 31 | 69 | ✅ CLEAN |
 
-**Quarantine Check:** 15 files in `houseofcards/duplicate/` correctly marked DELETE.
+**Quarantine Check:** 15 files in `hoc/duplicate/` correctly marked DELETE.
 
 ### 0.3 INTERNAL/FOUNDER Pre-Check ✅
 

@@ -155,10 +155,10 @@ capabilities:
 
     founder_routes:
       - "GET /ops/*"
-      - "GET /founder/timeline/*"
-      - "GET /founder/controls/*"
-      - "GET /founder/explorer/*"
-      - "POST /founder/actions/*"
+      - "GET /fdr/timeline/*"
+      - "GET /fdr/controls/*"
+      - "GET /fdr/explorer/*"
+      - "POST /fdr/actions/*"
 
   # ---------------------------------------------------------------------------
   # CAP-006: AUTHENTICATION
@@ -238,10 +238,10 @@ capabilities:
       Approval workflows require founder authority.
 
     founder_routes:
-      - "GET /founder/review/*"
+      - "GET /fdr/review/*"
       - "GET /api/v1/discovery/*"
-      - "POST /founder/review/{id}/approve"
-      - "POST /founder/review/{id}/reject"
+      - "POST /fdr/review/{id}/approve"
+      - "POST /fdr/review/{id}/reject"
 
   # ---------------------------------------------------------------------------
   # CAP-012: M4 WORKFLOW ENGINE

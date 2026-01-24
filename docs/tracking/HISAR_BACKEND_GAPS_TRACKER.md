@@ -79,8 +79,8 @@ Gaps are reported here for backend team to resolve. Once fixed, re-run SDSR.
 | OVR-SUM-CI-O2 | `/cost/by-feature` | SDSR_FAILED | BLOCKED |
 | OVR-SUM-CI-O3 | `/cost/by-model` | SDSR_FAILED | BLOCKED |
 | OVR-SUM-CI-O4 | `/cost/anomalies` | SDSR_FAILED | BLOCKED |
-| OVR-SUM-DC-O1 | `/founder/timeline/decisions` | AUTH_FAILURE | BLOCKED |
-| OVR-SUM-DC-O2 | `/founder/timeline/count` | AUTH_FAILURE | BLOCKED |
+| OVR-SUM-DC-O1 | `/fdr/timeline/decisions` | AUTH_FAILURE | BLOCKED |
+| OVR-SUM-DC-O2 | `/fdr/timeline/count` | AUTH_FAILURE | BLOCKED |
 | OVR-SUM-DC-O3 | `/api/v1/recovery/stats` | AUTH_FAILURE | BLOCKED |
 | OVR-SUM-DC-O4 | `/api/v1/feedback/stats/summary` | SDSR_FAILED | BLOCKED |
 
@@ -92,7 +92,7 @@ Gaps are reported here for backend team to resolve. Once fixed, re-run SDSR.
 |-------|----------|-----|--------|
 | ACT-LLM-COMP-O1 | `/api/v1/activity/runs` | PROVENANCE_MISSING | BLOCKED |
 | ACT-LLM-COMP-O3 | `/api/v1/tenants/runs` | ENDPOINT_MISSING | BLOCKED |
-| ACT-LLM-COMP-O4 | `/api/v1/customer/activity` | SDSR_FAILED | BLOCKED |
+| ACT-LLM-COMP-O4 | `/api/v1/cus/activity` | SDSR_FAILED | BLOCKED |
 | ACT-LLM-LIVE-O2 | `/api/v1/agents/agents` | ENDPOINT_MISSING | BLOCKED |
 | ACT-LLM-LIVE-O3 | `/api/v1/agents/jobs` | COHERENCY_FAILED | BLOCKED |
 | ACT-LLM-LIVE-O4 | `/api/v1/workers/business-builder/runs` | AUTH_FAILURE | BLOCKED |
@@ -160,7 +160,7 @@ Gaps are reported here for backend team to resolve. Once fixed, re-run SDSR.
 | LOG-REC-AUD-O1 | `/api/v1/traces` | AUTH_FAILURE | BLOCKED |
 | LOG-REC-AUD-O2 | `/api/v1/rbac/audit` | SDSR_FAILED | BLOCKED |
 | LOG-REC-AUD-O3 | `/ops/actions/audit` | AUTH_FAILURE | BLOCKED |
-| LOG-REC-LLM-O3 | `/api/v1/customer/activity` | SDSR_FAILED | BLOCKED |
+| LOG-REC-LLM-O3 | `/api/v1/cus/activity` | SDSR_FAILED | BLOCKED |
 | LOG-REC-LLM-O4 | `/api/v1/tenants/runs` | ENDPOINT_MISSING | BLOCKED |
 | LOG-REC-LLM-O5 | `/api/v1/traces/mismatches/bulk-report` | COHERENCY_FAILED | BLOCKED |
 | LOG-REC-SYS-O1 | `/guard/logs` | AUTH_FAILURE | BLOCKED |
@@ -218,7 +218,7 @@ Add these endpoints to public paths in `gateway_config.py`:
 "/replay/",
 
 # Founder Timeline
-"/founder/timeline/",
+"/fdr/timeline/",
 
 # Guards API
 "/guard/",

@@ -276,7 +276,7 @@ These routes are accessible without Founder authentication:
 | **ID** | GAP-020 |
 | **Category** | Route Placement |
 | **Severity** | LOW |
-| **Current Route** | `/founder/timeline` |
+| **Current Route** | `/fdr/timeline` |
 | **Expected Route** | `/ops/timeline` |
 
 **Impact:** Inconsistent with Founder Console `/ops/*` prefix.
@@ -290,7 +290,7 @@ These routes are accessible without Founder authentication:
 | **ID** | GAP-021 |
 | **Category** | Route Placement |
 | **Severity** | LOW |
-| **Current Route** | `/founder/controls` |
+| **Current Route** | `/fdr/controls` |
 | **Expected Route** | `/ops/controls` |
 
 **Impact:** Inconsistent with Founder Console `/ops/*` prefix.

@@ -79,7 +79,7 @@ These APIs have endpoint-level `Depends(verify_fops_token)`:
 
 | API File | Prefix | Auth | RISK |
 |----------|--------|------|------|
-| `founder_timeline.py` | `/founder/timeline/*` | NONE | CRITICAL |
+| `founder_timeline.py` | `/fdr/timeline/*` | NONE | CRITICAL |
 | `traces.py` | `/traces/*` | NONE | CRITICAL |
 | `scenarios.py` | `/scenarios/*` | NONE | CRITICAL |
 | `replay.py` | `/replay/*` | NONE | CRITICAL |
@@ -93,11 +93,11 @@ These APIs have endpoint-level `Depends(verify_fops_token)`:
 
 ```python
 from fastapi import APIRouter, HTTPException, Query  # NO Depends
-router = APIRouter(prefix="/founder/timeline", tags=["founder-timeline"])  # NO dependencies
+router = APIRouter(prefix="/fdr/timeline", tags=["founder-timeline"])  # NO dependencies
 ```
 
 **Endpoints exposed:**
-- `GET /founder/timeline/decisions` - Lists all decision records
+- `GET /fdr/timeline/decisions` - Lists all decision records
 - Cross-tenant data visible to anyone
 
 **Risk:** Any authenticated user can view founder decision timeline

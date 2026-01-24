@@ -124,29 +124,29 @@ Every irreversible UI action **MUST** declare metadata:
 
 | Endpoint | Irreversible | Requirements |
 |----------|--------------|--------------|
-| `POST /api/customer/policies` | NO | Basic confirmation |
-| `POST /api/customer/policies/{id}/simulate` | NO | None |
-| `POST /api/customer/policies/{id}/activate` | **YES** | Intent, consequences, simulation, reason, ≥2 steps |
-| `POST /api/customer/policies/{id}/mode` | **YES** | Consequences, simulation, typed confirm, reason |
+| `POST /api/cus/policies` | NO | Basic confirmation |
+| `POST /api/cus/policies/{id}/simulate` | NO | None |
+| `POST /api/cus/policies/{id}/activate` | **YES** | Intent, consequences, simulation, reason, ≥2 steps |
+| `POST /api/cus/policies/{id}/mode` | **YES** | Consequences, simulation, typed confirm, reason |
 
 ### 6.2 Killswitch
 
 | Endpoint | Irreversible | Requirements |
 |----------|--------------|--------------|
-| `POST /api/customer/killswitch` | **YES** | Intent, scope, reason, delayed confirm |
-| `POST /api/customer/killswitch/resume` | NO | Single confirm + reason |
+| `POST /api/cus/killswitch` | **YES** | Intent, scope, reason, delayed confirm |
+| `POST /api/cus/killswitch/resume` | NO | Single confirm + reason |
 
 ### 6.3 Spend Guardrails
 
 | Endpoint | Irreversible | Requirements |
 |----------|--------------|--------------|
-| `POST /api/customer/spend/guardrails` | **YES** | Consequences, simulation, reason, ≥2 steps |
+| `POST /api/cus/spend/guardrails` | **YES** | Consequences, simulation, reason, ≥2 steps |
 
 ### 6.4 Integrations
 
 | Endpoint | Irreversible | Requirements |
 |----------|--------------|--------------|
-| `POST /api/customer/integrations/{id}/disable` | **YES** | Consequences, reason, two-step confirm |
+| `POST /api/cus/integrations/{id}/disable` | **YES** | Consequences, reason, two-step confirm |
 
 ---
 

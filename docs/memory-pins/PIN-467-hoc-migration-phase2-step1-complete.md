@@ -123,7 +123,7 @@ All 10 customer domains passed final audit:
 - `docs/architecture/migration/PHASE2_MIGRATION_PLAN.md` - Master plan (updated)
 - `docs/architecture/migration/PHASE2_STEP0_AUDIT.md` - Pre-migration audit
 - `docs/architecture/migration/MIGRATION_INVENTORY_ITER3.csv` - Source inventory
-- `backend/app/houseofcards/customer/*/HOC_*_audit_report.md` - Domain audits
+- `backend/app/hoc/cus/*/HOC_*_audit_report.md` - Domain audits
 
 ---
 

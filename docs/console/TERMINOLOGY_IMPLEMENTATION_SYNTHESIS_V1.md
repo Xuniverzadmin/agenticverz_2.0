@@ -111,8 +111,8 @@ ADMINISTRATION (bottom): Users, Settings, Billing, Account
 | Current Route | Expected Route | Status |
 |---------------|---------------|--------|
 | `/credits` | `/guard/billing` | Wrong prefix |
-| `/founder/timeline` | `/ops/timeline` | Wrong prefix |
-| `/founder/controls` | `/ops/controls` | Wrong prefix |
+| `/fdr/timeline` | `/ops/timeline` | Wrong prefix |
+| `/fdr/controls` | `/ops/controls` | Wrong prefix |
 
 **Proposal:** Only covers labels, not routes
 

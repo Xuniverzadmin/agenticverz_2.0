@@ -229,8 +229,8 @@ These:
 ### Mutation APIs (Founder / Internal Only)
 
 ```
-POST /founder/billing/assign-plan
-POST /founder/billing/set-state
+POST /fdr/billing/assign-plan
+POST /fdr/billing/set-state
 ```
 
 Rules:

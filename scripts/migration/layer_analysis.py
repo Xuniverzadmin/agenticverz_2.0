@@ -29,12 +29,12 @@ from typing import Dict, List, Optional, Set
 # Change to repo root
 os.chdir(Path(__file__).parent.parent.parent)
 
-HOC_ROOT = Path("backend/app/houseofcards")
+HOC_ROOT = Path("backend/app/hoc")
 OUTPUT_FILE = Path("docs/architecture/migration/signals_raw.json")
 
 # Whitelist paths (excluded from analysis)
 WHITELIST_PATTERNS = [
-    "*/general/utils/*",
+    "*/general/L5_utils/*",
     "*/__init__.py",
     "*/tests/*",
     "*/duplicate/*",
@@ -183,7 +183,7 @@ def is_whitelisted(file_path: Path) -> bool:
         return True
     if "/tests/" in path_str:
         return True
-    if "/general/utils/" in path_str:
+    if "/general/L5_utils/" in path_str:
         return True
 
     return False

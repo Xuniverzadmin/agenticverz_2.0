@@ -39,9 +39,9 @@ Phase H represents the first post-governance build phase, focusing on founder-ce
 **Frontend Implementation:**
 - **Files:**
   - `src/api/replay.ts` - API client with typed interfaces
-  - `src/pages/founder/ReplayIndexPage.tsx` - Incident list for selection
-  - `src/pages/founder/ReplaySliceViewer.tsx` - Interactive timeline viewer
-  - `src/pages/founder/components/ReplayTimeline.tsx` - Visual timeline component
+  - `src/pages/fdr/ReplayIndexPage.tsx` - Incident list for selection
+  - `src/pages/fdr/ReplaySliceViewer.tsx` - Interactive timeline viewer
+  - `src/pages/fdr/components/ReplayTimeline.tsx` - Visual timeline component
 - **Features:**
   - Incident selection interface
   - Visual timeline with phase markers
@@ -50,8 +50,8 @@ Phase H represents the first post-governance build phase, focusing on founder-ce
   - Clear READ-ONLY advisory notices
 
 **Routes Added:**
-- `/founder/replay` - Incident index
-- `/founder/replay/:incidentId` - Slice viewer
+- `/fdr/replay` - Incident index
+- `/fdr/replay/:incidentId` - Slice viewer
 
 ---
 
@@ -80,7 +80,7 @@ Phase H represents the first post-governance build phase, focusing on founder-ce
 **Frontend Implementation:**
 - **Files:**
   - `src/api/scenarios.ts` - API client with types and helpers
-  - `src/pages/founder/ScenarioBuilderPage.tsx` - Interactive scenario builder
+  - `src/pages/fdr/ScenarioBuilderPage.tsx` - Interactive scenario builder
 - **Features:**
   - Three-column layout (scenarios, editor, results)
   - Template selection for quick starts
@@ -91,7 +91,7 @@ Phase H represents the first post-governance build phase, focusing on founder-ce
   - Advisory-only warnings throughout UI
 
 **Routes Added:**
-- `/founder/scenarios` - Scenario builder
+- `/fdr/scenarios` - Scenario builder
 
 ---
 
@@ -118,7 +118,7 @@ Phase H represents the first post-governance build phase, focusing on founder-ce
 **Frontend Implementation:**
 - **Files:**
   - `src/api/explorer.ts` - API client with types and helpers
-  - `src/pages/founder/FounderExplorerPage.tsx` - Explorer dashboard
+  - `src/pages/fdr/FounderExplorerPage.tsx` - Explorer dashboard
 - **Features:**
   - System overview card with key metrics
   - Health checks visualization
@@ -129,7 +129,7 @@ Phase H represents the first post-governance build phase, focusing on founder-ce
   - Clear READ-ONLY advisory notice
 
 **Routes Added:**
-- `/founder/explorer` - Explorer dashboard
+- `/fdr/explorer` - Explorer dashboard
 
 ---
 
@@ -139,11 +139,11 @@ The Founder section of the sidebar now includes:
 
 ```
 Founder
-  - Timeline    (/founder/timeline)     [Phase 5E-1]
-  - Controls    (/founder/controls)     [Phase 5E-2]
-  - Replay      (/founder/replay)       [Phase H1]
-  - Scenarios   (/founder/scenarios)    [Phase H2]
-  - Explorer    (/founder/explorer)     [Phase H3]
+  - Timeline    (/fdr/timeline)     [Phase 5E-1]
+  - Controls    (/fdr/controls)     [Phase 5E-2]
+  - Replay      (/fdr/replay)       [Phase H1]
+  - Scenarios   (/fdr/scenarios)    [Phase H2]
+  - Explorer    (/fdr/explorer)     [Phase H3]
 ```
 
 ---
@@ -242,11 +242,11 @@ app.include_router(explorer_router, prefix="/api/v1")  # H3 Explorer
 | `src/api/replay.ts` | Replay API client |
 | `src/api/scenarios.ts` | Scenarios API client |
 | `src/api/explorer.ts` | Explorer API client |
-| `src/pages/founder/ReplayIndexPage.tsx` | Incident list page |
-| `src/pages/founder/ReplaySliceViewer.tsx` | Timeline viewer |
-| `src/pages/founder/components/ReplayTimeline.tsx` | Timeline component |
-| `src/pages/founder/ScenarioBuilderPage.tsx` | Scenario builder |
-| `src/pages/founder/FounderExplorerPage.tsx` | Explorer dashboard |
+| `src/pages/fdr/ReplayIndexPage.tsx` | Incident list page |
+| `src/pages/fdr/ReplaySliceViewer.tsx` | Timeline viewer |
+| `src/pages/fdr/components/ReplayTimeline.tsx` | Timeline component |
+| `src/pages/fdr/ScenarioBuilderPage.tsx` | Scenario builder |
+| `src/pages/fdr/FounderExplorerPage.tsx` | Explorer dashboard |
 
 ### Frontend (Modified)
 

@@ -8,11 +8,11 @@
 
 ## Overview
 
-The `app/houseofcards/` namespace provides a first-principles directory structure where **the path tells you what it does**. This reorganization addresses the flat structure problem in `app/services/` where 200+ files lived without clear organization.
+The `app/hoc/` namespace provides a first-principles directory structure where **the path tells you what it does**. This reorganization addresses the flat structure problem in `app/services/` where 200+ files lived without clear organization.
 
 ## Design Principles
 
-1. **Path = Purpose**: `customer/policies/engines/limits_engine.py` immediately tells you:
+1. **Path = Purpose**: `customer/policies/L5_engines/limits_engine.py` immediately tells you:
    - WHO: customer-facing
    - WHAT: policies domain
    - HOW: engine (business logic)
@@ -26,7 +26,7 @@ The `app/houseofcards/` namespace provides a first-principles directory structur
 ## Directory Structure
 
 ```
-app/houseofcards/
+app/hoc/
 ├── customer/           # Customer-facing (Console, SDK, APIs)
 │   ├── account/        # Account management, users, profile
 │   │   ├── support/CRM/engines/  # CRM workflow (imported by founder ops)

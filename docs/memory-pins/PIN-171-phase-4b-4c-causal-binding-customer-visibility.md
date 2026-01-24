@@ -63,10 +63,10 @@ Give customers predictability and accountability without exposing governance mec
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /customer/pre-run` | PRE-RUN declaration before execution |
-| `POST /customer/acknowledge` | Customer acknowledgement gate |
-| `GET /customer/outcome/{run_id}` | Outcome reconciliation after execution |
-| `GET /customer/declaration/{id}` | Retrieve stored declaration |
+| `POST /cus/pre-run` | PRE-RUN declaration before execution |
+| `POST /cus/acknowledge` | Customer acknowledgement gate |
+| `GET /cus/outcome/{run_id}` | Outcome reconciliation after execution |
+| `GET /cus/declaration/{id}` | Retrieve stored declaration |
 
 ### PRE-RUN Declaration
 
@@ -144,7 +144,7 @@ What customers see AFTER execution (decomposed, not single success flag):
 | `app/main.py` | request_id generation, backfill call, router registration |
 | `app/api/customer_visibility.py` | NEW - Customer endpoints |
 | `app/api/founder_timeline.py` | request_id, causal_role in queries |
-| `app/auth/rbac_middleware.py` | /customer/* route mappings |
+| `app/auth/rbac_middleware.py` | /cus/* route mappings |
 | `alembic/versions/050_decision_records_causal_binding.py` | Migration |
 | `docs/contracts/INDEX.md` | Phase documentation |
 

@@ -177,7 +177,7 @@ AFTER:
 **Options:**
 | Option | Classification | Location |
 |--------|---------------|----------|
-| A | L2.1 Panel Adapter | Move to `api/facades/customer/` or panel area |
+| A | L2.1 Panel Adapter | Move to `api/facades/cus/` or panel area |
 | B | L4 Engine | Update header, keep in `engines/` |
 
 **Recommendation:** Option B — This is domain-specific failure semantics for incidents, classify as L4 and add proper header.

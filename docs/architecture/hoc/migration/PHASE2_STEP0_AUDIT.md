@@ -26,7 +26,7 @@ Pre-migration audit complete. The inventory has been validated and corrected. **
 
 ### HOC Structure Status
 
-The HOC directory exists at `backend/app/houseofcards/` with:
+The HOC directory exists at `backend/app/hoc/` with:
 - **187 non-init Python files** already in HOC
 - Established structure for: customer, internal, founder audiences
 - Domain subdirectories with facades/, engines/, drivers/, schemas/
@@ -43,9 +43,9 @@ These are files in `app/services/`, `app/adapters/`, etc. that have equivalent v
 
 | Legacy Source | HOC Version |
 |--------------|-------------|
-| `app/services/accounts_facade.py` | `app/houseofcards/customer/account/facades/accounts_facade.py` |
-| `app/services/incident_aggregator.py` | `app/houseofcards/customer/incidents/engines/incident_aggregator.py` |
-| `app/services/policy_proposal.py` | `app/houseofcards/customer/policies/engines/policy_proposal.py` |
+| `app/services/accounts_facade.py` | `app/hoc/cus/account/facades/accounts_facade.py` |
+| `app/services/incident_aggregator.py` | `app/hoc/cus/incidents/L5_engines/incident_aggregator.py` |
+| `app/services/policy_proposal.py` | `app/hoc/cus/policies/L5_engines/policy_proposal.py` |
 
 ---
 
@@ -53,7 +53,7 @@ These are files in `app/services/`, `app/adapters/`, etc. that have equivalent v
 
 ### Audit Documents Found
 
-Domain audit documents located at `backend/app/houseofcards/customer/{domain}/HOC_{domain}_*_audit_report.md`:
+Domain audit documents located at `backend/app/hoc/cus/{domain}/HOC_{domain}_*_audit_report.md`:
 
 | Domain | Audit Document | Status |
 |--------|---------------|--------|
@@ -85,7 +85,7 @@ Domain audit documents located at `backend/app/houseofcards/customer/{domain}/HO
 
 ### Quarantine Files Check
 
-All 15 non-init quarantine files in `houseofcards/duplicate/` are correctly marked DELETE:
+All 15 non-init quarantine files in `hoc/duplicate/` are correctly marked DELETE:
 
 - `duplicate/policies/` - 4 files (POL-DUP-001 to POL-DUP-004)
 - `duplicate/incidents/` - 7 files (quarantined duplicates)
@@ -132,10 +132,10 @@ All 15 non-init quarantine files in `houseofcards/duplicate/` are correctly mark
 **Fix Applied:**
 ```python
 # Before (wrong)
-"L2": f"app/houseofcards/api/{aud_lower}/{domain}.py"
+"L2": f"app/hoc/api/{aud_lower}/{domain}.py"
 
 # After (correct)
-"L2": f"app/houseofcards/api/{aud_lower}/{domain}/{filename}"
+"L2": f"app/hoc/api/{aud_lower}/{domain}/{filename}"
 ```
 
 **Verification:** 0 collisions after fix (was 67 collisions before).

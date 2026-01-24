@@ -1,6 +1,6 @@
 # HOC Incidents Domain Analysis v1
 
-**Domain:** `app/houseofcards/customer/incidents/`
+**Domain:** `app/hoc/cus/incidents/`
 **Audience:** CUSTOMER
 **Date:** 2026-01-22
 **Status:** CLEANUP COMPLETE
@@ -11,7 +11,7 @@
 ## 1. Final Structure (Post-Cleanup)
 
 ```
-app/houseofcards/customer/incidents/
+app/hoc/cus/incidents/
 ├── __init__.py
 ├── drivers/
 │   └── __init__.py               (EMPTY - reserved for L3 adapters)
@@ -317,7 +317,7 @@ app/houseofcards/customer/incidents/
 
 | File | Old Import | New Import |
 |------|------------|------------|
-| All engines | `app.services.incidents.*` | `app.houseofcards.customer.incidents.engines.*` |
+| All engines | `app.services.incidents.*` | `app.hoc.cus.incidents.L5_engines.*` |
 | `recovery_evaluation_engine.py` | `app.services.recovery_*` | TBD |
 
 ### 5.2 L6 Imports (Correct)
@@ -364,7 +364,7 @@ llm_failure_service.py
 
 | File | Action |
 |------|--------|
-| All engines | Update `app.services.incidents.*` → `app.houseofcards.customer.incidents.engines.*` |
+| All engines | Update `app.services.incidents.*` → `app.hoc.cus.incidents.L5_engines.*` |
 | `recovery_evaluation_engine.py` | Update `app.services.recovery_*` paths |
 
 ### 7.2 Documentation (Low Priority)
@@ -416,7 +416,7 @@ Files moved out of incidents now reside in:
 | File | New Location | Domain |
 |------|--------------|--------|
 | `incident_driver.py` | `internal/recovery/engines/` | internal/recovery |
-| `guard_write_service.py` | `customer/general/controls/engines/` | general/controls (temporary) |
+| `guard_write_service.py` | `customer/general/L5_controls/engines/` | general/controls (temporary) |
 
 ---
 

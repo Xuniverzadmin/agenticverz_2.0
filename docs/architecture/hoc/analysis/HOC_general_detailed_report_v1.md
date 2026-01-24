@@ -1,6 +1,6 @@
 # HOC General Domain — Detailed Technical Report
 
-**Domain:** `app/houseofcards/customer/general/`
+**Domain:** `app/hoc/cus/general/`
 **Date:** 2026-01-22
 **Total Files:** ~38 Python files
 **Total LOC:** ~10,500+

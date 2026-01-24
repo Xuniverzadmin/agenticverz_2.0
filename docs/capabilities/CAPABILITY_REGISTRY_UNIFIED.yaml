@@ -315,20 +315,20 @@ first_class_capabilities:
     routes:
       # Original CAP-005 routes
       - "GET /ops/*"
-      - "GET /founder/timeline/*"
-      - "GET /founder/controls/*"
-      - "GET /founder/explorer/*"
-      - "POST /founder/actions/*"
+      - "GET /fdr/timeline/*"
+      - "GET /fdr/controls/*"
+      - "GET /fdr/explorer/*"
+      - "POST /fdr/actions/*"
       # MERGED from LCAP-033 (Founder Tenant Control)
-      - "POST /founder/actions/freeze-tenant"
-      - "POST /founder/actions/unfreeze-tenant"
-      - "POST /founder/actions/throttle-tenant"
+      - "POST /fdr/actions/freeze-tenant"
+      - "POST /fdr/actions/unfreeze-tenant"
+      - "POST /fdr/actions/throttle-tenant"
       # MERGED from LCAP-034 (Founder Incident Override)
-      - "POST /founder/actions/override-incident"
-      - "POST /founder/actions/force-resolve"
+      - "POST /fdr/actions/override-incident"
+      - "POST /fdr/actions/force-resolve"
       # MERGED from LCAP-035 (Founder API Key Management)
-      - "POST /founder/actions/revoke-key"
-      - "POST /founder/actions/rotate-key"
+      - "POST /fdr/actions/revoke-key"
+      - "POST /fdr/actions/rotate-key"
       # MERGED from LCAP-036 (Ops Pulse Dashboard)
       - "GET /ops/pulse"
       - "GET /ops/health"
@@ -338,15 +338,15 @@ first_class_capabilities:
       - "GET /ops/customers/{id}"
       - "GET /ops/customers/at-risk"
       # MERGED from LCAP-038 (Ops Timeline)
-      - "GET /founder/timeline"
-      - "GET /founder/timeline/{id}"
+      - "GET /fdr/timeline"
+      - "GET /fdr/timeline/{id}"
       # MERGED from LCAP-039 (Ops Controls)
-      - "GET /founder/controls"
-      - "PUT /founder/controls"
-      - "POST /founder/controls/killswitch"
+      - "GET /fdr/controls"
+      - "PUT /fdr/controls"
+      - "POST /fdr/controls/killswitch"
       # MERGED from LCAP-040 (Ops Explorer)
-      - "GET /founder/explorer"
-      - "GET /founder/explorer/query"
+      - "GET /fdr/explorer"
+      - "GET /fdr/explorer/query"
 
     promotion_blockers: []
     layer_violations: []
@@ -518,12 +518,12 @@ first_class_capabilities:
     owner: platform
 
     routes:
-      - "GET /founder/review/*"
+      - "GET /fdr/review/*"
       - "GET /api/v1/discovery/*"
-      - "POST /founder/review/{id}/approve"
-      - "POST /founder/review/{id}/reject"
+      - "POST /fdr/review/{id}/approve"
+      - "POST /fdr/review/{id}/reject"
       # MERGED from LCAP-059 (Governance Review)
-      - "GET /founder/review"
+      - "GET /fdr/review"
 
     promotion_blockers: []
     layer_violations: []

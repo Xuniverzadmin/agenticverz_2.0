@@ -348,13 +348,13 @@ Create `docs/architecture/migration/ALLOWED_VIOLATIONS.yaml`:
 #   - new violation added without entry
 
 allowed_violations:
-  - file: houseofcards/customer/incidents/engines/legacy_service.py
+  - file: hoc/cus/incidents/L5_engines/legacy_service.py
     action: EXTRACT_DRIVER
     expires: 2026-03-15
     reason: Pending Phase 2 extraction
     owner: team-incidents
 
-  - file: houseofcards/customer/integrations/facades/webhook_adapter.py
+  - file: hoc/cus/integrations/facades/webhook_adapter.py
     action: EXTRACT_AUTHORITY
     expires: 2026-04-01
     reason: Pending Phase 3 - requires architect review

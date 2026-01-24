@@ -173,7 +173,7 @@ The following prefixes are SAFE for Customer Console:
 | Prefix | Router(s) | Auth |
 |--------|-----------|------|
 | `/guard/*` | guard.py, guard_policies.py, guard_logs.py, cost_guard.py | Console auth |
-| `/api/v1/customer/*` | customer_activity.py | Customer-safe |
+| `/api/v1/cus/*` | customer_activity.py | Customer-safe |
 | `/api/v1/runtime/*` | runtime_projections/* | Tenant auth |
 | `/api/v1/policy-layer/*` | policy_layer.py | No explicit auth |
 | `/api/v1/policy-proposals/*` | policy_proposals.py | No explicit auth |

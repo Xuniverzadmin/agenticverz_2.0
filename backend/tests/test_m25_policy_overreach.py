@@ -9,7 +9,7 @@ If policies start blocking unrelated requests, the system is unsafe.
 
 import pytest
 
-from app.integrations.bridges import (
+from app.integrations.L3_adapters import (
     ConfidenceCalculator,
 )
 from app.integrations.events import (

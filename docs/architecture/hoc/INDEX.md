@@ -26,7 +26,7 @@ These are the authoritative documents for HOC architecture.
 |----------|----------|---------|--------|-------------|
 | **Layer Topology** | [`../HOC_LAYER_TOPOLOGY_V1.md`](../HOC_LAYER_TOPOLOGY_V1.md) | 1.2.0 | RATIFIED | L1-L8 layer model, naming rules, import contracts |
 | **Master Migration Plan** | [`../HOC_MIGRATION_PLAN.md`](../HOC_MIGRATION_PLAN.md) | 1.1.0 | DRAFT | 5-phase migration overview (P1-P5) |
-| **Driver-Engine Contract** | [`../../../backend/app/houseofcards/DRIVER_ENGINE_CONTRACT.md`](../../../backend/app/houseofcards/DRIVER_ENGINE_CONTRACT.md) | — | ACTIVE | L5/L6 boundary rules |
+| **Driver-Engine Contract** | [`../../../backend/app/hoc/DRIVER_ENGINE_CONTRACT.md`](../../../backend/app/hoc/DRIVER_ENGINE_CONTRACT.md) | — | ACTIVE | L5/L6 boundary rules |
 
 ---
 
@@ -75,22 +75,52 @@ This sub-phase focuses on L4/L6 separation within already-migrated domains.
 
 | Domain | Status | Lock Document |
 |--------|--------|---------------|
-| **analytics** | LOCKED | [`backend/.../analytics/ANALYTICS_DOMAIN_LOCK_FINAL.md`](../../../backend/app/houseofcards/customer/analytics/ANALYTICS_DOMAIN_LOCK_FINAL.md) |
-| **policies** | LOCKED | [`backend/.../policies/POLICIES_DOMAIN_LOCK_FINAL.md`](../../../backend/app/houseofcards/customer/policies/POLICIES_DOMAIN_LOCK_FINAL.md) |
-| **activity** | LOCKED | [`backend/.../activity/ACTIVITY_DOMAIN_LOCK_FINAL.md`](../../../backend/app/houseofcards/customer/activity/ACTIVITY_DOMAIN_LOCK_FINAL.md) |
-| **logs** | LOCKED | [`backend/.../logs/LOGS_DOMAIN_LOCK_FINAL.md`](../../../backend/app/houseofcards/customer/logs/LOGS_DOMAIN_LOCK_FINAL.md) |
-| **incidents** | LOCKED | [`backend/.../incidents/INCIDENTS_DOMAIN_LOCK_FINAL.md`](../../../backend/app/houseofcards/customer/incidents/INCIDENTS_DOMAIN_LOCK_FINAL.md) |
-| **overview** | LOCKED | [`backend/.../overview/OVERVIEW_DOMAIN_LOCK_FINAL.md`](../../../backend/app/houseofcards/customer/overview/OVERVIEW_DOMAIN_LOCK_FINAL.md) |
+| **analytics** | LOCKED | [`backend/.../analytics/ANALYTICS_DOMAIN_LOCK_FINAL.md`](../../../backend/app/hoc/cus/analytics/ANALYTICS_DOMAIN_LOCK_FINAL.md) |
+| **policies** | LOCKED | [`backend/.../policies/POLICIES_DOMAIN_LOCK_FINAL.md`](../../../backend/app/hoc/cus/policies/POLICIES_DOMAIN_LOCK_FINAL.md) |
+| **activity** | LOCKED | [`backend/.../activity/ACTIVITY_DOMAIN_LOCK_FINAL.md`](../../../backend/app/hoc/cus/activity/ACTIVITY_DOMAIN_LOCK_FINAL.md) |
+| **logs** | LOCKED | [`backend/.../logs/LOGS_DOMAIN_LOCK_FINAL.md`](../../../backend/app/hoc/cus/logs/LOGS_DOMAIN_LOCK_FINAL.md) |
+| **incidents** | LOCKED | [`backend/.../incidents/INCIDENTS_DOMAIN_LOCK_FINAL.md`](../../../backend/app/hoc/cus/incidents/INCIDENTS_DOMAIN_LOCK_FINAL.md) |
+| **overview** | LOCKED | [`backend/.../overview/OVERVIEW_DOMAIN_LOCK_FINAL.md`](../../../backend/app/hoc/cus/overview/OVERVIEW_DOMAIN_LOCK_FINAL.md) |
 | **api_keys** | LOCKED | [`implementation/API_KEYS_DOMAIN_LOCK_FINAL.md`](implementation/API_KEYS_DOMAIN_LOCK_FINAL.md) |
 | **account** | LOCKED | [`implementation/ACCOUNT_DOMAIN_LOCK_FINAL.md`](implementation/ACCOUNT_DOMAIN_LOCK_FINAL.md) |
 | **integrations** | LOCKED (debt) | [`implementation/INTEGRATIONS_DOMAIN_LOCK_FINAL.md`](implementation/INTEGRATIONS_DOMAIN_LOCK_FINAL.md) |
-| general | LOCKED | [`backend/.../general/GENERAL_DOMAIN_LOCK_FINAL.md`](../../../backend/app/houseofcards/customer/general/GENERAL_DOMAIN_LOCK_FINAL.md) |
+| general | LOCKED | [`backend/.../general/GENERAL_DOMAIN_LOCK_FINAL.md`](../../../backend/app/hoc/cus/general/GENERAL_DOMAIN_LOCK_FINAL.md) |
 
-### Phase 3-5: (PLANNED)
+### Phase 3: Directory Restructure (COMPLETE)
+
+| Document | Location | Status | Description |
+|----------|----------|--------|-------------|
+| Phase 3 Plan | [`migration/PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md`](migration/PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md) | **COMPLETE** | Layer-prefixed directory restructure + package rename |
+
+**Completion Summary (2026-01-24):**
+- **10 customer domains migrated:** overview, api_keys, account, activity, incidents, policies, logs, analytics, integrations, **general**
+- **Package & audience rename applied:** `houseofcards` → `hoc`, `customer` → `cus`, `founder` → `fdr`, `internal` → `int`
+- **Layer-prefixed folders deployed:** `L3_adapters/`, `L5_engines/`, `L5_schemas/`, `L6_drivers/`
+- **L4 centralized:** Only in `general/L4_runtime/` (as per HOC Layer Topology)
+- **Facades merged:** All domain `facades/` folders eliminated; files moved to `L5_engines/` or `L3_adapters/`
+- **Headers fixed:** All L4 headers in L5_engines converted to L5
+
+**General Domain Structure (L4 is here only):**
+```
+hoc/cus/general/
+├── L3_mcp/           # MCP adapters
+├── L4_runtime/       # Runtime control plane (ONLY L4 location)
+├── L5_controls/      # Control engines
+├── L5_engines/       # Business logic
+├── L5_lifecycle/     # Lifecycle management
+├── L5_schemas/       # Domain schemas
+├── L5_ui/            # UI utilities
+├── L5_utils/         # Shared utilities
+├── L5_workflow/      # Workflow engines
+└── L6_drivers/       # Database drivers
+```
+
+**All paths now use new structure:** `backend/app/hoc/cus/{domain}/L{n}_{folder}/`
+
+### Phase 4-5: (PLANNED)
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| Phase 3: Gap Development | PLANNED | Build missing L2.1, L4, L6 components |
 | Phase 4: Wiring | PLANNED | Connect all layers, validate contracts |
 | Phase 5: Cleanup | PLANNED | Delete `app/services/*` legacy code |
 
@@ -132,20 +162,20 @@ Internal audit reports for each domain (located in domain folders for proximity)
 
 | Domain | Audit Report | Status |
 |--------|--------------|--------|
-| activity | [`backend/.../activity/HOC_activity_deep_audit_report.md`](../../../backend/app/houseofcards/customer/activity/HOC_activity_deep_audit_report.md) | CLEAN |
-| incidents | [`backend/.../incidents/HOC_incidents_deep_audit_report.md`](../../../backend/app/houseofcards/customer/incidents/HOC_incidents_deep_audit_report.md) | QUARANTINED |
-| incidents | [`backend/.../incidents/INCIDENTS_DOMAIN_ANALYSIS_REPORT.md`](../../../backend/app/houseofcards/customer/incidents/INCIDENTS_DOMAIN_ANALYSIS_REPORT.md) | Phase 2.5B Analysis |
-| incidents | [`backend/.../incidents/INCIDENTS_BLCA_REPORT.md`](../../../backend/app/houseofcards/customer/incidents/INCIDENTS_BLCA_REPORT.md) | BLCA Baseline |
-| policies | [`backend/.../policies/HOC_policies_detailed_audit_report.md`](../../../backend/app/houseofcards/customer/policies/HOC_policies_detailed_audit_report.md) | CLEAN |
-| policies | [`backend/.../policies/HOC_policies_deep_audit_report.md`](../../../backend/app/houseofcards/customer/policies/HOC_policies_deep_audit_report.md) | CLEAN |
-| logs | [`backend/.../logs/HOC_logs_detailed_audit_report.md`](../../../backend/app/houseofcards/customer/logs/HOC_logs_detailed_audit_report.md) | CLEAN |
-| analytics | [`backend/.../analytics/HOC_analytics_detailed_audit_report.md`](../../../backend/app/houseofcards/customer/analytics/HOC_analytics_detailed_audit_report.md) | CLEAN |
-| integrations | [`backend/.../integrations/HOC_integrations_detailed_audit_report.md`](../../../backend/app/houseofcards/customer/integrations/HOC_integrations_detailed_audit_report.md) | QUARANTINED |
-| api_keys | [`backend/.../api_keys/HOC_api_keys_detailed_audit_report.md`](../../../backend/app/houseofcards/customer/api_keys/HOC_api_keys_detailed_audit_report.md) | CLEAN |
-| account | [`backend/.../account/HOC_account_detailed_audit_report.md`](../../../backend/app/houseofcards/customer/account/HOC_account_detailed_audit_report.md) | HEALTHY |
-| overview | [`backend/.../overview/HOC_overview_detailed_audit_report.md`](../../../backend/app/houseofcards/customer/overview/HOC_overview_detailed_audit_report.md) | EXCELLENT |
-| general | [`backend/.../general/HOC_general_deep_audit_report.md`](../../../backend/app/houseofcards/customer/general/HOC_general_deep_audit_report.md) | RESOLVED |
-| general | [`backend/.../general/HOC_general_audit_domain.md`](../../../backend/app/houseofcards/customer/general/HOC_general_audit_domain.md) | — |
+| activity | [`backend/.../activity/HOC_activity_deep_audit_report.md`](../../../backend/app/hoc/cus/activity/HOC_activity_deep_audit_report.md) | CLEAN |
+| incidents | [`backend/.../incidents/HOC_incidents_deep_audit_report.md`](../../../backend/app/hoc/cus/incidents/HOC_incidents_deep_audit_report.md) | QUARANTINED |
+| incidents | [`backend/.../incidents/INCIDENTS_DOMAIN_ANALYSIS_REPORT.md`](../../../backend/app/hoc/cus/incidents/INCIDENTS_DOMAIN_ANALYSIS_REPORT.md) | Phase 2.5B Analysis |
+| incidents | [`backend/.../incidents/INCIDENTS_BLCA_REPORT.md`](../../../backend/app/hoc/cus/incidents/INCIDENTS_BLCA_REPORT.md) | BLCA Baseline |
+| policies | [`backend/.../policies/HOC_policies_detailed_audit_report.md`](../../../backend/app/hoc/cus/policies/HOC_policies_detailed_audit_report.md) | CLEAN |
+| policies | [`backend/.../policies/HOC_policies_deep_audit_report.md`](../../../backend/app/hoc/cus/policies/HOC_policies_deep_audit_report.md) | CLEAN |
+| logs | [`backend/.../logs/HOC_logs_detailed_audit_report.md`](../../../backend/app/hoc/cus/logs/HOC_logs_detailed_audit_report.md) | CLEAN |
+| analytics | [`backend/.../analytics/HOC_analytics_detailed_audit_report.md`](../../../backend/app/hoc/cus/analytics/HOC_analytics_detailed_audit_report.md) | CLEAN |
+| integrations | [`backend/.../integrations/HOC_integrations_detailed_audit_report.md`](../../../backend/app/hoc/cus/integrations/HOC_integrations_detailed_audit_report.md) | QUARANTINED |
+| api_keys | [`backend/.../api_keys/HOC_api_keys_detailed_audit_report.md`](../../../backend/app/hoc/cus/api_keys/HOC_api_keys_detailed_audit_report.md) | CLEAN |
+| account | [`backend/.../account/HOC_account_detailed_audit_report.md`](../../../backend/app/hoc/cus/account/HOC_account_detailed_audit_report.md) | HEALTHY |
+| overview | [`backend/.../overview/HOC_overview_detailed_audit_report.md`](../../../backend/app/hoc/cus/overview/HOC_overview_detailed_audit_report.md) | EXCELLENT |
+| general | [`backend/.../general/HOC_general_deep_audit_report.md`](../../../backend/app/hoc/cus/general/HOC_general_deep_audit_report.md) | RESOLVED |
+| general | [`backend/.../general/HOC_general_audit_domain.md`](../../../backend/app/hoc/cus/general/HOC_general_audit_domain.md) | — |
 
 ---
 
@@ -155,16 +185,16 @@ Final lock documents for domains that have completed L4/L6 structural layering.
 
 | Domain | Lock Document | Lock Date | Status |
 |--------|---------------|-----------|--------|
-| **analytics** | [`ANALYTICS_DOMAIN_LOCK_FINAL.md`](../../../backend/app/houseofcards/customer/analytics/ANALYTICS_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
-| **policies** | [`POLICIES_DOMAIN_LOCK_FINAL.md`](../../../backend/app/houseofcards/customer/policies/POLICIES_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
-| **activity** | [`ACTIVITY_DOMAIN_LOCK_FINAL.md`](../../../backend/app/houseofcards/customer/activity/ACTIVITY_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
-| **logs** | [`LOGS_DOMAIN_LOCK_FINAL.md`](../../../backend/app/houseofcards/customer/logs/LOGS_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
-| **incidents** | [`INCIDENTS_DOMAIN_LOCK_FINAL.md`](../../../backend/app/houseofcards/customer/incidents/INCIDENTS_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
-| **overview** | [`OVERVIEW_DOMAIN_LOCK_FINAL.md`](../../../backend/app/houseofcards/customer/overview/OVERVIEW_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
+| **analytics** | [`ANALYTICS_DOMAIN_LOCK_FINAL.md`](../../../backend/app/hoc/cus/analytics/ANALYTICS_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
+| **policies** | [`POLICIES_DOMAIN_LOCK_FINAL.md`](../../../backend/app/hoc/cus/policies/POLICIES_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
+| **activity** | [`ACTIVITY_DOMAIN_LOCK_FINAL.md`](../../../backend/app/hoc/cus/activity/ACTIVITY_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
+| **logs** | [`LOGS_DOMAIN_LOCK_FINAL.md`](../../../backend/app/hoc/cus/logs/LOGS_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
+| **incidents** | [`INCIDENTS_DOMAIN_LOCK_FINAL.md`](../../../backend/app/hoc/cus/incidents/INCIDENTS_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
+| **overview** | [`OVERVIEW_DOMAIN_LOCK_FINAL.md`](../../../backend/app/hoc/cus/overview/OVERVIEW_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
 | **api_keys** | [`API_KEYS_DOMAIN_LOCK_FINAL.md`](implementation/API_KEYS_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
 | **account** | [`ACCOUNT_DOMAIN_LOCK_FINAL.md`](implementation/ACCOUNT_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
 | **integrations** | [`INTEGRATIONS_DOMAIN_LOCK_FINAL.md`](implementation/INTEGRATIONS_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED (debt) |
-| **general** | [`GENERAL_DOMAIN_LOCK_FINAL.md`](../../../backend/app/houseofcards/customer/general/GENERAL_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
+| **general** | [`GENERAL_DOMAIN_LOCK_FINAL.md`](../../../backend/app/hoc/cus/general/GENERAL_DOMAIN_LOCK_FINAL.md) | 2026-01-24 | LOCKED |
 
 ---
 
@@ -186,7 +216,7 @@ Active implementation plans for Phase 2.5A domain extraction.
 
 | Document | Location | Status |
 |----------|----------|--------|
-| Customer Domain Audit | [`backend/.../customer/HOC_CUSTOMER_DOMAIN_AUDIT_2026-01-24.md`](../../../backend/app/houseofcards/customer/HOC_CUSTOMER_DOMAIN_AUDIT_2026-01-24.md) | COMPLETE |
+| Customer Domain Audit | [`backend/.../cus/HOC_CUSTOMER_DOMAIN_AUDIT_2026-01-24.md`](../../../backend/app/hoc/cus/HOC_CUSTOMER_DOMAIN_AUDIT_2026-01-24.md) | COMPLETE |
 
 ---
 
@@ -235,34 +265,66 @@ docs/architecture/
     └── implementation/               # Phase 2.5A implementation plans
         └── ACTIVITY_PHASE2.5_IMPLEMENTATION_PLAN.md (to be created)
 
-backend/app/houseofcards/
+backend/app/hoc/
 ├── DRIVER_ENGINE_CONTRACT.md         # L5/L6 contract
 ├── INVENTORY.md                      # File inventory
 │
-└── customer/
-    ├── analytics/
-    │   ├── ANALYTICS_DOMAIN_LOCK_FINAL.md    # LOCKED
-    │   └── HOC_analytics_detailed_audit_report.md
-    ├── policies/
-    │   ├── POLICIES_DOMAIN_LOCK_FINAL.md     # LOCKED
-    │   └── HOC_policies_*_audit_report.md
-    ├── activity/
-    │   └── HOC_activity_deep_audit_report.md
-    ├── incidents/
-    │   └── HOC_incidents_deep_audit_report.md
-    ├── logs/
-    │   └── HOC_logs_detailed_audit_report.md
-    ├── integrations/
-    │   └── HOC_integrations_detailed_audit_report.md
-    ├── api_keys/
-    │   └── HOC_api_keys_detailed_audit_report.md
-    ├── account/
-    │   └── HOC_account_detailed_audit_report.md
+└── cus/                              # Customer audience (was: customer/)
     ├── overview/
-    │   └── HOC_overview_detailed_audit_report.md
-    └── general/
-        ├── HOC_general_deep_audit_report.md
-        └── HOC_general_audit_domain.md
+    │   ├── L5_engines/
+    │   ├── L5_schemas/
+    │   └── L6_drivers/
+    ├── api_keys/
+    │   ├── L5_engines/
+    │   ├── L5_schemas/
+    │   └── L6_drivers/
+    ├── account/
+    │   ├── L5_engines/
+    │   ├── L5_notifications/
+    │   ├── L5_schemas/
+    │   ├── L5_support/
+    │   └── L6_drivers/
+    ├── activity/
+    │   ├── L5_engines/
+    │   ├── L5_schemas/
+    │   └── L6_drivers/
+    ├── incidents/
+    │   ├── L3_adapters/
+    │   ├── L5_engines/
+    │   ├── L5_schemas/
+    │   └── L6_drivers/
+    ├── policies/
+    │   ├── L5_controls/
+    │   ├── L5_engines/
+    │   ├── L5_schemas/
+    │   └── L6_drivers/
+    ├── logs/
+    │   ├── L3_adapters/
+    │   ├── L5_engines/
+    │   ├── L5_schemas/
+    │   └── L6_drivers/
+    ├── analytics/
+    │   ├── L3_adapters/
+    │   ├── L5_engines/
+    │   ├── L5_schemas/
+    │   └── L6_drivers/
+    ├── integrations/
+    │   ├── L3_adapters/
+    │   ├── L5_engines/
+    │   ├── L5_schemas/
+    │   ├── L5_vault/
+    │   └── L6_drivers/
+    └── general/                       # Cross-domain + L4 runtime
+        ├── L3_mcp/
+        ├── L4_runtime/               # ONLY L4 location
+        ├── L5_controls/
+        ├── L5_engines/
+        ├── L5_lifecycle/
+        ├── L5_schemas/
+        ├── L5_ui/
+        ├── L5_utils/
+        ├── L5_workflow/
+        └── L6_drivers/
 ```
 
 ---
@@ -296,6 +358,14 @@ This index is referenced in `/CLAUDE.md` under:
 | 2026-01-24 | **Account domain LOCKED** — 9/9 fixes complete, L4/L6 extraction done, ACCOUNT_DOMAIN_LOCK_FINAL.md created | Claude |
 | 2026-01-24 | **Integrations domain LOCKED (with debt)** — 12 fixes complete, 3 HYBRID files (M25 debt), INTEGRATIONS_DOMAIN_LOCK_FINAL.md created | Claude |
 | 2026-01-24 | **General domain LOCKED** — 31 files reclassified (13 engines L4→L5, 5 facades →L3, 6 schemas →L5, 4 utils/drivers →L5, 1 file moved engines→drivers), GENERAL_DOMAIN_LOCK_FINAL.md created | Claude |
+| 2026-01-24 | **Phase 2.5C BANNED_NAMING** — All customer domain `*_service.py` files renamed to `*_engine.py` or `*_driver.py`. 0 customer BANNED_NAMING violations remaining. | Claude |
+| 2026-01-24 | **Phase 2.5D HEADER_CLAIM_MISMATCH** — 19 customer domain files reclassified L6→L5 (no DB ops). Includes: logs (6 files), incidents (4 files), integrations (3 files), general (4 files), account (2 files). 0 customer HEADER_CLAIM_MISMATCH errors remaining. | Claude |
+| 2026-01-24 | **Phase 2.5E MISSING_HEADER + RELOCATION** — Added L5 headers to 15 customer domain files (analytics/engines, general/controls, policies/engines, duplicates). Relocated 9 L5 engine files from policies/drivers/ → policies/engines/. **HOC customer domain BLCA: 0 errors, 0 warnings.** | Claude |
+| 2026-01-24 | **Phase 2.5E VERIFICATION COMPLETE** — All 10 customer domain lock documents updated with BLCA verification status (0 errors, 0 warnings across all 6 check types): ACTIVITY v1.2.0, ANALYTICS v1.1.0, GENERAL v1.1.0, INCIDENTS v1.3.0, LOGS v1.4.0, OVERVIEW v1.1.0, POLICIES v1.2.0, API_KEYS, ACCOUNT, INTEGRATIONS. | Claude |
+| 2026-01-24 | **Phase 3 APPROVED** — Directory restructure plan approved. Layer-prefixed folders (L3_adapters/, L5_engines/, L6_drivers/). L4 centralized to general/L4_runtime/. API nesting (L2.1 + L2). HOC_LAYER_TOPOLOGY_V1.md updated to v1.3.0. | Claude |
+| 2026-01-24 | **Phase 3 UPDATE** — Package & audience rename added: `hoc` → `hoc`, `customer` → `cus`, `founder` → `fdr`, `internal` → `int`. Saves 14 chars per import. PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md updated to v1.1.0. HOC_LAYER_TOPOLOGY_V1.md updated to v1.4.0. | Claude |
+| 2026-01-24 | **Phase 3 COMPLETE** — All 10 customer domains migrated (overview, api_keys, account, activity, incidents, policies, logs, analytics, integrations, general). Layer-prefixed folders deployed. Facades merged into L5_engines or L3_adapters. L4 centralized to general/L4_runtime/ only. | Claude |
+| 2026-01-24 | **Phase 3 L5/L6 FIX** — Relocated 52 L5 engine files from L6_drivers/ to L5_engines/ based on content analysis. Files declared L5 with no DB ops. Domains: policies (18), general (13), logs (6), integrations (6), incidents (4), account (2), analytics (2), activity (1). BLCA customer domain: 0 structure errors. PIN-470. | Claude |
 
 ---
 

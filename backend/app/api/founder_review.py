@@ -43,7 +43,7 @@ from app.db import get_session
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
-    prefix="/founder/review",
+    prefix="/fdr/review",
     tags=["founder-review"],
 )
 

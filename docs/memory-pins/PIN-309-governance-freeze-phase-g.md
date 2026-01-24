@@ -47,7 +47,7 @@ Move the system from "correct" to "non-regressable" by locking capability states
 **Route Classifications:**
 | Category | Routes |
 |----------|--------|
-| HUMAN_ONLY | `/founder/`, `/admin/`, `/console/`, `/guard/` |
+| HUMAN_ONLY | `/fdr/`, `/admin/`, `/console/`, `/guard/` |
 | MACHINE_ONLY | `/api/v1/workers/`, `/api/v1/agents/`, `/api/v1/runtime/`, `/webhook/` |
 
 ### Phase G3: Taxonomy Lock

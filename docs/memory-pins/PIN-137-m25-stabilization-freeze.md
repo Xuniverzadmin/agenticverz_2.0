@@ -28,7 +28,7 @@ CONFIDENCE_VERSION = "CONFIDENCE_V1"
 | File | Purpose |
 |------|---------|
 | `backend/app/integrations/events.py` | Event types, ConfidenceCalculator, JSON guard |
-| `backend/app/integrations/bridges.py` | 5 bridges, PolicyActivationAudit |
+| `backend/app/integrations/L3_adapters.py` | 5 bridges, PolicyActivationAudit |
 | `backend/app/integrations/dispatcher.py` | Dispatch flow, idempotency |
 
 ---

@@ -33,7 +33,7 @@ LOGS → RECORDS
 |-------|------------|----------|--------|
 | LOG-REC-LLM-O1 | logs.runtime_traces | /api/v1/runtime/traces | OBSERVED |
 | LOG-REC-LLM-O2 | logs.activity_runs | /api/v1/activity/runs | OBSERVED |
-| LOG-REC-LLM-O3 | logs.customer_runs | /api/v1/customer/activity | OBSERVED |
+| LOG-REC-LLM-O3 | logs.customer_runs | /api/v1/cus/activity | OBSERVED |
 | LOG-REC-LLM-O4 | logs.tenant_runs | /api/v1/tenants/runs | BLOCKED (COH-009) |
 | LOG-REC-LLM-O5 | logs.mismatch_list | /api/v1/traces/mismatches | OBSERVED |
 

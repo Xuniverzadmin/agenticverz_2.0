@@ -60,7 +60,7 @@ integrations/                                     (21 files, ~6,300 LOC)
 
 | File | Header | Current Path | Required Path | Status |
 |------|--------|--------------|---------------|--------|
-| `server_registry.py` | `AUDIENCE: INTERNAL` | `customer/integrations/engines/` | `internal/platform/mcp/engines/` | DEFERRED |
+| `server_registry.py` | `AUDIENCE: INTERNAL` | `customer/integrations/L5_engines/` | `internal/platform/mcp/engines/` | DEFERRED |
 | `vault.py` | `AUDIENCE: INTERNAL` | `customer/integrations/vault/engines/` | `internal/platform/vault/engines/` | DEFERRED |
 
 **Rationale for Deferral:** These files are deep in subdirectories with existing callers. Moving them requires Phase 5 (Wire Imports) when all import paths will be updated systematically.
@@ -520,7 +520,7 @@ Some engines are transitional and will migrate to internal/ in Phase 5.
 
 | File | Current | Target | Pre-condition |
 |------|---------|--------|---------------|
-| `server_registry.py` | `customer/integrations/engines/` | `internal/platform/mcp/engines/` | All callers updated |
+| `server_registry.py` | `customer/integrations/L5_engines/` | `internal/platform/mcp/engines/` | All callers updated |
 | `vault.py` | `customer/integrations/vault/engines/` | `internal/platform/vault/engines/` | All callers updated |
 
 **Import discipline locked NOW** so Phase 5 move is mechanical, not traumatic.

@@ -114,11 +114,11 @@ class FounderToken:
 | `/recovery/*` | YES | YES |
 | `/sba/*` | YES | YES |
 | `/integration/*` | YES | YES |
-| `/founder/timeline` | YES | YES |
-| `/founder/controls` | YES | NO |
-| `/founder/replay` | YES | YES |
-| `/founder/scenarios` | YES | YES |
-| `/founder/explorer` | YES | YES |
+| `/fdr/timeline` | YES | YES |
+| `/fdr/controls` | YES | NO |
+| `/fdr/replay` | YES | YES |
+| `/fdr/scenarios` | YES | YES |
+| `/fdr/explorer` | YES | YES |
 | `/workers/*` | YES | YES |
 | `/credits/*` | YES | YES |
 

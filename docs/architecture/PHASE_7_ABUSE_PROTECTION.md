@@ -301,8 +301,8 @@ Protection checks are middleware, not explicit API endpoints.
 ### Ops APIs (Founder Only)
 
 ```
-GET  /founder/abuse/signals/{tenant_id}
-POST /founder/abuse/override
+GET  /fdr/abuse/signals/{tenant_id}
+POST /fdr/abuse/override
 ```
 
 Rules:

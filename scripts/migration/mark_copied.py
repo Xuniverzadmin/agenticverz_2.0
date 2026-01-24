@@ -32,36 +32,36 @@ BACKEND_ROOT = Path('backend')
 # These were removed as migration copies; originals exist at different locations
 DEDUPLICATED_FILES = {
     # Target path (from inventory) -> Actual path (where file exists in HOC)
-    'app/houseofcards/customer/analytics/drivers/cost_write_service.py':
-        'app/houseofcards/customer/analytics/engines/cost_write_service.py',
-    'app/houseofcards/customer/integrations/engines/vault.py':
-        'app/houseofcards/customer/integrations/vault/engines/vault.py',
-    'app/houseofcards/customer/integrations/engines/cus_credential_service.py':
-        'app/houseofcards/customer/integrations/vault/engines/cus_credential_service.py',
-    'app/houseofcards/customer/integrations/engines/datasource_model.py':
-        'app/houseofcards/customer/integrations/schemas/datasource_model.py',
-    'app/houseofcards/customer/logs/engines/evidence_facade.py':
-        'app/houseofcards/customer/logs/facades/evidence_facade.py',
-    'app/houseofcards/customer/policies/engines/governance_facade.py':
-        'app/houseofcards/customer/policies/facades/governance_facade.py',
-    'app/houseofcards/customer/incidents/drivers/incident_read_service.py':
-        'app/houseofcards/customer/incidents/engines/incident_read_service.py',
-    'app/houseofcards/customer/incidents/drivers/incident_write_service.py':
-        'app/houseofcards/customer/incidents/engines/incident_write_service.py',
-    'app/houseofcards/customer/policies/drivers/customer_killswitch_read_service.py':
-        'app/houseofcards/customer/policies/controls/engines/customer_killswitch_read_service.py',
-    'app/houseofcards/customer/general/engines/offboarding.py':
-        'app/houseofcards/customer/general/lifecycle/engines/offboarding.py',
-    'app/houseofcards/customer/general/engines/onboarding.py':
-        'app/houseofcards/customer/general/lifecycle/engines/onboarding.py',
-    'app/houseofcards/customer/policies/engines/limits_facade.py':
-        'app/houseofcards/customer/policies/facades/limits_facade.py',
-    'app/houseofcards/customer/policies/drivers/customer_policy_read_service.py':
-        'app/houseofcards/customer/policies/engines/customer_policy_read_service.py',
-    'app/houseofcards/customer/account/drivers/tenant_service.py':
-        'app/houseofcards/customer/account/engines/tenant_service.py',
-    'app/houseofcards/customer/account/drivers/user_write_service.py':
-        'app/houseofcards/customer/account/engines/user_write_service.py',
+    'app/hoc/cus/analytics/L6_drivers/cost_write_service.py':
+        'app/hoc/cus/analytics/L5_engines/cost_write_service.py',
+    'app/hoc/cus/integrations/L5_engines/vault.py':
+        'app/hoc/cus/integrations/vault/engines/vault.py',
+    'app/hoc/cus/integrations/L5_engines/cus_credential_service.py':
+        'app/hoc/cus/integrations/vault/engines/cus_credential_service.py',
+    'app/hoc/cus/integrations/L5_engines/datasource_model.py':
+        'app/hoc/cus/integrations/L5_schemas/datasource_model.py',
+    'app/hoc/cus/logs/L5_engines/evidence_facade.py':
+        'app/hoc/cus/logs/facades/evidence_facade.py',
+    'app/hoc/cus/policies/L5_engines/governance_facade.py':
+        'app/hoc/cus/policies/facades/governance_facade.py',
+    'app/hoc/cus/incidents/L6_drivers/incident_read_service.py':
+        'app/hoc/cus/incidents/L5_engines/incident_read_service.py',
+    'app/hoc/cus/incidents/L6_drivers/incident_write_service.py':
+        'app/hoc/cus/incidents/L5_engines/incident_write_service.py',
+    'app/hoc/cus/policies/L6_drivers/customer_killswitch_read_service.py':
+        'app/hoc/cus/policies/controls/engines/customer_killswitch_read_service.py',
+    'app/hoc/cus/general/L5_engines/offboarding.py':
+        'app/hoc/cus/general/L5_lifecycle/engines/offboarding.py',
+    'app/hoc/cus/general/L5_engines/onboarding.py':
+        'app/hoc/cus/general/L5_lifecycle/engines/onboarding.py',
+    'app/hoc/cus/policies/L5_engines/limits_facade.py':
+        'app/hoc/cus/policies/facades/limits_facade.py',
+    'app/hoc/cus/policies/L6_drivers/customer_policy_read_service.py':
+        'app/hoc/cus/policies/L5_engines/customer_policy_read_service.py',
+    'app/hoc/cus/account/L6_drivers/tenant_service.py':
+        'app/hoc/cus/account/L5_engines/tenant_service.py',
+    'app/hoc/cus/account/L6_drivers/user_write_service.py':
+        'app/hoc/cus/account/L5_engines/user_write_service.py',
 }
 
 

@@ -42,8 +42,8 @@ Provide a definitive reference for which capabilities are visible in which conso
 
 | ID | Name | Key Routes |
 |----|------|------------|
-| **CAP-005** | Founder Console | `/ops/*`, `/founder/timeline/*`, `/founder/controls/*`, `/founder/explorer/*`, `POST /founder/actions/*` |
-| **CAP-011** | Governance Orchestration | `/founder/review/*`, `/api/v1/discovery/*`, `POST /founder/review/{id}/approve`, `POST /founder/review/{id}/reject` |
+| **CAP-005** | Founder Console | `/ops/*`, `/fdr/timeline/*`, `/fdr/controls/*`, `/fdr/explorer/*`, `POST /fdr/actions/*` |
+| **CAP-011** | Governance Orchestration | `/fdr/review/*`, `/api/v1/discovery/*`, `POST /fdr/review/{id}/approve`, `POST /fdr/review/{id}/reject` |
 | **CAP-017** | Cross-Project Aggregation | PLANNED (if implemented, founder-only) |
 
 ### Shared Capabilities — Founder Routes

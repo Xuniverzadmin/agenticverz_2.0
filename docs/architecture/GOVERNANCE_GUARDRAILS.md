@@ -613,7 +613,7 @@ def check_capabilities():
 **Rule:** Customer console capabilities must NOT bind to founder/ops endpoints.
 
 **Forbidden Patterns:**
-- `/founder/*`
+- `/fdr/*`
 - `/ops/*`
 - `/admin/*`
 
@@ -622,7 +622,7 @@ def check_capabilities():
 ```python
 # scripts/ci/check_console_boundaries.py
 
-FORBIDDEN_PREFIXES_FOR_CUSTOMER = ["/founder/", "/ops/", "/admin/"]
+FORBIDDEN_PREFIXES_FOR_CUSTOMER = ["/fdr/", "/ops/", "/admin/"]
 
 def check_customer_capabilities():
     capabilities = load_capability_registry()

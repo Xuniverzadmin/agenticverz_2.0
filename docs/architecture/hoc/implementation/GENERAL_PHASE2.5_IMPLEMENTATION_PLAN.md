@@ -42,7 +42,7 @@ L7 = Models (ORM)
 
 ## BLCA Results (2026-01-24)
 
-**Command:** `python3 scripts/ops/layer_validator.py --path backend/app/houseofcards/customer/general --ci`
+**Command:** `python3 scripts/ops/layer_validator.py --path backend/app/hoc/cus/general --ci`
 
 | Category | Count | Details |
 |----------|-------|---------|
@@ -97,7 +97,7 @@ Fix files with incorrect layer declarations.
 
 #### Evidence-Based Analysis (2026-01-24)
 
-**Location:** `backend/app/houseofcards/customer/general/engines/knowledge_sdk.py`
+**Location:** `backend/app/hoc/cus/general/L5_engines/knowledge_sdk.py`
 
 **Header Claims:**
 ```python
@@ -148,7 +148,7 @@ SDK-003: SDK does NOT bypass policy gates — gates are mandatory
 #### Verdict
 
 **The L2 header is WRONG:**
-1. L2 is for HTTP route handlers at `houseofcards/api/{audience}/*.py`
+1. L2 is for HTTP route handlers at `hoc/api/{audience}/*.py`
 2. This file is NOT at that location
 3. This file does NOT handle HTTP
 4. This file does NOT validate HTTP input

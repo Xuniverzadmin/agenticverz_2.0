@@ -22,7 +22,7 @@
 ## Final File Structure
 
 ```
-backend/app/houseofcards/customer/api_keys/
+backend/app/hoc/cus/api_keys/
 ├── __init__.py
 ├── adapters/
 │   └── __init__.py
@@ -147,6 +147,15 @@ DATE: 2026-01-24
 BLCA: CLEAN (0 violations)
 PHASE: 2.5B COMPLETE
 ```
+
+---
+
+## Changelog
+
+| Date | Version | Change | Author |
+|------|---------|--------|--------|
+| 2026-01-24 | 1.0.0 | Initial lock | Claude |
+| 2026-01-24 | 1.1.0 | Phase 2.5E BLCA verification: 0 errors, 0 warnings across all 6 check types | Claude |
 
 ---
 

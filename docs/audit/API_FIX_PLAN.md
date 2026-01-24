@@ -18,7 +18,7 @@
 
 These are internal operations endpoints, NOT customer-facing. Customer Console panels should NEVER point to `/ops/*` routes.
 
-**Customer-facing routes:** `/guard/*`, `/api/v1/customer/*`, `/api/v1/runtime/*`
+**Customer-facing routes:** `/guard/*`, `/api/v1/cus/*`, `/api/v1/runtime/*`
 
 ---
 
@@ -30,7 +30,7 @@ These are internal operations endpoints, NOT customer-facing. Customer Console p
 ┌──────────────────────────────────────────────────────────────┐
 │  PANEL (UI)                                                  │
 │    ↓                                                         │
-│  L2 API Route (e.g., /guard/*, /api/v1/customer/*)          │
+│  L2 API Route (e.g., /guard/*, /api/v1/cus/*)          │
 │    ↓                                                         │
 │  L3 ADAPTER (e.g., CustomerActivityAdapter)                  │
 │    ↓                                                         │
@@ -137,14 +137,14 @@ class IncidentPattern(BaseModel):
 
 ---
 
-### FIX-002: /api/v1/customer/activity (Path Collision)
+### FIX-002: /api/v1/cus/activity (Path Collision)
 
 | Field | Value |
 |-------|-------|
 | Panel | LOG-REC-LLM-O3 |
 | Facet | llm_record_keeping |
 | Criticality | MEDIUM |
-| Expected Path | `/api/v1/customer/activity` |
+| Expected Path | `/api/v1/cus/activity` |
 | Current State | **FALSE POSITIVE** - Endpoint exists at correct path |
 | Router | customer_activity.py |
 | Investigation | COMPLETE |
@@ -154,10 +154,10 @@ class IncidentPattern(BaseModel):
 | Finding | Detail |
 |---------|--------|
 | Endpoint EXISTS | YES - at `app/api/customer_activity.py:56` |
-| Actual Path | `/api/v1/customer/activity` |
+| Actual Path | `/api/v1/cus/activity` |
 | Router Prefix | `prefix="/api/v1/customer"` |
 | Endpoint Definition | `@router.get("/activity", ...)` |
-| Full Path | `/api/v1/customer` + `/activity` = `/api/v1/customer/activity` ✅ |
+| Full Path | `/api/v1/customer` + `/activity` = `/api/v1/cus/activity` ✅ |
 
 **Investigation Steps:**
 1. [x] Read `customer_activity.py` to check route definition - **Found at line 56**
@@ -165,10 +165,10 @@ class IncidentPattern(BaseModel):
 3. [x] Verify the intent YAML expected path - **Matches actual path**
 
 **Root Cause of False Alarm:**
-The original audit incorrectly stated path was `/api/v1/customer/activity/activity`. Re-verification shows:
+The original audit incorrectly stated path was `/api/v1/cus/activity/activity`. Re-verification shows:
 - Router prefix: `/api/v1/customer` (line 48)
 - Endpoint: `/activity` (line 56)
-- Full path: `/api/v1/customer/activity` (MATCHES intent YAML)
+- Full path: `/api/v1/cus/activity` (MATCHES intent YAML)
 
 **Status:** NO ACTION NEEDED - Endpoint exists at correct path
 
@@ -437,7 +437,7 @@ For each FIX item:
 | ID | Status | Description | Finding |
 |----|--------|-------------|---------|
 | FIX-001 | **PATH MISMATCH** | /api/v1/ops/incidents/patterns | Endpoint exists at `/ops/incidents/patterns` - intent YAML needs update |
-| FIX-002 | ✅ FALSE POSITIVE | /api/v1/customer/activity | Endpoint exists at correct path - no action needed |
+| FIX-002 | ✅ FALSE POSITIVE | /api/v1/cus/activity | Endpoint exists at correct path - no action needed |
 | FIX-003 | ✅ FALSE POSITIVE | /guard/costs/incidents | Endpoint exists at correct path - no action needed |
 | FIX-004 | ✅ FALSE POSITIVE | /ops/actions/audit | Endpoint exists at correct path - no action needed |
 | NULL-001 | PENDING | Activity Signals Assembler | Use runtime projection |
@@ -464,7 +464,7 @@ Out of 4 FIX items originally flagged as "missing":
 
 The original audit incorrectly flagged endpoints as "missing" because:
 
-1. **FIX-002**: Audit misread path as `/api/v1/customer/activity/activity` - actual path is `/api/v1/customer/activity`
+1. **FIX-002**: Audit misread path as `/api/v1/cus/activity/activity` - actual path is `/api/v1/cus/activity`
 2. **FIX-003**: Endpoint exists at `/guard/costs/incidents` with comprehensive cost incident data
 3. **FIX-004**: Endpoint exists at `/ops/actions/audit` with pagination and filtering
 

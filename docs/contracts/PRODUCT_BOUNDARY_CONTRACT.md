@@ -38,7 +38,7 @@ The AI Console is a **read-first, decision-surface product**.
 
 **It SHALL:**
 - Own UI pages and components
-- Own console-only API routes (`/guard/*`, `/customer/*`)
+- Own console-only API routes (`/guard/*`, `/cus/*`)
 - Own translation adapters (thin transformation layers)
 - Depend on platform services (read-only consumption)
 

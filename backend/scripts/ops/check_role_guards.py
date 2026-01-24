@@ -84,7 +84,7 @@ ALLOWLIST = {
     ("c2_prediction.py", "/c2/", "POST"): "C2 - machine context with scope auth",
     ("c2_prediction.py", "/c2/", "PUT"): "C2 - machine context with scope auth",
     # Founder endpoints - use verify_fops_token instead of require_role
-    ("founder_onboarding.py", "/founder/", "POST"): "Founder-only - uses verify_fops_token",
+    ("founder_onboarding.py", "/fdr/", "POST"): "Founder-only - uses verify_fops_token",
 }
 
 # Patterns that indicate role protection

@@ -279,9 +279,9 @@ capabilities:
 
     planes:
       engine: true           # Founder actions, timeline services
-      l2_api: true           # /founder/*, /ops/*
+      l2_api: true           # /fdr/*, /ops/*
       client: true           # /api/ops.ts exists
-      ui: true               # 5 pages in /pages/founder/ and /pages/ops/
+      ui: true               # 5 pages in /pages/fdr/ and /pages/ops/
       authority: true        # Founder-only RBAC
       audit_replay: true     # Founder actions audited
 
@@ -312,8 +312,8 @@ capabilities:
         - "/backend/app/api/platform.py"                # PIN-311: Platform health/eligibility (Founder-only)
       client: "/website/aos-console/console/src/api/ops.ts"
       ui:
-        - "/website/aos-console/console/src/pages/founder/FounderControlsPage.tsx"
-        - "/website/aos-console/console/src/pages/founder/FounderTimelinePage.tsx"
+        - "/website/aos-console/console/src/pages/fdr/FounderControlsPage.tsx"
+        - "/website/aos-console/console/src/pages/fdr/FounderTimelinePage.tsx"
         - "/website/aos-console/console/src/pages/ops/FounderOpsConsole.tsx"
         - "/website/aos-console/console/src/pages/ops/FounderPulsePage.tsx"
         - "/website/aos-console/console/src/pages/ops/OpsConsoleEntry.tsx"
@@ -901,7 +901,7 @@ capabilities:
         - "/backend/app/integrations/dispatcher.py"
         - "/backend/app/integrations/graduation_engine.py"
         - "/backend/app/integrations/learning_proof.py"
-        - "/backend/app/integrations/bridges.py"
+        - "/backend/app/integrations/L3_adapters.py"
       l2_api:
         - "/backend/app/api/integration.py"           # M25 Integration API (17 endpoints)
         - "/backend/app/api/recovery.py"              # M10 Recovery Suggestion Engine
@@ -1157,10 +1157,10 @@ invocation_addendum:
     frontend_invocable: true
     allowed_routes:
       - "GET /ops/*"                                      # Ops metrics, dashboards
-      - "GET /founder/timeline/*"                         # Timeline queries
-      - "GET /founder/controls/*"                         # Control status
-      - "GET /founder/explorer/*"                         # H3 explorer mode
-      - "POST /founder/actions/*"                         # Founder actions (RBAC protected)
+      - "GET /fdr/timeline/*"                         # Timeline queries
+      - "GET /fdr/controls/*"                         # Control status
+      - "GET /fdr/explorer/*"                         # H3 explorer mode
+      - "POST /fdr/actions/*"                         # Founder actions (RBAC protected)
     forbidden_routes: []                                  # RBAC handles authorization
     invocation_modes:
       - read                                              # Dashboard, timeline
@@ -1260,10 +1260,10 @@ invocation_addendum:
     capability_id: CAP-011
     frontend_invocable: true
     allowed_routes:
-      - "GET /founder/review/*"                           # Review queues
+      - "GET /fdr/review/*"                           # Review queues
       - "GET /api/v1/discovery/*"                         # Discovery ledger
-      - "POST /founder/review/{id}/approve"               # Approval (RBAC gated)
-      - "POST /founder/review/{id}/reject"                # Rejection (RBAC gated)
+      - "POST /fdr/review/{id}/approve"               # Approval (RBAC gated)
+      - "POST /fdr/review/{id}/reject"                # Rejection (RBAC gated)
     forbidden_routes: []                                  # RBAC handles authorization
     invocation_modes:
       - read                                              # Review queue, discovery

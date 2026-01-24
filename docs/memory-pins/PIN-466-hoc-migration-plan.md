@@ -9,7 +9,7 @@
 
 ## Summary
 
-Four-phase migration plan for restructuring codebase from `app/services/*` to `houseofcards/{audience}/{domain}/*` following HOC Layer Topology V1.2.0.
+Four-phase migration plan for restructuring codebase from `app/services/*` to `hoc/{audience}/{domain}/*` following HOC Layer Topology V1.2.0.
 
 ---
 
@@ -30,10 +30,10 @@ Four-phase migration plan for restructuring codebase from `app/services/*` to `h
 
 | Source | Target | Layer |
 |--------|--------|-------|
-| `app/services/*_facade.py` | `houseofcards/{audience}/{domain}/adapters/` | L3 |
-| `app/services/**/*_engine.py` | `houseofcards/{audience}/{domain}/engines/` | L5 |
+| `app/services/*_facade.py` | `hoc/{audience}/{domain}/adapters/` | L3 |
+| `app/services/**/*_engine.py` | `hoc/{audience}/{domain}/engines/` | L5 |
 | `app/services/**/*_service.py` | `engines/` or `drivers/` | L5/L6 |
-| `app/api/*.py` | `houseofcards/api/{audience}/*.py` | L2 |
+| `app/api/*.py` | `hoc/api/{audience}/*.py` | L2 |
 
 ### What Stays
 
@@ -46,7 +46,7 @@ Four-phase migration plan for restructuring codebase from `app/services/*` to `h
 
 ### What Gets Deleted
 
-- `houseofcards/duplicate/` — Legacy structures
+- `hoc/duplicate/` — Legacy structures
 - `app/api/legacy_routes.py` — Deprecated routes
 - `app/api/v1_*.py` — V1 proxy routes
 

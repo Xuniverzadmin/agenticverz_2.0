@@ -61,7 +61,7 @@ consoles:
     routes:
       - /guard/*           # Customer dashboard, incidents, killswitch
       - /guard/costs/*     # Customer cost summary
-      - /customer/*        # Pre-run declarations, outcomes
+      - /cus/*        # Pre-run declarations, outcomes
 
   # ---------------------------------------------------------------------------
   # FOUNDER OPS CONSOLE (Internal Control Plane)
@@ -79,7 +79,7 @@ consoles:
       - /ops/*             # Founder intelligence dashboard
       - /ops/cost/*        # Founder cost overview
       - /ops/actions/*     # Freeze, throttle, override
-      - /founder/*         # Controls, timeline, decision audit
+      - /fdr/*         # Controls, timeline, decision audit
       - /traces            # Execution traces
       - /integration/*     # M25 Pillar integration loop
       - /sba/*             # SBA Inspector (agent governance)

@@ -312,7 +312,7 @@ The Three-Mode Authority System is now documented in:
 |----------|----------|---------|
 | **Three-Mode Authority System** | `docs/architecture/auth/THREE_MODE_AUTHORITY_SYSTEM.md` | Full architecture specification |
 | **Testing Guide** | `docs/architecture/TESTING_GUIDE.md` | Canonical testing contract |
-| **Customer Sandbox Guide** | `docs/customer/SANDBOX_TESTING_GUIDE.md` | Customer-facing documentation |
+| **Customer Sandbox Guide** | `docs/cus/SANDBOX_TESTING_GUIDE.md` | Customer-facing documentation |
 
 ---
 

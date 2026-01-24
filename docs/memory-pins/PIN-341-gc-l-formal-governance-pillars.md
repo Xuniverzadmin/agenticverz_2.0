@@ -503,7 +503,7 @@ Replay **never re-executes**. It reconstructs **intent and context**.
 ### 3.5 Replay Query API
 
 ```
-POST /api/customer/audit/replay
+POST /api/cus/audit/replay
 ```
 
 **Request:**

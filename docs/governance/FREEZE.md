@@ -283,7 +283,7 @@ tests/middleware/test_runtime_gates.py (25 tests)
 - Protection Gate: Applies AbuseProtectionProvider decisions (429/503)
 - Billing Gate: Enforces billing state and limits (402)
 
-All gates respect exempt paths (/health, /founder/, /docs, etc.)
+All gates respect exempt paths (/health, /fdr/, /docs, etc.)
 BILLING-001 preserved: Billing never blocks onboarding.
 
 ### A2-A4: Pending

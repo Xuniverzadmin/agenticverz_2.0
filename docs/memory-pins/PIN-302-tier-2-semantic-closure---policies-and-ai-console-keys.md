@@ -80,7 +80,7 @@ The `/guard/keys` surface required explicit object identity clarification:
 | Surface | Intent ID | Status | Interpretation |
 |---------|-----------|--------|----------------|
 | `/guard/logs` | L2-GUARD-LOGS | APPROVED | Forbidden |
-| `/api/v1/customer/activity` | L2-GUARD-ACTIVITY | APPROVED | Forbidden |
+| `/api/v1/cus/activity` | L2-GUARD-ACTIVITY | APPROVED | Forbidden |
 | `/guard/incidents` | L2-GUARD-INCIDENTS | APPROVED | Forbidden |
 | `/guard/policies` | L2-GUARD-POLICIES | APPROVED | Forbidden (surface-scoped) |
 | `/guard/keys` | L2-GUARD-AICONSOLE-KEYS | FROZEN | Forbidden |

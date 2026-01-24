@@ -47,14 +47,14 @@ These APIs support founder pages and have NO customer console consumers.
 
 | File | Prefix | Routes | Frontend Consumer | Capability |
 |------|--------|--------|-------------------|------------|
-| `founder_timeline.py` | `/founder/timeline` | 4 | FounderTimelinePage | CAP-005 |
+| `founder_timeline.py` | `/fdr/timeline` | 4 | FounderTimelinePage | CAP-005 |
 | `founder_explorer.py` | `/explorer` | 5 | FounderExplorerPage | CAP-005 |
-| `founder_review.py` | `/founder/contracts` | 6 | (founder review gate) | CAP-005 |
+| `founder_review.py` | `/fdr/contracts` | 6 | (founder review gate) | CAP-005 |
 
 **Routes Exposed:**
-- `GET /founder/timeline/*` - Decision timeline
+- `GET /fdr/timeline/*` - Decision timeline
 - `GET /explorer/*` - Cross-tenant explorer
-- `POST /founder/contracts/*` - Contract review
+- `POST /fdr/contracts/*` - Contract review
 
 ---
 
@@ -151,7 +151,7 @@ These APIs serve both founder and customer or have public access.
 | SBAInspectorPage | `/api/v1/sba/*` |
 | IntegrationDashboard | `/integration/*` |
 | LoopStatusPage | `/integration/loop/*` |
-| FounderTimelinePage | `/founder/timeline/*` |
+| FounderTimelinePage | `/fdr/timeline/*` |
 | FounderControlsPage | `/api/v1/killswitch/*`, `/ops/customers` |
 | ReplayIndexPage | `/api/v1/replay/*` |
 | ReplaySliceViewer | `/api/v1/replay/:id/*` |
@@ -188,7 +188,7 @@ These backend files have NO canonical (customer) frontend consumer:
 ```
 /ops/*                    → No protection
 /explorer                 → No protection
-/founder/*                → Partial (prefix only)
+/fdr/*                → Partial (prefix only)
 /replay                   → No protection
 /scenarios                → No protection
 /traces                   → No protection (but /api/v1/traces exists)
@@ -197,7 +197,7 @@ These backend files have NO canonical (customer) frontend consumer:
 
 ### Target State
 All founder-only APIs should:
-1. Be under `/fops/` or `/api/v1/founder/` namespace
+1. Be under `/fops/` or `/api/v1/fdr/` namespace
 2. Require founder RBAC role
 3. Not appear in OpenAPI for customer audience
 

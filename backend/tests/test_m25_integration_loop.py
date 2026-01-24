@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.integrations.bridges import (
+from app.integrations.L3_adapters import (
     IncidentToCatalogBridge,
     PatternToRecoveryBridge,
     RecoveryToPolicyBridge,

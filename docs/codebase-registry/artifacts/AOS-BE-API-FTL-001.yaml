@@ -16,8 +16,8 @@ traceability:
   subdomain: timeline
   order_depth: O4
 responsibility: |
-  - GET /founder/timeline - List decisions chronologically
-  - GET /founder/timeline/run/{run_id} - Timeline for run
+  - GET /fdr/timeline - List decisions chronologically
+  - GET /fdr/timeline/run/{run_id} - Timeline for run
   - Chronological order only, no grouping
   - No collapsing, no status pills, no interpretation
   - "Court transcript, not dashboard"

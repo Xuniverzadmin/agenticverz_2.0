@@ -131,11 +131,11 @@ All findings are **directional inputs** for L1 launch readiness assessment.
 | FAIL-009 | JRN-009 | /api/v1/predictions | AUTH_MISMATCH | JRN-009_*.json |
 | FAIL-010 | JRN-010 | /api/v1/predictions/stats/summary | AUTH_MISMATCH | JRN-010_*.json |
 | FAIL-011 | JRN-011 | /ops/dashboard | AUTH_MISMATCH | JRN-011_*.json |
-| FAIL-012 | JRN-012 | /founder/timeline/recent | AUTH_MISMATCH | JRN-012_*.json |
-| FAIL-013 | JRN-013 | /founder/explorer/summary | AUTH_MISMATCH | JRN-013_*.json |
+| FAIL-012 | JRN-012 | /fdr/timeline/recent | AUTH_MISMATCH | JRN-012_*.json |
+| FAIL-013 | JRN-013 | /fdr/explorer/summary | AUTH_MISMATCH | JRN-013_*.json |
 | FAIL-014 | JRN-014 | /api/v1/policies | AUTH_MISMATCH | JRN-014_*.json |
 | FAIL-015 | JRN-015 | /guard/policies/active | AUTH_MISMATCH | JRN-015_*.json |
-| FAIL-016 | JRN-016 | /founder/review/pending | AUTH_MISMATCH | JRN-016_*.json |
+| FAIL-016 | JRN-016 | /fdr/review/pending | AUTH_MISMATCH | JRN-016_*.json |
 | FAIL-017 | JRN-017 | /sba/status | AUTH_MISMATCH | JRN-017_*.json |
 | FAIL-018 | JRN-018 | /api/v1/memory/pins | AUTH_MISMATCH | JRN-018_*.json |
 | FAIL-019 | JRN-019 | /api/v1/embedding/status | AUTH_MISMATCH | JRN-019_*.json |

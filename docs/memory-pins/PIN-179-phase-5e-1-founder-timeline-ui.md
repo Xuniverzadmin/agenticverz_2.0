@@ -29,14 +29,14 @@ This work continues from PIN-178 (Phase 5E-H Human Test Eligibility Gate) which 
 
 | File | Purpose |
 |------|---------|
-| `website/aos-console/console/src/api/timeline.ts` | Frontend API client for `/founder/timeline/*` endpoints |
-| `website/aos-console/console/src/pages/founder/FounderTimelinePage.tsx` | Timeline UI component |
+| `website/aos-console/console/src/api/timeline.ts` | Frontend API client for `/fdr/timeline/*` endpoints |
+| `website/aos-console/console/src/pages/fdr/FounderTimelinePage.tsx` | Timeline UI component |
 
 ### Files Modified
 
 | File | Change |
 |------|--------|
-| `website/aos-console/console/src/routes/index.tsx` | Added route for `/founder/timeline` |
+| `website/aos-console/console/src/routes/index.tsx` | Added route for `/fdr/timeline` |
 | `docs/memory-pins/PIN-178-phase-5e-h-human-test-eligibility.md` | Updated with 5E-1 completion |
 
 ---
@@ -46,18 +46,18 @@ This work continues from PIN-178 (Phase 5E-H Human Test Eligibility Gate) which 
 ### Route Structure
 
 ```
-/console/founder/timeline          → All decisions view (paginated)
-/console/founder/timeline?run=xxx  → Single run timeline view
+/console/fdr/timeline          → All decisions view (paginated)
+/console/fdr/timeline?run=xxx  → Single run timeline view
 ```
 
 ### API Integration
 
 | Frontend | Backend | Purpose |
 |----------|---------|---------|
-| `getRunTimeline(runId)` | `GET /founder/timeline/run/{run_id}` | Complete run timeline |
-| `listDecisionRecords(params)` | `GET /founder/timeline/decisions` | List all records |
-| `getDecisionRecord(id)` | `GET /founder/timeline/decisions/{id}` | Single record |
-| `countDecisionRecords(params)` | `GET /founder/timeline/count` | Count records |
+| `getRunTimeline(runId)` | `GET /fdr/timeline/run/{run_id}` | Complete run timeline |
+| `listDecisionRecords(params)` | `GET /fdr/timeline/decisions` | List all records |
+| `getDecisionRecord(id)` | `GET /fdr/timeline/decisions/{id}` | Single record |
+| `countDecisionRecords(params)` | `GET /fdr/timeline/count` | Count records |
 
 ### RBAC
 
@@ -120,11 +120,11 @@ As mandated by user directive:
 
 ```bash
 # Count endpoint (returns 0 - no production runs yet)
-curl -H "X-Roles: founder" http://localhost:8000/founder/timeline/count
+curl -H "X-Roles: founder" http://localhost:8000/fdr/timeline/count
 {"count": 0}
 
 # List endpoint (returns empty - no production runs yet)
-curl -H "X-Roles: founder" "http://localhost:8000/founder/timeline/decisions?limit=5"
+curl -H "X-Roles: founder" "http://localhost:8000/fdr/timeline/decisions?limit=5"
 []
 ```
 
@@ -170,9 +170,9 @@ All verbatim. All chronological. No interpretation.
 | Time | Action | Result |
 |------|--------|--------|
 | Session Start | Resumed from PIN-178 completion | - |
-| Step 1 | Reviewed existing `/founder/timeline` API | Backend already complete |
+| Step 1 | Reviewed existing `/fdr/timeline` API | Backend already complete |
 | Step 2 | Created `src/api/timeline.ts` | API client ready |
-| Step 3 | Created `src/pages/founder/FounderTimelinePage.tsx` | UI component ready |
+| Step 3 | Created `src/pages/fdr/FounderTimelinePage.tsx` | UI component ready |
 | Step 4 | Updated `src/routes/index.tsx` | Route registered |
 | Step 5 | Ran `npm run build` | ✅ Build successful |
 | Step 6 | Verified backend endpoints | ✅ Working (0 records expected) |
@@ -221,7 +221,7 @@ export interface RunTimeline {
 
 ```typescript
 // routes/index.tsx
-const FounderTimelinePage = lazy(() => import('@/pages/founder/FounderTimelinePage'));
+const FounderTimelinePage = lazy(() => import('@/pages/fdr/FounderTimelinePage'));
 
 // In routes:
 <Route path="founder/timeline" element={<FounderTimelinePage />} />

@@ -52,11 +52,11 @@ def determine_target_folder(
     declared_layer: Optional[str],
 ) -> Optional[Path]:
     """Determine the correct target folder for a file."""
-    # Parse current path: backend/app/houseofcards/{audience}/{domain}/{layer_folder}/...
+    # Parse current path: backend/app/hoc/{audience}/{domain}/{layer_folder}/...
     parts = current_path.parts
 
     try:
-        hoc_idx = parts.index("houseofcards")
+        hoc_idx = parts.index("hoc")
     except ValueError:
         return None
 

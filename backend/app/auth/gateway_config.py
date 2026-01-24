@@ -125,7 +125,7 @@ def get_gateway_middleware_config() -> dict:
             "/api/v1/c2/predictions/",
             # =================================================================
             # REMOVED: /api/v1/activity - SDSR should use customer API
-            # Customer Activity API at /api/v1/customer/activity requires auth
+            # Customer Activity API at /api/v1/cus/activity requires auth
             # =================================================================
             # =================================================================
             # REMOVED: /api/v1/incidents - now requires auth via unified facade
@@ -241,14 +241,14 @@ def get_gateway_middleware_config() -> dict:
             # SDSR Customer Activity API (PIN-427)
             # Used for preflight SDSR validation of customer panels.
             # =================================================================
-            "/api/v1/customer/",
+            "/api/v1/cus/",
             # =================================================================
             # FOUNDER ROUTES (PIN-336, PIN-398)
             # PIN-398: Founder routes now go through the gateway for FOPS auth.
             # Gateway routes FOPS tokens (iss=agenticverz-fops) to FounderAuthContext.
             # Route handlers use verify_fops_token which checks isinstance().
             # =================================================================
-            "/founder/",  # Contract review, evidence review (FOPS auth via gateway)
+            "/fdr/",  # Contract review, evidence review (FOPS auth via gateway)
             # "/ops/",  # PIN-398: REMOVED - now goes through gateway for FOPS auth
             "/platform/",  # Platform health (founder-only)
             # =================================================================

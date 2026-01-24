@@ -18,7 +18,7 @@ Inventory all founder APIs and enforce `verify_fops_token` middleware.
 
 | API File | Prefix | Current Auth | Required Action |
 |----------|--------|--------------|-----------------|
-| `founder_timeline.py` | `/founder/timeline/*` | NONE | ADD `verify_fops_token` |
+| `founder_timeline.py` | `/fdr/timeline/*` | NONE | ADD `verify_fops_token` |
 | `scenarios.py` | `/scenarios/*` | NONE | ADD `verify_fops_token` |
 | `integration.py` | `/integration/*` | Query param only | ADD `verify_fops_token` |
 | `traces.py` | `/traces/*` | JWT (generic) | Keep (tenant-isolated) |
@@ -37,11 +37,11 @@ Inventory all founder APIs and enforce `verify_fops_token` middleware.
 **Current State:**
 ```python
 from fastapi import APIRouter, HTTPException, Query  # No Depends
-router = APIRouter(prefix="/founder/timeline", tags=["founder-timeline"])  # No dependencies
+router = APIRouter(prefix="/fdr/timeline", tags=["founder-timeline"])  # No dependencies
 ```
 
 **Endpoints Exposed:**
-- `GET /founder/timeline/decisions` - Lists all decision records
+- `GET /fdr/timeline/decisions` - Lists all decision records
 
 **Risk:** Any authenticated user can view founder decision timeline. CRITICAL.
 
@@ -163,7 +163,7 @@ from ..auth.console_auth import verify_fops_token, FounderToken
 
 # Router-level protection (for all endpoints)
 router = APIRouter(
-    prefix="/founder/timeline",
+    prefix="/fdr/timeline",
     tags=["founder-timeline"],
     dependencies=[Depends(verify_fops_token)]  # ADD THIS
 )

@@ -13,8 +13,8 @@
 |----------|------|--------------|---------|
 | `/api/v1/activity/runs` | `activity.py:129` | O1 | Basic run list |
 | `/api/v1/activity/summary` | `activity.py:231` | O1 | Run summary stats |
-| `/api/v1/customer/activity` | `customer_activity.py:56` | Customer-safe | L3 adapter pattern |
-| `/api/v1/customer/activity/{run_id}` | `customer_activity.py:99` | Customer-safe | Run detail |
+| `/api/v1/cus/activity` | `customer_activity.py:56` | Customer-safe | L3 adapter pattern |
+| `/api/v1/cus/activity/{run_id}` | `customer_activity.py:99` | Customer-safe | Run detail |
 | `/api/v1/runtime/activity/runs` | `runtime_projections/activity/runs.py` | O2 | Enhanced with risk_level, evidence_health |
 
 ---
@@ -153,7 +153,7 @@ design/l2_1/intents/AURORA_L2_INTENT_ACT-LLM-SIG-O5.yaml
 
 ## Alternative: Customer Activity Adapter
 
-For stricter L3 boundary enforcement, O1 panels could point to `/api/v1/customer/activity` instead of `/api/v1/activity/runs`. The customer activity adapter provides:
+For stricter L3 boundary enforcement, O1 panels could point to `/api/v1/cus/activity` instead of `/api/v1/activity/runs`. The customer activity adapter provides:
 
 - Tenant isolation enforcement
 - Customer-safe DTO transformation

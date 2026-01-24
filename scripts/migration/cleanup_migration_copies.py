@@ -24,49 +24,49 @@ DRY_RUN = "--dry-run" in sys.argv
 # Format: path, original_file (the one we're keeping)
 MIGRATION_COPIES_TO_REMOVE = [
     # incidents - drivers/ copied today, keep engines/ (Jan 22)
-    ("backend/app/houseofcards/customer/incidents/drivers/incident_read_service.py",
+    ("backend/app/hoc/cus/incidents/L6_drivers/incident_read_service.py",
      "Keeping: engines/incident_read_service.py (Jan 22 14:17)"),
-    ("backend/app/houseofcards/customer/incidents/drivers/incident_write_service.py",
+    ("backend/app/hoc/cus/incidents/L6_drivers/incident_write_service.py",
      "Keeping: engines/incident_write_service.py (Jan 22 14:17)"),
 
     # policies - drivers/ copied today, keep engines/ (Jan 22)
-    ("backend/app/houseofcards/customer/policies/drivers/customer_killswitch_read_service.py",
+    ("backend/app/hoc/cus/policies/L6_drivers/customer_killswitch_read_service.py",
      "Keeping: controls/engines/customer_killswitch_read_service.py (Jan 22 16:25)"),
-    ("backend/app/houseofcards/customer/policies/drivers/customer_policy_read_service.py",
+    ("backend/app/hoc/cus/policies/L6_drivers/customer_policy_read_service.py",
      "Keeping: engines/customer_policy_read_service.py (Jan 22 14:18)"),
 
     # policies - engines/ copied today, keep facades/ (Jan 22)
-    ("backend/app/houseofcards/customer/policies/engines/governance_facade.py",
+    ("backend/app/hoc/cus/policies/L5_engines/governance_facade.py",
      "Keeping: facades/governance_facade.py (Jan 22 11:07)"),
-    ("backend/app/houseofcards/customer/policies/engines/limits_facade.py",
+    ("backend/app/hoc/cus/policies/L5_engines/limits_facade.py",
      "Keeping: facades/limits_facade.py (Jan 22 12:00)"),
 
     # logs - engines/ copied today, keep facades/ (Jan 22)
-    ("backend/app/houseofcards/customer/logs/engines/evidence_facade.py",
+    ("backend/app/hoc/cus/logs/L5_engines/evidence_facade.py",
      "Keeping: facades/evidence_facade.py (Jan 22 12:00)"),
 
     # analytics - drivers/ copied today, keep engines/ (Jan 22)
-    ("backend/app/houseofcards/customer/analytics/drivers/cost_write_service.py",
+    ("backend/app/hoc/cus/analytics/L6_drivers/cost_write_service.py",
      "Keeping: engines/cost_write_service.py (Jan 22 14:28)"),
 
     # integrations - engines/ copied today, keep vault/engines/ and schemas/ (Jan 22)
-    ("backend/app/houseofcards/customer/integrations/engines/cus_credential_service.py",
+    ("backend/app/hoc/cus/integrations/L5_engines/cus_credential_service.py",
      "Keeping: vault/engines/cus_credential_service.py (Jan 22 15:35)"),
-    ("backend/app/houseofcards/customer/integrations/engines/datasource_model.py",
+    ("backend/app/hoc/cus/integrations/L5_engines/datasource_model.py",
      "Keeping: schemas/datasource_model.py (Jan 22 12:04)"),
-    ("backend/app/houseofcards/customer/integrations/engines/vault.py",
+    ("backend/app/hoc/cus/integrations/L5_engines/vault.py",
      "Keeping: vault/engines/vault.py (Jan 22 19:14)"),
 
     # general - engines/ copied today, keep lifecycle/engines/ (Jan 22)
-    ("backend/app/houseofcards/customer/general/engines/offboarding.py",
+    ("backend/app/hoc/cus/general/L5_engines/offboarding.py",
      "Keeping: lifecycle/engines/offboarding.py (Jan 22 16:25)"),
-    ("backend/app/houseofcards/customer/general/engines/onboarding.py",
+    ("backend/app/hoc/cus/general/L5_engines/onboarding.py",
      "Keeping: lifecycle/engines/onboarding.py (Jan 22 16:25)"),
 
     # account - drivers/ copied today, keep engines/ (Jan 23 09:41 - earlier today)
-    ("backend/app/houseofcards/customer/account/drivers/tenant_service.py",
+    ("backend/app/hoc/cus/account/L6_drivers/tenant_service.py",
      "Keeping: engines/tenant_service.py (Jan 23 09:41)"),
-    ("backend/app/houseofcards/customer/account/drivers/user_write_service.py",
+    ("backend/app/hoc/cus/account/L6_drivers/user_write_service.py",
      "Keeping: engines/user_write_service.py (Jan 23 09:41)"),
 ]
 

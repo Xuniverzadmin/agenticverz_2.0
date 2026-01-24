@@ -34,7 +34,7 @@
 | backend/tests/test_pb_s5_prediction.py | backend/app/services/__init__.py | import | 347 |
 | backend/tests/test_m27_cost_loop.py | backend/app/integrations/cost_safety_rails.py | import | 298 |
 | backend/tests/test_m27_cost_loop.py | backend/app/integrations/cost_bridges.py | import | 28 |
-| backend/tests/test_m25_policy_overreach.py | backend/app/integrations/bridges.py | import | 13 |
+| backend/tests/test_m25_policy_overreach.py | backend/app/integrations/L3_adapters.py | import | 13 |
 | backend/tests/test_m25_policy_overreach.py | backend/app/integrations/events.py | import | 16 |
 | backend/tests/test_m26_prevention.py | backend/app/services/cost_anomaly_detector.py | import | 137 |
 | backend/tests/test_m18_advanced.py | backend/app/agents/sba/evolution.py | import | 15 |

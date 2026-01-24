@@ -43,7 +43,7 @@ All execution paths map to L4 semantic owners. Phase A fixes verified.
 | L2 API | L3 Adapter | L4 Semantic | L5 Execution | Status |
 |--------|------------|-------------|--------------|--------|
 | `/costsim/v2/simulate` | `CostSimV2Adapter` | `CostModelEngine` | `cost_simulator` | ✅ CLEAN (C5 fixed) |
-| `/customer/pre-run-declaration` | Direct | Domain models | Planner | ✅ CLEAN (C3 fixed) |
+| `/cus/pre-run-declaration` | Direct | Domain models | Planner | ✅ CLEAN (C3 fixed) |
 | `/ops/revenue` | Direct | Domain models | DB query | ✅ CLEAN (C3 fixed) |
 | `/policy-layer/simulate` | Direct | `PolicyEngine` | Policy evaluator | ✅ CLEAN |
 | `/founder-actions/*` | Direct | `RBACEngine` | Action handlers | ✅ CLEAN |
@@ -154,7 +154,7 @@ BLCA scope expanded to include frontend (L1) transaction initiators.
 | `updateIntegration()` | IntegrationEditor | `PUT /integrations/{id}` | L2→L4→L6(DB) | ✅ CLEAN |
 | `deleteIntegration()` | IntegrationEditor | `DELETE /integrations/{id}` | L2→L4→L6(DB) | ✅ CLEAN |
 | `testIntegration()` | IntegrationTester | `POST /integrations/{id}/test` | L2→L4→L3(Adapter)→External | ✅ CLEAN |
-| `submitPreRunDeclaration()` | PreRunForm | `POST /customer/pre-run-declaration` | L2→L4(Planner)→L6(DB) | ✅ CLEAN |
+| `submitPreRunDeclaration()` | PreRunForm | `POST /cus/pre-run-declaration` | L2→L4(Planner)→L6(DB) | ✅ CLEAN |
 | `createJob()` | JobScheduler | `POST /ops/jobs` | L2→L4→L5(JobRunner) | ✅ CLEAN |
 | `cancelJob()` | JobControls | `POST /ops/jobs/{id}/cancel` | L2→L4→L5(JobRunner) | ✅ CLEAN |
 | `triggerGuard()` | GuardPanel | `POST /guards/trigger` | L2→L4(GuardEngine)→L5 | ✅ CLEAN |

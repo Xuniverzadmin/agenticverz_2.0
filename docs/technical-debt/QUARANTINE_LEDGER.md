@@ -108,7 +108,7 @@ remediation_hint: n/a - FastAPI requires this pattern
 
 ```yaml
 id: TD-005
-scope: backend/app/integrations/bridges.py
+scope: backend/app/integrations/L3_adapters.py
 layer: L4
 type: typing
 reason: TYPE_CHECKING import for IntegrationDispatcher

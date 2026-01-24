@@ -50,43 +50,43 @@
 
 ### DATA_LEAK (75 files)
 
-- `app/houseofcards/founder/ops/engines/founder_review.py`
+- `app/hoc/fdr/ops/engines/founder_review.py`
   - Declared: L2, Dominant: L2
   - Issue: L2 file has 1 L6_DRIVER signals (DB access)
   - Remediation: Extract DB operations to a L6 Driver service
-- `app/houseofcards/api/infrastructure/tenant.py`
+- `app/hoc/api/infrastructure/tenant.py`
   - Declared: L2, Dominant: L2
   - Issue: L2 file has 1 L6_DRIVER signals (DB access)
   - Remediation: Extract DB operations to a L6 Driver service
-- `app/houseofcards/api/founder/ops/founder_actions.py`
+- `app/hoc/api/fdr/ops/founder_actions.py`
   - Declared: ?, Dominant: L2
   - Issue: L2 file has 5 L6_DRIVER signals (DB access)
   - Remediation: Extract DB operations to a L6 Driver service
-- `app/houseofcards/api/founder/agent/founder_contract_review.py`
+- `app/hoc/api/fdr/agent/founder_contract_review.py`
   - Declared: L2, Dominant: L2
   - Issue: L2 file has 1 L6_DRIVER signals (DB access)
   - Remediation: Extract DB operations to a L6 Driver service
-- `app/houseofcards/api/founder/account/founder_explorer.py`
+- `app/hoc/api/fdr/account/founder_explorer.py`
   - Declared: L2, Dominant: L2
   - Issue: L2 file has 4 L6_DRIVER signals (DB access)
   - Remediation: Extract DB operations to a L6 Driver service
-- `app/houseofcards/api/founder/logs/founder_timeline.py`
+- `app/hoc/api/fdr/logs/founder_timeline.py`
   - Declared: ?, Dominant: L2
   - Issue: L2 file has 1 L6_DRIVER signals (DB access)
   - Remediation: Extract DB operations to a L6 Driver service
-- `app/houseofcards/api/customer/ops/cost_ops.py`
+- `app/hoc/api/cus/ops/cost_ops.py`
   - Declared: ?, Dominant: L6
   - Issue: L2 file has 7 L6_DRIVER signals (DB access)
   - Remediation: Extract DB operations to a L6 Driver service
-- `app/houseofcards/api/customer/recovery/recovery.py`
+- `app/hoc/api/cus/recovery/recovery.py`
   - Declared: L2, Dominant: L2
   - Issue: L2 file has 5 L6_DRIVER signals (DB access)
   - Remediation: Extract DB operations to a L6 Driver service
-- `app/houseofcards/api/customer/recovery/recovery_ingest.py`
+- `app/hoc/api/cus/recovery/recovery_ingest.py`
   - Declared: ?, Dominant: L2
   - Issue: L2 file has 2 L6_DRIVER signals (DB access)
   - Remediation: Extract DB operations to a L6 Driver service
-- `app/houseofcards/api/customer/policies/policy_rules_crud.py`
+- `app/hoc/api/cus/policies/policy_rules_crud.py`
   - Declared: L2, Dominant: L2
   - Issue: L2 file has 2 L6_DRIVER signals (DB access)
   - Remediation: Extract DB operations to a L6 Driver service
@@ -94,43 +94,43 @@
 
 ### DRIFT (217 files)
 
-- `app/houseofcards/founder/ops/drivers/ops_write_service.py`
+- `app/hoc/fdr/ops/drivers/ops_write_service.py`
   - Declared: L4, Dominant: L6
   - Issue: Declared L4 but dominant signals are L6 (5 vs 0 signals)
   - Remediation: Update header to declare L6 OR refactor to match declared layer
-- `app/houseofcards/founder/ops/engines/founder_action_write_service.py`
+- `app/hoc/fdr/ops/engines/founder_action_write_service.py`
   - Declared: L4, Dominant: L6
   - Issue: Declared L4 but dominant signals are L6 (8 vs 1 signals)
   - Remediation: Update header to declare L6 OR refactor to match declared layer
-- `app/houseofcards/founder/ops/engines/ops_incident_service.py`
+- `app/hoc/fdr/ops/engines/ops_incident_service.py`
   - Declared: L4, Dominant: L6
   - Issue: Declared L4 but dominant signals are L6 (6 vs 1 signals)
   - Remediation: Update header to declare L6 OR refactor to match declared layer
-- `app/houseofcards/founder/agent/drivers/founder_action_write_service.py`
+- `app/hoc/fdr/agent/drivers/founder_action_write_service.py`
   - Declared: L4, Dominant: L6
   - Issue: Declared L4 but dominant signals are L6 (8 vs 0 signals)
   - Remediation: Update header to declare L6 OR refactor to match declared layer
-- `app/houseofcards/founder/agent/drivers/ops_write_service.py`
+- `app/hoc/fdr/agent/drivers/ops_write_service.py`
   - Declared: L4, Dominant: L6
   - Issue: Declared L4 but dominant signals are L6 (5 vs 0 signals)
   - Remediation: Update header to declare L6 OR refactor to match declared layer
-- `app/houseofcards/founder/incidents/engines/ops_incident_service.py`
+- `app/hoc/fdr/incidents/L5_engines/ops_incident_service.py`
   - Declared: L4, Dominant: L6
   - Issue: Declared L4 but dominant signals are L6 (6 vs 1 signals)
   - Remediation: Update header to declare L6 OR refactor to match declared layer
-- `app/houseofcards/api/founder/logs/founder_review.py`
+- `app/hoc/api/fdr/logs/founder_review.py`
   - Declared: L2, Dominant: L6
   - Issue: Declared L2 but dominant signals are L6 (6 vs 5 signals)
   - Remediation: Update header to declare L6 OR refactor to match declared layer
-- `app/houseofcards/api/founder/incidents/ops.py`
+- `app/hoc/api/fdr/incidents/ops.py`
   - Declared: L2, Dominant: L6
   - Issue: Declared L2 but dominant signals are L6 (11 vs 6 signals)
   - Remediation: Update header to declare L6 OR refactor to match declared layer
-- `app/houseofcards/api/customer/policies/guard.py`
+- `app/hoc/api/cus/policies/guard.py`
   - Declared: L2, Dominant: L6
   - Issue: Declared L2 but dominant signals are L6 (10 vs 8 signals)
   - Remediation: Update header to declare L6 OR refactor to match declared layer
-- `app/houseofcards/api/customer/policies/policy.py`
+- `app/hoc/api/cus/policies/policy.py`
   - Declared: L2, Dominant: L6
   - Issue: Declared L2 but dominant signals are L6 (14 vs 8 signals)
   - Remediation: Update header to declare L6 OR refactor to match declared layer
@@ -138,43 +138,43 @@
 
 ### LAYER_JUMP (53 files)
 
-- `app/houseofcards/customer/policies/drivers/logs_read_service.py`
+- `app/hoc/cus/policies/L6_drivers/logs_read_service.py`
   - Declared: L4, Dominant: ?
   - Issue: Folder suggests L6 but declares L4
   - Remediation: Move file to correct folder matching declared layer
-- `app/houseofcards/customer/policies/drivers/policy_driver.py`
+- `app/hoc/cus/policies/L6_drivers/policy_driver.py`
   - Declared: L2, Dominant: L2
   - Issue: Folder suggests L6 but declares L2
   - Remediation: Move file to correct folder matching declared layer
-- `app/houseofcards/customer/policies/facades/governance_facade.py`
+- `app/hoc/cus/policies/facades/governance_facade.py`
   - Declared: L6, Dominant: L6
   - Issue: Folder suggests L3 but declares L6
   - Remediation: Move file to correct folder matching declared layer
-- `app/houseofcards/customer/agent/engines/semantic_validator.py`
+- `app/hoc/cus/agent/engines/semantic_validator.py`
   - Declared: L2, Dominant: ?
   - Issue: Folder suggests L4 but declares L2
   - Remediation: Move file to correct folder matching declared layer
-- `app/houseofcards/customer/agent/engines/intent_guardrails.py`
+- `app/hoc/cus/agent/engines/intent_guardrails.py`
   - Declared: L2, Dominant: ?
   - Issue: Folder suggests L4 but declares L2
   - Remediation: Move file to correct folder matching declared layer
-- `app/houseofcards/customer/agent/engines/panel_spec_loader.py`
+- `app/hoc/cus/agent/engines/panel_spec_loader.py`
   - Declared: L2, Dominant: ?
   - Issue: Folder suggests L4 but declares L2
   - Remediation: Move file to correct folder matching declared layer
-- `app/houseofcards/customer/agent/engines/panel_metrics_emitter.py`
+- `app/hoc/cus/agent/engines/panel_metrics_emitter.py`
   - Declared: L2, Dominant: ?
   - Issue: Folder suggests L4 but declares L2
   - Remediation: Move file to correct folder matching declared layer
-- `app/houseofcards/customer/agent/engines/validator_engine.py`
+- `app/hoc/cus/agent/engines/validator_engine.py`
   - Declared: L2, Dominant: ?
   - Issue: Folder suggests L4 but declares L2
   - Remediation: Move file to correct folder matching declared layer
-- `app/houseofcards/customer/agent/engines/panel_signal_collector.py`
+- `app/hoc/cus/agent/engines/panel_signal_collector.py`
   - Declared: L6, Dominant: L6
   - Issue: Folder suggests L4 but declares L6
   - Remediation: Move file to correct folder matching declared layer
-- `app/houseofcards/customer/agent/engines/panel_dependency_resolver.py`
+- `app/hoc/cus/agent/engines/panel_dependency_resolver.py`
   - Declared: L2, Dominant: ?
   - Issue: Folder suggests L4 but declares L2
   - Remediation: Move file to correct folder matching declared layer
@@ -182,41 +182,41 @@
 
 ### SIGNAL_MISMATCH (25 files)
 
-- `app/houseofcards/founder/ops/facades/founder_review_adapter.py`
+- `app/hoc/fdr/ops/facades/founder_review_adapter.py`
   - Declared: L3, Dominant: L2
   - Remediation: Review signals - dominant is L2, verify layer assignment
-- `app/houseofcards/customer/platform/facades/platform_eligibility_adapter.py`
+- `app/hoc/cus/platform/facades/platform_eligibility_adapter.py`
   - Declared: L3, Dominant: L2
   - Remediation: Review signals - dominant is L2, verify layer assignment
-- `app/houseofcards/customer/policies/schemas/policy_rules.py`
+- `app/hoc/cus/policies/L5_schemas/policy_rules.py`
   - Declared: L6, Dominant: L2
   - Remediation: Review signals - dominant is L2, verify layer assignment
-- `app/houseofcards/customer/analytics/facades/v2_adapter.py`
+- `app/hoc/cus/analytics/facades/v2_adapter.py`
   - Declared: L3, Dominant: L6
   - Remediation: Review signals - dominant is L6, verify layer assignment
-- `app/houseofcards/customer/analytics/engines/config.py`
+- `app/hoc/cus/analytics/L5_engines/config.py`
   - Declared: ?, Dominant: L6
   - Remediation: Review signals - dominant is L6, verify layer assignment
-- `app/houseofcards/customer/analytics/engines/divergence.py`
+- `app/hoc/cus/analytics/L5_engines/divergence.py`
   - Declared: ?, Dominant: L6
   - Remediation: Review signals - dominant is L6, verify layer assignment
-- `app/houseofcards/customer/analytics/engines/datasets.py`
+- `app/hoc/cus/analytics/L5_engines/datasets.py`
   - Declared: ?, Dominant: L6
   - Remediation: Review signals - dominant is L6, verify layer assignment
-- `app/houseofcards/customer/analytics/engines/provenance.py`
+- `app/hoc/cus/analytics/L5_engines/provenance.py`
   - Declared: ?, Dominant: L6
   - Remediation: Review signals - dominant is L6, verify layer assignment
-- `app/houseofcards/customer/integrations/facades/founder_ops_adapter.py`
+- `app/hoc/cus/integrations/facades/founder_ops_adapter.py`
   - Declared: L3, Dominant: L2
   - Remediation: Review signals - dominant is L2, verify layer assignment
-- `app/houseofcards/customer/integrations/facades/customer_policies_adapter.py`
+- `app/hoc/cus/integrations/facades/customer_policies_adapter.py`
   - Declared: L3, Dominant: L6
   - Remediation: Review signals - dominant is L6, verify layer assignment
 - ... and 15 more
 
 ### TEMPORAL_LEAK (1 files)
 
-- `app/houseofcards/internal/agent/engines/retry_policy.py`
+- `app/hoc/int/agent/engines/retry_policy.py`
   - Declared: ?, Dominant: L6
   - Issue: Temporal pattern (sleep/retry) in L4
   - Remediation: Move temporal logic (sleep, retry) to L5 Worker or runtime infrastructure
@@ -257,38 +257,38 @@
 
 #### RECLASSIFY_ONLY (89 files)
 
-- `app/houseofcards/founder/ops/drivers/ops_write_service.py` (declared: L4, detected: L6)
-- `app/houseofcards/founder/agent/drivers/founder_action_write_service.py` (declared: L4, detected: L6)
-- `app/houseofcards/founder/agent/drivers/ops_write_service.py` (declared: L4, detected: L6)
-- `app/houseofcards/customer/policies/drivers/logs_read_service.py` (declared: L4, detected: ?)
-- `app/houseofcards/customer/policies/drivers/recovery_write_service.py` (declared: L4, detected: L6)
+- `app/hoc/fdr/ops/drivers/ops_write_service.py` (declared: L4, detected: L6)
+- `app/hoc/fdr/agent/drivers/founder_action_write_service.py` (declared: L4, detected: L6)
+- `app/hoc/fdr/agent/drivers/ops_write_service.py` (declared: L4, detected: L6)
+- `app/hoc/cus/policies/L6_drivers/logs_read_service.py` (declared: L4, detected: ?)
+- `app/hoc/cus/policies/L6_drivers/recovery_write_service.py` (declared: L4, detected: L6)
 - ... and 84 more
 
 #### EXTRACT_DRIVER (232 files)
 
-- `app/houseofcards/founder/ops/engines/founder_action_write_service.py` (declared: L4, detected: L6)
-- `app/houseofcards/founder/ops/engines/founder_review.py` (declared: L2, detected: L2)
-- `app/houseofcards/founder/ops/engines/ops_incident_service.py` (declared: L4, detected: L6)
-- `app/houseofcards/founder/incidents/engines/ops_incident_service.py` (declared: L4, detected: L6)
-- `app/houseofcards/api/infrastructure/tenant.py` (declared: L2, detected: L2)
+- `app/hoc/fdr/ops/engines/founder_action_write_service.py` (declared: L4, detected: L6)
+- `app/hoc/fdr/ops/engines/founder_review.py` (declared: L2, detected: L2)
+- `app/hoc/fdr/ops/engines/ops_incident_service.py` (declared: L4, detected: L6)
+- `app/hoc/fdr/incidents/L5_engines/ops_incident_service.py` (declared: L4, detected: L6)
+- `app/hoc/api/infrastructure/tenant.py` (declared: L2, detected: L2)
 - ... and 227 more
 
 #### EXTRACT_AUTHORITY (13 files)
 
-- `app/houseofcards/customer/platform/engines/pool_manager.py` (declared: L4, detected: L6)
-- `app/houseofcards/customer/general/lifecycle/engines/pool_manager.py` (declared: L4, detected: L6)
-- `app/houseofcards/customer/integrations/facades/webhook_adapter.py` (declared: L3, detected: L6)
-- `app/houseofcards/internal/platform/engines/engine.py` (declared: L4, detected: L6)
-- `app/houseofcards/internal/policies/engines/rbac.py` (declared: L4, detected: L2)
+- `app/hoc/cus/platform/engines/pool_manager.py` (declared: L4, detected: L6)
+- `app/hoc/cus/general/L5_lifecycle/engines/pool_manager.py` (declared: L4, detected: L6)
+- `app/hoc/cus/integrations/facades/webhook_adapter.py` (declared: L3, detected: L6)
+- `app/hoc/int/platform/engines/engine.py` (declared: L4, detected: L6)
+- `app/hoc/int/policies/L5_engines/rbac.py` (declared: L4, detected: L2)
 - ... and 8 more
 
 #### SPLIT_FILE (20 files)
 
-- `app/houseofcards/founder/ops/facades/founder_review_adapter.py` (declared: L3, detected: L2)
-- `app/houseofcards/customer/platform/facades/platform_eligibility_adapter.py` (declared: L3, detected: L2)
-- `app/houseofcards/customer/policies/engines/certificate.py` (declared: L3, detected: L6)
-- `app/houseofcards/customer/policies/engines/policy_models.py` (declared: L4, detected: L6)
-- `app/houseofcards/customer/policies/engines/decisions.py` (declared: L4, detected: L6)
+- `app/hoc/fdr/ops/facades/founder_review_adapter.py` (declared: L3, detected: L2)
+- `app/hoc/cus/platform/facades/platform_eligibility_adapter.py` (declared: L3, detected: L2)
+- `app/hoc/cus/policies/L5_engines/certificate.py` (declared: L3, detected: L6)
+- `app/hoc/cus/policies/L5_engines/policy_models.py` (declared: L4, detected: L6)
+- `app/hoc/cus/policies/L5_engines/decisions.py` (declared: L4, detected: L6)
 - ... and 15 more
 
 ---

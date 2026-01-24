@@ -728,7 +728,7 @@ library:
       Required action:
       1. Add entry to docs/contracts/visibility_contract.yaml
       2. Declare O1-O4 visibility (REQUIRED/OPTIONAL/FORBIDDEN)
-      3. Declare console visibility (ops/guard/founder/user)
+      3. Declare console visibility (ops/guard/fdr/user)
       4. Implement required API endpoints
       5. Verify with visibility validator
 

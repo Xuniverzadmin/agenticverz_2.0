@@ -157,8 +157,8 @@ These pages exist but belong to Founder or Ops Console, NOT Customer Console.
 
 | Route | Component | Jurisdiction | Notes |
 |-------|-----------|--------------|-------|
-| `/founder/timeline` | `FounderTimelinePage.tsx` | FOUNDER | Decision timeline |
-| `/founder/controls` | `FounderControlsPage.tsx` | FOUNDER | Kill-switch controls |
+| `/fdr/timeline` | `FounderTimelinePage.tsx` | FOUNDER | Decision timeline |
+| `/fdr/controls` | `FounderControlsPage.tsx` | FOUNDER | Kill-switch controls |
 
 ### Founder Execution
 

@@ -37,7 +37,7 @@ invariants:
 | ACT-LLM-LIVE-O4 | Telemetry status | /api/v1/workers/.../runs | `has telemetry_status` |
 | ACT-LLM-LIVE-O5 | Run distribution | /health | `has distribution_by_provider` |
 | ACT-LLM-COMP-O2 | Success count | /api/v1/activity/summary | `has successful_count` |
-| ACT-LLM-COMP-O4 | Near-limit completed | /api/v1/customer/activity | `has near_limit_count` |
+| ACT-LLM-COMP-O4 | Near-limit completed | /api/v1/cus/activity | `has near_limit_count` |
 | ACT-LLM-COMP-O5 | Aborted runs | /api/v1/runtime/traces | `has aborted_count` |
 | ACT-LLM-SIG-O2 | Threshold proximity | /api/v1/predictions | `has threshold_proximity` |
 | ACT-LLM-SIG-O3 | Temporal patterns | /api/v1/predictions/.../summary | `has temporal_patterns` |

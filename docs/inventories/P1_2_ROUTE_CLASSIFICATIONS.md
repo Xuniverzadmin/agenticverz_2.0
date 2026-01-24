@@ -41,12 +41,12 @@ Explicitly classify all routes by audience and role requirements.
 | `/recovery` | RecoveryPage | fops | ALL | FounderRoute | HARDENED |
 | `/integration` | IntegrationDashboard | fops | ALL | FounderRoute | HARDENED |
 | `/integration/loop/:id` | LoopStatusPage | fops | ALL | FounderRoute | HARDENED |
-| `/founder/timeline` | FounderTimelinePage | fops | ALL | FounderRoute | HARDENED |
-| `/founder/controls` | FounderControlsPage | fops | FOUNDER | FounderRoute | HARDENED |
-| `/founder/replay` | ReplayIndexPage | fops | ALL | FounderRoute | HARDENED |
-| `/founder/replay/:id` | ReplaySliceViewer | fops | ALL | FounderRoute | HARDENED |
-| `/founder/scenarios` | ScenarioBuilderPage | fops | ALL | FounderRoute | HARDENED |
-| `/founder/explorer` | FounderExplorerPage | fops | ALL | FounderRoute | HARDENED |
+| `/fdr/timeline` | FounderTimelinePage | fops | ALL | FounderRoute | HARDENED |
+| `/fdr/controls` | FounderControlsPage | fops | FOUNDER | FounderRoute | HARDENED |
+| `/fdr/replay` | ReplayIndexPage | fops | ALL | FounderRoute | HARDENED |
+| `/fdr/replay/:id` | ReplaySliceViewer | fops | ALL | FounderRoute | HARDENED |
+| `/fdr/scenarios` | ScenarioBuilderPage | fops | ALL | FounderRoute | HARDENED |
+| `/fdr/explorer` | FounderExplorerPage | fops | ALL | FounderRoute | HARDENED |
 | `/sba` | SBAInspectorPage | fops | ALL | FounderRoute | HARDENED |
 | `/credits` | CreditsPage | fops | ALL | FounderRoute | HARDENED |
 
@@ -80,7 +80,7 @@ Explicitly classify all routes by audience and role requirements.
 
 | Endpoint | File | Auth | PIN-318 Status |
 |----------|------|------|----------------|
-| `/api/v1/founder/timeline/*` | founder_timeline.py | verify_fops_token | HARDENED |
+| `/api/v1/fdr/timeline/*` | founder_timeline.py | verify_fops_token | HARDENED |
 | `/api/v1/scenarios/*` | scenarios.py | verify_fops_token | HARDENED |
 | `/api/v1/integration/*` | integration.py | verify_fops_token | HARDENED |
 | `/api/v1/traces/*` | traces.py | JWT (tenant-isolated) | OK |

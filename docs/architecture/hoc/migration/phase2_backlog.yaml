@@ -36,23 +36,23 @@ batch_1_read_service:
   completed: 3
   status: verified
   files:
-    - file: "app/houseofcards/customer/incidents/engines/incident_read_service.py"
+    - file: "app/hoc/cus/incidents/L5_engines/incident_read_service.py"
       declared: L4
       detected: L4  # Now pure L4
       status: verified
-      driver_file: "app/houseofcards/customer/incidents/drivers/incident_read_driver.py"
+      driver_file: "app/hoc/cus/incidents/L6_drivers/incident_read_driver.py"
       extracted_date: "2026-01-23"
-    - file: "app/houseofcards/customer/policies/controls/engines/customer_killswitch_read_service.py"
+    - file: "app/hoc/cus/policies/controls/engines/customer_killswitch_read_service.py"
       declared: L4
       detected: L4  # Now pure L4
       status: verified
-      driver_file: "app/houseofcards/customer/policies/controls/drivers/killswitch_read_driver.py"
+      driver_file: "app/hoc/cus/policies/controls/drivers/killswitch_read_driver.py"
       extracted_date: "2026-01-23"
-    - file: "app/houseofcards/customer/policies/engines/customer_policy_read_service.py"
+    - file: "app/hoc/cus/policies/L5_engines/customer_policy_read_service.py"
       declared: L4
       detected: L4  # Now pure L4
       status: verified
-      driver_file: "app/houseofcards/customer/policies/drivers/policy_read_driver.py"
+      driver_file: "app/hoc/cus/policies/L6_drivers/policy_read_driver.py"
       extracted_date: "2026-01-23"
 
 # =============================================================================
@@ -64,31 +64,31 @@ batch_2_write_service:
   completed: 0
   status: pending
   files:
-    - file: "app/houseofcards/customer/account/engines/user_write_service.py"
+    - file: "app/hoc/cus/account/L5_engines/user_write_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/analytics/engines/cost_write_service.py"
+    - file: "app/hoc/cus/analytics/L5_engines/cost_write_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/controls/engines/guard_write_service.py"
+    - file: "app/hoc/cus/general/L5_controls/engines/guard_write_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/incidents/engines/incident_write_service.py"
+    - file: "app/hoc/cus/incidents/L5_engines/incident_write_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/founder/ops/engines/founder_action_write_service.py"
+    - file: "app/hoc/fdr/ops/engines/founder_action_write_service.py"
       declared: L4
       detected: L6
       status: pending
@@ -104,247 +104,247 @@ batch_3_service_mixed:
   completed: 0
   status: pending
   files:
-    - file: "app/houseofcards/customer/account/support/CRM/engines/audit_service.py"
+    - file: "app/hoc/cus/account/support/CRM/engines/audit_service.py"
       declared: L8
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/account/support/CRM/engines/validator_service.py"
+    - file: "app/hoc/cus/account/support/CRM/engines/validator_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/api_keys/engines/keys_service.py"
+    - file: "app/hoc/cus/api_keys/L5_engines/keys_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/engines/cus_enforcement_service.py"
+    - file: "app/hoc/cus/general/L5_engines/cus_enforcement_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/engines/cus_health_service.py"
+    - file: "app/hoc/cus/general/L5_engines/cus_health_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/engines/cus_telemetry_service.py"
+    - file: "app/hoc/cus/general/L5_engines/cus_telemetry_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/workflow/contracts/engines/contract_service.py"
+    - file: "app/hoc/cus/general/L5_workflow/contracts/engines/contract_service.py"
       declared: L4
       detected: L4
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/incidents/engines/incident_pattern_service.py"
+    - file: "app/hoc/cus/incidents/L5_engines/incident_pattern_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/incidents/engines/llm_failure_service.py"
+    - file: "app/hoc/cus/incidents/L5_engines/llm_failure_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/incidents/engines/policy_violation_service.py"
+    - file: "app/hoc/cus/incidents/L5_engines/policy_violation_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/incidents/engines/postmortem_service.py"
+    - file: "app/hoc/cus/incidents/L5_engines/postmortem_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/incidents/engines/recurrence_analysis_service.py"
+    - file: "app/hoc/cus/incidents/L5_engines/recurrence_analysis_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/engines/cus_health_service.py"
+    - file: "app/hoc/cus/integrations/L5_engines/cus_health_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/engines/cus_integration_service.py"
+    - file: "app/hoc/cus/integrations/L5_engines/cus_integration_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/engines/iam_service.py"
+    - file: "app/hoc/cus/integrations/L5_engines/iam_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/cus_integration_service.py"
+    - file: "app/hoc/cus/logs/L5_engines/cus_integration_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/cus_telemetry_service.py"
+    - file: "app/hoc/cus/logs/L5_engines/cus_telemetry_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/export_bundle_service.py"
+    - file: "app/hoc/cus/logs/L5_engines/export_bundle_service.py"
       declared: L3
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/platform/engines/platform_health_service.py"
+    - file: "app/hoc/cus/platform/engines/platform_health_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/audit_service.py"
+    - file: "app/hoc/cus/policies/L5_engines/audit_service.py"
       declared: L8
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/contract_service.py"
+    - file: "app/hoc/cus/policies/L5_engines/contract_service.py"
       declared: L4
       detected: L4
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/cus_enforcement_service.py"
+    - file: "app/hoc/cus/policies/L5_engines/cus_enforcement_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/keys_service.py"
+    - file: "app/hoc/cus/policies/L5_engines/keys_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/override_service.py"
+    - file: "app/hoc/cus/policies/L5_engines/override_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/policy_limits_service.py"
+    - file: "app/hoc/cus/policies/L5_engines/policy_limits_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/policy_rules_service.py"
+    - file: "app/hoc/cus/policies/L5_engines/policy_rules_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/policy_violation_service.py"
+    - file: "app/hoc/cus/policies/L5_engines/policy_violation_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/simulation_service.py"
+    - file: "app/hoc/cus/policies/L5_engines/simulation_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/validator_service.py"
+    - file: "app/hoc/cus/policies/L5_engines/validator_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/founder/incidents/engines/ops_incident_service.py"
+    - file: "app/hoc/fdr/incidents/L5_engines/ops_incident_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/founder/ops/engines/ops_incident_service.py"
+    - file: "app/hoc/fdr/ops/engines/ops_incident_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/blackboard_service.py"
+    - file: "app/hoc/int/agent/engines/blackboard_service.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/credit_service.py"
+    - file: "app/hoc/int/agent/engines/credit_service.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/governance_service.py"
+    - file: "app/hoc/int/agent/engines/governance_service.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/invoke_audit_service.py"
+    - file: "app/hoc/int/agent/engines/invoke_audit_service.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/job_service.py"
+    - file: "app/hoc/int/agent/engines/job_service.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/message_service.py"
+    - file: "app/hoc/int/agent/engines/message_service.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/registry_service.py"
+    - file: "app/hoc/int/agent/engines/registry_service.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/worker_service.py"
+    - file: "app/hoc/int/agent/engines/worker_service.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/api_keys/engines/api_key_service.py"
+    - file: "app/hoc/int/api_keys/L5_engines/api_key_service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/platform/iam/engines/iam_service.py"
+    - file: "app/hoc/int/platform/iam/engines/iam_service.py"
       declared: L4
       detected: L6
       status: pending
@@ -360,145 +360,145 @@ batch_4_facade:
   completed: 0
   status: pending
   files:
-    - file: "app/houseofcards/customer/account/facades/accounts_facade.py"
+    - file: "app/hoc/cus/account/facades/accounts_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/account/facades/notifications_facade.py"
+    - file: "app/hoc/cus/account/facades/notifications_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/activity/facades/activity_facade.py"
+    - file: "app/hoc/cus/activity/facades/activity_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/analytics/facades/analytics_facade.py"
+    - file: "app/hoc/cus/analytics/facades/analytics_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/api_keys/facades/api_keys_facade.py"
+    - file: "app/hoc/cus/api_keys/facades/api_keys_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/facades/monitors_facade.py"
+    - file: "app/hoc/cus/general/facades/monitors_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/facades/scheduler_facade.py"
+    - file: "app/hoc/cus/general/facades/scheduler_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/incidents/facades/incidents_facade.py"
+    - file: "app/hoc/cus/incidents/facades/incidents_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/facades/datasources_facade.py"
+    - file: "app/hoc/cus/integrations/facades/datasources_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/alerts_facade.py"
+    - file: "app/hoc/cus/logs/L5_engines/alerts_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/compliance_facade.py"
+    - file: "app/hoc/cus/logs/L5_engines/compliance_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/connectors_facade.py"
+    - file: "app/hoc/cus/logs/L5_engines/connectors_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/controls_facade.py"
+    - file: "app/hoc/cus/logs/L5_engines/controls_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/datasources_facade.py"
+    - file: "app/hoc/cus/logs/L5_engines/datasources_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/lifecycle_facade.py"
+    - file: "app/hoc/cus/logs/L5_engines/lifecycle_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/monitors_facade.py"
+    - file: "app/hoc/cus/logs/L5_engines/monitors_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/notifications_facade.py"
+    - file: "app/hoc/cus/logs/L5_engines/notifications_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/retrieval_facade.py"
+    - file: "app/hoc/cus/logs/L5_engines/retrieval_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/scheduler_facade.py"
+    - file: "app/hoc/cus/logs/L5_engines/scheduler_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/facades/logs_facade.py"
+    - file: "app/hoc/cus/logs/facades/logs_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/overview/facades/overview_facade.py"
+    - file: "app/hoc/cus/overview/facades/overview_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/facades/controls_facade.py"
+    - file: "app/hoc/cus/policies/facades/controls_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/facades/limits_facade.py"
+    - file: "app/hoc/cus/policies/facades/limits_facade.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/facades/policies_facade.py"
+    - file: "app/hoc/cus/policies/facades/policies_facade.py"
       declared: L4
       detected: L6
       status: pending
@@ -514,973 +514,973 @@ batch_5_other:
   completed: 0
   status: pending
   files:
-    - file: "app/houseofcards/api/customer/account/memory_pins.py"
+    - file: "app/hoc/api/cus/account/memory_pins.py"
       declared: None
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/customer/activity/activity.py"
+    - file: "app/hoc/api/cus/activity/activity.py"
       declared: L2
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/customer/agent/discovery.py"
+    - file: "app/hoc/api/cus/agent/discovery.py"
       declared: None
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/customer/agent/platform.py"
+    - file: "app/hoc/api/cus/agent/platform.py"
       declared: L2
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/customer/analytics/feedback.py"
+    - file: "app/hoc/api/cus/analytics/feedback.py"
       declared: None
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/customer/analytics/predictions.py"
+    - file: "app/hoc/api/cus/analytics/predictions.py"
       declared: None
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/customer/analytics/scenarios.py"
+    - file: "app/hoc/api/cus/analytics/scenarios.py"
       declared: L2
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/customer/api_keys/embedding.py"
+    - file: "app/hoc/api/cus/api_keys/embedding.py"
       declared: None
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/customer/general/agents.py"
+    - file: "app/hoc/api/cus/general/agents.py"
       declared: L2
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/customer/general/debug_auth.py"
+    - file: "app/hoc/api/cus/general/debug_auth.py"
       declared: L2
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/customer/incidents/cost_guard.py"
-      declared: None
-      detected: L6
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/incidents/incidents.py"
-      declared: L2
-      detected: L6
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/integrations/session_context.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/logs/cost_intelligence.py"
+    - file: "app/hoc/api/cus/incidents/cost_guard.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/customer/logs/tenants.py"
-      declared: None
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/logs/traces.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/ops/cost_ops.py"
-      declared: None
-      detected: L6
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/overview/overview.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/M25_integrations.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/alerts.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/analytics.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/aos_accounts.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/aos_api_key.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/aos_cus_integrations.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/connectors.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/customer_visibility.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/datasources.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/guard.py"
+    - file: "app/hoc/api/cus/incidents/incidents.py"
       declared: L2
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/logs.py"
+    - file: "app/hoc/api/cus/integrations/session_context.py"
       declared: L2
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/monitors.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/override.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/policies.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/policy.py"
-      declared: L2
-      detected: L6
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/policy_layer.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/policy_limits_crud.py"
-      declared: L2
-      detected: L6
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/policy_proposals.py"
-      declared: None
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/policy_rules_crud.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/rbac_api.py"
-      declared: None
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/replay.py"
-      declared: L2
-      detected: L6
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/scheduler.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/simulate.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/status_history.py"
+    - file: "app/hoc/api/cus/logs/cost_intelligence.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/customer/policies/workers.py"
-      declared: L2
-      detected: L6
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/recovery/recovery.py"
-      declared: L2
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/customer/recovery/recovery_ingest.py"
+    - file: "app/hoc/api/cus/logs/tenants.py"
       declared: None
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/founder/account/founder_explorer.py"
+    - file: "app/hoc/api/cus/logs/traces.py"
       declared: L2
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/founder/agent/founder_contract_review.py"
+    - file: "app/hoc/api/cus/ops/cost_ops.py"
+      declared: None
+      detected: L6
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/overview/overview.py"
       declared: L2
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/founder/incidents/ops.py"
+    - file: "app/hoc/api/cus/policies/M25_integrations.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/alerts.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/analytics.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/aos_accounts.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/aos_api_key.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/aos_cus_integrations.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/connectors.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/customer_visibility.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/datasources.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/guard.py"
       declared: L2
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/founder/logs/founder_review.py"
+    - file: "app/hoc/api/cus/policies/logs.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/monitors.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/override.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/policies.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/policy.py"
       declared: L2
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/founder/logs/founder_timeline.py"
-      declared: None
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/founder/ops/founder_actions.py"
-      declared: None
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/api/infrastructure/tenant.py"
+    - file: "app/hoc/api/cus/policies/policy_layer.py"
       declared: L2
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/internal/account/aos_cli.py"
+    - file: "app/hoc/api/cus/policies/policy_limits_crud.py"
+      declared: L2
+      detected: L6
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/policy_proposals.py"
+      declared: None
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/policy_rules_crud.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/rbac_api.py"
+      declared: None
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/replay.py"
+      declared: L2
+      detected: L6
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/scheduler.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/simulate.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/status_history.py"
+      declared: None
+      detected: L6
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/policies/workers.py"
+      declared: L2
+      detected: L6
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/recovery/recovery.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/cus/recovery/recovery_ingest.py"
+      declared: None
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/fdr/account/founder_explorer.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/fdr/agent/founder_contract_review.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/fdr/incidents/ops.py"
+      declared: L2
+      detected: L6
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/fdr/logs/founder_review.py"
+      declared: L2
+      detected: L6
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/fdr/logs/founder_timeline.py"
+      declared: None
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/fdr/ops/founder_actions.py"
+      declared: None
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/infrastructure/tenant.py"
+      declared: L2
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/api/int/account/aos_cli.py"
       declared: L7
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/api/internal/agent/main.py"
+    - file: "app/hoc/api/int/agent/main.py"
       declared: L2
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/account/engines/email_verification.py"
+    - file: "app/hoc/cus/account/L5_engines/email_verification.py"
       declared: L3
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/account/support/CRM/engines/job_executor.py"
+    - file: "app/hoc/cus/account/support/CRM/engines/job_executor.py"
       declared: L5
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/agent/engines/panel_signal_translator.py"
+    - file: "app/hoc/cus/agent/engines/panel_signal_translator.py"
       declared: L2
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/analytics/engines/alert_worker.py"
+    - file: "app/hoc/cus/analytics/L5_engines/alert_worker.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/analytics/engines/coordinator.py"
+    - file: "app/hoc/cus/analytics/L5_engines/coordinator.py"
       declared: L5
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/analytics/engines/cost_anomaly_detector.py"
+    - file: "app/hoc/cus/analytics/L5_engines/cost_anomaly_detector.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/analytics/engines/cost_model_engine.py"
+    - file: "app/hoc/cus/analytics/L5_engines/cost_model_engine.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/analytics/engines/envelope.py"
+    - file: "app/hoc/cus/analytics/L5_engines/envelope.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/analytics/engines/pattern_detection.py"
+    - file: "app/hoc/cus/analytics/L5_engines/pattern_detection.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/analytics/engines/prediction.py"
+    - file: "app/hoc/cus/analytics/L5_engines/prediction.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/api_keys/engines/email_verification.py"
+    - file: "app/hoc/cus/api_keys/L5_engines/email_verification.py"
       declared: L3
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/engines/alert_log_linker.py"
+    - file: "app/hoc/cus/general/L5_engines/alert_log_linker.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/engines/control_registry.py"
+    - file: "app/hoc/cus/general/L5_engines/control_registry.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/engines/knowledge_lifecycle_manager.py"
+    - file: "app/hoc/cus/general/L5_engines/knowledge_lifecycle_manager.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/engines/knowledge_sdk.py"
+    - file: "app/hoc/cus/general/L5_engines/knowledge_sdk.py"
       declared: L2
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/engines/lifecycle_stages_base.py"
+    - file: "app/hoc/cus/general/L5_engines/lifecycle_stages_base.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/lifecycle/engines/base.py"
+    - file: "app/hoc/cus/general/L5_lifecycle/engines/base.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/lifecycle/engines/offboarding.py"
+    - file: "app/hoc/cus/general/L5_lifecycle/engines/offboarding.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/lifecycle/engines/onboarding.py"
+    - file: "app/hoc/cus/general/L5_lifecycle/engines/onboarding.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/runtime/engines/constraint_checker.py"
+    - file: "app/hoc/cus/general/L4_runtime/engines/constraint_checker.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/runtime/engines/governance_orchestrator.py"
+    - file: "app/hoc/cus/general/L4_runtime/engines/governance_orchestrator.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/runtime/engines/phase_status_invariants.py"
+    - file: "app/hoc/cus/general/L4_runtime/engines/phase_status_invariants.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/general/ui/engines/rollout_projection.py"
+    - file: "app/hoc/cus/general/L5_ui/engines/rollout_projection.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/incidents/engines/alert_log_linker.py"
+    - file: "app/hoc/cus/incidents/L5_engines/alert_log_linker.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/incidents/engines/degraded_mode_checker.py"
+    - file: "app/hoc/cus/incidents/L5_engines/degraded_mode_checker.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/incidents/engines/failure_mode_handler.py"
+    - file: "app/hoc/cus/incidents/L5_engines/failure_mode_handler.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/incidents/engines/incident_engine.py"
+    - file: "app/hoc/cus/incidents/L5_engines/incident_engine.py"
       declared: L4
       detected: L4
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/incidents/engines/lessons_engine.py"
+    - file: "app/hoc/cus/incidents/L5_engines/lessons_engine.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/drivers/cost_snapshots.py"
+    - file: "app/hoc/cus/integrations/L6_drivers/cost_snapshots.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/engines/graduation_engine.py"
+    - file: "app/hoc/cus/integrations/L5_engines/graduation_engine.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/engines/http_connector.py"
+    - file: "app/hoc/cus/integrations/L5_engines/http_connector.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/engines/retrieval_mediator.py"
+    - file: "app/hoc/cus/integrations/L5_engines/retrieval_mediator.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/engines/sql_gateway.py"
+    - file: "app/hoc/cus/integrations/L5_engines/sql_gateway.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/facades/customer_incidents_adapter.py"
+    - file: "app/hoc/cus/integrations/facades/customer_incidents_adapter.py"
       declared: L3
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/facades/customer_keys_adapter.py"
+    - file: "app/hoc/cus/integrations/facades/customer_keys_adapter.py"
       declared: L3
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/facades/customer_killswitch_adapter.py"
+    - file: "app/hoc/cus/integrations/facades/customer_killswitch_adapter.py"
       declared: L3
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/facades/file_storage_base.py"
+    - file: "app/hoc/cus/integrations/facades/file_storage_base.py"
       declared: L3
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/facades/gcs_adapter.py"
+    - file: "app/hoc/cus/integrations/facades/gcs_adapter.py"
       declared: L3
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/facades/notifications_base.py"
+    - file: "app/hoc/cus/integrations/facades/notifications_base.py"
       declared: L3
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/facades/pgvector_adapter.py"
+    - file: "app/hoc/cus/integrations/facades/pgvector_adapter.py"
       declared: L3
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/facades/pinecone_adapter.py"
+    - file: "app/hoc/cus/integrations/facades/pinecone_adapter.py"
       declared: L3
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/facades/s3_adapter.py"
+    - file: "app/hoc/cus/integrations/facades/s3_adapter.py"
       declared: L3
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/facades/vector_stores_base.py"
+    - file: "app/hoc/cus/integrations/facades/vector_stores_base.py"
       declared: L3
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/integrations/facades/weaviate_adapter.py"
+    - file: "app/hoc/cus/integrations/facades/weaviate_adapter.py"
       declared: L3
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/M17_internal_worker.py"
+    - file: "app/hoc/cus/logs/L5_engines/M17_internal_worker.py"
       declared: L2
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/api.py"
+    - file: "app/hoc/cus/logs/L5_engines/api.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/audit_durability.py"
+    - file: "app/hoc/cus/logs/L5_engines/audit_durability.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/completeness_checker.py"
+    - file: "app/hoc/cus/logs/L5_engines/completeness_checker.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/cost_anomaly_detector.py"
+    - file: "app/hoc/cus/logs/L5_engines/cost_anomaly_detector.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/durability.py"
+    - file: "app/hoc/cus/logs/L5_engines/durability.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/export_completeness_checker.py"
+    - file: "app/hoc/cus/logs/L5_engines/export_completeness_checker.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/pattern_detection.py"
+    - file: "app/hoc/cus/logs/L5_engines/pattern_detection.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/logs/engines/retrieval_mediator.py"
+    - file: "app/hoc/cus/logs/L5_engines/retrieval_mediator.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/controls/engines/degraded_mode_checker.py"
+    - file: "app/hoc/cus/policies/controls/engines/degraded_mode_checker.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/binding_moment_enforcer.py"
+    - file: "app/hoc/cus/policies/L5_engines/binding_moment_enforcer.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/budget_enforcement_engine.py"
+    - file: "app/hoc/cus/policies/L5_engines/budget_enforcement_engine.py"
       declared: L4
       detected: L4
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/constraint_checker.py"
+    - file: "app/hoc/cus/policies/L5_engines/constraint_checker.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/control_registry.py"
+    - file: "app/hoc/cus/policies/L5_engines/control_registry.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/deterministic_engine.py"
+    - file: "app/hoc/cus/policies/L5_engines/deterministic_engine.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/engine.py"
+    - file: "app/hoc/cus/policies/L5_engines/engine.py"
       declared: L4
       detected: L4
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/governance_orchestrator.py"
+    - file: "app/hoc/cus/policies/L5_engines/governance_orchestrator.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/intent.py"
+    - file: "app/hoc/cus/policies/L5_engines/intent.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/job_executor.py"
+    - file: "app/hoc/cus/policies/L5_engines/job_executor.py"
       declared: L5
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/kernel.py"
+    - file: "app/hoc/cus/policies/L5_engines/kernel.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/lessons_engine.py"
+    - file: "app/hoc/cus/policies/L5_engines/lessons_engine.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/phase_status_invariants.py"
+    - file: "app/hoc/cus/policies/L5_engines/phase_status_invariants.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/policy_graph_engine.py"
+    - file: "app/hoc/cus/policies/L5_engines/policy_graph_engine.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/policy_mapper.py"
+    - file: "app/hoc/cus/policies/L5_engines/policy_mapper.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/policy_proposal.py"
+    - file: "app/hoc/cus/policies/L5_engines/policy_proposal.py"
       declared: L3
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/prevention_engine.py"
+    - file: "app/hoc/cus/policies/L5_engines/prevention_engine.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/prevention_hook.py"
+    - file: "app/hoc/cus/policies/L5_engines/prevention_hook.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/customer/policies/engines/rollout_projection.py"
+    - file: "app/hoc/cus/policies/L5_engines/rollout_projection.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/founder/ops/engines/founder_review.py"
+    - file: "app/hoc/fdr/ops/engines/founder_review.py"
       declared: L2
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/agent_invoke.py"
+    - file: "app/hoc/int/agent/engines/agent_invoke.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/evolution.py"
+    - file: "app/hoc/int/agent/engines/evolution.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/http_call.py"
+    - file: "app/hoc/int/agent/engines/http_call.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/http_call_stub.py"
+    - file: "app/hoc/int/agent/engines/http_call_stub.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/http_call_v2.py"
+    - file: "app/hoc/int/agent/engines/http_call_v2.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/integrated_runtime.py"
+    - file: "app/hoc/int/agent/engines/integrated_runtime.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/json_transform_v2.py"
+    - file: "app/hoc/int/agent/engines/json_transform_v2.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/llm_invoke_stub.py"
+    - file: "app/hoc/int/agent/engines/llm_invoke_stub.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/llm_invoke_v2.py"
+    - file: "app/hoc/int/agent/engines/llm_invoke_v2.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/panel_signal_translator.py"
+    - file: "app/hoc/int/agent/engines/panel_signal_translator.py"
       declared: L2
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/service.py"
+    - file: "app/hoc/int/agent/engines/service.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/agent/engines/skills_base.py"
+    - file: "app/hoc/int/agent/engines/skills_base.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/analytics/engines/runner.py"
+    - file: "app/hoc/int/analytics/L5_engines/runner.py"
       declared: L5
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/analytics/engines/simulate.py"
+    - file: "app/hoc/int/analytics/L5_engines/simulate.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/api_keys/engines/onboarding_transitions.py"
+    - file: "app/hoc/int/api_keys/L5_engines/onboarding_transitions.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/general/engines/authorization.py"
+    - file: "app/hoc/int/general/L5_engines/authorization.py"
       declared: L4
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/general/engines/rbac_rules_loader.py"
+    - file: "app/hoc/int/general/L5_engines/rbac_rules_loader.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/general/engines/retrieval_hook.py"
+    - file: "app/hoc/int/general/L5_engines/retrieval_hook.py"
       declared: L5
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/general/engines/role_guard.py"
+    - file: "app/hoc/int/general/L5_engines/role_guard.py"
       declared: L3
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/incidents/engines/lifecycle_worker.py"
+    - file: "app/hoc/int/incidents/L5_engines/lifecycle_worker.py"
       declared: L5
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/incidents/engines/outbox_processor.py"
+    - file: "app/hoc/int/incidents/L5_engines/outbox_processor.py"
       declared: None
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/incidents/engines/recovery_evaluator.py"
+    - file: "app/hoc/int/incidents/L5_engines/recovery_evaluator.py"
       declared: L5
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/integrations/engines/worker.py"
+    - file: "app/hoc/int/integrations/L5_engines/worker.py"
       declared: L5
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/logs/engines/gateway_audit.py"
+    - file: "app/hoc/int/logs/L5_engines/gateway_audit.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/platform/drivers/care.py"
+    - file: "app/hoc/int/platform/drivers/care.py"
       declared: L4
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/platform/engines/errors.py"
+    - file: "app/hoc/int/platform/engines/errors.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/platform/engines/evaluator.py"
+    - file: "app/hoc/int/platform/engines/evaluator.py"
       declared: L4
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/platform/engines/external_guard.py"
-      declared: L4
-      detected: L2
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/internal/platform/engines/m10_metrics_collector.py"
-      declared: L5
-      detected: L6
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/internal/platform/engines/state_resolver.py"
+    - file: "app/hoc/int/platform/engines/external_guard.py"
       declared: L4
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/policies/engines/graduation_evaluator.py"
+    - file: "app/hoc/int/platform/engines/m10_metrics_collector.py"
       declared: L5
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/policies/engines/policy_checker.py"
-      declared: L5
-      detected: L6
-      status: pending
-      driver_file: null
-      extracted_date: null
-    - file: "app/houseofcards/internal/policies/engines/rbac_engine.py"
+    - file: "app/hoc/int/platform/engines/state_resolver.py"
       declared: L4
       detected: L2
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/policies/engines/recovery_claim_worker.py"
+    - file: "app/hoc/int/policies/L5_engines/graduation_evaluator.py"
       declared: L5
       detected: L6
       status: pending
       driver_file: null
       extracted_date: null
-    - file: "app/houseofcards/internal/policies/engines/recovery_queue_stream.py"
+    - file: "app/hoc/int/policies/L5_engines/policy_checker.py"
+      declared: L5
+      detected: L6
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/int/policies/L5_engines/rbac_engine.py"
+      declared: L4
+      detected: L2
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/int/policies/L5_engines/recovery_claim_worker.py"
+      declared: L5
+      detected: L6
+      status: pending
+      driver_file: null
+      extracted_date: null
+    - file: "app/hoc/int/policies/L5_engines/recovery_queue_stream.py"
       declared: L5
       detected: L6
       status: pending

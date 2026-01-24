@@ -58,11 +58,11 @@ This PIN tracks the implementation of the GC_L (Governed Control with Learning) 
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Policy CRUD routes | `app/api/customer/policies.py` | ⏳ PENDING | |
-| Policy simulation | `app/api/customer/policies.py` | ⏳ PENDING | |
-| Policy activation | `app/api/customer/policies.py` | ⏳ PENDING | |
-| Killswitch routes | `app/api/customer/killswitch.py` | ⏳ PENDING | |
-| Spend guardrails | `app/api/customer/spend.py` | ⏳ PENDING | |
+| Policy CRUD routes | `app/api/cus/policies.py` | ⏳ PENDING | |
+| Policy simulation | `app/api/cus/policies.py` | ⏳ PENDING | |
+| Policy activation | `app/api/cus/policies.py` | ⏳ PENDING | |
+| Killswitch routes | `app/api/cus/killswitch.py` | ⏳ PENDING | |
+| Spend guardrails | `app/api/cus/spend.py` | ⏳ PENDING | |
 | GCL Middleware | `app/api/middleware/gcl_governance.py` | ⏳ PENDING | 409 enforcement |
 
 ### Phase 4: FACILITATION
@@ -73,7 +73,7 @@ This PIN tracks the implementation of the GC_L (Governed Control with Learning) 
 | Signal Emitter | `app/signals/emitter.py` | ⏳ PENDING | |
 | Facilitation Compiler | `app/facilitation/compiler.py` | ⏳ PENDING | RECOMMEND_ONLY |
 | Confidence Service | `app/signals/confidence.py` | ⏳ PENDING | Decay + accuracy |
-| Feedback API | `app/api/customer/feedback.py` | ⏳ PENDING | |
+| Feedback API | `app/api/cus/feedback.py` | ⏳ PENDING | |
 
 ### Phase 5: Audit & Anchoring
 

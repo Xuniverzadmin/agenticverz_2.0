@@ -30,7 +30,7 @@ This file was added as part of CAP-005/CAP-006 work but the router was never mou
 from .api.founder_review import router as founder_review_router
 
 # Add to router mounting:
-app.include_router(founder_review_router)  # /founder/contracts/* - Founder Review Gate
+app.include_router(founder_review_router)  # /fdr/contracts/* - Founder Review Gate
 ```
 
 ## Explicitly Disabled API Files

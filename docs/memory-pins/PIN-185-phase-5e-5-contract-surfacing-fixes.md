@@ -120,7 +120,7 @@ All stages completed successfully
 
 ### 6. FounderTimelinePage - Decision Details (P1)
 
-**File:** `website/aos-console/console/src/pages/founder/FounderTimelinePage.tsx`
+**File:** `website/aos-console/console/src/pages/fdr/FounderTimelinePage.tsx`
 
 Added specialized detail sections for decision types:
 

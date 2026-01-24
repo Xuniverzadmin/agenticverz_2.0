@@ -65,7 +65,7 @@ Services with business logic, domain operations, and governance decisions:
 | `app/services/policy/snapshot_service.py` | Policies | Snapshot immutability |
 | `app/services/policy_violation_service.py` | Policies | Violation persistence |
 | `app/services/sandbox/sandbox_service.py` | Platform | Sandbox orchestration |
-| `app/houseofcards/internal/platform/monitoring/platform_health_service.py` | Platform | Already in HOC |
+| `app/hoc/int/platform/monitoring/platform_health_service.py` | Platform | Already in HOC |
 
 ### L6 Platform Substrate (4 files)
 
@@ -88,7 +88,7 @@ Services that primarily perform database read/write operations:
 
 | File | Reason |
 |------|--------|
-| `app/houseofcards/duplicate/integrations/credential_service.py` | Quarantined duplicate |
+| `app/hoc/duplicate/integrations/credential_service.py` | Quarantined duplicate |
 
 ---
 
@@ -117,16 +117,16 @@ Services that primarily perform database read/write operations:
 
 | Audience | Count | % | Target Root |
 |----------|-------|---|-------------|
-| **CUSTOMER** | 619 | 61.3% | `app/houseofcards/customer/` |
-| **INTERNAL** | 342 | 33.9% | `app/houseofcards/internal/` |
-| **FOUNDER** | 30 | 3.0% | `app/houseofcards/founder/` |
+| **CUSTOMER** | 619 | 61.3% | `app/hoc/cus/` |
+| **INTERNAL** | 342 | 33.9% | `app/hoc/int/` |
+| **FOUNDER** | 30 | 3.0% | `app/hoc/fdr/` |
 | **DEPRECATED** | 18 | 1.8% | DELETE |
 
 ### By Action
 
 | Action | Count | % | Description |
 |--------|-------|---|-------------|
-| **TRANSFER** | 961 | 95.2% | Move to app/houseofcards/ |
+| **TRANSFER** | 961 | 95.2% | Move to app/hoc/ |
 | **STAYS** | 30 | 3.0% | L7 models stay in app/ |
 | **DELETE** | 18 | 1.8% | Deprecated/duplicate files |
 
@@ -201,14 +201,14 @@ For `_service.py` files, the layer was determined by examining:
 With Iteration 2 complete, the inventory is ready for Phase 2 execution:
 
 1. **Generate Migration Script:** Create `execute_migration.sh` from approved CSV
-2. **Execute Migration:** Move files to `app/houseofcards/` structure
+2. **Execute Migration:** Move files to `app/hoc/` structure
 3. **Run BLCA:** Verify 0 violations
 4. **Update Imports:** Fix all import statements
 5. **Phase 5 Cleanup:** Delete `app/services/*` after validation
 
 ### Option B Architectural Decision
 
-Per user decision, files migrate to `app/houseofcards/` (not outside `app/`).
+Per user decision, files migrate to `app/hoc/` (not outside `app/`).
 Legacy code in `app/services/` will be deleted in Phase 5 after migration is complete and validated.
 
 ---

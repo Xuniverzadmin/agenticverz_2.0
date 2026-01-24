@@ -5,25 +5,25 @@
 #
 # MIGRATION PATH:
 #   Current:  from app.services.policy_violation_service import create_policy_evaluation_sync
-#   Future:   from app.houseofcards.customer.incidents.engines.policy_violation_service import create_policy_evaluation_sync
+#   Future:   from app.hoc.cus.incidents.L5_engines.policy_violation_service import create_policy_evaluation_sync
 #
 # This shim exists for Phase-2.5 migration. Delete when all callers are updated.
 # Reference: PIN-468, POLICIES_CROSS_DOMAIN_OWNERSHIP.md
 #
-# CANONICAL SOURCE: app/houseofcards/customer/incidents/engines/policy_violation_service.py
+# CANONICAL SOURCE: app/hoc/cus/incidents/L5_engines/policy_violation_service.py
 
 """
 Policy Violation Service - DEPRECATED SHIM
 
 This file re-exports from the canonical incidents domain engine.
 Do not add logic here. All implementation is in:
-    app.houseofcards.customer.incidents.engines.policy_violation_service
+    app.hoc.cus.incidents.L5_engines.policy_violation_service
 
 Migration: Update imports to use the canonical path directly.
 """
 
 # Re-export everything from canonical source
-from app.houseofcards.customer.incidents.engines.policy_violation_service import (
+from app.hoc.cus.incidents.L5_engines.policy_violation_service import (
     # Constants
     POLICY_OUTCOME_ADVISORY,
     POLICY_OUTCOME_NO_VIOLATION,

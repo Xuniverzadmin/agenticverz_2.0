@@ -1,6 +1,6 @@
 # General Domain Constitution v1
 
-**Domain:** `app/houseofcards/customer/general/`
+**Domain:** `app/hoc/cus/general/`
 **Status:** RATIFIED
 **Effective:** 2026-01-22
 **Authority:** Architectural Governance

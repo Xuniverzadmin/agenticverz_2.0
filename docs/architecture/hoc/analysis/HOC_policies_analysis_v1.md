@@ -1,6 +1,6 @@
 # HOC Policies Domain Analysis v1
 
-**Domain:** `app/houseofcards/customer/policies/`
+**Domain:** `app/hoc/cus/policies/`
 **Audience:** CUSTOMER
 **Date:** 2026-01-22
 **Status:** CLEANUP COMPLETE
@@ -11,7 +11,7 @@
 ## 1. Final Structure (Post-Cleanup)
 
 ```
-app/houseofcards/customer/policies/
+app/hoc/cus/policies/
 ├── __init__.py
 ├── controls/
 │   ├── KillSwitch/
@@ -67,7 +67,7 @@ app/houseofcards/customer/policies/
 
 | File | From | To | Reason |
 |------|------|-----|--------|
-| `policy_driver.py` | `customer/policies/drivers/` | `internal/platform/policy/engines/` | AUDIENCE: INTERNAL in customer/ path |
+| `policy_driver.py` | `customer/policies/L6_drivers/` | `internal/platform/policy/engines/` | AUDIENCE: INTERNAL in customer/ path |
 
 ### 2.2 Files Deleted
 
@@ -419,8 +419,8 @@ get_conflict_engine(), get_dependency_engine()
 
 | File | Old Import | New Import |
 |------|------------|------------|
-| All engines | `app.services.policy.*` | `app.houseofcards.customer.policies.engines.*` |
-| `run_governance_facade.py` | `app.services.policy.lessons_engine` | `app.houseofcards.customer.policies.engines.lessons_engine` |
+| All engines | `app.services.policy.*` | `app.hoc.cus.policies.L5_engines.*` |
+| `run_governance_facade.py` | `app.services.policy.lessons_engine` | `app.hoc.cus.policies.L5_engines.lessons_engine` |
 
 ### 8.2 L6 Imports (Correct)
 

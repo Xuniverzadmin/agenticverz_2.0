@@ -54,12 +54,12 @@ Until domain separation is implemented, path-based separation:
 | `/sba` | `/fops/sba` | SBAInspectorPage |
 | `/integration` | `/fops/integration` | IntegrationDashboard |
 | `/integration/loop/:id` | `/fops/integration/loop/:id` | LoopStatusPage |
-| `/founder/timeline` | `/fops/founder/timeline` | FounderTimelinePage |
-| `/founder/controls` | `/fops/founder/controls` | FounderControlsPage |
-| `/founder/replay` | `/fops/founder/replay` | ReplayIndexPage |
-| `/founder/replay/:id` | `/fops/founder/replay/:id` | ReplaySliceViewer |
-| `/founder/scenarios` | `/fops/founder/scenarios` | ScenarioBuilderPage |
-| `/founder/explorer` | `/fops/founder/explorer` | FounderExplorerPage |
+| `/fdr/timeline` | `/fops/fdr/timeline` | FounderTimelinePage |
+| `/fdr/controls` | `/fops/fdr/controls` | FounderControlsPage |
+| `/fdr/replay` | `/fops/fdr/replay` | ReplayIndexPage |
+| `/fdr/replay/:id` | `/fops/fdr/replay/:id` | ReplaySliceViewer |
+| `/fdr/scenarios` | `/fops/fdr/scenarios` | ScenarioBuilderPage |
+| `/fdr/explorer` | `/fops/fdr/explorer` | FounderExplorerPage |
 
 ### Backend API Routes
 
@@ -68,7 +68,7 @@ Until domain separation is implemented, path-based separation:
 | `/ops/*` | `/fops/ops/*` | ops.py |
 | `/ops/cost/*` | `/fops/ops/cost/*` | cost_ops.py |
 | `/ops/actions/*` | `/fops/ops/actions/*` | founder_actions.py |
-| `/founder/timeline/*` | `/fops/founder/timeline/*` | founder_timeline.py |
+| `/fdr/timeline/*` | `/fops/fdr/timeline/*` | founder_timeline.py |
 | `/explorer/*` | `/fops/explorer/*` | founder_explorer.py |
 | `/replay/*` | `/fops/replay/*` | replay.py |
 | `/scenarios/*` | `/fops/scenarios/*` | scenarios.py |
@@ -198,7 +198,7 @@ Each layout:
 Customer Console must NOT contain:
 - Links to `/fops/*`
 - Links to `/ops/*`
-- Links to `/founder/*`
+- Links to `/fdr/*`
 - Links to `/traces/*`
 - Links to `/workers/*`
 
@@ -221,8 +221,8 @@ const founderNavItems = [
   { path: '/fops/ops', label: 'Operations' },
   { path: '/fops/traces', label: 'Traces' },
   { path: '/fops/workers', label: 'Workers' },
-  { path: '/fops/founder/timeline', label: 'Timeline' },
-  { path: '/fops/founder/explorer', label: 'Explorer' },
+  { path: '/fops/fdr/timeline', label: 'Timeline' },
+  { path: '/fops/fdr/explorer', label: 'Explorer' },
 ];
 ```
 
@@ -239,7 +239,7 @@ paths:
     get: ...
   # NO /fops/* paths
   # NO /ops/* paths
-  # NO /founder/* paths
+  # NO /fdr/* paths
 ```
 
 ### 4. 404 for Wrong Audience

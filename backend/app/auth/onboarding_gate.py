@@ -60,7 +60,7 @@ AUTH_EXEMPT_PREFIXES = [
 
 # Paths that operate outside tenant context entirely
 NON_TENANT_PREFIXES = [
-    "/internal/",  # Internal-only APIs (no tenant)
+    "/int/",  # Internal-only APIs (no tenant)
 ]
 
 # Infra paths - no auth at all

@@ -27,7 +27,7 @@ These endpoints are declared in SDSR but do not exist in the backend.
 | Panel ID | Declared Endpoint | Expected Data | Priority |
 |----------|-------------------|---------------|----------|
 | **INC-EV-ACT-O4** | `/api/v1/ops/incidents/patterns` | Incident pattern analysis for operators | HIGH |
-| **LOG-REC-LLM-O3** | `/api/v1/customer/activity` | Customer-scoped activity for logs domain | MEDIUM |
+| **LOG-REC-LLM-O3** | `/api/v1/cus/activity` | Customer-scoped activity for logs domain | MEDIUM |
 | **POL-LIM-VIO-O2** | `/guard/costs/incidents` | Cost-related incidents in guard context | MEDIUM |
 | **LOG-REC-AUD-O3** | `/ops/actions/audit` | Operator action audit trail | MEDIUM |
 | **OVR-SUM-CI-O1** | (null but needed) | Cost intelligence summary for overview | LOW |
@@ -39,9 +39,9 @@ These endpoints are declared in SDSR but do not exist in the backend.
    - Need separate endpoint returning pattern analysis: recurring types, correlation, MTTR
    - Data exists via `incidents` table but aggregation logic missing
 
-2. **`/api/v1/customer/activity`** - Create endpoint in `customer_activity.py`
-   - Currently `/api/v1/customer/activity/activity` exists at line 56
-   - Path collision - the intent expects `/api/v1/customer/activity` (no duplicate)
+2. **`/api/v1/cus/activity`** - Create endpoint in `customer_activity.py`
+   - Currently `/api/v1/cus/activity/activity` exists at line 56
+   - Path collision - the intent expects `/api/v1/cus/activity` (no duplicate)
    - Returns: `CustomerActivityListResponse`
 
 3. **`/guard/costs/incidents`** - Create endpoint in `cost_guard.py`
@@ -203,9 +203,9 @@ These panels have `assumed_endpoint: null` because they require composite data f
 
 ### P1 - Should Fix (Affects Customer Experience)
 
-2. **Fix path mismatch for `/api/v1/customer/activity`**
-   - Current: `/api/v1/customer/activity/activity` (double segment)
-   - Expected: `/api/v1/customer/activity`
+2. **Fix path mismatch for `/api/v1/cus/activity`**
+   - Current: `/api/v1/cus/activity/activity` (double segment)
+   - Expected: `/api/v1/cus/activity`
    - Panel: LOG-REC-LLM-O3
 
 3. **Create `/guard/costs/incidents`** in `cost_guard.py`

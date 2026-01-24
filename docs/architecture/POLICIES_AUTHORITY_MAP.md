@@ -8,7 +8,7 @@
 
 ## Domain Overview
 
-**Location:** `houseofcards/customer/policies/`
+**Location:** `hoc/cus/policies/`
 
 | Component | Count |
 |-----------|-------|

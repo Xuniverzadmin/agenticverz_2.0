@@ -48,7 +48,7 @@ EXEMPT_PREFIXES: tuple[str, ...] = (
     "/health",
     "/metrics",
     "/api/v1/auth/",
-    "/founder/",
+    "/fdr/",
     "/docs",
     "/openapi.json",
     "/redoc",

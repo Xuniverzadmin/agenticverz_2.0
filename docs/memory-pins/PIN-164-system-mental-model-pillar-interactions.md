@@ -88,7 +88,7 @@ This document provides a mental model of how AOS components interact, complement
 | **M27** | Cost Loop | Cost bridges | ✅ ACTIVE |
 | **M28** | Unified Console | UI components | ✅ ACTIVE |
 
-**Key File:** `app/integrations/bridges.py` - 5 integration bridges
+**Key File:** `app/integrations/L3_adapters.py` - 5 integration bridges
 
 ### Pillar 4: Developer Experience
 

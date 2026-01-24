@@ -333,10 +333,10 @@ class TestRBACEnforcement:
         """
         from app.api.founder_review import router
 
-        # All routes must be under /founder/review prefix
+        # All routes must be under /fdr/review prefix
         for route in router.routes:
             path = route.path
-            assert "/founder/" in path or path.startswith("/founder"), (
+            assert "/fdr/" in path or path.startswith("/founder"), (
                 f"Route {path} is not under founder namespace. PIN-333 forbids customer console exposure."
             )
 

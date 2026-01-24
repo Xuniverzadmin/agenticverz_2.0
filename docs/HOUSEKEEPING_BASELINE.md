@@ -148,7 +148,7 @@ SKIP_MYPY=true ./scripts/ci/lint_regression_guard.sh
 | File | Fix |
 |------|-----|
 | `backend/app/api/guard.py` | Added logger import, changed bare except |
-| `backend/app/integrations/bridges.py` | Added TYPE_CHECKING import |
+| `backend/app/integrations/L3_adapters.py` | Added TYPE_CHECKING import |
 | `backend/app/policy/engine.py` | Added TYPE_CHECKING, future annotations |
 | `backend/app/routing/models.py` | Added timezone import |
 | `backend/app/memory/store.py` | Changed bare except |

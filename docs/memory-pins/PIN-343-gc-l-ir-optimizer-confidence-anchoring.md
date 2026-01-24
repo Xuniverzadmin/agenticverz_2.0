@@ -682,7 +682,7 @@ async function exportAnchor(
         await postToTransparencyLog(anchor);
         break;
       case "CUSTOMER_API":
-        // Available via GET /api/customer/audit/anchors/{date}
+        // Available via GET /api/cus/audit/anchors/{date}
         break;
     }
   }

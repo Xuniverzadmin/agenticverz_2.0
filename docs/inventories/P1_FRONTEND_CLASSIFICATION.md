@@ -87,12 +87,12 @@
 ### Founder Tools Domain
 | Page | Route | Classification | Phase |
 |------|-------|----------------|-------|
-| FounderTimelinePage | /founder/timeline | **CANONICAL** | 5E-1 |
-| FounderControlsPage | /founder/controls | **CANONICAL** | 5E-2 |
-| ReplayIndexPage | /founder/replay | **CANONICAL** | H1 |
-| ReplaySliceViewer | /founder/replay/:id | **CANONICAL** | H1 |
-| ScenarioBuilderPage | /founder/scenarios | **CANONICAL** | H2 |
-| FounderExplorerPage | /founder/explorer | **CANONICAL** | H3 |
+| FounderTimelinePage | /fdr/timeline | **CANONICAL** | 5E-1 |
+| FounderControlsPage | /fdr/controls | **CANONICAL** | 5E-2 |
+| ReplayIndexPage | /fdr/replay | **CANONICAL** | H1 |
+| ReplaySliceViewer | /fdr/replay/:id | **CANONICAL** | H1 |
+| ScenarioBuilderPage | /fdr/scenarios | **CANONICAL** | H2 |
+| FounderExplorerPage | /fdr/explorer | **CANONICAL** | H3 |
 
 ### Governance Domain
 | Page | Route | Classification | Phase |

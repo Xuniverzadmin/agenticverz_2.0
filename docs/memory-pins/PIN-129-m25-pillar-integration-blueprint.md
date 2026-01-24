@@ -1193,7 +1193,7 @@ def to_console_display(self) -> dict:
 | Migration 042_m25_integration_loop | ✅ | `backend/alembic/versions/042_m25_integration_loop.py` |
 | Event types with enhancements | ✅ | `backend/app/integrations/events.py` |
 | IntegrationDispatcher | ✅ | `backend/app/integrations/dispatcher.py` |
-| All 5 bridges | ✅ | `backend/app/integrations/bridges.py` |
+| All 5 bridges | ✅ | `backend/app/integrations/L3_adapters.py` |
 | Integration API router | ✅ | `backend/app/api/integration.py` |
 
 ### Phase 2-3: Bridges ✅ COMPLETE

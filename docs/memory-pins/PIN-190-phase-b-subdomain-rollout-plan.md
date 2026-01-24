@@ -85,8 +85,8 @@ fops.agenticverz.com
 | Current Route | Target Route | Purpose |
 |---------------|--------------|---------|
 | `/console/ops` | `/ops` | Ops dashboard |
-| `/console/founder/controls` | `/founder/controls` | Kill-switch |
-| `/console/founder/timeline` | `/founder/timeline` | Decision audit |
+| `/console/fdr/controls` | `/fdr/controls` | Kill-switch |
+| `/console/fdr/timeline` | `/fdr/timeline` | Decision audit |
 | `/console/traces` | `/traces` | Execution traces |
 
 **Requirements:**
@@ -178,8 +178,8 @@ preflight-fops.agenticverz.com
 | `agenticverz.com/console/guard/keys` | `console.agenticverz.com/guard/keys` | 301 |
 | `agenticverz.com/console/guard/limits` | `console.agenticverz.com/guard/limits` | 301 |
 | `agenticverz.com/console/ops` | `fops.agenticverz.com/ops` | 301 |
-| `agenticverz.com/console/founder/controls` | `fops.agenticverz.com/founder/controls` | 301 |
-| `agenticverz.com/console/founder/timeline` | `fops.agenticverz.com/founder/timeline` | 301 |
+| `agenticverz.com/console/fdr/controls` | `fops.agenticverz.com/fdr/controls` | 301 |
+| `agenticverz.com/console/fdr/timeline` | `fops.agenticverz.com/fdr/timeline` | 301 |
 | `agenticverz.com/console/traces` | `fops.agenticverz.com/traces` | 301 |
 
 ---

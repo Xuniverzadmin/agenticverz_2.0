@@ -1,7 +1,7 @@
 # HOC API Keys Domain Analysis v1
 
 **Date:** 2026-01-22
-**Domain:** `app/houseofcards/customer/api_keys/`
+**Domain:** `app/hoc/cus/api_keys/`
 **Status:** Analysis Complete — Governance Applied
 
 ---
@@ -23,7 +23,7 @@
 ## Directory Structure
 
 ```
-app/houseofcards/customer/api_keys/
+app/hoc/cus/api_keys/
 ├── __init__.py                           (50 LOC) ← governance added
 ├── facades/
 │   ├── __init__.py                       (11 LOC)

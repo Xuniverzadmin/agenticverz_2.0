@@ -277,8 +277,8 @@ backend/app/docs/demo_btc.md
 
 **Artifacts:**
 ```
-backend/app/internal/agenticverz_onboard_agent/
-backend/app/internal/mobiverz_report_agent/
+backend/app/int/agenticverz_onboard_agent/
+backend/app/int/mobiverz_report_agent/
 backend/logs/internal_runs/*.json
 /reports/internal_validation_report.md
 ```

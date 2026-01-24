@@ -105,7 +105,7 @@ This is the flow for onboarding customer data sources via `aos_sdk`:
 │  aos_sdk.register_data_source(                                              │
 │      type="POSTGRES",                                                       │
 │      connection_config={...},                                               │
-│      credential_ref="vault://customer/db/prod"                              │
+│      credential_ref="vault://cus/db/prod"                              │
 │  )                                                                          │
 │  → Creates CustomerDataSource record (GAP-055)                              │
 │  → Status: REGISTERED                                                       │

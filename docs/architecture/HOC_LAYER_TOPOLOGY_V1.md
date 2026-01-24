@@ -1,6 +1,6 @@
 # HOC Layer Topology V1
 
-**Version:** 1.2.0
+**Version:** 1.4.0
 **Status:** RATIFIED
 **Created:** 2026-01-23
 **Author:** Founder + Claude (Architecture Session)
@@ -11,6 +11,8 @@
 ## ⚠️ CANONICAL REFERENCE STATUS
 
 > **This document is the CANONICAL layer architecture for House of Cards (HOC).**
+>
+> **Package name:** `hoc` (renamed from `hoc` in v1.4.0)
 >
 > **Referenced in:** `/CLAUDE.md` (Section: HOC Layer Topology - BL-HOC-LAYER-001)
 >
@@ -25,6 +27,8 @@
 | 1.0.0 | 2026-01-23 | Founder + Claude | Initial ratified version |
 | 1.1.0 | 2026-01-23 | Founder + Claude | L4 Runtime restructured: Parts-based architecture (authority/execution/consequences), Independence Guarantee, L4 Runtime Contract |
 | 1.2.0 | 2026-01-23 | Founder + Claude | Added layer contracts: L2.1 Facade, L3 Adapter, L5 Worker, L6 Driver. Updated Panel Engine rules. Added CI Enforcement section. |
+| 1.3.0 | 2026-01-24 | Founder + Claude | Phase 3 Directory Restructure: Layer-prefixed folder names (L3_adapters/, L5_engines/, L6_drivers/). L4 centralized to general/L4_runtime/ only. API nesting (L2.1 + L2 together). |
+| 1.4.0 | 2026-01-24 | Founder + Claude | Package & audience rename: `hoc` → `hoc`, `customer` → `cus`, `founder` → `fdr`, `internal` → `int`. Saves 14 chars per import path. |
 
 ---
 
@@ -76,34 +80,34 @@ This document defines the canonical layer topology for the House of Cards (HOC) 
                                  ↓
 ┌─────────────────────────────────────────────────────────────────────┐
 │  L2.1: API FACADE (ORGANIZER)                                       │
-│  houseofcards/api/facades/{audience}/{domain}.py                    │
+│  hoc/api/facades/{audience}/{domain}.py                    │
 └─────────────────────────────────────────────────────────────────────┘
                                  ↓
 ┌─────────────────────────────────────────────────────────────────────┐
 │  L2: APIs                                                           │
-│  houseofcards/api/{audience}/{domain}.py                            │
+│  hoc/api/{audience}/{domain}.py                            │
 └─────────────────────────────────────────────────────────────────────┘
                                  ↓
 ┌─────────────────────────────────────────────────────────────────────┐
 │  L3: ADAPTERS                                                       │
-│  houseofcards/{audience}/{domain}/adapters/*.py                     │
+│  hoc/{audience}/{domain}/adapters/*.py                     │
 └─────────────────────────────────────────────────────────────────────┘
                                  ↓
 ┌─────────────────────────────────────────────────────────────────────┐
 │  L4: GOVERNED RUNTIME                                               │
-│  houseofcards/{audience}/general/runtime/*.py                       │
+│  hoc/{audience}/general/L4_runtime/*.py                       │
 └─────────────────────────────────────────────────────────────────────┘
                                  ↓
 ┌─────────────────────────────────────────────────────────────────────┐
 │  L5: ENGINES / WORKERS / SCHEMAS                                    │
-│  houseofcards/{audience}/{domain}/engines/*.py                      │
-│  houseofcards/{audience}/{domain}/workers/*.py                      │
-│  houseofcards/{audience}/{domain}/schemas/*.py                      │
+│  hoc/{audience}/{domain}/engines/*.py                      │
+│  hoc/{audience}/{domain}/workers/*.py                      │
+│  hoc/{audience}/{domain}/schemas/*.py                      │
 └─────────────────────────────────────────────────────────────────────┘
                                  ↓
 ┌─────────────────────────────────────────────────────────────────────┐
 │  L6: DRIVERS                                                        │
-│  houseofcards/{audience}/{domain}/drivers/*.py                      │
+│  hoc/{audience}/{domain}/drivers/*.py                      │
 └─────────────────────────────────────────────────────────────────────┘
                                  ↓
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -143,7 +147,7 @@ This document defines the canonical layer topology for the House of Cards (HOC) 
 
 ### 4.2 L2.1 — API Facade (ORGANIZER)
 
-**Location:** `houseofcards/api/facades/{audience}/{domain}.py`
+**Location:** `hoc/api/facades/{audience}/{domain}.py`
 
 **Purpose:**
 - Conceals API endpoints from outside world
@@ -153,12 +157,12 @@ This document defines the canonical layer topology for the House of Cards (HOC) 
 
 **Example:**
 ```python
-# houseofcards/api/facades/customer/policies.py
+# hoc/api/facades/cus/policies.py
 # Layer: L2.1 — API Facade
 # AUDIENCE: CUSTOMER
 # Role: Organizes policies-related API access
 
-from houseofcards.api.customer import policies, limits
+from hoc.api.cus import policies, limits
 
 class CustomerPoliciesFacade:
     """Groups all policies-related API routers."""
@@ -201,14 +205,14 @@ Violations indicate authority drift.
 
 **BLCA Enforcement Rule:**
 ```
-houseofcards/api/facades/** → CANNOT import → houseofcards/{audience}/**
+hoc/api/facades/** → CANNOT import → hoc/{audience}/**
 ```
 
 ---
 
 ### 4.3 L2 — APIs
 
-**Location:** `houseofcards/api/{audience}/{domain}.py`
+**Location:** `hoc/api/{audience}/{domain}.py`
 
 **Purpose:**
 - HTTP route handlers
@@ -218,11 +222,11 @@ houseofcards/api/facades/** → CANNOT import → houseofcards/{audience}/**
 
 **Example:**
 ```python
-# houseofcards/api/customer/policies.py
+# hoc/api/cus/policies.py
 # Layer: L2 — Product API
 # AUDIENCE: CUSTOMER
 
-from houseofcards.customer.policies.adapters import PoliciesAdapter
+from hoc.cus.policies.L3_adapters import PoliciesAdapter
 
 @router.get("/rules")
 async def get_rules(request: Request, session: AsyncSession):
@@ -242,7 +246,7 @@ async def get_rules(request: Request, session: AsyncSession):
 
 ### 4.4 L3 — Adapters (Distribution Layer)
 
-**Location:** `houseofcards/{audience}/{domain}/adapters/*.py`
+**Location:** `hoc/{audience}/{domain}/adapters/*.py`
 
 **Purpose:**
 - Translation between API and domain
@@ -253,15 +257,15 @@ async def get_rules(request: Request, session: AsyncSession):
 
 **Example:**
 ```python
-# houseofcards/customer/overview/adapters/overview_adapter.py
+# hoc/cus/overview/L3_adapters/overview_adapter.py
 # Layer: L3 — Boundary Adapter
 # AUDIENCE: CUSTOMER
 # Role: Aggregates data from multiple domains
 
 # Cross-domain imports (ALLOWED at L3)
-from houseofcards.customer.activity.engines import RunEngine
-from houseofcards.customer.incidents.engines import IncidentEngine
-from houseofcards.customer.policies.engines import PolicyEngine
+from hoc.cus.activity.L5_engines import RunEngine
+from hoc.cus.incidents.L5_engines import IncidentEngine
+from hoc.cus.policies.L5_engines import PolicyEngine
 
 class OverviewAdapter:
     async def get_highlights(self, tenant_id: str):
@@ -322,7 +326,7 @@ If adapters start doing retries, they bypass L4 governance and create non-determ
 
 ### 4.5 L4 — Governed Runtime (Control Plane)
 
-**Location:** `houseofcards/{audience}/general/runtime/`
+**Location:** `hoc/{audience}/general/L4_runtime/`
 
 **Purpose:**
 
@@ -399,7 +403,7 @@ Centralized MEANS:
 #### Directory Structure
 
 ```
-houseofcards/{audience}/general/runtime/
+hoc/{audience}/general/L4_runtime/
 ├── authority/
 │   └── governance_gate.py      # Grants/denies execution
 ├── execution/
@@ -415,12 +419,12 @@ houseofcards/{audience}/general/runtime/
 #### Example — Authority Part
 
 ```python
-# houseofcards/customer/general/runtime/authority/governance_gate.py
+# hoc/cus/general/L4_runtime/authority/governance_gate.py
 # Layer: L4 — Governed Runtime (Authority)
 # AUDIENCE: CUSTOMER
 # Role: Grants or denies execution permission
 
-from houseofcards.customer.general.runtime.contracts.runtime_verdict import RuntimeVerdict
+from hoc.cus.general.L4_runtime.contracts.runtime_verdict import RuntimeVerdict
 
 class GovernanceGate:
     """Pure function: context → verdict. No side effects."""
@@ -437,7 +441,7 @@ class GovernanceGate:
 #### Example — Execution Part
 
 ```python
-# houseofcards/customer/general/runtime/execution/orchestrator.py
+# hoc/cus/general/L4_runtime/execution/orchestrator.py
 # Layer: L4 — Governed Runtime (Execution)
 # AUDIENCE: CUSTOMER
 # Role: Mechanical triggering of engines (assumes authority granted)
@@ -458,7 +462,7 @@ class Orchestrator:
 #### Example — Consequences Part
 
 ```python
-# houseofcards/customer/general/runtime/consequences/enforcement.py
+# hoc/cus/general/L4_runtime/consequences/enforcement.py
 # Layer: L4 — Governed Runtime (Consequences)
 # AUDIENCE: CUSTOMER
 # Role: Reacts to outcomes (non-blocking)
@@ -489,9 +493,9 @@ class EnforcementHandler:
 ### 4.6 L5 — Engines / Workers / Schemas (Domain Business Logic)
 
 **Location:**
-- `houseofcards/{audience}/{domain}/engines/*.py` — Business rules, decisions
-- `houseofcards/{audience}/{domain}/workers/*.py` — Heavy computation
-- `houseofcards/{audience}/{domain}/schemas/*.py` — Data contracts
+- `hoc/{audience}/{domain}/engines/*.py` — Business rules, decisions
+- `hoc/{audience}/{domain}/workers/*.py` — Heavy computation
+- `hoc/{audience}/{domain}/schemas/*.py` — Data contracts
 
 **Purpose:**
 
@@ -503,7 +507,7 @@ class EnforcementHandler:
 
 **Example — Engine:**
 ```python
-# houseofcards/customer/policies/engines/policy_proposal.py
+# hoc/cus/policies/L5_engines/policy_proposal.py
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
 
@@ -518,7 +522,7 @@ class PolicyProposalEngine:
 
 **Example — Worker:**
 ```python
-# houseofcards/customer/analytics/workers/prediction_worker.py
+# hoc/cus/analytics/workers/prediction_worker.py
 # Layer: L5 — Domain Worker
 # AUDIENCE: CUSTOMER
 
@@ -532,7 +536,7 @@ class PredictionWorker:
 
 **Example — Schema:**
 ```python
-# houseofcards/customer/policies/schemas/policy_models.py
+# hoc/cus/policies/L5_schemas/policy_models.py
 # Layer: L5 — Domain Schema
 # AUDIENCE: CUSTOMER
 
@@ -608,7 +612,7 @@ Failure escalation flows through L4:
 
 ### 4.7 L6 — Drivers (Database Operations)
 
-**Location:** `houseofcards/{audience}/{domain}/drivers/*.py`
+**Location:** `hoc/{audience}/{domain}/drivers/*.py`
 
 **Purpose:**
 - Database read/write operations
@@ -617,11 +621,11 @@ Failure escalation flows through L4:
 
 **Example:**
 ```python
-# houseofcards/customer/policies/drivers/policy_driver.py
+# hoc/cus/policies/L6_drivers/policy_driver.py
 # Layer: L6 — Database Driver
 # AUDIENCE: CUSTOMER
 
-from app.customer.models.policy import PolicyRule
+from app.cus.models.policy import PolicyRule
 
 class PolicyDriver:
     def __init__(self, session: AsyncSession):
@@ -715,9 +719,9 @@ If engines receive ORM models:
 | Category | Location | Examples |
 |----------|----------|----------|
 | **Shared** | `app/models/` | `tenant.py`, `base.py`, `audit_ledger.py` |
-| **Customer** | `app/customer/models/` | `policy.py`, `killswitch.py`, `knowledge.py` |
-| **Founder** | `app/founder/models/` | `ops_events.py`, `ops_segments.py` |
-| **Internal** | `app/internal/models/` | `recovery.py`, `agent.py` |
+| **Customer** | `app/cus/models/` | `policy.py`, `killswitch.py`, `knowledge.py` |
+| **Founder** | `app/fdr/models/` | `ops_events.py`, `ops_segments.py` |
+| **Internal** | `app/int/models/` | `recovery.py`, `agent.py` |
 
 **Rules:**
 | Allowed | Forbidden |
@@ -741,7 +745,7 @@ If engines receive ORM models:
 
 **Status:** To Be Developed
 
-**Location:** `houseofcards/{audience}/frontend/{domain}/*.py`
+**Location:** `hoc/{audience}/frontend/{domain}/*.py`
 
 **Purpose:**
 - UI projection logic
@@ -750,8 +754,8 @@ If engines receive ORM models:
 
 **Structure:**
 ```
-houseofcards/
-└── customer/
+hoc/
+└── cus/
     └── frontend/
         ├── overview/
         │   └── panels/
@@ -787,7 +791,7 @@ Frontend answers: "How should it be shown?"
 
 | Concern | Owner | Location |
 |---------|-------|----------|
-| What data | Panel Engine (Backend) | `houseofcards/{audience}/frontend/` |
+| What data | Panel Engine (Backend) | `hoc/{audience}/frontend/` |
 | Data shape | Panel Engine (Backend) | Panel response schema |
 | Layout | Frontend | React components |
 | Styling | Frontend | CSS/Tailwind |
@@ -819,230 +823,234 @@ Backend-hosted panels that make UI decisions:
 
 ## 6. Directory Structure (Complete)
 
+> **NOTE (v1.3.0):** Phase 3 introduces layer-prefixed folder names for clarity.
+> See `PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md` for migration details.
+
+### 6.1 API Layer (L2.1 + L2 Nested)
+
 ```
-houseofcards/
-├── api/
-│   ├── facades/                          # L2.1 — ORGANIZER
-│   │   ├── __init__.py
-│   │   ├── customer/
-│   │   │   ├── __init__.py
-│   │   │   ├── overview.py
-│   │   │   ├── activity.py
-│   │   │   ├── incidents.py
-│   │   │   ├── policies.py
-│   │   │   ├── logs.py
-│   │   │   ├── analytics.py
-│   │   │   ├── integrations.py
-│   │   │   ├── api_keys.py
-│   │   │   └── account.py
-│   │   ├── founder/
-│   │   │   ├── __init__.py
-│   │   │   └── ops.py
-│   │   └── internal/
-│   │       ├── __init__.py
-│   │       └── platform.py
-│   │
-│   ├── customer/                         # L2 — Customer APIs
-│   │   ├── __init__.py
-│   │   ├── overview.py
-│   │   ├── activity.py
-│   │   ├── incidents.py
-│   │   ├── policies.py
-│   │   ├── logs.py
-│   │   ├── analytics.py
-│   │   ├── integrations.py
-│   │   ├── api_keys.py
-│   │   └── account.py
-│   │
-│   ├── founder/                          # L2 — Founder APIs
-│   │   ├── __init__.py
-│   │   └── ops.py
-│   │
-│   └── internal/                         # L2 — Internal APIs
-│       ├── __init__.py
-│       └── platform.py
-│
-├── customer/
-│   ├── general/                          # Shared for Customer
-│   │   ├── __init__.py
-│   │   ├── runtime/                      # L4 — Governed Runtime (Control Plane)
-│   │   │   ├── __init__.py
-│   │   │   ├── authority/                # Part 1: Grant/deny permission
-│   │   │   │   ├── __init__.py
-│   │   │   │   └── governance_gate.py
-│   │   │   ├── execution/                # Part 2: Mechanical triggering
-│   │   │   │   ├── __init__.py
-│   │   │   │   └── orchestrator.py
-│   │   │   ├── consequences/             # Part 3: React to outcomes
-│   │   │   │   ├── __init__.py
-│   │   │   │   └── enforcement.py
-│   │   │   └── contracts/                # Shared verdict objects
-│   │   │       ├── __init__.py
-│   │   │       └── runtime_verdict.py
-│   │   ├── utils/                        # Shared Utilities
-│   │   │   ├── __init__.py
-│   │   │   └── time.py
-│   │   └── schemas/                      # Shared Schemas
-│   │       └── __init__.py
-│   │
-│   ├── frontend/                         # Panel Engine (TBD)
-│   │   ├── overview/
-│   │   │   └── panels/
-│   │   ├── activity/
-│   │   │   └── panels/
-│   │   └── ... (per domain)
-│   │
+hoc/api/
+├── customer/                             # Customer APIs
+│   ├── __init__.py
 │   ├── overview/
 │   │   ├── __init__.py
-│   │   ├── adapters/                     # L3
-│   │   │   └── overview_adapter.py
-│   │   ├── engines/                      # L5
-│   │   ├── workers/                      # L5
-│   │   ├── schemas/                      # L5
-│   │   └── drivers/                      # L6
-│   │
+│   │   ├── overview_facade.py            # L2.1 — API composition
+│   │   └── overview_routes.py            # L2 — HTTP handlers
 │   ├── activity/
 │   │   ├── __init__.py
-│   │   ├── adapters/
-│   │   ├── engines/
-│   │   ├── workers/
-│   │   ├── schemas/
-│   │   └── drivers/
-│   │
+│   │   ├── activity_facade.py
+│   │   └── activity_routes.py
 │   ├── incidents/
 │   │   ├── __init__.py
-│   │   ├── adapters/
-│   │   ├── engines/
-│   │   ├── workers/
-│   │   ├── schemas/
-│   │   └── drivers/
-│   │
+│   │   ├── incidents_facade.py
+│   │   └── incidents_routes.py
 │   ├── policies/
 │   │   ├── __init__.py
-│   │   ├── adapters/
-│   │   ├── engines/
-│   │   ├── workers/
-│   │   ├── schemas/
-│   │   └── drivers/
-│   │
+│   │   ├── policies_facade.py
+│   │   └── policies_routes.py
 │   ├── logs/
 │   │   ├── __init__.py
-│   │   ├── adapters/
-│   │   ├── engines/
-│   │   ├── workers/
-│   │   ├── schemas/
-│   │   └── drivers/
-│   │
+│   │   ├── logs_facade.py
+│   │   └── logs_routes.py
 │   ├── analytics/
 │   │   ├── __init__.py
-│   │   ├── adapters/
-│   │   ├── engines/
-│   │   ├── workers/
-│   │   ├── schemas/
-│   │   └── drivers/
-│   │
+│   │   ├── analytics_facade.py
+│   │   └── analytics_routes.py
 │   ├── integrations/
 │   │   ├── __init__.py
-│   │   ├── adapters/
-│   │   ├── engines/
-│   │   ├── workers/
-│   │   ├── schemas/
-│   │   └── drivers/
-│   │
+│   │   ├── integrations_facade.py
+│   │   └── integrations_routes.py
 │   ├── api_keys/
 │   │   ├── __init__.py
-│   │   ├── adapters/
-│   │   ├── engines/
-│   │   ├── workers/
-│   │   ├── schemas/
-│   │   └── drivers/
-│   │
+│   │   ├── api_keys_facade.py
+│   │   └── api_keys_routes.py
 │   └── account/
 │       ├── __init__.py
-│       ├── adapters/
-│       ├── engines/
-│       ├── workers/
-│       ├── schemas/
-│       └── drivers/
+│       ├── account_facade.py
+│       └── account_routes.py
 │
-├── founder/
-│   ├── general/
-│   │   ├── runtime/                      # L4 (same structure as customer)
-│   │   │   ├── authority/
-│   │   │   ├── execution/
-│   │   │   ├── consequences/
-│   │   │   └── contracts/
-│   │   └── utils/
-│   │
-│   ├── frontend/                         # Panel Engine (TBD)
-│   │   └── ops/
-│   │       └── panels/
-│   │
+├── founder/                              # Founder APIs
 │   └── ops/
-│       ├── adapters/                     # L3
-│       ├── engines/                      # L5
-│       ├── workers/                      # L5
-│       ├── schemas/                      # L5
-│       └── drivers/                      # L6
-│
-└── internal/
-    ├── general/
-    │   ├── runtime/                      # L4 (same structure as customer)
-    │   │   ├── authority/
-    │   │   ├── execution/
-    │   │   ├── consequences/
-    │   │   └── contracts/
-    │   └── utils/
-    │
-    ├── platform/
-    │   ├── adapters/
-    │   ├── engines/
-    │   ├── workers/
-    │   ├── schemas/
-    │   └── drivers/
-    │
-    ├── recovery/
-    │   ├── adapters/
-    │   ├── engines/
-    │   ├── workers/
-    │   ├── schemas/
-    │   └── drivers/
-    │
-    └── agent/
-        ├── adapters/
-        ├── engines/
-        ├── workers/
-        ├── schemas/
-        └── drivers/
-
-
-app/
-├── models/                               # L7 — SHARED
-│   ├── __init__.py
-│   ├── base.py
-│   ├── tenant.py
-│   ├── audit_ledger.py
-│   └── worker_run.py
-│
-├── customer/
-│   └── models/                           # L7 — CUSTOMER
 │       ├── __init__.py
-│       ├── policy.py
-│       ├── policy_control_plane.py
-│       ├── killswitch.py
-│       └── knowledge_lifecycle.py
+│       ├── ops_facade.py
+│       └── ops_routes.py
 │
-├── founder/
-│   └── models/                           # L7 — FOUNDER
-│       ├── __init__.py
-│       ├── ops_events.py
-│       └── ops_segments.py
-│
-└── internal/
-    └── models/                           # L7 — INTERNAL
+└── internal/                             # Internal APIs
+    └── platform/
         ├── __init__.py
-        ├── recovery.py
-        └── agent.py
+        ├── platform_facade.py
+        └── platform_routes.py
+```
+
+### 6.2 General Domain (Meta/Cross-Domain)
+
+```
+hoc/cus/general/
+├── __init__.py
+├── L4_runtime/                           # L4 — Control Plane (ONLY L4)
+│   ├── __init__.py
+│   ├── authority/                        # Part 1: Grant/deny permission
+│   │   ├── __init__.py
+│   │   └── governance_gate.py
+│   ├── execution/                        # Part 2: Mechanical triggering
+│   │   ├── __init__.py
+│   │   └── orchestrator.py
+│   ├── consequences/                     # Part 3: React to outcomes
+│   │   ├── __init__.py
+│   │   └── enforcement.py
+│   └── contracts/                        # Shared verdict objects
+│       ├── __init__.py
+│       └── runtime_verdict.py
+├── L3_mcp/                               # L3 — Cross-domain MCP adapters
+│   └── __init__.py
+├── L5_controls/                          # L5 — Control engines (killswitch, guards)
+│   └── __init__.py
+├── L5_lifecycle/                         # L5 — Lifecycle management
+│   └── __init__.py
+├── L5_workflow/                          # L5 — Workflow contracts
+│   └── __init__.py
+├── L5_schemas/                           # L5 — Shared schemas
+│   └── __init__.py
+├── L5_utils/                             # L5 — Shared utilities
+│   └── __init__.py
+├── L5_ui/                                # L5 — UI projection logic
+│   └── __init__.py
+└── L6_drivers/                           # L6 — Shared data access
+    └── __init__.py
+```
+
+### 6.3 Standard Domains (Layer-Prefixed)
+
+```
+hoc/cus/{domain}/           # overview, activity, incidents, etc.
+├── __init__.py
+├── L3_adapters/                          # L3 — Translation, bridges
+│   └── __init__.py
+├── L5_engines/                           # L5 — Business logic (includes facades)
+│   └── __init__.py
+├── L5_schemas/                           # L5 — Dataclasses, types
+│   └── __init__.py
+└── L6_drivers/                           # L6 — Data access
+    └── __init__.py
+```
+
+### 6.4 Complete Customer Domain Structure
+
+```
+hoc/cus/
+├── general/                              # Meta/Cross-domain (see 6.2)
+│
+├── overview/
+│   ├── __init__.py
+│   ├── L3_adapters/
+│   ├── L5_engines/
+│   ├── L5_schemas/
+│   └── L6_drivers/
+│
+├── activity/
+│   ├── __init__.py
+│   ├── L3_adapters/
+│   ├── L5_engines/
+│   ├── L5_schemas/
+│   └── L6_drivers/
+│
+├── incidents/
+│   ├── __init__.py
+│   ├── L3_adapters/
+│   ├── L5_engines/
+│   ├── L5_schemas/
+│   └── L6_drivers/
+│
+├── policies/
+│   ├── __init__.py
+│   ├── L3_adapters/
+│   ├── L5_engines/
+│   ├── L5_schemas/
+│   └── L6_drivers/
+│
+├── logs/
+│   ├── __init__.py
+│   ├── L3_adapters/
+│   ├── L5_engines/
+│   ├── L5_schemas/
+│   └── L6_drivers/
+│
+├── analytics/
+│   ├── __init__.py
+│   ├── L3_adapters/
+│   ├── L5_engines/
+│   ├── L5_schemas/
+│   └── L6_drivers/
+│
+├── integrations/
+│   ├── __init__.py
+│   ├── L3_adapters/
+│   ├── L5_engines/
+│   ├── L5_schemas/
+│   └── L6_drivers/
+│
+├── api_keys/
+│   ├── __init__.py
+│   ├── L3_adapters/
+│   ├── L5_engines/
+│   ├── L5_schemas/
+│   └── L6_drivers/
+│
+└── account/
+    ├── __init__.py
+    ├── L3_adapters/
+    ├── L5_engines/
+    ├── L5_schemas/
+    └── L6_drivers/
+```
+
+### 6.5 Other Audiences (Founder, Internal)
+
+```
+hoc/fdr/
+├── general/
+│   ├── L4_runtime/                       # L4 (same structure as customer)
+│   └── L5_utils/
+│
+└── ops/
+    ├── L3_adapters/
+    ├── L5_engines/
+    ├── L5_schemas/
+    └── L6_drivers/
+
+hoc/int/
+├── general/
+│   ├── L4_runtime/
+│   └── L5_utils/
+│
+├── platform/
+│   ├── L3_adapters/
+│   ├── L5_engines/
+│   ├── L5_schemas/
+│   └── L6_drivers/
+│
+├── recovery/
+│   ├── L3_adapters/
+│   ├── L5_engines/
+│   ├── L5_schemas/
+│   └── L6_drivers/
+│
+└── agent/
+    ├── L3_adapters/
+    ├── L5_engines/
+    ├── L5_schemas/
+    └── L6_drivers/
+```
+
+### 6.6 Models (Centralized)
+
+```
+app/models/                               # L7 — SHARED (centralized)
+├── __init__.py
+├── base.py
+├── tenant.py
+├── audit_ledger.py
+└── worker_run.py
 ```
 
 ---
@@ -1087,55 +1095,55 @@ L2.1 → L2 → L3 ─┬─→ L4 → L5 → L6 → L7
 
 ### 8.1 Single Domain Request
 
-**Request:** `GET /api/v1/customer/policies/rules`
+**Request:** `GET /api/v1/cus/policies/rules`
 
 ```
 Browser
     ↓
-houseofcards/api/facades/customer/policies.py       (L2.1)
+hoc/api/facades/cus/policies.py       (L2.1)
     ↓
-houseofcards/api/customer/policies.py               (L2)
+hoc/api/cus/policies.py               (L2)
     ↓
-houseofcards/customer/policies/adapters/adapter.py  (L3)
+hoc/cus/policies/L3_adapters/adapter.py  (L3)
     ↓
-houseofcards/customer/general/runtime/orchestrator.py (L4)
+hoc/cus/general/L4_runtime/orchestrator.py (L4)
     ↓
-houseofcards/customer/policies/engines/rules.py     (L5)
+hoc/cus/policies/L5_engines/rules.py     (L5)
     ↓
-houseofcards/customer/policies/drivers/policy.py    (L6)
+hoc/cus/policies/L6_drivers/policy.py    (L6)
     ↓
-app/customer/models/policy.py                       (L7)
+app/cus/models/policy.py                       (L7)
     ↓
 Database                                            (L8)
 ```
 
 ### 8.2 Cross-Domain Request (Overview)
 
-**Request:** `GET /api/v1/customer/overview/highlights`
+**Request:** `GET /api/v1/cus/overview/highlights`
 
 ```
 Browser
     ↓
-houseofcards/api/facades/customer/overview.py       (L2.1)
+hoc/api/facades/cus/overview.py       (L2.1)
     ↓
-houseofcards/api/customer/overview.py               (L2)
+hoc/api/cus/overview.py               (L2)
     ↓
-houseofcards/customer/overview/adapters/adapter.py  (L3 — CROSS-DOMAIN)
-    ├── imports from customer/activity/engines/
-    ├── imports from customer/incidents/engines/
-    └── imports from customer/policies/engines/
+hoc/cus/overview/L3_adapters/adapter.py  (L3 — CROSS-DOMAIN)
+    ├── imports from customer/activity/L5_engines/
+    ├── imports from customer/incidents/L5_engines/
+    └── imports from customer/policies/L5_engines/
     ↓
-houseofcards/customer/general/runtime/orchestrator.py (L4)
+hoc/cus/general/L4_runtime/orchestrator.py (L4)
     ↓
-├── customer/activity/engines/*.py                  (L5)
-├── customer/incidents/engines/*.py                 (L5)
-└── customer/policies/engines/*.py                  (L5)
+├── customer/activity/L5_engines/*.py                  (L5)
+├── customer/incidents/L5_engines/*.py                 (L5)
+└── customer/policies/L5_engines/*.py                  (L5)
     ↓
-├── customer/activity/drivers/*.py                  (L6)
-├── customer/incidents/drivers/*.py                 (L6)
-└── customer/policies/drivers/*.py                  (L6)
+├── customer/activity/L6_drivers/*.py                  (L6)
+├── customer/incidents/L6_drivers/*.py                 (L6)
+└── customer/policies/L6_drivers/*.py                  (L6)
     ↓
-app/customer/models/*                               (L7)
+app/cus/models/*                               (L7)
     ↓
 Database                                            (L8)
 ```
@@ -1196,15 +1204,15 @@ Database                                            (L8)
 
 | Source | Forbidden Targets | Rule |
 |--------|-------------------|------|
-| `houseofcards/api/facades/**` | `houseofcards/{audience}/**` | L2.1 cannot import L3-L7 |
-| `houseofcards/api/{audience}/**` | `houseofcards/{audience}/**/engines/**` | L2 cannot import L5 directly |
-| `houseofcards/{audience}/**/engines/**` | `app/**/models/**` (ORM) | L5 cannot import ORM models |
-| `houseofcards/{audience}/**/workers/**` | `houseofcards/{audience}/**/runtime/**` | L5 workers cannot import L4 |
+| `hoc/api/facades/**` | `hoc/{audience}/**` | L2.1 cannot import L3-L7 |
+| `hoc/api/{audience}/**` | `hoc/{audience}/**/engines/**` | L2 cannot import L5 directly |
+| `hoc/{audience}/**/engines/**` | `app/**/models/**` (ORM) | L5 cannot import ORM models |
+| `hoc/{audience}/**/workers/**` | `hoc/{audience}/**/runtime/**` | L5 workers cannot import L4 |
 
 **Legacy Namespace Ban:**
 ```bash
 # FAIL if any HOC file imports from legacy app.services
-fail if: houseofcards/** imports app.services.**
+fail if: hoc/** imports app.services.**
 ```
 
 ### 10.3 Contract Enforcement
@@ -1243,12 +1251,12 @@ Cheap tests that import nothing but scan imports:
 
 def test_l21_facades_do_not_import_adapters():
     """L2.1 Facades must not import L3 Adapters."""
-    violations = scan_imports("houseofcards/api/facades/", forbidden=["adapters"])
+    violations = scan_imports("hoc/api/facades/", forbidden=["adapters"])
     assert violations == [], f"L2.1 Facade violations: {violations}"
 
 def test_l5_engines_do_not_import_orm():
     """L5 Engines must not import ORM models directly."""
-    violations = scan_imports("houseofcards/**/engines/", forbidden=["app/models"])
+    violations = scan_imports("hoc/**/L5_engines/", forbidden=["app/models"])
     assert violations == [], f"L5 ORM leakage: {violations}"
 ```
 
@@ -1300,9 +1308,9 @@ For **Drivers (L6):**
 
 | From | To |
 |------|-----|
-| `app/api/*.py` | `houseofcards/api/{audience}/*.py` |
-| `app/adapters/*.py` | `houseofcards/{audience}/{domain}/adapters/` |
-| `app/services/*.py` (facades) | `houseofcards/{audience}/{domain}/engines/` |
+| `app/api/*.py` | `hoc/api/{audience}/*.py` |
+| `app/adapters/*.py` | `hoc/{audience}/{domain}/adapters/` |
+| `app/services/*.py` (facades) | `hoc/{audience}/{domain}/engines/` |
 | `app/models/*.py` (audience-specific) | `app/{audience}/models/` |
 
 ### 11.2 What Stays
@@ -1316,10 +1324,10 @@ For **Drivers (L6):**
 
 | Location | Purpose |
 |----------|---------|
-| `houseofcards/api/facades/` | L2.1 organizers |
-| `houseofcards/{audience}/general/runtime/` | L4 governed runtime |
-| `houseofcards/{audience}/frontend/` | Panel engine |
-| `houseofcards/{audience}/{domain}/workers/` | L5 domain workers |
+| `hoc/api/facades/` | L2.1 organizers |
+| `hoc/{audience}/general/L4_runtime/` | L4 governed runtime |
+| `hoc/{audience}/frontend/` | Panel engine |
+| `hoc/{audience}/{domain}/workers/` | L5 domain workers |
 
 ---
 

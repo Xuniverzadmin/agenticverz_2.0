@@ -11,13 +11,13 @@
 
 ### Phase 1: Structure Creation ✅
 
-- Created `app/houseofcards/{audience}/{domain}/{role}/` structure
+- Created `app/hoc/{audience}/{domain}/{role}/` structure
 - Audiences: customer, internal, founder
 - Roles: facades, engines, drivers, schemas
 
 ### Phase 2: File Copy ✅
 
-- Copied **167 files** from `app/services/` to `app/houseofcards/`
+- Copied **167 files** from `app/services/` to `app/hoc/`
 - Original files preserved as fallback
 - Iterative classification with user decisions
 - 15 facade files renamed for clarity (`facade.py` → `{domain}_facade.py`)
@@ -37,9 +37,9 @@
 | Metric | Value |
 |--------|-------|
 | app/services/ total files | 167 |
-| app/houseofcards/ total files | 170 |
+| app/hoc/ total files | 170 |
 | Unique basenames in services | 153 |
-| Files MISSING from houseofcards | **0** |
+| Files MISSING from hoc | **0** |
 | BLCA Status | PASS |
 
 ### File Distribution
@@ -133,7 +133,7 @@ All subdirectories fully covered:
 # Find files with same name in both locations
 comm -12 \
   <(find app/services -name "*.py" -exec basename {} \; | sort -u) \
-  <(find app/houseofcards -name "*.py" -exec basename {} \; | sort -u)
+  <(find app/hoc -name "*.py" -exec basename {} \; | sort -u)
 ```
 
 #### Step 4.2: Compare Content
@@ -145,8 +145,8 @@ For each duplicate:
 #### Step 4.3: Mark Deprecated
 Add deprecation header to `app/services/` files:
 ```python
-# DEPRECATED: Use app.houseofcards.{audience}.{domain}.{role} instead
-# Migration target: app/houseofcards/customer/policies/engines/limits_engine.py
+# DEPRECATED: Use app.hoc.{audience}.{domain}.{role} instead
+# Migration target: app/hoc/cus/policies/L5_engines/limits_engine.py
 ```
 
 #### Step 4.4: Audit Imports
@@ -169,17 +169,17 @@ Generate mapping file:
 # import_mapping.yaml
 mappings:
   - old: app.services.policies_facade
-    new: app.houseofcards.customer.policies.facades.policies_facade
+    new: app.hoc.cus.policies.facades.policies_facade
   - old: app.services.incident_aggregator
-    new: app.houseofcards.customer.incidents.engines.incident_aggregator
+    new: app.hoc.cus.incidents.L5_engines.incident_aggregator
   # ... etc
 ```
 
 #### Step 5.2: Batch Update (Low Risk)
-Start with internal imports within houseofcards:
+Start with internal imports within hoc:
 ```bash
-# Update imports inside houseofcards first
-find app/houseofcards -name "*.py" -exec grep -l "from app.services" {} \;
+# Update imports inside hoc first
+find app/hoc -name "*.py" -exec grep -l "from app.services" {} \;
 ```
 
 #### Step 5.3: Batch Update (Medium Risk)
@@ -213,7 +213,7 @@ After each batch:
 # app/services/__init__.py
 import warnings
 warnings.warn(
-    "app.services is deprecated. Use app.houseofcards instead. "
+    "app.services is deprecated. Use app.hoc instead. "
     "See docs/architecture/HOUSEOFCARDS_DIRECTORY_DESIGN.md",
     DeprecationWarning,
     stacklevel=2
@@ -296,12 +296,12 @@ If issues arise during any phase:
 
 ## Next Action
 
-**Start Phase 4.1**: Identify duplicate files between `app/services/` and `app/houseofcards/`.
+**Start Phase 4.1**: Identify duplicate files between `app/services/` and `app/hoc/`.
 
 ```bash
 # Quick check for duplicates
 cd /root/agenticverz2.0/backend
 comm -12 \
   <(find app/services -type f -name "*.py" | grep -v __pycache__ | grep -v __init__ | sed 's|.*/||' | sort -u) \
-  <(find app/houseofcards -type f -name "*.py" | grep -v __pycache__ | grep -v __init__ | sed 's|.*/||' | sort -u) | wc -l
+  <(find app/hoc -type f -name "*.py" | grep -v __pycache__ | grep -v __init__ | sed 's|.*/||' | sort -u) | wc -l
 ```

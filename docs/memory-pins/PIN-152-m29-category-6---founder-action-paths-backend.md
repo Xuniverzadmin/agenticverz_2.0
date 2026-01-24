@@ -372,7 +372,7 @@ Customers must NEVER see: Action names, Actor identity, Reason codes
 - 2 audit endpoints (list, detail)
 
 **Safety Rails:** All server-side enforced
-- Rate limit: 10 actions/founder/hour
+- Rate limit: 10 actions/fdr/hour
 - Duplicate detection: Same action on same target → 409
 - Mutual exclusion: Cannot throttle frozen tenant (freeze wins)
 - MFA enforcement: Required for all actions

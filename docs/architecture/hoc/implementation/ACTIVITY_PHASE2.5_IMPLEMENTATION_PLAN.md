@@ -18,10 +18,10 @@
 | **Phase 2 Plan** | [`../migration/PHASE2_MIGRATION_PLAN.md`](../migration/PHASE2_MIGRATION_PLAN.md) | Execution context |
 | **Extraction Playbook** | [`../migration/PHASE2_EXTRACTION_PLAYBOOK.md`](../migration/PHASE2_EXTRACTION_PLAYBOOK.md) | L4/L6 extraction procedures |
 | **Extraction Protocol** | [`../migration/PHASE2_EXTRACTION_PROTOCOL.md`](../migration/PHASE2_EXTRACTION_PROTOCOL.md) | Step-by-step guide |
-| **Driver-Engine Contract** | [`../../../../backend/app/houseofcards/DRIVER_ENGINE_CONTRACT.md`](../../../../backend/app/houseofcards/DRIVER_ENGINE_CONTRACT.md) | L5/L6 boundary rules |
-| **Analytics Lock** | [`../../../../backend/app/houseofcards/customer/analytics/ANALYTICS_DOMAIN_LOCK_FINAL.md`](../../../../backend/app/houseofcards/customer/analytics/ANALYTICS_DOMAIN_LOCK_FINAL.md) | Lock template |
-| **Policies Lock** | [`../../../../backend/app/houseofcards/customer/policies/POLICIES_DOMAIN_LOCK_FINAL.md`](../../../../backend/app/houseofcards/customer/policies/POLICIES_DOMAIN_LOCK_FINAL.md) | Lock template |
-| **Activity Audit** | [`../../../../backend/app/houseofcards/customer/activity/HOC_activity_deep_audit_report.md`](../../../../backend/app/houseofcards/customer/activity/HOC_activity_deep_audit_report.md) | Current state |
+| **Driver-Engine Contract** | [`../../../../backend/app/hoc/DRIVER_ENGINE_CONTRACT.md`](../../../../backend/app/hoc/DRIVER_ENGINE_CONTRACT.md) | L5/L6 boundary rules |
+| **Analytics Lock** | [`../../../../backend/app/hoc/cus/analytics/ANALYTICS_DOMAIN_LOCK_FINAL.md`](../../../../backend/app/hoc/cus/analytics/ANALYTICS_DOMAIN_LOCK_FINAL.md) | Lock template |
+| **Policies Lock** | [`../../../../backend/app/hoc/cus/policies/POLICIES_DOMAIN_LOCK_FINAL.md`](../../../../backend/app/hoc/cus/policies/POLICIES_DOMAIN_LOCK_FINAL.md) | Lock template |
+| **Activity Audit** | [`../../../../backend/app/hoc/cus/activity/HOC_activity_deep_audit_report.md`](../../../../backend/app/hoc/cus/activity/HOC_activity_deep_audit_report.md) | Current state |
 
 ---
 
@@ -33,7 +33,7 @@ Complete L4/L6 structural layering for the `activity` domain to achieve LOCK-ELI
 
 ### 1.2 Scope
 
-**Domain Path:** `backend/app/houseofcards/customer/activity/`
+**Domain Path:** `backend/app/hoc/cus/activity/`
 
 **Current State:**
 - 5 engines (4 with violations, 1 clean)

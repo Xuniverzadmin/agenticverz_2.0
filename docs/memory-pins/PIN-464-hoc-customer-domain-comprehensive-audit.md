@@ -8,7 +8,7 @@
 
 ## Summary
 
-Deep audit of all 10 houseofcards/customer/* domains for duplicates, imports, semantics, and deprecated API usage
+Deep audit of all 10 hoc/cus/* domains for duplicates, imports, semantics, and deprecated API usage
 
 ---
 
@@ -24,7 +24,7 @@ Comprehensive audit of the House of Cards (HOC) customer domain structure to ide
 
 ## Scope
 
-All 10 domains under `app/houseofcards/customer/`:
+All 10 domains under `app/hoc/cus/`:
 1. account
 2. activity
 3. analytics
@@ -43,7 +43,7 @@ All 10 domains under `app/houseofcards/customer/`:
 Found 42 occurrences of deprecated `datetime.utcnow()` across 12 files.
 
 **Resolution:**
-- Created shared utility: `app/houseofcards/customer/general/utils/time.py`
+- Created shared utility: `app/hoc/cus/general/L5_utils/time.py`
 - Replaced all occurrences with `utc_now()` which returns timezone-aware `datetime.now(timezone.utc)`
 
 **Files Fixed:**
@@ -64,7 +64,7 @@ Found 42 occurrences of deprecated `datetime.utcnow()` across 12 files.
 
 ### 2. Misplaced Audit Reports (FIXED)
 
-5 audit reports were in wrong location (`app/houseofcards/` instead of their domain folders).
+5 audit reports were in wrong location (`app/hoc/` instead of their domain folders).
 
 **Relocated:**
 - `HOC_policies_detailed_audit_report.md` → `customer/policies/`
@@ -79,11 +79,11 @@ Files in `app/services/` that duplicate HOC files are intentional for backward c
 
 ### 4. Import Fix (account domain)
 
-Fixed broken import in `identity_resolver.py` - changed relative import to absolute import from `app.houseofcards.internal.platform.iam.engines.iam_service`.
+Fixed broken import in `identity_resolver.py` - changed relative import to absolute import from `app.hoc.int.platform.iam.engines.iam_service`.
 
 ### 5. Removed Triple Duplicate
 
-Deleted `app/houseofcards/customer/policies/engines/validator_service.py` (existed in 3 locations).
+Deleted `app/hoc/cus/policies/L5_engines/validator_service.py` (existed in 3 locations).
 
 ## Audit Reports
 
@@ -105,7 +105,7 @@ All 10 domains now have co-located audit reports:
 ## Shared Utility Created
 
 ```python
-# app/houseofcards/customer/general/utils/time.py
+# app/hoc/cus/general/L5_utils/time.py
 from datetime import datetime, timezone
 
 def utc_now() -> datetime:

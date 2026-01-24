@@ -200,7 +200,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.houseofcards.customer.overview.drivers.overview_facade_driver import (
+from app.hoc.cus.overview.L6_drivers.overview_facade_driver import (
     OverviewFacadeDriver,
 )
 

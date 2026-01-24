@@ -175,7 +175,7 @@ integrations/
 |-----------|-------|
 | File | `engines/server_registry.py` |
 | Header | `# AUDIENCE: INTERNAL` |
-| Current Path | `customer/integrations/engines/server_registry.py` |
+| Current Path | `customer/integrations/L5_engines/server_registry.py` |
 | Required Path | `internal/platform/mcp/engines/server_registry.py` |
 
 #### 5.2 vault.py - AUDIENCE: INTERNAL
@@ -246,7 +246,7 @@ overview/
 
 ### 8.1 Move server_registry.py
 
-**From:** `customer/integrations/engines/server_registry.py`
+**From:** `customer/integrations/L5_engines/server_registry.py`
 **To:** `internal/platform/mcp/engines/server_registry.py`
 
 ### 8.2 Move vault.py

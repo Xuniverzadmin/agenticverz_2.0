@@ -144,29 +144,29 @@ Every irreversible UI action **MUST** declare metadata used by frontend and back
 
 | Endpoint | Irreversible | Contract Requirements |
 |----------|--------------|----------------------|
-| `POST /api/customer/policies` (create draft) | NO | Basic confirmation |
-| `POST /api/customer/policies/{id}/simulate` | NO | None |
-| `POST /api/customer/policies/{id}/activate` | **YES** | Intent, consequences, simulation REQUIRED, reason REQUIRED, ≥2 steps |
-| `POST /api/customer/policies/{id}/mode` (MONITOR→ENFORCE) | **YES** | Consequence disclosure, simulation, typed confirm, reason REQUIRED |
+| `POST /api/cus/policies` (create draft) | NO | Basic confirmation |
+| `POST /api/cus/policies/{id}/simulate` | NO | None |
+| `POST /api/cus/policies/{id}/activate` | **YES** | Intent, consequences, simulation REQUIRED, reason REQUIRED, ≥2 steps |
+| `POST /api/cus/policies/{id}/mode` (MONITOR→ENFORCE) | **YES** | Consequence disclosure, simulation, typed confirm, reason REQUIRED |
 
 ### Killswitch
 
 | Endpoint | Irreversible | Contract Requirements |
 |----------|--------------|----------------------|
-| `POST /api/customer/killswitch` (engage) | **YES** | Intent "Pause executions", scope disclosure, reason REQUIRED, delayed confirm |
-| `POST /api/customer/killswitch/resume` | NO | Single confirm + reason |
+| `POST /api/cus/killswitch` (engage) | **YES** | Intent "Pause executions", scope disclosure, reason REQUIRED, delayed confirm |
+| `POST /api/cus/killswitch/resume` | NO | Single confirm + reason |
 
 ### Spend Guardrails
 
 | Endpoint | Irreversible | Contract Requirements |
 |----------|--------------|----------------------|
-| `POST /api/customer/spend/guardrails` | **YES** | Consequence disclosure, simulation if available, reason REQUIRED, ≥2 steps |
+| `POST /api/cus/spend/guardrails` | **YES** | Consequence disclosure, simulation if available, reason REQUIRED, ≥2 steps |
 
 ### Integrations
 
 | Endpoint | Irreversible | Contract Requirements |
 |----------|--------------|----------------------|
-| `POST /api/customer/integrations/{id}/disable` | **YES** | Consequence disclosure (ingest stops), reason REQUIRED, two-step confirm |
+| `POST /api/cus/integrations/{id}/disable` | **YES** | Consequence disclosure (ingest stops), reason REQUIRED, two-step confirm |
 
 ---
 

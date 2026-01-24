@@ -82,7 +82,7 @@ No implicit exceptions. No "temporary" violations.
 | Guard | Trigger | Action |
 |-------|---------|--------|
 | Engine DB imports | `engines/*.py` imports sqlalchemy/sqlmodel | **FAIL BUILD** |
-| New service files | `*_service.py` created in houseofcards | **FAIL BUILD** |
+| New service files | `*_service.py` created in hoc | **FAIL BUILD** |
 | Driver engine imports | `drivers/*.py` imports from engines | **FAIL BUILD** |
 | Missing layer header | Any `.py` without `# Layer:` | **FAIL BUILD** |
 

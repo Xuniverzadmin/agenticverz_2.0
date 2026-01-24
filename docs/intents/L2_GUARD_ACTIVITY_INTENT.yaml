@@ -1,6 +1,6 @@
 # L2 Intent Declaration: Guard Activity
 # Reference: PIN-300 (Semantic Promotion Gate)
-# Surface: /api/v1/customer/activity, /api/v1/customer/activity/{run_id}
+# Surface: /api/v1/cus/activity, /api/v1/cus/activity/{run_id}
 #
 # STATUS: APPROVED — Founder Reviewed 2026-01-05
 # RISK PROFILE: Tier-1 High (execution facts vs performance narrative boundary)
@@ -65,7 +65,7 @@ explicitly_forbidden:
   - optimization_suggestion  # No "you should..." recommendations
 
 endpoints:
-  - path: GET /api/v1/customer/activity
+  - path: GET /api/v1/cus/activity
     authority: projection
     mutates: false
     explicitly_forbidden:
@@ -74,7 +74,7 @@ endpoints:
       - filtering_by_success
       - performance_sorting
 
-  - path: GET /api/v1/customer/activity/{run_id}
+  - path: GET /api/v1/cus/activity/{run_id}
     authority: projection
     mutates: false
     explicitly_forbidden:

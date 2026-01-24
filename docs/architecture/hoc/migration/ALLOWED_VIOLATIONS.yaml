@@ -8,7 +8,7 @@
 #   - ❌ FAIL if violation count for a file increases
 #
 # Format:
-#   - file: relative path from houseofcards/
+#   - file: relative path from hoc/
 #   - action: EXTRACT_DRIVER | EXTRACT_AUTHORITY | SPLIT_FILE
 #   - expires: YYYY-MM-DD (max 90 days from entry)
 #   - reason: why this is allowed temporarily
@@ -29,7 +29,7 @@ extract_authority:
     owner: architect-review
     phase: 3
 
-  - file: customer/general/lifecycle/engines/pool_manager.py
+  - file: customer/general/L5_lifecycle/engines/pool_manager.py
     action: EXTRACT_AUTHORITY
     expires: 2026-04-15
     reason: Authority leak - needs L4 runtime design
@@ -50,7 +50,7 @@ extract_authority:
     owner: architect-review
     phase: 3
 
-  - file: internal/policies/engines/rbac.py
+  - file: internal/policies/L5_engines/rbac.py
     action: EXTRACT_AUTHORITY
     expires: 2026-04-15
     reason: RBAC authority - security review needed

@@ -2134,7 +2134,7 @@ codebase_registry_authority:
 
         Please clarify:
         - Which product does this belong to?
-        - Which console (customer/founder/internal)?
+        - Which console (customer/fdr/internal)?
         - What domain/subdomain does it serve?
 
   # ---------------------------------------------------------------------------
@@ -5563,7 +5563,7 @@ product_architecture:
       location: "pages/ops/"
       status: "Separate jurisdiction"
     - name: "Founder Console"
-      location: "pages/founder/"
+      location: "pages/fdr/"
       status: "Separate jurisdiction"
 
   # ---------------------------------------------------------------------------

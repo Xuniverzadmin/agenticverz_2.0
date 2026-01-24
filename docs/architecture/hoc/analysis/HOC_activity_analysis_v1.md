@@ -1,6 +1,6 @@
 # HOC Activity Domain Analysis v1
 
-**Domain:** `app/houseofcards/customer/activity/`
+**Domain:** `app/hoc/cus/activity/`
 **Audience:** CUSTOMER
 **Date:** 2026-01-22
 **Status:** CLEANUP COMPLETE
@@ -11,7 +11,7 @@
 ## 1. Final Structure (Post-Cleanup)
 
 ```
-app/houseofcards/customer/activity/
+app/hoc/cus/activity/
 ├── __init__.py
 ├── drivers/
 │   └── __init__.py           (EMPTY - reserved for L3 adapters)
@@ -67,7 +67,7 @@ app/houseofcards/customer/activity/
 | `activity_facade.py` | `app.services.activity.signal_feedback_service` |
 | `activity_facade.py` | `app.services.activity.signal_identity` |
 
-**Note:** Import paths need update from `app.services.activity.*` to `app.houseofcards.customer.activity.engines.*`
+**Note:** Import paths need update from `app.services.activity.*` to `app.hoc.cus.activity.L5_engines.*`
 
 ### 3.2 Standard Library Imports
 
@@ -235,7 +235,7 @@ activity_facade.py
 └── signal_identity.py
 
 External Dependencies:
-├── app.services.activity.* (OLD PATH - needs update to houseofcards)
+├── app.services.activity.* (OLD PATH - needs update to hoc)
 ├── sqlalchemy.ext.asyncio.AsyncSession
 └── sqlalchemy.text
 ```
@@ -248,7 +248,7 @@ External Dependencies:
 
 | File | Old Import | New Import |
 |------|------------|------------|
-| `activity_facade.py` | `app.services.activity.*` | `app.houseofcards.customer.activity.engines.*` |
+| `activity_facade.py` | `app.services.activity.*` | `app.hoc.cus.activity.L5_engines.*` |
 
 ### 7.2 Documentation (Priority: LOW)
 

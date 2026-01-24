@@ -1,0 +1,48 @@
+# Analytics Domain Driver Inventory
+# Reference: Phase-2.5A Analytics Extraction
+# Layer: L6 — Platform Substrate (Drivers)
+
+drivers:
+  - id: cost_anomaly_driver
+    file: cost_anomaly_driver.py
+    authority: COST_ANOMALY_PERSISTENCE
+    methods: 19
+    status: LOCKED
+    engine_consumer: cost_anomaly_detector.py
+    description: >
+      Pure persistence for cost anomaly detection.
+      Fetches baselines, breaches, drift tracking, and rolling averages.
+      Inserts breach history and updates drift tracking.
+
+  - id: alert_driver
+    file: alert_driver.py
+    authority: ALERT_PERSISTENCE
+    methods: 9
+    status: LOCKED
+    engine_consumer: alert_worker.py
+    description: >
+      Pure persistence for alert queue management.
+      Fetches pending alerts, updates status (sent/retry/failed),
+      marks incidents, inserts new alerts, retries failed, purges old.
+
+  - id: prediction_driver
+    file: prediction_driver.py
+    authority: PREDICTION_PERSISTENCE
+    methods: 7
+    status: LOCKED
+    engine_consumer: prediction.py
+    description: >
+      Pure persistence for prediction event management.
+      Fetches failure patterns, failed runs, run totals, cost runs.
+      Fetches predictions, inserts new prediction events.
+
+adapters:
+  - id: alert_delivery_adapter
+    file: ../adapters/alert_delivery.py
+    authority: ALERT_DELIVERY
+    methods: 2
+    status: LOCKED
+    engine_consumer: alert_worker.py
+    description: >
+      HTTP delivery to Alertmanager.
+      Pure side-effect adapter - no business logic, no persistence.

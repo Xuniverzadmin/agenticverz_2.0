@@ -95,7 +95,7 @@ def valid_force_complete_request():
 
 
 class TestForceCompleteEndpoint:
-    """Tests for POST /founder/onboarding/force-complete."""
+    """Tests for POST /fdr/onboarding/force-complete."""
 
     def test_force_complete_request_requires_tenant_id(self):
         """Request must include tenant_id."""

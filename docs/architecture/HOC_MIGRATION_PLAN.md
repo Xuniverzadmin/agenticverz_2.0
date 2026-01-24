@@ -29,21 +29,21 @@
 
 ## Executive Summary
 
-This document outlines the four-phase migration plan for restructuring the codebase from `app/services/*` to `app/houseofcards/{audience}/{domain}/*` following the HOC Layer Topology V1.2.0.
+This document outlines the four-phase migration plan for restructuring the codebase from `app/services/*` to `app/hoc/{audience}/{domain}/*` following the HOC Layer Topology V1.2.0.
 
 **Architectural Decision (2026-01-23):** Keep HOC inside `app/` directory (Option B).
-- Target: `app/houseofcards/` (NOT `houseofcards/` outside app)
-- Rationale: 248 files already structured in `app/houseofcards/`, no relocation needed
+- Target: `app/hoc/` (NOT `hoc/` outside app)
+- Rationale: 248 files already structured in `app/hoc/`, no relocation needed
 - Cleanup: Delete `app/services/*` after migration complete
 
 **Current State:**
 - `app/services/`: 220 files in 41 subdirectories
 - `app/api/`: 78 files
 - `app/models/`: 30 files
-- `app/houseofcards/`: 248 files (partial migration already started)
+- `app/hoc/`: 248 files (partial migration already started)
 
 **Target State:**
-- All domain logic in `app/houseofcards/{audience}/{domain}/`
+- All domain logic in `app/hoc/{audience}/{domain}/`
 - Layer contracts enforced (L2.1, L2, L3, L4, L5, L6, L7)
 - Headers on all files
 - BLCA passing with 0 violations
@@ -55,7 +55,7 @@ This document outlines the four-phase migration plan for restructuring the codeb
 
 | Phase | Name | Objective |
 |-------|------|-----------|
-| **P1** | Migration | Move files to `app/houseofcards/`, insert headers |
+| **P1** | Migration | Move files to `app/hoc/`, insert headers |
 | **P2** | Gap Analysis | Identify missing pieces at each layer |
 | **P3** | Development | Build missing components |
 | **P4** | Wiring | Connect all layers, validate contracts |
@@ -71,33 +71,33 @@ This document outlines the four-phase migration plan for restructuring the codeb
 
 | Source | Target | Layer | Count |
 |--------|--------|-------|-------|
-| `app/services/*_facade.py` | `houseofcards/{audience}/{domain}/adapters/` | L3 | ~25 |
-| `app/services/**/*_engine.py` | `houseofcards/{audience}/{domain}/engines/` | L5 | ~40 |
-| `app/services/**/*_service.py` | `houseofcards/{audience}/{domain}/engines/` or `drivers/` | L5/L6 | ~80 |
-| `app/services/**/schemas/` | `houseofcards/{audience}/{domain}/schemas/` | L5 | ~15 |
-| `app/api/*.py` | `houseofcards/api/{audience}/*.py` | L2 | ~50 |
-| `app/worker/*.py` | `houseofcards/{audience}/general/runtime/` or `{domain}/workers/` | L4/L5 | ~20 |
-| `app/auth/*.py` | `houseofcards/internal/platform/auth/` | L4-Internal | ~40 |
-| `app/core/*.py` | `houseofcards/internal/platform/core/` | L6-Internal | ~15 |
-| `app/events/*.py` | `houseofcards/internal/platform/events/` | L6-Internal | ~10 |
-| `app/middleware/*.py` | `houseofcards/api/middleware/` | L2-Infra | ~10 |
+| `app/services/*_facade.py` | `hoc/{audience}/{domain}/adapters/` | L3 | ~25 |
+| `app/services/**/*_engine.py` | `hoc/{audience}/{domain}/engines/` | L5 | ~40 |
+| `app/services/**/*_service.py` | `hoc/{audience}/{domain}/engines/` or `drivers/` | L5/L6 | ~80 |
+| `app/services/**/schemas/` | `hoc/{audience}/{domain}/schemas/` | L5 | ~15 |
+| `app/api/*.py` | `hoc/api/{audience}/*.py` | L2 | ~50 |
+| `app/worker/*.py` | `hoc/{audience}/general/L4_runtime/` or `{domain}/workers/` | L4/L5 | ~20 |
+| `app/auth/*.py` | `hoc/int/platform/auth/` | L4-Internal | ~40 |
+| `app/core/*.py` | `hoc/int/platform/core/` | L6-Internal | ~15 |
+| `app/events/*.py` | `hoc/int/platform/events/` | L6-Internal | ~10 |
+| `app/middleware/*.py` | `hoc/api/middleware/` | L2-Infra | ~10 |
 
 ### Files That WILL NOT Migrate (Stay in `app/`) — L7 ONLY
 
 | Location | Reason | Layer |
 |----------|--------|-------|
 | `app/models/*.py` (shared) | Cross-audience DB tables (tenant, audit_ledger, base) | L7 |
-| `app/customer/models/*.py` | Customer-specific DB tables | L7 |
-| `app/founder/models/*.py` | Founder-specific DB tables | L7 |
-| `app/internal/models/*.py` | Internal-specific DB tables | L7 |
+| `app/cus/models/*.py` | Customer-specific DB tables | L7 |
+| `app/fdr/models/*.py` | Founder-specific DB tables | L7 |
+| `app/int/models/*.py` | Internal-specific DB tables | L7 |
 
-**Note:** Only database table definitions (L7) stay in `app/`. Everything else migrates to `houseofcards/`.
+**Note:** Only database table definitions (L7) stay in `app/`. Everything else migrates to `hoc/`.
 
 ### Files to DELETE (Legacy/Duplicate)
 
 | Location | Reason |
 |----------|--------|
-| `houseofcards/duplicate/` | Legacy structures (30 files) |
+| `hoc/duplicate/` | Legacy structures (30 files) |
 | `app/api/legacy_routes.py` | Deprecated routes |
 | `app/api/v1_*.py` | V1 proxy routes (deprecated) |
 
@@ -112,7 +112,7 @@ This document outlines the four-phase migration plan for restructuring the codeb
 | Source | Target | Layer |
 |--------|--------|-------|
 | `app/services/overview_facade.py` | `adapters/overview_adapter.py` | L3 |
-| `app/api/overview.py` | `houseofcards/api/customer/overview.py` | L2 |
+| `app/api/overview.py` | `hoc/api/cus/overview.py` | L2 |
 | — | `facades/overview.py` (NEW - L2.1) | L2.1 |
 
 **Missing (to be created in P3):**
@@ -132,7 +132,7 @@ This document outlines the four-phase migration plan for restructuring the codeb
 | `app/services/activity/pattern_detection_service.py` | `engines/pattern_detection.py` | L5 |
 | `app/services/activity/signal_feedback_service.py` | `engines/signal_feedback.py` | L5 |
 | `app/services/activity/signal_identity.py` | `engines/signal_identity.py` | L5 |
-| `app/api/activity.py` | `houseofcards/api/customer/activity.py` | L2 |
+| `app/api/activity.py` | `hoc/api/cus/activity.py` | L2 |
 
 **Already exists in HOC:** Most engines already migrated
 
@@ -155,7 +155,7 @@ This document outlines the four-phase migration plan for restructuring the codeb
 | `app/services/incident_read_service.py` | `drivers/incident_driver.py` | L6 |
 | `app/services/incident_write_service.py` | `drivers/incident_driver.py` | L6 |
 | `app/services/incident_aggregator.py` | `engines/aggregator.py` | L5 |
-| `app/api/incidents.py` | `houseofcards/api/customer/incidents.py` | L2 |
+| `app/api/incidents.py` | `hoc/api/cus/incidents.py` | L2 |
 
 **Already exists in HOC:** Most engines already migrated
 
@@ -176,8 +176,8 @@ This document outlines the four-phase migration plan for restructuring the codeb
 | `app/services/policy/*_service.py` | `engines/*.py` | L5 |
 | `app/services/limits/*_service.py` | `engines/*.py` | L5 |
 | `app/services/killswitch/*` | `controls/KillSwitch/engines/` | L5 |
-| `app/api/policies.py` | `houseofcards/api/customer/policies.py` | L2 |
-| `app/api/policy_*.py` | `houseofcards/api/customer/policies.py` | L2 |
+| `app/api/policies.py` | `hoc/api/cus/policies.py` | L2 |
+| `app/api/policy_*.py` | `hoc/api/cus/policies.py` | L2 |
 
 **Already exists in HOC:** Extensive policies structure
 
@@ -197,9 +197,9 @@ This document outlines the four-phase migration plan for restructuring the codeb
 | `app/services/logs_read_service.py` | `drivers/logs_driver.py` | L6 |
 | `app/services/audit/*` | `engines/audit/` | L5 |
 | `app/services/export/*` | `engines/export/` | L5 |
-| `app/api/logs.py` | `houseofcards/api/customer/logs.py` | L2 |
-| `app/api/evidence.py` | `houseofcards/api/customer/evidence.py` | L2 |
-| `app/api/traces.py` | `houseofcards/api/customer/traces.py` | L2 |
+| `app/api/logs.py` | `hoc/api/cus/logs.py` | L2 |
+| `app/api/evidence.py` | `hoc/api/cus/evidence.py` | L2 |
+| `app/api/traces.py` | `hoc/api/cus/traces.py` | L2 |
 
 **Missing:**
 - `facades/logs.py` (L2.1)
@@ -216,8 +216,8 @@ This document outlines the four-phase migration plan for restructuring the codeb
 | `app/services/cost_anomaly_detector.py` | `engines/anomaly_detector.py` | L5 |
 | `app/services/cost_model_engine.py` | `engines/cost_model.py` | L5 |
 | `app/services/prediction.py` | `engines/prediction.py` | L5 |
-| `app/api/analytics.py` | `houseofcards/api/customer/analytics.py` | L2 |
-| `app/api/detection.py` | `houseofcards/api/customer/detection.py` | L2 |
+| `app/api/analytics.py` | `hoc/api/cus/analytics.py` | L2 |
+| `app/api/detection.py` | `hoc/api/cus/detection.py` | L2 |
 
 **Missing:**
 - `facades/analytics.py` (L2.1)
@@ -235,8 +235,8 @@ This document outlines the four-phase migration plan for restructuring the codeb
 | `app/services/connectors/*` | `engines/connectors/` | L5 |
 | `app/services/credentials/*` | `engines/credentials/` | L5 |
 | `app/services/mcp/*` | `engines/mcp/` | L5 |
-| `app/api/connectors.py` | `houseofcards/api/customer/connectors.py` | L2 |
-| `app/api/datasources.py` | `houseofcards/api/customer/datasources.py` | L2 |
+| `app/api/connectors.py` | `hoc/api/cus/connectors.py` | L2 |
+| `app/api/datasources.py` | `hoc/api/cus/datasources.py` | L2 |
 
 **Missing:**
 - `facades/integrations.py` (L2.1)
@@ -249,7 +249,7 @@ This document outlines the four-phase migration plan for restructuring the codeb
 |--------|--------|-------|
 | `app/services/api_keys_facade.py` | `adapters/api_keys_adapter.py` | L3 |
 | `app/services/key_service.py` | `engines/key_service.py` | L5 |
-| `app/api/aos_api_key.py` | `houseofcards/api/customer/api_keys.py` | L2 |
+| `app/api/aos_api_key.py` | `hoc/api/cus/api_keys.py` | L2 |
 
 **Missing:**
 - `facades/api_keys.py` (L2.1)
@@ -264,9 +264,9 @@ This document outlines the four-phase migration plan for restructuring the codeb
 | `app/services/accounts_facade.py` | `adapters/accounts_adapter.py` | L3 |
 | `app/services/tenant_service.py` | `engines/tenant.py` | L5 |
 | `app/services/user_write_service.py` | `drivers/user_driver.py` | L6 |
-| `app/api/aos_accounts.py` | `houseofcards/api/customer/account.py` | L2 |
-| `app/api/tenants.py` | `houseofcards/api/customer/tenants.py` | L2 |
-| `app/api/onboarding.py` | `houseofcards/api/customer/onboarding.py` | L2 |
+| `app/api/aos_accounts.py` | `hoc/api/cus/account.py` | L2 |
+| `app/api/tenants.py` | `hoc/api/cus/tenants.py` | L2 |
+| `app/api/onboarding.py` | `hoc/api/cus/onboarding.py` | L2 |
 
 **Missing:**
 - `facades/account.py` (L2.1)
@@ -281,8 +281,8 @@ This document outlines the four-phase migration plan for restructuring the codeb
 |--------|--------|-------|
 | `app/services/ops_facade.py` | `adapters/ops_adapter.py` | L3 |
 | `app/services/ops/*` | `engines/*` | L5 |
-| `app/api/ops.py` | `houseofcards/api/founder/ops.py` | L2 |
-| `app/api/founder_*.py` | `houseofcards/api/founder/ops.py` | L2 |
+| `app/api/ops.py` | `hoc/api/fdr/ops.py` | L2 |
+| `app/api/founder_*.py` | `hoc/api/fdr/ops.py` | L2 |
 
 **Missing:**
 - `facades/ops.py` (L2.1)
@@ -300,8 +300,8 @@ This document outlines the four-phase migration plan for restructuring the codeb
 | `app/services/sandbox/*` | `engines/sandbox/` | L5 |
 | `app/services/pools/*` | `engines/pools/` | L5 |
 | `app/services/platform/*` | `engines/platform/` | L5 |
-| `app/api/scheduler.py` | `houseofcards/api/internal/scheduler.py` | L2 |
-| `app/api/platform.py` | `houseofcards/api/internal/platform.py` | L2 |
+| `app/api/scheduler.py` | `hoc/api/int/scheduler.py` | L2 |
+| `app/api/platform.py` | `hoc/api/int/platform.py` | L2 |
 
 ---
 
@@ -311,7 +311,7 @@ This document outlines the four-phase migration plan for restructuring the codeb
 |--------|--------|-------|
 | `app/services/orphan_recovery.py` | `engines/orphan_recovery.py` | L5 |
 | `app/services/recovery_*.py` | `engines/recovery/` | L5 |
-| `app/api/recovery.py` | `houseofcards/api/internal/recovery.py` | L2 |
+| `app/api/recovery.py` | `hoc/api/int/recovery.py` | L2 |
 
 ---
 
@@ -321,7 +321,7 @@ This document outlines the four-phase migration plan for restructuring the codeb
 |--------|--------|-------|
 | `app/services/ai_console_panel_adapter/*` | `engines/panel/` | L5 |
 | `app/services/worker_registry_service.py` | `engines/worker_registry.py` | L5 |
-| `app/api/workers.py` | `houseofcards/api/internal/workers.py` | L2 |
+| `app/api/workers.py` | `hoc/api/int/workers.py` | L2 |
 
 ---
 
@@ -461,7 +461,7 @@ After Phase 1 migration, identify missing pieces at each layer.
 
 ### Gap Analysis Template
 
-For each `houseofcards/{audience}/{domain}/`:
+For each `hoc/{audience}/{domain}/`:
 
 | Layer | Expected | Exists? | Gap |
 |-------|----------|---------|-----|
@@ -589,7 +589,7 @@ Build API organizers after all L2 routes are stable.
 ### Driver Template (L6)
 
 ```python
-# houseofcards/customer/{domain}/drivers/{domain}_driver.py
+# hoc/cus/{domain}/drivers/{domain}_driver.py
 # Layer: L6 — Database Driver
 # AUDIENCE: CUSTOMER
 # Role: Database operations for {domain}
@@ -605,7 +605,7 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.customer.models.{model} import {Model}
+from app.cus.models.{model} import {Model}
 
 
 @dataclass
@@ -635,7 +635,7 @@ class {Domain}Driver:
 ### Facade Template (L2.1)
 
 ```python
-# houseofcards/api/facades/customer/{domain}.py
+# hoc/api/facades/cus/{domain}.py
 # Layer: L2.1 — API Facade
 # AUDIENCE: CUSTOMER
 # Role: Organizes {domain}-related API access
@@ -646,7 +646,7 @@ class {Domain}Driver:
 # - Organizers only, no business logic
 # - May import L2 routers ONLY
 
-from houseofcards.api.customer import {domain}
+from hoc.api.customer import {domain}
 
 
 class Customer{Domain}Facade:
@@ -757,8 +757,8 @@ After Phase 4 wiring is complete and validated, delete legacy code.
 
 | Location | Condition | Action |
 |----------|-----------|--------|
-| `app/services/**/*.py` | All files migrated to `app/houseofcards/` | DELETE entire directory |
-| `app/houseofcards/duplicate/` | Legacy duplicates | DELETE entire directory |
+| `app/services/**/*.py` | All files migrated to `app/hoc/` | DELETE entire directory |
+| `app/hoc/duplicate/` | Legacy duplicates | DELETE entire directory |
 | `app/api/legacy_routes.py` | Deprecated | DELETE |
 | `app/api/v1_*.py` | Deprecated v1 proxies | DELETE |
 
@@ -766,7 +766,7 @@ After Phase 4 wiring is complete and validated, delete legacy code.
 
 Before deleting any files:
 
-- [ ] All imports updated to use `app.houseofcards.*` paths
+- [ ] All imports updated to use `app.hoc.*` paths
 - [ ] BLCA passes with 0 violations
 - [ ] All tests pass
 - [ ] No references to `app.services.*` in codebase
@@ -785,9 +785,9 @@ Before deleting any files:
    rm -rf backend/app/services/
    ```
 
-3. **Delete app/houseofcards/duplicate/:**
+3. **Delete app/hoc/duplicate/:**
    ```bash
-   rm -rf backend/app/houseofcards/duplicate/
+   rm -rf backend/app/hoc/duplicate/
    ```
 
 4. **Run tests:**
@@ -803,7 +803,7 @@ Before deleting any files:
 ### Acceptance Criteria (Phase 5)
 
 - [ ] `app/services/` directory deleted
-- [ ] `app/houseofcards/duplicate/` directory deleted
+- [ ] `app/hoc/duplicate/` directory deleted
 - [ ] No `app.services.*` imports in codebase
 - [ ] All tests pass
 - [ ] BLCA passes with 0 violations
@@ -814,15 +814,15 @@ Before deleting any files:
 
 | Source | Target | Layer | Status |
 |--------|--------|-------|--------|
-| `app/services/overview_facade.py` | `customer/overview/adapters/overview_adapter.py` | L3 | Pending |
-| `app/services/activity_facade.py` | `customer/activity/adapters/activity_adapter.py` | L3 | Pending |
-| `app/services/incidents_facade.py` | `customer/incidents/adapters/incidents_adapter.py` | L3 | Pending |
-| `app/services/policies_facade.py` | `customer/policies/adapters/policies_adapter.py` | L3 | Pending |
-| `app/services/logs_facade.py` | `customer/logs/adapters/logs_adapter.py` | L3 | Pending |
-| `app/services/analytics_facade.py` | `customer/analytics/adapters/analytics_adapter.py` | L3 | Pending |
-| `app/services/integrations_facade.py` | `customer/integrations/adapters/integrations_adapter.py` | L3 | Pending |
-| `app/services/api_keys_facade.py` | `customer/api_keys/adapters/api_keys_adapter.py` | L3 | Pending |
-| `app/services/accounts_facade.py` | `customer/account/adapters/accounts_adapter.py` | L3 | Pending |
+| `app/services/overview_facade.py` | `customer/overview/L3_adapters/overview_adapter.py` | L3 | Pending |
+| `app/services/activity_facade.py` | `customer/activity/L3_adapters/activity_adapter.py` | L3 | Pending |
+| `app/services/incidents_facade.py` | `customer/incidents/L3_adapters/incidents_adapter.py` | L3 | Pending |
+| `app/services/policies_facade.py` | `customer/policies/L3_adapters/policies_adapter.py` | L3 | Pending |
+| `app/services/logs_facade.py` | `customer/logs/L3_adapters/logs_adapter.py` | L3 | Pending |
+| `app/services/analytics_facade.py` | `customer/analytics/L3_adapters/analytics_adapter.py` | L3 | Pending |
+| `app/services/integrations_facade.py` | `customer/integrations/L3_adapters/integrations_adapter.py` | L3 | Pending |
+| `app/services/api_keys_facade.py` | `customer/api_keys/L3_adapters/api_keys_adapter.py` | L3 | Pending |
+| `app/services/accounts_facade.py` | `customer/account/L3_adapters/accounts_adapter.py` | L3 | Pending |
 | `app/services/ops_facade.py` | `founder/ops/adapters/ops_adapter.py` | L3 | Pending |
 | ... | ... | ... | ... |
 

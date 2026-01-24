@@ -308,7 +308,7 @@ With this audit:
 ## Completion Criteria
 
 Phase 5E is complete when:
-1. All gaps are classified (founder/customer/intentional)
+1. All gaps are classified (founder/cus/intentional)
 2. Founder timeline shows all decisions
 3. Kill-switch is accessible from UI
 4. Customer sees effects without mechanics

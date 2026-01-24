@@ -22,7 +22,7 @@
 ## Final File Structure
 
 ```
-backend/app/houseofcards/customer/account/
+backend/app/hoc/cus/account/
 ├── __init__.py
 ├── adapters/
 │   └── __init__.py
@@ -199,6 +199,15 @@ FILES_CREATED: 3
 FILES_DELETED: 1
 FILES_RENAMED: 4
 ```
+
+---
+
+## Changelog
+
+| Date | Version | Change | Author |
+|------|---------|--------|--------|
+| 2026-01-24 | 1.0.0 | Initial lock | Claude |
+| 2026-01-24 | 1.1.0 | Phase 2.5E BLCA verification: 0 errors, 0 warnings across all 6 check types | Claude |
 
 ---
 

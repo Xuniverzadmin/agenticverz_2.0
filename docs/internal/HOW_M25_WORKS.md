@@ -36,7 +36,7 @@ Incident → Pattern → Recovery → Policy → Prevention
 | `backend/app/integrations/prevention_contract.py` | Prevention validation rules (FROZEN) |
 | `scripts/ops/m25_graduation_delta.py` | Graduation metrics |
 | `backend/app/integrations/dispatcher.py` | Event routing |
-| `backend/app/integrations/bridges.py` | Stage-to-stage connectors |
+| `backend/app/integrations/L3_adapters.py` | Stage-to-stage connectors |
 
 ---
 

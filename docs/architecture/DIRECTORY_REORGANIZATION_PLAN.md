@@ -11,11 +11,11 @@
 This document defines the directory reorganization following **first-principles** design with an **isolated namespace** for safe migration.
 
 ```
-app/houseofcards/{audience}/{domain}/{role}/{file}.py
+app/hoc/{audience}/{domain}/{role}/{file}.py
 ```
 
 Where:
-- **houseofcards** = Isolated namespace (new structure)
+- **hoc** = Isolated namespace (new structure)
 - **audience** = `customer`, `internal`, `founder`
 - **domain** = business area (policies, incidents, analytics, etc.)
 - **role** = `facades`, `drivers`, `engines`, `schemas`
@@ -36,7 +36,7 @@ Where:
 |---------|-------------|
 | **Zero risk** | Original files untouched, system keeps working |
 | **Gradual migration** | Switch imports one at a time, test each |
-| **Easy rollback** | Just delete houseofcards/ if something breaks |
+| **Easy rollback** | Just delete hoc/ if something breaks |
 | **Parallel testing** | Verify new structure before committing |
 
 ### 1.2 Namespace Isolation
@@ -48,7 +48,7 @@ app/
 │   ├── incidents_facade.py
 │   └── ...
 │
-└── houseofcards/       ← NEW (isolated copy)
+└── hoc/       ← NEW (isolated copy)
     ├── customer/
     ├── internal/
     └── founder/
@@ -58,7 +58,7 @@ app/
 
 ```
 STEP 2-11: COPY
-├── Copy file to houseofcards/{audience}/{domain}/{role}/
+├── Copy file to hoc/{audience}/{domain}/{role}/
 ├── Update header comments (new path)
 ├── Keep original unchanged
 └── Test new imports work
@@ -79,10 +79,10 @@ STEP 14: CLEANUP (after validation)
 |-----------|-------------------|
 | **Path tells role** | `policies/engines/lessons_engine.py` → domain logic |
 | **Consistent pattern** | Every domain has same folder structure |
-| **Flat** | Max 5 levels: `app/houseofcards/customer/policies/engines/` |
+| **Flat** | Max 5 levels: `app/hoc/cus/policies/L5_engines/` |
 | **Topic in filename** | `lessons_engine.py`, `killswitch_facade.py` |
 | **Find all of type** | Want all facades? Look in `*/facades/` |
-| **Isolated** | `houseofcards/` namespace prevents conflicts |
+| **Isolated** | `hoc/` namespace prevents conflicts |
 
 ### 2.2 Role Definitions
 
@@ -106,7 +106,7 @@ STEP 14: CLEANUP (after validation)
 ## 3. Target Directory Structure
 
 ```
-app/houseofcards/
+app/hoc/
 ├── __init__.py
 │
 ├── customer/
@@ -309,59 +309,59 @@ app/houseofcards/
 
 | Source (KEEP) | Target (COPY TO) |
 |---------------|------------------|
-| `services/overview_facade.py` | `houseofcards/customer/overview/facades/overview_facade.py` |
-| `services/activity_facade.py` | `houseofcards/customer/activity/facades/activity_facade.py` |
-| `services/incidents_facade.py` | `houseofcards/customer/incidents/facades/incidents_facade.py` |
-| `services/policies_facade.py` | `houseofcards/customer/policies/facades/policies_facade.py` |
-| `services/logs_facade.py` | `houseofcards/customer/logs/facades/logs_facade.py` |
-| `services/analytics_facade.py` | `houseofcards/customer/analytics/facades/analytics_facade.py` |
-| `services/accounts_facade.py` | `houseofcards/customer/account/facades/accounts_facade.py` |
-| `services/integrations_facade.py` | `houseofcards/customer/integrations/facades/integrations_facade.py` |
-| `services/api_keys_facade.py` | `houseofcards/customer/api_keys/facades/api_keys_facade.py` |
-| `services/governance/facade.py` | `houseofcards/customer/policies/facades/killswitch_facade.py` |
-| `services/governance/run_governance_facade.py` | `houseofcards/customer/policies/facades/run_governance_facade.py` |
+| `services/overview_facade.py` | `hoc/cus/overview/facades/overview_facade.py` |
+| `services/activity_facade.py` | `hoc/cus/activity/facades/activity_facade.py` |
+| `services/incidents_facade.py` | `hoc/cus/incidents/facades/incidents_facade.py` |
+| `services/policies_facade.py` | `hoc/cus/policies/facades/policies_facade.py` |
+| `services/logs_facade.py` | `hoc/cus/logs/facades/logs_facade.py` |
+| `services/analytics_facade.py` | `hoc/cus/analytics/facades/analytics_facade.py` |
+| `services/accounts_facade.py` | `hoc/cus/account/facades/accounts_facade.py` |
+| `services/integrations_facade.py` | `hoc/cus/integrations/facades/integrations_facade.py` |
+| `services/api_keys_facade.py` | `hoc/cus/api_keys/facades/api_keys_facade.py` |
+| `services/governance/facade.py` | `hoc/cus/policies/facades/killswitch_facade.py` |
+| `services/governance/run_governance_facade.py` | `hoc/cus/policies/facades/run_governance_facade.py` |
 
 ### 7.2 Customer Drivers
 
 | Source (KEEP) | Target (COPY TO) |
 |---------------|------------------|
-| `services/incidents/incident_driver.py` | `houseofcards/customer/incidents/drivers/incident_driver.py` |
-| `services/policy/policy_driver.py` | `houseofcards/customer/policies/drivers/policy_driver.py` |
-| `services/governance/transaction_coordinator.py` | `houseofcards/customer/general/drivers/runtime_spine.py` |
+| `services/incidents/incident_driver.py` | `hoc/cus/incidents/L6_drivers/incident_driver.py` |
+| `services/policy/policy_driver.py` | `hoc/cus/policies/L6_drivers/policy_driver.py` |
+| `services/governance/transaction_coordinator.py` | `hoc/cus/general/L6_drivers/runtime_spine.py` |
 
 ### 7.3 Customer Engines
 
 | Source (KEEP) | Target (COPY TO) |
 |---------------|------------------|
-| `services/incidents/incident_engine.py` | `houseofcards/customer/incidents/engines/incident_engine.py` |
-| `services/policy/lessons_engine.py` | `houseofcards/customer/policies/engines/lessons_engine.py` |
-| `services/policy_graph_engine.py` | `houseofcards/customer/policies/engines/graph_engine.py` |
-| `services/llm_policy_engine.py` | `houseofcards/customer/policies/engines/llm_engine.py` |
-| `services/budget_enforcement_engine.py` | `houseofcards/customer/policies/engines/budget_engine.py` |
-| `services/cost_model_engine.py` | `houseofcards/customer/analytics/engines/cost_model_engine.py` |
+| `services/incidents/incident_engine.py` | `hoc/cus/incidents/L5_engines/incident_engine.py` |
+| `services/policy/lessons_engine.py` | `hoc/cus/policies/L5_engines/lessons_engine.py` |
+| `services/policy_graph_engine.py` | `hoc/cus/policies/L5_engines/graph_engine.py` |
+| `services/llm_policy_engine.py` | `hoc/cus/policies/L5_engines/llm_engine.py` |
+| `services/budget_enforcement_engine.py` | `hoc/cus/policies/L5_engines/budget_engine.py` |
+| `services/cost_model_engine.py` | `hoc/cus/analytics/L5_engines/cost_model_engine.py` |
 
 ### 7.4 Internal Engines
 
 | Source (KEEP) | Target (COPY TO) |
 |---------------|------------------|
-| `services/claim_decision_engine.py` | `houseofcards/internal/recovery/engines/claim_decision_engine.py` |
-| `services/recovery_evaluation_engine.py` | `houseofcards/internal/recovery/engines/recovery_evaluation_engine.py` |
-| `services/recovery_rule_engine.py` | `houseofcards/internal/recovery/engines/recovery_rule_engine.py` |
-| `services/plan_generation_engine.py` | `houseofcards/internal/agent/engines/plan_generation_engine.py` |
+| `services/claim_decision_engine.py` | `hoc/int/recovery/engines/claim_decision_engine.py` |
+| `services/recovery_evaluation_engine.py` | `hoc/int/recovery/engines/recovery_evaluation_engine.py` |
+| `services/recovery_rule_engine.py` | `hoc/int/recovery/engines/recovery_rule_engine.py` |
+| `services/plan_generation_engine.py` | `hoc/int/agent/engines/plan_generation_engine.py` |
 
 ### 7.5 Founder Facades
 
 | Source (KEEP) | Target (COPY TO) |
 |---------------|------------------|
-| `services/ops/facade.py` | `houseofcards/founder/ops/facades/ops_facade.py` |
+| `services/ops/facade.py` | `hoc/fdr/ops/facades/ops_facade.py` |
 
 ### 7.6 Create New (Missing)
 
 | Domain | Role | Target Location |
 |--------|------|-----------------|
-| general | facade | `houseofcards/customer/general/facades/general_facade.py` |
-| recovery | facade | `houseofcards/internal/recovery/facades/recovery_facade.py` |
-| agent | facade | `houseofcards/internal/agent/facades/agent_facade.py` |
+| general | facade | `hoc/cus/general/facades/general_facade.py` |
+| recovery | facade | `hoc/int/recovery/facades/recovery_facade.py` |
+| agent | facade | `hoc/int/agent/facades/agent_facade.py` |
 
 ### 7.7 Deferred (HOLD)
 
@@ -394,14 +394,14 @@ app/houseofcards/
 
 ### STEP 1: Create Directory Skeleton ✅ COMPLETE
 
-**Goal:** Create houseofcards directory structure with `__init__.py` files.
+**Goal:** Create hoc directory structure with `__init__.py` files.
 
 **Result:**
-- Created `app/houseofcards/` namespace
+- Created `app/hoc/` namespace
 - Created 13 domain directories (10 customer + 2 internal + 1 founder)
 - Created 52 role directories (facades, drivers, engines, schemas)
 - Created 69 `__init__.py` files
-- Verified imports work: `from app.houseofcards import customer`
+- Verified imports work: `from app.hoc import customer`
 
 ---
 
@@ -411,11 +411,11 @@ app/houseofcards/
 
 | Source (KEEP) | Target (COPY TO) |
 |---------------|------------------|
-| `services/overview_facade.py` | `houseofcards/customer/overview/facades/overview_facade.py` |
-| `services/activity_facade.py` | `houseofcards/customer/activity/facades/activity_facade.py` |
-| `services/incidents_facade.py` | `houseofcards/customer/incidents/facades/incidents_facade.py` |
-| `services/policies_facade.py` | `houseofcards/customer/policies/facades/policies_facade.py` |
-| `services/logs_facade.py` | `houseofcards/customer/logs/facades/logs_facade.py` |
+| `services/overview_facade.py` | `hoc/cus/overview/facades/overview_facade.py` |
+| `services/activity_facade.py` | `hoc/cus/activity/facades/activity_facade.py` |
+| `services/incidents_facade.py` | `hoc/cus/incidents/facades/incidents_facade.py` |
+| `services/policies_facade.py` | `hoc/cus/policies/facades/policies_facade.py` |
+| `services/logs_facade.py` | `hoc/cus/logs/facades/logs_facade.py` |
 
 **Actions per file:**
 1. Copy file to target location
@@ -424,7 +424,7 @@ app/houseofcards/
 4. Update `__init__.py` exports in new location
 5. Test new import works
 
-**Validation:** `from app.houseofcards.customer.overview.facades import overview_facade`
+**Validation:** `from app.hoc.cus.overview.facades import overview_facade`
 
 ---
 
@@ -434,10 +434,10 @@ app/houseofcards/
 
 | Source (KEEP) | Target (COPY TO) |
 |---------------|------------------|
-| `services/analytics_facade.py` | `houseofcards/customer/analytics/facades/analytics_facade.py` |
-| `services/accounts_facade.py` | `houseofcards/customer/account/facades/accounts_facade.py` |
-| `services/integrations_facade.py` | `houseofcards/customer/integrations/facades/integrations_facade.py` |
-| `services/api_keys_facade.py` | `houseofcards/customer/api_keys/facades/api_keys_facade.py` |
+| `services/analytics_facade.py` | `hoc/cus/analytics/facades/analytics_facade.py` |
+| `services/accounts_facade.py` | `hoc/cus/account/facades/accounts_facade.py` |
+| `services/integrations_facade.py` | `hoc/cus/integrations/facades/integrations_facade.py` |
+| `services/api_keys_facade.py` | `hoc/cus/api_keys/facades/api_keys_facade.py` |
 
 **Actions:** Same as Step 2.
 
@@ -451,8 +451,8 @@ app/houseofcards/
 
 | Source (KEEP) | Target (COPY TO) | Rename |
 |---------------|------------------|--------|
-| `services/governance/facade.py` | `houseofcards/customer/policies/facades/killswitch_facade.py` | Yes |
-| `services/governance/run_governance_facade.py` | `houseofcards/customer/policies/facades/run_governance_facade.py` | No |
+| `services/governance/facade.py` | `hoc/cus/policies/facades/killswitch_facade.py` | Yes |
+| `services/governance/run_governance_facade.py` | `hoc/cus/policies/facades/run_governance_facade.py` | No |
 
 **Actions:**
 1. Copy and rename files
@@ -470,8 +470,8 @@ app/houseofcards/
 
 | Source (KEEP) | Target (COPY TO) |
 |---------------|------------------|
-| `services/incidents/incident_driver.py` | `houseofcards/customer/incidents/drivers/incident_driver.py` |
-| `services/incidents/incident_engine.py` | `houseofcards/customer/incidents/engines/incident_engine.py` |
+| `services/incidents/incident_driver.py` | `hoc/cus/incidents/L6_drivers/incident_driver.py` |
+| `services/incidents/incident_engine.py` | `hoc/cus/incidents/L5_engines/incident_engine.py` |
 
 **Actions:**
 1. Copy files
@@ -488,11 +488,11 @@ app/houseofcards/
 
 | Source (KEEP) | Target (COPY TO) |
 |---------------|------------------|
-| `services/policy/policy_driver.py` | `houseofcards/customer/policies/drivers/policy_driver.py` |
-| `services/policy/lessons_engine.py` | `houseofcards/customer/policies/engines/lessons_engine.py` |
-| `services/policy_graph_engine.py` | `houseofcards/customer/policies/engines/graph_engine.py` |
-| `services/llm_policy_engine.py` | `houseofcards/customer/policies/engines/llm_engine.py` |
-| `services/budget_enforcement_engine.py` | `houseofcards/customer/policies/engines/budget_engine.py` |
+| `services/policy/policy_driver.py` | `hoc/cus/policies/L6_drivers/policy_driver.py` |
+| `services/policy/lessons_engine.py` | `hoc/cus/policies/L5_engines/lessons_engine.py` |
+| `services/policy_graph_engine.py` | `hoc/cus/policies/L5_engines/graph_engine.py` |
+| `services/llm_policy_engine.py` | `hoc/cus/policies/L5_engines/llm_engine.py` |
+| `services/budget_enforcement_engine.py` | `hoc/cus/policies/L5_engines/budget_engine.py` |
 
 **Actions:**
 1. Copy files (rename where indicated)
@@ -509,7 +509,7 @@ app/houseofcards/
 
 | Source (KEEP) | Target (COPY TO) |
 |---------------|------------------|
-| `services/cost_model_engine.py` | `houseofcards/customer/analytics/engines/cost_model_engine.py` |
+| `services/cost_model_engine.py` | `hoc/cus/analytics/L5_engines/cost_model_engine.py` |
 
 **Actions:**
 1. Copy file
@@ -526,7 +526,7 @@ app/houseofcards/
 
 | Source (KEEP) | Target (COPY TO) | Rename |
 |---------------|------------------|--------|
-| `services/governance/transaction_coordinator.py` | `houseofcards/customer/general/drivers/runtime_spine.py` | Yes |
+| `services/governance/transaction_coordinator.py` | `hoc/cus/general/L6_drivers/runtime_spine.py` | Yes |
 
 **Actions:**
 1. Copy and rename file
@@ -544,10 +544,10 @@ app/houseofcards/
 
 | Source (KEEP) | Target (COPY TO) |
 |---------------|------------------|
-| `services/claim_decision_engine.py` | `houseofcards/internal/recovery/engines/claim_decision_engine.py` |
-| `services/recovery_evaluation_engine.py` | `houseofcards/internal/recovery/engines/recovery_evaluation_engine.py` |
-| `services/recovery_rule_engine.py` | `houseofcards/internal/recovery/engines/recovery_rule_engine.py` |
-| `services/plan_generation_engine.py` | `houseofcards/internal/agent/engines/plan_generation_engine.py` |
+| `services/claim_decision_engine.py` | `hoc/int/recovery/engines/claim_decision_engine.py` |
+| `services/recovery_evaluation_engine.py` | `hoc/int/recovery/engines/recovery_evaluation_engine.py` |
+| `services/recovery_rule_engine.py` | `hoc/int/recovery/engines/recovery_rule_engine.py` |
+| `services/plan_generation_engine.py` | `hoc/int/agent/engines/plan_generation_engine.py` |
 
 **Actions:**
 1. Copy files
@@ -564,7 +564,7 @@ app/houseofcards/
 
 | Source (KEEP) | Target (COPY TO) |
 |---------------|------------------|
-| `services/ops/facade.py` | `houseofcards/founder/ops/facades/ops_facade.py` |
+| `services/ops/facade.py` | `hoc/fdr/ops/facades/ops_facade.py` |
 
 **Actions:**
 1. Copy file
@@ -581,9 +581,9 @@ app/houseofcards/
 
 | Domain | Target |
 |--------|--------|
-| general | `houseofcards/customer/general/facades/general_facade.py` |
-| recovery | `houseofcards/internal/recovery/facades/recovery_facade.py` |
-| agent | `houseofcards/internal/agent/facades/agent_facade.py` |
+| general | `hoc/cus/general/facades/general_facade.py` |
+| recovery | `hoc/int/recovery/facades/recovery_facade.py` |
+| agent | `hoc/int/agent/facades/agent_facade.py` |
 
 **Validation:** New facades can be imported.
 
@@ -597,9 +597,9 @@ app/houseofcards/
 
 **Actions per facade:**
 1. Grep for callers
-2. Determine audience (customer/internal/founder)
+2. Determine audience (customer/int/founder)
 3. Determine domain
-4. Copy to `houseofcards/{audience}/{domain}/facades/`
+4. Copy to `hoc/{audience}/{domain}/facades/`
 5. Update header and exports
 
 **Validation:** Each facade classified and copied.
@@ -621,7 +621,7 @@ app/houseofcards/
 
 ### STEP 14: Switch Callers to New Imports
 
-**Goal:** Update L2 APIs and other callers to use houseofcards paths.
+**Goal:** Update L2 APIs and other callers to use hoc paths.
 
 **Actions:**
 1. Update L2 API imports one by one
@@ -637,7 +637,7 @@ app/houseofcards/
 **Goal:** Remove original files after validation period.
 
 **Actions:**
-1. Verify all imports use houseofcards paths
+1. Verify all imports use hoc paths
 2. Run full test suite
 3. Delete original files from services/
 4. Remove empty directories
@@ -651,7 +651,7 @@ app/houseofcards/
 **Goal:** Add layer rules for new structure.
 
 **Actions:**
-1. Update `scripts/ops/layer_validator.py` with houseofcards paths
+1. Update `scripts/ops/layer_validator.py` with hoc paths
 2. Add audience-based import rules:
    - `customer/*` may not import from `founder/*`
    - `internal/*` may not import from `founder/*`
@@ -670,9 +670,9 @@ app/houseofcards/
 
 | From | May Import |
 |------|------------|
-| `houseofcards/customer/*` | `customer/*`, `internal/*` (not `founder/*`) |
-| `houseofcards/internal/*` | `internal/*` (not `customer/*`, `founder/*`) |
-| `houseofcards/founder/*` | `founder/*`, `customer/*`, `internal/*` |
+| `hoc/cus/*` | `customer/*`, `internal/*` (not `founder/*`) |
+| `hoc/int/*` | `internal/*` (not `customer/*`, `founder/*`) |
+| `hoc/fdr/*` | `founder/*`, `customer/*`, `internal/*` |
 
 ### 9.2 Role Rules (within domain)
 
@@ -704,7 +704,7 @@ app/houseofcards/
 | Circular imports | Copy in dependency order (engines → drivers → facades) |
 | Test failures | Run tests after each step |
 | BLCA violations | Update rules in Step 16 |
-| Rollback needed | Delete houseofcards/ folder, originals intact |
+| Rollback needed | Delete hoc/ folder, originals intact |
 
 ---
 
@@ -730,6 +730,6 @@ app/houseofcards/
 |------|------|---------|
 | 2026-01-22 | 0 | Initial plan created |
 | 2026-01-22 | 0 | Updated to first-principles structure (audience/domain/role) |
-| 2026-01-22 | 0 | Changed to COPY approach with `houseofcards/` namespace |
-| 2026-01-22 | 1 | ✅ COMPLETE: Created houseofcards directory skeleton (69 __init__.py files) |
+| 2026-01-22 | 0 | Changed to COPY approach with `hoc/` namespace |
+| 2026-01-22 | 1 | ✅ COMPLETE: Created hoc directory skeleton (69 __init__.py files) |
 

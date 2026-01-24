@@ -34,7 +34,7 @@ patterns:
     cap: CAP-004
     owner: platform
 
-  - glob: "website/app-shell/src/pages/founder/**"
+  - glob: "website/app-shell/src/pages/fdr/**"
     cap: CAP-005
     owner: founder
 

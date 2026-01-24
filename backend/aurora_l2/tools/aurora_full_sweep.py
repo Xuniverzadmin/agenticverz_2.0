@@ -61,15 +61,15 @@ ENDPOINT_MAP = {
     "OVR-SUM-CI-O3": ("/cost/by-model", "overview.cost_by_model"),
     "OVR-SUM-CI-O4": ("/cost/anomalies", "overview.cost_anomalies"),
     # OVERVIEW - Decisions
-    "OVR-SUM-DC-O1": ("/founder/timeline/decisions", "overview.decisions_list"),
-    "OVR-SUM-DC-O2": ("/founder/timeline/count", "overview.decisions_count"),
+    "OVR-SUM-DC-O1": ("/fdr/timeline/decisions", "overview.decisions_list"),
+    "OVR-SUM-DC-O2": ("/fdr/timeline/count", "overview.decisions_count"),
     "OVR-SUM-DC-O3": ("/api/v1/recovery/stats", "overview.recovery_stats"),
     "OVR-SUM-DC-O4": ("/api/v1/feedback/stats/summary", "overview.feedback_summary"),
     # ACTIVITY - Completed
     "ACT-LLM-COMP-O1": ("/api/v1/activity/runs", "activity.runs_list"),
     "ACT-LLM-COMP-O2": ("/api/v1/activity/summary", "activity.summary"),
     "ACT-LLM-COMP-O3": ("/api/v1/tenants/runs", "activity.tenant_runs"),
-    "ACT-LLM-COMP-O4": ("/api/v1/customer/activity", "activity.customer_activity"),
+    "ACT-LLM-COMP-O4": ("/api/v1/cus/activity", "activity.customer_activity"),
     "ACT-LLM-COMP-O5": ("/api/v1/runtime/traces", "activity.runtime_traces"),
     # ACTIVITY - Live
     "ACT-LLM-LIVE-O1": ("/api/v1/activity/runs", "activity.live_runs"),  # filtered
@@ -146,7 +146,7 @@ ENDPOINT_MAP = {
     # LOGS - LLM Runs
     "LOG-REC-LLM-O1": ("/api/v1/runtime/traces", "logs.runtime_traces"),
     "LOG-REC-LLM-O2": ("/api/v1/activity/runs", "logs.activity_runs"),
-    "LOG-REC-LLM-O3": ("/api/v1/customer/activity", "logs.customer_runs"),
+    "LOG-REC-LLM-O3": ("/api/v1/cus/activity", "logs.customer_runs"),
     "LOG-REC-LLM-O4": ("/api/v1/tenants/runs", "logs.tenant_runs"),
     "LOG-REC-LLM-O5": ("/api/v1/traces/mismatches/bulk-report", "logs.mismatch_report"),
     # LOGS - System

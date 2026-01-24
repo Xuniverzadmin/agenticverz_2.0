@@ -260,7 +260,7 @@ Total Panels:           11
 
 | Capability | Before | After |
 |------------|--------|-------|
-| `overview.decisions_list` | `/founder/timeline/decisions` | `/api/v1/overview/decisions` |
+| `overview.decisions_list` | `/fdr/timeline/decisions` | `/api/v1/overview/decisions` |
 | `overview.cost_summary` | `/cost/summary` | `/api/v1/overview/costs` |
 
 ---

@@ -117,7 +117,7 @@ class FounderContractDetailView:
 @dataclass(frozen=True)
 class FounderReviewQueueResponse:
     """
-    Response for GET /founder/contracts/review-queue.
+    Response for GET /fdr/contracts/review-queue.
 
     List of ELIGIBLE contracts awaiting founder review.
     """

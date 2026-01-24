@@ -50,7 +50,7 @@ account/
 |-----------|-------|
 | File | `engines/iam_service.py` |
 | Header | `# AUDIENCE: INTERNAL` |
-| Current Path | `customer/account/engines/iam_service.py` |
+| Current Path | `customer/account/L5_engines/iam_service.py` |
 | Required Path | `internal/platform/iam/engines/iam_service.py` |
 | Violation Type | BL-AUD-001 (Audience boundary) |
 
@@ -375,20 +375,20 @@ AccountsErrorResult
 
 **Action:** Moved `iam_service.py` from `customer/` to `internal/`
 
-**From:** `app/houseofcards/customer/account/engines/iam_service.py`
-**To:** `app/houseofcards/internal/platform/iam/engines/iam_service.py`
+**From:** `app/hoc/cus/account/L5_engines/iam_service.py`
+**To:** `app/hoc/int/platform/iam/engines/iam_service.py`
 
 **Completed Steps:**
 1. ✅ Created `internal/platform/iam/` directory structure
 2. ✅ Created `internal/platform/iam/__init__.py`
 3. ✅ Created `internal/platform/iam/engines/__init__.py` with exports
 4. ✅ Moved `iam_service.py`
-5. ✅ Updated `customer/account/engines/__init__.py` to document removal
+5. ✅ Updated `customer/account/L5_engines/__init__.py` to document removal
 6. ⏳ Callers update pending (phase 5: wire imports)
 
 **New Import Path:**
 ```python
-from app.houseofcards.internal.platform.iam.engines import (
+from app.hoc.int.platform.iam.engines import (
     IAMService,
     Identity,
     AccessDecision,

@@ -27,7 +27,7 @@ This PIN tracks the systematic declaration of L2 intent files per PIN-300 (Seman
 |---------|-------------|--------|--------|
 | `/guard/incidents` | L2_GUARD_INCIDENTS_INTENT.yaml | ✅ APPROVED (Gold Reference) | 6756eaee |
 | `/guard/logs` | L2_GUARD_LOGS_INTENT.yaml | ✅ APPROVED | b45f6ef8 |
-| `/api/v1/customer/activity` | L2_GUARD_ACTIVITY_INTENT.yaml | ✅ APPROVED | 7aad53d6 |
+| `/api/v1/cus/activity` | L2_GUARD_ACTIVITY_INTENT.yaml | ✅ APPROVED | 7aad53d6 |
 
 **Tier-1 Semantic Triangle:**
 - **Logs** → Raw emissions ("This was emitted")

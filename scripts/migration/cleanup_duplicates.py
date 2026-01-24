@@ -26,52 +26,52 @@ DRY_RUN = "--dry-run" in sys.argv
 # Format: (file_to_remove, reason)
 DUPLICATES_TO_REMOVE = [
     # incidents - services should be in drivers/, not engines/
-    ("backend/app/houseofcards/customer/incidents/engines/incident_read_service.py",
+    ("backend/app/hoc/cus/incidents/L5_engines/incident_read_service.py",
      "IDENTICAL: Service belongs in drivers/ (L6), not engines/"),
-    ("backend/app/houseofcards/customer/incidents/engines/incident_write_service.py",
+    ("backend/app/hoc/cus/incidents/L5_engines/incident_write_service.py",
      "IDENTICAL: Service belongs in drivers/ (L6), not engines/"),
 
     # policies - services should be in drivers/, facades in facades/
-    ("backend/app/houseofcards/customer/policies/controls/engines/customer_killswitch_read_service.py",
+    ("backend/app/hoc/cus/policies/controls/engines/customer_killswitch_read_service.py",
      "IDENTICAL: Service belongs in drivers/ (L6), not controls/engines/"),
-    ("backend/app/houseofcards/customer/policies/engines/customer_policy_read_service.py",
+    ("backend/app/hoc/cus/policies/L5_engines/customer_policy_read_service.py",
      "IDENTICAL: Service belongs in drivers/ (L6), not engines/"),
-    ("backend/app/houseofcards/customer/policies/engines/governance_facade.py",
+    ("backend/app/hoc/cus/policies/L5_engines/governance_facade.py",
      "IDENTICAL: Facade belongs in facades/ (L3), not engines/"),
-    ("backend/app/houseofcards/customer/policies/engines/limits_facade.py",
+    ("backend/app/hoc/cus/policies/L5_engines/limits_facade.py",
      "IDENTICAL: Facade belongs in facades/ (L3), not engines/"),
 
     # logs - facades belong in facades/
-    ("backend/app/houseofcards/customer/logs/engines/evidence_facade.py",
+    ("backend/app/hoc/cus/logs/L5_engines/evidence_facade.py",
      "IDENTICAL: Facade belongs in facades/ (L3), not engines/"),
 
     # analytics - services should be in drivers/
-    ("backend/app/houseofcards/customer/analytics/engines/cost_write_service.py",
+    ("backend/app/hoc/cus/analytics/L5_engines/cost_write_service.py",
      "IDENTICAL: Service belongs in drivers/ (L6), not engines/"),
 
     # integrations - keep the main location, remove subdirectory duplicates
-    ("backend/app/houseofcards/customer/integrations/vault/engines/cus_credential_service.py",
+    ("backend/app/hoc/cus/integrations/vault/engines/cus_credential_service.py",
      "IDENTICAL: Already exists in integrations/engines/"),
-    ("backend/app/houseofcards/customer/integrations/schemas/datasource_model.py",
+    ("backend/app/hoc/cus/integrations/L5_schemas/datasource_model.py",
      "IDENTICAL: Already exists in integrations/engines/"),
 
     # general - keep main engines/, remove lifecycle subdirectory
-    ("backend/app/houseofcards/customer/general/lifecycle/engines/offboarding.py",
+    ("backend/app/hoc/cus/general/L5_lifecycle/engines/offboarding.py",
      "IDENTICAL: Already exists in general/engines/"),
-    ("backend/app/houseofcards/customer/general/lifecycle/engines/onboarding.py",
+    ("backend/app/hoc/cus/general/L5_lifecycle/engines/onboarding.py",
      "IDENTICAL: Already exists in general/engines/"),
 ]
 
 # Files that are DIFFERENT and need manual review
 NEEDS_REVIEW = [
-    ("backend/app/houseofcards/customer/integrations/engines/vault.py",
-     "backend/app/houseofcards/customer/integrations/vault/engines/vault.py",
+    ("backend/app/hoc/cus/integrations/L5_engines/vault.py",
+     "backend/app/hoc/cus/integrations/vault/engines/vault.py",
      "DIFFERENT: vault/engines/ version has additional governance comments"),
-    ("backend/app/houseofcards/customer/account/drivers/tenant_service.py",
-     "backend/app/houseofcards/customer/account/engines/tenant_service.py",
+    ("backend/app/hoc/cus/account/L6_drivers/tenant_service.py",
+     "backend/app/hoc/cus/account/L5_engines/tenant_service.py",
      "DIFFERENT: drivers/ version has timezone import, engines/ doesn't"),
-    ("backend/app/houseofcards/customer/account/drivers/user_write_service.py",
-     "backend/app/houseofcards/customer/account/engines/user_write_service.py",
+    ("backend/app/hoc/cus/account/L6_drivers/user_write_service.py",
+     "backend/app/hoc/cus/account/L5_engines/user_write_service.py",
      "DIFFERENT: drivers/ version is 111 lines, engines/ is 106 lines"),
 ]
 
@@ -129,9 +129,9 @@ def main():
         print("=" * 60)
 
         empty_dirs = [
-            "backend/app/houseofcards/customer/general/lifecycle/engines",
-            "backend/app/houseofcards/customer/general/lifecycle",
-            "backend/app/houseofcards/customer/policies/controls/engines",
+            "backend/app/hoc/cus/general/L5_lifecycle/engines",
+            "backend/app/hoc/cus/general/L5_lifecycle",
+            "backend/app/hoc/cus/policies/controls/engines",
         ]
 
         for dir_path in empty_dirs:

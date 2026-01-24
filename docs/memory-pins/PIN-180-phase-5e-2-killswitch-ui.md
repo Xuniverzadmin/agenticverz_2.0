@@ -17,7 +17,7 @@ Phase 5E-2 implements the Kill-Switch UI Toggle - a control room interface for f
 ## Session Context
 
 This work continues from PIN-179 (Phase 5E-1 Founder Decision Timeline UI) which completed:
-- Founder Decision Timeline at `/founder/timeline`
+- Founder Decision Timeline at `/fdr/timeline`
 - Read-only, verbatim decision record viewing
 - Build verified, route registered
 
@@ -30,13 +30,13 @@ This work continues from PIN-179 (Phase 5E-1 Founder Decision Timeline UI) which
 | File | Purpose |
 |------|---------|
 | `website/aos-console/console/src/api/killswitch.ts` | Frontend API client for kill-switch endpoints |
-| `website/aos-console/console/src/pages/founder/FounderControlsPage.tsx` | Kill-Switch Controls UI |
+| `website/aos-console/console/src/pages/fdr/FounderControlsPage.tsx` | Kill-Switch Controls UI |
 
 ### Files Modified
 
 | File | Change |
 |------|--------|
-| `website/aos-console/console/src/routes/index.tsx` | Added route for `/founder/controls` |
+| `website/aos-console/console/src/routes/index.tsx` | Added route for `/fdr/controls` |
 
 ---
 
@@ -45,7 +45,7 @@ This work continues from PIN-179 (Phase 5E-1 Founder Decision Timeline UI) which
 ### Route Structure
 
 ```
-/console/founder/controls    → Kill-Switch Controls UI
+/console/fdr/controls    → Kill-Switch Controls UI
 ```
 
 ### API Integration
@@ -165,7 +165,7 @@ nova_pgbouncer       Up 2 weeks (healthy)
 
 **Status:** MET
 
-When the UI is accessed at `/founder/controls`:
+When the UI is accessed at `/fdr/controls`:
 1. All tenants are listed with their freeze state
 2. Founder can click "Freeze" → confirm → tenant is frozen
 3. Founder can click "Unfreeze" → confirm → tenant is active
@@ -192,7 +192,7 @@ When the UI is accessed at `/founder/controls`:
 | Step 1 | Reviewed kill-switch backend API (`v1_killswitch.py`) | 6 endpoints identified |
 | Step 2 | Reviewed RBAC mappings | killswitch:read/activate/reset |
 | Step 3 | Created `src/api/killswitch.ts` | API client ready |
-| Step 4 | Created `src/pages/founder/FounderControlsPage.tsx` | UI component ready |
+| Step 4 | Created `src/pages/fdr/FounderControlsPage.tsx` | UI component ready |
 | Step 5 | Updated `src/routes/index.tsx` | Route registered |
 | Step 6 | Ran `npm run build` | Build successful |
 | Step 7 | Verified backend health | Healthy |
@@ -242,7 +242,7 @@ export interface TenantKillSwitchState {
 
 ```typescript
 // routes/index.tsx
-const FounderControlsPage = lazy(() => import('@/pages/founder/FounderControlsPage'));
+const FounderControlsPage = lazy(() => import('@/pages/fdr/FounderControlsPage'));
 
 // In routes:
 <Route path="founder/controls" element={<FounderControlsPage />} />

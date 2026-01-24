@@ -1,7 +1,7 @@
 # HOC Analytics Domain Analysis v1
 
 **Date:** 2026-01-22
-**Domain:** `app/houseofcards/customer/analytics/`
+**Domain:** `app/hoc/cus/analytics/`
 **Status:** Analysis Complete
 
 ---
@@ -9,7 +9,7 @@
 ## Directory Structure
 
 ```
-app/houseofcards/customer/analytics/
+app/hoc/cus/analytics/
 ├── __init__.py                           (12 LOC)
 ├── facades/
 │   ├── __init__.py                       (11 LOC)

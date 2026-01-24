@@ -75,7 +75,7 @@ HOME
 
 ### REMOVED from Customer View
 
-- ❌ Kill Switch (moved to Founder Controls at `/founder/controls`)
+- ❌ Kill Switch (moved to Founder Controls at `/fdr/controls`)
 - ❌ Overview (replaced by Home)
 - ❌ Live Activity
 - ❌ Logs
@@ -176,7 +176,7 @@ npm run build
 | Plane | Console | Purpose |
 |-------|---------|---------|
 | **Founder/PrefOps** | Ops Console (`/ops`) | Truth & control surface |
-| **Founder/Control** | Founder Pages (`/founder/*`) | Timeline, kill-switch |
+| **Founder/Control** | Founder Pages (`/fdr/*`) | Timeline, kill-switch |
 | **Customer** | Guard Console (`/guard`) | Product UI, outcomes only |
 
 ---

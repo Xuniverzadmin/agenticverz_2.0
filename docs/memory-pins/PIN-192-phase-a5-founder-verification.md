@@ -74,8 +74,8 @@ Protection against self-deception.
 |---------|-----|--------|-------------|------------------|
 | Guard | `agenticverz.com/console/guard` | [ ] | [ ] | [ ] |
 | Ops | `agenticverz.com/console/ops` | [ ] | [ ] | [ ] |
-| Timeline | `agenticverz.com/console/founder/timeline` | [ ] | [ ] | [ ] |
-| Controls | `agenticverz.com/console/founder/controls` | [ ] | [ ] | [ ] |
+| Timeline | `agenticverz.com/console/fdr/timeline` | [ ] | [ ] | [ ] |
+| Controls | `agenticverz.com/console/fdr/controls` | [ ] | [ ] | [ ] |
 | Incidents | `agenticverz.com/console/guard/incidents` | [ ] | [ ] | [ ] |
 | Runs | `agenticverz.com/console/guard/runs` | [ ] | [ ] | [ ] |
 | Traces | `agenticverz.com/console/traces` | [ ] | [ ] | [ ] |

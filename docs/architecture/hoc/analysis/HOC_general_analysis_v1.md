@@ -1,7 +1,7 @@
 # HOC General Domain Analysis v1
 
 **Date:** 2026-01-22
-**Domain:** `app/houseofcards/customer/general/`
+**Domain:** `app/hoc/cus/general/`
 **Status:** Analysis Complete — Governance Recommended
 
 ---
@@ -24,7 +24,7 @@
 ## Directory Structure
 
 ```
-app/houseofcards/customer/general/
+app/hoc/cus/general/
 ├── __init__.py                                (12 LOC)
 ├── facades/
 │   ├── __init__.py                            (11 LOC)
@@ -351,10 +351,10 @@ This domain is an aggregation point for runtime orchestration,
 lifecycle management, and cross-domain operations.
 
 PLANNED EXTRACTION:
-1. runtime/engines/* → app/houseofcards/customer/runtime/
-2. lifecycle/engines/* → app/houseofcards/customer/lifecycle/
-3. workflow/contracts/* → app/houseofcards/customer/contracts/
-4. Alert engines → app/houseofcards/customer/alerts/
+1. runtime/engines/* → app/hoc/cus/runtime/
+2. lifecycle/engines/* → app/hoc/cus/lifecycle/
+3. workflow/contracts/* → app/hoc/cus/contracts/
+4. Alert engines → app/hoc/cus/alerts/
 
 INVARIANTS (System-Wide):
 

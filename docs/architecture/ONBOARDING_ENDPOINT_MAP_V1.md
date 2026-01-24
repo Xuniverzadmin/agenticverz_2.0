@@ -191,9 +191,9 @@ These use `verify_fops_token` dependency and are founder-only access.
 | ops.py | `/ops/*` | FOPS_ONLY |
 | cost_ops.py | `/ops/cost/*` | FOPS_ONLY |
 | founder_actions.py | `/ops/actions/*` | FOPS_ONLY |
-| founder_timeline.py | `/founder/timeline/*` | FOPS_ONLY |
-| founder_review.py | `/founder/review/*` | FOPS_ONLY |
-| founder_contract_review.py | `/founder/contracts/*` | FOPS_ONLY |
+| founder_timeline.py | `/fdr/timeline/*` | FOPS_ONLY |
+| founder_review.py | `/fdr/review/*` | FOPS_ONLY |
+| founder_contract_review.py | `/fdr/contracts/*` | FOPS_ONLY |
 | platform.py | `/platform/*` | FOPS_ONLY |
 | founder_explorer.py | `/explorer/*` | FOPS_ONLY |
 | integration.py | `/integration/*` | FOPS_ONLY |
@@ -213,8 +213,8 @@ These need onboarding state gating.
 | guard_logs.py | `/guard/logs/*` | SDK_CONNECTED |
 | guard_policies.py | `/guard/policies/*` | SDK_CONNECTED |
 | cost_guard.py | `/guard/costs/*` | SDK_CONNECTED |
-| customer_visibility.py | `/customer/*` | SDK_CONNECTED |
-| customer_activity.py | `/api/v1/customer/*` | SDK_CONNECTED |
+| customer_visibility.py | `/cus/*` | SDK_CONNECTED |
+| customer_activity.py | `/api/v1/cus/*` | SDK_CONNECTED |
 
 **Action Required:** Add onboarding state gate.
 
@@ -262,7 +262,7 @@ These need onboarding state gating.
 
 | Router | Prefix | Classification |
 |--------|--------|----------------|
-| authz_status.py | `/internal/authz/*` | INTERNAL_ONLY |
+| authz_status.py | `/int/authz/*` | INTERNAL_ONLY |
 | rbac_api.py | `/api/v1/rbac/*` | INTERNAL_ONLY |
 
 **Status:** Internal endpoints, not customer-facing.
@@ -286,7 +286,7 @@ These need onboarding state gating.
 
 1. **P0: Enable /api-keys** - Currently DISABLED, blocking onboarding
 2. **P1: Gate onboarding endpoints** - /api/v1/auth/*, /api-keys
-3. **P2: Gate customer console** - /guard/*, /customer/*
+3. **P2: Gate customer console** - /guard/*, /cus/*
 4. **P3: Gate SDK endpoints** - All /api/v1/* business endpoints
 
 ---

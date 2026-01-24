@@ -52,15 +52,15 @@ See: `docs/architecture/migration/ITERATION2_AUDIT_REPORT.md`
 | DEPRECATED_DUPLICATE | 3 | 0.3% |
 | ALREADY_IN_HOC | 0 | 0% |
 
-**Note:** `ALREADY_IN_HOC = 0` because `houseofcards/` directory doesn't exist yet. This is expected.
+**Note:** `ALREADY_IN_HOC = 0` because `hoc/` directory doesn't exist yet. This is expected.
 
 ---
 
 ## 1. Objective
 
-Inventory all files in `app/` and create a canonical migration CSV that maps each file to its target location in `app/houseofcards/{audience}/{domain}/` following the 8-layer topology.
+Inventory all files in `app/` and create a canonical migration CSV that maps each file to its target location in `app/hoc/{audience}/{domain}/` following the 8-layer topology.
 
-**Architectural Decision (Option B):** HOC files remain within `app/` directory as `app/houseofcards/`. Legacy code in `app/services/` will be deleted in Phase 5 after migration is complete and validated.
+**Architectural Decision (Option B):** HOC files remain within `app/` directory as `app/hoc/`. Legacy code in `app/services/` will be deleted in Phase 5 after migration is complete and validated.
 
 ---
 
@@ -71,9 +71,9 @@ Inventory all files in `app/` and create a canonical migration CSV that maps eac
 | Location | Reason | Action |
 |----------|--------|--------|
 | `app/models/*.py` | Shared DB tables (tenant, audit_ledger, base) | STAYS |
-| `app/customer/models/*.py` | Customer-specific DB tables | STAYS |
-| `app/founder/models/*.py` | Founder-specific DB tables | STAYS |
-| `app/internal/models/*.py` | Internal-specific DB tables | STAYS |
+| `app/cus/models/*.py` | Customer-specific DB tables | STAYS |
+| `app/fdr/models/*.py` | Founder-specific DB tables | STAYS |
+| `app/int/models/*.py` | Internal-specific DB tables | STAYS |
 
 **Total:** ~30 files
 
@@ -81,18 +81,18 @@ Inventory all files in `app/` and create a canonical migration CSV that maps eac
 
 | Source | Target Pattern | Layer |
 |--------|----------------|-------|
-| `app/api/*.py` | `app/houseofcards/api/{audience}/{domain}.py` | L2 |
-| `app/api/dependencies/*.py` | `app/houseofcards/api/dependencies/` | L2-Infra |
-| `app/api/middleware/*.py` | `app/houseofcards/api/middleware/` | L2-Infra |
-| `app/services/*_facade.py` | `app/houseofcards/{audience}/{domain}/adapters/` | L3 |
-| `app/services/**/*_engine.py` | `app/houseofcards/{audience}/{domain}/engines/` | L5 |
-| `app/services/**/*_service.py` | `app/houseofcards/{audience}/{domain}/engines/` or `drivers/` | L5/L6 |
-| `app/services/**/schemas/*.py` | `app/houseofcards/{audience}/{domain}/schemas/` | L5 |
-| `app/worker/*.py` | `app/houseofcards/{audience}/general/runtime/` or `{domain}/workers/` | L4/L5 |
-| `app/auth/*.py` | `app/houseofcards/internal/platform/auth/` | L4-Internal |
-| `app/core/*.py` | `app/houseofcards/internal/platform/core/` | L6-Internal |
-| `app/events/*.py` | `app/houseofcards/internal/platform/events/` | L6-Internal |
-| `app/middleware/*.py` | `app/houseofcards/api/middleware/` | L2-Infra |
+| `app/api/*.py` | `app/hoc/api/{audience}/{domain}.py` | L2 |
+| `app/api/dependencies/*.py` | `app/hoc/api/dependencies/` | L2-Infra |
+| `app/api/middleware/*.py` | `app/hoc/api/middleware/` | L2-Infra |
+| `app/services/*_facade.py` | `app/hoc/{audience}/{domain}/adapters/` | L3 |
+| `app/services/**/*_engine.py` | `app/hoc/{audience}/{domain}/engines/` | L5 |
+| `app/services/**/*_service.py` | `app/hoc/{audience}/{domain}/engines/` or `drivers/` | L5/L6 |
+| `app/services/**/schemas/*.py` | `app/hoc/{audience}/{domain}/schemas/` | L5 |
+| `app/worker/*.py` | `app/hoc/{audience}/general/L4_runtime/` or `{domain}/workers/` | L4/L5 |
+| `app/auth/*.py` | `app/hoc/int/platform/auth/` | L4-Internal |
+| `app/core/*.py` | `app/hoc/int/platform/core/` | L6-Internal |
+| `app/events/*.py` | `app/hoc/int/platform/events/` | L6-Internal |
+| `app/middleware/*.py` | `app/hoc/api/middleware/` | L2-Infra |
 
 **Total:** ~300 files
 
@@ -100,13 +100,13 @@ Inventory all files in `app/` and create a canonical migration CSV that maps eac
 
 | Location | Reason |
 |----------|--------|
-| `houseofcards/duplicate/**/*.py` | Legacy duplicates (already removed in prior audit) |
+| `hoc/duplicate/**/*.py` | Legacy duplicates (already removed in prior audit) |
 | `app/api/legacy_routes.py` | Deprecated |
 | `app/api/v1_*.py` | Deprecated v1 proxy routes |
 
 ### 2.4 What's ALREADY IN HOC
 
-Files already in `app/houseofcards/` structure (248 files).
+Files already in `app/hoc/` structure (248 files).
 Script will detect and mark as `ALREADY_IN_HOC` - these files stay in place.
 
 ---
@@ -128,7 +128,7 @@ docs/architecture/migration/MIGRATION_INVENTORY.csv
 | `audience` | ENUM | **Human** | CUSTOMER / FOUNDER / INTERNAL |
 | `domain` | TEXT | **Human** | overview / activity / incidents / policies / logs / analytics / integrations / api_keys / account / general / ops / platform / recovery / agent |
 | `layer` | ENUM | **Human** | L2 / L2-Infra / L3 / L4 / L5 / L6 / L7 |
-| `target_path` | TEXT | **Human** | Target path in app/houseofcards/ |
+| `target_path` | TEXT | **Human** | Target path in app/hoc/ |
 | `file_header` | TEXT | Script | First 15 lines of file (for classification help) |
 | `docstring` | TEXT | Script | Module/class docstring if exists |
 | `existing_hoc_path` | TEXT | Script | Path if already exists in HOC |
@@ -142,7 +142,7 @@ docs/architecture/migration/MIGRATION_INVENTORY.csv
 | Value | Meaning | Human Action Required |
 |-------|---------|----------------------|
 | `NEEDS_CLASSIFICATION` | File needs audience/domain/layer assignment | Fill all columns |
-| `ALREADY_IN_HOC` | Equivalent exists in houseofcards/ | Verify, mark SKIP or MERGE |
+| `ALREADY_IN_HOC` | Equivalent exists in hoc/ | Verify, mark SKIP or MERGE |
 | `DEPRECATED_DUPLICATE` | Was in duplicate/ folder | Confirm DELETE |
 | `STAYS` | L7 model file, stays in app/models/ | Verify, confirm STAYS |
 
@@ -169,7 +169,7 @@ Mechanically inventory all files. Does NOT make classification decisions.
 ```
 INPUT:
   - backend/app/**/*.py
-  - backend/houseofcards/**/*.py (for duplicate detection)
+  - backend/hoc/**/*.py (for duplicate detection)
 
 OUTPUT:
   - docs/architecture/migration/MIGRATION_INVENTORY.csv
@@ -180,12 +180,12 @@ LOGIC:
      a. Extract source_path
      b. Extract file_header (first 15 lines)
      c. Extract docstring (module or first class)
-     d. Check if similar file exists in houseofcards/
+     d. Check if similar file exists in hoc/
         - Match by filename
         - Match by class/function names
      e. Determine auto_status:
         - If in app/models/ or app/{audience}/models/ → STAYS
-        - If match found in houseofcards/ → ALREADY_IN_HOC
+        - If match found in hoc/ → ALREADY_IN_HOC
         - If source was in duplicate/ folder → DEPRECATED_DUPLICATE
         - Else → NEEDS_CLASSIFICATION
   3. Output to CSV
@@ -201,7 +201,7 @@ LOGIC:
 | `**/__init__.py` (if empty) | Boilerplate |
 | `**/test_*.py` | Test files (separate inventory) |
 | `**/tests/**` | Test directories |
-| `houseofcards/**/*.py` | Already in target (but used for matching) |
+| `hoc/**/*.py` | Already in target (but used for matching) |
 
 ### 4.4 Duplicate Detection Logic
 
@@ -286,7 +286,7 @@ For each `NEEDS_CLASSIFICATION` row:
    - Write services → L6 drivers (not L5 engines)
    - Business logic → L5 engines
 3. Verify no cross-audience violations
-4. Verify target_path follows pattern: `app/houseofcards/{audience}/{domain}/{layer}/`
+4. Verify target_path follows pattern: `app/hoc/{audience}/{domain}/{layer}/`
 5. Set `audit_status` = `APPROVED`
 
 ### 5.4 Validation Checklist
@@ -367,15 +367,15 @@ Before marking `APPROVED`:
 
 | Layer | Target Path Pattern |
 |-------|---------------------|
-| L2 API | `app/houseofcards/api/{audience}/{domain}.py` |
-| L2 Middleware | `app/houseofcards/api/middleware/{name}.py` |
-| L2 Dependencies | `app/houseofcards/api/dependencies/{name}.py` |
-| L3 Adapter | `app/houseofcards/{audience}/{domain}/adapters/{name}_adapter.py` |
-| L4 Runtime | `app/houseofcards/{audience}/general/runtime/{part}/{name}.py` |
-| L5 Engine | `app/houseofcards/{audience}/{domain}/engines/{name}.py` |
-| L5 Worker | `app/houseofcards/{audience}/{domain}/workers/{name}.py` |
-| L6 Schema | `app/houseofcards/{audience}/{domain}/schemas/{name}.py` |
-| L6 Driver | `app/houseofcards/{audience}/{domain}/drivers/{name}_driver.py` |
+| L2 API | `app/hoc/api/{audience}/{domain}.py` |
+| L2 Middleware | `app/hoc/api/middleware/{name}.py` |
+| L2 Dependencies | `app/hoc/api/dependencies/{name}.py` |
+| L3 Adapter | `app/hoc/{audience}/{domain}/adapters/{name}_adapter.py` |
+| L4 Runtime | `app/hoc/{audience}/general/L4_runtime/{part}/{name}.py` |
+| L5 Engine | `app/hoc/{audience}/{domain}/engines/{name}.py` |
+| L5 Worker | `app/hoc/{audience}/{domain}/workers/{name}.py` |
+| L6 Schema | `app/hoc/{audience}/{domain}/schemas/{name}.py` |
+| L6 Driver | `app/hoc/{audience}/{domain}/drivers/{name}_driver.py` |
 | L7 Model | `app/{audience}/models/{name}.py` (STAYS) |
 
 **Note:** L6 Data Layer includes both schemas and drivers. Both go under their respective subdirectories.
@@ -384,9 +384,9 @@ Before marking `APPROVED`:
 
 | Source | Target | Notes |
 |--------|--------|-------|
-| `app/auth/*.py` | `app/houseofcards/internal/platform/auth/` | Auth infrastructure |
-| `app/core/*.py` | `app/houseofcards/internal/platform/core/` | Core utilities |
-| `app/events/*.py` | `app/houseofcards/internal/platform/events/` | Event bus |
+| `app/auth/*.py` | `app/hoc/int/platform/auth/` | Auth infrastructure |
+| `app/core/*.py` | `app/hoc/int/platform/core/` | Core utilities |
+| `app/events/*.py` | `app/hoc/int/platform/events/` | Event bus |
 | `app/worker/*.py` | Depends on content | May be L4 runtime or L5 workers |
 
 ---
@@ -469,12 +469,12 @@ Phase 1 is complete when:
 
 ```csv
 s_no,source_path,audience,domain,layer,target_path,file_header,docstring,existing_hoc_path,auto_status,audit_status,audit_notes,action
-1,app/services/overview_facade.py,CUSTOMER,overview,L3,app/houseofcards/customer/overview/adapters/overview_adapter.py,"# Overview facade module\nfrom typing import...","OverviewFacade: Aggregates dashboard data from multiple domains",,NEEDS_CLASSIFICATION,APPROVED,Aggregates cross-domain data - L3 adapter,TRANSFER
-2,app/services/activity/attention_ranking_service.py,,,,,,"# Attention ranking\n...","AttentionRankingService: Ranks activity items by importance",app/houseofcards/customer/activity/engines/attention_ranking_service.py,ALREADY_IN_HOC,APPROVED,Exact match in HOC,SKIP
+1,app/services/overview_facade.py,CUSTOMER,overview,L3,app/hoc/cus/overview/L3_adapters/overview_adapter.py,"# Overview facade module\nfrom typing import...","OverviewFacade: Aggregates dashboard data from multiple domains",,NEEDS_CLASSIFICATION,APPROVED,Aggregates cross-domain data - L3 adapter,TRANSFER
+2,app/services/activity/attention_ranking_service.py,,,,,,"# Attention ranking\n...","AttentionRankingService: Ranks activity items by importance",app/hoc/cus/activity/L5_engines/attention_ranking_service.py,ALREADY_IN_HOC,APPROVED,Exact match in HOC,SKIP
 3,app/models/tenant.py,INTERNAL,,L7,app/models/tenant.py,"# Tenant model\n...","Tenant: Multi-tenant base model",,STAYS,APPROVED,INTERNAL L7 model,STAYS
-4,app/services/incidents/incident_engine.py,CUSTOMER,incidents,L5,app/houseofcards/customer/incidents/engines/incident_engine.py,"# Incident engine\n...","IncidentEngine: Creates and manages incidents",app/houseofcards/customer/incidents/engines/incident_engine.py,ALREADY_IN_HOC,APPROVED,Already migrated,SKIP
+4,app/services/incidents/incident_engine.py,CUSTOMER,incidents,L5,app/hoc/cus/incidents/L5_engines/incident_engine.py,"# Incident engine\n...","IncidentEngine: Creates and manages incidents",app/hoc/cus/incidents/L5_engines/incident_engine.py,ALREADY_IN_HOC,APPROVED,Already migrated,SKIP
 5,app/api/legacy_routes.py,,,,,,"# Legacy routes - deprecated\n...","Deprecated v1 routes",,DEPRECATED_DUPLICATE,APPROVED,Deprecated,DELETE
-6,app/services/logs_read_service.py,CUSTOMER,logs,L6,app/houseofcards/customer/logs/drivers/logs_driver.py,"# Logs read service\n...","LogsReadService: Queries log records from database",,NEEDS_CLASSIFICATION,APPROVED,Read service = L6 driver,TRANSFER
+6,app/services/logs_read_service.py,CUSTOMER,logs,L6,app/hoc/cus/logs/L6_drivers/logs_driver.py,"# Logs read service\n...","LogsReadService: Queries log records from database",,NEEDS_CLASSIFICATION,APPROVED,Read service = L6 driver,TRANSFER
 ```
 
 ---

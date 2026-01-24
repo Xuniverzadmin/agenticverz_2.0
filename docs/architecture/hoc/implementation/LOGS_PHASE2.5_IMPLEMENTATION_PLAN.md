@@ -15,8 +15,8 @@
 | **HOC Index** | [`../INDEX.md`](../INDEX.md) | Master documentation index |
 | **Layer Topology** | [`../../HOC_LAYER_TOPOLOGY_V1.md`](../../HOC_LAYER_TOPOLOGY_V1.md) | L4/L6 contract rules |
 | **Logs Analysis** | [`../analysis/HOC_logs_analysis_v1.md`](../analysis/HOC_logs_analysis_v1.md) | Domain architecture |
-| **Logs Audit** | [`../../../../backend/app/houseofcards/customer/logs/HOC_logs_detailed_audit_report.md`](../../../../backend/app/houseofcards/customer/logs/HOC_logs_detailed_audit_report.md) | Duplication audit |
-| **Activity Lock** | [`../../../../backend/app/houseofcards/customer/activity/ACTIVITY_DOMAIN_LOCK_FINAL.md`](../../../../backend/app/houseofcards/customer/activity/ACTIVITY_DOMAIN_LOCK_FINAL.md) | Pattern reference |
+| **Logs Audit** | [`../../../../backend/app/hoc/cus/logs/HOC_logs_detailed_audit_report.md`](../../../../backend/app/hoc/cus/logs/HOC_logs_detailed_audit_report.md) | Duplication audit |
+| **Activity Lock** | [`../../../../backend/app/hoc/cus/activity/ACTIVITY_DOMAIN_LOCK_FINAL.md`](../../../../backend/app/hoc/cus/activity/ACTIVITY_DOMAIN_LOCK_FINAL.md) | Pattern reference |
 
 ---
 
@@ -44,7 +44,7 @@ Logs does NOT:
 
 ### 1.3 Scope
 
-**Domain Path:** `backend/app/houseofcards/customer/logs/`
+**Domain Path:** `backend/app/hoc/cus/logs/`
 
 **Current State:**
 
@@ -564,7 +564,7 @@ Three gray-zone files received INTENT FREEZE comments explaining why they are L6
 ### 14.9 Domain Formally Locked
 
 **Status:** LOCKED (v1.2.0)
-**Lock Document:** `backend/app/houseofcards/customer/logs/LOGS_DOMAIN_LOCK_FINAL.md`
+**Lock Document:** `backend/app/hoc/cus/logs/LOGS_DOMAIN_LOCK_FINAL.md`
 
 ---
 

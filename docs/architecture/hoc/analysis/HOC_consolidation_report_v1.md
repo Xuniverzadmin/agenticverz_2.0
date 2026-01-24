@@ -1,7 +1,7 @@
 # HOC Customer Domains Consolidation Report v1
 
 **Date:** 2026-01-22
-**Scope:** `app/houseofcards/customer/`
+**Scope:** `app/hoc/cus/`
 **Status:** Phase 4 Analysis Complete
 
 ---
@@ -124,7 +124,7 @@ from uuid import UUID
 #### Consolidation Path
 
 ```
-1. Create: app/houseofcards/shared/validators/issue_validator.py
+1. Create: app/hoc/shared/validators/issue_validator.py
 2. Move: ValidatorService + all enums/dataclasses
 3. Update: policies/engines/__init__.py to re-export
 4. Update: account/support/CRM/engines/__init__.py to re-export
@@ -215,7 +215,7 @@ def list_<items>(self, tenant_id: str, limit: int = 50, offset: int = 0, **filte
 ### 2.4 Consolidation Opportunity: BaseTenantReadService
 
 ```python
-# Proposed: app/houseofcards/shared/services/base_read_service.py
+# Proposed: app/hoc/shared/services/base_read_service.py
 
 from typing import Generic, TypeVar, List, Optional, Tuple, Type
 from sqlalchemy import and_, desc, func, select
@@ -439,7 +439,7 @@ def emit_<event>(self, event_type: str, payload: dict):
 ### 4.4 Consolidation Opportunity: EventEmitter
 
 ```python
-# Proposed: app/houseofcards/shared/events/emitter.py
+# Proposed: app/hoc/shared/events/emitter.py
 
 class DomainEventEmitter:
     """Centralized domain event emission."""
@@ -488,7 +488,7 @@ stmt = select(<Model>).where(and_(*conditions)).order_by(desc(<Model>.created_at
 ### 5.3 Consolidation Opportunity: TenantQueryBuilder
 
 ```python
-# Proposed: app/houseofcards/shared/queries/tenant_query_builder.py
+# Proposed: app/hoc/shared/queries/tenant_query_builder.py
 
 class TenantQueryBuilder:
     """Build tenant-isolated queries with common filters."""
@@ -645,7 +645,7 @@ Files with limited callers, safe to modify.
 ## Section 9: Recommended Shared Module Structure
 
 ```
-backend/app/houseofcards/shared/
+backend/app/hoc/shared/
 ├── __init__.py
 ├── services/
 │   ├── __init__.py
@@ -704,7 +704,7 @@ backend/app/houseofcards/shared/
 ### Appendix A: Complete File Inventory
 
 ```
-app/houseofcards/customer/
+app/hoc/cus/
 ├── __init__.py                                    (10 LOC)
 ├── activity/
 │   ├── __init__.py                                (12 LOC)

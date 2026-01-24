@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The Account domain (`backend/app/houseofcards/customer/account/`) contains **18 Python files** with **9 violations** identified:
+The Account domain (`backend/app/hoc/cus/account/`) contains **18 Python files** with **9 violations** identified:
 - **3 CRITICAL** violations (blocking)
 - **6 MEDIUM** violations (naming)
 

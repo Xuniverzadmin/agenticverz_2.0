@@ -176,9 +176,9 @@ class {class_name}{service_type}:
 def extract_path_info(rel_path: str) -> tuple[str, str, str]:
     """Extract audience, domain, and folder from path."""
     parts = rel_path.split("/")
-    # app/houseofcards/{audience}/{domain}/...
+    # app/hoc/{audience}/{domain}/...
     try:
-        hoc_idx = parts.index("houseofcards")
+        hoc_idx = parts.index("hoc")
         audience = parts[hoc_idx + 1] if hoc_idx + 1 < len(parts) else "unknown"
         domain = parts[hoc_idx + 2] if hoc_idx + 2 < len(parts) else "unknown"
         folder = parts[hoc_idx + 3] if hoc_idx + 3 < len(parts) else "unknown"

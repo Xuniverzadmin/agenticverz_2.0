@@ -12,11 +12,11 @@
 
 | Layer | Name | Location Pattern | Core Responsibility |
 |-------|------|------------------|---------------------|
-| **L2** | APIs | `houseofcards/api/{audience}/{domain}.py` | HTTP boundary only |
-| **L3** | Adapters | `houseofcards/{audience}/{domain}/facades/*.py` | Translation, cross-domain aggregation |
-| **L4** | Engines | `houseofcards/{audience}/{domain}/engines/*.py` | Authority, business decisions |
-| **L5** | Workers | `houseofcards/{audience}/{domain}/workers/*.py` | Background computation |
-| **L6** | Drivers + Schemas | `houseofcards/{audience}/{domain}/drivers/*.py`, `schemas/*.py` | Data access, data contracts |
+| **L2** | APIs | `hoc/api/{audience}/{domain}.py` | HTTP boundary only |
+| **L3** | Adapters | `hoc/{audience}/{domain}/facades/*.py` | Translation, cross-domain aggregation |
+| **L4** | Engines | `hoc/{audience}/{domain}/engines/*.py` | Authority, business decisions |
+| **L5** | Workers | `hoc/{audience}/{domain}/workers/*.py` | Background computation |
+| **L6** | Drivers + Schemas | `hoc/{audience}/{domain}/drivers/*.py`, `schemas/*.py` | Data access, data contracts |
 
 **Note:** L3 named "Adapters" (not "Facades") — aligns with cross-domain distribution role.
 
@@ -227,8 +227,8 @@ Execute in this order for minimal risk and maximum efficiency:
 
 | Path Pattern | Reason |
 |--------------|--------|
-| `*/general/utils/*` | Shared utilities |
-| `*/general/schemas/*` | Shared schemas |
+| `*/general/L5_utils/*` | Shared utilities |
+| `*/general/L5_schemas/*` | Shared schemas |
 | `*/__init__.py` | Package markers |
 | `*/tests/*` | Test files |
 | `*/duplicate/*` | Quarantine folder |
@@ -258,7 +258,7 @@ Execute in this order for minimal risk and maximum efficiency:
 
 ```json
 {
-  "file": "houseofcards/customer/incidents/engines/incident_read_service.py",
+  "file": "hoc/cus/incidents/L5_engines/incident_read_service.py",
   "header": {
     "declared_layer": "L4",
     "audience": "CUSTOMER"

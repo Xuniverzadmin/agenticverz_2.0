@@ -36,9 +36,9 @@ The user requested these files be restored and merged with the PIN-333 AUTO_EXEC
 ### Functionality
 
 The quarantined CRM workflow provided:
-- `GET /founder/contracts/review-queue` - List contracts pending review
-- `GET /founder/contracts/{contract_id}` - Contract detail view
-- `POST /founder/contracts/{contract_id}/review` - Approve/reject contracts
+- `GET /fdr/contracts/review-queue` - List contracts pending review
+- `GET /fdr/contracts/{contract_id}` - Contract detail view
+- `POST /fdr/contracts/{contract_id}/review` - Approve/reject contracts
 
 ---
 
@@ -58,7 +58,7 @@ Original `founder_review.py` name was already used by PIN-333 for AUTO_EXECUTE r
 **`app/api/founder_contract_review.py`**
 - Copied from quarantine with renamed imports
 - Added FOPS token authentication (`verify_fops_token`)
-- Router prefix: `/founder/contracts`
+- Router prefix: `/fdr/contracts`
 
 **`app/adapters/founder_contract_review_adapter.py`**
 - Copied from quarantine
@@ -71,7 +71,7 @@ Original `founder_review.py` name was already used by PIN-333 for AUTO_EXECUTE r
 
 **`app/main.py`**
 - Registered `founder_contract_review_router`
-- Routes active at `/founder/contracts/*`
+- Routes active at `/fdr/contracts/*`
 
 ### 3. Frontend Creation
 
@@ -80,16 +80,16 @@ Original `founder_review.py` name was already used by PIN-333 for AUTO_EXECUTE r
 - Types: `ContractSummary`, `ContractDetail`, `ReviewQueueResponse`, `ReviewResult`
 - Functions: `getReviewQueue()`, `getContractDetail()`, `submitReview()`
 
-**`website/fops/src/pages/founder/ContractReviewContent.tsx`**
+**`website/fops/src/pages/fdr/ContractReviewContent.tsx`**
 - Contract review tab content
 - Components: `QueueStats`, `ContractTable`, `ContractDrawer`
 - Full approve/reject workflow with notes
 
-**`website/fops/src/pages/founder/AutoExecuteReviewContent.tsx`**
+**`website/fops/src/pages/fdr/AutoExecuteReviewContent.tsx`**
 - Extracted from `AutoExecuteReviewPage.tsx`
 - Evidence-only content for AUTO_EXECUTE tab (read-only)
 
-**`website/fops/src/pages/founder/FounderReviewPage.tsx`**
+**`website/fops/src/pages/fdr/FounderReviewPage.tsx`**
 - Unified tabbed dashboard
 - Tabs: "AUTO_EXECUTE Decisions" | "Contract Review"
 - Lazy loads appropriate content component
@@ -99,7 +99,7 @@ Original `founder_review.py` name was already used by PIN-333 for AUTO_EXECUTE r
 **`website/app-shell/src/routes/index.tsx`**
 ```typescript
 // Unified Founder Review Dashboard (AUTO_EXECUTE + Contract Review)
-const FounderReviewPage = lazy(() => import('@fops/pages/founder/FounderReviewPage'));
+const FounderReviewPage = lazy(() => import('@fops/pages/fdr/FounderReviewPage'));
 
 <Route path="fops/review" element={<FounderRoute><FounderReviewPage /></FounderRoute>} />
 ```
@@ -128,13 +128,13 @@ All imports verified working:
 - **Tabs:** AUTO_EXECUTE | Contracts
 
 ### Contract Review API
-- `GET /founder/contracts/review-queue` - Queue of pending contracts
-- `GET /founder/contracts/{contract_id}` - Contract details
-- `POST /founder/contracts/{contract_id}/review` - Submit decision
+- `GET /fdr/contracts/review-queue` - Queue of pending contracts
+- `GET /fdr/contracts/{contract_id}` - Contract details
+- `POST /fdr/contracts/{contract_id}/review` - Submit decision
 
 ### AUTO_EXECUTE Review API (PIN-333)
-- `GET /founder/review/auto-execute/queue` - Pending decisions
-- `GET /founder/review/auto-execute/{decision_id}` - Decision evidence
+- `GET /fdr/review/auto-execute/queue` - Pending decisions
+- `GET /fdr/review/auto-execute/{decision_id}` - Decision evidence
 
 ---
 
@@ -144,9 +144,9 @@ All imports verified working:
 - `backend/app/api/founder_contract_review.py`
 - `backend/app/adapters/founder_contract_review_adapter.py`
 - `website/app-shell/src/api/contractReview.ts`
-- `website/fops/src/pages/founder/FounderReviewPage.tsx`
-- `website/fops/src/pages/founder/ContractReviewContent.tsx`
-- `website/fops/src/pages/founder/AutoExecuteReviewContent.tsx`
+- `website/fops/src/pages/fdr/FounderReviewPage.tsx`
+- `website/fops/src/pages/fdr/ContractReviewContent.tsx`
+- `website/fops/src/pages/fdr/AutoExecuteReviewContent.tsx`
 
 ### Modified
 - `backend/app/adapters/__init__.py` - Added adapter import

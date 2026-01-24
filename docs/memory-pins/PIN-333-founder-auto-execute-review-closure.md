@@ -32,7 +32,7 @@ PIN-333 delivers an evidence-only dashboard for founders to review AUTO_EXECUTE 
 | ❌ No approve/reject/pause/override actions | VERIFIED | No mutation endpoints; all routes GET-only |
 | ❌ No change to AUTO_EXECUTE behavior/thresholds | VERIFIED | No imports from workflow/worker modules |
 | ❌ No new gates or enforcement | VERIFIED | No gate code in module |
-| ❌ No exposure to customer console | VERIFIED | All routes under /founder/review; FounderRoute guard |
+| ❌ No exposure to customer console | VERIFIED | All routes under /fdr/review; FounderRoute guard |
 | ✅ Read-only, evidence-only | VERIFIED | GET endpoints only; no state mutation |
 | ✅ Backed by execution envelopes + safety flags | VERIFIED | DTOs map 1:1 to ExecutionEnvelope |
 | ✅ Founder-only (RBAC enforced) | VERIFIED | verify_fops_token dependency on all endpoints |
@@ -60,9 +60,9 @@ Created `backend/app/api/founder_review.py` with:
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `GET /founder/review/auto-execute` | GET | List decisions with filters |
-| `GET /founder/review/auto-execute/{id}` | GET | Single decision evidence |
-| `GET /founder/review/auto-execute/stats` | GET | Aggregate statistics |
+| `GET /fdr/review/auto-execute` | GET | List decisions with filters |
+| `GET /fdr/review/auto-execute/{id}` | GET | Single decision evidence |
+| `GET /fdr/review/auto-execute/stats` | GET | Aggregate statistics |
 
 All endpoints:
 - Require FOPS token (founder-only)
@@ -81,7 +81,7 @@ Added route in `website/app-shell/src/routes/index.tsx`:
 
 #### Phase 2.2: Primary Table View
 
-Created `website/fops/src/pages/founder/AutoExecuteReviewPage.tsx`:
+Created `website/fops/src/pages/fdr/AutoExecuteReviewPage.tsx`:
 
 | Component | Purpose |
 |-----------|---------|
@@ -161,7 +161,7 @@ This document.
 | API Endpoints | `backend/app/api/founder_review.py` | Read-only query endpoints |
 | Main Router | `backend/app/main.py` | Router registration |
 | Frontend API | `website/app-shell/src/api/autoExecuteReview.ts` | TypeScript API client |
-| Review Page | `website/fops/src/pages/founder/AutoExecuteReviewPage.tsx` | Full dashboard UI |
+| Review Page | `website/fops/src/pages/fdr/AutoExecuteReviewPage.tsx` | Full dashboard UI |
 | Routes | `website/app-shell/src/routes/index.tsx` | Route configuration |
 | Tests | `backend/tests/api/test_founder_review_noninterference.py` | 16 non-interference tests |
 | Closure Report | `docs/memory-pins/PIN-333-founder-auto-execute-review-closure.md` | This report |

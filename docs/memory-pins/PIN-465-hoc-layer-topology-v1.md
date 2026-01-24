@@ -23,32 +23,32 @@ Formal architecture document defining the 8-layer topology for House of Cards (H
 | Layer | Location | Purpose |
 |-------|----------|---------|
 | L1 | Frontend | AI Console (UI projection + Panel Engine) |
-| L2.1 | `houseofcards/api/facades/{audience}/{domain}/` | API Organizer |
-| L2 | `houseofcards/api/{audience}/{domain}/` | HTTP APIs |
-| L3 | `houseofcards/{audience}/{domain}/adapters/` | Adapters (cross-domain allowed) |
-| L4 | `houseofcards/{audience}/general/runtime/` | Governed Runtime (shared) |
-| L5 | `houseofcards/{audience}/{domain}/engines,workers,schemas/` | Business Logic |
-| L6 | `houseofcards/{audience}/{domain}/drivers/` | DB Operations |
+| L2.1 | `hoc/api/facades/{audience}/{domain}/` | API Organizer |
+| L2 | `hoc/api/{audience}/{domain}/` | HTTP APIs |
+| L3 | `hoc/{audience}/{domain}/adapters/` | Adapters (cross-domain allowed) |
+| L4 | `hoc/{audience}/general/L4_runtime/` | Governed Runtime (shared) |
+| L5 | `hoc/{audience}/{domain}/engines,workers,schemas/` | Business Logic |
+| L6 | `hoc/{audience}/{domain}/drivers/` | DB Operations |
 | L7 | `app/models/` + `app/{audience}/models/` | Database Tables |
 | L8 | Database | PostgreSQL |
 
 ### Key Architecture Choices
 
-1. **Everything under HOC** — APIs, adapters, engines all in `houseofcards/`
+1. **Everything under HOC** — APIs, adapters, engines all in `hoc/`
 2. **Audience-first** — `{audience}/{domain}` pattern throughout
 3. **Cross-domain at L3 only** — Adapters are the aggregation point
 4. **Shared runtime per audience** — `general/runtime/` not per domain
 5. **Hybrid models** — Shared + audience-specific tables
-6. **Panel engine location** — `houseofcards/{audience}/frontend/{domain}/`
+6. **Panel engine location** — `hoc/{audience}/frontend/{domain}/`
 
 ### L7 Models Decision (Option B)
 
 | Category | Location |
 |----------|----------|
 | Shared | `app/models/` (tenant, audit_ledger, base) |
-| Customer-specific | `app/customer/models/` (policy, killswitch) |
-| Founder-specific | `app/founder/models/` (ops_events) |
-| Internal-specific | `app/internal/models/` (recovery, agent) |
+| Customer-specific | `app/cus/models/` (policy, killswitch) |
+| Founder-specific | `app/fdr/models/` (ops_events) |
+| Internal-specific | `app/int/models/` (recovery, agent) |
 
 ---
 

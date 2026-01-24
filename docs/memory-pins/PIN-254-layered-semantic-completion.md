@@ -155,7 +155,7 @@ The distribution (85.7% authorized, 5.4% shadow) is plausible for an organically
 |----|-----|----------|----------|-------------|
 | ~~C01~~ | `POST /ops/jobs/detect-silent-churn` | C1 | HIGH | Removed from L2 API surface (ops.py:2271-2286) |
 | ~~C02~~ | `POST /ops/jobs/compute-stickiness` | C1 | HIGH | Removed from L2 API surface (ops.py:2271-2286) |
-| ~~C03~~ | `POST /customer/pre-run-declaration` | C3 | MEDIUM | Added `EstimationMethodology` disclosure (customer_visibility.py:82-95) |
+| ~~C03~~ | `POST /cus/pre-run-declaration` | C3 | MEDIUM | Added `EstimationMethodology` disclosure (customer_visibility.py:82-95) |
 | ~~C04~~ | `GET /ops/revenue` | C3 | MEDIUM | Added `EstimationBasis` disclosure (ops.py:387-420) |
 | ~~C05~~ | `POST /costsim/v2/simulate` | C5 | MEDIUM | Added `SideEffectDisclosure` (costsim.py:164-177, 492-508) |
 

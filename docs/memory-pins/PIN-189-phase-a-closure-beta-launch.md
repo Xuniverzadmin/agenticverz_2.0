@@ -89,7 +89,7 @@ https://console.agenticverz.com
 | `/guard/keys` | API key management |
 | `/guard/limits` | Budget & rate limit awareness |
 
-**Customers NEVER see:** `/ops`, `/founder/*`, `/traces`
+**Customers NEVER see:** `/ops`, `/fdr/*`, `/traces`
 
 ---
 
@@ -102,8 +102,8 @@ https://fops.agenticverz.com
 | Route | Purpose |
 |-------|---------|
 | `/ops` | Founder operations dashboard |
-| `/founder/controls` | Kill-switch (freeze/unfreeze) |
-| `/founder/timeline` | Decision audit trail |
+| `/fdr/controls` | Kill-switch (freeze/unfreeze) |
+| `/fdr/timeline` | Decision audit trail |
 | `/incidents` | All incidents (founder view) |
 | `/runs` | All runs (founder view) |
 | `/traces` | Execution traces |
@@ -166,8 +166,8 @@ For founder beta sessions, use these URLs:
 | What | URL | API Key |
 |------|-----|---------|
 | Ops Dashboard | `https://agenticverz.com/console/ops` | See .env |
-| Kill-Switch | `https://agenticverz.com/console/founder/controls` | See .env |
-| Decision Timeline | `https://agenticverz.com/console/founder/timeline` | See .env |
+| Kill-Switch | `https://agenticverz.com/console/fdr/controls` | See .env |
+| Decision Timeline | `https://agenticverz.com/console/fdr/timeline` | See .env |
 | Guard Console | `https://agenticverz.com/console/guard` | See .env |
 | Incidents | `https://agenticverz.com/console/guard/incidents` | See .env |
 | Runs | `https://agenticverz.com/console/guard/runs` | See .env |

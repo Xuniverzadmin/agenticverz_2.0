@@ -24,7 +24,7 @@ drivers:
   # INCIDENT WRITE DRIVER (Primary incident persistence)
   # ===========================================================================
   - driver_id: incident_write_driver
-    location: houseofcards/customer/incidents/drivers/incident_write_driver.py
+    location: hoc/cus/incidents/L6_drivers/incident_write_driver.py
     authority: INCIDENT_PERSISTENCE
     domains:
       - customer/incidents
@@ -89,7 +89,7 @@ drivers:
   # LESSONS DRIVER (Lessons learned persistence)
   # ===========================================================================
   - driver_id: lessons_driver
-    location: houseofcards/customer/incidents/drivers/lessons_driver.py
+    location: hoc/cus/incidents/L6_drivers/lessons_driver.py
     authority: LESSONS_PERSISTENCE
     domains:
       - customer/incidents
@@ -150,7 +150,7 @@ drivers:
   # POLICY VIOLATION DRIVER (Policy violation persistence - ASYNC)
   # ===========================================================================
   - driver_id: policy_violation_driver
-    location: houseofcards/customer/incidents/drivers/policy_violation_driver.py
+    location: hoc/cus/incidents/L6_drivers/policy_violation_driver.py
     authority: POLICY_VIOLATION_PERSISTENCE
     domains:
       - customer/incidents
@@ -202,7 +202,7 @@ drivers:
   # LLM FAILURE DRIVER (LLM failure persistence - ASYNC)
   # ===========================================================================
   - driver_id: llm_failure_driver
-    location: houseofcards/customer/incidents/drivers/llm_failure_driver.py
+    location: hoc/cus/incidents/L6_drivers/llm_failure_driver.py
     authority: LLM_FAILURE_PERSISTENCE
     domains:
       - customer/incidents
@@ -244,7 +244,7 @@ drivers:
   # POSTMORTEM DRIVER (Post-mortem analytics - ASYNC, READ-ONLY)
   # ===========================================================================
   - driver_id: postmortem_driver
-    location: houseofcards/customer/incidents/drivers/postmortem_driver.py
+    location: hoc/cus/incidents/L6_drivers/postmortem_driver.py
     authority: POSTMORTEM_ANALYTICS
     domains:
       - customer/incidents
@@ -277,7 +277,7 @@ drivers:
   # INCIDENT PATTERN DRIVER (Pattern detection - ASYNC, READ-ONLY)
   # ===========================================================================
   - driver_id: incident_pattern_driver
-    location: houseofcards/customer/incidents/drivers/incident_pattern_driver.py
+    location: hoc/cus/incidents/L6_drivers/incident_pattern_driver.py
     authority: INCIDENT_PATTERN_FACTS
     domains:
       - customer/incidents
@@ -305,7 +305,7 @@ drivers:
   # POLICY LIMITS DRIVER (Policy limits CRUD - Phase-2.5A)
   # ===========================================================================
   - driver_id: policy_limits_driver
-    location: houseofcards/customer/policies/drivers/policy_limits_driver.py
+    location: hoc/cus/policies/L6_drivers/policy_limits_driver.py
     authority: LIMIT_PERSISTENCE
     domains:
       - customer/policies
@@ -334,7 +334,7 @@ drivers:
   # POLICY RULES DRIVER (Policy rules CRUD - Phase-2.5A)
   # ===========================================================================
   - driver_id: policy_rules_driver
-    location: houseofcards/customer/policies/drivers/policy_rules_driver.py
+    location: hoc/cus/policies/L6_drivers/policy_rules_driver.py
     authority: RULE_PERSISTENCE
     domains:
       - customer/policies
@@ -363,7 +363,7 @@ drivers:
   # POLICY ENGINE DRIVER (Core PolicyEngine data access - Phase-2.5A)
   # ===========================================================================
   - driver_id: policy_engine_driver
-    location: houseofcards/customer/policies/drivers/policy_engine_driver.py
+    location: hoc/cus/policies/L6_drivers/policy_engine_driver.py
     authority: POLICY_ENGINE_PERSISTENCE
     domains:
       - customer/policies
@@ -476,7 +476,7 @@ drivers:
   # KEYS DRIVER (API Keys CRUD - Phase-2.5A RECLASSIFIED)
   # ===========================================================================
   - driver_id: keys_driver
-    location: houseofcards/customer/policies/drivers/keys_driver.py
+    location: hoc/cus/policies/L6_drivers/keys_driver.py
     authority: KEY_PERSISTENCE
     domains:
       - customer/policies
@@ -593,13 +593,13 @@ cross_domain_ownership:
   lessons_driver:
     owner: incidents
     consumers: [policies]
-    canonical_path: houseofcards/customer/incidents/engines/lessons_engine.py
+    canonical_path: hoc/cus/incidents/L5_engines/lessons_engine.py
     note: "Lessons are created from failure events (incidents domain owns write)"
 
   policy_violation_driver:
     owner: incidents
     consumers: [policies]
-    canonical_path: houseofcards/customer/incidents/engines/policy_violation_service.py
+    canonical_path: hoc/cus/incidents/L5_engines/policy_violation_service.py
     note: "Violations are facts about run failures (incidents domain owns write)"
 
   # Tables NOT owned by policies domain for writes:

@@ -50,7 +50,7 @@
 | Page | Path | Route | Backend APIs | Status |
 |------|------|-------|--------------|--------|
 | OverviewPage | `products/ai-console/pages/overview/` | `/guard/overview` | `/guard/status`, `/guard/snapshot/today` | CANONICAL |
-| ActivityPage | `products/ai-console/pages/activity/` | `/guard/activity` | `/api/v1/customer/activity` | CANONICAL |
+| ActivityPage | `products/ai-console/pages/activity/` | `/guard/activity` | `/api/v1/cus/activity` | CANONICAL |
 | IncidentsPage | `products/ai-console/pages/incidents/` | `/guard/incidents` | `/guard/incidents` | CANONICAL |
 | IncidentDetailPage | `products/ai-console/pages/incidents/` | `/guard/incidents/:id` | `/guard/incidents/:id`, `/guard/incidents/:id/timeline` | CANONICAL |
 | PoliciesPage | `products/ai-console/pages/policies/` | `/guard/policies` | `/guard/policies/*` | CANONICAL |
@@ -178,25 +178,25 @@
 
 ---
 
-### Founder Tools (`pages/founder/`)
+### Founder Tools (`pages/fdr/`)
 
-**Current Routes:** `/founder/timeline`, `/founder/controls`, `/founder/replay/*`, `/founder/scenarios`, `/founder/explorer`
-**Target Routes:** `/fops/founder/*`
+**Current Routes:** `/fdr/timeline`, `/fdr/controls`, `/fdr/replay/*`, `/fdr/scenarios`, `/fdr/explorer`
+**Target Routes:** `/fops/fdr/*`
 **Capability:** CAP-005 (Founder Console), CAP-001 (Replay), CAP-002 (CostSim)
 
 | Page | File | Current Route | Backend APIs | Plane |
 |------|------|---------------|--------------|-------|
-| FounderTimelinePage | `FounderTimelinePage.tsx` | `/founder/timeline` | `/api/v1/founder/timeline/*` | Visibility |
-| FounderControlsPage | `FounderControlsPage.tsx` | `/founder/controls` | `/api/v1/killswitch/*` | Execution |
-| ReplayIndexPage | `ReplayIndexPage.tsx` | `/founder/replay` | `/api/v1/replay/*` | Visibility |
-| ReplaySliceViewer | `ReplaySliceViewer.tsx` | `/founder/replay/:id` | `/api/v1/replay/:id/*` | Visibility |
-| ScenarioBuilderPage | `ScenarioBuilderPage.tsx` | `/founder/scenarios` | `/api/v1/scenarios/*` | Advisory |
-| FounderExplorerPage | `FounderExplorerPage.tsx` | `/founder/explorer` | `/api/v1/explorer/*` | Visibility |
+| FounderTimelinePage | `FounderTimelinePage.tsx` | `/fdr/timeline` | `/api/v1/fdr/timeline/*` | Visibility |
+| FounderControlsPage | `FounderControlsPage.tsx` | `/fdr/controls` | `/api/v1/killswitch/*` | Execution |
+| ReplayIndexPage | `ReplayIndexPage.tsx` | `/fdr/replay` | `/api/v1/replay/*` | Visibility |
+| ReplaySliceViewer | `ReplaySliceViewer.tsx` | `/fdr/replay/:id` | `/api/v1/replay/:id/*` | Visibility |
+| ScenarioBuilderPage | `ScenarioBuilderPage.tsx` | `/fdr/scenarios` | `/api/v1/scenarios/*` | Advisory |
+| FounderExplorerPage | `FounderExplorerPage.tsx` | `/fdr/explorer` | `/api/v1/explorer/*` | Visibility |
 
-**Supporting Components:** 2 files in `pages/founder/components/`
+**Supporting Components:** 2 files in `pages/fdr/components/`
 
 **Backend APIs Used:**
-- `GET /api/v1/founder/timeline/*` - Decision timeline
+- `GET /api/v1/fdr/timeline/*` - Decision timeline
 - `POST /api/v1/killswitch/*` - Kill-switch controls
 - `GET /api/v1/replay/:id/slice` - Replay slice
 - `GET /api/v1/scenarios` - Scenario list
@@ -244,7 +244,7 @@
 /recovery                 → Founder (WRONG - should be /fops/recovery)
 /sba                      → Founder (WRONG - should be /fops/sba)
 /integration/*            → Founder (WRONG - should be /fops/integration/*)
-/founder/*                → Founder (WRONG - should be /fops/founder/*)
+/fdr/*                → Founder (WRONG - should be /fops/fdr/*)
 /credits                  → DISPUTED
 /*                        → AppLayout fallback (DANGEROUS)
 ```
@@ -261,7 +261,7 @@
   /fops/recovery          → Recovery
   /fops/sba               → SBA
   /fops/integration/*     → Integration
-  /fops/founder/*         → Founder Tools
+  /fops/fdr/*         → Founder Tools
   /fops/credits           → Billing (if founder-only)
 ```
 

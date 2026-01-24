@@ -277,7 +277,7 @@ Cross-cutting integrations - L4/L6.
 
 | File | Likely Layer |
 |------|--------------|
-| `backend/app/integrations/bridges.py` | L4 |
+| `backend/app/integrations/L3_adapters.py` | L4 |
 | `backend/app/integrations/cost_bridges.py` | L4 |
 | `backend/app/integrations/cost_safety_rails.py` | L4 |
 | `backend/app/integrations/cost_snapshots.py` | L4 |

@@ -128,7 +128,7 @@ From `CONSTRAINT_DECLARATION_CONTRACT.md`:
 ### Implementation Order
 
 1. Add `policy/engine.py:pre_check()` method
-2. Integrate into `/customer/pre-run`
+2. Integrate into `/cus/pre-run`
 3. Add `policy_blocked` to PreRunDeclaration model
 4. Modify acknowledgement to require policy consent
 5. Update goal endpoint to verify acknowledgement

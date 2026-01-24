@@ -41,13 +41,13 @@ Completed session handoff for CAP-006 Authentication Gateway implementation. All
 | `invariants.py` | Auth invariant guards |
 
 #### API Routes Added (L2):
-- `/founder/contracts/*` - Founder review gate
-- `/founder/explorer/*` - Codebase explorer
+- `/fdr/contracts/*` - Founder review gate
+- `/fdr/explorer/*` - Codebase explorer
 - `/scenarios/*` - Cost simulation (H2, advisory)
 - `/replay/*` - Execution replay
 - `/authz/status` - Authorization status
 - `/guard/logs`, `/guard/policies` - Guard management
-- `/customer/*` - Customer activity, incidents, keys, policies
+- `/cus/*` - Customer activity, incidents, keys, policies
 
 #### Adapters (L3):
 - `founder_review_adapter.py`

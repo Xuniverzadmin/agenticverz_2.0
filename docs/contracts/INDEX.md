@@ -211,10 +211,10 @@ If these questions cannot be answered, the scenario is rejected.
 
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /founder/timeline/run/{run_id}` | Raw timeline for a run |
-| `GET /founder/timeline/decisions` | List all decision records |
-| `GET /founder/timeline/decisions/{id}` | Single decision record |
-| `GET /founder/timeline/count` | Count records |
+| `GET /fdr/timeline/run/{run_id}` | Raw timeline for a run |
+| `GET /fdr/timeline/decisions` | List all decision records |
+| `GET /fdr/timeline/decisions/{id}` | Single decision record |
+| `GET /fdr/timeline/count` | Count records |
 
 ### Consumption Rules (Enforced)
 
@@ -260,10 +260,10 @@ All fields visible:
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /customer/pre-run` | PRE-RUN declaration before execution |
-| `POST /customer/acknowledge` | Customer acknowledgement gate |
-| `GET /customer/outcome/{run_id}` | Outcome reconciliation after execution |
-| `GET /customer/declaration/{id}` | Retrieve stored declaration |
+| `POST /cus/pre-run` | PRE-RUN declaration before execution |
+| `POST /cus/acknowledge` | Customer acknowledgement gate |
+| `GET /cus/outcome/{run_id}` | Outcome reconciliation after execution |
+| `GET /cus/declaration/{id}` | Retrieve stored declaration |
 
 ### What Customers See
 

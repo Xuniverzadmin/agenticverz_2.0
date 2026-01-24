@@ -354,7 +354,7 @@ This document provides a complete inventory of backend resources mapped to the A
 | `GET /api/v1/connectivity/integrations` | CON-INT-SDK-O1 | Integration status |
 | `GET /api/v1/connectivity/integrations/sdk` | CON-INT-SDK-O2 | SDK setup status |
 | `GET /api/v1/connectivity/providers` | CON-INT-SDK-O3 | Provider connections |
-| `POST /api/v1/customer/integrations/register` | - | Register integration |
+| `POST /api/v1/cus/integrations/register` | - | Register integration |
 
 ### 7.2 API → API Keys
 

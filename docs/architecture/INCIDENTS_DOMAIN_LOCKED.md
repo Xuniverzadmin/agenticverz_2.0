@@ -8,7 +8,7 @@
 
 ## Lock Declaration
 
-The **Incidents Domain** (`houseofcards/customer/incidents/`) has completed Phase-2.5A extraction.
+The **Incidents Domain** (`hoc/cus/incidents/`) has completed Phase-2.5A extraction.
 
 All engines now delegate persistence to L6 drivers. No raw SQL remains in L4 engines.
 
@@ -18,12 +18,12 @@ All engines now delegate persistence to L6 drivers. No raw SQL remains in L4 eng
 
 | Engine | Location |
 |--------|----------|
-| incident_engine.py | `customer/incidents/engines/` |
-| lessons_engine.py | `customer/incidents/engines/` |
-| policy_violation_service.py | `customer/incidents/engines/` |
-| llm_failure_service.py | `customer/incidents/engines/` |
-| postmortem_service.py | `customer/incidents/engines/` |
-| incident_pattern_service.py | `customer/incidents/engines/` |
+| incident_engine.py | `customer/incidents/L5_engines/` |
+| lessons_engine.py | `customer/incidents/L5_engines/` |
+| policy_violation_service.py | `customer/incidents/L5_engines/` |
+| llm_failure_service.py | `customer/incidents/L5_engines/` |
+| postmortem_service.py | `customer/incidents/L5_engines/` |
+| incident_pattern_service.py | `customer/incidents/L5_engines/` |
 
 ---
 
@@ -79,7 +79,7 @@ All engines now delegate persistence to L6 drivers. No raw SQL remains in L4 eng
 ```bash
 # Verify no raw SQL in incidents engines
 grep -rE "(select\(|insert\(|update\(|text\()" \
-  backend/app/houseofcards/customer/incidents/engines/
+  backend/app/hoc/cus/incidents/L5_engines/
 
 # Expected: No matches (or TYPE_CHECKING only)
 ```
@@ -88,7 +88,7 @@ grep -rE "(select\(|insert\(|update\(|text\()" \
 
 ## Next Domain
 
-**P0 Priority:** `customer/policies/engines/`
+**P0 Priority:** `customer/policies/L5_engines/`
 
 Begin extraction when this document is acknowledged.
 

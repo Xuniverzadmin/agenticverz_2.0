@@ -29,7 +29,7 @@ from ..schemas.response import wrap_dict
 logger = logging.getLogger("nova.api.founder_timeline")
 
 # PIN-318: Router-level auth - all endpoints require founder token (aud="fops")
-router = APIRouter(prefix="/founder/timeline", tags=["founder-timeline"], dependencies=[Depends(verify_fops_token)])
+router = APIRouter(prefix="/fdr/timeline", tags=["founder-timeline"], dependencies=[Depends(verify_fops_token)])
 
 
 # =============================================================================

@@ -522,7 +522,7 @@ async def test_g5b_10_founder_timeline_reconstruction():
 
     # Query founder timeline
     timeline = await client.get(
-        f"/founder/timeline/decisions?request_id={request_id}"
+        f"/fdr/timeline/decisions?request_id={request_id}"
     )
 
     decisions = timeline.json()["decisions"]

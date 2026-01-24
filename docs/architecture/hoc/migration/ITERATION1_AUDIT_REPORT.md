@@ -26,7 +26,7 @@ Iteration 1 automated classification is complete. **"SHARED" audience eliminated
 
 | Action | Count | % | Description |
 |--------|-------|---|-------------|
-| **TRANSFER** | 961 | 95.2% | Move to houseofcards/ structure |
+| **TRANSFER** | 961 | 95.2% | Move to hoc/ structure |
 | **STAYS** | 30 | 3.0% | L7 models stay in app/ |
 | **DELETE** | 18 | 1.8% | Deprecated/duplicate files |
 
@@ -34,9 +34,9 @@ Iteration 1 automated classification is complete. **"SHARED" audience eliminated
 
 | Audience | Count | % | Target Root |
 |----------|-------|---|-------------|
-| **CUSTOMER** | 619 | 61.3% | `houseofcards/customer/` |
-| **INTERNAL** | 342 | 33.9% | `houseofcards/internal/` |
-| **FOUNDER** | 30 | 3.0% | `houseofcards/founder/` |
+| **CUSTOMER** | 619 | 61.3% | `hoc/cus/` |
+| **INTERNAL** | 342 | 33.9% | `hoc/int/` |
+| **FOUNDER** | 30 | 3.0% | `hoc/fdr/` |
 | **DEPRECATED** | 18 | 1.8% | DELETE |
 
 ### SHARED Reclassification (User Decisions)
@@ -100,17 +100,17 @@ Iteration 1 automated classification is complete. **"SHARED" audience eliminated
 
 ## Files Already in HOC Namespace
 
-248 files are already in `app/houseofcards/` and just need relocation:
+248 files are already in `app/hoc/` and just need relocation:
 
 | Location | Count | Status |
 |----------|-------|--------|
-| `app/houseofcards/customer/` | 186 | Just relocate |
-| `app/houseofcards/internal/` | 48 | Just relocate |
-| `app/houseofcards/founder/` | 13 | Just relocate |
-| `app/houseofcards/duplicate/` | 15 | DELETE |
-| `app/houseofcards/__init__.py` | 1 | Just relocate |
+| `app/hoc/cus/` | 186 | Just relocate |
+| `app/hoc/int/` | 48 | Just relocate |
+| `app/hoc/fdr/` | 13 | Just relocate |
+| `app/hoc/duplicate/` | 15 | DELETE |
+| `app/hoc/__init__.py` | 1 | Just relocate |
 
-These files are already structured by audience/domain - they just need to move from `app/houseofcards/` to `houseofcards/`.
+These files are already structured by audience/domain - they just need to move from `app/hoc/` to `hoc/`.
 
 ---
 
@@ -189,10 +189,10 @@ Files with LOW confidence typically have:
 
 ## Directory Structure Preview
 
-After migration, the `houseofcards/` structure will be:
+After migration, the `hoc/` structure will be:
 
 ```
-houseofcards/
+hoc/
 ├── api/
 │   ├── customer/           # 60+ API routes
 │   ├── founder/            # ~10 API routes

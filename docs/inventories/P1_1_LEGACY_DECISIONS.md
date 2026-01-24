@@ -95,7 +95,7 @@ The problem is discoverability by customers, not the code itself.
 
 ---
 
-### Founder Tools (`pages/founder/`)
+### Founder Tools (`pages/fdr/`)
 
 | Page | Classification | Reason |
 |------|----------------|--------|
@@ -106,7 +106,7 @@ The problem is discoverability by customers, not the code itself.
 | ScenarioBuilderPage | **RETAIN** | Active founder tool, cost simulation |
 | FounderExplorerPage | **RETAIN** | Active founder tool, cross-tenant explorer |
 
-**Migration:** `/founder/*` → `/fops/founder/*`
+**Migration:** `/fdr/*` → `/fops/fdr/*`
 
 ---
 
@@ -156,11 +156,11 @@ The problem is discoverability by customers, not the code itself.
 
 **Evidence for founder_review.py QUARANTINE:**
 - API is mounted (fixed in Phase 1)
-- No frontend page calls `/founder/contracts/*` endpoints
+- No frontend page calls `/fdr/contracts/*` endpoints
 - May be future functionality or dead code
 - Safe to quarantine until usage confirmed
 
-**Migration (retained):** `/founder/*` → `/fops/founder/*`
+**Migration (retained):** `/fdr/*` → `/fops/fdr/*`
 
 ---
 
@@ -251,7 +251,7 @@ All RETAIN items require namespace migration in Phase 1.1-3:
 | `/recovery` | `/fops/recovery` |
 | `/sba` | `/fops/sba` |
 | `/integration/*` | `/fops/integration/*` |
-| `/founder/*` | `/fops/founder/*` |
+| `/fdr/*` | `/fops/fdr/*` |
 
 ### Backend API Prefixes
 
@@ -259,7 +259,7 @@ All RETAIN items require namespace migration in Phase 1.1-3:
 |---------|--------|
 | `/ops/*` | `/fops/ops/*` |
 | `/explorer` | `/fops/explorer` |
-| `/founder/*` | `/fops/founder/*` |
+| `/fdr/*` | `/fops/fdr/*` |
 | `/replay` | `/fops/replay` |
 | `/scenarios` | `/fops/scenarios` |
 | `/traces` | `/fops/traces` |

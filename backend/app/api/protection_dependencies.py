@@ -54,7 +54,7 @@ EXEMPT_PREFIXES = (
     "/health",
     "/metrics",
     "/api/v1/auth/",
-    "/founder/",
+    "/fdr/",
     "/docs",
     "/openapi.json",
     "/redoc",

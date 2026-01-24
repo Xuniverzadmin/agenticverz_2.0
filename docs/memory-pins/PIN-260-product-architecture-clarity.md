@@ -82,7 +82,7 @@ Per Constitution Section 3.3:
 | Python SDK | PyPI: `aos-sdk` | PUBLISHED |
 | JavaScript SDK | npm: `@agenticverz/aos-sdk` | PUBLISHED |
 | Ops Console | `pages/ops/` | Separate jurisdiction |
-| Founder Console | `pages/founder/` | Separate jurisdiction |
+| Founder Console | `pages/fdr/` | Separate jurisdiction |
 
 ---
 

@@ -38,7 +38,7 @@
 |-------|-------------------|--------|-------|
 | LOG-REC-LLM-O1 | `/api/v1/runtime/traces` | ✅ CORRECT | runtime.py |
 | LOG-REC-LLM-O2 | `/api/v1/activity/runs` | ✅ CORRECT | activity.py |
-| LOG-REC-LLM-O3 | `/api/v1/customer/activity` | ✅ CORRECT | customer_activity.py |
+| LOG-REC-LLM-O3 | `/api/v1/cus/activity` | ✅ CORRECT | customer_activity.py |
 | LOG-REC-LLM-O4 | `/api/v1/tenants/runs` | ⚠️ NEEDS VERIFY | Check if endpoint exists |
 | LOG-REC-LLM-O5 | `/api/v1/traces/mismatches` | ⚠️ NEEDS VERIFY | Check if endpoint exists |
 

@@ -87,9 +87,9 @@ Adapter methods:
 `backend/app/api/founder_review.py` (~330 lines)
 
 Endpoints:
-- `GET /founder/contracts/review-queue` - List ELIGIBLE contracts
-- `GET /founder/contracts/{contract_id}` - Get contract details
-- `POST /founder/contracts/{contract_id}/review` - Submit APPROVE/REJECT
+- `GET /fdr/contracts/review-queue` - List ELIGIBLE contracts
+- `GET /fdr/contracts/{contract_id}` - Get contract details
+- `POST /fdr/contracts/{contract_id}/review` - Submit APPROVE/REJECT
 
 Features:
 - Uses L3 adapter for all response translation
@@ -240,7 +240,7 @@ Implementation order from here:
 
 ## API Reference
 
-### GET /founder/contracts/review-queue
+### GET /fdr/contracts/review-queue
 
 Returns all contracts in ELIGIBLE status awaiting founder review.
 
@@ -267,11 +267,11 @@ Returns all contracts in ELIGIBLE status awaiting founder review.
 }
 ```
 
-### GET /founder/contracts/{contract_id}
+### GET /fdr/contracts/{contract_id}
 
 Returns full contract context for review decision.
 
-### POST /founder/contracts/{contract_id}/review
+### POST /fdr/contracts/{contract_id}/review
 
 Submit APPROVE or REJECT decision.
 

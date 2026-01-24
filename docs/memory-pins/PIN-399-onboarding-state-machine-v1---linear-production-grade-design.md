@@ -124,7 +124,7 @@ Single escape hatch for founders to bypass onboarding for enterprise customers.
 
 ### Implementation
 
-- **Endpoint:** `POST /founder/onboarding/force-complete`
+- **Endpoint:** `POST /fdr/onboarding/force-complete`
 - **Guard:** `verify_fops_token` (founder-only)
 - **Audit:** Mandatory audit event before transition
 - **Target:** Always `COMPLETE` (fixed target)

@@ -62,9 +62,9 @@ EXCLUSIONS = [
 # Model paths that STAY (L7)
 MODEL_PATTERNS = [
     r"^app/models/",
-    r"^app/customer/models/",
-    r"^app/founder/models/",
-    r"^app/internal/models/",
+    r"^app/cus/models/",
+    r"^app/fdr/models/",
+    r"^app/int/models/",
 ]
 
 # Deprecated/duplicate patterns to mark for deletion
@@ -392,8 +392,8 @@ def main():
     parser.add_argument(
         "--hoc-root",
         type=Path,
-        default=Path("backend/houseofcards"),
-        help="Path to houseofcards/ directory (default: backend/houseofcards)"
+        default=Path("backend/hoc"),
+        help="Path to hoc/ directory (default: backend/hoc)"
     )
     parser.add_argument(
         "--output",

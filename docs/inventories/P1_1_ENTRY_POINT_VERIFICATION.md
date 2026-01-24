@@ -80,12 +80,12 @@ routes/index.tsx (AppRoutes)
 | `pages/sba/SBAInspectorPage.tsx` | `/sba` | OK |
 | `pages/integration/IntegrationDashboard.tsx` | `/integration` | OK |
 | `pages/integration/LoopStatusPage.tsx` | `/integration/loop/:id` | OK |
-| `pages/founder/FounderTimelinePage.tsx` | `/founder/timeline` | OK |
-| `pages/founder/FounderControlsPage.tsx` | `/founder/controls` | OK |
-| `pages/founder/ReplayIndexPage.tsx` | `/founder/replay` | OK |
-| `pages/founder/ReplaySliceViewer.tsx` | `/founder/replay/:id` | OK |
-| `pages/founder/ScenarioBuilderPage.tsx` | `/founder/scenarios` | OK |
-| `pages/founder/FounderExplorerPage.tsx` | `/founder/explorer` | OK |
+| `pages/fdr/FounderTimelinePage.tsx` | `/fdr/timeline` | OK |
+| `pages/fdr/FounderControlsPage.tsx` | `/fdr/controls` | OK |
+| `pages/fdr/ReplayIndexPage.tsx` | `/fdr/replay` | OK |
+| `pages/fdr/ReplaySliceViewer.tsx` | `/fdr/replay/:id` | OK |
+| `pages/fdr/ScenarioBuilderPage.tsx` | `/fdr/scenarios` | OK |
+| `pages/fdr/FounderExplorerPage.tsx` | `/fdr/explorer` | OK |
 | `pages/credits/CreditsPage.tsx` | `/credits` | OK |
 
 **Founder Pages Status:** 15/15 pages routed
@@ -120,7 +120,7 @@ These files are in `pages/` directories but are components, not routable pages:
 |------|------|---------|
 | `pages/sba/components/*.tsx` (18 files) | Components | SBAInspectorPage |
 | `pages/workers/components/*.tsx` (5 files) | Components | Worker pages |
-| `pages/founder/components/*.tsx` (2 files) | Components | Founder pages |
+| `pages/fdr/components/*.tsx` (2 files) | Components | Founder pages |
 | `products/ai-console/pages/incidents/IncidentFilters.tsx` | Component | IncidentsPage |
 | `products/ai-console/pages/incidents/IncidentSearchBar.tsx` | Component | IncidentsPage |
 | `products/ai-console/pages/incidents/DecisionTimeline.tsx` | Component | IncidentDetailPage |

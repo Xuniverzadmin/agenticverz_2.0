@@ -33,12 +33,12 @@ class Classification:
 # Audience patterns by directory
 # NOTE: No "SHARED" audience - everything must be CUSTOMER, FOUNDER, or INTERNAL
 AUDIENCE_PATTERNS = [
-    # Already in app/houseofcards/ structure
-    (r"^app/houseofcards/customer/", "CUSTOMER"),
-    (r"^app/houseofcards/founder/", "FOUNDER"),
-    (r"^app/houseofcards/internal/", "INTERNAL"),
-    (r"^app/houseofcards/duplicate/", "DEPRECATED"),  # Mark for deletion
-    (r"^app/houseofcards/__init__\.py$", "INTERNAL"),  # HOC root init
+    # Already in app/hoc/ structure
+    (r"^app/hoc/cus/", "CUSTOMER"),
+    (r"^app/hoc/fdr/", "FOUNDER"),
+    (r"^app/hoc/int/", "INTERNAL"),
+    (r"^app/hoc/duplicate/", "DEPRECATED"),  # Mark for deletion
+    (r"^app/hoc/__init__\.py$", "INTERNAL"),  # HOC root init
 
     # API routes - detect audience from path or filename
     (r"^app/api/founder", "FOUNDER"),
@@ -55,9 +55,9 @@ AUDIENCE_PATTERNS = [
     (r"^app/adapters/", "CUSTOMER"),
 
     # Models stay in app/ - L7 (audience doesn't matter for STAYS)
-    (r"^app/customer/models/", "CUSTOMER"),
-    (r"^app/founder/models/", "FOUNDER"),
-    (r"^app/internal/models/", "INTERNAL"),
+    (r"^app/cus/models/", "CUSTOMER"),
+    (r"^app/fdr/models/", "FOUNDER"),
+    (r"^app/int/models/", "INTERNAL"),
     (r"^app/models/", "INTERNAL"),  # Shared models → INTERNAL (but they STAY)
 
     # Infrastructure (internal platform)
@@ -134,7 +134,7 @@ AUDIENCE_PATTERNS = [
 
 # Domain patterns by directory/filename
 DOMAIN_PATTERNS = [
-    # Explicit domain directories in houseofcards
+    # Explicit domain directories in hoc
     (r"/overview/", "overview"),
     (r"/activity/", "activity"),
     (r"/incidents/", "incidents"),
@@ -259,7 +259,7 @@ LAYER_PATTERNS = [
     (r"^app/services/sandbox/.*_service\.py$", "L4", "L4 Domain Engine (Sandbox)"),
 
     # L4 Domain Engines in HOC (already migrated)
-    (r"^app/houseofcards/.*/platform_health_service\.py$", "L4", "L4 Domain Engine (Health)"),
+    (r"^app/hoc/.*/platform_health_service\.py$", "L4", "L4 Domain Engine (Health)"),
 
     # L6 Platform Substrate (services that are data stores)
     (r"^app/services/tenant_service\.py$", "L6", "L6 Platform Substrate (Tenant)"),
@@ -273,7 +273,7 @@ LAYER_PATTERNS = [
     (r"^app/memory/memory_service\.py$", "L6", "L6 Platform Substrate (Memory)"),
 
     # DELETE - Quarantined duplicates in HOC/duplicate
-    (r"^app/houseofcards/duplicate/.*_service\.py$", "DELETE", "Quarantined duplicate"),
+    (r"^app/hoc/duplicate/.*_service\.py$", "DELETE", "Quarantined duplicate"),
 
     # Catch-all for remaining _service.py (should be empty after above patterns)
     (r"_service\.py$", "L5/L6", "Service (needs manual check)"),
@@ -358,7 +358,7 @@ LAYER_PATTERNS = [
     (r"^app/skill_http\.py$", "L5", "HTTP skill"),
 
     # Deprecated duplicate files (will be deleted)
-    (r"^app/houseofcards/duplicate/", "DELETE", "Deprecated duplicate"),
+    (r"^app/hoc/duplicate/", "DELETE", "Deprecated duplicate"),
 ]
 
 
@@ -402,7 +402,7 @@ def get_source_subdirectory(source_path: str) -> str:
         # Get the directory just before the filename
         parent = parts[-2]
         # Skip generic parents
-        if parent not in ('services', 'adapters', 'api', 'houseofcards', 'customer',
+        if parent not in ('services', 'adapters', 'api', 'hoc', 'customer',
                           'internal', 'founder', 'engines', 'facades', 'drivers', 'schemas'):
             return parent
     return ""
@@ -414,7 +414,7 @@ def generate_target_path(
     domain: str,
     layer: str
 ) -> str:
-    """Generate target path in app/houseofcards/ structure.
+    """Generate target path in app/hoc/ structure.
 
     Option B Decision: HOC files stay within app/ directory.
     Legacy code in app/services/ will be deleted in Phase 5 after migration.
@@ -435,8 +435,8 @@ def generate_target_path(
     if layer == "L7":
         return source_path  # No change
 
-    # Files already in app/houseofcards/ stay in place
-    if source_path.startswith("app/houseofcards/"):
+    # Files already in app/hoc/ stay in place
+    if source_path.startswith("app/hoc/"):
         return source_path  # No change for already-migrated files
 
     # Normalize audience for path
@@ -465,22 +465,22 @@ def generate_target_path(
             "protocol.py" in source_path
         )
         if is_schema:
-            return f"app/houseofcards/{aud_lower}/{domain}/schemas/{disambig_filename}"
+            return f"app/hoc/{aud_lower}/{domain}/schemas/{disambig_filename}"
         else:
-            return f"app/houseofcards/{aud_lower}/{domain}/drivers/{disambig_filename}"
+            return f"app/hoc/{aud_lower}/{domain}/drivers/{disambig_filename}"
 
-    # Map layer to directory (Option B: app/houseofcards/ as root)
+    # Map layer to directory (Option B: app/hoc/ as root)
     # FIX: L2 must preserve filename (not consolidate to single domain file)
     # FIX: L4 must respect domain (not all go to general/runtime)
     # FIX: L3 goes to facades/ (consistent with existing HOC structure)
     layer_dirs = {
-        "L2": f"app/houseofcards/api/{aud_lower}/{domain}/{disambig_filename}",
-        "L2-Infra": f"app/houseofcards/api/infrastructure/{disambig_filename}",
-        "L3": f"app/houseofcards/{aud_lower}/{domain}/facades/{disambig_filename}",
-        "L4": f"app/houseofcards/{aud_lower}/{domain}/engines/{disambig_filename}",
-        "L5": f"app/houseofcards/{aud_lower}/{domain}/engines/{disambig_filename}",
-        "L5/L6": f"app/houseofcards/{aud_lower}/{domain}/services/{disambig_filename}",
-        "UNKNOWN": f"app/houseofcards/unclassified/{disambig_filename}",
+        "L2": f"app/hoc/api/{aud_lower}/{domain}/{disambig_filename}",
+        "L2-Infra": f"app/hoc/api/infrastructure/{disambig_filename}",
+        "L3": f"app/hoc/{aud_lower}/{domain}/facades/{disambig_filename}",
+        "L4": f"app/hoc/{aud_lower}/{domain}/engines/{disambig_filename}",
+        "L5": f"app/hoc/{aud_lower}/{domain}/engines/{disambig_filename}",
+        "L5/L6": f"app/hoc/{aud_lower}/{domain}/services/{disambig_filename}",
+        "UNKNOWN": f"app/hoc/unclassified/{disambig_filename}",
         "N/A": "",
     }
 
@@ -488,7 +488,7 @@ def generate_target_path(
         return layer_dirs[layer]
 
     # Default path
-    return f"app/houseofcards/{audience.lower()}/{domain}/{disambig_filename}"
+    return f"app/hoc/{audience.lower()}/{domain}/{disambig_filename}"
 
 
 def determine_action(
@@ -508,7 +508,7 @@ def determine_action(
     if audience == "DEPRECATED":
         return "DELETE"
 
-    if "houseofcards/duplicate" in source_path:
+    if "hoc/duplicate" in source_path:
         return "DELETE"
 
     return "TRANSFER"
@@ -525,11 +525,11 @@ def classify_file(row: dict) -> Classification:
     # Handle pre-classified statuses
     if auto_status == "STAYS":
         # Determine audience for L7 models based on directory
-        if "/customer/" in source_path:
+        if "/cus/" in source_path:
             model_audience = "CUSTOMER"
-        elif "/founder/" in source_path:
+        elif "/fdr/" in source_path:
             model_audience = "FOUNDER"
-        elif "/internal/" in source_path:
+        elif "/int/" in source_path:
             model_audience = "INTERNAL"
         else:
             model_audience = "INTERNAL"  # Shared models default to INTERNAL

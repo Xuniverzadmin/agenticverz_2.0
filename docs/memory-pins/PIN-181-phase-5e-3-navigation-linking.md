@@ -17,7 +17,7 @@ Phase 5E-3 links existing Founder Console UIs into a coherent navigation structu
 ## Session Context
 
 This work continues from PIN-180 (Phase 5E-2 Kill-Switch UI Toggle) which completed:
-- Founder Controls page at `/founder/controls`
+- Founder Controls page at `/fdr/controls`
 - Freeze/Unfreeze functionality with confirmation dialogs
 - Build verified
 
@@ -44,8 +44,8 @@ MAIN CONSOLES
 └── Guard Console  → /guard
 
 FOUNDER (emerald heading)
-├── Timeline       → /founder/timeline
-└── Controls       → /founder/controls
+├── Timeline       → /fdr/timeline
+└── Controls       → /fdr/controls
 
 EXECUTION
 ├── Workers        → /workers
@@ -81,8 +81,8 @@ The Founder pages (Timeline, Controls) are accessible via:
 | Route | Page | Purpose |
 |-------|------|---------|
 | `/ops` | OpsConsoleEntry | Pulse + Console views |
-| `/founder/timeline` | FounderTimelinePage | Decision record viewer |
-| `/founder/controls` | FounderControlsPage | Kill-switch operations |
+| `/fdr/timeline` | FounderTimelinePage | Decision record viewer |
+| `/fdr/controls` | FounderControlsPage | Kill-switch operations |
 
 ### Customer Console (Product)
 
@@ -183,8 +183,8 @@ npm run build
 ```typescript
 // Sidebar.tsx
 const FOUNDER_ITEMS = [
-  { icon: Clock, label: 'Timeline', href: '/founder/timeline' },
-  { icon: Power, label: 'Controls', href: '/founder/controls' },
+  { icon: Clock, label: 'Timeline', href: '/fdr/timeline' },
+  { icon: Power, label: 'Controls', href: '/fdr/controls' },
 ];
 
 // In nav:
@@ -210,14 +210,14 @@ const FOUNDER_ITEMS = [
 {/* Founder Pages (Phase 5E) */}
 <div className="flex items-center gap-3 border-l border-gray-700 pl-4 ml-2">
   <Link
-    to="/founder/timeline"
+    to="/fdr/timeline"
     className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
   >
     <Clock className="w-4 h-4" />
     Timeline
   </Link>
   <Link
-    to="/founder/controls"
+    to="/fdr/controls"
     className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
   >
     <Power className="w-4 h-4" />

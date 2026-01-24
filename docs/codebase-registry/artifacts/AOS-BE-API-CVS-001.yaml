@@ -16,8 +16,8 @@ traceability:
   subdomain: visibility
   order_depth: O2
 responsibility: |
-  - GET /customer/pre-run/{run_id} - Pre-run declaration
-  - GET /customer/post-run/{run_id} - Post-run accountability
+  - GET /cus/pre-run/{run_id} - Pre-run declaration
+  - GET /cus/post-run/{run_id} - Post-run accountability
   - Show effects, not mechanics
   - No decision records exposed
   - No governance internals

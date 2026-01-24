@@ -254,7 +254,7 @@ recovery_status = recovery.get("status") if isinstance(recovery, dict) else geta
 |------|---------|
 | `backend/app/integrations/__init__.py` | Added `get_dispatcher()`, `trigger_integration_loop()` |
 | `backend/app/integrations/dispatcher.py` | Fixed JSONB casting syntax |
-| `backend/app/integrations/bridges.py` | Fixed all 5 bridges: JSONB casts, schema mismatches, serialization |
+| `backend/app/integrations/L3_adapters.py` | Fixed all 5 bridges: JSONB casts, schema mismatches, serialization |
 | `backend/app/integrations/events.py` | Added `to_dict()` to 5 dataclasses |
 | `scripts/ops/m25_trigger_real_incident.py` | New script for triggering real M25 incidents |
 

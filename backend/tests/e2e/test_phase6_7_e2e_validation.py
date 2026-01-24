@@ -245,7 +245,7 @@ class TestE2EValidation:
     def test_force_complete_advances_to_complete(self):
         """Force-complete moves tenant directly to COMPLETE state."""
         # Force-complete is an escape hatch for founders
-        # The endpoint is at POST /founder/onboarding/force-complete
+        # The endpoint is at POST /fdr/onboarding/force-complete
         # This test verifies the state transition is valid
 
         # Any state can advance to COMPLETE via force

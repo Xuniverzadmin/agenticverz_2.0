@@ -67,7 +67,7 @@ GENERATION_MODE = "SCRIPT"
 # Source: Derived from other domain READ models
 # Primary action: Navigate to underlying domain/panel
 #
-# Overview panels do NOT bind to platform/founder/infra capabilities.
+# Overview panels do NOT bind to platform/fdr/infra capabilities.
 # They bind to a DERIVED_READ_MODEL marker indicating composition.
 # =============================================================================
 
@@ -93,7 +93,7 @@ Each function returns:
 - severity_hint
 - redirect_target (domain/subdomain/topic/panel)
 
-Overview panels do NOT bind to platform/founder/infra capabilities (CAP-OVW-*).
+Overview panels do NOT bind to platform/fdr/infra capabilities (CAP-OVW-*).
 They use DERIVED_READ_MODEL as a composition marker.
 """
 

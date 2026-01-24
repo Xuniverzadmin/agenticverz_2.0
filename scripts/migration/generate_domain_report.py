@@ -10,10 +10,10 @@ from datetime import datetime
 
 def extract_domain(file_path: str) -> tuple[str, str]:
     """Extract audience and domain from file path."""
-    # Path pattern: app/houseofcards/{audience}/{domain}/...
+    # Path pattern: app/hoc/{audience}/{domain}/...
     parts = file_path.split("/")
-    if "houseofcards" in parts:
-        idx = parts.index("houseofcards")
+    if "hoc" in parts:
+        idx = parts.index("hoc")
         if idx + 2 < len(parts):
             audience = parts[idx + 1]
             domain = parts[idx + 2]

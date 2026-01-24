@@ -9,11 +9,11 @@
 
 ## Problem Statement
 
-The auth gateway middleware blocks `/founder/` API routes before they reach the route handler's `verify_fops_token` dependency. This prevents FOPS-authenticated requests from reaching founder endpoints.
+The auth gateway middleware blocks `/fdr/` API routes before they reach the route handler's `verify_fops_token` dependency. This prevents FOPS-authenticated requests from reaching founder endpoints.
 
 **Symptom:**
 ```bash
-curl -H "X-API-Key: $AOS_FOPS_KEY" "http://localhost:8000/founder/contracts/review-queue"
+curl -H "X-API-Key: $AOS_FOPS_KEY" "http://localhost:8000/fdr/contracts/review-queue"
 # Returns: {"error":"missing_auth","message":"Authentication required"}
 ```
 
@@ -39,7 +39,7 @@ File: `app/auth/gateway_config.py`
     "/health",
     "/metrics",
     "/docs",
-    # ... no /founder/ paths
+    # ... no /fdr/ paths
 ]
 ```
 
@@ -58,7 +58,7 @@ async def get_review_queue(
 
 ## Solution
 
-Add `/founder/` to gateway's public paths. The route handlers use their own auth (`verify_fops_token`) which validates FOPS tokens/keys.
+Add `/fdr/` to gateway's public paths. The route handlers use their own auth (`verify_fops_token`) which validates FOPS tokens/keys.
 
 **Rationale:**
 - Founder routes are designed with dedicated auth dependencies
@@ -74,7 +74,7 @@ Add `/founder/` to gateway's public paths. The route handlers use their own auth
 File: `app/auth/gateway_config.py`
 
 Add to `public_paths`:
-- `/founder/` - All founder API routes (contract review, evidence review)
+- `/fdr/` - All founder API routes (contract review, evidence review)
 - `/ops/` - Ops console routes (also FOPS auth)
 - `/platform/` - Platform health routes (also FOPS auth)
 
@@ -85,7 +85,7 @@ Add to `public_paths`:
 After fix:
 ```bash
 source .env
-curl -H "X-API-Key: $AOS_FOPS_KEY" "http://localhost:8000/founder/contracts/review-queue"
+curl -H "X-API-Key: $AOS_FOPS_KEY" "http://localhost:8000/fdr/contracts/review-queue"
 # Should return: {"items": [...], "total": N, ...}
 ```
 
@@ -107,11 +107,11 @@ curl -H "X-API-Key: $AOS_FOPS_KEY" "http://localhost:8000/founder/contracts/revi
 **Two middleware layers required fixes:**
 
 1. **Gateway Middleware** (`app/auth/gateway_config.py`):
-   - Added `/founder/`, `/ops/`, `/platform/` to `public_paths` in `get_gateway_middleware_config()`
+   - Added `/fdr/`, `/ops/`, `/platform/` to `public_paths` in `get_gateway_middleware_config()`
    - These routes now bypass gateway auth check
 
 2. **RBAC Middleware** (`app/auth/rbac_middleware.py`):
-   - Added `/founder/`, `/ops/`, `/platform/` to `PUBLIC_PATHS` in `get_policy_for_path()`
+   - Added `/fdr/`, `/ops/`, `/platform/` to `PUBLIC_PATHS` in `get_policy_for_path()`
    - These routes now return `None` (no policy) so RBAC is skipped
 
 **Error progression during debugging:**
@@ -122,7 +122,7 @@ curl -H "X-API-Key: $AOS_FOPS_KEY" "http://localhost:8000/founder/contracts/revi
 
 **Verification:**
 ```bash
-curl -H "X-API-Key: $AOS_FOPS_KEY" "http://localhost:8000/founder/contracts/review-queue"
+curl -H "X-API-Key: $AOS_FOPS_KEY" "http://localhost:8000/fdr/contracts/review-queue"
 # Returns: {"total":0,"contracts":[],"as_of":"2026-01-06T17:43:57.363557+00:00"}
 ```
 

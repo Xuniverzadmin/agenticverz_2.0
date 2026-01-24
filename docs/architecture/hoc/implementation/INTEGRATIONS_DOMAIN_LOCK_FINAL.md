@@ -14,7 +14,7 @@
 | Header Corrections | ✅ COMPLETE | drivers/, engines/, schemas/ init files fixed |
 | File Relocations | ✅ COMPLETE | 4 files relocated to correct layers |
 | File Splits | ✅ PARTIAL | 3 HYBRID files documented (pending M25) |
-| Audience Correction | ✅ COMPLETE | server_registry.py → customer/general/mcp/ |
+| Audience Correction | ✅ COMPLETE | server_registry.py → customer/general/L3_mcp/ |
 | Schema Extraction | ✅ COMPLETE | audit_schemas.py, cost_snapshot_schemas.py, loop_events.py |
 | Legacy Imports | ⏸️ PARTIAL | 2 deferred until dependency migration |
 | Init Exports | ✅ COMPLETE | All 3 init files updated |
@@ -48,7 +48,7 @@ This domain has **documented technical debt** that cannot be remediated without:
 ## Final File Structure
 
 ```
-backend/app/houseofcards/customer/integrations/
+backend/app/hoc/cus/integrations/
 ├── __init__.py
 ├── adapters/
 │   └── __init__.py
@@ -81,7 +81,7 @@ backend/app/houseofcards/customer/integrations/
 └── vault/
     └── (out of scope)
 
-backend/app/houseofcards/customer/general/mcp/
+backend/app/hoc/cus/general/L3_mcp/
 ├── __init__.py                          # L5 — MCP cross-domain package (NEW)
 └── server_registry.py                   # L6 — MCP server registry (MOVED)
 ```
@@ -191,7 +191,7 @@ Consequences:
 1. Bridges orchestrate policy activation with audit trails
 2. Cost snapshots track usage with anomaly detection
 3. Dispatcher manages loop lifecycle and event persistence
-4. MCP registry is cross-domain (customer/general/mcp/)
+4. MCP registry is cross-domain (customer/general/L3_mcp/)
 5. HYBRID files are technical debt, not permanent architecture
 
 ---
@@ -239,6 +239,15 @@ FILES_DELETED: 1
 TECHNICAL_DEBT: 3 HYBRID files (M25), 2 deferred imports
 OUT_OF_SCOPE: 4 naming, 8 facades
 ```
+
+---
+
+## Changelog
+
+| Date | Version | Change | Author |
+|------|---------|--------|--------|
+| 2026-01-24 | 1.0.0 | Initial lock (with documented technical debt) | Claude |
+| 2026-01-24 | 1.1.0 | Phase 2.5E BLCA verification: 0 errors, 0 warnings across all 6 check types (for in-scope files) | Claude |
 
 ---
 

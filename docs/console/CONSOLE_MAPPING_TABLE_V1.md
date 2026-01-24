@@ -89,8 +89,8 @@ Every discovered page is classified exactly once.
 
 | Route | Page Component | Purpose | Jurisdiction | Status |
 |-------|----------------|---------|--------------|--------|
-| `/founder/timeline` | `FounderTimelinePage.tsx` | Decision Timeline | FNDR | OK |
-| `/founder/controls` | `FounderControlsPage.tsx` | Kill-Switch Controls | FNDR | OK |
+| `/fdr/timeline` | `FounderTimelinePage.tsx` | Decision Timeline | FNDR | OK |
+| `/fdr/controls` | `FounderControlsPage.tsx` | Kill-Switch Controls | FNDR | OK |
 
 ### Founder Execution
 
@@ -205,7 +205,7 @@ Every discovered page is classified exactly once.
 |--------|---------|-------|
 | `/guard/*` | CUST | Customer Console |
 | `/ops/*` | FNDR | Founder Console (Pulse + Dashboard) |
-| `/founder/*` | FNDR | Founder Features (Phase 5E) |
+| `/fdr/*` | FNDR | Founder Features (Phase 5E) |
 | `/traces/*` | FNDR | Should be `/ops/traces/*` |
 | `/workers/*` | FNDR | Should be `/ops/workers/*` |
 | `/integration/*` | FNDR | Should be `/ops/integration/*` |
@@ -237,8 +237,8 @@ Every discovered page is classified exactly once.
 | Route | Current Location | Should Be | Severity |
 |-------|------------------|-----------|----------|
 | `/credits` | Root | `/guard/billing` | LOW |
-| `/founder/timeline` | Root | `/ops/timeline` | LOW |
-| `/founder/controls` | Root | `/ops/controls` | LOW |
+| `/fdr/timeline` | Root | `/ops/timeline` | LOW |
+| `/fdr/controls` | Root | `/ops/controls` | LOW |
 
 ---
 
@@ -289,8 +289,8 @@ Every discovered page is classified exactly once.
 /ops/                      → Founder Console Entry
 /ops/pulse                 → Pulse View
 /ops/console               → Dashboard View
-/ops/timeline              → Decision Timeline (move from /founder/)
-/ops/controls              → Kill-Switch Controls (move from /founder/)
+/ops/timeline              → Decision Timeline (move from /fdr/)
+/ops/controls              → Kill-Switch Controls (move from /fdr/)
 /ops/traces                → Traces (move from root)
 /ops/traces/:id            → Trace Detail
 /ops/workers               → Worker Studio (move from root)

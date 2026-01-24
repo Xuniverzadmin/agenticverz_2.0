@@ -197,16 +197,16 @@ Known next work items (no ordering assumed):
 | `src/api/replay.ts` | Replay API client |
 | `src/api/scenarios.ts` | Scenarios API client |
 | `src/api/explorer.ts` | Explorer API client |
-| `src/pages/founder/ReplayIndexPage.tsx` | Incident list |
-| `src/pages/founder/ReplaySliceViewer.tsx` | Timeline viewer |
-| `src/pages/founder/ScenarioBuilderPage.tsx` | Scenario builder |
-| `src/pages/founder/FounderExplorerPage.tsx` | Explorer dashboard |
+| `src/pages/fdr/ReplayIndexPage.tsx` | Incident list |
+| `src/pages/fdr/ReplaySliceViewer.tsx` | Timeline viewer |
+| `src/pages/fdr/ScenarioBuilderPage.tsx` | Scenario builder |
+| `src/pages/fdr/FounderExplorerPage.tsx` | Explorer dashboard |
 
 ### Routes Added
-- `/founder/replay` - Incident index
-- `/founder/replay/:incidentId` - Slice viewer
-- `/founder/scenarios` - Scenario builder
-- `/founder/explorer` - Cross-tenant explorer
+- `/fdr/replay` - Incident index
+- `/fdr/replay/:incidentId` - Slice viewer
+- `/fdr/scenarios` - Scenario builder
+- `/fdr/explorer` - Cross-tenant explorer
 
 ---
 

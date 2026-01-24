@@ -70,7 +70,7 @@ Driver files **MUST satisfy ALL**:
 ### File Placement
 
 ```
-houseofcards/{audience}/{domain}/
+hoc/{audience}/{domain}/
 ├── engines/
 │   └── incident_engine.py        # Business logic (no DB)
 ├── drivers/
@@ -201,9 +201,9 @@ Mark file in `phase2_backlog.yaml`:
 
 | # | File | Status | Driver | Date |
 |---|------|--------|--------|------|
-| 1 | `customer/incidents/engines/incident_read_service.py` | ⬜ | - | - |
+| 1 | `customer/incidents/L5_engines/incident_read_service.py` | ⬜ | - | - |
 | 2 | `customer/policies/controls/engines/customer_killswitch_read_service.py` | ⬜ | - | - |
-| 3 | `customer/policies/engines/customer_policy_read_service.py` | ⬜ | - | - |
+| 3 | `customer/policies/L5_engines/customer_policy_read_service.py` | ⬜ | - | - |
 
 **Batch 1 Target:** All 3 files extracted with 0 DB signals in engines.
 
@@ -211,10 +211,10 @@ Mark file in `phase2_backlog.yaml`:
 
 | # | File | Status | Driver | Date |
 |---|------|--------|--------|------|
-| 1 | `customer/account/engines/user_write_service.py` | ⬜ | - | - |
-| 2 | `customer/analytics/engines/cost_write_service.py` | ⬜ | - | - |
-| 3 | `customer/general/controls/engines/guard_write_service.py` | ⬜ | - | - |
-| 4 | `customer/incidents/engines/incident_write_service.py` | ⬜ | - | - |
+| 1 | `customer/account/L5_engines/user_write_service.py` | ⬜ | - | - |
+| 2 | `customer/analytics/L5_engines/cost_write_service.py` | ⬜ | - | - |
+| 3 | `customer/general/L5_controls/engines/guard_write_service.py` | ⬜ | - | - |
+| 4 | `customer/incidents/L5_engines/incident_write_service.py` | ⬜ | - | - |
 | 5 | `founder/ops/engines/founder_action_write_service.py` | ⬜ | - | - |
 
 **Batch 2 Target:** All 5 files extracted with 0 DB signals in engines.

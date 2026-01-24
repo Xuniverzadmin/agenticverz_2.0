@@ -104,7 +104,7 @@ Target: Migrate all `write` action checks to `authorize_action()`
 ### Phase 3: API Cleanup (Phase B→C)
 Target: Remove direct M7 API exposure
 
-1. [ ] `app/api/rbac_api.py` - Replace with `/internal/authz/*` endpoints
+1. [ ] `app/api/rbac_api.py` - Replace with `/int/authz/*` endpoints
 2. [ ] `app/main.py` - Remove M7 initialization
 
 ### Phase 4: Deletion (Phase C)

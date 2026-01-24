@@ -38,7 +38,7 @@ From this point forward:
 
 ```
 Founder / PrefOps  →  /ops           →  Truth, diagnosis
-Founder / Control  →  /founder/*     →  Authority, reversibility
+Founder / Control  →  /fdr/*     →  Authority, reversibility
 Customer           →  /guard         →  Product outcomes
 ```
 

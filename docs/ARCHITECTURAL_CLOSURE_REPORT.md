@@ -94,7 +94,7 @@ This report certifies the completion of Phases A, B, C, and C′ of the Layered 
 |----|-----|----------|----------|
 | C01 | `POST /ops/jobs/detect-silent-churn` | C1 | HIGH |
 | C02 | `POST /ops/jobs/compute-stickiness` | C1 | HIGH |
-| C03 | `POST /customer/pre-run-declaration` | C3 | MEDIUM |
+| C03 | `POST /cus/pre-run-declaration` | C3 | MEDIUM |
 | C04 | `GET /ops/revenue` | C3 | MEDIUM |
 | C05 | `POST /costsim/v2/simulate` | C5 | MEDIUM |
 

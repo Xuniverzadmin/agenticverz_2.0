@@ -92,7 +92,7 @@
 | SIG-051 | User | terminal | signup | user_write_service.py | L4 | onboarding.py | L2 | /api/v1/auth/me | PostgreSQL |
 | SIG-052 | APIKey | terminal | key_creation | tenants.py | L2 | v1_proxy.py | L2 | /api/v1/api-keys | PostgreSQL |
 | SIG-053 | AuditLog | raw | any_mutation | rbac_engine.py | L4 | rbac_api.py | L2 | /api/v1/rbac/audit | PostgreSQL |
-| SIG-054 | FounderAction | terminal | founder_decision | founder_action_write_service.py | L4 | founder_timeline.py | L2 | /founder/timeline/decisions | PostgreSQL |
+| SIG-054 | FounderAction | terminal | founder_decision | founder_action_write_service.py | L4 | founder_timeline.py | L2 | /fdr/timeline/decisions | PostgreSQL |
 
 ### 2.7 Worker Domain Signals
 

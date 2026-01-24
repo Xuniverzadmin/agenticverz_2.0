@@ -108,10 +108,10 @@ FRONTEND_INVOCABLE_CAPABILITIES = {
         "name": "Founder Console",
         "allowed_routes": [
             "GET /ops/*",
-            "GET /founder/timeline/*",
-            "GET /founder/controls/*",
-            "GET /founder/explorer/*",
-            "POST /founder/actions/*",
+            "GET /fdr/timeline/*",
+            "GET /fdr/controls/*",
+            "GET /fdr/explorer/*",
+            "POST /fdr/actions/*",
         ],
         "forbidden_routes": [],
         "invocation_modes": ["read", "write"],
@@ -133,10 +133,10 @@ FRONTEND_INVOCABLE_CAPABILITIES = {
     "CAP-011": {  # GOVERNANCE ORCHESTRATION
         "name": "Governance Orchestration",
         "allowed_routes": [
-            "GET /founder/review/*",
+            "GET /fdr/review/*",
             "GET /api/v1/discovery/*",
-            "POST /founder/review/{id}/approve",
-            "POST /founder/review/{id}/reject",
+            "POST /fdr/review/{id}/approve",
+            "POST /fdr/review/{id}/reject",
             "GET /sba/*",  # SBA inspector
         ],
         "forbidden_routes": [],

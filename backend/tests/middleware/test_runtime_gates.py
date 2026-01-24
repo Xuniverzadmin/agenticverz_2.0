@@ -115,7 +115,7 @@ class TestLifecycleGateExemptions:
     def test_exempt_prefixes_defined(self):
         """Exempt prefixes are defined."""
         assert "/health" in EXEMPT_PREFIXES
-        assert "/founder/" in EXEMPT_PREFIXES
+        assert "/fdr/" in EXEMPT_PREFIXES
         assert "/docs" in EXEMPT_PREFIXES
 
     def test_is_exempt_path_health(self):
@@ -125,7 +125,7 @@ class TestLifecycleGateExemptions:
 
     def test_is_exempt_path_founder(self):
         """Founder paths are exempt."""
-        assert is_exempt_path("/founder/lifecycle/t_123") is True
+        assert is_exempt_path("/fdr/lifecycle/t_123") is True
 
     def test_is_exempt_path_sdk(self):
         """SDK paths are NOT exempt."""

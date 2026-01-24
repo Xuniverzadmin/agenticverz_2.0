@@ -83,8 +83,8 @@ Both `lessons_engine.py` and `policy_violation_service.py` exist in THREE locati
 The following files are **exact duplicates** with no unique functionality:
 
 ```
-DELETE: app/houseofcards/customer/policies/engines/lessons_engine.py
-DELETE: app/houseofcards/customer/policies/engines/policy_violation_service.py
+DELETE: app/hoc/cus/policies/L5_engines/lessons_engine.py
+DELETE: app/hoc/cus/policies/L5_engines/policy_violation_service.py
 ```
 
 **Verification before delete:**
@@ -98,14 +98,14 @@ The `app/services/` files must delegate to incidents domain:
 
 **app/services/policy/lessons_engine.py → shim to incidents**
 ```python
-# DEPRECATED: Use app.houseofcards.customer.incidents.engines.lessons_engine
-from app.houseofcards.customer.incidents.engines.lessons_engine import *
+# DEPRECATED: Use app.hoc.cus.incidents.L5_engines.lessons_engine
+from app.hoc.cus.incidents.L5_engines.lessons_engine import *
 ```
 
 **app/services/policy_violation_service.py → shim to incidents**
 ```python
-# DEPRECATED: Use app.houseofcards.customer.incidents.engines.policy_violation_service
-from app.houseofcards.customer.incidents.engines.policy_violation_service import *
+# DEPRECATED: Use app.hoc.cus.incidents.L5_engines.policy_violation_service
+from app.hoc.cus.incidents.L5_engines.policy_violation_service import *
 ```
 
 ### Action 3: Update driver_inventory.yaml

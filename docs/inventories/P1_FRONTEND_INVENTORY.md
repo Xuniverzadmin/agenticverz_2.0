@@ -75,12 +75,12 @@
 | /recovery | RecoveryPage | CAP-011 | M10 |
 | /integration | IntegrationDashboard | CAP-013 | M25 |
 | /integration/loop/:id | LoopStatusPage | CAP-013 | M25 |
-| /founder/timeline | FounderTimelinePage | CAP-005 | 5E-1 |
-| /founder/controls | FounderControlsPage | CAP-005 | 5E-2 |
-| /founder/replay | ReplayIndexPage | CAP-001 | H1 |
-| /founder/replay/:id | ReplaySliceViewer | CAP-001 | H1 |
-| /founder/scenarios | ScenarioBuilderPage | CAP-002 | H2 |
-| /founder/explorer | FounderExplorerPage | CAP-005 | H3 |
+| /fdr/timeline | FounderTimelinePage | CAP-005 | 5E-1 |
+| /fdr/controls | FounderControlsPage | CAP-005 | 5E-2 |
+| /fdr/replay | ReplayIndexPage | CAP-001 | H1 |
+| /fdr/replay/:id | ReplaySliceViewer | CAP-001 | H1 |
+| /fdr/scenarios | ScenarioBuilderPage | CAP-002 | H2 |
+| /fdr/explorer | FounderExplorerPage | CAP-005 | H3 |
 | /sba | SBAInspectorPage | CAP-008 | M15 |
 | /credits | CreditsPage | Billing | - |
 
@@ -104,7 +104,7 @@
 | Page | API Endpoints |
 |------|---------------|
 | OverviewPage | /guard/status, /guard/snapshot/today |
-| ActivityPage | /api/v1/customer/activity |
+| ActivityPage | /api/v1/cus/activity |
 | IncidentsPage | /guard/incidents |
 | PoliciesPage | /guard/policies/* |
 | LogsPage | /guard/logs/* |

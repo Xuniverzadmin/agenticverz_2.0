@@ -89,12 +89,12 @@ Phase 2 Step 2 of the House of Cards (HOC) migration focuses on **layer segregat
 ## Files Created (Batch 2)
 
 ```
-backend/app/houseofcards/customer/incidents/drivers/incident_write_driver.py
-backend/app/houseofcards/customer/analytics/drivers/cost_write_driver.py
-backend/app/houseofcards/founder/ops/drivers/founder_action_write_driver.py
-backend/app/houseofcards/customer/general/controls/drivers/guard_write_driver.py
-backend/app/houseofcards/customer/general/controls/drivers/__init__.py
-backend/app/houseofcards/customer/account/drivers/user_write_driver.py
+backend/app/hoc/cus/incidents/L6_drivers/incident_write_driver.py
+backend/app/hoc/cus/analytics/L6_drivers/cost_write_driver.py
+backend/app/hoc/fdr/ops/drivers/founder_action_write_driver.py
+backend/app/hoc/cus/general/L5_controls/drivers/guard_write_driver.py
+backend/app/hoc/cus/general/L5_controls/drivers/__init__.py
+backend/app/hoc/cus/account/L6_drivers/user_write_driver.py
 ```
 
 ---
@@ -124,7 +124,7 @@ Only ActorType Enum (not ORM model) imported at runtime in incident_write_servic
 
 from typing import TYPE_CHECKING
 
-from app.houseofcards.{domain}/drivers/{name}_driver import (
+from app.hoc.{domain}/drivers/{name}_driver import (
     {Driver},
     get_{name}_driver,
 )
@@ -211,12 +211,12 @@ Backward compatibility: CusIntegrationService alias works
 ### Callers Updated
 
 - `app/services/integrations_facade.py` → imports from engine
-- `app/houseofcards/customer/integrations/facades/integrations_facade.py` → imports from engine
+- `app/hoc/cus/integrations/facades/integrations_facade.py` → imports from engine
 
 ### HOC Duplicates Deleted
 
-- `houseofcards/customer/integrations/engines/cus_integration_service.py`
-- `houseofcards/customer/logs/engines/cus_integration_service.py`
+- `hoc/cus/integrations/L5_engines/cus_integration_service.py`
+- `hoc/cus/logs/L5_engines/cus_integration_service.py`
 
 ---
 
@@ -250,7 +250,7 @@ Backward compatibility: CusIntegrationService alias works
 
 **Status:** COMPLETE ✅
 
-All 6 engines in `customer/incidents/engines/` extracted:
+All 6 engines in `customer/incidents/L5_engines/` extracted:
 
 | Engine | Driver | Authority |
 |--------|--------|-----------|
@@ -307,8 +307,8 @@ Created `POLICIES_AUTHORITY_MAP.md` with:
 
 | File | Reason |
 |------|--------|
-| `houseofcards/customer/policies/engines/lessons_engine.py` | Duplicate of incidents canonical; no callers |
-| `houseofcards/customer/policies/engines/policy_violation_service.py` | Duplicate of incidents canonical; no callers |
+| `hoc/cus/policies/L5_engines/lessons_engine.py` | Duplicate of incidents canonical; no callers |
+| `hoc/cus/policies/L5_engines/policy_violation_service.py` | Duplicate of incidents canonical; no callers |
 
 ### Step B: Created Legacy Shims (app/services/)
 
@@ -324,7 +324,7 @@ Converted legacy files to shims pointing to incidents domain canonical:
 # Layer: L7 — Legacy Shim (DEPRECATED)
 # MIGRATION PATH:
 #   Current:  from app.services.policy.lessons_engine import ...
-#   Future:   from app.houseofcards.customer.incidents.engines.lessons_engine import ...
+#   Future:   from app.hoc.cus.incidents.L5_engines.lessons_engine import ...
 ```
 
 ### Step C: Updated Driver Inventory with Ownership
@@ -437,7 +437,7 @@ Created `POLICIES_DOMAIN_LOCK.md` declaring:
 
 ### Work Completed
 
-**Target File:** `houseofcards/customer/incidents/engines/incident_engine.py`
+**Target File:** `hoc/cus/incidents/L5_engines/incident_engine.py`
 
 **DB Operations Extracted to Driver:**
 
@@ -478,8 +478,8 @@ Created `POLICIES_DOMAIN_LOCK.md` declaring:
 - Policy suppression decision flow
 
 ### Files Modified
-- `backend/app/houseofcards/customer/incidents/engines/incident_engine.py`
-- `backend/app/houseofcards/customer/incidents/drivers/incident_write_driver.py`
+- `backend/app/hoc/cus/incidents/L5_engines/incident_engine.py`
+- `backend/app/hoc/cus/incidents/L6_drivers/incident_write_driver.py`
 
 ### Phase-2.5A Progress
 - **Completed:** 1/70 HOC engine DB violations fixed
@@ -490,7 +490,7 @@ Created `POLICIES_DOMAIN_LOCK.md` declaring:
 
 ### Work Completed
 
-**Target File:** `houseofcards/customer/incidents/engines/lessons_engine.py`
+**Target File:** `hoc/cus/incidents/L5_engines/lessons_engine.py`
 
 **DB Operations Extracted to Driver:**
 
@@ -543,8 +543,8 @@ Created `POLICIES_DOMAIN_LOCK.md` declaring:
 - Proposal type determination for conversion
 
 ### Files Created/Modified
-- **NEW:** `backend/app/houseofcards/customer/incidents/drivers/lessons_driver.py`
-- **MODIFIED:** `backend/app/houseofcards/customer/incidents/engines/lessons_engine.py`
+- **NEW:** `backend/app/hoc/cus/incidents/L6_drivers/lessons_driver.py`
+- **MODIFIED:** `backend/app/hoc/cus/incidents/L5_engines/lessons_engine.py`
 
 ### Phase-2.5A Progress
 - **Completed:** 2/70 HOC engine DB violations fixed
@@ -555,7 +555,7 @@ Created `POLICIES_DOMAIN_LOCK.md` declaring:
 
 ### Work Completed
 
-**Target File:** `houseofcards/customer/incidents/engines/policy_violation_service.py`
+**Target File:** `hoc/cus/incidents/L5_engines/policy_violation_service.py`
 
 **Complexity:** HIGH (async + sync patterns, cross-domain dependencies)
 
@@ -612,8 +612,8 @@ This is a cross-domain call to another L4 engine, not direct DB access. The Sess
 - Idempotency checks
 
 ### Files Created/Modified
-- **NEW:** `backend/app/houseofcards/customer/incidents/drivers/policy_violation_driver.py`
-- **MODIFIED:** `backend/app/houseofcards/customer/incidents/engines/policy_violation_service.py`
+- **NEW:** `backend/app/hoc/cus/incidents/L6_drivers/policy_violation_driver.py`
+- **MODIFIED:** `backend/app/hoc/cus/incidents/L5_engines/policy_violation_service.py`
 
 ### Phase-2.5A Progress
 - **Completed:** 3/70 HOC engine DB violations fixed
@@ -624,7 +624,7 @@ This is a cross-domain call to another L4 engine, not direct DB access. The Sess
 
 ### Work Completed
 
-**Target File:** `houseofcards/customer/incidents/engines/llm_failure_service.py`
+**Target File:** `hoc/cus/incidents/L5_engines/llm_failure_service.py`
 
 **DB Operations Extracted to Driver:**
 
@@ -664,8 +664,8 @@ This is a cross-domain call to another L4 engine, not direct DB access. The Sess
 - PIN-196 invariant orchestration (persist → evidence → mark failed)
 
 ### Files Created/Modified
-- **NEW:** `backend/app/houseofcards/customer/incidents/drivers/llm_failure_driver.py`
-- **MODIFIED:** `backend/app/houseofcards/customer/incidents/engines/llm_failure_service.py`
+- **NEW:** `backend/app/hoc/cus/incidents/L6_drivers/llm_failure_driver.py`
+- **MODIFIED:** `backend/app/hoc/cus/incidents/L5_engines/llm_failure_service.py`
 
 ### Driver Inventory Updated
 - Added `llm_failure_driver` to `docs/architecture/driver_inventory.yaml`
@@ -682,7 +682,7 @@ This is a cross-domain call to another L4 engine, not direct DB access. The Sess
 
 ### Work Completed
 
-**Target File:** `houseofcards/customer/incidents/engines/postmortem_service.py`
+**Target File:** `hoc/cus/incidents/L5_engines/postmortem_service.py`
 
 **Classification:** READ-ONLY analytics (5 SELECT queries, 0 writes)
 
@@ -722,8 +722,8 @@ This is a cross-domain call to another L4 engine, not direct DB access. The Sess
 - All dataclass definitions (ResolutionSummary, LearningInsight, PostMortemResult, CategoryLearnings)
 
 ### Files Created/Modified
-- **NEW:** `backend/app/houseofcards/customer/incidents/drivers/postmortem_driver.py`
-- **MODIFIED:** `backend/app/houseofcards/customer/incidents/engines/postmortem_service.py`
+- **NEW:** `backend/app/hoc/cus/incidents/L6_drivers/postmortem_driver.py`
+- **MODIFIED:** `backend/app/hoc/cus/incidents/L5_engines/postmortem_service.py`
 
 ### Driver Inventory Updated
 - Added `postmortem_driver` to `docs/architecture/driver_inventory.yaml`
@@ -740,7 +740,7 @@ This is a cross-domain call to another L4 engine, not direct DB access. The Sess
 
 ### Work Completed
 
-**Target File:** `houseofcards/customer/incidents/engines/incident_pattern_service.py`
+**Target File:** `hoc/cus/incidents/L5_engines/incident_pattern_service.py`
 
 **Classification:** READ-ONLY pattern detection (4 SELECT queries, 0 writes)
 
@@ -779,8 +779,8 @@ This is a cross-domain call to another L4 engine, not direct DB access. The Sess
 - Pattern type determination logic
 
 ### Files Created/Modified
-- **NEW:** `backend/app/houseofcards/customer/incidents/drivers/incident_pattern_driver.py`
-- **MODIFIED:** `backend/app/houseofcards/customer/incidents/engines/incident_pattern_service.py`
+- **NEW:** `backend/app/hoc/cus/incidents/L6_drivers/incident_pattern_driver.py`
+- **MODIFIED:** `backend/app/hoc/cus/incidents/L5_engines/incident_pattern_service.py`
 
 ### Driver Inventory Updated
 - Added `incident_pattern_driver` to `docs/architecture/driver_inventory.yaml`
@@ -800,7 +800,7 @@ This is a cross-domain call to another L4 engine, not direct DB access. The Sess
 
 | Criterion | Status |
 |-----------|--------|
-| All engines in `customer/incidents/engines/` have zero raw DB signals | ✅ PASS |
+| All engines in `customer/incidents/L5_engines/` have zero raw DB signals | ✅ PASS |
 | All *_service.py files have drivers | ✅ PASS |
 | Drivers inventory has no duplicate methods | ✅ PASS |
 | All drivers registered in driver_inventory.yaml | ✅ PASS |
@@ -820,7 +820,7 @@ This is a cross-domain call to another L4 engine, not direct DB access. The Sess
 
 **INCIDENTS DOMAIN PHASE-2.5A: COMPLETE ✅**
 
-All engines in `customer/incidents/engines/` now delegate persistence to L6 drivers.
+All engines in `customer/incidents/L5_engines/` now delegate persistence to L6 drivers.
 No raw SQL remains in L4 engines. All drivers are registered with canonical authority.
 
 ---
@@ -829,7 +829,7 @@ No raw SQL remains in L4 engines. All drivers are registered with canonical auth
 
 ### Critical Reframe (User Directive)
 
-> **HOC (houseofcards/) is the CANONICAL runtime.**
+> **HOC (hoc/) is the CANONICAL runtime.**
 > **app/services/ is a transitional compatibility layer — will be deleted.**
 
 **Phase-2 Goal Rewritten:**
@@ -865,8 +865,8 @@ No raw SQL remains in L4 engines. All drivers are registered with canonical auth
 ### HOC Authority Map (Generated)
 
 **Structure:**
-- 287 engines in houseofcards/
-- 259 drivers in houseofcards/
+- 287 engines in hoc/
+- 259 drivers in hoc/
 
 **Violation Counts:**
 | Type | Count | Severity |
@@ -879,10 +879,10 @@ No raw SQL remains in L4 engines. All drivers are registered with canonical auth
 
 | Domain | Files |
 |--------|-------|
-| customer/incidents/engines/ | incident_engine.py, lessons_engine.py, etc. |
-| customer/policies/engines/ | policy_graph_engine.py, budget_enforcement_engine.py |
-| customer/analytics/engines/ | cost_anomaly_detector.py, coordinator.py |
-| customer/activity/engines/ | signal_feedback_service.py |
+| customer/incidents/L5_engines/ | incident_engine.py, lessons_engine.py, etc. |
+| customer/policies/L5_engines/ | policy_graph_engine.py, budget_enforcement_engine.py |
+| customer/analytics/L5_engines/ | cost_anomaly_detector.py, coordinator.py |
+| customer/activity/L5_engines/ | signal_feedback_service.py |
 | internal/agent/engines/ | 45 engines, many with DB access |
 
 ### Phase-2.5 Scope (Future — After All Splits)
@@ -1033,7 +1033,7 @@ Declare **Incidents Phase-2.5A DONE** when:
 2. All *_service.py in engines/ are: renamed OR shimmed OR deleted
 3. Drivers inventory has no duplicates
 
-Only then move to `customer/policies/engines/`.
+Only then move to `customer/policies/L5_engines/`.
 
 ---
 
@@ -1061,10 +1061,10 @@ Only then move to `customer/policies/engines/`.
 
 | Priority | Domain | Reason |
 |----------|--------|--------|
-| P0 | customer/incidents/engines/* | State-mutating, defines failure behavior |
-| P0 | customer/policies/engines/* | State-mutating, defines limits |
-| P1 | customer/analytics/engines/* | Read-heavy, lower blast radius |
-| P1 | customer/activity/engines/* | Signal-driven, lower blast radius |
+| P0 | customer/incidents/L5_engines/* | State-mutating, defines failure behavior |
+| P0 | customer/policies/L5_engines/* | State-mutating, defines limits |
+| P1 | customer/analytics/L5_engines/* | Read-heavy, lower blast radius |
+| P1 | customer/activity/L5_engines/* | Signal-driven, lower blast radius |
 | P2 | internal/agent/engines/* | Large surface, can be isolated last |
 
 **Pattern:** classify → split → verify → freeze (same as Phase-2)
