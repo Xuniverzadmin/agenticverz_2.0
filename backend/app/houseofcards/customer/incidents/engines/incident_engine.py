@@ -1,4 +1,5 @@
 # Layer: L4 — Domain Engine (System Truth)
+# AUDIENCE: INTERNAL
 # Product: system-wide (NOT console-owned)
 # Temporal:
 #   Trigger: worker (run failure events)
@@ -6,14 +7,29 @@
 # Role: Incident creation decision-making (domain logic)
 # Authority: Incident generation from run failures (SDSR pattern)
 # Callers: Worker runtime, API endpoints
-# Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
+# Allowed Imports: L6 drivers (via injection)
+# Forbidden Imports: L1, L2, L3, sqlalchemy, sqlmodel (at runtime)
 # Contract: SDSR (PIN-370)
-# Reference: PIN-370 (Scenario-Driven System Realization)
+# Reference: PIN-370, PIN-468 (Phase-2.5A L4/L6 Segregation)
 #
 # GOVERNANCE NOTE: This L4 engine owns INCIDENT CREATION logic.
 # Scenarios inject causes (failed runs), this engine creates incidents.
 # UI observes incidents, never writes them.
+#
+# EXTRACTION STATUS: Phase-2.5A (2026-01-23) — COMPLETE ✅
+# - All DB operations extracted to IncidentWriteDriver
+# - Engine contains ONLY decision logic
+# - NO sqlalchemy/sqlmodel imports at runtime
+#
+# ============================================================================
+# L4 ENGINE INVARIANT — INCIDENT DOMAIN (LOCKED)
+# ============================================================================
+# This file MUST NOT import sqlalchemy/sqlmodel at runtime.
+# All persistence is delegated to incident_write_driver.py.
+# Business decisions ONLY.
+#
+# Any violation is a Phase-2.5 regression.
+# ============================================================================
 
 """
 Incident Engine (L4 Domain Logic)
@@ -26,15 +42,36 @@ Per PIN-370 Rule 6 (Scenarios Inject Causes, Not Consequences):
 - This engine AUTOMATICALLY creates incidents
 - If incident doesn't appear, the ENGINE is broken, not the scenario
 
-Reference: PIN-370, INCIDENTS-EXEC-FAILURE-001
+DECISIONS (L4 - stay here):
+- Severity mapping from error codes
+- Category mapping from error codes
+- Policy suppression decision
+- Title generation
+- Policy proposal creation decision
+
+PERSISTENCE (L6 - delegated to driver):
+- INSERT into incidents
+- INSERT into prevention_records
+- INSERT into policy_proposals
+- UPDATE runs, aos_traces
+
+Reference: PIN-370, PIN-468, INCIDENTS-EXEC-FAILURE-001
 """
 
 import logging
 import os
+import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from sqlalchemy import create_engine, text
+# L6 driver import (allowed)
+from app.houseofcards.customer.incidents.drivers.incident_write_driver import (
+    IncidentWriteDriver,
+    get_incident_write_driver,
+)
+
+if TYPE_CHECKING:
+    from sqlmodel import Session
 
 logger = logging.getLogger("nova.services.incident_engine")
 
@@ -136,41 +173,65 @@ class IncidentEngine:
     Callers:
     - Worker runtime (on run failure)
     - inject_synthetic.py expectations validator
+
+    PIN-468 Phase-2.5A:
+    - All DB operations delegated to IncidentWriteDriver
+    - Engine contains ONLY decision logic
+    - No sqlalchemy/sqlmodel imports at runtime
     """
 
-    def __init__(self, db_url: Optional[str] = None):
-        """Initialize the incident engine."""
-        self._db_url = db_url or os.environ.get("DATABASE_URL")
+    def __init__(self, db_url: Optional[str] = None, driver: Optional[IncidentWriteDriver] = None):
+        """
+        Initialize the incident engine.
 
-    def _get_engine(self):
-        """Get SQLAlchemy engine."""
-        if not self._db_url:
-            raise RuntimeError("DATABASE_URL not configured")
-        return create_engine(self._db_url)
+        Args:
+            db_url: Database URL (for creating Session internally)
+            driver: Optional pre-configured driver (for testing/injection)
+        """
+        self._db_url = db_url or os.environ.get("DATABASE_URL")
+        self._driver = driver
+        self._session = None
+
+    def _get_driver(self) -> IncidentWriteDriver:
+        """
+        Get or create the write driver.
+
+        DECISION: Lazy initialization of driver with Session.
+        Creates Session from db_url if not injected.
+        """
+        if self._driver is not None:
+            return self._driver
+
+        if self._session is None:
+            # Create Session from db_url
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import sessionmaker
+
+            if not self._db_url:
+                raise RuntimeError("DATABASE_URL not configured")
+
+            engine = create_engine(self._db_url)
+            SessionLocal = sessionmaker(bind=engine)
+            self._session = SessionLocal()
+
+        self._driver = get_incident_write_driver(self._session)
+        return self._driver
 
     def _check_policy_suppression(
         self,
         tenant_id: str,
         error_code: Optional[str],
         category: str,
-    ) -> Optional[dict]:
+    ) -> Optional[Dict[str, Any]]:
         """
         Check if an active policy_rule suppresses this incident pattern.
 
-        POLICY ENFORCEMENT (Keystone):
-        - Called BEFORE incident creation (read-before-write)
+        DECISION: Policy enforcement check (read-before-write)
         - Returns matching policy_rule if suppression applies
         - Returns None if no suppression (proceed with incident)
 
-        Matching criteria:
-        - Same tenant_id
-        - is_active = true
-        - mode = 'active'
-        - conditions match error_code pattern
-
         This is NOT SDSR-specific logic. It applies to ALL runs,
-        both real and synthetic. The policy_rule itself may be
-        synthetic (for testing) but the enforcement logic is identical.
+        both real and synthetic.
 
         Args:
             tenant_id: Tenant scope
@@ -181,42 +242,12 @@ class IncidentEngine:
             dict with policy_rule info if suppressed, None otherwise
         """
         try:
-            engine = self._get_engine()
-            with engine.connect() as conn:
-                # Find active policy_rules for this tenant that match the error pattern
-                # The conditions JSONB contains trigger.error_code or similar
-                result = conn.execute(
-                    text("""
-                        SELECT id, name, conditions, source_incident_id
-                        FROM policy_rules
-                        WHERE tenant_id = :tenant_id
-                          AND is_active = true
-                          AND mode = 'active'
-                          AND (
-                            -- Match if conditions contain the error_code
-                            conditions::text LIKE :error_pattern
-                            OR conditions::text LIKE :category_pattern
-                          )
-                        ORDER BY created_at DESC
-                        LIMIT 1
-                    """),
-                    {
-                        "tenant_id": tenant_id,
-                        "error_pattern": f"%{error_code or 'UNKNOWN'}%",
-                        "category_pattern": f"%{category}%",
-                    },
-                )
-                row = result.fetchone()
-
-                if row:
-                    return {
-                        "policy_id": row[0],
-                        "policy_name": row[1],
-                        "conditions": row[2],
-                        "source_incident_id": row[3],
-                    }
-                return None
-
+            driver = self._get_driver()
+            return driver.fetch_suppressing_policy(
+                tenant_id=tenant_id,
+                error_code=error_code or "UNKNOWN",
+                category=category,
+            )
         except Exception as e:
             logger.warning(f"Error checking policy suppression: {e}")
             # On error, default to NOT suppressing (fail open for incident creation)
@@ -235,7 +266,7 @@ class IncidentEngine:
         """
         Write a prevention_record when a run is suppressed by an active policy.
 
-        EXACTLY ONE SIDE EFFECT:
+        DECISION: Exactly one side effect per run
         - Either an incident is created (in create_incident_for_failed_run)
         - OR a prevention_record is created (here)
         - NEVER both
@@ -252,42 +283,22 @@ class IncidentEngine:
         Returns:
             prevention_record ID
         """
-        import uuid
-
         prevention_id = f"prev_{uuid.uuid4().hex[:16]}"
         now = utc_now()
 
-        engine = self._get_engine()
-        with engine.connect() as conn:
-            conn.execute(
-                text("""
-                    INSERT INTO prevention_records (
-                        id, policy_id, pattern_id, original_incident_id,
-                        blocked_incident_id, tenant_id, outcome,
-                        signature_match_confidence, created_at,
-                        is_synthetic, synthetic_scenario_id
-                    ) VALUES (
-                        :id, :policy_id, :pattern_id, :original_incident_id,
-                        :blocked_incident_id, :tenant_id, :outcome,
-                        :signature_match_confidence, :created_at,
-                        :is_synthetic, :synthetic_scenario_id
-                    )
-                """),
-                {
-                    "id": prevention_id,
-                    "policy_id": policy_id,
-                    "pattern_id": error_code or "UNKNOWN",
-                    "original_incident_id": source_incident_id or policy_id,
-                    "blocked_incident_id": run_id,
-                    "tenant_id": tenant_id,
-                    "outcome": "prevented",
-                    "signature_match_confidence": 1.0,
-                    "created_at": now,
-                    "is_synthetic": is_synthetic,
-                    "synthetic_scenario_id": synthetic_scenario_id,
-                },
-            )
-            conn.commit()
+        driver = self._get_driver()
+        driver.insert_prevention_record(
+            prevention_id=prevention_id,
+            policy_id=policy_id,
+            pattern_id=error_code or "UNKNOWN",
+            original_incident_id=source_incident_id or policy_id,
+            blocked_incident_id=run_id,
+            tenant_id=tenant_id,
+            now=now,
+            is_synthetic=is_synthetic,
+            synthetic_scenario_id=synthetic_scenario_id,
+        )
+        driver.commit()
 
         logger.info(
             f"Prevention record {prevention_id}: run {run_id} suppressed by policy {policy_id}"
@@ -388,72 +399,40 @@ class IncidentEngine:
                     return None
 
             # Generate incident ID
-            import uuid
             incident_id = f"inc_{uuid.uuid4().hex[:16]}"
-
-            # Insert incident
-            engine = self._get_engine()
             now = utc_now()
 
-            with engine.connect() as conn:
-                conn.execute(
-                    text("""
-                        INSERT INTO incidents (
-                            id, tenant_id, title, severity, status,
-                            trigger_type, started_at, created_at, updated_at,
-                            source_run_id, source_type, category, description,
-                            error_code, error_message, impact_scope,
-                            affected_agent_id, affected_count,
-                            is_synthetic, synthetic_scenario_id
-                        ) VALUES (
-                            :id, :tenant_id, :title, :severity, :status,
-                            :trigger_type, :started_at, :created_at, :updated_at,
-                            :source_run_id, :source_type, :category, :description,
-                            :error_code, :error_message, :impact_scope,
-                            :affected_agent_id, :affected_count,
-                            :is_synthetic, :synthetic_scenario_id
-                        )
-                        ON CONFLICT (id) DO NOTHING
-                    """),
-                    {
-                        "id": incident_id,
-                        "tenant_id": tenant_id,
-                        "title": title,
-                        "severity": severity.upper(),
-                        "status": status,
-                        "trigger_type": "run_completion",  # Not just failure
-                        "started_at": now,
-                        "created_at": now,
-                        "updated_at": now,
-                        "source_run_id": run_id,
-                        "source_type": "run",
-                        "category": category,
-                        "description": description,
-                        "error_code": error_code if outcome != INCIDENT_OUTCOME_SUCCESS else None,
-                        "error_message": error_message if outcome != INCIDENT_OUTCOME_SUCCESS else None,
-                        "impact_scope": "single_run",
-                        "affected_agent_id": agent_id,
-                        "affected_count": 1,
-                        "is_synthetic": is_synthetic,
-                        "synthetic_scenario_id": synthetic_scenario_id,
-                    },
-                )
-                conn.commit()
+            # DELEGATE: Insert incident via driver
+            driver = self._get_driver()
+            inserted = driver.insert_incident(
+                incident_id=incident_id,
+                tenant_id=tenant_id,
+                title=title,
+                severity=severity.upper(),
+                status=status,
+                trigger_type="run_completion",
+                category=category,
+                description=description,
+                source_run_id=run_id,
+                source_type="run",
+                now=now,
+                error_code=error_code if outcome != INCIDENT_OUTCOME_SUCCESS else None,
+                error_message=error_message if outcome != INCIDENT_OUTCOME_SUCCESS else None,
+                agent_id=agent_id,
+                is_synthetic=is_synthetic,
+                synthetic_scenario_id=synthetic_scenario_id,
+            )
 
-                # Update runs.incident_count for Customer Console Activity panels
-                # This allows ACT-LLM-* panels to show "incidents caused by this run"
-                try:
-                    conn.execute(
-                        text("""
-                            UPDATE runs
-                            SET incident_count = incident_count + 1
-                            WHERE id = :run_id
-                        """),
-                        {"run_id": run_id},
-                    )
-                    conn.commit()
-                except Exception as e:
-                    logger.warning(f"Failed to update runs.incident_count for run {run_id}: {e}")
+            if not inserted:
+                logger.warning(f"Incident {incident_id} already exists (conflict)")
+
+            # Update runs.incident_count for Customer Console Activity panels
+            try:
+                driver.update_run_incident_count(run_id)
+            except Exception as e:
+                logger.warning(f"Failed to update runs.incident_count for run {run_id}: {e}")
+
+            driver.commit()
 
             logger.info(
                 f"Created incident {incident_id} for run {run_id} "
@@ -464,16 +443,8 @@ class IncidentEngine:
             if outcome != INCIDENT_OUTCOME_SUCCESS:
                 # GAP-PROP-001 FIX: Propagate incident_id to aos_traces
                 try:
-                    with engine.connect() as conn:
-                        conn.execute(
-                            text("""
-                                UPDATE aos_traces
-                                SET incident_id = :incident_id
-                                WHERE run_id = :run_id
-                            """),
-                            {"incident_id": incident_id, "run_id": run_id},
-                        )
-                        conn.commit()
+                    driver.update_trace_incident_id(run_id, incident_id)
+                    driver.commit()
                 except Exception as e:
                     logger.warning(f"Failed to propagate incident_id to trace: {e}")
 
@@ -588,95 +559,50 @@ class IncidentEngine:
 
             # Generate incident title
             title = self._generate_title(error_code, run_id)
-
-            # Generate incident ID
-            import uuid
-
             incident_id = f"inc_{uuid.uuid4().hex[:16]}"
-
-            # Insert incident into canonical incidents table (PIN-370 consolidation)
-            engine = self._get_engine()
             now = utc_now()
 
-            with engine.connect() as conn:
-                conn.execute(
-                    text("""
-                        INSERT INTO incidents (
-                            id, tenant_id, title, severity, status,
-                            trigger_type, started_at, created_at, updated_at,
-                            source_run_id, source_type, category, description,
-                            error_code, error_message, impact_scope,
-                            affected_agent_id, affected_count,
-                            is_synthetic, synthetic_scenario_id
-                        ) VALUES (
-                            :id, :tenant_id, :title, :severity, :status,
-                            :trigger_type, :started_at, :created_at, :updated_at,
-                            :source_run_id, :source_type, :category, :description,
-                            :error_code, :error_message, :impact_scope,
-                            :affected_agent_id, :affected_count,
-                            :is_synthetic, :synthetic_scenario_id
-                        )
-                        ON CONFLICT (id) DO NOTHING
-                    """),
-                    {
-                        "id": incident_id,
-                        "tenant_id": tenant_id,
-                        "title": title,
-                        "severity": severity.upper(),  # NORMALIZED: always uppercase (CRITICAL, HIGH, MEDIUM, LOW)
-                        "status": "OPEN",  # NORMALIZED: always uppercase (OPEN, ACKNOWLEDGED, RESOLVED, CLOSED)
-                        "trigger_type": "run_failure",
-                        "started_at": now,
-                        "created_at": now,
-                        "updated_at": now,
-                        "source_run_id": run_id,
-                        "source_type": "run",
-                        "category": category,
-                        "description": f"Run {run_id} failed with error: {error_code or 'UNKNOWN'}",
-                        "error_code": error_code,
-                        "error_message": error_message,
-                        "impact_scope": "single_run",
-                        "affected_agent_id": agent_id,
-                        "affected_count": 1,
-                        "is_synthetic": is_synthetic,
-                        "synthetic_scenario_id": synthetic_scenario_id,
-                    },
-                )
-                conn.commit()
+            # DELEGATE: Insert incident via driver
+            driver = self._get_driver()
+            inserted = driver.insert_incident(
+                incident_id=incident_id,
+                tenant_id=tenant_id,
+                title=title,
+                severity=severity.upper(),
+                status="OPEN",
+                trigger_type="run_failure",
+                category=category,
+                description=f"Run {run_id} failed with error: {error_code or 'UNKNOWN'}",
+                source_run_id=run_id,
+                source_type="run",
+                now=now,
+                error_code=error_code,
+                error_message=error_message,
+                agent_id=agent_id,
+                is_synthetic=is_synthetic,
+                synthetic_scenario_id=synthetic_scenario_id,
+            )
 
-                # Update runs.incident_count for Customer Console Activity panels
-                # This allows ACT-LLM-* panels to show "incidents caused by this run"
-                try:
-                    conn.execute(
-                        text("""
-                            UPDATE runs
-                            SET incident_count = incident_count + 1
-                            WHERE id = :run_id
-                        """),
-                        {"run_id": run_id},
-                    )
-                    conn.commit()
-                except Exception as e:
-                    logger.warning(f"Failed to update runs.incident_count for run {run_id}: {e}")
+            if not inserted:
+                logger.warning(f"Incident {incident_id} already exists (conflict)")
+
+            # Update runs.incident_count for Customer Console Activity panels
+            try:
+                driver.update_run_incident_count(run_id)
+            except Exception as e:
+                logger.warning(f"Failed to update runs.incident_count for run {run_id}: {e}")
+
+            driver.commit()
 
             logger.info(
                 f"Created incident {incident_id} for failed run {run_id} "
                 f"(category={category}, severity={severity}, synthetic={is_synthetic})"
             )
 
-            # GAP-PROP-001 FIX: Propagate incident_id to aos_traces (PIN-378 cross-domain correlation)
-            # This enables Logs → Incidents deep linking in UI
+            # GAP-PROP-001 FIX: Propagate incident_id to aos_traces
             try:
-                engine_conn = self._get_engine()
-                with engine_conn.connect() as conn:
-                    conn.execute(
-                        text("""
-                            UPDATE aos_traces
-                            SET incident_id = :incident_id
-                            WHERE run_id = :run_id
-                        """),
-                        {"incident_id": incident_id, "run_id": run_id},
-                    )
-                    conn.commit()
+                driver.update_trace_incident_id(run_id, incident_id)
+                driver.commit()
                 logger.debug(f"Propagated incident_id {incident_id} to trace for run {run_id}")
             except Exception as e:
                 # Don't fail incident creation if trace update fails
@@ -738,16 +664,16 @@ class IncidentEngine:
         - Only for HIGH/CRITICAL severity
         - Creates DRAFT proposal, never auto-enforces
 
+        DECISION (L4): Determine proposal type and rationale based on error pattern.
+        PERSISTENCE (L6): Delegated to driver.insert_policy_proposal()
+
         Returns:
             proposal_id if created, None otherwise
         """
         try:
-            import json
-            import uuid
-
             proposal_id = str(uuid.uuid4())
 
-            # Determine proposal type based on error pattern
+            # DECISION: Determine proposal type based on error pattern
             proposal_type_map = {
                 "EXECUTION_TIMEOUT": "timeout_policy",
                 "AGENT_CRASH": "crash_recovery_policy",
@@ -757,7 +683,7 @@ class IncidentEngine:
             }
             proposal_type = proposal_type_map.get(error_code or "", "failure_pattern_policy")
 
-            # Generate rationale
+            # DECISION: Generate human-readable rationale
             rationale = (
                 f"Auto-generated proposal based on {severity} severity incident.\n"
                 f"Category: {category}\n"
@@ -766,8 +692,8 @@ class IncidentEngine:
                 f"This proposal requires human review and approval before activation."
             )
 
-            # Generate proposed rule (simple template)
-            proposed_rule = {
+            # DECISION: Generate proposed rule template
+            proposed_rule: Dict[str, Any] = {
                 "type": proposal_type,
                 "trigger": {
                     "error_code": error_code,
@@ -781,38 +707,26 @@ class IncidentEngine:
                 "source_incident_id": incident_id,
             }
 
-            # Insert into policy_proposals
-            engine = self._get_engine()
+            # DECISION: Generate proposal name
+            proposal_name = f"Auto: {proposal_type.replace('_', ' ').title()} ({incident_id[:12]})"
+
             now = utc_now()
 
-            with engine.connect() as conn:
-                conn.execute(
-                    text("""
-                        INSERT INTO policy_proposals (
-                            id, tenant_id, proposal_name, proposal_type,
-                            rationale, proposed_rule, triggering_feedback_ids,
-                            status, created_at, is_synthetic, synthetic_scenario_id
-                        ) VALUES (
-                            :id, :tenant_id, :proposal_name, :proposal_type,
-                            :rationale, :proposed_rule, :triggering_feedback_ids,
-                            :status, :created_at, :is_synthetic, :synthetic_scenario_id
-                        )
-                    """),
-                    {
-                        "id": proposal_id,
-                        "tenant_id": tenant_id,
-                        "proposal_name": f"Auto: {proposal_type.replace('_', ' ').title()} ({incident_id[:12]})",
-                        "proposal_type": proposal_type,
-                        "rationale": rationale,
-                        "proposed_rule": json.dumps(proposed_rule),  # Proper JSON
-                        "triggering_feedback_ids": json.dumps([incident_id]),  # Proper JSON array
-                        "status": "draft",  # Always draft - human approval required
-                        "created_at": now,
-                        "is_synthetic": is_synthetic,  # SDSR traceability
-                        "synthetic_scenario_id": synthetic_scenario_id,  # SDSR traceability
-                    },
-                )
-                conn.commit()
+            # PERSISTENCE: Delegate to driver
+            driver = self._get_driver()
+            driver.insert_policy_proposal(
+                proposal_id=proposal_id,
+                tenant_id=tenant_id,
+                proposal_name=proposal_name,
+                proposal_type=proposal_type,
+                rationale=rationale,
+                proposed_rule=proposed_rule,
+                triggering_feedback_ids=[incident_id],
+                now=now,
+                is_synthetic=is_synthetic,
+                synthetic_scenario_id=synthetic_scenario_id,
+            )
+            driver.commit()
 
             logger.info(
                 f"Created policy proposal {proposal_id} for incident {incident_id} "
@@ -953,11 +867,13 @@ class IncidentEngine:
 
         return "UNKNOWN"
 
-    def get_incidents_for_run(self, run_id: str) -> list:
+    def get_incidents_for_run(self, run_id: str) -> List[Dict[str, Any]]:
         """
         Get all incidents linked to a run.
 
         Used by SDSR expectations validator to check if incidents were created.
+
+        PERSISTENCE (L6): Delegated to driver.fetch_incidents_by_run_id()
 
         Args:
             run_id: Run ID to check
@@ -966,33 +882,8 @@ class IncidentEngine:
             List of incident dicts
         """
         try:
-            engine = self._get_engine()
-
-            with engine.connect() as conn:
-                result = conn.execute(
-                    text("""
-                        SELECT id, category, severity, status, created_at, is_synthetic
-                        FROM incidents
-                        WHERE source_run_id = :run_id
-                        ORDER BY created_at DESC
-                    """),
-                    {"run_id": run_id},
-                )
-
-                incidents = []
-                for row in result:
-                    incidents.append(
-                        {
-                            "id": row[0],
-                            "category": row[1],
-                            "severity": row[2],
-                            "status": row[3],
-                            "created_at": row[4].isoformat() if row[4] else None,
-                            "is_synthetic": row[5],
-                        }
-                    )
-
-                return incidents
+            driver = self._get_driver()
+            return driver.fetch_incidents_by_run_id(run_id)
 
         except Exception as e:
             logger.error(f"Failed to get incidents for run {run_id}: {e}")

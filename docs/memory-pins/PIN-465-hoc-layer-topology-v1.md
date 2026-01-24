@@ -4,12 +4,15 @@
 **Created:** 2026-01-23
 **Category:** Architecture / Layer Model
 **Reference:** `docs/architecture/HOC_LAYER_TOPOLOGY_V1.md`
+**Current Version:** 1.2.0
 
 ---
 
 ## Summary
 
 Formal architecture document defining the 8-layer topology for House of Cards (HOC) structure. Establishes audience-first, domain-second organization with governed runtime layer.
+
+**v1.2.0 Additions:** Layer contracts for all layers (L2.1, L3, L4, L5, L6, Panel Engine) with mechanical enforcement rules.
 
 ---
 

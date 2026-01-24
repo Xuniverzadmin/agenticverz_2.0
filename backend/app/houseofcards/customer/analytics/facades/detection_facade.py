@@ -64,11 +64,11 @@ class DetectionType(str, Enum):
     POLICY = "policy"  # Policy violations
 
 
-class AnomalySeverity(str, Enum):
-    """Anomaly severity levels."""
-    LOW = "LOW"  # +15% to +25%
-    MEDIUM = "MEDIUM"  # +25% to +40%
-    HIGH = "HIGH"  # >40%
+# AnomalySeverity enum removed — ANA-DUP-001 quarantine
+# Import from canonical source: cost_anomaly_detector.py
+from app.houseofcards.customer.analytics.engines.cost_anomaly_detector import (
+    AnomalySeverity,
+)
 
 
 class AnomalyStatus(str, Enum):

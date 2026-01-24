@@ -1,0 +1,74 @@
+name: Layer Segregation Guard
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/app/**/*.py'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/app/**/*.py'
+
+jobs:
+  layer-guard:
+    name: Enforce L4/L6 Boundaries
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Layer Segregation Guard
+        run: |
+          python3 scripts/ops/layer_segregation_guard.py --ci
+        working-directory: ${{ github.workspace }}
+
+      - name: Run Shim Kill Guard
+        run: |
+          python3 backend/scripts/ops/shim_guard.py --ci --backend backend
+        working-directory: ${{ github.workspace }}
+
+      - name: Check for banned service files (new files only)
+        run: |
+          # Get list of added files in PR
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            ADDED_FILES=$(git diff --name-only --diff-filter=A ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
+          else
+            ADDED_FILES=$(git diff --name-only --diff-filter=A HEAD~1 HEAD)
+          fi
+
+          # Check for new *_service.py files in houseofcards
+          VIOLATIONS=$(echo "$ADDED_FILES" | grep -E "backend/app/houseofcards/.*_service\.py$" || true)
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "❌ BLOCKED: New *_service.py files are banned in houseofcards/"
+            echo ""
+            echo "Violations:"
+            echo "$VIOLATIONS"
+            echo ""
+            echo "Use *_engine.py for L4 (decisions) or *_driver.py for L6 (persistence)"
+            echo "Reference: docs/architecture/DRIVER_ENGINE_PATTERN_LOCKED.md"
+            exit 1
+          fi
+
+          echo "✅ No banned service files added"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Layer Segregation Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Reference: \`docs/architecture/DRIVER_ENGINE_PATTERN_LOCKED.md\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Rules Enforced" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Engines cannot import sqlalchemy/sqlmodel" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Drivers cannot contain business logic" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Drivers cannot import engines" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ New *_service.py files are banned" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Shim files are READ-ONLY (no logic, delegation only)" >> $GITHUB_STEP_SUMMARY

@@ -8,7 +8,7 @@
 
 **Status:** ACTIVE
 **Effective:** 2026-01-02
-**Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`, `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`, `docs/contracts/ARCHITECTURE_CONSTRAINTS_V1.yaml`, `docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md`, `docs/governance/RBAC_AUTHORITY_SEPARATION_DESIGN.md`, `docs/governance/PERMISSION_TAXONOMY_V1.md`, `docs/governance/SDSR_E2E_TESTING_PROTOCOL.md`, `docs/architecture/ENVIRONMENT_CONTRACT.md`
+**Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`, `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`, `docs/contracts/ARCHITECTURE_CONSTRAINTS_V1.yaml`, `docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md`, `docs/governance/RBAC_AUTHORITY_SEPARATION_DESIGN.md`, `docs/governance/PERMISSION_TAXONOMY_V1.md`, `docs/governance/SDSR_E2E_TESTING_PROTOCOL.md`, `docs/architecture/ENVIRONMENT_CONTRACT.md`, `docs/architecture/HOC_LAYER_TOPOLOGY_V1.md`
 
 ### Session Playbook Bootstrap (REQUIRED - BL-BOOT-001, BL-BOOT-002)
 
@@ -65,7 +65,9 @@ SESSION_BOOTSTRAP_CONFIRMATION
   - PHASE_G_STEADY_STATE_GOVERNANCE.md
   - GOVERNANCE_CHECKLIST.md
   - ENVIRONMENT_CONTRACT.md
+  - HOC_LAYER_TOPOLOGY_V1.md
 - visibility_lifecycle_loaded: YES
+- hoc_layer_topology_loaded: YES
 - environment_contract_loaded: YES
 - discovery_ledger_loaded: YES
 - database_contract_loaded: YES
@@ -140,6 +142,76 @@ The correct approach is:
 - DB operations: Use DATABASE_URL directly
 
 Reference: docs/architecture/ENVIRONMENT_CONTRACT.md
+```
+
+### HOC Layer Topology (CANONICAL REFERENCE - BL-HOC-LAYER-001)
+
+**Status:** RATIFIED
+**Version:** 1.2.0
+**Effective:** 2026-01-23
+**Reference:** `docs/architecture/HOC_LAYER_TOPOLOGY_V1.md`
+**Documentation Index:** `docs/architecture/hoc/INDEX.md` (master index for all HOC docs)
+
+> **This is the CANONICAL layer architecture for House of Cards (HOC).**
+> **When in doubt about layer rules, import boundaries, or file naming — READ THIS DOCUMENT.**
+
+**Quick Layer Reference:**
+
+| Layer | Name | Location Pattern | Purpose |
+|-------|------|------------------|---------|
+| L1 | Frontend | `website/app-shell/` | UI |
+| L2.1 | API Facade | `houseofcards/api/facades/{audience}/` | Route grouping |
+| L2 | APIs | `houseofcards/api/{audience}/` | HTTP handlers |
+| L3 | Adapters | `houseofcards/{audience}/{domain}/adapters/` | Translation (cross-domain OK) |
+| L4 | Runtime | `houseofcards/{audience}/general/runtime/` | Control plane |
+| L5 | Engines/Workers | `houseofcards/{audience}/{domain}/engines/` | Business logic |
+| L6 | Drivers | `houseofcards/{audience}/{domain}/drivers/` | DB operations |
+| L7 | Models | `app/models/` or `app/{audience}/models/` | ORM tables |
+
+**Naming Rules (LOCKED):**
+
+| Pattern | Status | Use |
+|---------|--------|-----|
+| `*_service.py` | ❌ **BANNED** | Never use |
+| `*_engine.py` | ✅ Required | L5 business logic |
+| `*_driver.py` | ✅ Required | L6 data access |
+| `*_adapter.py` | ✅ Allowed | L3 translation |
+| `*_facade.py` | ✅ Allowed | L2.1 API composition |
+
+**Critical Contracts:**
+
+| Layer | Rule |
+|-------|------|
+| L5 Engine | MUST NOT import `sqlalchemy`, `sqlmodel`, `Session` at runtime |
+| L6 Driver | Pure data access. NO business logic (`if severity >`, `if policy.allows`) |
+| L3 Adapter | Translation only. No state mutation, no retries |
+
+**Import Flow:**
+```
+L2.1 → L2 → L3 → L4/L5 → L6 → L7
+              ↓
+         (cross-domain allowed at L3 only)
+```
+
+**Cross-Domain Location Rule:**
+
+Respective cross-domain items shall be in `{audience}/general/` and not outside `{audience}/` folder. Files never leave their audience boundary when becoming cross-domain.
+
+Example: A file in `customer/integrations/` that needs cross-domain use → moves to `customer/general/`, NOT to `internal/` or another audience.
+
+**Hard Failure Response:**
+
+If Claude violates layer boundaries:
+```
+BL-HOC-LAYER-001 VIOLATION: Layer boundary crossed.
+
+Reference: docs/architecture/HOC_LAYER_TOPOLOGY_V1.md
+
+Layer rules:
+- L5 engines cannot import sqlalchemy/sqlmodel
+- L6 drivers cannot contain business logic
+- Cross-domain imports only at L3
+- *_service.py naming is BANNED
 ```
 
 ### Session Continuation from Summary (REQUIRED - BL-BOOT-003)

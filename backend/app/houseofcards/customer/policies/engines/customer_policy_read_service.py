@@ -1,49 +1,58 @@
 # Layer: L4 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api
-#   Execution: sync (delegates to L6)
-# Role: Customer policy domain read operations (L4)
+#   Execution: sync (delegates to L6 driver)
+# Role: Customer policy domain read operations with business logic (L4)
 # Callers: customer_policies_adapter.py (L3)
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: PIN-281 (POLICY Domain Qualification)
+# Allowed Imports: L6 (drivers only, NOT ORM models)
+# Forbidden Imports: L1, L2, L3, L5, sqlalchemy, sqlmodel
+# Reference: PIN-281, PHASE2_EXTRACTION_PROTOCOL.md
 #
 # GOVERNANCE NOTE:
-# This L4 service provides READ operations for the Policy domain.
-# All policy constraint reads must go through this service.
-# The L3 adapter should NOT import L6 directly.
-# CUSTOMER-SAFE: No threshold values or internal rule configs exposed.
+# This L4 engine delegates DB operations to PolicyReadDriver (L6).
+# Business logic (period calculation, budget math) stays HERE.
+# Phase 2 extraction: DB operations moved to drivers/policy_read_driver.py
+#
+# EXTRACTION STATUS: COMPLETE (2026-01-23)
 
 """
 Customer Policy Read Service (L4)
 
 This service provides all READ operations for the Policy domain.
-It sits between L3 (CustomerPoliciesAdapter) and L6 (Tenant, ProxyCall, DefaultGuardrail).
+It delegates DB access to PolicyReadDriver (L6) and applies business logic.
 
-L3 (Adapter) → L4 (this service) → L6 (Models)
+L3 (Adapter) → L4 (this service) → L6 (PolicyReadDriver)
 
 Responsibilities:
-- Query tenant budget settings
-- Calculate current period usage
-- Query guardrails list
-- Translate internal models → customer-visible policy constraints
-- Hide internal fields (threshold values, rule configs)
-- Stable period calculation
+- Calculate period bounds (business logic)
+- Calculate budget remaining/percentage (business logic)
+- Assemble customer-safe DTOs
+- Rate limits defaults (business logic)
+- Delegate DB queries to driver
 
-Reference: POLICY Domain Qualification Task
+Business Logic (stays in L4):
+- _calculate_period_bounds() - daily/weekly/monthly period calculation
+- Budget remaining calculation
+- Percentage calculation
+- Rate limit defaults
+
+Reference: PIN-281, PHASE2_EXTRACTION_PROTOCOL.md
 """
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import and_, func
-from sqlmodel import Session, select
+# L6 driver import (allowed)
+from app.houseofcards.customer.policies.drivers.policy_read_driver import (
+    PolicyReadDriver,
+    get_policy_read_driver,
+)
 
-# L6 imports (allowed)
-from app.models.killswitch import DefaultGuardrail, ProxyCall
-from app.models.tenant import Tenant
+if TYPE_CHECKING:
+    from sqlmodel import Session
 
 
 @dataclass
@@ -113,20 +122,21 @@ class CustomerPolicyReadService:
     """
     L4 service for policy constraint read operations.
 
-    Provides tenant-scoped, bounded reads for the Policy domain.
-    All L3 adapters must use this service for policy reads.
+    Delegates DB operations to PolicyReadDriver (L6).
+    Applies business logic for period calculation, budget math, etc.
 
     INVARIANT: tenant_id is REQUIRED for budget operations.
+    NO DIRECT DB ACCESS - driver calls only.
     """
 
-    def __init__(self, session: Session):
+    def __init__(self, session: "Session"):
         """
-        Initialize with database session.
+        Initialize with database session (passed to driver).
 
         Args:
             session: SQLModel session (injected by L3)
         """
-        self._session = session
+        self._driver = get_policy_read_driver(session)
 
     def get_policy_constraints(
         self,
@@ -146,13 +156,13 @@ class CustomerPolicyReadService:
         if not tenant_id:
             raise ValueError("tenant_id is required for get_policy_constraints")
 
-        # Get budget constraint
+        # Get budget constraint (business logic + driver data)
         budget = self._get_budget_constraint(tenant_id)
 
-        # Get rate limits (simplified - could be expanded)
+        # Get rate limits (business logic - defaults)
         rate_limits = self._get_rate_limits(tenant_id)
 
-        # Get guardrails list
+        # Get guardrails list (driver data + DTO transform)
         guardrails = self._get_guardrails()
 
         return PolicyConstraints(
@@ -183,50 +193,46 @@ class CustomerPolicyReadService:
         if not guardrail_id:
             raise ValueError("guardrail_id is required for get_guardrail_detail")
 
-        stmt = select(DefaultGuardrail).where(DefaultGuardrail.id == guardrail_id)
-        result = self._session.exec(stmt).first()
+        # Delegate to driver
+        guardrail_dto = self._driver.get_guardrail_by_id(guardrail_id)
 
-        if result is None:
+        if guardrail_dto is None:
             return None
 
-        return self._to_guardrail_summary(result)
+        # Transform driver DTO to customer-safe summary
+        return GuardrailSummary(
+            id=guardrail_dto.id,
+            name=guardrail_dto.name,
+            description=guardrail_dto.description or "",
+            enabled=guardrail_dto.is_enabled,
+            category=guardrail_dto.category,
+            action_on_trigger=guardrail_dto.action,
+        )
 
     def _get_budget_constraint(self, tenant_id: str) -> Optional[BudgetConstraint]:
         """
         Get budget constraint for tenant.
 
-        Calculates current period usage and remaining budget.
+        BUSINESS LOGIC: Calculates period bounds, remaining, percentage.
         """
-        # Get tenant settings
-        stmt = select(Tenant).where(Tenant.id == tenant_id)
-        result = self._session.exec(stmt).first()
+        # Get tenant settings from driver
+        tenant_data = self._driver.get_tenant_budget_settings(tenant_id)
 
-        if result is None:
+        if tenant_data is None:
             return None
 
-        tenant = result
+        budget_limit = tenant_data.budget_limit_cents
+        budget_period = tenant_data.budget_period
 
-        # Extract budget settings (use defaults if not set)
-        # Note: Tenant model may not have budget_limit_cents/budget_period
-        # These could be derived from plan or explicit settings
-        budget_limit = getattr(tenant, "budget_limit_cents", 10000)  # $100 default
-        budget_period = getattr(tenant, "budget_period", "daily")
-
-        # Calculate period start and reset time
+        # BUSINESS LOGIC: Calculate period start and reset time
         now = datetime.now(timezone.utc)
         period_start, reset_at = self._calculate_period_bounds(now, budget_period)
 
-        # Query current usage from ProxyCall
-        usage_stmt = select(func.coalesce(func.sum(ProxyCall.cost_cents), 0)).where(
-            and_(
-                ProxyCall.tenant_id == tenant_id,
-                ProxyCall.created_at >= period_start,
-            )
-        )
-        usage_result = self._session.exec(usage_stmt).first()
-        current_usage = int(usage_result) if usage_result else 0
+        # Get usage from driver
+        usage_data = self._driver.get_usage_sum_since(tenant_id, period_start)
+        current_usage = usage_data.total_cents
 
-        # Calculate remaining and percentage
+        # BUSINESS LOGIC: Calculate remaining and percentage
         remaining = max(0, budget_limit - current_usage)
         percentage = (current_usage / budget_limit * 100) if budget_limit > 0 else 0
 
@@ -246,6 +252,8 @@ class CustomerPolicyReadService:
     ) -> tuple[datetime, datetime]:
         """
         Calculate period start and reset time.
+
+        BUSINESS LOGIC: Defines how daily/weekly/monthly periods work.
 
         Args:
             now: Current time
@@ -274,7 +282,7 @@ class CustomerPolicyReadService:
         """
         Get rate limits for tenant.
 
-        Currently returns default rate limits.
+        BUSINESS LOGIC: Currently returns default rate limits.
         Could be expanded to tenant-specific limits.
         """
         # Default rate limits (could be made tenant-specific based on plan)
@@ -291,41 +299,37 @@ class CustomerPolicyReadService:
         """
         Get all guardrails.
 
-        Default guardrails apply to all tenants.
+        Transforms driver DTOs to customer-safe summaries.
         """
-        stmt = select(DefaultGuardrail).order_by(DefaultGuardrail.priority)
-        results = list(self._session.exec(stmt))
+        # Delegate to driver
+        guardrail_dtos = self._driver.list_all_guardrails()
 
-        return [self._to_guardrail_summary(g) for g in results]
-
-    def _to_guardrail_summary(self, guardrail: DefaultGuardrail) -> GuardrailSummary:
-        """
-        Transform internal DefaultGuardrail to customer-safe GuardrailSummary.
-
-        HIDES: priority, rule_type, rule_config_json, version
-        """
-        return GuardrailSummary(
-            id=guardrail.id,
-            name=guardrail.name,
-            description=guardrail.description or "",
-            enabled=guardrail.is_enabled,
-            category=guardrail.category,
-            action_on_trigger=guardrail.action,
-        )
+        # Transform to customer-safe summaries (hides priority, rule_config)
+        return [
+            GuardrailSummary(
+                id=g.id,
+                name=g.name,
+                description=g.description or "",
+                enabled=g.is_enabled,
+                category=g.category,
+                action_on_trigger=g.action,
+            )
+            for g in guardrail_dtos
+        ]
 
 
-def get_customer_policy_read_service(session: Optional[Session] = None) -> CustomerPolicyReadService:
+def get_customer_policy_read_service(session: "Session") -> CustomerPolicyReadService:
     """
     Factory function for CustomerPolicyReadService.
 
     Args:
-        session: Optional SQLModel session. If not provided, creates one internally.
+        session: SQLModel session (REQUIRED - must be provided by L3 adapter)
 
     Returns:
         Configured CustomerPolicyReadService instance
-    """
-    if session is None:
-        from app.db import engine
 
-        session = Session(engine)
+    Note:
+        Session must be provided by caller. This engine does not create sessions.
+        Session creation is the responsibility of L3 adapters.
+    """
     return CustomerPolicyReadService(session)

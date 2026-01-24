@@ -373,6 +373,10 @@ class APIKey(SQLModel, table=True):
     revoked_at: Optional[datetime] = None
     revoked_reason: Optional[str] = Field(default=None, max_length=255)
 
+    # Freeze status (M22 KillSwitch - INT-APIKEYS-BUG-001 fix)
+    is_frozen: bool = Field(default=False, description="True if API key is frozen")
+    frozen_at: Optional[datetime] = None
+
     # Usage
     last_used_at: Optional[datetime] = None
     total_requests: int = Field(default=0)

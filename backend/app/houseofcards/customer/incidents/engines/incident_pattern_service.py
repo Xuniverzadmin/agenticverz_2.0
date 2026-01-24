@@ -1,16 +1,32 @@
-# Layer: L4 — Domain Engines
+# Layer: L4 — Domain Engine (System Truth)
+# AUDIENCE: CUSTOMER
 # Product: ai-console
 # Temporal:
 #   Trigger: api
 #   Execution: async
 # Role: Detect structural patterns across incidents
 # Callers: Incidents API (L2)
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: docs/architecture/incidents/INCIDENTS_DOMAIN_SQL.md#5-act-o4
+# Allowed Imports: L6 drivers (via injection)
+# Forbidden Imports: L1, L2, L3, sqlalchemy, sqlmodel (at runtime)
+# Reference: PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
+#
+# EXTRACTION STATUS: Phase-2.5A (2026-01-23)
+# - All DB operations extracted to IncidentPatternDriver
+# - Engine contains ONLY pattern detection logic
+# - NO sqlalchemy/sqlmodel imports at runtime
+#
+# ============================================================================
+# L4 ENGINE INVARIANT — INCIDENT PATTERN DOMAIN (LOCKED)
+# ============================================================================
+# This file MUST NOT import sqlalchemy/sqlmodel at runtime.
+# All persistence is delegated to incident_pattern_driver.py.
+# Business decisions (confidence calculation, thresholds) ONLY.
+#
+# Any violation is a Phase-2.5 regression.
+# ============================================================================
 
 """
-Incident Pattern Service
+Incident Pattern Engine - L4 Domain Logic
 
 Detects structural patterns across incidents:
 - category_cluster: Multiple incidents in same category
@@ -18,20 +34,29 @@ Detects structural patterns across incidents:
 - cascade_failure: Multiple incidents from same source run
 - resolution_pattern: Common resolution methods
 
+Architecture:
+- All DB operations delegated to IncidentPatternDriver (L6)
+- Engine contains only pattern detection logic
+- Read-only (no writes)
+
 Design Rules:
 - Rule-based only (v1, no ML)
-- Read-only (no writes)
 - No cross-service calls
 """
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
-
+# L6 driver import (allowed)
+from app.houseofcards.customer.incidents.drivers.incident_pattern_driver import (
+    IncidentPatternDriver,
+    get_incident_pattern_driver,
+)
 from app.houseofcards.customer.general.utils.time import utc_now
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @dataclass
@@ -67,6 +92,9 @@ class IncidentPatternService:
     - Write to any table
     - Call other services
     - Use machine learning
+
+    Note: All DB operations are delegated to IncidentPatternDriver (L6).
+    This engine contains only pattern detection logic.
     """
 
     # Pattern thresholds (frozen constants)
@@ -74,8 +102,20 @@ class IncidentPatternService:
     SEVERITY_SPIKE_THRESHOLD = 3  # Min high/critical in 1 hour
     CASCADE_THRESHOLD = 2  # Min incidents from same run
 
-    def __init__(self, session: AsyncSession):
-        self.session = session
+    def __init__(
+        self,
+        session: "AsyncSession",
+        driver: Optional[IncidentPatternDriver] = None,
+    ):
+        """
+        Initialize with session and optional driver.
+
+        Args:
+            session: Database session (injected, not fetched)
+            driver: Optional pre-configured driver (for testing)
+        """
+        self._session = session
+        self._driver = driver or get_incident_pattern_driver(session)
 
     async def detect_patterns(
         self,
@@ -93,15 +133,17 @@ class IncidentPatternService:
 
         Returns:
             PatternResult with all detected patterns
+
+        PERSISTENCE: Delegated to driver.
+        BUSINESS LOGIC: Pattern detection and confidence stays here (L4).
         """
         window_hours = min(window_hours, 168)  # Cap at 7 days
         window_start = utc_now() - timedelta(hours=window_hours)
         window_end = utc_now()
 
         all_patterns: list[PatternMatch] = []
-        incidents_analyzed = 0
 
-        # Detect each pattern type
+        # Detect each pattern type (business logic stays in engine)
         category_patterns = await self._detect_category_clusters(
             tenant_id, window_start, limit
         )
@@ -117,18 +159,10 @@ class IncidentPatternService:
         )
         all_patterns.extend(cascade_patterns)
 
-        # Get incidents analyzed count
-        count_sql = text("""
-            SELECT COUNT(*)
-            FROM incidents
-            WHERE tenant_id = :tenant_id
-              AND created_at >= :window_start
-        """)
-        result = await self.session.execute(count_sql, {
-            "tenant_id": tenant_id,
-            "window_start": window_start,
-        })
-        incidents_analyzed = result.scalar() or 0
+        # Get incidents analyzed count via driver
+        incidents_analyzed = await self._driver.fetch_incidents_count(
+            tenant_id, window_start
+        )
 
         return PatternResult(
             patterns=all_patterns,
@@ -143,33 +177,20 @@ class IncidentPatternService:
         window_start: datetime,
         limit: int,
     ) -> list[PatternMatch]:
-        """Detect categories with multiple incidents."""
-        sql = text("""
-            SELECT
-                category,
-                COUNT(*) AS incident_count,
-                array_agg(id ORDER BY created_at DESC) AS incident_ids
-            FROM incidents
-            WHERE tenant_id = :tenant_id
-              AND created_at >= :window_start
-              AND category IS NOT NULL
-            GROUP BY category
-            HAVING COUNT(*) >= :threshold
-            ORDER BY incident_count DESC
-            LIMIT :limit
-        """)
+        """
+        Detect categories with multiple incidents.
 
-        result = await self.session.execute(sql, {
-            "tenant_id": tenant_id,
-            "window_start": window_start,
-            "threshold": self.CATEGORY_CLUSTER_THRESHOLD,
-            "limit": limit,
-        })
+        PERSISTENCE: Delegated to driver.
+        BUSINESS LOGIC: Confidence calculation stays here (L4).
+        """
+        rows = await self._driver.fetch_category_clusters(
+            tenant_id, window_start, self.CATEGORY_CLUSTER_THRESHOLD, limit
+        )
 
         patterns = []
-        for row in result.mappings():
+        for row in rows:
             count = row["incident_count"]
-            # Confidence increases with count
+            # Confidence increases with count (business logic)
             confidence = min(0.5 + (count - self.CATEGORY_CLUSTER_THRESHOLD) * 0.1, 0.95)
 
             patterns.append(PatternMatch(
@@ -187,40 +208,22 @@ class IncidentPatternService:
         tenant_id: str,
         limit: int,
     ) -> list[PatternMatch]:
-        """Detect multiple high/critical incidents in short window."""
-        sql = text("""
-            SELECT
-                severity,
-                COUNT(*) AS incident_count,
-                array_agg(id ORDER BY created_at DESC) AS incident_ids
-            FROM incidents
-            WHERE tenant_id = :tenant_id
-              AND severity IN ('critical', 'high')
-              AND created_at >= NOW() - INTERVAL '1 hour'
-              AND (lifecycle_state = 'ACTIVE' OR status = 'open')
-            GROUP BY severity
-            HAVING COUNT(*) >= :threshold
-            ORDER BY
-                CASE severity
-                    WHEN 'critical' THEN 1
-                    WHEN 'high' THEN 2
-                END,
-                incident_count DESC
-            LIMIT :limit
-        """)
+        """
+        Detect multiple high/critical incidents in short window.
 
-        result = await self.session.execute(sql, {
-            "tenant_id": tenant_id,
-            "threshold": self.SEVERITY_SPIKE_THRESHOLD,
-            "limit": limit,
-        })
+        PERSISTENCE: Delegated to driver.
+        BUSINESS LOGIC: Confidence calculation stays here (L4).
+        """
+        rows = await self._driver.fetch_severity_spikes(
+            tenant_id, self.SEVERITY_SPIKE_THRESHOLD, limit
+        )
 
         patterns = []
-        for row in result.mappings():
+        for row in rows:
             count = row["incident_count"]
             severity = row["severity"]
 
-            # Critical spikes get higher confidence
+            # Critical spikes get higher confidence (business logic)
             base_confidence = 0.8 if severity == "critical" else 0.7
             confidence = min(base_confidence + (count - self.SEVERITY_SPIKE_THRESHOLD) * 0.05, 0.98)
 
@@ -240,32 +243,20 @@ class IncidentPatternService:
         window_start: datetime,
         limit: int,
     ) -> list[PatternMatch]:
-        """Detect multiple incidents from same source run."""
-        sql = text("""
-            SELECT
-                source_run_id,
-                COUNT(*) AS incident_count,
-                array_agg(id ORDER BY created_at DESC) AS incident_ids
-            FROM incidents
-            WHERE tenant_id = :tenant_id
-              AND source_run_id IS NOT NULL
-              AND created_at >= :window_start
-            GROUP BY source_run_id
-            HAVING COUNT(*) >= :threshold
-            ORDER BY incident_count DESC
-            LIMIT :limit
-        """)
+        """
+        Detect multiple incidents from same source run.
 
-        result = await self.session.execute(sql, {
-            "tenant_id": tenant_id,
-            "window_start": window_start,
-            "threshold": self.CASCADE_THRESHOLD,
-            "limit": limit,
-        })
+        PERSISTENCE: Delegated to driver.
+        BUSINESS LOGIC: Confidence calculation stays here (L4).
+        """
+        rows = await self._driver.fetch_cascade_failures(
+            tenant_id, window_start, self.CASCADE_THRESHOLD, limit
+        )
 
         patterns = []
-        for row in result.mappings():
+        for row in rows:
             count = row["incident_count"]
+            # Confidence increases with count (business logic)
             confidence = min(0.75 + (count - self.CASCADE_THRESHOLD) * 0.1, 0.95)
 
             patterns.append(PatternMatch(

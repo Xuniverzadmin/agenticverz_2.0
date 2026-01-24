@@ -1,13 +1,15 @@
-# Layer: L4 — Domain Engine
+# Layer: L6 — Driver
+# AUDIENCE: CUSTOMER
+# Role: Connectors Facade - Centralized access to connector operations
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: async
-# Role: Connectors Facade - Centralized access to connector operations
 # Callers: L2 connectors.py API, SDK
 # Allowed Imports: L4 connector services, L6 (models, db)
 # Forbidden Imports: L1, L2, L3, L5
 # Reference: GAP-093 (Connector Registry API)
+
 
 """
 Connectors Facade (L4 Domain Logic)

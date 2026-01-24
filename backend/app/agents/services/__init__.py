@@ -3,7 +3,7 @@
 
 from .blackboard_service import BlackboardService, get_blackboard_service
 from .credit_service import CreditService, get_credit_service
-from .invoke_audit_service import InvokeAuditService, get_invoke_audit_service
+from .invoke_audit_driver import InvokeAuditService, get_invoke_audit_service  # Reclassified per PIN-468
 from .job_service import JobService, get_job_service
 from .message_service import MessageService, get_message_service
 from .registry_service import RegistryService, get_registry_service

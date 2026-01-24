@@ -1,52 +1,55 @@
 # Layer: L4 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: ai-console (Customer Console)
 # Temporal:
 #   Trigger: api
-#   Execution: sync
-# Role: Customer killswitch read operations (L4 service)
+#   Execution: sync (delegates to L6 driver)
+# Role: Customer killswitch read operations (L4 facade over L6 driver)
 # Callers: customer_killswitch_adapter.py (L3)
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: PIN-280, PIN-281 (L2 Promotion Governance)
+# Allowed Imports: L6 (drivers only, NOT ORM models)
+# Forbidden Imports: L1, L2, L3, L5, sqlalchemy, sqlmodel
+# Reference: PIN-280, PIN-281, PHASE2_EXTRACTION_PROTOCOL.md
 #
 # GOVERNANCE NOTE:
-# This L4 service provides read operations for customer killswitch status.
-# It queries L6 models and returns domain DTOs.
-# The L3 adapter transforms these to customer-safe DTOs.
+# This L4 engine delegates ALL database operations to KillswitchReadDriver (L6).
+# NO direct database access - only driver calls.
+# Phase 2 extraction: DB operations moved to drivers/killswitch_read_driver.py
+#
+# EXTRACTION STATUS: COMPLETE (2026-01-23)
 
 """
 Customer Killswitch Read Service (L4)
 
 This service provides read operations for customer killswitch status.
-L3 adapters call this service to get killswitch state, guardrails, and incident info.
+It delegates to KillswitchReadDriver (L6) for all database access.
 
-L3 (customer_killswitch_adapter.py) → L4 (this service) → L6 (models)
+L3 (customer_killswitch_adapter.py) → L4 (this service) → L6 (KillswitchReadDriver)
 
-The service:
-1. Queries KillSwitchState for tenant freeze status
-2. Queries DefaultGuardrail for active guardrails
-3. Queries Incident for incident statistics
-4. Returns domain DTOs (not customer-safe - L3 transforms)
+Responsibilities:
+- Delegate to L6 driver for data access
+- Apply business rules (if any)
+- Maintain backward compatibility for callers
 
-Reference: PIN-280 (L2 Promotion Governance), PIN-281 (Claude Task TODO)
+Reference: PIN-280, PIN-281, PHASE2_EXTRACTION_PROTOCOL.md
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import BaseModel
-from sqlalchemy import and_, desc, func, select
-from sqlmodel import Session
 
-from app.db import get_session
-from app.models.killswitch import (
-    DefaultGuardrail,
-    Incident,
-    KillSwitchState,
+# L6 driver import (allowed)
+from app.houseofcards.customer.policies.controls.drivers.killswitch_read_driver import (
+    KillswitchReadDriver,
+    get_killswitch_read_driver,
 )
 
+if TYPE_CHECKING:
+    from sqlmodel import Session
+
+
 # =============================================================================
-# L4 DTOs (Domain-level, not customer-safe)
+# L4 DTOs (Backward compatibility - aliased from driver DTOs)
 # =============================================================================
 
 
@@ -88,25 +91,17 @@ class CustomerKillswitchReadService:
     """
     Read operations for customer killswitch status.
 
-    This service provides domain-level access to killswitch state,
-    guardrails, and incident statistics. The L3 adapter transforms
-    these results to customer-safe DTOs.
+    Delegates all database operations to KillswitchReadDriver (L6).
+    Maintains backward compatibility for existing callers.
 
     INVARIANT: All methods require tenant_id for isolation.
     INVARIANT: Read-only - no mutations.
-
-    PIN-280 Rule: L4 Is DB Access + Domain Logic
+    NO DIRECT DB ACCESS - driver calls only.
     """
 
-    def __init__(self, session: Optional[Session] = None):
-        """Initialize service with optional session (lazy loaded)."""
-        self._session = session
-
-    def _get_session(self) -> Session:
-        """Get the database session (lazy loaded)."""
-        if self._session is None:
-            self._session = next(get_session())
-        return self._session
+    def __init__(self, session: Optional["Session"] = None):
+        """Initialize service with optional session (passed to driver)."""
+        self._driver = get_killswitch_read_driver(session)
 
     def get_killswitch_status(
         self,
@@ -114,6 +109,8 @@ class CustomerKillswitchReadService:
     ) -> KillswitchStatusInfo:
         """
         Get complete killswitch status for a tenant.
+
+        Delegates to KillswitchReadDriver.get_killswitch_status().
 
         Args:
             tenant_id: Customer's tenant ID (REQUIRED)
@@ -124,82 +121,21 @@ class CustomerKillswitchReadService:
         Raises:
             ValueError: If tenant_id is missing
         """
-        if not tenant_id:
-            raise ValueError("tenant_id is required for get_killswitch_status")
+        # Get status from driver
+        driver_result = self._driver.get_killswitch_status(tenant_id)
 
-        session = self._get_session()
-
-        # Get tenant killswitch state
-        state = self._get_killswitch_state(session, tenant_id)
-
-        # Get active guardrails
-        active_guardrails = self._get_active_guardrails(session)
-
-        # Get incident stats
-        incident_stats = self._get_incident_stats(session, tenant_id)
-
+        # Transform to engine DTOs (for backward compatibility)
         return KillswitchStatusInfo(
-            state=state,
-            active_guardrails=active_guardrails,
-            incident_stats=incident_stats,
-        )
-
-    def _get_killswitch_state(
-        self,
-        session: Session,
-        tenant_id: str,
-    ) -> KillswitchState:
-        """Get killswitch state for a tenant."""
-        stmt = select(KillSwitchState).where(
-            and_(
-                KillSwitchState.entity_type == "tenant",
-                KillSwitchState.entity_id == tenant_id,
-            )
-        )
-        row = session.exec(stmt).first()
-        state = row[0] if row else None
-
-        return KillswitchState(
-            is_frozen=state.is_frozen if state else False,
-            frozen_at=state.frozen_at if state else None,
-            frozen_by=state.frozen_by if state else None,
-        )
-
-    def _get_active_guardrails(
-        self,
-        session: Session,
-    ) -> List[str]:
-        """Get list of active guardrail names."""
-        stmt = select(DefaultGuardrail).where(DefaultGuardrail.is_enabled == True)
-        rows = session.exec(stmt).all()
-        return [g[0].name if hasattr(g, "__getitem__") else g.name for g in rows]
-
-    def _get_incident_stats(
-        self,
-        session: Session,
-        tenant_id: str,
-    ) -> IncidentStats:
-        """Get incident statistics for a tenant."""
-        yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
-
-        # Count incidents in last 24h
-        count_stmt = select(func.count(Incident.id)).where(
-            and_(
-                Incident.tenant_id == tenant_id,
-                Incident.created_at >= yesterday,
-            )
-        )
-        count_row = session.exec(count_stmt).first()
-        incidents_count = count_row[0] if count_row else 0
-
-        # Get last incident time
-        last_stmt = select(Incident).where(Incident.tenant_id == tenant_id).order_by(desc(Incident.created_at)).limit(1)
-        last_row = session.exec(last_stmt).first()
-        last_incident = last_row[0] if last_row else None
-
-        return IncidentStats(
-            incidents_blocked_24h=incidents_count,
-            last_incident_time=last_incident.created_at if last_incident else None,
+            state=KillswitchState(
+                is_frozen=driver_result.state.is_frozen,
+                frozen_at=driver_result.state.frozen_at,
+                frozen_by=driver_result.state.frozen_by,
+            ),
+            active_guardrails=driver_result.active_guardrails,
+            incident_stats=IncidentStats(
+                incidents_blocked_24h=driver_result.incident_stats.incidents_blocked_24h,
+                last_incident_time=driver_result.incident_stats.last_incident_time,
+            ),
         )
 
 

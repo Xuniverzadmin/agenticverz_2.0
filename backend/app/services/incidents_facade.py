@@ -957,7 +957,7 @@ class IncidentsFacade:
 
         Identifies incident categories that recur frequently.
         """
-        from app.services.incidents.recurrence_analysis_service import RecurrenceAnalysisService
+        from app.services.incidents.recurrence_analysis_driver import RecurrenceAnalysisService  # PIN-468
 
         service = RecurrenceAnalysisService(session)
         result = await service.analyze_recurrence(

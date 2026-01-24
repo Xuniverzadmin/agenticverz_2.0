@@ -1,7 +1,21 @@
-# Layer: L3 — Boundary Adapter (Console → Platform)
-# Product: AI Console
+# Layer: L4 — Domain Engine
+# AUDIENCE: CUSTOMER
+# Product: ai-console
+# Temporal:
+#   Trigger: api
+#   Execution: async (Redis operations)
+# Role: Email OTP verification engine for customer onboarding
 # Callers: onboarding.py (auth flow)
-# Reference: PIN-240
+# Allowed Imports: L6 (Redis)
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: PIN-240, ACCOUNT_PHASE2.5_IMPLEMENTATION_PLAN.md
+#
+# RECLASSIFICATION NOTE (2026-01-24):
+# This file was previously declared as L3 (Boundary Adapter).
+# Reclassified to L4 because it contains domain-specific verification
+# logic (OTP generation, cooldown, rate limiting). Redis-only state.
+# NOT protocol adaptation (not L3).
+#
 # NOTE: Redis-only state (not PostgreSQL). M24 onboarding.
 
 """

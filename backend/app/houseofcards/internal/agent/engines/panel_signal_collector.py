@@ -1,7 +1,9 @@
-# Layer: L2.1 — Panel Adapter Layer
-# Product: ai-console
+# Layer: L6 — Driver
+# AUDIENCE: CUSTOMER
 # Role: Collect raw signals from backend APIs via capability resolution
+# Product: ai-console
 # Reference: L2_1_PANEL_ADAPTER_SPEC.yaml
+
 
 """
 Panel Signal Collector — Capability-Bound API I/O for panel evaluation

@@ -3,13 +3,18 @@
 # Product: ai-console
 # Temporal:
 #   Trigger: api
-#   Execution: async (DB operations)
+#   Execution: async
 # Role: Incidents domain facade - unified entry point for incident management operations
 # Callers: L2 incidents API (incidents.py)
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
+# Allowed Imports: L6 (via delegation)
+# Forbidden Imports: L1, L2, L3, L5, sqlalchemy (runtime)
 # Reference: INCIDENTS Domain - Customer Console v1 Constitution
 #
+# EXTRACTION COMPLETE (2026-01-24):
+# All DB operations extracted to incidents_facade_driver.py (L6).
+# This facade now delegates to driver, no direct sqlalchemy imports.
+# Per INCIDENTS_PHASE2.5_IMPLEMENTATION_PLAN.md — Violation I.1
+
 """
 Incidents Domain Facade (L4)
 
@@ -27,16 +32,24 @@ Provides:
 - Post-mortem learnings (RES-O4)
 
 All operations are tenant-scoped for isolation.
+
+Architecture:
+- Facade → Driver (L6) for DB operations
+- Facade → Engine (L4) for business logic delegation
+- No direct sqlalchemy imports
 """
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
-from sqlalchemy import func, select, text
-from sqlalchemy.ext.asyncio import AsyncSession
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.killswitch import Incident
+from app.houseofcards.customer.incidents.drivers.incidents_facade_driver import (
+    IncidentsFacadeDriver,
+    IncidentSnapshot,
+)
 
 
 # =============================================================================
@@ -366,6 +379,10 @@ class IncidentsFacade:
     - Cost impact analysis
 
     All operations are tenant-scoped for isolation.
+
+    Architecture:
+    - Delegates DB operations to IncidentsFacadeDriver (L6)
+    - No direct sqlalchemy access
     """
 
     # -------------------------------------------------------------------------
@@ -374,7 +391,7 @@ class IncidentsFacade:
 
     async def list_active_incidents(
         self,
-        session: AsyncSession,
+        session: "AsyncSession",
         tenant_id: str,
         *,
         severity: Optional[str] = None,
@@ -389,82 +406,46 @@ class IncidentsFacade:
         sort_order: str = "desc",
     ) -> IncidentListResult:
         """List active incidents (ACTIVE + ACKED states)."""
+        driver = IncidentsFacadeDriver(session)
+
+        snapshot = await driver.fetch_active_incidents(
+            tenant_id=tenant_id,
+            severity=severity,
+            category=category,
+            cause_type=cause_type,
+            is_synthetic=is_synthetic,
+            created_after=created_after,
+            created_before=created_before,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
+
         filters_applied: dict[str, Any] = {
             "tenant_id": tenant_id,
             "topic": "ACTIVE",
         }
-
-        # Base query with tenant isolation + ACTIVE topic
-        stmt = (
-            select(Incident)
-            .where(Incident.tenant_id == tenant_id)
-            .where(Incident.lifecycle_state.in_(["ACTIVE", "ACKED"]))
-        )
-
-        count_stmt = (
-            select(func.count(Incident.id))
-            .where(Incident.tenant_id == tenant_id)
-            .where(Incident.lifecycle_state.in_(["ACTIVE", "ACKED"]))
-        )
-
-        # Apply filters
         if severity:
-            stmt = stmt.where(Incident.severity == severity)
-            count_stmt = count_stmt.where(Incident.severity == severity)
             filters_applied["severity"] = severity
-
         if category:
-            stmt = stmt.where(Incident.category == category)
-            count_stmt = count_stmt.where(Incident.category == category)
             filters_applied["category"] = category
-
         if cause_type:
-            stmt = stmt.where(Incident.cause_type == cause_type)
-            count_stmt = count_stmt.where(Incident.cause_type == cause_type)
             filters_applied["cause_type"] = cause_type
-
         if is_synthetic is not None:
-            stmt = stmt.where(Incident.is_synthetic == is_synthetic)
-            count_stmt = count_stmt.where(Incident.is_synthetic == is_synthetic)
             filters_applied["is_synthetic"] = is_synthetic
-
         if created_after:
-            stmt = stmt.where(Incident.created_at >= created_after)
-            count_stmt = count_stmt.where(Incident.created_at >= created_after)
             filters_applied["created_after"] = created_after.isoformat()
-
         if created_before:
-            stmt = stmt.where(Incident.created_at <= created_before)
-            count_stmt = count_stmt.where(Incident.created_at <= created_before)
             filters_applied["created_before"] = created_before.isoformat()
 
-        # Sorting
-        sort_column = getattr(Incident, sort_by)
-        if sort_order == "desc":
-            stmt = stmt.order_by(sort_column.desc())
-        else:
-            stmt = stmt.order_by(sort_column.asc())
-
-        # Pagination
-        stmt = stmt.limit(limit).offset(offset)
-
-        count_result = await session.execute(count_stmt)
-        total = count_result.scalar() or 0
-
-        result = await session.execute(stmt)
-        incidents = result.scalars().all()
-
-        items = [
-            self._to_summary_result(inc)
-            for inc in incidents
-        ]
-
-        has_more = offset + len(items) < total
+        items = [self._snapshot_to_summary(s) for s in snapshot.items]
+        has_more = offset + len(items) < snapshot.total
         next_offset = offset + limit if has_more else None
 
         return IncidentListResult(
             items=items,
-            total=total,
+            total=snapshot.total,
             has_more=has_more,
             filters_applied=filters_applied,
             pagination=PaginationResult(limit=limit, offset=offset, next_offset=next_offset),
@@ -472,7 +453,7 @@ class IncidentsFacade:
 
     async def list_resolved_incidents(
         self,
-        session: AsyncSession,
+        session: "AsyncSession",
         tenant_id: str,
         *,
         severity: Optional[str] = None,
@@ -487,77 +468,46 @@ class IncidentsFacade:
         sort_order: str = "desc",
     ) -> IncidentListResult:
         """List resolved incidents."""
+        driver = IncidentsFacadeDriver(session)
+
+        snapshot = await driver.fetch_resolved_incidents(
+            tenant_id=tenant_id,
+            severity=severity,
+            category=category,
+            cause_type=cause_type,
+            is_synthetic=is_synthetic,
+            resolved_after=resolved_after,
+            resolved_before=resolved_before,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
+
         filters_applied: dict[str, Any] = {
             "tenant_id": tenant_id,
             "topic": "RESOLVED",
         }
-
-        stmt = (
-            select(Incident)
-            .where(Incident.tenant_id == tenant_id)
-            .where(Incident.lifecycle_state == "RESOLVED")
-        )
-
-        count_stmt = (
-            select(func.count(Incident.id))
-            .where(Incident.tenant_id == tenant_id)
-            .where(Incident.lifecycle_state == "RESOLVED")
-        )
-
-        # Apply filters
         if severity:
-            stmt = stmt.where(Incident.severity == severity)
-            count_stmt = count_stmt.where(Incident.severity == severity)
             filters_applied["severity"] = severity
-
         if category:
-            stmt = stmt.where(Incident.category == category)
-            count_stmt = count_stmt.where(Incident.category == category)
             filters_applied["category"] = category
-
         if cause_type:
-            stmt = stmt.where(Incident.cause_type == cause_type)
-            count_stmt = count_stmt.where(Incident.cause_type == cause_type)
             filters_applied["cause_type"] = cause_type
-
         if is_synthetic is not None:
-            stmt = stmt.where(Incident.is_synthetic == is_synthetic)
-            count_stmt = count_stmt.where(Incident.is_synthetic == is_synthetic)
             filters_applied["is_synthetic"] = is_synthetic
-
         if resolved_after:
-            stmt = stmt.where(Incident.resolved_at >= resolved_after)
-            count_stmt = count_stmt.where(Incident.resolved_at >= resolved_after)
             filters_applied["resolved_after"] = resolved_after.isoformat()
-
         if resolved_before:
-            stmt = stmt.where(Incident.resolved_at <= resolved_before)
-            count_stmt = count_stmt.where(Incident.resolved_at <= resolved_before)
             filters_applied["resolved_before"] = resolved_before.isoformat()
 
-        # Sorting
-        sort_column = getattr(Incident, sort_by)
-        if sort_order == "desc":
-            stmt = stmt.order_by(sort_column.desc())
-        else:
-            stmt = stmt.order_by(sort_column.asc())
-
-        stmt = stmt.limit(limit).offset(offset)
-
-        count_result = await session.execute(count_stmt)
-        total = count_result.scalar() or 0
-
-        result = await session.execute(stmt)
-        incidents = result.scalars().all()
-
-        items = [self._to_summary_result(inc) for inc in incidents]
-
-        has_more = offset + len(items) < total
+        items = [self._snapshot_to_summary(s) for s in snapshot.items]
+        has_more = offset + len(items) < snapshot.total
         next_offset = offset + limit if has_more else None
 
         return IncidentListResult(
             items=items,
-            total=total,
+            total=snapshot.total,
             has_more=has_more,
             filters_applied=filters_applied,
             pagination=PaginationResult(limit=limit, offset=offset, next_offset=next_offset),
@@ -565,7 +515,7 @@ class IncidentsFacade:
 
     async def list_historical_incidents(
         self,
-        session: AsyncSession,
+        session: "AsyncSession",
         tenant_id: str,
         *,
         retention_days: int = 30,
@@ -578,7 +528,20 @@ class IncidentsFacade:
         sort_order: str = "desc",
     ) -> IncidentListResult:
         """List historical incidents (resolved beyond retention window)."""
+        driver = IncidentsFacadeDriver(session)
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=retention_days)
+
+        snapshot = await driver.fetch_historical_incidents(
+            tenant_id=tenant_id,
+            cutoff_date=cutoff_date,
+            severity=severity,
+            category=category,
+            cause_type=cause_type,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
 
         filters_applied: dict[str, Any] = {
             "tenant_id": tenant_id,
@@ -586,59 +549,20 @@ class IncidentsFacade:
             "retention_days": retention_days,
             "cutoff_date": cutoff_date.isoformat(),
         }
-
-        stmt = (
-            select(Incident)
-            .where(Incident.tenant_id == tenant_id)
-            .where(Incident.lifecycle_state == "RESOLVED")
-            .where(Incident.resolved_at < cutoff_date)
-        )
-
-        count_stmt = (
-            select(func.count(Incident.id))
-            .where(Incident.tenant_id == tenant_id)
-            .where(Incident.lifecycle_state == "RESOLVED")
-            .where(Incident.resolved_at < cutoff_date)
-        )
-
         if severity:
-            stmt = stmt.where(Incident.severity == severity)
-            count_stmt = count_stmt.where(Incident.severity == severity)
             filters_applied["severity"] = severity
-
         if category:
-            stmt = stmt.where(Incident.category == category)
-            count_stmt = count_stmt.where(Incident.category == category)
             filters_applied["category"] = category
-
         if cause_type:
-            stmt = stmt.where(Incident.cause_type == cause_type)
-            count_stmt = count_stmt.where(Incident.cause_type == cause_type)
             filters_applied["cause_type"] = cause_type
 
-        # Sorting
-        sort_column = getattr(Incident, sort_by)
-        if sort_order == "desc":
-            stmt = stmt.order_by(sort_column.desc())
-        else:
-            stmt = stmt.order_by(sort_column.asc())
-
-        stmt = stmt.limit(limit).offset(offset)
-
-        count_result = await session.execute(count_stmt)
-        total = count_result.scalar() or 0
-
-        result = await session.execute(stmt)
-        incidents = result.scalars().all()
-
-        items = [self._to_summary_result(inc) for inc in incidents]
-
-        has_more = offset + len(items) < total
+        items = [self._snapshot_to_summary(s) for s in snapshot.items]
+        has_more = offset + len(items) < snapshot.total
         next_offset = offset + limit if has_more else None
 
         return IncidentListResult(
             items=items,
-            total=total,
+            total=snapshot.total,
             has_more=has_more,
             filters_applied=filters_applied,
             pagination=PaginationResult(limit=limit, offset=offset, next_offset=next_offset),
@@ -650,62 +574,57 @@ class IncidentsFacade:
 
     async def get_incident_detail(
         self,
-        session: AsyncSession,
+        session: "AsyncSession",
         tenant_id: str,
         incident_id: str,
     ) -> Optional[IncidentDetailResult]:
         """Get incident detail. Tenant isolation enforced."""
-        stmt = (
-            select(Incident)
-            .where(Incident.id == incident_id)
-            .where(Incident.tenant_id == tenant_id)
+        driver = IncidentsFacadeDriver(session)
+
+        snapshot = await driver.fetch_incident_by_id(
+            tenant_id=tenant_id,
+            incident_id=incident_id,
         )
 
-        result = await session.execute(stmt)
-        incident = result.scalar_one_or_none()
-
-        if not incident:
+        if not snapshot:
             return None
 
         return IncidentDetailResult(
-            incident_id=incident.id,
-            tenant_id=incident.tenant_id,
-            lifecycle_state=incident.lifecycle_state or "ACTIVE",
-            severity=incident.severity or "medium",
-            category=incident.category or "UNKNOWN",
-            title=incident.title or "Untitled Incident",
-            description=incident.description,
-            llm_run_id=incident.llm_run_id,
-            source_run_id=incident.source_run_id,
-            cause_type=incident.cause_type or "SYSTEM",
-            error_code=incident.error_code,
-            error_message=incident.error_message,
-            affected_agent_id=incident.affected_agent_id,
-            created_at=incident.created_at,
-            updated_at=incident.updated_at,
-            resolved_at=incident.resolved_at,
-            is_synthetic=incident.is_synthetic or False,
-            synthetic_scenario_id=incident.synthetic_scenario_id,
+            incident_id=snapshot.id,
+            tenant_id=snapshot.tenant_id,
+            lifecycle_state=snapshot.lifecycle_state or "ACTIVE",
+            severity=snapshot.severity or "medium",
+            category=snapshot.category or "UNKNOWN",
+            title=snapshot.title or "Untitled Incident",
+            description=snapshot.description,
+            llm_run_id=snapshot.llm_run_id,
+            source_run_id=snapshot.source_run_id,
+            cause_type=snapshot.cause_type or "SYSTEM",
+            error_code=snapshot.error_code,
+            error_message=snapshot.error_message,
+            affected_agent_id=snapshot.affected_agent_id,
+            created_at=snapshot.created_at,
+            updated_at=snapshot.updated_at,
+            resolved_at=snapshot.resolved_at,
+            is_synthetic=snapshot.is_synthetic or False,
+            synthetic_scenario_id=snapshot.synthetic_scenario_id,
         )
 
     async def get_incidents_for_run(
         self,
-        session: AsyncSession,
+        session: "AsyncSession",
         tenant_id: str,
         run_id: str,
     ) -> IncidentsByRunResult:
         """Get all incidents linked to a specific run."""
-        stmt = (
-            select(Incident)
-            .where(Incident.tenant_id == tenant_id)
-            .where(Incident.source_run_id == run_id)
-            .order_by(Incident.created_at.desc())
+        driver = IncidentsFacadeDriver(session)
+
+        snapshots = await driver.fetch_incidents_by_run(
+            tenant_id=tenant_id,
+            run_id=run_id,
         )
 
-        result = await session.execute(stmt)
-        incidents = result.scalars().all()
-
-        items = [self._to_summary_result(inc) for inc in incidents]
+        items = [self._snapshot_to_summary(s) for s in snapshots]
 
         return IncidentsByRunResult(
             run_id=run_id,
@@ -719,53 +638,20 @@ class IncidentsFacade:
 
     async def get_metrics(
         self,
-        session: AsyncSession,
+        session: "AsyncSession",
         tenant_id: str,
         *,
         window_days: int = 30,
     ) -> IncidentMetricsResult:
         """Get incident metrics. Backend-computed, deterministic."""
-        sql = text("""
-            WITH incident_stats AS (
-                SELECT
-                    lifecycle_state,
-                    severity,
-                    NULL::bigint AS time_to_containment_ms,
-                    CASE WHEN resolved_at IS NOT NULL
-                         THEN EXTRACT(EPOCH FROM (resolved_at - created_at)) * 1000
-                         ELSE NULL
-                    END AS time_to_resolution_ms,
-                    NULL::boolean AS sla_met
-                FROM incidents
-                WHERE tenant_id = :tenant_id
-                  AND created_at >= NOW() - INTERVAL '1 day' * :window_days
-            )
-            SELECT
-                COUNT(*) FILTER (WHERE lifecycle_state IN ('ACTIVE', 'ACKED')) AS active_count,
-                COUNT(*) FILTER (WHERE lifecycle_state = 'ACKED') AS acked_count,
-                COUNT(*) FILTER (WHERE lifecycle_state = 'RESOLVED') AS resolved_count,
-                COUNT(*) AS total_count,
-                NULL::bigint AS avg_time_to_containment_ms,
-                NULL::bigint AS median_time_to_containment_ms,
-                AVG(time_to_resolution_ms)::bigint AS avg_time_to_resolution_ms,
-                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY time_to_resolution_ms)::bigint AS median_time_to_resolution_ms,
-                0 AS sla_met_count,
-                0 AS sla_breached_count,
-                COUNT(*) FILTER (WHERE severity = 'critical') AS critical_count,
-                COUNT(*) FILTER (WHERE severity = 'high') AS high_count,
-                COUNT(*) FILTER (WHERE severity = 'medium') AS medium_count,
-                COUNT(*) FILTER (WHERE severity = 'low') AS low_count
-            FROM incident_stats
-        """)
+        driver = IncidentsFacadeDriver(session)
 
-        result = await session.execute(sql, {
-            "tenant_id": tenant_id,
-            "window_days": window_days,
-        })
+        snapshot = await driver.fetch_metrics_aggregates(
+            tenant_id=tenant_id,
+            window_days=window_days,
+        )
 
-        row = result.mappings().first()
-
-        if not row:
+        if not snapshot:
             return IncidentMetricsResult(
                 active_count=0,
                 acked_count=0,
@@ -786,27 +672,27 @@ class IncidentsFacade:
                 generated_at=datetime.now(timezone.utc),
             )
 
-        sla_total = (row["sla_met_count"] or 0) + (row["sla_breached_count"] or 0)
+        sla_total = snapshot.sla_met_count + snapshot.sla_breached_count
         sla_compliance_rate = None
         if sla_total > 0:
-            sla_compliance_rate = round((row["sla_met_count"] or 0) / sla_total * 100, 2)
+            sla_compliance_rate = round(snapshot.sla_met_count / sla_total * 100, 2)
 
         return IncidentMetricsResult(
-            active_count=row["active_count"] or 0,
-            acked_count=row["acked_count"] or 0,
-            resolved_count=row["resolved_count"] or 0,
-            total_count=row["total_count"] or 0,
-            avg_time_to_containment_ms=row["avg_time_to_containment_ms"],
-            median_time_to_containment_ms=row["median_time_to_containment_ms"],
-            avg_time_to_resolution_ms=row["avg_time_to_resolution_ms"],
-            median_time_to_resolution_ms=row["median_time_to_resolution_ms"],
-            sla_met_count=row["sla_met_count"] or 0,
-            sla_breached_count=row["sla_breached_count"] or 0,
+            active_count=snapshot.active_count,
+            acked_count=snapshot.acked_count,
+            resolved_count=snapshot.resolved_count,
+            total_count=snapshot.total_count,
+            avg_time_to_containment_ms=snapshot.avg_time_to_containment_ms,
+            median_time_to_containment_ms=snapshot.median_time_to_containment_ms,
+            avg_time_to_resolution_ms=snapshot.avg_time_to_resolution_ms,
+            median_time_to_resolution_ms=snapshot.median_time_to_resolution_ms,
+            sla_met_count=snapshot.sla_met_count,
+            sla_breached_count=snapshot.sla_breached_count,
             sla_compliance_rate=sla_compliance_rate,
-            critical_count=row["critical_count"] or 0,
-            high_count=row["high_count"] or 0,
-            medium_count=row["medium_count"] or 0,
-            low_count=row["low_count"] or 0,
+            critical_count=snapshot.critical_count,
+            high_count=snapshot.high_count,
+            medium_count=snapshot.medium_count,
+            low_count=snapshot.low_count,
             window_days=window_days,
             generated_at=datetime.now(timezone.utc),
         )
@@ -817,49 +703,33 @@ class IncidentsFacade:
 
     async def analyze_cost_impact(
         self,
-        session: AsyncSession,
+        session: "AsyncSession",
         tenant_id: str,
         *,
         baseline_days: int = 30,
         limit: int = 20,
     ) -> CostImpactResult:
         """Analyze cost impact across incidents."""
+        driver = IncidentsFacadeDriver(session)
         baseline_days = min(baseline_days, 90)
 
-        sql = text("""
-            SELECT
-                COALESCE(category, 'uncategorized') AS category,
-                resolution_method,
-                COUNT(*) AS incident_count,
-                SUM(cost_impact) AS total_cost_impact,
-                AVG(cost_impact) AS avg_cost_impact
-            FROM incidents
-            WHERE tenant_id = :tenant_id
-              AND cost_impact IS NOT NULL
-              AND created_at >= NOW() - INTERVAL '1 day' * :baseline_days
-            GROUP BY category, resolution_method
-            ORDER BY total_cost_impact DESC NULLS LAST
-            LIMIT :limit
-        """)
-
-        result = await session.execute(sql, {
-            "tenant_id": tenant_id,
-            "baseline_days": baseline_days,
-            "limit": limit,
-        })
+        rows = await driver.fetch_cost_impact_data(
+            tenant_id=tenant_id,
+            baseline_days=baseline_days,
+            limit=limit,
+        )
 
         summaries: list[CostImpactSummaryResult] = []
         total_cost = 0.0
 
-        for row in result.mappings():
-            cost = float(row["total_cost_impact"]) if row["total_cost_impact"] else 0.0
-            total_cost += cost
+        for row in rows:
+            total_cost += row.total_cost_impact
             summaries.append(CostImpactSummaryResult(
-                category=row["category"],
-                incident_count=row["incident_count"],
-                total_cost_impact=cost,
-                avg_cost_impact=float(row["avg_cost_impact"]) if row["avg_cost_impact"] else 0.0,
-                resolution_method=row["resolution_method"],
+                category=row.category,
+                incident_count=row.incident_count,
+                total_cost_impact=row.total_cost_impact,
+                avg_cost_impact=row.avg_cost_impact,
+                resolution_method=row.resolution_method,
             ))
 
         return CostImpactResult(
@@ -873,23 +743,23 @@ class IncidentsFacade:
     # Helper Methods
     # -------------------------------------------------------------------------
 
-    def _to_summary_result(self, inc: Incident) -> IncidentSummaryResult:
-        """Convert Incident model to IncidentSummaryResult."""
+    def _snapshot_to_summary(self, snapshot: IncidentSnapshot) -> IncidentSummaryResult:
+        """Convert snapshot to summary result. Applies business defaults."""
         return IncidentSummaryResult(
-            incident_id=inc.id,
-            tenant_id=inc.tenant_id,
-            lifecycle_state=inc.lifecycle_state or "ACTIVE",
-            severity=inc.severity or "medium",
-            category=inc.category or "UNKNOWN",
-            title=inc.title or "Untitled Incident",
-            description=inc.description,
-            llm_run_id=inc.llm_run_id,
-            cause_type=inc.cause_type or "SYSTEM",
-            error_code=inc.error_code,
-            error_message=inc.error_message,
-            created_at=inc.created_at,
-            resolved_at=inc.resolved_at,
-            is_synthetic=inc.is_synthetic or False,
+            incident_id=snapshot.id,
+            tenant_id=snapshot.tenant_id,
+            lifecycle_state=snapshot.lifecycle_state or "ACTIVE",
+            severity=snapshot.severity or "medium",
+            category=snapshot.category or "UNKNOWN",
+            title=snapshot.title or "Untitled Incident",
+            description=snapshot.description,
+            llm_run_id=snapshot.llm_run_id,
+            cause_type=snapshot.cause_type or "SYSTEM",
+            error_code=snapshot.error_code,
+            error_message=snapshot.error_message,
+            created_at=snapshot.created_at,
+            resolved_at=snapshot.resolved_at,
+            is_synthetic=snapshot.is_synthetic or False,
         )
 
     # -------------------------------------------------------------------------
@@ -898,7 +768,7 @@ class IncidentsFacade:
 
     async def detect_patterns(
         self,
-        session: AsyncSession,
+        session: "AsyncSession",
         tenant_id: str,
         *,
         window_hours: int = 24,
@@ -945,7 +815,7 @@ class IncidentsFacade:
 
     async def analyze_recurrence(
         self,
-        session: AsyncSession,
+        session: "AsyncSession",
         tenant_id: str,
         *,
         baseline_days: int = 30,
@@ -957,7 +827,7 @@ class IncidentsFacade:
 
         Identifies incident categories that recur frequently.
         """
-        from app.services.incidents.recurrence_analysis_service import RecurrenceAnalysisService
+        from app.services.incidents.recurrence_analysis_driver import RecurrenceAnalysisService  # PIN-468
 
         service = RecurrenceAnalysisService(session)
         result = await service.analyze_recurrence(
@@ -993,7 +863,7 @@ class IncidentsFacade:
 
     async def get_incident_learnings(
         self,
-        session: AsyncSession,
+        session: "AsyncSession",
         tenant_id: str,
         incident_id: str,
     ) -> Optional[LearningsResult]:

@@ -1,0 +1,51 @@
+name: Layer Compliance Check
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/app/houseofcards/**/*.py'
+      - 'scripts/migration/*.py'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/app/houseofcards/**/*.py'
+      - 'scripts/migration/*.py'
+
+jobs:
+  layer-compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+
+      - name: Run layer analysis
+        run: |
+          python scripts/migration/layer_analysis.py
+
+      - name: Run layer classifier
+        run: |
+          python scripts/migration/layer_classifier.py
+
+      - name: Run layer compliance check
+        run: |
+          python scripts/migration/layer_compliance_check.py \
+            --baseline docs/architecture/migration/layer_fit_report.json
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: layer-fit-reports
+          path: |
+            docs/architecture/migration/layer_fit_report.json
+            docs/architecture/migration/layer_fit_summary.md
+            docs/architecture/migration/signals_raw.json

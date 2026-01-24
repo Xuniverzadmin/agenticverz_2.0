@@ -1,10 +1,20 @@
 # HOC Layer Topology V1
 
-**Version:** 1.0.0
+**Version:** 1.2.0
 **Status:** RATIFIED
 **Created:** 2026-01-23
 **Author:** Founder + Claude (Architecture Session)
 **Supersedes:** LAYER_MODEL.md (partial), API_FACADE_COEXISTENCE_PLAN.md
+
+---
+
+## ⚠️ CANONICAL REFERENCE STATUS
+
+> **This document is the CANONICAL layer architecture for House of Cards (HOC).**
+>
+> **Referenced in:** `/CLAUDE.md` (Section: HOC Layer Topology - BL-HOC-LAYER-001)
+>
+> When working with HOC files, layer classification, import rules, or file naming conventions — **this document is authoritative**.
 
 ---
 
@@ -13,6 +23,8 @@
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0.0 | 2026-01-23 | Founder + Claude | Initial ratified version |
+| 1.1.0 | 2026-01-23 | Founder + Claude | L4 Runtime restructured: Parts-based architecture (authority/execution/consequences), Independence Guarantee, L4 Runtime Contract |
+| 1.2.0 | 2026-01-23 | Founder + Claude | Added layer contracts: L2.1 Facade, L3 Adapter, L5 Worker, L6 Driver. Updated Panel Engine rules. Added CI Enforcement section. |
 
 ---
 
@@ -167,6 +179,33 @@ class CustomerPoliciesFacade:
 
 ---
 
+#### L2.1 Facade Contract
+
+```text
+L2.1 FACADE CONTRACT
+
+1. Facades are ORGANIZERS ONLY — no business logic
+2. Facades MAY import L2 routers ONLY
+3. Facades MAY NOT import:
+   - Adapters (L3)
+   - Runtime (L4)
+   - Engines/Workers (L5)
+   - Drivers (L6)
+   - Models (L7)
+4. Facades MAY apply audience/domain grouping
+5. Facades MAY apply HTTP route binding
+6. Validation logic belongs in L2, not L2.1
+
+Violations indicate authority drift.
+```
+
+**BLCA Enforcement Rule:**
+```
+houseofcards/api/facades/** → CANNOT import → houseofcards/{audience}/**
+```
+
+---
+
 ### 4.3 L2 — APIs
 
 **Location:** `houseofcards/api/{audience}/{domain}.py`
@@ -244,57 +283,206 @@ class OverviewAdapter:
 
 ---
 
-### 4.5 L4 — Governed Runtime (Shared per Audience)
+#### L3 Adapter Contract
 
-**Location:** `houseofcards/{audience}/general/runtime/*.py`
+```text
+L3 ADAPTER CONTRACT
+
+1. Translation + aggregation ONLY
+2. NO state mutation
+3. NO retries or fallback logic
+4. NO policy decisions
+5. NO short-circuiting L4 runtime
+6. Tenant scoping enforcement ONLY
+
+Adapters that violate this contract become invisible orchestrators.
+When failures occur, L4 cannot reason about what actually executed.
+Violations are architectural defects, not bugs.
+```
+
+**Why This Matters:**
+
+Adapters are the cross-domain aggregation point, making them magnets for "just one more thing."
+If adapters start doing retries, they bypass L4 governance and create non-deterministic failure modes.
+
+**Standard Adapter Header:**
+```python
+# Layer: L3 — Boundary Adapter
+# AUDIENCE: {CUSTOMER | FOUNDER | INTERNAL}
+# Role: {single-line description}
+#
+# ADAPTER CONTRACT:
+# - Translation + aggregation only
+# - No state mutation
+# - No retries
+# - No policy decisions
+```
+
+---
+
+### 4.5 L4 — Governed Runtime (Control Plane)
+
+**Location:** `houseofcards/{audience}/general/runtime/`
 
 **Purpose:**
-- Trigger mechanisms
-- Lifecycle management
-- Orchestration of multiple engines
-- Shared utilities
-- (Optional) Policy/governance checks before engine execution
 
-**Components:**
-| File | Responsibility |
-|------|----------------|
-| `trigger_manager.py` | Event triggers, scheduling |
-| `lifecycle_manager.py` | State transitions, cleanup |
-| `orchestrator.py` | Multi-engine coordination |
-| `governance_gate.py` | Pre-execution governance checks |
+L4 is the system's execution authority. It is the ONLY layer allowed to:
+- Authorize execution
+- Trigger domain engines
+- Coordinate multi-engine behavior
+- React to system consequences
 
-**Example:**
-```python
-# houseofcards/customer/general/runtime/orchestrator.py
-# Layer: L4 — Governed Runtime
-# AUDIENCE: CUSTOMER
-# Role: Orchestrates multi-engine workflows
+**L4 is NOT:**
+- A pipeline
+- A timeline
+- A workflow engine
 
-class CustomerOrchestrator:
-    async def execute_workflow(self, workflow_id: str, context: dict):
-        # Lifecycle: start
-        await self._lifecycle.start(workflow_id)
+**L4 IS:**
+- A control plane
+- Centralized authority (all execution flows through L4 exactly once)
+- Composed of independent parts
 
-        # Governance check (optional)
-        if not await self._governance.can_proceed(context):
-            return GatedResult(blocked=True)
+---
 
-        # Orchestrate engines
-        result = await self._run_engines(context)
+#### L4 Internal Structure (Three Independent Parts)
 
-        # Lifecycle: complete
-        await self._lifecycle.complete(workflow_id)
-        return result
+| Part | Folder | Purpose | Can Block? | Can Execute? |
+|------|--------|---------|------------|--------------|
+| **Authority** | `authority/` | Grant/deny permission | ✅ Yes | ❌ No |
+| **Execution** | `execution/` | Mechanical triggering | ❌ No | ✅ Yes |
+| **Consequences** | `consequences/` | React to outcomes | ❌ No | ❌ No |
+| **Contracts** | `contracts/` | Shared verdict objects | — | — |
+
+---
+
+#### Independence Guarantee
+
+These parts:
+- Do NOT call each other
+- Do NOT share mutable state
+- Do NOT assume execution order
+- Do NOT block each other
+- Are linked only by immutable inputs (verdicts, IDs, events)
+
+---
+
+#### L4 Runtime Contract
+
+```text
+L4 RUNTIME CONTRACT
+
+1. Governance logic MUST be pure and side-effect free.
+2. Orchestration MUST assume authority already granted.
+3. Consequence handlers MUST NOT block execution.
+4. Engines MUST NOT perform governance checks.
+5. Adapters MUST NOT bypass runtime.
+6. All execution enters via L4 exactly once.
+7. No part may impersonate another.
 ```
+
+---
+
+#### What "Centralized" Means
+
+Centralized does NOT mean:
+- Synchronous
+- Sequential
+- Single-threaded
+- A bottleneck
+
+Centralized MEANS:
+- All execution authority flows through L4 exactly once
+- No engine, adapter, or worker may self-authorize
+
+---
+
+#### Directory Structure
+
+```
+houseofcards/{audience}/general/runtime/
+├── authority/
+│   └── governance_gate.py      # Grants/denies execution
+├── execution/
+│   └── orchestrator.py         # Triggers engines/workers
+├── consequences/
+│   └── enforcement.py          # Incidents, audit, compensation
+└── contracts/
+    └── runtime_verdict.py      # Immutable verdict object
+```
+
+---
+
+#### Example — Authority Part
+
+```python
+# houseofcards/customer/general/runtime/authority/governance_gate.py
+# Layer: L4 — Governed Runtime (Authority)
+# AUDIENCE: CUSTOMER
+# Role: Grants or denies execution permission
+
+from houseofcards.customer.general.runtime.contracts.runtime_verdict import RuntimeVerdict
+
+class GovernanceGate:
+    """Pure function: context → verdict. No side effects."""
+
+    async def evaluate(self, context: dict) -> RuntimeVerdict:
+        # Check policies, limits, killswitches
+        if await self._is_blocked(context):
+            return RuntimeVerdict(allowed=False, reason="policy_blocked")
+        return RuntimeVerdict(allowed=True)
+```
+
+---
+
+#### Example — Execution Part
+
+```python
+# houseofcards/customer/general/runtime/execution/orchestrator.py
+# Layer: L4 — Governed Runtime (Execution)
+# AUDIENCE: CUSTOMER
+# Role: Mechanical triggering of engines (assumes authority granted)
+
+class Orchestrator:
+    """Triggers engines. Does NOT check permissions (already granted)."""
+
+    async def execute(self, verdict: RuntimeVerdict, context: dict):
+        if not verdict.allowed:
+            raise RuntimeError("Orchestrator called without authority")
+
+        # Trigger engines mechanically
+        return await self._run_engines(context)
+```
+
+---
+
+#### Example — Consequences Part
+
+```python
+# houseofcards/customer/general/runtime/consequences/enforcement.py
+# Layer: L4 — Governed Runtime (Consequences)
+# AUDIENCE: CUSTOMER
+# Role: Reacts to outcomes (non-blocking)
+
+class EnforcementHandler:
+    """Reacts to outcomes. Cannot block. Cannot execute."""
+
+    async def handle(self, outcome: dict):
+        # Log to audit, create incidents, trigger compensation
+        await self._log_audit(outcome)
+        if outcome.get("failed"):
+            await self._create_incident(outcome)
+```
+
+---
 
 **Rules:**
 | Allowed | Forbidden |
 |---------|-----------|
-| Call L5 engines | Know HTTP |
+| Call L5 engines (from execution/) | Know HTTP |
 | Call L6 drivers | Cross-audience imports |
-| Lifecycle control | Domain-specific logic |
-| Trigger management | Direct API response |
-| Shared utilities | |
+| Issue verdicts (from authority/) | Domain-specific logic |
+| React to outcomes (from consequences/) | Direct API response |
+| Share immutable contracts | Parts calling each other |
 
 ---
 
@@ -373,6 +561,51 @@ class PolicyProposalCreate(BaseModel):
 
 ---
 
+#### L5 Worker Contract
+
+```text
+L5 WORKER CONTRACT
+
+1. Workers MUST be idempotent OR explicitly marked non-idempotent
+2. Workers MUST be restart-safe
+3. Workers MUST NOT create incidents directly
+4. Workers MUST NOT enforce policy
+5. Workers MUST NOT manage retries
+6. Workers MUST NOT perform governance checks
+
+Failure escalation flows through L4:
+  L4/consequences → incident creation
+  L4/execution → retry logic
+  L4/authority → policy enforcement
+```
+
+**Failure Ownership Matrix:**
+
+| Concern | Owner | Location |
+|---------|-------|----------|
+| Retry logic | L4 | `execution/orchestrator.py` |
+| Backoff policy | L4 | `execution/orchestrator.py` |
+| Failure classification | L4 | `consequences/enforcement.py` |
+| Incident creation | L4 | `consequences/enforcement.py` |
+| Compensation | L4 | `consequences/enforcement.py` |
+| Idempotency | L5 Worker | Worker itself |
+
+**Standard Worker Header:**
+```python
+# Layer: L5 — Domain Worker
+# AUDIENCE: {CUSTOMER | FOUNDER | INTERNAL}
+# Role: {single-line description}
+# Idempotent: YES | NO (if NO, explain why)
+#
+# WORKER CONTRACT:
+# - Restart-safe
+# - No incident creation
+# - No policy enforcement
+# - No retry management
+```
+
+---
+
 ### 4.7 L6 — Drivers (Database Operations)
 
 **Location:** `houseofcards/{audience}/{domain}/drivers/*.py`
@@ -412,6 +645,57 @@ class PolicyDriver:
 | Query building | Know about HTTP |
 | Model imports (L7) | Call engines |
 | Data transformation | Cross-domain queries |
+
+---
+
+#### L6 Driver Contract
+
+```text
+L6 DRIVER CONTRACT
+
+1. Drivers MUST NOT return ORM models to engines
+2. Drivers MUST return: primitives, dicts, dataclasses, or Pydantic models
+3. ORM models are L7-only and L6-only
+4. Engines (L5) MUST be schema-ignorant
+5. Query logic stays in drivers, never in engines
+6. Drivers own the data shape transformation
+
+This enables:
+- Schema migrations without logic breaks
+- Testability without database
+- Clear ownership of data shape
+```
+
+**Return Type Guidance:**
+
+| From Driver | To Engine | Allowed? |
+|-------------|-----------|----------|
+| `PolicyRule` (ORM model) | Engine | ❌ No |
+| `PolicyRuleSnapshot` (dataclass) | Engine | ✅ Yes |
+| `dict` | Engine | ✅ Yes |
+| Pydantic model | Engine | ✅ Yes |
+| `list[ORM]` | Engine | ❌ No |
+| `list[dict]` | Engine | ✅ Yes |
+
+**Why This Matters:**
+
+If engines receive ORM models:
+- Engines become schema-coupled
+- Migrations break logic
+- Testability collapses (need real DB for unit tests)
+- Query patterns leak upward
+
+**Standard Driver Header:**
+```python
+# Layer: L6 — Database Driver
+# AUDIENCE: {CUSTOMER | FOUNDER | INTERNAL}
+# Role: {single-line description}
+#
+# DRIVER CONTRACT:
+# - Returns domain objects, not ORM models
+# - Owns query logic
+# - Owns data shape transformation
+```
 
 ---
 
@@ -483,6 +767,56 @@ houseofcards/
 
 ---
 
+### Panel Engine Contract
+
+```text
+PANEL ENGINE CONTRACT
+
+1. Panels are READ-ONLY projection services
+2. NO UI decisions (layout, colors, interactions)
+3. NO feature flags
+4. NO presentation logic
+5. Data shape ONLY — frontend owns rendering
+6. NO stateful behavior beyond request scope
+
+Panels answer: "What data should be shown?"
+Frontend answers: "How should it be shown?"
+```
+
+**Separation of Concerns:**
+
+| Concern | Owner | Location |
+|---------|-------|----------|
+| What data | Panel Engine (Backend) | `houseofcards/{audience}/frontend/` |
+| Data shape | Panel Engine (Backend) | Panel response schema |
+| Layout | Frontend | React components |
+| Styling | Frontend | CSS/Tailwind |
+| Interactions | Frontend | Event handlers |
+| Feature flags | Frontend or Platform | Not in panels |
+
+**Why This Matters:**
+
+Backend-hosted panels that make UI decisions:
+- Become tightly coupled to frontend UX
+- Block independent frontend evolution
+- Accumulate presentation logic
+- Become stateful over time
+
+**Standard Panel Header:**
+```python
+# Layer: Panel Engine
+# AUDIENCE: {CUSTOMER | FOUNDER | INTERNAL}
+# Role: {single-line description}
+#
+# PANEL CONTRACT:
+# - Read-only projection
+# - No UI decisions
+# - No feature flags
+# - Data shape only
+```
+
+---
+
 ## 6. Directory Structure (Complete)
 
 ```
@@ -531,12 +865,20 @@ houseofcards/
 ├── customer/
 │   ├── general/                          # Shared for Customer
 │   │   ├── __init__.py
-│   │   ├── runtime/                      # L4 — Governed Runtime
+│   │   ├── runtime/                      # L4 — Governed Runtime (Control Plane)
 │   │   │   ├── __init__.py
-│   │   │   ├── trigger_manager.py
-│   │   │   ├── lifecycle_manager.py
-│   │   │   ├── orchestrator.py
-│   │   │   └── governance_gate.py
+│   │   │   ├── authority/                # Part 1: Grant/deny permission
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── governance_gate.py
+│   │   │   ├── execution/                # Part 2: Mechanical triggering
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── orchestrator.py
+│   │   │   ├── consequences/             # Part 3: React to outcomes
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── enforcement.py
+│   │   │   └── contracts/                # Shared verdict objects
+│   │   │       ├── __init__.py
+│   │   │       └── runtime_verdict.py
 │   │   ├── utils/                        # Shared Utilities
 │   │   │   ├── __init__.py
 │   │   │   └── time.py
@@ -625,7 +967,11 @@ houseofcards/
 │
 ├── founder/
 │   ├── general/
-│   │   ├── runtime/                      # L4
+│   │   ├── runtime/                      # L4 (same structure as customer)
+│   │   │   ├── authority/
+│   │   │   ├── execution/
+│   │   │   ├── consequences/
+│   │   │   └── contracts/
 │   │   └── utils/
 │   │
 │   ├── frontend/                         # Panel Engine (TBD)
@@ -641,7 +987,11 @@ houseofcards/
 │
 └── internal/
     ├── general/
-    │   ├── runtime/                      # L4
+    │   ├── runtime/                      # L4 (same structure as customer)
+    │   │   ├── authority/
+    │   │   ├── execution/
+    │   │   ├── consequences/
+    │   │   └── contracts/
     │   └── utils/
     │
     ├── platform/
@@ -837,8 +1187,72 @@ Database                                            (L8)
 | `layer_validator.py` | Import rules | YES |
 | `audience_guard.py` | Audience boundaries | YES |
 | `cross_domain_checker.py` | L3-only cross-domain | YES |
+| `contract_validator.py` | Layer contract compliance | YES |
+| `orm_leakage_checker.py` | L6→L5 ORM isolation | YES |
 
-### 10.2 File Header Requirement
+### 10.2 BLCA Layer-Specific Rules
+
+**BLCA (Bidirectional Layer Consistency Auditor)** must enforce these import rules:
+
+| Source | Forbidden Targets | Rule |
+|--------|-------------------|------|
+| `houseofcards/api/facades/**` | `houseofcards/{audience}/**` | L2.1 cannot import L3-L7 |
+| `houseofcards/api/{audience}/**` | `houseofcards/{audience}/**/engines/**` | L2 cannot import L5 directly |
+| `houseofcards/{audience}/**/engines/**` | `app/**/models/**` (ORM) | L5 cannot import ORM models |
+| `houseofcards/{audience}/**/workers/**` | `houseofcards/{audience}/**/runtime/**` | L5 workers cannot import L4 |
+
+**Legacy Namespace Ban:**
+```bash
+# FAIL if any HOC file imports from legacy app.services
+fail if: houseofcards/** imports app.services.**
+```
+
+### 10.3 Contract Enforcement
+
+Each layer contract must be mechanically verifiable:
+
+| Contract | Enforcement Method |
+|----------|-------------------|
+| L2.1 Facade Contract | Import analysis (no L3-L7 imports) |
+| L3 Adapter Contract | Code pattern analysis (no retry/mutation patterns) |
+| L4 Runtime Contract | Part isolation check (no inter-part calls) |
+| L5 Worker Contract | Ownership check (no incident/policy creation) |
+| L6 Driver Contract | Return type analysis (no ORM in returns) |
+| Panel Engine Contract | Read-only check (no state mutation) |
+
+### 10.4 Quarantine Registry
+
+Legacy files that violate layer rules must be listed in a single index:
+
+```
+docs/architecture/QUARANTINE_REGISTRY.md
+```
+
+**Quarantine Rules:**
+1. Every quarantined file must be explicitly listed
+2. Each entry must include: file path, violation type, migration plan
+3. No new files may be added to quarantine (fix or delete)
+4. Quarantine count must decrease monotonically
+
+### 10.5 Layer Assertion Tests
+
+Cheap tests that import nothing but scan imports:
+
+```python
+# tests/architecture/test_layer_imports.py
+
+def test_l21_facades_do_not_import_adapters():
+    """L2.1 Facades must not import L3 Adapters."""
+    violations = scan_imports("houseofcards/api/facades/", forbidden=["adapters"])
+    assert violations == [], f"L2.1 Facade violations: {violations}"
+
+def test_l5_engines_do_not_import_orm():
+    """L5 Engines must not import ORM models directly."""
+    violations = scan_imports("houseofcards/**/engines/", forbidden=["app/models"])
+    assert violations == [], f"L5 ORM leakage: {violations}"
+```
+
+### 10.6 File Header Requirement
 
 Every file must include:
 
@@ -848,6 +1262,34 @@ Every file must include:
 # Role: {Single-line description}
 # Callers: {Who calls this}
 # Reference: HOC_LAYER_TOPOLOGY_V1.md
+```
+
+**Layer-Specific Header Extensions:**
+
+For **Adapters (L3):**
+```python
+# ADAPTER CONTRACT:
+# - Translation + aggregation only
+# - No state mutation
+# - No retries
+# - No policy decisions
+```
+
+For **Workers (L5):**
+```python
+# Idempotent: YES | NO (if NO, explain why)
+# WORKER CONTRACT:
+# - Restart-safe
+# - No incident creation
+# - No retry management
+```
+
+For **Drivers (L6):**
+```python
+# DRIVER CONTRACT:
+# - Returns domain objects, not ORM models
+# - Owns query logic
+# - Owns data shape transformation
 ```
 
 ---
@@ -886,6 +1328,8 @@ Every file must include:
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | 2026-01-23 | Initial ratified version |
+| 1.1.0 | 2026-01-23 | L4 Runtime restructured to parts-based control plane architecture |
+| 1.2.0 | 2026-01-23 | Added layer contracts (L2.1, L3, L5, L6, Panel). Expanded CI enforcement (BLCA rules, quarantine registry, layer assertion tests). |
 
 ---
 

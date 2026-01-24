@@ -1,160 +1,164 @@
 #!/usr/bin/env python3
 """
-Layer Validator - Detect Layer Violations in Codebase
+BLCA — Bidirectional Layer Consistency Auditor
 
+Reference: HOC_LAYER_TOPOLOGY_V1.md (v1.2.0)
 Reference: PIN-240 (Seven-Layer Codebase Mental Model)
 
-Layers (top to bottom):
-  L1 — Product Experience (Frontend)
-  L2 — Product APIs (Console / Public)
-  L3 — Boundary Adapters (Translation)
-  L4 — Domain Engines (System Truth)
-  L5 — Execution & Workers
-  L6 — Platform Substrate
-  L7 — Fundamental Ops & Scripts
+This tool enforces the HOC Layer Topology rules:
 
-Violations detected:
-  - L1 importing L4, L5, L6 (frontend calling domain/workers/platform)
-  - L2 importing L1, L5 (API calling frontend or workers)
-  - L3 importing L1, L2, L5 (adapter calling presentation or execution)
-  - L4 importing L1, L2, L3 (domain knowing about products)
-  - L5 importing L1, L2, L3 (workers knowing about products)
+1. Layer import boundaries (L1-L8)
+2. L4/L5 engines cannot import sqlalchemy/sqlmodel at runtime
+3. File naming conventions (*_service.py is BANNED)
+4. File header requirements (# Layer: declaration)
+5. HOC-specific import rules:
+   - L2.1 facades cannot import L3-L7
+   - L5 engines cannot import ORM models directly
+   - L5 workers cannot import L4 runtime
+   - HOC files cannot import from legacy app.services
+6. SEMANTIC LAYER VALIDATION (NEW - 2026-01-24):
+   - HEADER_CLAIM_MISMATCH: Header claims don't match code behavior
+     - L2 claims require HTTP route decorators
+     - L6 claims require database operations
+   - HEADER_LOCATION_MISMATCH: Header claims don't match file location
+     - L2 files must be in api/, not engines/
+     - L5 engines must be in engines/, not drivers/
+
+Violation Types:
+  MISSING_HEADER       - HOC file missing layer header (WARNING)
+  BANNED_NAMING        - *_service.py naming (ERROR)
+  SQLALCHEMY_RUNTIME   - L4/L5 with sqlalchemy outside TYPE_CHECKING (ERROR)
+  LEGACY_IMPORT        - HOC importing from app.services (ERROR)
+  LAYER_BOUNDARY       - Import violates layer rules (ERROR)
+  HEADER_CLAIM_MISMATCH   - Code behavior doesn't match header claim (ERROR)
+  HEADER_LOCATION_MISMATCH - File location doesn't match header claim (ERROR)
 
 Usage:
   python scripts/ops/layer_validator.py                   # Scan all
   python scripts/ops/layer_validator.py --backend         # Backend only
-  python scripts/ops/layer_validator.py --frontend        # Frontend only
-  python scripts/ops/layer_validator.py --verbose         # Show all imports
+  python scripts/ops/layer_validator.py --hoc             # HOC files only
+  python scripts/ops/layer_validator.py --verbose         # Show details
   python scripts/ops/layer_validator.py --ci              # Exit 1 on violations
 """
 
 import argparse
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
-# Layer definitions
+# =============================================================================
+# HOC Layer Definitions (from HOC_LAYER_TOPOLOGY_V1.md)
+# =============================================================================
+
 LAYERS = {
-    "L1": "Product Experience",
+    "L1": "Frontend",
+    "L2.1": "API Facade",
     "L2": "Product APIs",
     "L3": "Boundary Adapters",
-    "L4": "Domain Engines",
-    "L5": "Execution & Workers",
-    "L6": "Platform Substrate",
-    "L7": "Ops & Scripts",
+    "L4": "Governed Runtime / Domain Engines",
+    "L5": "Engines / Workers / Schemas",
+    "L6": "Database Drivers",
+    "L7": "Models",
+    "L8": "Database",
 }
 
-# Layer classification rules (file path patterns)
-LAYER_PATTERNS = {
-    # Backend
-    "backend/app/api/guard.py": "L2",
-    "backend/app/api/customer_visibility.py": "L2",
-    "backend/app/api/v1_killswitch.py": "L2",  # Actually L6 but labeled L2
-    "backend/app/api/onboarding.py": "L2",
-    "backend/app/api/predictions.py": "L2",
-    "backend/app/api/": "L2",  # Default for API routes
-    "backend/app/services/certificate.py": "L3",
-    "backend/app/services/evidence_report.py": "L3",
-    "backend/app/services/email_verification.py": "L3",
-    "backend/app/services/prediction.py": "L3",
-    "backend/app/services/policy_proposal.py": "L3",
-    # Phase F-3: L3 Boundary Adapters (PIN-258)
+# =============================================================================
+# HOC Path-based Layer Classification
+# =============================================================================
+
+HOC_LAYER_PATTERNS = {
+    # L2.1 — API Facades
+    "houseofcards/api/facades/": "L2.1",
+    # L2 — APIs
+    "houseofcards/api/customer/": "L2",
+    "houseofcards/api/founder/": "L2",
+    "houseofcards/api/internal/": "L2",
+    # L3 — Adapters
+    "/adapters/": "L3",
+    # L4 — Runtime (in general/)
+    "/general/runtime/": "L4",
+    # L4 — Domain Facades (facades/ within domain, not api/facades)
+    # These are L4 because they orchestrate but don't touch HTTP
+    # L5 — Engines, Workers, Schemas
+    "/engines/": "L5",
+    "/workers/": "L5",
+    "/schemas/": "L5",
+    # L6 — Drivers
+    "/drivers/": "L6",
+    # L7 — Models
+    "app/models/": "L7",
+    "app/customer/models/": "L7",
+    "app/founder/models/": "L7",
+    "app/internal/models/": "L7",
+}
+
+# Legacy patterns (for backwards compatibility)
+LEGACY_LAYER_PATTERNS = {
+    "backend/app/api/": "L2",
+    "backend/app/services/": "L4",  # Legacy services treated as L4
     "backend/app/adapters/": "L3",
-    "backend/app/adapters/runtime_adapter.py": "L3",
-    "backend/app/adapters/workers_adapter.py": "L3",
-    "backend/app/adapters/policy_adapter.py": "L3",
-    "backend/app/services/pattern_detection.py": "L4",
-    "backend/app/services/recovery_matcher.py": "L4",
-    "backend/app/services/recovery_rule_engine.py": "L4",
-    "backend/app/services/cost_anomaly_detector.py": "L4",
-    # Phase E FIX-01: Reclassified from L5 to L4 (passed 10-point purity test)
-    "backend/app/worker/simulate.py": "L4",
-    # Phase E FIX-01: Extracted L4 domain engine from L5 failure_aggregation.py
-    "backend/app/jobs/failure_classification_engine.py": "L4",
-    # Phase E FIX-01: Graduation engine purity enforcement
-    "backend/app/integrations/graduation_engine.py": "L4",
-    # Phase E-4 Extraction #4: Claim decision domain engine
-    "backend/app/services/claim_decision_engine.py": "L4",
-    # Phase F-3: L4 Command Facades (PIN-258)
-    "backend/app/commands/": "L4",
-    "backend/app/commands/runtime_command.py": "L4",
-    "backend/app/commands/worker_execution_command.py": "L4",
-    "backend/app/commands/policy_command.py": "L4",
     "backend/app/worker/": "L5",
     "backend/app/workflow/": "L5",
     "backend/app/auth/": "L6",
     "backend/app/db/": "L6",
-    "backend/app/models/": "L6",
-    "backend/app/services/event_emitter.py": "L6",
-    # Frontend
-    "website/app-shell/src/products/ai-console/pages/": "L1",
-    "website/app-shell/src/products/ai-console/app/": "L1",
-    "website/app-shell/src/products/": "L1",
-    "website/app-shell/src/components/": "L6",  # Shared UI = Platform
-    "website/app-shell/src/lib/": "L6",
-    "website/app-shell/src/api/": "L2",
-    # Scripts
+    "backend/app/models/": "L7",
     "scripts/": "L7",
 }
 
-# Import patterns to detect
-IMPORT_LAYER_HINTS = {
-    # Backend imports
-    "from app.api.guard": "L2",
-    "from app.api.customer_visibility": "L2",
-    "from app.api.v1_killswitch": "L2",
-    "from app.api.": "L2",
-    "from app.services.certificate": "L3",
-    "from app.services.evidence_report": "L3",
-    "from app.services.email_verification": "L3",
-    "from app.services.prediction": "L3",
-    "from app.services.policy_proposal": "L3",
-    # Phase F-3: L3 Boundary Adapters (PIN-258)
-    "from app.adapters": "L3",
-    "from app.adapters.runtime_adapter": "L3",
-    "from app.adapters.workers_adapter": "L3",
-    "from app.adapters.policy_adapter": "L3",
-    "from app.services.pattern_detection": "L4",
-    "from app.services.recovery_matcher": "L4",
-    "from app.services.recovery_rule_engine": "L4",
-    "from app.services.cost_anomaly_detector": "L4",
-    # Phase E FIX-01: Reclassified from L5 to L4 (passed 10-point purity test)
-    "from app.worker.simulate": "L4",
-    # Phase E FIX-01: Extracted L4 domain engine from L5 failure_aggregation.py
-    "from app.jobs.failure_classification_engine": "L4",
-    # Phase E FIX-01: Graduation engine purity enforcement
-    "from app.integrations.graduation_engine": "L4",
-    # Phase E-4 Extraction #4: Claim decision domain engine
-    "from app.services.claim_decision_engine": "L4",
-    # Phase F-3: L4 Command Facades (PIN-258)
-    "from app.commands": "L4",
-    "from app.commands.runtime_command": "L4",
-    "from app.commands.worker_execution_command": "L4",
-    "from app.commands.policy_command": "L4",
-    "from app.worker": "L5",
-    "from app.workflow": "L5",
-    "from app.auth": "L6",
-    "from app.db": "L6",
-    "from app.models": "L6",
-    "from app.services.event_emitter": "L6",
+# =============================================================================
+# Import Rules (HOC_LAYER_TOPOLOGY_V1.md Section 7)
+# =============================================================================
+
+# Allowed imports: source_layer -> set of allowed target layers
+ALLOWED_IMPORTS = {
+    "L1": {"L1", "L2.1"},
+    "L2.1": {"L2.1", "L2"},  # Facades can ONLY import L2 APIs
+    "L2": {"L2", "L3"},  # APIs import Adapters
+    "L3": {"L3", "L4", "L5", "L6"},  # Adapters can cross-domain
+    "L4": {"L4", "L5", "L6"},  # Runtime imports Engines, Drivers
+    "L5": {"L5", "L6"},  # Engines/Workers import Drivers
+    "L6": {"L6", "L7"},  # Drivers import Models
+    "L7": {"L7"},  # Models are leaf
 }
 
-# Allowed imports (from -> to)
-# Key = source layer, Value = set of allowed target layers
-# Same-layer imports are always allowed (peers)
-ALLOWED_IMPORTS = {
-    "L1": {"L1", "L2", "L3"},  # Frontend can call APIs and adapters
-    "L2": {"L2", "L3", "L4", "L6"},  # APIs can call adapters, domain, platform
-    "L3": {"L3", "L4", "L6"},  # Adapters can call domain, platform
-    "L4": {"L4", "L5", "L6"},  # Domain can call execution, platform
-    # Phase R (PIN-263): L5→L4 FORBIDDEN — Workers execute, never decide
-    # Enforcement: Step 5 Wave-1 (2026-01-01)
-    # Escape: SIG-001 owner override via commit message
-    "L5": {"L5", "L6"},  # Workers can ONLY call platform (L6) and peers (L5)
-    "L6": {"L6"},  # Platform calls platform (peers)
-    "L7": {"L1", "L2", "L3", "L4", "L5", "L6", "L7"},  # Ops can call anything
+# =============================================================================
+# Forbidden Import Patterns (Critical Rules)
+# =============================================================================
+
+# L4/L5 engines CANNOT import these at runtime
+FORBIDDEN_RUNTIME_IMPORTS = {
+    "sqlalchemy",
+    "sqlmodel",
+    "from sqlalchemy",
+    "from sqlmodel",
 }
+
+# HOC files cannot import from legacy namespaces
+FORBIDDEN_HOC_IMPORTS = {
+    "from app.services.",
+    "import app.services.",
+}
+
+# =============================================================================
+# Naming Convention Rules
+# =============================================================================
+
+# BANNED filename patterns
+BANNED_FILENAME_PATTERNS = [
+    r".*_service\.py$",  # *_service.py is BANNED in HOC
+]
+
+# Required filename patterns per layer
+REQUIRED_PATTERNS = {
+    "L5": [r".*_engine\.py$", r".*_worker\.py$", r".*_schema\.py$", r".*\.py$"],
+    "L6": [r".*_driver\.py$", r".*_store\.py$", r".*\.py$"],
+}
+
+# =============================================================================
+# Violation Types
+# =============================================================================
 
 
 @dataclass
@@ -163,16 +167,13 @@ class Violation:
 
     file: str
     line_number: int
-    import_statement: str
-    source_layer: str
-    target_layer: str
+    violation_type: str
+    message: str
+    severity: str = "ERROR"  # ERROR, WARNING
 
     def __str__(self) -> str:
-        return (
-            f"{self.file}:{self.line_number}: "
-            f"{self.source_layer} -> {self.target_layer} violation\n"
-            f"  Import: {self.import_statement.strip()}"
-        )
+        prefix = "⚠️ " if self.severity == "WARNING" else "❌ "
+        return f"{prefix}[{self.violation_type}] {self.file}:{self.line_number}\n   {self.message}"
 
 
 @dataclass
@@ -182,73 +183,438 @@ class ValidationResult:
     files_scanned: int = 0
     violations: List[Violation] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
-    imports_by_layer: Dict[str, List[str]] = field(default_factory=dict)
+
+    @property
+    def error_count(self) -> int:
+        return len([v for v in self.violations if v.severity == "ERROR"])
+
+    @property
+    def warning_count(self) -> int:
+        return len([v for v in self.violations if v.severity == "WARNING"])
 
 
-def get_file_layer(file_path: str) -> Optional[str]:
-    """Determine which layer a file belongs to."""
-    # Check specific patterns first (most specific to least)
-    for pattern, layer in sorted(LAYER_PATTERNS.items(), key=lambda x: -len(x[0])):
+# =============================================================================
+# Layer Detection
+# =============================================================================
+
+
+def get_layer_from_header(file_path: Path) -> Optional[str]:
+    """Extract layer from file header (# Layer: L{x})."""
+    try:
+        content = file_path.read_text(encoding="utf-8", errors="ignore")
+        lines = content.split("\n")[:50]  # Check first 50 lines
+
+        for line in lines:
+            # Match patterns like "# Layer: L4", "# Layer: L6 — Platform Substrate"
+            match = re.match(r"#\s*Layer:\s*(L\d(?:\.\d)?)", line, re.IGNORECASE)
+            if match:
+                return match.group(1).upper()
+    except Exception:
+        pass
+    return None
+
+
+def get_layer_from_path(file_path: str) -> Optional[str]:
+    """Determine layer from file path patterns."""
+    # Check HOC patterns first (more specific)
+    for pattern, layer in sorted(HOC_LAYER_PATTERNS.items(), key=lambda x: -len(x[0])):
         if pattern in file_path:
             return layer
-    return None
 
-
-def get_import_layer(import_line: str) -> Optional[str]:
-    """Determine which layer an import targets."""
-    for pattern, layer in IMPORT_LAYER_HINTS.items():
-        if pattern in import_line:
+    # Check legacy patterns
+    for pattern, layer in sorted(LEGACY_LAYER_PATTERNS.items(), key=lambda x: -len(x[0])):
+        if pattern in file_path:
             return layer
+
     return None
 
 
-def extract_imports(file_path: Path) -> List[Tuple[int, str]]:
-    """Extract import statements from a Python file."""
+def get_file_layer(file_path: Path) -> Tuple[Optional[str], str]:
+    """
+    Get layer for a file.
+
+    Returns: (layer, source) where source is "header" or "path"
+    """
+    # Prefer header declaration
+    header_layer = get_layer_from_header(file_path)
+    if header_layer:
+        return header_layer, "header"
+
+    # Fall back to path-based detection
+    path_layer = get_layer_from_path(str(file_path))
+    return path_layer, "path"
+
+
+# =============================================================================
+# Semantic Layer Validation (Header Claim Verification)
+# =============================================================================
+
+# Patterns that indicate L2 (HTTP route handlers)
+L2_INDICATORS = {
+    "decorators": [
+        r"@router\.",
+        r"@app\.(get|post|put|delete|patch|options|head)",
+        r"@api_router\.",
+        r"from fastapi import.*Router",
+        r"from starlette",
+    ],
+    "imports": [
+        r"from fastapi import",
+        r"from fastapi\.routing",
+    ],
+}
+
+# Patterns that indicate L6 (Database drivers)
+L6_INDICATORS = {
+    "imports": [
+        r"from sqlalchemy",
+        r"from sqlmodel",
+        r"import sqlalchemy",
+        r"import sqlmodel",
+    ],
+    "code": [
+        r"\.execute\(",
+        r"select\(",
+        r"insert\(",
+        r"update\(",
+        r"delete\(",
+        r"AsyncSession",
+        r"Session",
+    ],
+}
+
+# Patterns that indicate business logic (L5 Engine behavior)
+L5_ENGINE_INDICATORS = {
+    "code": [
+        r"def (process|handle|compute|calculate|validate|check|decide|evaluate)",
+        r"if .+ (and|or) .+:",  # Complex conditionals
+        r"for .+ in .+:",  # Iteration logic
+    ],
+}
+
+
+def analyze_code_semantics(file_path: Path) -> Dict[str, List[str]]:
+    """
+    Analyze code to determine what layer behaviors are present.
+
+    Returns dict with keys: 'l2_evidence', 'l5_evidence', 'l6_evidence'
+    """
+    evidence = {
+        "l2_evidence": [],
+        "l5_evidence": [],
+        "l6_evidence": [],
+    }
+
+    try:
+        content = file_path.read_text(encoding="utf-8", errors="ignore")
+        lines = content.split("\n")
+
+        for i, line in enumerate(lines, 1):
+            stripped = line.strip()
+
+            # Check L2 indicators (HTTP)
+            for pattern in L2_INDICATORS["decorators"]:
+                if re.search(pattern, stripped):
+                    evidence["l2_evidence"].append(f"Line {i}: {stripped[:80]}")
+            for pattern in L2_INDICATORS["imports"]:
+                if re.search(pattern, stripped):
+                    evidence["l2_evidence"].append(f"Line {i}: {stripped[:80]}")
+
+            # Check L6 indicators (DB)
+            for pattern in L6_INDICATORS["imports"]:
+                if re.search(pattern, stripped):
+                    evidence["l6_evidence"].append(f"Line {i}: {stripped[:80]}")
+            for pattern in L6_INDICATORS["code"]:
+                if re.search(pattern, stripped):
+                    evidence["l6_evidence"].append(f"Line {i}: {stripped[:80]}")
+
+            # Check L5 engine indicators (business logic)
+            for pattern in L5_ENGINE_INDICATORS["code"]:
+                if re.search(pattern, stripped):
+                    evidence["l5_evidence"].append(f"Line {i}: {stripped[:80]}")
+
+    except Exception:
+        pass
+
+    return evidence
+
+
+def validate_header_claim(
+    file_path: Path,
+    declared_layer: str,
+    evidence: Dict[str, List[str]]
+) -> List[Violation]:
+    """
+    Validate that declared layer matches code behavior.
+
+    NEW: This catches cases like knowledge_sdk.py claiming L2
+    but having zero HTTP handling code.
+    """
+    violations = []
+    rel_path = str(file_path)
+    filename = file_path.name
+
+    # Skip __init__.py files (they're structural)
+    if filename == "__init__.py":
+        return violations
+
+    # L2 Claim Validation: Must have HTTP evidence
+    if declared_layer == "L2":
+        has_http = len(evidence["l2_evidence"]) > 0
+        path_is_api = "/api/" in rel_path and "/facades/" not in rel_path
+
+        if not has_http and not path_is_api:
+            violations.append(Violation(
+                file=rel_path,
+                line_number=1,
+                violation_type="HEADER_CLAIM_MISMATCH",
+                message=(
+                    f"File declares L2 (Product APIs) but has NO HTTP handling evidence.\n"
+                    f"   L2 requires: HTTP route decorators (@router.*, @app.*)\n"
+                    f"   Found: 0 HTTP indicators\n"
+                    f"   Possible fix: Reclassify to correct layer (L3/L5) based on actual behavior"
+                ),
+                severity="ERROR",
+            ))
+
+    # L2.1 Claim Validation: Must be in facades path, no HTTP handlers
+    if declared_layer == "L2.1":
+        if len(evidence["l2_evidence"]) > 0:
+            # L2.1 facades organize routers, they don't define routes
+            has_route_defs = any("@router." in e or "@app." in e for e in evidence["l2_evidence"])
+            if has_route_defs:
+                violations.append(Violation(
+                    file=rel_path,
+                    line_number=1,
+                    violation_type="HEADER_CLAIM_MISMATCH",
+                    message=(
+                        f"File declares L2.1 (API Facade) but defines HTTP routes.\n"
+                        f"   L2.1 facades ORGANIZE routers, they don't DEFINE routes.\n"
+                        f"   Found route definitions: {evidence['l2_evidence'][:2]}\n"
+                        f"   Possible fix: Reclassify to L2 or split file"
+                    ),
+                    severity="ERROR",
+                ))
+
+    # L5 Engine in wrong location
+    if declared_layer == "L5" and "/engines/" not in rel_path:
+        if "/drivers/" in rel_path:
+            violations.append(Violation(
+                file=rel_path,
+                line_number=1,
+                violation_type="HEADER_LOCATION_MISMATCH",
+                message=(
+                    f"File declares L5 (Engine) but is located in drivers/.\n"
+                    f"   L5 engines belong in engines/ directory.\n"
+                    f"   Possible fix: Move file or reclassify header"
+                ),
+                severity="WARNING",
+            ))
+
+    # L6 Driver without DB evidence (may be misclassified)
+    if declared_layer == "L6":
+        has_db = len(evidence["l6_evidence"]) > 0
+        if not has_db and "/drivers/" in rel_path:
+            violations.append(Violation(
+                file=rel_path,
+                line_number=1,
+                violation_type="HEADER_CLAIM_MISMATCH",
+                message=(
+                    f"File declares L6 (Driver) but has NO database operation evidence.\n"
+                    f"   L6 drivers should contain: sqlalchemy/sqlmodel, queries, Session\n"
+                    f"   Found: 0 DB indicators\n"
+                    f"   Possible fix: Reclassify to L5 (if business logic) or add DB ops"
+                ),
+                severity="WARNING",  # Warning since some drivers are thin
+            ))
+
+    # L4/L5 claiming to be L2 (most common issue like knowledge_sdk.py)
+    if declared_layer == "L2" and "/engines/" in rel_path:
+        violations.append(Violation(
+            file=rel_path,
+            line_number=1,
+            violation_type="HEADER_LOCATION_MISMATCH",
+            message=(
+                f"File declares L2 (Product APIs) but is located in engines/.\n"
+                f"   L2 APIs belong in houseofcards/api/**\n"
+                f"   engines/ directory is L5 territory.\n"
+                f"   Possible fix: Change header to L5 or move to api/"
+            ),
+            severity="ERROR",
+        ))
+
+    return violations
+
+
+# =============================================================================
+# Import Analysis
+# =============================================================================
+
+
+def extract_imports(file_path: Path) -> List[Tuple[int, str, bool]]:
+    """Extract import statements from a Python file.
+
+    Returns: List of (line_number, import_statement, in_type_checking_block)
+    """
     imports = []
     try:
         content = file_path.read_text(encoding="utf-8", errors="ignore")
+        in_type_checking = False
+
         for i, line in enumerate(content.split("\n"), 1):
             stripped = line.strip()
+
+            # Track TYPE_CHECKING blocks
+            if "TYPE_CHECKING" in stripped and "if" in stripped:
+                in_type_checking = True
+            elif in_type_checking and stripped and not stripped.startswith("#"):
+                # Check for end of TYPE_CHECKING block (dedent or else)
+                if not line.startswith(" ") and not line.startswith("\t"):
+                    in_type_checking = False
+
             if stripped.startswith("from ") or stripped.startswith("import "):
-                imports.append((i, stripped))
+                imports.append((i, stripped, in_type_checking))
     except Exception:
         pass
     return imports
 
 
-def check_violation(source_layer: str, target_layer: str) -> bool:
-    """Check if importing from target_layer into source_layer is a violation."""
+def get_import_target_layer(import_line: str) -> Optional[str]:
+    """Determine target layer of an import."""
+    # HOC import patterns
+    if "houseofcards/api/facades/" in import_line or "houseofcards.api.facades" in import_line:
+        return "L2.1"
+    if "houseofcards/api/" in import_line or "houseofcards.api." in import_line:
+        return "L2"
+    if "/adapters/" in import_line or ".adapters." in import_line:
+        return "L3"
+    if "/general/runtime/" in import_line or ".general.runtime." in import_line:
+        return "L4"
+    if "/engines/" in import_line or ".engines." in import_line:
+        return "L5"
+    if "/workers/" in import_line or ".workers." in import_line:
+        return "L5"
+    if "/drivers/" in import_line or ".drivers." in import_line:
+        return "L6"
+    if "app.models" in import_line or "app/models" in import_line:
+        return "L7"
+    if "app.customer.models" in import_line or "app.founder.models" in import_line:
+        return "L7"
+
+    # Legacy patterns
+    if "from app.api." in import_line:
+        return "L2"
+    if "from app.services." in import_line:
+        return "L4"
+    if "from app.adapters." in import_line:
+        return "L3"
+    if "from app.worker." in import_line or "from app.workflow." in import_line:
+        return "L5"
+    if "from app.auth." in import_line or "from app.db." in import_line:
+        return "L6"
+
+    return None
+
+
+def is_sqlalchemy_import(import_line: str) -> bool:
+    """Check if import is sqlalchemy/sqlmodel."""
+    return any(pattern in import_line for pattern in FORBIDDEN_RUNTIME_IMPORTS)
+
+
+def is_forbidden_hoc_import(import_line: str) -> bool:
+    """Check if import is from forbidden legacy namespace."""
+    return any(pattern in import_line for pattern in FORBIDDEN_HOC_IMPORTS)
+
+
+# =============================================================================
+# Validation Functions
+# =============================================================================
+
+
+def check_layer_import_violation(
+    source_layer: str, target_layer: str
+) -> bool:
+    """Check if importing target_layer from source_layer is a violation."""
     if source_layer not in ALLOWED_IMPORTS:
-        return False  # Unknown layer, can't validate
+        return False
     return target_layer not in ALLOWED_IMPORTS[source_layer]
 
 
 def validate_file(file_path: Path, verbose: bool = False) -> List[Violation]:
-    """Validate a single file for layer violations."""
+    """Validate a single file for all HOC violations."""
     violations = []
     rel_path = str(file_path)
+    is_hoc_file = "houseofcards" in rel_path
 
-    source_layer = get_file_layer(rel_path)
-    if not source_layer:
-        return []  # Can't classify file
+    # 1. Check layer declaration in header
+    layer, source = get_file_layer(file_path)
 
+    if is_hoc_file and source != "header":
+        violations.append(Violation(
+            file=rel_path,
+            line_number=1,
+            violation_type="MISSING_HEADER",
+            message="HOC file missing '# Layer: L{x}' header declaration",
+            severity="WARNING",
+        ))
+
+    if not layer:
+        return violations  # Can't validate without knowing layer
+
+    # 1b. NEW: Semantic validation - verify header claim matches code behavior
+    if is_hoc_file and source == "header":
+        evidence = analyze_code_semantics(file_path)
+        claim_violations = validate_header_claim(file_path, layer, evidence)
+        violations.extend(claim_violations)
+
+    # 2. Check naming convention (only for HOC files)
+    if is_hoc_file:
+        filename = file_path.name
+        for pattern in BANNED_FILENAME_PATTERNS:
+            if re.match(pattern, filename):
+                violations.append(Violation(
+                    file=rel_path,
+                    line_number=1,
+                    violation_type="BANNED_NAMING",
+                    message=f"Filename '{filename}' matches banned pattern. Use *_engine.py or *_driver.py instead of *_service.py",
+                    severity="ERROR",
+                ))
+
+    # 3. Check imports
     imports = extract_imports(file_path)
 
-    for line_num, import_stmt in imports:
-        target_layer = get_import_layer(import_stmt)
-        if not target_layer:
-            continue  # Can't classify import
-
-        if check_violation(source_layer, target_layer):
-            violations.append(
-                Violation(
+    for line_num, import_stmt, in_type_checking in imports:
+        # 3a. Check L4/L5 sqlalchemy runtime import (CRITICAL)
+        if layer in ("L4", "L5") and is_sqlalchemy_import(import_stmt):
+            if not in_type_checking:
+                violations.append(Violation(
                     file=rel_path,
                     line_number=line_num,
-                    import_statement=import_stmt,
-                    source_layer=source_layer,
-                    target_layer=target_layer,
-                )
-            )
+                    violation_type="SQLALCHEMY_RUNTIME",
+                    message=f"L{layer[-1]} cannot import sqlalchemy/sqlmodel at runtime. Use TYPE_CHECKING block.\n   Import: {import_stmt}",
+                    severity="ERROR",
+                ))
+
+        # 3b. Check HOC importing from legacy app.services
+        if is_hoc_file and is_forbidden_hoc_import(import_stmt):
+            violations.append(Violation(
+                file=rel_path,
+                line_number=line_num,
+                violation_type="LEGACY_IMPORT",
+                message=f"HOC file cannot import from legacy app.services namespace.\n   Import: {import_stmt}",
+                severity="ERROR",
+            ))
+
+        # 3c. Check layer boundary violations
+        target_layer = get_import_target_layer(import_stmt)
+        if target_layer and check_layer_import_violation(layer, target_layer):
+            violations.append(Violation(
+                file=rel_path,
+                line_number=line_num,
+                violation_type="LAYER_BOUNDARY",
+                message=f"{layer} cannot import {target_layer}. Allowed: {ALLOWED_IMPORTS.get(layer, set())}\n   Import: {import_stmt}",
+                severity="ERROR",
+            ))
 
     return violations
 
@@ -263,7 +629,9 @@ def validate_directory(
         "dist",
         ".venv",
         "venv",
+        "alembic/versions",
     },
+    hoc_only: bool = False,
     verbose: bool = False,
 ) -> ValidationResult:
     """Validate all files in a directory."""
@@ -282,6 +650,10 @@ def validate_directory(
         if not file_path.is_file():
             continue
 
+        # HOC-only filter
+        if hoc_only and "houseofcards" not in str(file_path):
+            continue
+
         result.files_scanned += 1
 
         violations = validate_file(file_path, verbose)
@@ -290,32 +662,43 @@ def validate_directory(
     return result
 
 
+# =============================================================================
+# Main
+# =============================================================================
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Validate layer architecture in codebase",
+        description="BLCA — Bidirectional Layer Consistency Auditor",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Layers (PIN-240):
-  L1 = Product Experience (pages, routes)
-  L2 = Product APIs (console/public routes)
-  L3 = Boundary Adapters (translation)
-  L4 = Domain Engines (system truth)
-  L5 = Execution & Workers
-  L6 = Platform Substrate
-  L7 = Ops & Scripts
+HOC Layer Topology V1.2.0:
+  L1    = Frontend
+  L2.1  = API Facade (organizers)
+  L2    = Product APIs
+  L3    = Boundary Adapters (cross-domain allowed)
+  L4    = Governed Runtime / Domain Engines
+  L5    = Engines / Workers / Schemas
+  L6    = Database Drivers
+  L7    = Models
+  L8    = Database
+
+Critical Rules:
+  - L4/L5 engines CANNOT import sqlalchemy at runtime (use TYPE_CHECKING)
+  - *_service.py naming is BANNED (use *_engine.py or *_driver.py)
+  - HOC files cannot import from legacy app.services
 
 Examples:
   %(prog)s                    # Validate all
   %(prog)s --backend          # Backend only
+  %(prog)s --hoc              # HOC files only
   %(prog)s --ci               # Exit 1 on violations
         """,
     )
 
     parser.add_argument("--backend", action="store_true", help="Validate backend only")
-    parser.add_argument(
-        "--frontend", action="store_true", help="Validate frontend only"
-    )
-    parser.add_argument("--verbose", "-v", action="store_true", help="Show all imports")
+    parser.add_argument("--hoc", action="store_true", help="Validate HOC files only")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Show details")
     parser.add_argument("--ci", action="store_true", help="Exit 1 if violations found")
     parser.add_argument("--path", type=str, default=".", help="Root path to scan")
 
@@ -326,13 +709,8 @@ Examples:
     # Determine what to scan
     if args.backend:
         scan_root = root / "backend"
-        extensions = {".py"}
-    elif args.frontend:
-        scan_root = root / "website"
-        extensions = {".tsx", ".ts"}
     else:
         scan_root = root
-        extensions = {".py"}  # Start with Python only
 
     if not scan_root.exists():
         print(f"ERROR: Path not found: {scan_root}", file=sys.stderr)
@@ -342,33 +720,39 @@ Examples:
     print(f"Scanning: {scan_root}")
     print("-" * 60)
 
-    result = validate_directory(scan_root, extensions, verbose=args.verbose)
+    result = validate_directory(
+        scan_root,
+        hoc_only=args.hoc,
+        verbose=args.verbose,
+    )
 
     print(f"Files scanned: {result.files_scanned}")
     print(f"Violations found: {len(result.violations)}")
     print()
 
     if result.violations:
-        print("VIOLATIONS:")
-        print("-" * 60)
+        # Group by type
+        by_type: Dict[str, List[Violation]] = {}
         for v in result.violations:
-            print(f"\n{v}")
+            by_type.setdefault(v.violation_type, []).append(v)
+
+        for vtype, violations in sorted(by_type.items()):
+            errors = [v for v in violations if v.severity == "ERROR"]
+            warnings = [v for v in violations if v.severity == "WARNING"]
+
+            print(f"\n{vtype}: {len(errors)} errors, {len(warnings)} warnings")
+            print("-" * 40)
+
+            for v in violations[:10]:  # Show first 10
+                print(f"\n{v}")
+
+            if len(violations) > 10:
+                print(f"\n   ... and {len(violations) - 10} more")
+
         print()
+        print(f"SUMMARY: {result.error_count} errors, {result.warning_count} warnings")
 
-        # Summary by type
-        violation_types: Dict[str, int] = {}
-        for v in result.violations:
-            key = f"{v.source_layer} -> {v.target_layer}"
-            violation_types[key] = violation_types.get(key, 0) + 1
-
-        print("Summary by type:")
-        for vtype, count in sorted(violation_types.items(), key=lambda x: -x[1]):
-            src, tgt = vtype.split(" -> ")
-            print(
-                f"  {vtype}: {count} ({LAYERS.get(src, src)} imports {LAYERS.get(tgt, tgt)})"
-            )
-
-        if args.ci:
+        if args.ci and result.error_count > 0:
             sys.exit(1)
     else:
         print("No layer violations found!")

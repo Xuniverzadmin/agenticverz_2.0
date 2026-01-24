@@ -1,4 +1,4 @@
-# Layer: L4 — Domain Engine
+# Layer: L3 — Adapter
 # Product: founder-console
 # Temporal:
 #   Trigger: api

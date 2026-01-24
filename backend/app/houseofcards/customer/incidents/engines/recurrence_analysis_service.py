@@ -1,16 +1,21 @@
 # Layer: L4 — Domain Engines
+# AUDIENCE: CUSTOMER
 # Product: ai-console
 # Temporal:
 #   Trigger: api
 #   Execution: async
-# Role: Analyze recurring incident patterns
-# Callers: Incidents API (L2)
+# Role: Analyze recurring incident patterns (business logic)
+# Callers: Incidents API (L2), incidents_facade.py (L4)
 # Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
+# Forbidden Imports: L1, L2, L3, L5, sqlalchemy (runtime)
 # Reference: docs/architecture/incidents/INCIDENTS_DOMAIN_SQL.md#9-hist-o3
+#
+# EXTRACTION COMPLETE (2026-01-24):
+# All DB operations extracted to recurrence_analysis_driver.py (L6).
+# This engine now delegates to driver, no direct sqlalchemy imports.
 
 """
-Recurrence Analysis Service
+Recurrence Analysis Service (L4 Engine)
 
 Answers "how often does this type repeat?":
 - Group by (category, resolution_method)
@@ -21,23 +26,28 @@ Design Rules:
 - Statistical analysis only
 - Read-only (no writes)
 - No cross-service calls
+- Delegates to L6 driver for DB access
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import Optional
-
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime
+from typing import TYPE_CHECKING
 
 from app.houseofcards.customer.general.utils.time import utc_now
+from app.houseofcards.customer.incidents.drivers.recurrence_analysis_driver import (
+    RecurrenceAnalysisDriver,
+    RecurrenceGroupSnapshot,
+)
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @dataclass
 class RecurrenceGroup:
     """A group of recurring incidents."""
     category: str
-    resolution_method: Optional[str]
+    resolution_method: str | None
     total_occurrences: int
     distinct_days: int
     occurrences_per_day: float
@@ -59,23 +69,25 @@ class RecurrenceAnalysisService:
     """
     Analyze recurring incident patterns.
 
-    RESPONSIBILITIES:
-    - Identify recurring incident types
-    - Calculate recurrence frequency
-    - Return recent examples
+    RESPONSIBILITIES (L4):
+    - Validate input parameters (threshold, baseline days)
+    - Delegate to L6 driver for data access
+    - Compose RecurrenceResult from driver snapshots
+    - Calculate aggregates (total_recurring)
 
     FORBIDDEN:
     - Write to any table
     - Call other services
-    - Modify incident data
+    - Import sqlalchemy at runtime
     """
 
-    # Analysis thresholds
+    # Analysis thresholds (business rules)
     DEFAULT_BASELINE_DAYS = 30
     DEFAULT_RECURRENCE_THRESHOLD = 3  # Min occurrences to be "recurring"
+    MAX_BASELINE_DAYS = 90  # Cap at 90 days
 
-    def __init__(self, session: AsyncSession):
-        self.session = session
+    def __init__(self, session: "AsyncSession"):
+        self._driver = RecurrenceAnalysisDriver(session)
 
     async def analyze_recurrence(
         self,
@@ -96,62 +108,27 @@ class RecurrenceAnalysisService:
         Returns:
             RecurrenceResult with recurring incident groups
         """
-        baseline_days = min(baseline_days, 90)  # Cap at 90 days
-        recurrence_threshold = max(recurrence_threshold, 2)  # Min 2 to be recurring
+        # Business rule: cap baseline days
+        baseline_days = min(baseline_days, self.MAX_BASELINE_DAYS)
 
-        sql = text("""
-            WITH recurrence_groups AS (
-                SELECT
-                    COALESCE(category, 'uncategorized') AS category,
-                    resolution_method,
-                    COUNT(*) AS total_occurrences,
-                    COUNT(DISTINCT DATE(created_at)) AS distinct_days,
-                    MIN(created_at) AS first_occurrence,
-                    MAX(created_at) AS last_occurrence,
-                    array_agg(id ORDER BY created_at DESC) AS incident_ids
-                FROM incidents
-                WHERE tenant_id = :tenant_id
-                  AND created_at >= NOW() - INTERVAL '1 day' * :baseline_days
-                GROUP BY category, resolution_method
-                HAVING COUNT(*) >= :recurrence_threshold
-            )
-            SELECT
-                category,
-                resolution_method,
-                total_occurrences,
-                distinct_days,
-                ROUND(total_occurrences::numeric / GREATEST(distinct_days, 1), 2) AS occurrences_per_day,
-                first_occurrence,
-                last_occurrence,
-                incident_ids[1:5] AS recent_incident_ids
-            FROM recurrence_groups
-            ORDER BY total_occurrences DESC
-            LIMIT :limit
-        """)
+        # Business rule: min 2 occurrences to be recurring
+        recurrence_threshold = max(recurrence_threshold, 2)
 
-        result = await self.session.execute(sql, {
-            "tenant_id": tenant_id,
-            "baseline_days": baseline_days,
-            "recurrence_threshold": recurrence_threshold,
-            "limit": limit,
-        })
+        # Delegate to L6 driver
+        snapshots = await self._driver.fetch_recurrence_groups(
+            tenant_id=tenant_id,
+            baseline_days=baseline_days,
+            recurrence_threshold=recurrence_threshold,
+            limit=limit,
+        )
 
+        # Compose result from driver snapshots
         groups: list[RecurrenceGroup] = []
         total_recurring = 0
 
-        for row in result.mappings():
-            total_recurring += row["total_occurrences"]
-
-            groups.append(RecurrenceGroup(
-                category=row["category"],
-                resolution_method=row["resolution_method"],
-                total_occurrences=row["total_occurrences"],
-                distinct_days=row["distinct_days"],
-                occurrences_per_day=float(row["occurrences_per_day"]),
-                first_occurrence=row["first_occurrence"],
-                last_occurrence=row["last_occurrence"],
-                recent_incident_ids=row["recent_incident_ids"] or [],
-            ))
+        for snapshot in snapshots:
+            total_recurring += snapshot.total_occurrences
+            groups.append(self._snapshot_to_group(snapshot))
 
         return RecurrenceResult(
             groups=groups,
@@ -165,7 +142,7 @@ class RecurrenceAnalysisService:
         tenant_id: str,
         category: str,
         baseline_days: int = DEFAULT_BASELINE_DAYS,
-    ) -> Optional[RecurrenceGroup]:
+    ) -> RecurrenceGroup | None:
         """
         Get recurrence details for a specific category.
 
@@ -177,43 +154,27 @@ class RecurrenceAnalysisService:
         Returns:
             RecurrenceGroup if found, None otherwise
         """
-        sql = text("""
-            SELECT
-                COALESCE(category, 'uncategorized') AS category,
-                resolution_method,
-                COUNT(*) AS total_occurrences,
-                COUNT(DISTINCT DATE(created_at)) AS distinct_days,
-                MIN(created_at) AS first_occurrence,
-                MAX(created_at) AS last_occurrence,
-                array_agg(id ORDER BY created_at DESC) AS incident_ids
-            FROM incidents
-            WHERE tenant_id = :tenant_id
-              AND category = :category
-              AND created_at >= NOW() - INTERVAL '1 day' * :baseline_days
-            GROUP BY category, resolution_method
-            ORDER BY total_occurrences DESC
-            LIMIT 1
-        """)
+        # Delegate to L6 driver
+        snapshot = await self._driver.fetch_recurrence_for_category(
+            tenant_id=tenant_id,
+            category=category,
+            baseline_days=baseline_days,
+        )
 
-        result = await self.session.execute(sql, {
-            "tenant_id": tenant_id,
-            "category": category,
-            "baseline_days": baseline_days,
-        })
-
-        row = result.mappings().first()
-        if not row:
+        if not snapshot:
             return None
 
+        return self._snapshot_to_group(snapshot)
+
+    def _snapshot_to_group(self, snapshot: RecurrenceGroupSnapshot) -> RecurrenceGroup:
+        """Convert driver snapshot to domain type. No business logic."""
         return RecurrenceGroup(
-            category=row["category"],
-            resolution_method=row["resolution_method"],
-            total_occurrences=row["total_occurrences"],
-            distinct_days=row["distinct_days"],
-            occurrences_per_day=round(
-                row["total_occurrences"] / max(row["distinct_days"], 1), 2
-            ),
-            first_occurrence=row["first_occurrence"],
-            last_occurrence=row["last_occurrence"],
-            recent_incident_ids=(row["incident_ids"] or [])[:5],
+            category=snapshot.category,
+            resolution_method=snapshot.resolution_method,
+            total_occurrences=snapshot.total_occurrences,
+            distinct_days=snapshot.distinct_days,
+            occurrences_per_day=snapshot.occurrences_per_day,
+            first_occurrence=snapshot.first_occurrence,
+            last_occurrence=snapshot.last_occurrence,
+            recent_incident_ids=snapshot.recent_incident_ids,
         )

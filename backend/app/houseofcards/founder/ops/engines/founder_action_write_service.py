@@ -1,44 +1,61 @@
 # Layer: L4 — Domain Engine
+# AUDIENCE: FOUNDER
 # Product: system-wide (Founder Console)
 # Temporal:
 #   Trigger: api
-#   Execution: sync
-# Role: DB write delegation for Founder Actions API (Phase 2B extraction)
+#   Execution: sync (delegates to L6 driver)
+# Role: Founder action write operations (L4 facade over L6 driver)
 # Callers: api/founder_actions.py
-# Allowed Imports: L6 (models, db)
-# Forbidden Imports: L2 (api), L3 (adapters)
-# Reference: PIN-250 Phase 2B Batch 3
+# Allowed Imports: L6 (drivers only, NOT ORM models)
+# Forbidden Imports: L2 (api), L3 (adapters), sqlalchemy, sqlmodel
+# Reference: PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
+#
+# GOVERNANCE NOTE:
+# This L4 engine delegates ALL database operations to FounderActionWriteDriver (L6).
+# NO direct database access - only driver calls.
+# Phase 2 extraction: DB operations moved to drivers/founder_action_write_driver.py
+#
+# EXTRACTION STATUS: COMPLETE (2026-01-23)
 
 """
-Founder Action Write Service - DB write operations for Founder Actions API.
+Founder Action Write Service (L4)
 
-Phase 2B Batch 3: Extracted from api/founder_actions.py.
+DB write operations for Founder Actions API.
+Delegates to FounderActionWriteDriver (L6) for all database access.
 
-Constraints (enforced by PIN-250):
-- Write-only: No policy logic
-- No cross-service calls
-- No domain refactoring
-- Call-path relocation only
+L2 (API) → L4 (this service) → L6 (FounderActionWriteDriver)
+
+Responsibilities:
+- Delegate to L6 driver for data access
+- Maintain backward compatibility for callers
+
+Reference: PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import text
-from sqlmodel import Session
+# L6 driver import (allowed)
+from app.houseofcards.founder.ops.drivers.founder_action_write_driver import (
+    FounderActionWriteDriver,
+    get_founder_action_write_driver,
+)
 
-from app.models.tenant import FounderAction
+if TYPE_CHECKING:
+    from sqlmodel import Session
+    from app.models.tenant import FounderAction
 
 
 class FounderActionWriteService:
     """
     DB write operations for Founder Actions.
 
-    Write-only facade. No policy logic, no branching beyond DB operations.
+    Delegates all operations to FounderActionWriteDriver (L6).
+    NO DIRECT DB ACCESS - driver calls only.
     """
 
-    def __init__(self, session: Session):
-        self.session = session
+    def __init__(self, session: "Session"):
+        self._driver = get_founder_action_write_driver(session)
 
     def create_founder_action(
         self,
@@ -53,27 +70,9 @@ class FounderActionWriteService:
         founder_email: str,
         mfa_verified: bool,
         is_reversible: bool,
-    ) -> FounderAction:
-        """
-        Create a new founder action record and persist.
-
-        Args:
-            action_type: Type of action (FREEZE_TENANT, etc.)
-            target_type: Target type (TENANT, API_KEY, etc.)
-            target_id: Target ID
-            target_name: Human-readable target name
-            reason_code: Reason code
-            reason_note: Optional reason note
-            source_incident_id: Optional source incident ID
-            founder_id: Founder user ID
-            founder_email: Founder email
-            mfa_verified: Whether MFA was verified
-            is_reversible: Whether action is reversible
-
-        Returns:
-            Created FounderAction instance (with ID assigned via flush)
-        """
-        action = FounderAction(
+    ) -> "FounderAction":
+        """Delegate to driver."""
+        return self._driver.create_founder_action(
             action_type=action_type,
             target_type=target_type,
             target_id=target_id,
@@ -86,9 +85,6 @@ class FounderActionWriteService:
             mfa_verified=mfa_verified,
             is_reversible=is_reversible,
         )
-        self.session.add(action)
-        self.session.flush()  # Get ID before commit
-        return action
 
     def mark_action_reversed(
         self,
@@ -96,35 +92,17 @@ class FounderActionWriteService:
         reversed_at: datetime,
         reversed_by_action_id: str,
     ) -> None:
-        """
-        Mark an original action as reversed.
-
-        Args:
-            action_id: ID of the action to mark as reversed
-            reversed_at: Timestamp of reversal
-            reversed_by_action_id: ID of the reversal action
-        """
-        self.session.execute(
-            text(
-                """
-                UPDATE founder_actions
-                SET is_active = false,
-                    reversed_at = :now,
-                    reversed_by_action_id = :reversal_id
-                WHERE id = :action_id
-            """
-            ),
-            {
-                "now": reversed_at,
-                "reversal_id": reversed_by_action_id,
-                "action_id": action_id,
-            },
+        """Delegate to driver."""
+        self._driver.mark_action_reversed(
+            action_id=action_id,
+            reversed_at=reversed_at,
+            reversed_by_action_id=reversed_by_action_id,
         )
 
     def commit(self) -> None:
-        """Commit the current transaction."""
-        self.session.commit()
+        """Delegate to driver."""
+        self._driver.commit()
 
     def rollback(self) -> None:
-        """Rollback the current transaction."""
-        self.session.rollback()
+        """Delegate to driver."""
+        self._driver.rollback()

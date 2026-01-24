@@ -1,13 +1,15 @@
-# Layer: L4 — Domain Engines
+# Layer: L6 — Driver
+# AUDIENCE: CUSTOMER
+# Role: Ops domain models for operator intelligence views
 # Product: system-wide (ops visibility)
 # Temporal:
 #   Trigger: api|scheduler
 #   Execution: sync
-# Role: Ops domain models for operator intelligence views
 # Callers: L3 adapters, L2 ops APIs
 # Allowed Imports: L6 (stdlib only for models)
 # Forbidden Imports: L6 infra artifacts (ErrorEnvelope, CorrelationContext)
 # Reference: PIN-264 (Phase-S Ops Domain)
+
 
 """
 Ops Domain Models — L4 Interpreted Meaning

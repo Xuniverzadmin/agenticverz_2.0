@@ -1,8 +1,26 @@
 # Layer: L4 — Domain Engine (System Truth)
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Role: S4 failure truth model, fact persistence
 # Callers: L5 workers (on LLM failure)
-# Reference: PIN-242 (Baseline Freeze)
+# Allowed Imports: L6 drivers (via injection)
+# Forbidden Imports: L1, L2, L3, sqlalchemy, sqlmodel (at runtime)
+# Reference: PIN-242 (Baseline Freeze), PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
+#
+# EXTRACTION STATUS: Phase-2.5A (2026-01-23)
+# - All DB operations extracted to LLMFailureDriver
+# - Engine contains ONLY decision logic
+# - NO sqlalchemy/sqlmodel imports at runtime
+#
+# ============================================================================
+# L4 ENGINE INVARIANT — LLM FAILURE DOMAIN (LOCKED)
+# ============================================================================
+# This file MUST NOT import sqlalchemy/sqlmodel at runtime.
+# All persistence is delegated to llm_failure_driver.py.
+# Business decisions ONLY.
+#
+# Any violation is a Phase-2.5 regression.
+# ============================================================================
 
 """
 LLMFailureService - S4 Failure Truth Implementation
@@ -23,10 +41,16 @@ Critical Invariant:
 import os
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
+# L6 driver import (allowed)
+from app.houseofcards.customer.incidents.drivers.llm_failure_driver import (
+    LLMFailureDriver,
+    get_llm_failure_driver,
+)
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 # Type aliases for dependency injection
 UuidFn = Callable[[], str]
@@ -105,13 +129,17 @@ class LLMFailureService:
     - Invariant 3: No silent healing (no retry/fallback/suppression)
     - Invariant 4: Evidence is mandatory (failure without evidence is invalid)
     - Invariant 5: Isolation holds under failure (tenant boundaries enforced)
+
+    Note: All DB operations are delegated to LLMFailureDriver (L6).
+    This engine contains only business logic decisions.
     """
 
     def __init__(
         self,
-        session: AsyncSession,
+        session: "AsyncSession",
         uuid_fn: UuidFn = generate_uuid,
         clock_fn: ClockFn = utc_now,
+        driver: Optional[LLMFailureDriver] = None,
     ):
         """
         Constructor requires explicit DI - no get_llm_failure_service() factory.
@@ -120,10 +148,12 @@ class LLMFailureService:
             session: Database session (injected, not fetched)
             uuid_fn: UUID generator (for testing)
             clock_fn: Clock function (for testing)
+            driver: Optional pre-configured driver (for testing)
         """
         self._session = session
         self._uuid_fn = uuid_fn
         self._clock_fn = clock_fn
+        self._driver = driver or get_llm_failure_driver(session)
 
     async def persist_failure_and_mark_run(
         self,
@@ -175,43 +205,34 @@ class LLMFailureService:
         )
 
     async def _persist_failure(self, failure: LLMFailureFact, timestamp: datetime) -> None:
-        """Persist failure fact to run_failures table."""
-        import json
+        """
+        Persist failure fact to run_failures table.
 
-        await self._session.execute(
-            text(
-                """
-                INSERT INTO run_failures (
-                    id, run_id, tenant_id, failure_type, error_code,
-                    error_message, model, request_id, duration_ms,
-                    metadata_json, created_at
-                )
-                VALUES (
-                    :id, :run_id, :tenant_id, :failure_type, :error_code,
-                    :error_message, :model, :request_id, :duration_ms,
-                    :metadata_json, :created_at
-                )
-            """
-            ),
-            {
-                "id": failure.id,
-                "run_id": failure.run_id,
-                "tenant_id": failure.tenant_id,
-                "failure_type": failure.failure_type,
-                "error_code": failure.error_code,
-                "error_message": failure.error_message,
-                "model": failure.model,
-                "request_id": failure.request_id,
-                "duration_ms": failure.duration_ms,
-                "metadata_json": json.dumps(failure.metadata),
-                "created_at": timestamp,
-            },
+        PERSISTENCE: Delegated to driver.
+        """
+        if failure.id is None:
+            raise ValueError("failure.id must be set before persistence")
+
+        await self._driver.insert_failure(
+            failure_id=failure.id,
+            run_id=failure.run_id,
+            tenant_id=failure.tenant_id,
+            failure_type=failure.failure_type,
+            error_code=failure.error_code,
+            error_message=failure.error_message,
+            model=failure.model,
+            request_id=failure.request_id,
+            duration_ms=failure.duration_ms,
+            metadata=failure.metadata,
+            created_at=timestamp,
         )
 
     async def _capture_evidence(self, failure: LLMFailureFact, timestamp: datetime) -> str:
-        """Capture evidence for the failure (mandatory per Invariant 4)."""
-        import json
+        """
+        Capture evidence for the failure (mandatory per Invariant 4).
 
+        PERSISTENCE: Delegated to driver.
+        """
         evidence_id = self._uuid_fn()
 
         evidence_data = {
@@ -227,27 +248,13 @@ class LLMFailureService:
             "verification_scenario": "S4",
         }
 
-        await self._session.execute(
-            text(
-                """
-                INSERT INTO failure_evidence (
-                    id, failure_id, evidence_type, evidence_data,
-                    is_immutable, created_at
-                )
-                VALUES (
-                    :id, :failure_id, :evidence_type, :evidence_data,
-                    :is_immutable, :created_at
-                )
-            """
-            ),
-            {
-                "id": evidence_id,
-                "failure_id": failure.id,
-                "evidence_type": "llm_failure_capture",
-                "evidence_data": json.dumps(evidence_data),
-                "is_immutable": True,
-                "created_at": timestamp,
-            },
+        await self._driver.insert_evidence(
+            evidence_id=evidence_id,
+            failure_id=failure.id,
+            evidence_type="llm_failure_capture",
+            evidence_data=evidence_data,
+            is_immutable=True,
+            created_at=timestamp,
         )
 
         return evidence_id
@@ -258,30 +265,17 @@ class LLMFailureService:
 
         Critical: Sets status='failed', success=false, error populated.
         Does NOT set recoveries (no implicit retry - Invariant 3).
-        """
-        result = await self._session.execute(
-            text(
-                """
-                UPDATE worker_runs
-                SET
-                    status = 'failed',
-                    success = false,
-                    error = :error,
-                    completed_at = :completed_at
-                WHERE id = :run_id AND tenant_id = :tenant_id
-                RETURNING id
-            """
-            ),
-            {
-                "run_id": failure.run_id,
-                "tenant_id": failure.tenant_id,
-                "error": f"{failure.error_code}: {failure.error_message}",
-                "completed_at": timestamp,
-            },
-        )
 
-        updated = result.fetchone()
-        return updated is not None
+        PERSISTENCE: Delegated to driver.
+        """
+        error_message = f"{failure.error_code}: {failure.error_message}"
+
+        return await self._driver.update_run_failed(
+            run_id=failure.run_id,
+            tenant_id=failure.tenant_id,
+            error=error_message,
+            completed_at=timestamp,
+        )
 
     async def _verify_no_contamination(self, failure: LLMFailureFact) -> None:
         """
@@ -289,45 +283,23 @@ class LLMFailureService:
 
         Only runs in VERIFICATION_MODE.
         Raises RuntimeError if contamination detected.
+
+        PERSISTENCE: Delegated to driver for queries.
+        BUSINESS LOGIC: Interpretation of counts stays here (L4).
         """
-        # Check for cost records
-        cost_check = await self._session.execute(
-            text(
-                """
-                SELECT COUNT(*) FROM cost_records
-                WHERE request_id = :run_id OR request_id LIKE :pattern
-            """
-            ),
-            {"run_id": failure.run_id, "pattern": f"%{failure.run_id}%"},
-        )
-        if cost_check.scalar() > 0:
-            raise RuntimeError(f"FAILURE_CONTAMINATION_VIOLATION: Cost record created for failed run {failure.run_id}")
+        counts = await self._driver.fetch_contamination_check(failure.run_id)
 
-        # Check for advisories
-        advisory_check = await self._session.execute(
-            text(
-                """
-                SELECT COUNT(*) FROM cost_anomalies
-                WHERE metadata->>'run_id' = :run_id
-            """
-            ),
-            {"run_id": failure.run_id},
-        )
-        if advisory_check.scalar() > 0:
-            raise RuntimeError(f"FAILURE_CONTAMINATION_VIOLATION: Advisory created for failed run {failure.run_id}")
+        if counts["cost_records"] > 0:
+            raise RuntimeError(
+                f"FAILURE_CONTAMINATION_VIOLATION: Cost record created for failed run {failure.run_id}"
+            )
 
-        # Check for incidents (except llm_failure type)
-        incident_check = await self._session.execute(
-            text(
-                """
-                SELECT COUNT(*) FROM incidents
-                WHERE trigger_value LIKE :pattern
-                AND trigger_type != 'llm_failure'
-            """
-            ),
-            {"pattern": f"%run_id={failure.run_id}%"},
-        )
-        if incident_check.scalar() > 0:
+        if counts["cost_anomalies"] > 0:
+            raise RuntimeError(
+                f"FAILURE_CONTAMINATION_VIOLATION: Advisory created for failed run {failure.run_id}"
+            )
+
+        if counts["other_incidents"] > 0:
             raise RuntimeError(
                 f"FAILURE_CONTAMINATION_VIOLATION: Non-failure incident created for failed run {failure.run_id}"
             )
@@ -337,25 +309,15 @@ class LLMFailureService:
         Retrieve failure fact by run ID (with tenant isolation).
 
         Returns None if no failure exists (not an error condition).
-        """
-        result = await self._session.execute(
-            text(
-                """
-                SELECT id, run_id, tenant_id, failure_type, error_code,
-                       error_message, model, request_id, duration_ms,
-                       metadata_json, created_at
-                FROM run_failures
-                WHERE run_id = :run_id AND tenant_id = :tenant_id
-            """
-            ),
-            {"run_id": run_id, "tenant_id": tenant_id},
-        )
 
-        row = result.fetchone()
+        PERSISTENCE: Delegated to driver.
+        BUSINESS LOGIC: Fact reconstruction stays here (L4).
+        """
+        import json
+
+        row = await self._driver.fetch_failure_by_run_id(run_id, tenant_id)
         if not row:
             return None
-
-        import json
 
         return LLMFailureFact(
             id=row[0],

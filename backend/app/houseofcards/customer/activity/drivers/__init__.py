@@ -1,10 +1,30 @@
-# Layer: L4 — Domain Services
+# Layer: L6 — Database Drivers
 # AUDIENCE: CUSTOMER
-# Role: activity domain - drivers
-# Reference: DIRECTORY_REORGANIZATION_PLAN.md
+# Role: activity domain - database drivers (data access only)
+# Reference: ACTIVITY_PHASE2.5_IMPLEMENTATION_PLAN.md
 
 """
-activity / drivers
+activity / drivers (L6)
 
-Exports will be added as files are moved here.
+Database drivers for activity domain. Pure data access, no business logic.
+
+Exports:
+- threshold_driver: Threshold limit DB operations
+- activity_enums: Activity domain enumerations
 """
+
+from app.houseofcards.customer.activity.drivers.threshold_driver import (
+    LimitSnapshot,
+    ThresholdDriver,
+    ThresholdDriverSync,
+    emit_and_persist_threshold_signal,
+    emit_threshold_signal_sync,
+)
+
+__all__ = [
+    "LimitSnapshot",
+    "ThresholdDriver",
+    "ThresholdDriverSync",
+    "emit_and_persist_threshold_signal",
+    "emit_threshold_signal_sync",
+]

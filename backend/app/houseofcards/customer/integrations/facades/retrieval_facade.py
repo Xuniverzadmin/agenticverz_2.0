@@ -1,13 +1,15 @@
-# Layer: L4 — Domain Engine
+# Layer: L6 — Driver
+# AUDIENCE: CUSTOMER
+# Role: Retrieval Facade - Centralized access to mediated data retrieval
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: async
-# Role: Retrieval Facade - Centralized access to mediated data retrieval
 # Callers: L2 retrieval.py API, SDK
 # Allowed Imports: L4 retrieval mediator, L6 (models, db)
 # Forbidden Imports: L1, L2, L3, L5
 # Reference: GAP-094 (Mediated Data Retrieval API)
+
 
 """
 Retrieval Facade (L4 Domain Logic)

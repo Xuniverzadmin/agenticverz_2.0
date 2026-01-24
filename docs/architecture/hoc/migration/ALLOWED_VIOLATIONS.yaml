@@ -1,0 +1,110 @@
+# HOC Migration - Allowed Violations Registry
+#
+# Purpose: Temporary escape hatch for known violations during migration
+#
+# CI Enforcement Rules:
+#   - ❌ FAIL if expiry date passes without resolution
+#   - ❌ FAIL if new violation added without entry here
+#   - ❌ FAIL if violation count for a file increases
+#
+# Format:
+#   - file: relative path from houseofcards/
+#   - action: EXTRACT_DRIVER | EXTRACT_AUTHORITY | SPLIT_FILE
+#   - expires: YYYY-MM-DD (max 90 days from entry)
+#   - reason: why this is allowed temporarily
+#   - owner: team or individual responsible
+#   - phase: which phase will resolve this
+
+version: "1.0"
+generated: "2026-01-23"
+
+# HIGH EFFORT - Phase 3 (Week 4)
+# These require architectural review before resolution
+
+extract_authority:
+  - file: customer/platform/engines/pool_manager.py
+    action: EXTRACT_AUTHORITY
+    expires: 2026-04-15
+    reason: Authority leak - needs L4 runtime design
+    owner: architect-review
+    phase: 3
+
+  - file: customer/general/lifecycle/engines/pool_manager.py
+    action: EXTRACT_AUTHORITY
+    expires: 2026-04-15
+    reason: Authority leak - needs L4 runtime design
+    owner: architect-review
+    phase: 3
+
+  - file: customer/integrations/facades/webhook_adapter.py
+    action: EXTRACT_AUTHORITY
+    expires: 2026-04-15
+    reason: HTTP awareness in L3 adapter
+    owner: team-integrations
+    phase: 3
+
+  - file: internal/platform/engines/engine.py
+    action: EXTRACT_AUTHORITY
+    expires: 2026-04-15
+    reason: Core engine - careful refactoring needed
+    owner: architect-review
+    phase: 3
+
+  - file: internal/policies/engines/rbac.py
+    action: EXTRACT_AUTHORITY
+    expires: 2026-04-15
+    reason: RBAC authority - security review needed
+    owner: security-team
+    phase: 3
+
+split_file:
+  - file: founder/ops/facades/founder_review_adapter.py
+    action: SPLIT_FILE
+    expires: 2026-04-15
+    reason: Multi-responsibility blob
+    owner: team-founder
+    phase: 3
+
+  - file: customer/platform/facades/platform_eligibility_adapter.py
+    action: SPLIT_FILE
+    expires: 2026-04-15
+    reason: Multi-responsibility blob
+    owner: team-platform
+    phase: 3
+
+  - file: customer/integrations/facades/cost_bridges.py
+    action: SPLIT_FILE
+    expires: 2026-04-15
+    reason: Complex - needs architect review
+    owner: team-integrations
+    phase: 3
+
+  - file: customer/integrations/facades/founder_ops_adapter.py
+    action: SPLIT_FILE
+    expires: 2026-04-15
+    reason: Cross-audience adapter - careful split needed
+    owner: architect-review
+    phase: 3
+
+# MEDIUM EFFORT - Phase 2 (Week 2-3)
+# These are queued for driver extraction, not blocked
+
+# Note: EXTRACT_DRIVER files (234) are NOT listed here because
+# they are actively being processed in Phase 2.
+# Only add entries here if a file must be temporarily skipped.
+
+phase_2_deferrals: []
+
+# LOW EFFORT - Phase 1 (Week 1)
+# These should be processed immediately, no deferrals allowed
+
+phase_1_deferrals: []
+
+# Statistics (auto-updated by CI)
+stats:
+  total_allowed: 9
+  extract_authority: 5
+  split_file: 4
+  phase_2_deferrals: 0
+  phase_1_deferrals: 0
+  oldest_expiry: "2026-04-15"

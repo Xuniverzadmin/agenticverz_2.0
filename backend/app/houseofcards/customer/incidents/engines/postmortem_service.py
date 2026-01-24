@@ -1,16 +1,32 @@
-# Layer: L4 — Domain Engines
+# Layer: L4 — Domain Engine (System Truth)
+# AUDIENCE: CUSTOMER
 # Product: ai-console
 # Temporal:
 #   Trigger: api
 #   Execution: async
 # Role: Extract learnings and post-mortem insights from resolved incidents
 # Callers: Incidents API (L2)
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: docs/architecture/incidents/INCIDENTS_DOMAIN_SQL.md#8-res-o4
+# Allowed Imports: L6 drivers (via injection)
+# Forbidden Imports: L1, L2, L3, sqlalchemy, sqlmodel (at runtime)
+# Reference: PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
+#
+# EXTRACTION STATUS: Phase-2.5A (2026-01-23)
+# - All DB operations extracted to PostMortemDriver
+# - Engine contains ONLY insight generation logic
+# - NO sqlalchemy/sqlmodel imports at runtime
+#
+# ============================================================================
+# L4 ENGINE INVARIANT — POSTMORTEM DOMAIN (LOCKED)
+# ============================================================================
+# This file MUST NOT import sqlalchemy/sqlmodel at runtime.
+# All persistence is delegated to postmortem_driver.py.
+# Business decisions (insight generation) ONLY.
+#
+# Any violation is a Phase-2.5 regression.
+# ============================================================================
 
 """
-Post-Mortem Service
+Post-Mortem Engine - L4 Domain Logic
 
 Extracts learnings from resolved incidents:
 - Resolution summaries
@@ -18,18 +34,28 @@ Extracts learnings from resolved incidents:
 - Prevention recommendations
 - Pattern correlations
 
+Architecture:
+- All DB operations delegated to PostMortemDriver (L6)
+- Engine contains only insight generation logic
+- Read-only (no writes)
+
 Design Rules:
 - Aggregation and analysis only
-- Read-only (no writes)
 - No cross-service calls
 """
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
+# L6 driver import (allowed)
+from app.houseofcards.customer.incidents.drivers.postmortem_driver import (
+    PostMortemDriver,
+    get_postmortem_driver,
+)
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @dataclass
@@ -90,14 +116,29 @@ class PostMortemService:
     - Write to any table
     - Call other services
     - Modify incident data
+
+    Note: All DB operations are delegated to PostMortemDriver (L6).
+    This engine contains only insight generation logic.
     """
 
     # Analysis constants
     SIMILAR_INCIDENT_LIMIT = 5
     INSIGHT_CONFIDENCE_THRESHOLD = 0.6
 
-    def __init__(self, session: AsyncSession):
-        self.session = session
+    def __init__(
+        self,
+        session: "AsyncSession",
+        driver: Optional[PostMortemDriver] = None,
+    ):
+        """
+        Initialize with session and optional driver.
+
+        Args:
+            session: Database session (injected, not fetched)
+            driver: Optional pre-configured driver (for testing)
+        """
+        self._session = session
+        self._driver = driver or get_postmortem_driver(session)
 
     async def get_incident_learnings(
         self,
@@ -158,97 +199,49 @@ class PostMortemService:
 
         Returns:
             CategoryLearnings with aggregated insights
+
+        PERSISTENCE: Delegated to driver.
+        BUSINESS LOGIC: Insight generation stays here (L4).
         """
         baseline_days = min(baseline_days, 90)
 
-        # Get category statistics
-        stats_sql = text("""
-            SELECT
-                COUNT(*) AS total_incidents,
-                COUNT(*) FILTER (WHERE lifecycle_state = 'RESOLVED' OR status = 'resolved') AS resolved_count,
-                AVG(
-                    CASE WHEN resolved_at IS NOT NULL THEN
-                        EXTRACT(EPOCH FROM (resolved_at - created_at)) * 1000
-                    END
-                ) AS avg_resolution_time_ms
-            FROM incidents
-            WHERE tenant_id = :tenant_id
-              AND category = :category
-              AND created_at >= NOW() - INTERVAL '1 day' * :baseline_days
-        """)
-
-        result = await self.session.execute(stats_sql, {
-            "tenant_id": tenant_id,
-            "category": category,
-            "baseline_days": baseline_days,
-        })
-        row = result.mappings().first()
-        if not row or row["total_incidents"] == 0:
+        # Get category statistics via driver
+        stats = await self._driver.fetch_category_stats(tenant_id, category, baseline_days)
+        if not stats:
             return None
 
-        # Get common resolution methods
-        methods_sql = text("""
-            SELECT
-                resolution_method,
-                COUNT(*) AS method_count
-            FROM incidents
-            WHERE tenant_id = :tenant_id
-              AND category = :category
-              AND resolution_method IS NOT NULL
-              AND created_at >= NOW() - INTERVAL '1 day' * :baseline_days
-            GROUP BY resolution_method
-            ORDER BY method_count DESC
-            LIMIT 5
-        """)
-
-        methods_result = await self.session.execute(methods_sql, {
-            "tenant_id": tenant_id,
-            "category": category,
-            "baseline_days": baseline_days,
-        })
-
+        # Get common resolution methods via driver
+        methods_data = await self._driver.fetch_resolution_methods(
+            tenant_id, category, baseline_days
+        )
         common_methods = [
             (r["resolution_method"], r["method_count"])
-            for r in methods_result.mappings()
+            for r in methods_data
         ]
 
-        # Calculate recurrence rate
-        recurrence_sql = text("""
-            SELECT
-                COUNT(DISTINCT DATE(created_at)) AS distinct_days,
-                COUNT(*) AS total
-            FROM incidents
-            WHERE tenant_id = :tenant_id
-              AND category = :category
-              AND created_at >= NOW() - INTERVAL '1 day' * :baseline_days
-        """)
-
-        recurrence_result = await self.session.execute(recurrence_sql, {
-            "tenant_id": tenant_id,
-            "category": category,
-            "baseline_days": baseline_days,
-        })
-        recurrence_row = recurrence_result.mappings().first()
-
-        distinct_days = recurrence_row["distinct_days"] if recurrence_row else 1
-        total = recurrence_row["total"] if recurrence_row else 0
+        # Get recurrence data via driver
+        recurrence_data = await self._driver.fetch_recurrence_data(
+            tenant_id, category, baseline_days
+        )
+        distinct_days = recurrence_data["distinct_days"]
+        total = recurrence_data["total"]
         recurrence_rate = round(total / max(distinct_days, 1), 2)
 
-        # Generate insights based on the data
+        # Generate insights based on the data (business logic - stays in L4)
         insights = self._generate_category_insights(
             category=category,
-            total_incidents=row["total_incidents"],
-            resolved_count=row["resolved_count"],
-            avg_resolution_time_ms=row["avg_resolution_time_ms"],
+            total_incidents=stats["total_incidents"],
+            resolved_count=stats["resolved_count"],
+            avg_resolution_time_ms=stats["avg_resolution_time_ms"],
             common_methods=common_methods,
             recurrence_rate=recurrence_rate,
         )
 
         return CategoryLearnings(
             category=category,
-            total_incidents=row["total_incidents"],
-            resolved_count=row["resolved_count"],
-            avg_resolution_time_ms=float(row["avg_resolution_time_ms"]) if row["avg_resolution_time_ms"] else None,
+            total_incidents=stats["total_incidents"],
+            resolved_count=stats["resolved_count"],
+            avg_resolution_time_ms=float(stats["avg_resolution_time_ms"]) if stats["avg_resolution_time_ms"] else None,
             common_resolution_methods=common_methods,
             recurrence_rate=recurrence_rate,
             insights=insights,
@@ -259,32 +252,12 @@ class PostMortemService:
         tenant_id: str,
         incident_id: str,
     ) -> Optional[ResolutionSummary]:
-        """Get resolution summary for an incident."""
-        sql = text("""
-            SELECT
-                i.id AS incident_id,
-                i.title,
-                i.category,
-                i.severity,
-                i.resolution_method,
-                CASE WHEN i.resolved_at IS NOT NULL THEN
-                    EXTRACT(EPOCH FROM (i.resolved_at - i.created_at)) * 1000
-                END AS time_to_resolution_ms,
-                (SELECT COUNT(*) FROM incident_evidence WHERE incident_id = i.id) AS evidence_count,
-                EXISTS(
-                    SELECT 1 FROM incident_evidence
-                    WHERE incident_id = i.id AND recovery_executed = TRUE
-                ) AS recovery_attempted
-            FROM incidents i
-            WHERE i.id = :incident_id
-              AND i.tenant_id = :tenant_id
-        """)
+        """
+        Get resolution summary for an incident.
 
-        result = await self.session.execute(sql, {
-            "incident_id": incident_id,
-            "tenant_id": tenant_id,
-        })
-        row = result.mappings().first()
+        PERSISTENCE: Delegated to driver.
+        """
+        row = await self._driver.fetch_resolution_summary(tenant_id, incident_id)
         if not row:
             return None
 
@@ -306,40 +279,17 @@ class PostMortemService:
         category: Optional[str],
         limit: int,
     ) -> list[ResolutionSummary]:
-        """Find similar resolved incidents."""
+        """
+        Find similar resolved incidents.
+
+        PERSISTENCE: Delegated to driver.
+        """
         if not category:
             return []
 
-        sql = text("""
-            SELECT
-                i.id AS incident_id,
-                i.title,
-                i.category,
-                i.severity,
-                i.resolution_method,
-                CASE WHEN i.resolved_at IS NOT NULL THEN
-                    EXTRACT(EPOCH FROM (i.resolved_at - i.created_at)) * 1000
-                END AS time_to_resolution_ms,
-                (SELECT COUNT(*) FROM incident_evidence WHERE incident_id = i.id) AS evidence_count,
-                EXISTS(
-                    SELECT 1 FROM incident_evidence
-                    WHERE incident_id = i.id AND recovery_executed = TRUE
-                ) AS recovery_attempted
-            FROM incidents i
-            WHERE i.tenant_id = :tenant_id
-              AND i.category = :category
-              AND i.id != :exclude_id
-              AND (i.lifecycle_state = 'RESOLVED' OR i.status = 'resolved')
-            ORDER BY i.resolved_at DESC
-            LIMIT :limit
-        """)
-
-        result = await self.session.execute(sql, {
-            "tenant_id": tenant_id,
-            "category": category,
-            "exclude_id": exclude_incident_id,
-            "limit": limit,
-        })
+        rows = await self._driver.fetch_similar_incidents(
+            tenant_id, exclude_incident_id, category, limit
+        )
 
         return [
             ResolutionSummary(
@@ -352,7 +302,7 @@ class PostMortemService:
                 evidence_count=row["evidence_count"],
                 recovery_attempted=row["recovery_attempted"],
             )
-            for row in result.mappings()
+            for row in rows
         ]
 
     async def _extract_insights(

@@ -1,10 +1,38 @@
-# Layer: L4 — Domain Services
+# Layer: L6 — Drivers
 # AUDIENCE: CUSTOMER
-# Role: analytics domain - drivers
-# Reference: DIRECTORY_REORGANIZATION_PLAN.md
+# Role: Analytics domain data access drivers
+# Reference: Phase-2.5A Analytics Extraction
 
 """
-analytics / drivers
+Analytics Drivers (L6)
 
-Exports will be added as files are moved here.
+Data access drivers for the analytics domain.
+All business logic stays in L4 engines.
+
+Drivers:
+- CostAnomalyDriver: Cost anomaly detection DB operations
+- AlertDriver: Alert queue DB operations
+- PredictionDriver: Prediction event DB operations
 """
+
+from app.houseofcards.customer.analytics.drivers.alert_driver import (
+    AlertDriver,
+    get_alert_driver,
+)
+from app.houseofcards.customer.analytics.drivers.cost_anomaly_driver import (
+    CostAnomalyDriver,
+    get_cost_anomaly_driver,
+)
+from app.houseofcards.customer.analytics.drivers.prediction_driver import (
+    PredictionDriver,
+    get_prediction_driver,
+)
+
+__all__ = [
+    "AlertDriver",
+    "get_alert_driver",
+    "CostAnomalyDriver",
+    "get_cost_anomaly_driver",
+    "PredictionDriver",
+    "get_prediction_driver",
+]

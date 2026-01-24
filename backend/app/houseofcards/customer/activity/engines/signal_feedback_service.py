@@ -8,8 +8,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.houseofcards.customer.general.utils.time import utc_now
 
 
@@ -57,8 +55,8 @@ class SignalFeedbackService:
     - Suppress: Temporarily hide signal from attention queue
     """
 
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    def __init__(self) -> None:
+        pass  # Stub - no DB dependency
 
     async def acknowledge_signal(
         self,

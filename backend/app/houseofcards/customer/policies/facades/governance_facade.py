@@ -1,13 +1,15 @@
-# Layer: L4 — Domain Engine
+# Layer: L6 — Driver
+# AUDIENCE: CUSTOMER
+# Role: Governance Facade - Centralized access to governance control operations
 # Product: system-wide
 # Temporal:
 #   Trigger: api (governance control) or internal (health checks)
 #   Execution: sync
-# Role: Governance Facade - Centralized access to governance control operations
 # Callers: L2 governance.py API, SDK
 # Allowed Imports: L4 domain engines, L6 (models, db)
 # Forbidden Imports: L1, L2, L3, L5
 # Reference: GAP-090, GAP-091, GAP-092, GAP-095
+
 
 """
 Governance Facade (L4 Domain Logic)

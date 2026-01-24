@@ -1,24 +1,46 @@
 # Layer: L4 — Domain Engine (Advisory)
+# AUDIENCE: CUSTOMER
 # Product: AI Console
+# Temporal:
+#   Trigger: API call, scheduler
+#   Execution: async
+# Role: Prediction generation and orchestration (advisory only)
 # Callers: predictions API (read-side)
-# Reference: PIN-240
+# Allowed Imports: L5, L6 (drivers)
+# Forbidden Imports: L1, L2, sqlalchemy direct queries
+# Reference: Phase-2.5A Analytics Extraction, PIN-240
 #
-# CLASSIFICATION: Advisory Engine (not Boundary Adapter)
-# ======================================================
-# This file contains 400+ LOC of business logic for prediction generation.
-# It queries DB, builds predictions, and emits records — engine behavior.
+# GOVERNANCE NOTE:
+# This L4 engine handles PREDICTION LOGIC only:
+# - Confidence scoring
+# - Threshold comparisons
+# - Factor aggregation
+# - Orchestration flow
 #
-# Advisory engines have zero side-effects per PB-S5 contract:
-#   - Predictions are advisory only
-#   - Predictions never modify execution, scheduling, or history
-#   - is_advisory=True is enforced by design
+# PERSISTENCE (L6 Driver): prediction_driver.py
 #
-# NOTE: Advisory only. Predictions have zero side-effects.
+# ============================================================================
+# AUTHORITY PARTITION — PREDICTION ENGINE
+# ============================================================================
+# Method                       | Bucket      | Notes
+# ---------------------------- | ----------- | --------------------------------
+# predict_failure_likelihood   | DECISION    | Calculates confidence scores
+# predict_cost_overrun         | DECISION    | Calculates cost projections
+# emit_prediction              | PERSISTENCE | → Delegated to driver
+# run_prediction_cycle         | DECISION    | Orchestrates full cycle
+# get_prediction_summary       | PERSISTENCE | → Delegated to driver
+# ============================================================================
+#
+# NOTE: Advisory only. Predictions have zero side-effects on execution.
 
 """
 Prediction Service (PB-S5)
 
 Generates predictions WITHOUT affecting execution behavior.
+
+Phase-2.5A Extraction:
+- PERSISTENCE: Delegated to PredictionDriver (L6)
+- DECISIONS: Retained in this engine (L4)
 
 PB-S5 Contract:
 - Advise → Observe → Do Nothing
@@ -34,15 +56,8 @@ from datetime import timedelta
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import func, select
-
 from app.houseofcards.customer.general.utils.time import utc_now
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.db import get_async_session
-from app.models.feedback import PatternFeedback
-from app.models.prediction import PredictionEvent, PredictionEventCreate
-from app.models.tenant import WorkerRun
 
 logger = logging.getLogger("nova.services.prediction")
 
@@ -53,14 +68,16 @@ PREDICTION_VALIDITY_HOURS = 24  # How long predictions remain valid
 
 
 async def predict_failure_likelihood(
-    session: AsyncSession,
+    driver: "PredictionDriver",
     tenant_id: Optional[UUID] = None,
     worker_id: Optional[str] = None,
 ) -> list[dict]:
     """
     Predict likelihood of failure for upcoming runs.
 
-    PB-S5: This function READS historical data only. No modifications.
+    Phase-2.5A: Data fetching delegated to driver (L6).
+
+    PB-S5: This function calculates predictions only. No modifications.
     Predictions are advisory and have ZERO side-effects.
 
     Returns list of predictions with:
@@ -68,74 +85,45 @@ async def predict_failure_likelihood(
     - confidence_score: likelihood of failure (0.0-1.0)
     - contributing_factors: signals used for prediction
     """
+    from app.houseofcards.customer.analytics.drivers.prediction_driver import (
+        PredictionDriver,
+    )
+
     predictions = []
+    since = utc_now() - timedelta(days=7)
 
-    # Query historical failure patterns (from PB-S3 feedback)
-    feedback_query = (
-        select(PatternFeedback)
-        .where(PatternFeedback.pattern_type == "failure_pattern")
-        .order_by(PatternFeedback.detected_at.desc())
-        .limit(100)
+    # Phase-2.5A: Delegate fetches to driver
+    feedback_records = await driver.fetch_failure_patterns(tenant_id=tenant_id, limit=100)
+    failed_runs = await driver.fetch_failed_runs(
+        since=since, tenant_id=tenant_id, worker_id=worker_id, limit=100
     )
-
-    if tenant_id:
-        feedback_query = feedback_query.where(PatternFeedback.tenant_id == str(tenant_id))
-
-    result = await session.execute(feedback_query)
-    feedback_records = result.scalars().all()
-
-    # Query recent failures (from worker_runs)
-    runs_query = (
-        select(WorkerRun)
-        .where(WorkerRun.status == "failed")
-        .where(WorkerRun.created_at >= utc_now() - timedelta(days=7))
-        .order_by(WorkerRun.created_at.desc())
-        .limit(100)
-    )
-
-    if tenant_id:
-        runs_query = runs_query.where(WorkerRun.tenant_id == tenant_id)
-    if worker_id:
-        runs_query = runs_query.where(WorkerRun.worker_id == worker_id)
-
-    result = await session.execute(runs_query)
-    failed_runs = result.scalars().all()
 
     if not failed_runs and not feedback_records:
         return []
 
-    # Group by worker_id and calculate failure rate
-    worker_failures: dict[str, list[WorkerRun]] = {}
+    # L4 DECISION: Group by worker_id and calculate failure rate
+    worker_failures: dict[str, list] = {}
     for run in failed_runs:
         wid = str(run.worker_id)
         if wid not in worker_failures:
             worker_failures[wid] = []
         worker_failures[wid].append(run)
 
-    # Get total runs per worker for rate calculation
-    total_runs_query = (
-        select(WorkerRun.worker_id, func.count().label("total"))
-        .where(WorkerRun.created_at >= utc_now() - timedelta(days=7))
-        .group_by(WorkerRun.worker_id)
-    )
+    # Phase-2.5A: Delegate fetch to driver
+    total_by_worker = await driver.fetch_run_totals(since=since, tenant_id=tenant_id)
 
-    if tenant_id:
-        total_runs_query = total_runs_query.where(WorkerRun.tenant_id == tenant_id)
-
-    result = await session.execute(total_runs_query)
-    total_by_worker = {str(row.worker_id): row.total for row in result}
-
-    # Generate predictions
-    for worker_id, failures in worker_failures.items():
-        total = total_by_worker.get(worker_id, len(failures))
+    # L4 DECISION: Generate predictions based on thresholds
+    for wid, failures in worker_failures.items():
+        total = total_by_worker.get(wid, len(failures))
         if total == 0:
             continue
 
+        # L4 DECISION: Calculate confidence score
         failure_rate = len(failures) / total
         confidence = min(failure_rate * 1.5, 1.0)  # Scale up slightly, cap at 1.0
 
         if confidence >= FAILURE_CONFIDENCE_THRESHOLD:
-            # Get contributing factors
+            # L4 DECISION: Build contributing factors
             factors = []
             if failures:
                 # Get unique error signatures
@@ -146,7 +134,7 @@ async def predict_failure_likelihood(
 
             # Check for feedback patterns
             worker_feedback = [
-                f for f in feedback_records if f.extra_data and f.extra_data.get("worker_id") == worker_id
+                f for f in feedback_records if f.extra_data and f.extra_data.get("worker_id") == wid
             ]
             if worker_feedback:
                 factors.append({"type": "feedback_patterns", "count": len(worker_feedback)})
@@ -154,7 +142,7 @@ async def predict_failure_likelihood(
             predictions.append(
                 {
                     "subject_type": "worker",
-                    "subject_id": worker_id,
+                    "subject_id": wid,
                     "tenant_id": str(failures[0].tenant_id),
                     "confidence_score": round(confidence, 3),
                     "prediction_value": {
@@ -179,14 +167,16 @@ async def predict_failure_likelihood(
 
 
 async def predict_cost_overrun(
-    session: AsyncSession,
+    driver: "PredictionDriver",
     tenant_id: Optional[UUID] = None,
     worker_id: Optional[str] = None,
 ) -> list[dict]:
     """
     Predict likelihood of cost overrun for upcoming runs.
 
-    PB-S5: This function READS cost data only. No modifications.
+    Phase-2.5A: Data fetching delegated to driver (L6).
+
+    PB-S5: This function calculates predictions only. No modifications.
     Predictions are advisory and have ZERO side-effects.
 
     Returns list of predictions with:
@@ -195,31 +185,20 @@ async def predict_cost_overrun(
     - projected_cost: expected cost
     - contributing_factors: signals used for prediction
     """
+    from datetime import datetime
+
     predictions = []
+    since = utc_now() - timedelta(days=7)
 
-    # Query recent costs
-    runs_query = (
-        select(WorkerRun)
-        .where(WorkerRun.status == "completed")
-        .where(WorkerRun.cost_cents.isnot(None))
-        .where(WorkerRun.cost_cents > 0)
-        .where(WorkerRun.created_at >= utc_now() - timedelta(days=7))
-        .order_by(WorkerRun.created_at.desc())
-        .limit(200)
+    # Phase-2.5A: Delegate fetch to driver
+    runs = await driver.fetch_cost_runs(
+        since=since, tenant_id=tenant_id, worker_id=worker_id, limit=200
     )
-
-    if tenant_id:
-        runs_query = runs_query.where(WorkerRun.tenant_id == tenant_id)
-    if worker_id:
-        runs_query = runs_query.where(WorkerRun.worker_id == worker_id)
-
-    result = await session.execute(runs_query)
-    runs = result.scalars().all()
 
     if len(runs) < 3:  # Need enough data for trend
         return []
 
-    # Group by worker and analyze cost trends
+    # L4 DECISION: Group by worker and analyze cost trends
     worker_costs: dict[str, list[tuple[datetime, int]]] = {}
     for run in runs:
         wid = str(run.worker_id)
@@ -227,14 +206,14 @@ async def predict_cost_overrun(
             worker_costs[wid] = []
         worker_costs[wid].append((run.created_at, run.cost_cents))
 
-    for worker_id, costs in worker_costs.items():
+    for wid, costs in worker_costs.items():
         if len(costs) < 3:
             continue
 
-        # Sort by time (newest first already)
+        # L4 DECISION: Sort by time (newest first already)
         costs_sorted = sorted(costs, key=lambda x: x[0], reverse=True)
 
-        # Calculate average and trend
+        # L4 DECISION: Calculate average and trend
         recent_costs = [c[1] for c in costs_sorted[:3]]
         older_costs = [c[1] for c in costs_sorted[3:]] if len(costs_sorted) > 3 else recent_costs
 
@@ -244,7 +223,7 @@ async def predict_cost_overrun(
         if older_avg == 0:
             continue
 
-        # Calculate projected cost and overrun percentage
+        # L4 DECISION: Calculate projected cost and overrun percentage
         trend_multiplier = recent_avg / older_avg
         projected_cost = recent_avg * trend_multiplier
         overrun_percent = ((projected_cost - older_avg) / older_avg) * 100
@@ -262,7 +241,7 @@ async def predict_cost_overrun(
             predictions.append(
                 {
                     "subject_type": "worker",
-                    "subject_id": worker_id,
+                    "subject_id": wid,
                     "tenant_id": str(runs[0].tenant_id),
                     "confidence_score": round(confidence, 3),
                     "prediction_value": {
@@ -287,31 +266,44 @@ async def predict_cost_overrun(
 
 
 async def emit_prediction(
-    session: AsyncSession,
-    prediction: PredictionEventCreate,
-) -> PredictionEvent:
+    driver: "PredictionDriver",
+    tenant_id: str,
+    prediction_type: str,
+    subject_type: str,
+    subject_id: str,
+    confidence_score: float,
+    prediction_value: dict,
+    contributing_factors: list,
+    notes: Optional[str] = None,
+    valid_until: Optional["datetime"] = None,
+) -> "PredictionEvent":
     """
     Emit a prediction event.
+
+    Phase-2.5A: Persistence delegated to driver (L6).
 
     PB-S5: This creates a NEW record in prediction_events.
     It does NOT modify any execution data. Predictions are advisory only.
     """
-    record = PredictionEvent(
-        tenant_id=prediction.tenant_id,
-        prediction_type=prediction.prediction_type,
-        subject_type=prediction.subject_type,
-        subject_id=prediction.subject_id,
-        confidence_score=prediction.confidence_score,
-        prediction_value=prediction.prediction_value,
-        contributing_factors=prediction.contributing_factors,
-        valid_until=prediction.valid_until or (utc_now() + timedelta(hours=PREDICTION_VALIDITY_HOURS)),
-        created_at=utc_now(),
-        is_advisory=True,  # ALWAYS TRUE - enforced by design
-        notes=prediction.notes,
-    )
+    from datetime import datetime
+    from app.models.prediction import PredictionEvent
 
-    session.add(record)
-    await session.flush()
+    now = utc_now()
+    valid_until_ts = valid_until or (now + timedelta(hours=PREDICTION_VALIDITY_HOURS))
+
+    # Phase-2.5A: Delegate insert to driver
+    record = await driver.insert_prediction(
+        tenant_id=tenant_id,
+        prediction_type=prediction_type,
+        subject_type=subject_type,
+        subject_id=subject_id,
+        confidence_score=confidence_score,
+        prediction_value=prediction_value,
+        contributing_factors=contributing_factors,
+        valid_until=valid_until_ts,
+        created_at=now,
+        notes=notes,
+    )
 
     logger.info(
         "prediction_event_emitted",
@@ -334,10 +326,17 @@ async def run_prediction_cycle(
     """
     Run full prediction cycle.
 
+    Phase-2.5A: Data access delegated to driver (L6).
+    This method orchestrates the prediction flow (L4 DECISION).
+
     PB-S5: Generates predictions. No execution modifications.
 
     Returns summary of generated predictions.
     """
+    from app.houseofcards.customer.analytics.drivers.prediction_driver import (
+        get_prediction_driver,
+    )
+
     result = {
         "failure_predictions": [],
         "cost_predictions": [],
@@ -347,14 +346,17 @@ async def run_prediction_cycle(
 
     try:
         async with get_async_session() as session:
-            # Generate failure predictions
-            failure_predictions = await predict_failure_likelihood(session, tenant_id)
+            driver = get_prediction_driver(session)
+
+            # L4 DECISION: Generate failure predictions
+            failure_predictions = await predict_failure_likelihood(driver, tenant_id)
             result["failure_predictions"] = failure_predictions
 
-            # Emit failure predictions
+            # L4 DECISION: Emit failure predictions via driver
             for pred in failure_predictions:
                 try:
-                    prediction = PredictionEventCreate(
+                    await emit_prediction(
+                        driver=driver,
                         tenant_id=pred["tenant_id"],
                         prediction_type="failure_likelihood",
                         subject_type=pred["subject_type"],
@@ -364,19 +366,19 @@ async def run_prediction_cycle(
                         contributing_factors=pred["contributing_factors"],
                         notes="ADVISORY: This is a prediction, not a fact.",
                     )
-                    await emit_prediction(session, prediction)
                     result["predictions_created"] += 1
                 except Exception as e:
                     result["errors"].append(f"Failed to emit failure prediction: {e}")
 
-            # Generate cost predictions
-            cost_predictions = await predict_cost_overrun(session, tenant_id)
+            # L4 DECISION: Generate cost predictions
+            cost_predictions = await predict_cost_overrun(driver, tenant_id)
             result["cost_predictions"] = cost_predictions
 
-            # Emit cost predictions
+            # L4 DECISION: Emit cost predictions via driver
             for pred in cost_predictions:
                 try:
-                    prediction = PredictionEventCreate(
+                    await emit_prediction(
+                        driver=driver,
                         tenant_id=pred["tenant_id"],
                         prediction_type="cost_overrun",
                         subject_type=pred["subject_type"],
@@ -386,12 +388,12 @@ async def run_prediction_cycle(
                         contributing_factors=pred["contributing_factors"],
                         notes="ADVISORY: This is a projection based on trends.",
                     )
-                    await emit_prediction(session, prediction)
                     result["predictions_created"] += 1
                 except Exception as e:
                     result["errors"].append(f"Failed to emit cost prediction: {e}")
 
-            await session.commit()
+            # Phase-2.5A: Delegate commit to driver
+            await driver.commit()
 
     except Exception as e:
         logger.error(f"prediction_cycle_error: {e}", exc_info=True)
@@ -409,31 +411,33 @@ async def get_prediction_summary(
     """
     Get prediction summary for ops visibility.
 
+    Phase-2.5A: Data fetching delegated to driver (L6).
+
     PB-S5: Read-only query of predictions table.
     """
+    from app.houseofcards.customer.analytics.drivers.prediction_driver import (
+        get_prediction_driver,
+    )
+
     async with get_async_session() as session:
-        query = select(PredictionEvent).order_by(PredictionEvent.created_at.desc())
+        driver = get_prediction_driver(session)
 
-        if tenant_id:
-            query = query.where(PredictionEvent.tenant_id == str(tenant_id))
-        if prediction_type:
-            query = query.where(PredictionEvent.prediction_type == prediction_type)
-        if not include_expired:
-            query = query.where(
-                (PredictionEvent.valid_until.is_(None)) | (PredictionEvent.valid_until > utc_now())
-            )
+        # Phase-2.5A: Delegate fetch to driver
+        valid_after = None if include_expired else utc_now()
+        predictions = await driver.fetch_predictions(
+            tenant_id=tenant_id,
+            prediction_type=prediction_type,
+            valid_after=valid_after,
+            limit=limit,
+        )
 
-        query = query.limit(limit)
-
-        result = await session.execute(query)
-        predictions = result.scalars().all()
-
-        # Count by type
+        # L4 DECISION: Count by type (business logic)
         type_counts: dict[str, int] = {}
         for pred in predictions:
             ptype = pred.prediction_type
             type_counts[ptype] = type_counts.get(ptype, 0) + 1
 
+        # L4 DECISION: Format response (presentation logic)
         return {
             "total": len(predictions),
             "by_type": type_counts,

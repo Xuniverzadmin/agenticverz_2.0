@@ -54,8 +54,16 @@ from app.services.activity.signal_feedback_service import (
     SignalFeedbackService,
     AcknowledgeResult,
     SuppressResult,
+    SignalFeedbackStatus,  # Canonical feedback state - engines own state DTOs
 )
 from app.services.activity.signal_identity import compute_signal_fingerprint_from_row
+
+# Import canonical enums from engines (engines own enums, facades import)
+from app.houseofcards.customer.activity.engines.activity_enums import (
+    SignalType,
+    SeverityLevel,
+    RunState,
+)
 
 logger = logging.getLogger("nova.services.activity.facade")
 
@@ -131,51 +139,38 @@ class RunListResult:
 
 
 @dataclass
-class LiveRunsResult:
-    """Result of getting live runs (V2)."""
+class RunsResult:
+    """
+    Unified result for getting runs (V2).
 
+    Consolidates LiveRunsResult and CompletedRunsResult per ACT-DUP-003.
+    These were 100% structurally identical - only the name differed.
+
+    Rule: If structures are identical today, they will diverge accidentally tomorrow.
+    """
+
+    state: str  # "LIVE" or "COMPLETED"
     items: list[RunSummaryV2Result]
     total: int
     has_more: bool
     generated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-@dataclass
-class CompletedRunsResult:
-    """Result of getting completed runs (V2)."""
-
-    items: list[RunSummaryV2Result]
-    total: int
-    has_more: bool
-    generated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+# Type aliases for backward compatibility during migration
+LiveRunsResult = RunsResult
+CompletedRunsResult = RunsResult
 
 
 @dataclass
-class RunDetailResult:
-    """Run detail (O3)."""
+class RunDetailResult(RunSummaryResult):
+    """
+    Run detail (O3) - extends summary with additional fields.
 
-    run_id: str
-    tenant_id: str | None
-    project_id: str | None
-    is_synthetic: bool
-    source: str
-    provider_type: str
-    state: str
-    status: str
-    started_at: datetime | None
-    last_seen_at: datetime | None
-    completed_at: datetime | None
-    duration_ms: float | None
-    risk_level: str
-    latency_bucket: str
-    evidence_health: str
-    integrity_status: str
-    incident_count: int
-    policy_draft_count: int
-    policy_violation: bool
-    input_tokens: int | None
-    output_tokens: int | None
-    estimated_cost_usd: float | None
+    Refactored per ACT-DUP-002: Detail DTOs must extend summary DTOs,
+    never re-declare shared fields. This prevents field drift and
+    guarantees backward compatibility.
+    """
+
     goal: str | None = None
     error_message: str | None = None
 
@@ -218,14 +213,9 @@ class StatusSummaryResult:
     total: int
 
 
-@dataclass
-class SignalFeedbackResult:
-    """Feedback state for a signal."""
-
-    acknowledged: bool = False
-    acknowledged_by: str | None = None
-    acknowledged_at: datetime | None = None
-    suppressed_until: datetime | None = None
+# SignalFeedbackResult DELETED (ACT-DUP-001)
+# Canonical feedback state is SignalFeedbackStatus from signal_feedback_service.py
+# Rule: Feedback state is owned by engines, never redefined by facades
 
 
 @dataclass
@@ -240,7 +230,7 @@ class SignalProjectionResult:
     summary: str
     policy_context: PolicyContextResult
     created_at: datetime
-    feedback: SignalFeedbackResult | None = None
+    feedback: SignalFeedbackStatus | None = None  # Uses canonical engine DTO
 
 
 @dataclass
@@ -295,7 +285,15 @@ class ThresholdSignalsResult:
 
 @dataclass
 class RiskSignalsResult:
-    """Risk signal aggregates."""
+    """
+    Risk signal aggregates.
+
+    NOTE (ACT-DUP-004): This is a DERIVED PROJECTION of MetricsResult.
+    The get_risk_signals() method extracts a subset from get_metrics().
+    If you need full metrics, use MetricsResult directly.
+
+    Rule: Derived views must be explicitly labeled as such.
+    """
 
     at_risk_count: int
     violated_count: int
@@ -764,7 +762,8 @@ class ActivityFacade:
             sort_order=sort_order,
         )
 
-        return LiveRunsResult(
+        return RunsResult(
+            state="LIVE",
             items=result["items"],
             total=result["total"],
             has_more=result["has_more"],
@@ -810,7 +809,8 @@ class ActivityFacade:
             sort_order=sort_order,
         )
 
-        return CompletedRunsResult(
+        return RunsResult(
+            state="COMPLETED",
             items=result["items"],
             total=result["total"],
             has_more=result["has_more"],
@@ -1063,27 +1063,40 @@ class ActivityFacade:
         return SignalsResult(signals=signals, total=total)
 
     def _compute_signal_type(self, row: dict[str, Any]) -> str:
-        """Compute signal type from run data."""
+        """
+        Compute signal type from run data.
+
+        Uses canonical SignalType enum values (ACT-DUP-006).
+        Rule: No free-text categorical fields in Activity.
+        """
         risk_type = row.get("risk_type")
         if risk_type:
-            return f"{risk_type}_RISK"
+            # Map risk types to SignalType enum
+            type_map = {
+                "COST": SignalType.COST_RISK,
+                "TIME": SignalType.TIME_RISK,
+                "TOKENS": SignalType.TOKEN_RISK,
+                "RATE": SignalType.RATE_RISK,
+            }
+            return type_map.get(risk_type, SignalType.COST_RISK).value
 
         risk_level = row.get("risk_level", "NORMAL")
         if risk_level == "VIOLATED":
-            return "POLICY_BREACH"
+            return SignalType.POLICY_BREACH.value
         if row.get("evidence_health") in ("DEGRADED", "MISSING"):
-            return "EVIDENCE_DEGRADED"
+            return SignalType.EVIDENCE_DEGRADED.value
 
-        return "COST_RISK"
+        return SignalType.COST_RISK.value
 
     def _compute_severity(self, row: dict[str, Any]) -> str:
-        """Compute severity from run data."""
+        """
+        Compute severity level from run data.
+
+        Rule (ACT-DUP-005): Engines speak numbers, facades speak labels.
+        Uses SeverityLevel.from_risk_level() for conversion.
+        """
         risk_level = row.get("risk_level", "NORMAL")
-        if risk_level == "VIOLATED":
-            return "HIGH"
-        if risk_level == "AT_RISK":
-            return "MEDIUM"
-        return "LOW"
+        return SeverityLevel.from_risk_level(risk_level).value.upper()
 
     def _compute_signal_summary(self, row: dict[str, Any], signal_type: str) -> str:
         """Compute signal summary from run data."""

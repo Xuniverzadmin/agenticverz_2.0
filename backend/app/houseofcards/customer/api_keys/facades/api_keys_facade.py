@@ -3,13 +3,18 @@
 # Product: ai-console
 # Temporal:
 #   Trigger: api
-#   Execution: async (DB reads)
+#   Execution: async (DB reads via driver)
 # Role: API Keys domain facade - unified entry point for API key operations
 # Callers: L2 api-keys API (aos_api_key.py)
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, L7
 # Reference: Connectivity Domain - Customer Console v1 Constitution
 #
+# PHASE 2.5B EXTRACTION (2026-01-24):
+# All DB operations extracted to api_keys_facade_driver.py (L6).
+# This facade now delegates to driver for data access and composes business results.
+# Reference: API_KEYS_PHASE2.5_IMPLEMENTATION_PLAN.md
+
 """
 API Keys Domain Facade (L4)
 
@@ -23,17 +28,24 @@ API keys are used for:
 - SDK authentication
 - Programmatic access to AOS APIs
 - RBAC-controlled permissions
+
+All DB access is delegated to APIKeysFacadeDriver (L6).
+This facade only contains business logic composition.
 """
 
+from __future__ import annotations
+
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from app.houseofcards.customer.api_keys.drivers.api_keys_facade_driver import (
+    APIKeysFacadeDriver,
+)
 
-from app.models.tenant import APIKey
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 # =============================================================================
@@ -103,7 +115,13 @@ class APIKeysFacade:
 
     All operations are tenant-scoped for isolation.
     Synthetic keys are excluded from customer view.
+
+    All DB access is delegated to APIKeysFacadeDriver (L6).
     """
+
+    def __init__(self) -> None:
+        """Initialize the facade with its driver."""
+        self._driver = APIKeysFacadeDriver()
 
     async def list_api_keys(
         self,
@@ -117,47 +135,28 @@ class APIKeysFacade:
         """List API keys for the tenant. Excludes synthetic keys."""
         filters_applied: dict[str, Any] = {"tenant_id": tenant_id}
 
-        # Base query - exclude synthetic keys from customer view
-        stmt = (
-            select(APIKey)
-            .where(APIKey.tenant_id == tenant_id)
-            .where(APIKey.is_synthetic == False)  # noqa: E712
-            .order_by(APIKey.created_at.desc())
-        )
-
         if status is not None:
-            stmt = stmt.where(APIKey.status == status)
             filters_applied["status"] = status
 
-        # Count total
-        count_stmt = (
-            select(func.count(APIKey.id))
-            .where(APIKey.tenant_id == tenant_id)
-            .where(APIKey.is_synthetic == False)  # noqa: E712
+        # Fetch data from driver
+        key_snapshots = await self._driver.fetch_api_keys(
+            session, tenant_id, status=status, limit=limit, offset=offset
         )
-        if status is not None:
-            count_stmt = count_stmt.where(APIKey.status == status)
+        total = await self._driver.count_api_keys(session, tenant_id, status=status)
 
-        count_result = await session.execute(count_stmt)
-        total = count_result.scalar() or 0
-
-        # Apply pagination
-        stmt = stmt.limit(limit).offset(offset)
-        result = await session.execute(stmt)
-        keys = result.scalars().all()
-
+        # Compose business result
         items = [
             APIKeySummaryResult(
-                key_id=key.id,
-                name=key.name,
-                prefix=key.key_prefix,
-                status=key.status.upper(),
-                created_at=key.created_at,
-                last_used_at=key.last_used_at,
-                expires_at=key.expires_at,
-                total_requests=key.total_requests,
+                key_id=snap.id,
+                name=snap.name,
+                prefix=snap.key_prefix,
+                status=snap.status.upper(),
+                created_at=snap.created_at,
+                last_used_at=snap.last_used_at,
+                expires_at=snap.expires_at,
+                total_requests=snap.total_requests,
             )
-            for key in keys
+            for snap in key_snapshots
         ]
 
         return APIKeysListResult(
@@ -174,40 +173,32 @@ class APIKeysFacade:
         key_id: str,
     ) -> Optional[APIKeyDetailResult]:
         """Get API key detail. Tenant isolation enforced."""
-        stmt = (
-            select(APIKey)
-            .where(APIKey.id == key_id)
-            .where(APIKey.tenant_id == tenant_id)
-            .where(APIKey.is_synthetic == False)  # noqa: E712
-        )
+        # Fetch data from driver
+        snap = await self._driver.fetch_api_key_by_id(session, tenant_id, key_id)
 
-        result = await session.execute(stmt)
-        key = result.scalar_one_or_none()
-
-        if key is None:
+        if snap is None:
             return None
 
-        # Parse JSON fields
-        permissions = json.loads(key.permissions_json) if key.permissions_json else None
-        allowed_workers = (
-            json.loads(key.allowed_workers_json) if key.allowed_workers_json else None
-        )
+        # Parse JSON fields (business logic)
+        permissions = json.loads(snap.permissions_json) if snap.permissions_json else None
+        allowed_workers = json.loads(snap.allowed_workers_json) if snap.allowed_workers_json else None
 
+        # Compose business result
         return APIKeyDetailResult(
-            key_id=key.id,
-            name=key.name,
-            prefix=key.key_prefix,
-            status=key.status.upper(),
-            created_at=key.created_at,
-            last_used_at=key.last_used_at,
-            expires_at=key.expires_at,
-            total_requests=key.total_requests,
+            key_id=snap.id,
+            name=snap.name,
+            prefix=snap.key_prefix,
+            status=snap.status.upper(),
+            created_at=snap.created_at,
+            last_used_at=snap.last_used_at,
+            expires_at=snap.expires_at,
+            total_requests=snap.total_requests,
             permissions=permissions,
             allowed_workers=allowed_workers,
-            rate_limit_rpm=key.rate_limit_rpm,
-            max_concurrent_runs=key.max_concurrent_runs,
-            revoked_at=key.revoked_at,
-            revoked_reason=key.revoked_reason,
+            rate_limit_rpm=snap.rate_limit_rpm,
+            max_concurrent_runs=snap.max_concurrent_runs,
+            revoked_at=snap.revoked_at,
+            revoked_reason=snap.revoked_reason,
         )
 
 

@@ -1,15 +1,16 @@
-# Layer: L4 — Domain Engine
+# Layer: L6 — Driver
 # AUDIENCE: CUSTOMER
+# Role: Integrations domain facade - unified entry point for integration management
 # Product: ai-console
 # Temporal:
 #   Trigger: api
 #   Execution: async (DB operations)
-# Role: Integrations domain facade - unified entry point for integration management
 # Callers: L2 integrations API (aos_cus_integrations.py)
 # Allowed Imports: L4 (CusIntegrationService), L6
 # Forbidden Imports: L1, L2, L3, L5
 # Reference: Connectivity Domain - Customer Console v1 Constitution
 #
+
 """
 Integrations Domain Facade (L4)
 
@@ -30,7 +31,8 @@ from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID
 
-from app.services.cus_integration_service import CusIntegrationService
+# PIN-468: Import from engine (provides CusIntegrationService alias for compatibility)
+from app.services.cus_integration_engine import CusIntegrationService
 
 
 # =============================================================================

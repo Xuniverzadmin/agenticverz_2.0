@@ -1,19 +1,33 @@
-# Layer: L4 — Domain Services
+# Layer: L6 — Driver
 # AUDIENCE: CUSTOMER
-# Role: policies/drivers - Reserved for L3 adapters
-# Reference: HOC_policies_analysis_v1.md
+# Role: Data access drivers for customer policies domain
+# Reference: PHASE2_EXTRACTION_PROTOCOL.md
 
 """
 policies/drivers
 
-EMPTY - Reserved for L3 adapters.
+L6 drivers for customer policy data access operations.
+All drivers are pure data access - no business logic.
 
-NOTE: policy_driver.py was moved to internal/platform/policy/engines/
-because it declares AUDIENCE: INTERNAL.
+For CUSTOMER policy read operations:
+    from app.houseofcards.customer.policies.drivers import PolicyReadDriver
 
-For INTERNAL policy operations, use:
+For INTERNAL policy operations:
     from app.houseofcards.internal.platform.policy.engines import get_policy_driver
-
-For CUSTOMER policy operations, use:
-    from app.houseofcards.customer.policies.facades import get_policies_facade
 """
+
+from app.houseofcards.customer.policies.drivers.policy_read_driver import (
+    PolicyReadDriver,
+    get_policy_read_driver,
+    TenantBudgetDataDTO,
+    UsageSumDTO,
+    GuardrailDTO,
+)
+
+__all__ = [
+    "PolicyReadDriver",
+    "get_policy_read_driver",
+    "TenantBudgetDataDTO",
+    "UsageSumDTO",
+    "GuardrailDTO",
+]

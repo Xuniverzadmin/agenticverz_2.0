@@ -1,7 +1,7 @@
-# Layer: L4 — Domain Services
+# Layer: L4 — Domain Engines
 # AUDIENCE: CUSTOMER
 # Role: account domain - engines
-# Reference: DIRECTORY_REORGANIZATION_PLAN.md, HOC_account_analysis_v1.md
+# Reference: DIRECTORY_REORGANIZATION_PLAN.md, ACCOUNT_PHASE2.5_IMPLEMENTATION_PLAN.md
 
 """
 account / engines
@@ -17,3 +17,34 @@ For INTERNAL IAM operations, use:
 For CUSTOMER account operations, use the facades:
     from app.houseofcards.customer.account.facades import get_accounts_facade
 """
+
+from app.houseofcards.customer.account.engines.email_verification import (
+    EmailVerificationService,
+    EmailVerificationError,
+    VerificationResult,
+    get_email_verification_service,
+)
+from app.houseofcards.customer.account.engines.tenant_engine import (
+    TenantEngine,
+    TenantEngineError,
+    QuotaExceededError,
+    get_tenant_engine,
+)
+from app.houseofcards.customer.account.engines.user_write_engine import (
+    UserWriteService,
+)
+
+__all__ = [
+    # email_verification
+    "EmailVerificationService",
+    "EmailVerificationError",
+    "VerificationResult",
+    "get_email_verification_service",
+    # tenant_engine
+    "TenantEngine",
+    "TenantEngineError",
+    "QuotaExceededError",
+    "get_tenant_engine",
+    # user_write_engine (class name not yet renamed to UserWriteEngine)
+    "UserWriteService",
+]

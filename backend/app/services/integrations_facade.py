@@ -30,7 +30,8 @@ from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID
 
-from app.services.cus_integration_service import CusIntegrationService
+# PIN-468: Import from engine (provides CusIntegrationService alias for compatibility)
+from app.services.cus_integration_engine import CusIntegrationService
 
 
 # =============================================================================

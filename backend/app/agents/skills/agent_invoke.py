@@ -28,7 +28,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from ..services.credit_service import CREDIT_COSTS, CreditService, get_credit_service
-from ..services.invoke_audit_service import InvokeAuditService, get_invoke_audit_service
+from ..services.invoke_audit_driver import InvokeAuditService, get_invoke_audit_service  # Reclassified per PIN-468
 from ..services.message_service import MessageService, get_message_service
 from ..services.registry_service import RegistryService, get_registry_service
 

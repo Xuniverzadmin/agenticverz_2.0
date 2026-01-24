@@ -7,8 +7,13 @@
 # Role: Accounts domain facade - unified entry point for account management
 # Callers: L2 accounts API (accounts.py)
 # Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: Customer Console v1 Constitution
+# Forbidden Imports: L1, L2, L3, L5, L7 (at runtime)
+# Reference: Customer Console v1 Constitution, ACCOUNT_PHASE2.5_IMPLEMENTATION_PLAN.md
+#
+# PHASE 2.5B REMEDIATION (2026-01-24):
+# This facade has been refactored to comply with HOC Layer Topology V1.
+# All DB operations are now delegated to AccountsFacadeDriver (L6).
+# SQLAlchemy and L7 model imports moved to TYPE_CHECKING block.
 #
 """
 Accounts Domain Facade (L4)
@@ -25,25 +30,22 @@ Account is NOT a domain - it manages who, what, and billing (not what happened).
 Account pages MUST NOT display executions, incidents, policies, or logs.
 """
 
+from __future__ import annotations
+
 import hashlib
 import secrets
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models.tenant import (
-    Invitation,
-    Subscription,
-    SupportTicket,
-    Tenant,
-    TenantMembership,
-    User,
-    generate_uuid,
-    utc_now,
+# L6 driver import (allowed at runtime)
+from app.houseofcards.customer.account.drivers.accounts_facade_driver import (
+    AccountsFacadeDriver,
+    get_accounts_facade_driver,
 )
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 # =============================================================================
@@ -356,7 +358,15 @@ class AccountsFacade:
 
     GOVERNANCE NOTE:
     Account is NOT a domain - it manages who, what, and billing (not what happened).
+
+    LAYER COMPLIANCE (Phase 2.5B):
+    This L4 facade delegates all DB operations to AccountsFacadeDriver (L6).
+    Business logic (validation, permissions) remains here.
     """
+
+    def __init__(self, driver: AccountsFacadeDriver | None = None) -> None:
+        """Initialize facade with optional driver injection."""
+        self._driver = driver or get_accounts_facade_driver()
 
     # -------------------------------------------------------------------------
     # Projects Operations
@@ -373,26 +383,14 @@ class AccountsFacade:
     ) -> ProjectsListResult:
         """List projects (tenants). In current architecture, Tenant = Project."""
         filters_applied: dict[str, Any] = {"tenant_id": tenant_id}
-
-        # Query tenant (current user's tenant is their project)
-        stmt = select(Tenant).where(Tenant.id == tenant_id)
-
         if status is not None:
-            stmt = stmt.where(Tenant.status == status)
             filters_applied["status"] = status
 
-        # Count
-        count_stmt = select(func.count(Tenant.id)).where(Tenant.id == tenant_id)
-        if status is not None:
-            count_stmt = count_stmt.where(Tenant.status == status)
-
-        count_result = await session.execute(count_stmt)
-        total = count_result.scalar() or 0
-
-        # Execute
-        stmt = stmt.limit(limit).offset(offset)
-        result = await session.execute(stmt)
-        tenants = result.scalars().all()
+        # Delegate to driver
+        tenants = await self._driver.fetch_tenants(
+            session, tenant_id, status=status, limit=limit, offset=offset
+        )
+        total = await self._driver.count_tenants(session, tenant_id, status=status)
 
         items = [
             ProjectSummaryResult(
@@ -425,10 +423,8 @@ class AccountsFacade:
         if project_id != tenant_id:
             return None
 
-        stmt = select(Tenant).where(Tenant.id == project_id)
-        result = await session.execute(stmt)
-        tenant = result.scalar_one_or_none()
-
+        # Delegate to driver
+        tenant = await self._driver.fetch_tenant_detail(session, project_id)
         if tenant is None:
             return None
 
@@ -448,7 +444,7 @@ class AccountsFacade:
             runs_this_month=tenant.runs_this_month,
             tokens_this_month=tenant.tokens_this_month,
             onboarding_state=tenant.onboarding_state,
-            onboarding_complete=tenant.has_completed_onboarding(),
+            onboarding_complete=tenant.onboarding_complete,
             created_at=tenant.created_at,
             updated_at=tenant.updated_at,
         )
@@ -469,61 +465,30 @@ class AccountsFacade:
     ) -> UsersListResult:
         """List users in the tenant."""
         filters_applied: dict[str, Any] = {"tenant_id": tenant_id}
-
-        # Join User with TenantMembership to get tenant users with roles
-        stmt = (
-            select(
-                User.id,
-                User.email,
-                User.name,
-                User.status,
-                User.created_at,
-                User.last_login_at,
-                TenantMembership.role,
-            )
-            .join(TenantMembership, TenantMembership.user_id == User.id)
-            .where(TenantMembership.tenant_id == tenant_id)
-            .order_by(User.email)
-        )
-
         if role is not None:
-            stmt = stmt.where(TenantMembership.role == role)
             filters_applied["role"] = role
-
         if status is not None:
-            stmt = stmt.where(User.status == status)
             filters_applied["status"] = status
 
-        # Count total
-        count_stmt = (
-            select(func.count(User.id))
-            .join(TenantMembership, TenantMembership.user_id == User.id)
-            .where(TenantMembership.tenant_id == tenant_id)
+        # Delegate to driver
+        users = await self._driver.fetch_users(
+            session, tenant_id, role=role, status=status, limit=limit, offset=offset
         )
-        if role is not None:
-            count_stmt = count_stmt.where(TenantMembership.role == role)
-        if status is not None:
-            count_stmt = count_stmt.where(User.status == status)
-
-        count_result = await session.execute(count_stmt)
-        total = count_result.scalar() or 0
-
-        # Apply pagination
-        stmt = stmt.limit(limit).offset(offset)
-        result = await session.execute(stmt)
-        rows = result.all()
+        total = await self._driver.count_users(
+            session, tenant_id, role=role, status=status
+        )
 
         items = [
             UserSummaryResult(
-                user_id=row.id,
-                email=row.email,
-                name=row.name,
-                role=row.role.upper(),
-                status=row.status.upper(),
-                created_at=row.created_at,
-                last_login_at=row.last_login_at,
+                user_id=u.id,
+                email=u.email,
+                name=u.name,
+                role=u.role.upper(),
+                status=u.status.upper(),
+                created_at=u.created_at,
+                last_login_at=u.last_login_at,
             )
-            for row in rows
+            for u in users
         ]
 
         return UsersListResult(
@@ -540,37 +505,25 @@ class AccountsFacade:
         user_id: str,
     ) -> Optional[UserDetailResult]:
         """Get user detail. Tenant isolation enforced."""
-        # Query user with membership in this tenant
-        stmt = (
-            select(User, TenantMembership)
-            .join(TenantMembership, TenantMembership.user_id == User.id)
-            .where(User.id == user_id)
-            .where(TenantMembership.tenant_id == tenant_id)
-        )
-
-        result = await session.execute(stmt)
-        row = result.first()
-
-        if row is None:
+        # Delegate to driver
+        user = await self._driver.fetch_user_detail(session, tenant_id, user_id)
+        if user is None:
             return None
-
-        user: User = row[0]
-        membership: TenantMembership = row[1]
 
         return UserDetailResult(
             user_id=user.id,
             email=user.email,
             name=user.name,
             avatar_url=user.avatar_url,
-            role=membership.role.upper(),
+            role=user.role.upper(),
             status=user.status.upper(),
             email_verified=user.email_verified,
             oauth_provider=user.oauth_provider,
-            membership_created_at=membership.created_at,
-            invited_by=membership.invited_by,
-            can_manage_keys=membership.can_manage_keys(),
-            can_run_workers=membership.can_run_workers(),
-            can_view_runs=membership.can_view_runs(),
+            membership_created_at=user.membership_created_at,
+            invited_by=user.invited_by,
+            can_manage_keys=user.can_manage_keys,
+            can_run_workers=user.can_run_workers,
+            can_view_runs=user.can_view_runs,
             created_at=user.created_at,
             updated_at=user.updated_at,
             last_login_at=user.last_login_at,
@@ -582,28 +535,21 @@ class AccountsFacade:
         tenant_id: str,
     ) -> TenantUsersListResult:
         """List users in the current tenant."""
-        stmt = (
-            select(TenantMembership, User)
-            .join(User, TenantMembership.user_id == User.id)
-            .where(TenantMembership.tenant_id == tenant_id)
-            .order_by(TenantMembership.created_at)
-        )
-
-        result = await session.execute(stmt)
-        rows = result.all()
+        # Delegate to driver
+        memberships = await self._driver.fetch_tenant_memberships(session, tenant_id)
 
         return TenantUsersListResult(
             users=[
                 TenantUserResult(
-                    user_id=membership.user_id,
-                    email=user.email,
-                    name=user.name,
-                    role=membership.role,
-                    joined_at=membership.created_at,
+                    user_id=m.user_id,
+                    email=m.email,
+                    name=m.name,
+                    role=m.role,
+                    joined_at=m.created_at,
                 )
-                for membership, user in rows
+                for m in memberships
             ],
-            total=len(rows),
+            total=len(memberships),
         )
 
     async def update_user_role(
@@ -615,13 +561,10 @@ class AccountsFacade:
         new_role: str,
     ) -> TenantUserResult | AccountsErrorResult:
         """Update a user's role in the tenant. Requires owner role."""
-        # Check caller is owner
-        caller_stmt = select(TenantMembership).where(
-            TenantMembership.tenant_id == tenant_id,
-            TenantMembership.user_id == caller_user_id,
+        # Business logic: Check caller has permission
+        caller_membership = await self._driver.fetch_membership(
+            session, tenant_id, caller_user_id
         )
-        caller_result = await session.execute(caller_stmt)
-        caller_membership = caller_result.scalar_one_or_none()
 
         if caller_membership is None or not caller_membership.can_change_roles():
             return AccountsErrorResult(
@@ -630,7 +573,7 @@ class AccountsFacade:
                 status_code=403,
             )
 
-        # Cannot change own role
+        # Business logic: Cannot change own role
         if target_user_id == caller_user_id:
             return AccountsErrorResult(
                 error="invalid_operation",
@@ -638,7 +581,7 @@ class AccountsFacade:
                 status_code=400,
             )
 
-        # Validate role
+        # Business logic: Validate role
         valid_roles = ["owner", "admin", "member", "viewer"]
         if new_role not in valid_roles:
             return AccountsErrorResult(
@@ -647,36 +590,31 @@ class AccountsFacade:
                 status_code=400,
             )
 
-        # Get target membership
-        target_stmt = (
-            select(TenantMembership, User)
-            .join(User, TenantMembership.user_id == User.id)
-            .where(
-                TenantMembership.tenant_id == tenant_id,
-                TenantMembership.user_id == target_user_id,
-            )
+        # Get target membership with user data
+        target_data = await self._driver.fetch_membership_with_user(
+            session, tenant_id, target_user_id
         )
-        target_result = await session.execute(target_stmt)
-        row = target_result.one_or_none()
 
-        if row is None:
+        if target_data is None:
             return AccountsErrorResult(
                 error="not_found",
                 message="User not found in tenant",
                 status_code=404,
             )
 
-        membership, user = row
+        membership, _user = target_data
 
-        membership.role = new_role
-        await session.commit()
+        # Delegate to driver for update
+        updated = await self._driver.update_membership_role(
+            session, membership, new_role
+        )
 
         return TenantUserResult(
-            user_id=membership.user_id,
-            email=user.email,
-            name=user.name,
-            role=membership.role,
-            joined_at=membership.created_at,
+            user_id=updated.user_id,
+            email=updated.email,
+            name=updated.name,
+            role=updated.role,
+            joined_at=updated.created_at,
         )
 
     async def remove_user(
@@ -687,13 +625,10 @@ class AccountsFacade:
         target_user_id: str,
     ) -> dict[str, str] | AccountsErrorResult:
         """Remove a user from the tenant. Requires owner or admin role."""
-        # Check caller has permission
-        caller_stmt = select(TenantMembership).where(
-            TenantMembership.tenant_id == tenant_id,
-            TenantMembership.user_id == caller_user_id,
+        # Business logic: Check caller has permission
+        caller_membership = await self._driver.fetch_membership(
+            session, tenant_id, caller_user_id
         )
-        caller_result = await session.execute(caller_stmt)
-        caller_membership = caller_result.scalar_one_or_none()
 
         if caller_membership is None or not caller_membership.can_manage_users():
             return AccountsErrorResult(
@@ -702,7 +637,7 @@ class AccountsFacade:
                 status_code=403,
             )
 
-        # Cannot remove self
+        # Business logic: Cannot remove self
         if target_user_id == caller_user_id:
             return AccountsErrorResult(
                 error="invalid_operation",
@@ -711,12 +646,9 @@ class AccountsFacade:
             )
 
         # Get target membership
-        target_stmt = select(TenantMembership).where(
-            TenantMembership.tenant_id == tenant_id,
-            TenantMembership.user_id == target_user_id,
+        target_membership = await self._driver.fetch_membership(
+            session, tenant_id, target_user_id
         )
-        target_result = await session.execute(target_stmt)
-        target_membership = target_result.scalar_one_or_none()
 
         if target_membership is None:
             return AccountsErrorResult(
@@ -725,7 +657,7 @@ class AccountsFacade:
                 status_code=404,
             )
 
-        # Cannot remove owner unless caller is also owner
+        # Business logic: Cannot remove owner unless caller is also owner
         if target_membership.role == "owner" and caller_membership.role != "owner":
             return AccountsErrorResult(
                 error="forbidden",
@@ -733,8 +665,8 @@ class AccountsFacade:
                 status_code=403,
             )
 
-        await session.delete(target_membership)
-        await session.commit()
+        # Delegate to driver for deletion
+        await self._driver.delete_membership(session, target_membership)
 
         return {"message": "User removed from tenant", "user_id": target_user_id}
 
@@ -749,56 +681,20 @@ class AccountsFacade:
         clerk_user_id: Optional[str],
     ) -> ProfileResult:
         """Get current user profile."""
-        # Query user by Clerk ID
-        user = None
-        if clerk_user_id:
-            user_stmt = select(User).where(User.clerk_user_id == clerk_user_id)
-            user_result = await session.execute(user_stmt)
-            user = user_result.scalar_one_or_none()
+        # Delegate to driver
+        profile = await self._driver.fetch_profile(session, tenant_id, clerk_user_id)
 
-        # Get tenant info
-        tenant_stmt = select(Tenant).where(Tenant.id == tenant_id)
-        tenant_result = await session.execute(tenant_stmt)
-        tenant = tenant_result.scalar_one_or_none()
-
-        # Get membership role if user exists
-        role = "MEMBER"  # Default
-        if user:
-            membership_stmt = (
-                select(TenantMembership)
-                .where(TenantMembership.user_id == user.id)
-                .where(TenantMembership.tenant_id == tenant_id)
-            )
-            membership_result = await session.execute(membership_stmt)
-            membership = membership_result.scalar_one_or_none()
-            if membership:
-                role = membership.role.upper()
-
-        if user:
-            return ProfileResult(
-                user_id=user.id,
-                email=user.email,
-                name=user.name,
-                avatar_url=user.avatar_url,
-                tenant_id=tenant_id,
-                tenant_name=tenant.name if tenant else None,
-                role=role,
-                created_at=user.created_at,
-                preferences=None,
-            )
-        else:
-            # Return minimal profile from auth context
-            return ProfileResult(
-                user_id=clerk_user_id or "unknown",
-                email="unknown@tenant.local",
-                name=None,
-                avatar_url=None,
-                tenant_id=tenant_id,
-                tenant_name=tenant.name if tenant else None,
-                role=role,
-                created_at=tenant.created_at if tenant else datetime.now(timezone.utc),
-                preferences=None,
-            )
+        return ProfileResult(
+            user_id=profile.user_id,
+            email=profile.email,
+            name=profile.name,
+            avatar_url=profile.avatar_url,
+            tenant_id=profile.tenant_id,
+            tenant_name=profile.tenant_name,
+            role=profile.role.upper(),
+            created_at=profile.created_at,
+            preferences=profile.preferences,
+        )
 
     async def update_profile(
         self,
@@ -810,9 +706,8 @@ class AccountsFacade:
         preferences: Optional[dict[str, Any]] = None,
     ) -> ProfileUpdateResult | AccountsErrorResult:
         """Update current user's profile and preferences."""
-        stmt = select(User).where(User.id == user_id)
-        result = await session.execute(stmt)
-        user = result.scalar_one_or_none()
+        # Delegate to driver for user lookup
+        user = await self._driver.fetch_user_by_id(session, user_id)
 
         if user is None:
             return AccountsErrorResult(
@@ -821,29 +716,22 @@ class AccountsFacade:
                 status_code=404,
             )
 
-        # Update fields if provided
-        if display_name is not None:
-            user.name = display_name
-        if timezone_str is not None:
-            prefs = user.get_preferences()
-            prefs["timezone"] = timezone_str
-            user.set_preferences(prefs)
-        if preferences is not None:
-            prefs = user.get_preferences()
-            prefs.update(preferences)
-            user.set_preferences(prefs)
-
-        user.updated_at = utc_now()
-        await session.commit()
-        await session.refresh(user)
+        # Delegate to driver for update
+        updated_user = await self._driver.update_user_profile(
+            session,
+            user,
+            display_name=display_name,
+            timezone_str=timezone_str,
+            preferences=preferences,
+        )
 
         return ProfileUpdateResult(
-            user_id=user.id,
-            email=user.email,
-            display_name=user.name,
-            timezone=user.get_preferences().get("timezone"),
-            preferences=user.get_preferences(),
-            updated_at=user.updated_at,
+            user_id=updated_user.id,
+            email=updated_user.email,
+            display_name=updated_user.name,
+            timezone=updated_user.get_preferences().get("timezone"),
+            preferences=updated_user.get_preferences(),
+            updated_at=updated_user.updated_at,
         )
 
     # -------------------------------------------------------------------------
@@ -856,10 +744,8 @@ class AccountsFacade:
         tenant_id: str,
     ) -> BillingSummaryResult | AccountsErrorResult:
         """Get billing summary for the tenant."""
-        # Query tenant
-        tenant_stmt = select(Tenant).where(Tenant.id == tenant_id)
-        tenant_result = await session.execute(tenant_stmt)
-        tenant = tenant_result.scalar_one_or_none()
+        # Delegate to driver for tenant lookup
+        tenant = await self._driver.fetch_tenant_detail(session, tenant_id)
 
         if tenant is None:
             return AccountsErrorResult(
@@ -868,15 +754,8 @@ class AccountsFacade:
                 status_code=404,
             )
 
-        # Query subscription if exists
-        sub_stmt = (
-            select(Subscription)
-            .where(Subscription.tenant_id == tenant_id)
-            .order_by(Subscription.created_at.desc())
-            .limit(1)
-        )
-        sub_result = await session.execute(sub_stmt)
-        subscription = sub_result.scalar_one_or_none()
+        # Delegate to driver for subscription lookup
+        subscription = await self._driver.fetch_subscription(session, tenant_id)
 
         # Build response
         if subscription:
@@ -921,10 +800,8 @@ class AccountsFacade:
         tenant_id: str,
     ) -> InvoiceListResult | AccountsErrorResult:
         """Get billing invoice history."""
-        # Get tenant to check plan
-        stmt = select(Tenant).where(Tenant.id == tenant_id)
-        result = await session.execute(stmt)
-        tenant = result.scalar_one_or_none()
+        # Delegate to driver for tenant lookup
+        tenant = await self._driver.fetch_tenant_detail(session, tenant_id)
 
         if tenant is None:
             return AccountsErrorResult(
@@ -973,35 +850,28 @@ class AccountsFacade:
         priority: str = "medium",
     ) -> SupportTicketResult:
         """Create a support ticket."""
-        now = utc_now()
-        new_ticket = SupportTicket(
-            id=generate_uuid(),
-            tenant_id=tenant_id,
-            user_id=user_id,
+        # Delegate to driver
+        ticket = await self._driver.insert_support_ticket(
+            session,
+            tenant_id,
+            user_id,
             subject=subject,
             description=description,
             category=category,
             priority=priority,
-            status="open",
-            created_at=now,
-            updated_at=now,
         )
 
-        session.add(new_ticket)
-        await session.commit()
-        await session.refresh(new_ticket)
-
         return SupportTicketResult(
-            id=new_ticket.id,
-            subject=new_ticket.subject,
-            description=new_ticket.description,
-            category=new_ticket.category,
-            priority=new_ticket.priority,
-            status=new_ticket.status,
-            created_at=new_ticket.created_at,
-            updated_at=new_ticket.updated_at,
-            resolution=new_ticket.resolution,
-            resolved_at=new_ticket.resolved_at,
+            id=ticket.id,
+            subject=ticket.subject,
+            description=ticket.description,
+            category=ticket.category,
+            priority=ticket.priority,
+            status=ticket.status,
+            created_at=ticket.created_at,
+            updated_at=ticket.updated_at,
+            resolution=ticket.resolution,
+            resolved_at=ticket.resolved_at,
         )
 
     async def list_support_tickets(
@@ -1012,15 +882,10 @@ class AccountsFacade:
         status: Optional[str] = None,
     ) -> SupportTicketListResult:
         """List support tickets for the tenant."""
-        stmt = select(SupportTicket).where(SupportTicket.tenant_id == tenant_id)
-
-        if status:
-            stmt = stmt.where(SupportTicket.status == status)
-
-        stmt = stmt.order_by(SupportTicket.created_at.desc())
-
-        result = await session.execute(stmt)
-        tickets = result.scalars().all()
+        # Delegate to driver
+        tickets = await self._driver.fetch_support_tickets(
+            session, tenant_id, status=status
+        )
 
         return SupportTicketListResult(
             tickets=[
@@ -1055,13 +920,10 @@ class AccountsFacade:
         role: str = "member",
     ) -> InvitationResult | AccountsErrorResult:
         """Invite a user to join the tenant. Requires owner or admin role."""
-        # Check caller has permission to invite
-        stmt = select(TenantMembership).where(
-            TenantMembership.tenant_id == tenant_id,
-            TenantMembership.user_id == caller_user_id,
+        # Business logic: Check caller has permission to invite
+        membership = await self._driver.fetch_membership(
+            session, tenant_id, caller_user_id
         )
-        result = await session.execute(stmt)
-        membership = result.scalar_one_or_none()
 
         if membership is None or not membership.can_manage_users():
             return AccountsErrorResult(
@@ -1070,14 +932,11 @@ class AccountsFacade:
                 status_code=403,
             )
 
-        # Check if email already invited (pending)
-        existing_stmt = select(Invitation).where(
-            Invitation.tenant_id == tenant_id,
-            Invitation.email == email,
-            Invitation.status == "pending",
+        # Business logic: Check if email already invited (pending)
+        existing = await self._driver.fetch_invitation_by_email(
+            session, tenant_id, email, status="pending"
         )
-        existing_result = await session.execute(existing_stmt)
-        if existing_result.scalar_one_or_none():
+        if existing:
             return AccountsErrorResult(
                 error="conflict",
                 message="Invitation already pending for this email",
@@ -1088,33 +947,28 @@ class AccountsFacade:
         token = secrets.token_urlsafe(32)
         token_hash = hashlib.sha256(token.encode()).hexdigest()
 
-        now = utc_now()
+        now = datetime.now(timezone.utc)
         expires_at = now + timedelta(days=7)  # 7 day expiry
 
-        new_invitation = Invitation(
-            id=generate_uuid(),
-            tenant_id=tenant_id,
-            email=email,
-            role=role,
-            status="pending",
-            token_hash=token_hash,
-            invited_by=caller_user_id,
-            created_at=now,
-            expires_at=expires_at,
+        # Delegate to driver
+        invitation = await self._driver.insert_invitation(
+            session,
+            tenant_id,
+            email,
+            role,
+            token_hash,
+            caller_user_id,
+            expires_at,
         )
 
-        session.add(new_invitation)
-        await session.commit()
-        await session.refresh(new_invitation)
-
         return InvitationResult(
-            id=new_invitation.id,
-            email=new_invitation.email,
-            role=new_invitation.role,
-            status=new_invitation.status,
-            created_at=new_invitation.created_at,
-            expires_at=new_invitation.expires_at,
-            invited_by=new_invitation.invited_by,
+            id=invitation.id,
+            email=invitation.email,
+            role=invitation.role,
+            status=invitation.status,
+            created_at=invitation.created_at,
+            expires_at=invitation.expires_at,
+            invited_by=invitation.invited_by,
         )
 
     async def list_invitations(
@@ -1126,13 +980,10 @@ class AccountsFacade:
         status: Optional[str] = None,
     ) -> InvitationListResult | AccountsErrorResult:
         """List invitations for the tenant. Requires owner or admin role."""
-        # Check caller has permission
-        stmt = select(TenantMembership).where(
-            TenantMembership.tenant_id == tenant_id,
-            TenantMembership.user_id == caller_user_id,
+        # Business logic: Check caller has permission
+        membership = await self._driver.fetch_membership(
+            session, tenant_id, caller_user_id
         )
-        result = await session.execute(stmt)
-        membership = result.scalar_one_or_none()
 
         if membership is None or not membership.can_manage_users():
             return AccountsErrorResult(
@@ -1141,15 +992,10 @@ class AccountsFacade:
                 status_code=403,
             )
 
-        inv_stmt = select(Invitation).where(Invitation.tenant_id == tenant_id)
-
-        if status:
-            inv_stmt = inv_stmt.where(Invitation.status == status)
-
-        inv_stmt = inv_stmt.order_by(Invitation.created_at.desc())
-
-        inv_result = await session.execute(inv_stmt)
-        invitations = inv_result.scalars().all()
+        # Delegate to driver
+        invitations = await self._driver.fetch_invitations(
+            session, tenant_id, status=status
+        )
 
         return InvitationListResult(
             invitations=[
@@ -1176,13 +1022,10 @@ class AccountsFacade:
         """Accept an invitation to join a tenant. Public endpoint."""
         token_hash = hashlib.sha256(token.encode()).hexdigest()
 
-        stmt = select(Invitation).where(
-            Invitation.id == invitation_id,
-            Invitation.token_hash == token_hash,
-            Invitation.status == "pending",
+        # Delegate to driver for invitation lookup
+        invitation = await self._driver.fetch_invitation_by_id_and_token(
+            session, invitation_id, token_hash
         )
-        result = await session.execute(stmt)
-        invitation = result.scalar_one_or_none()
 
         if invitation is None:
             return AcceptInvitationResult(
@@ -1190,43 +1033,32 @@ class AccountsFacade:
                 message="Invalid or expired invitation",
             )
 
-        now = utc_now()
+        now = datetime.now(timezone.utc)
 
         if invitation.expires_at < now:
-            invitation.status = "expired"
-            await session.commit()
+            await self._driver.update_invitation_expired(session, invitation)
             return AcceptInvitationResult(
                 success=False,
                 message="Invitation has expired",
             )
 
         # Check if user exists with this email
-        user_stmt = select(User).where(User.email == invitation.email)
-        user_result = await session.execute(user_stmt)
-        user = user_result.scalar_one_or_none()
+        user = await self._driver.fetch_user_by_email(session, invitation.email)
 
         if user is None:
             # Create new user
-            user = User(
-                id=generate_uuid(),
-                email=invitation.email,
-                name=invitation.email.split("@")[0],  # Default name from email
-                created_at=now,
-                updated_at=now,
+            user = await self._driver.insert_user(
+                session,
+                invitation.email,
+                invitation.email.split("@")[0],  # Default name from email
             )
-            session.add(user)
-            await session.flush()
 
         # Check if already a member
-        member_stmt = select(TenantMembership).where(
-            TenantMembership.tenant_id == invitation.tenant_id,
-            TenantMembership.user_id == user.id,
+        existing_membership = await self._driver.fetch_membership(
+            session, invitation.tenant_id, user.id
         )
-        member_result = await session.execute(member_stmt)
-        if member_result.scalar_one_or_none():
-            invitation.status = "accepted"
-            invitation.accepted_at = now
-            await session.commit()
+        if existing_membership:
+            await self._driver.update_invitation_accepted(session, invitation)
             return AcceptInvitationResult(
                 success=True,
                 message="Already a member of this tenant",
@@ -1235,20 +1067,12 @@ class AccountsFacade:
             )
 
         # Create membership
-        new_membership = TenantMembership(
-            id=generate_uuid(),
-            tenant_id=invitation.tenant_id,
-            user_id=user.id,
-            role=invitation.role,
-            created_at=now,
+        await self._driver.insert_membership(
+            session, invitation.tenant_id, user.id, invitation.role
         )
-        session.add(new_membership)
 
         # Update invitation
-        invitation.status = "accepted"
-        invitation.accepted_at = now
-
-        await session.commit()
+        await self._driver.update_invitation_accepted(session, invitation)
 
         return AcceptInvitationResult(
             success=True,

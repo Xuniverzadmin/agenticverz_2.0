@@ -51,8 +51,8 @@ from app.services.incidents.postmortem_service import (
     PostMortemService,
     ResolutionSummary,
 )
-from app.services.incidents.recurrence_analysis_service import (
-    RecurrenceAnalysisService,
+from app.services.incidents.recurrence_analysis_driver import (  # PIN-468 reclassified
+    RecurrenceAnalysisService,  # Deprecated alias
     RecurrenceGroup,
     RecurrenceResult,
 )

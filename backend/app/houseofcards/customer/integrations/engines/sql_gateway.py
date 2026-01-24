@@ -45,10 +45,16 @@ Acceptance Criteria:
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 from enum import Enum
 import logging
+
+# Credential and CredentialService imported from canonical source — INT-DUP-001, INT-DUP-002
+from app.houseofcards.customer.integrations.engines.credentials import (
+    Credential,
+    CredentialService,
+)
 
 logger = logging.getLogger("nova.services.connectors.sql_gateway")
 
@@ -111,20 +117,11 @@ class SqlGatewayConfig:
     tenant_id: str = ""  # Owning tenant for isolation
 
 
-@dataclass
-class Credential:
-    """Credential from vault."""
-    value: str
-    expires_at: Optional[datetime] = None
+# Credential dataclass removed — INT-DUP-001 quarantine
+# Import from canonical source: engines/credentials/types.py
 
-
-@runtime_checkable
-class CredentialService(Protocol):
-    """Protocol for credential service."""
-
-    async def get(self, credential_ref: str) -> Credential:
-        """Get credential from vault."""
-        ...
+# CredentialService protocol removed — INT-DUP-002 quarantine
+# Import from canonical source: engines/credentials/protocol.py
 
 
 class SqlGatewayError(Exception):

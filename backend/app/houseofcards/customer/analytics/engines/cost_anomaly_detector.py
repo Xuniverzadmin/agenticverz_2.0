@@ -30,7 +30,6 @@ from datetime import date, datetime, timedelta
 from enum import Enum
 from typing import List, Optional
 
-from sqlalchemy import text
 from sqlmodel import Session, select
 
 from app.db import (
@@ -38,7 +37,9 @@ from app.db import (
     CostBudget,
     utc_now,
 )
-from app.services.governance.cross_domain import create_incident_from_cost_anomaly_sync
+# R1 Resolution: Cross-domain incident write REMOVED.
+# Analytics emits CostAnomalyFact; incidents domain decides incident creation.
+# See: app/houseofcards/customer/incidents/bridges/anomaly_bridge.py
 
 logger = logging.getLogger("nova.cost_anomaly_detector")
 
@@ -158,6 +159,12 @@ class CostAnomalyDetector:
     """
     Detects cost anomalies with aligned rules.
 
+    Phase-2.5A Extraction: DB operations delegated to CostAnomalyDriver (L6).
+    This engine (L4) retains:
+    - Threshold comparisons
+    - Severity classification
+    - Anomaly type decisions
+
     Rules:
     1. ABSOLUTE_SPIKE: daily > baseline * 1.4 for 2 consecutive intervals
     2. SUSTAINED_DRIFT: 7d rolling avg > baseline_7d * 1.25 for >= 3 days
@@ -168,6 +175,11 @@ class CostAnomalyDetector:
     def __init__(self, session: Session):
         self.session = session
         self.today = date.today()
+        # Phase-2.5A: Initialize driver for DB operations
+        from app.houseofcards.customer.analytics.drivers.cost_anomaly_driver import (
+            get_cost_anomaly_driver,
+        )
+        self._driver = get_cost_anomaly_driver(session)
 
     async def detect_all(self, tenant_id: str) -> List[DetectedAnomaly]:
         """Run all anomaly detection checks for a tenant."""
@@ -228,58 +240,36 @@ class CostAnomalyDetector:
         column_name: str,
         lookback_days: int,
     ) -> List[DetectedAnomaly]:
-        """Detect spikes for a specific entity type (user or feature)."""
+        """
+        Detect spikes for a specific entity type (user or feature).
+
+        M1 Extraction (Phase-2.5A): DB access delegated to _driver.
+        Engine retains: threshold comparison, severity classification.
+        """
         anomalies = []
 
         # Baseline: average daily spend over lookback period (excluding last 2 days)
         baseline_start = self.today - timedelta(days=lookback_days)
         baseline_end = self.today - timedelta(days=2)
 
-        # Get entity baselines
-        baseline_result = self.session.execute(
-            text(
-                f"""
-                SELECT
-                    {column_name},
-                    COALESCE(SUM(cost_cents), 0) / NULLIF(COUNT(DISTINCT DATE(created_at)), 0) as daily_avg
-                FROM cost_records
-                WHERE tenant_id = :tenant_id
-                  AND {column_name} IS NOT NULL
-                  AND DATE(created_at) >= :baseline_start
-                  AND DATE(created_at) <= :baseline_end
-                GROUP BY {column_name}
-            """
-            ),
-            {
-                "tenant_id": tenant_id,
-                "baseline_start": baseline_start,
-                "baseline_end": baseline_end,
-            },
-        ).all()
+        # M1 Extraction: Delegate baseline query to driver
+        entity_baselines = self._driver.fetch_entity_baseline(
+            tenant_id=tenant_id,
+            column_name=column_name,
+            baseline_start=baseline_start,
+            baseline_end=baseline_end,
+        )
 
-        entity_baselines = {row[0]: row[1] for row in baseline_result if row[1]}
-
-        # Get today's spend
+        # M1 Extraction: Delegate today spend query to driver
         today_start = datetime.combine(self.today, datetime.min.time())
-        today_result = self.session.execute(
-            text(
-                f"""
-                SELECT
-                    {column_name},
-                    COALESCE(SUM(cost_cents), 0) as today_cost
-                FROM cost_records
-                WHERE tenant_id = :tenant_id
-                  AND {column_name} IS NOT NULL
-                  AND created_at >= :today_start
-                GROUP BY {column_name}
-            """
-            ),
-            {"tenant_id": tenant_id, "today_start": today_start},
-        ).all()
+        today_spend = self._driver.fetch_entity_today_spend(
+            tenant_id=tenant_id,
+            column_name=column_name,
+            today_start=today_start,
+        )
 
-        for row in today_result:
-            entity_id = row[0]
-            today_cost = row[1]
+        # L4 logic: threshold comparison, anomaly classification
+        for entity_id, today_cost in today_spend.items():
             baseline = entity_baselines.get(entity_id)
 
             if not baseline or baseline <= 0:
@@ -336,50 +326,35 @@ class CostAnomalyDetector:
         tenant_id: str,
         lookback_days: int,
     ) -> List[DetectedAnomaly]:
-        """Detect tenant-level absolute spikes."""
+        """
+        Detect tenant-level absolute spikes.
+
+        M2 Extraction (Phase-2.5A): DB access delegated to _driver.
+        Engine retains: threshold comparison, severity classification.
+        """
         anomalies = []
 
         baseline_start = self.today - timedelta(days=lookback_days)
         baseline_end = self.today - timedelta(days=2)
 
-        # Get tenant baseline
-        baseline_result = self.session.execute(
-            text(
-                """
-                SELECT COALESCE(SUM(cost_cents), 0) / NULLIF(COUNT(DISTINCT DATE(created_at)), 0)
-                FROM cost_records
-                WHERE tenant_id = :tenant_id
-                  AND DATE(created_at) >= :baseline_start
-                  AND DATE(created_at) <= :baseline_end
-            """
-            ),
-            {
-                "tenant_id": tenant_id,
-                "baseline_start": baseline_start,
-                "baseline_end": baseline_end,
-            },
-        ).first()
+        # M2 Extraction: Delegate baseline query to driver
+        baseline = self._driver.fetch_tenant_baseline(
+            tenant_id=tenant_id,
+            baseline_start=baseline_start,
+            baseline_end=baseline_end,
+        )
 
-        baseline = baseline_result[0] if baseline_result and baseline_result[0] else 0
-
-        if baseline <= 0:
+        if not baseline or baseline <= 0:
             return anomalies
 
-        # Get today's spend
+        # M2 Extraction: Delegate today spend query to driver
         today_start = datetime.combine(self.today, datetime.min.time())
-        today_result = self.session.execute(
-            text(
-                """
-                SELECT COALESCE(SUM(cost_cents), 0)
-                FROM cost_records
-                WHERE tenant_id = :tenant_id
-                  AND created_at >= :today_start
-            """
-            ),
-            {"tenant_id": tenant_id, "today_start": today_start},
-        ).first()
+        today_cost = self._driver.fetch_tenant_today_spend(
+            tenant_id=tenant_id,
+            today_start=today_start,
+        )
 
-        today_cost = today_result[0] if today_result else 0
+        # L4 logic: threshold comparison
         ratio = today_cost / baseline if baseline > 0 else 0
         deviation_pct = (ratio - 1) * 100
 
@@ -433,6 +408,9 @@ class CostAnomalyDetector:
         """
         Detect sustained drift anomalies.
 
+        M3 Extraction (Phase-2.5A): DB access delegated to _driver.
+        Engine retains: threshold comparison, severity classification.
+
         Algorithm:
         1. Get 7-day rolling average
         2. Compare to 21-day baseline (days 8-28 ago)
@@ -447,55 +425,24 @@ class CostAnomalyDetector:
         baseline_start = self.today - timedelta(days=28)
         baseline_end = self.today - timedelta(days=8)  # Exclude recent 7 days
 
-        # Get rolling 7-day average
-        rolling_result = self.session.execute(
-            text(
-                """
-                SELECT COALESCE(SUM(cost_cents), 0) / 7.0
-                FROM cost_records
-                WHERE tenant_id = :tenant_id
-                  AND DATE(created_at) >= :rolling_start
-                  AND DATE(created_at) <= :rolling_end
-            """
-            ),
-            {
-                "tenant_id": tenant_id,
-                "rolling_start": rolling_start,
-                "rolling_end": rolling_end,
-            },
-        ).first()
+        # M3 Extraction: Delegate rolling avg query to driver
+        rolling_avg = self._driver.fetch_rolling_avg(
+            tenant_id=tenant_id,
+            rolling_start=rolling_start,
+            rolling_end=rolling_end,
+        )
 
-        rolling_avg = rolling_result[0] if rolling_result and rolling_result[0] else 0
-
-        # Get baseline (21-day period before rolling window)
-        baseline_result = self.session.execute(
-            text(
-                """
-                SELECT COALESCE(SUM(cost_cents), 0) / NULLIF(
-                    (SELECT COUNT(DISTINCT DATE(created_at))
-                     FROM cost_records
-                     WHERE tenant_id = :tenant_id
-                       AND DATE(created_at) >= :baseline_start
-                       AND DATE(created_at) <= :baseline_end), 0
-                )
-                FROM cost_records
-                WHERE tenant_id = :tenant_id
-                  AND DATE(created_at) >= :baseline_start
-                  AND DATE(created_at) <= :baseline_end
-            """
-            ),
-            {
-                "tenant_id": tenant_id,
-                "baseline_start": baseline_start,
-                "baseline_end": baseline_end,
-            },
-        ).first()
-
-        baseline_avg = baseline_result[0] if baseline_result and baseline_result[0] else 0
+        # M3 Extraction: Delegate baseline avg query to driver
+        baseline_avg = self._driver.fetch_baseline_avg(
+            tenant_id=tenant_id,
+            baseline_start=baseline_start,
+            baseline_end=baseline_end,
+        )
 
         if baseline_avg <= 0:
             return anomalies
 
+        # L4 logic: threshold comparison
         ratio = rolling_avg / baseline_avg
         drift_pct = (ratio - 1) * 100
 
@@ -544,12 +491,20 @@ class CostAnomalyDetector:
     # =========================================================================
 
     async def detect_budget_issues(self, tenant_id: str) -> List[DetectedAnomaly]:
-        """Detect budget warnings and exceeded budgets."""
+        """
+        Detect budget warnings and exceeded budgets.
+
+        M4 Extraction (Phase-2.5A): DB access delegated to _driver.
+        Engine retains: threshold comparison, anomaly classification.
+
+        Note: Budget ORM query retained in engine (simple select, not raw SQL).
+        """
         anomalies = []
 
         today_start = datetime.combine(self.today, datetime.min.time())
         month_start = self.today.replace(day=1)
 
+        # TRANSITIONAL_READ_OK: Simple ORM entity query, scheduled for driver migration
         budgets = self.session.exec(
             select(CostBudget).where(
                 CostBudget.tenant_id == tenant_id,
@@ -558,31 +513,17 @@ class CostAnomalyDetector:
         ).all()
 
         for budget in budgets:
-            where_clause = "tenant_id = :tenant_id"
-            params: dict = {"tenant_id": tenant_id}
-
-            if budget.budget_type == "feature" and budget.entity_id:
-                where_clause += " AND feature_tag = :entity_id"
-                params["entity_id"] = budget.entity_id
-            elif budget.budget_type == "user" and budget.entity_id:
-                where_clause += " AND user_id = :entity_id"
-                params["entity_id"] = budget.entity_id
-
             # Check daily budget
             if budget.daily_limit_cents:
-                params["today_start"] = today_start
-                daily_spend = self.session.execute(
-                    text(
-                        f"""
-                        SELECT COALESCE(SUM(cost_cents), 0)
-                        FROM cost_records
-                        WHERE {where_clause} AND created_at >= :today_start
-                    """
-                    ),
-                    params,
-                ).first()
+                # M4 Extraction: Delegate daily spend query to driver
+                daily_cost = self._driver.fetch_daily_spend(
+                    tenant_id=tenant_id,
+                    today_start=today_start,
+                    budget_type=budget.budget_type,
+                    entity_id=budget.entity_id,
+                )
 
-                daily_cost = daily_spend[0] if daily_spend else 0
+                # L4 logic: threshold comparison
                 anomaly = self._check_budget_threshold(
                     budget_type=budget.budget_type,
                     entity_id=budget.entity_id,
@@ -596,19 +537,15 @@ class CostAnomalyDetector:
 
             # Check monthly budget
             if budget.monthly_limit_cents:
-                params["month_start"] = month_start
-                monthly_spend = self.session.execute(
-                    text(
-                        f"""
-                        SELECT COALESCE(SUM(cost_cents), 0)
-                        FROM cost_records
-                        WHERE {where_clause} AND DATE(created_at) >= :month_start
-                    """
-                    ),
-                    params,
-                ).first()
+                # M4 Extraction: Delegate monthly spend query to driver
+                monthly_cost = self._driver.fetch_monthly_spend(
+                    tenant_id=tenant_id,
+                    month_start=month_start,
+                    budget_type=budget.budget_type,
+                    entity_id=budget.entity_id,
+                )
 
-                monthly_cost = monthly_spend[0] if monthly_spend else 0
+                # L4 logic: threshold comparison
                 anomaly = self._check_budget_threshold(
                     budget_type=budget.budget_type,
                     entity_id=budget.entity_id,
@@ -684,91 +621,45 @@ class CostAnomalyDetector:
         current_value: float,
         baseline_value: float,
     ) -> int:
-        """Record a breach and return the consecutive breach count."""
-        # Check if breach already recorded for today
-        existing = self.session.execute(
-            text(
-                """
-                SELECT id FROM cost_breach_history
-                WHERE tenant_id = :tenant_id
-                  AND entity_type = :entity_type
-                  AND COALESCE(entity_id, '') = COALESCE(:entity_id, '')
-                  AND breach_type = :breach_type
-                  AND breach_date = :today
-            """
-            ),
-            {
-                "tenant_id": tenant_id,
-                "entity_type": entity_type,
-                "entity_id": entity_id,
-                "breach_type": breach_type,
-                "today": self.today,
-            },
-        ).first()
+        """
+        Record a breach and return the consecutive breach count.
 
-        if not existing:
-            # Insert new breach record
+        M5 Extraction (Phase-2.5A): DB access delegated to _driver.
+        Engine retains: ID generation, orchestration logic.
+        """
+        # M5 Extraction: Check if breach already recorded for today
+        exists = self._driver.fetch_breach_exists_today(
+            tenant_id=tenant_id,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            breach_type=breach_type,
+            today=self.today,
+        )
+
+        if not exists:
+            # M5 Extraction: Insert new breach record
             breach_id = f"bh_{uuid.uuid4().hex[:16]}"
-            self.session.execute(
-                text(
-                    """
-                    INSERT INTO cost_breach_history
-                    (id, tenant_id, entity_type, entity_id, breach_type, breach_date,
-                     deviation_pct, current_value_cents, baseline_value_cents, created_at)
-                    VALUES (:id, :tenant_id, :entity_type, :entity_id, :breach_type, :breach_date,
-                            :deviation_pct, :current_value, :baseline_value, :now)
-                    ON CONFLICT (tenant_id, entity_type, entity_id, breach_type, breach_date)
-                    DO UPDATE SET deviation_pct = :deviation_pct,
-                                  current_value_cents = :current_value
-                """
-                ),
-                {
-                    "id": breach_id,
-                    "tenant_id": tenant_id,
-                    "entity_type": entity_type,
-                    "entity_id": entity_id or "",
-                    "breach_type": breach_type,
-                    "breach_date": self.today,
-                    "deviation_pct": deviation_pct,
-                    "current_value": current_value,
-                    "baseline_value": baseline_value,
-                    "now": utc_now(),
-                },
+            self._driver.insert_breach_history(
+                breach_id=breach_id,
+                tenant_id=tenant_id,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                breach_type=breach_type,
+                breach_date=self.today,
+                deviation_pct=deviation_pct,
+                current_value=current_value,
+                baseline_value=baseline_value,
+                created_at=utc_now(),
             )
-            self.session.commit()
 
-        # Count consecutive breaches (look at last N days)
-        consecutive_count = self.session.execute(
-            text(
-                """
-                WITH consecutive AS (
-                    SELECT breach_date,
-                           ROW_NUMBER() OVER (ORDER BY breach_date DESC) as rn,
-                           breach_date - INTERVAL '1 day' * (ROW_NUMBER() OVER (ORDER BY breach_date DESC) - 1) as grp
-                    FROM cost_breach_history
-                    WHERE tenant_id = :tenant_id
-                      AND entity_type = :entity_type
-                      AND COALESCE(entity_id, '') = COALESCE(:entity_id, '')
-                      AND breach_type = :breach_type
-                      AND breach_date <= :today
-                      AND breach_date >= :today - INTERVAL '7 days'
-                    ORDER BY breach_date DESC
-                )
-                SELECT COUNT(*)
-                FROM consecutive
-                WHERE grp = (SELECT grp FROM consecutive WHERE breach_date = :today LIMIT 1)
-            """
-            ),
-            {
-                "tenant_id": tenant_id,
-                "entity_type": entity_type,
-                "entity_id": entity_id or "",
-                "breach_type": breach_type,
-                "today": self.today,
-            },
-        ).first()
-
-        return consecutive_count[0] if consecutive_count and consecutive_count[0] else 1
+        # M5 Extraction: Count consecutive breaches
+        return self._driver.fetch_consecutive_breaches(
+            tenant_id=tenant_id,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            breach_type=breach_type,
+            today=self.today,
+        )
 
     def _reset_breach_history(
         self,
@@ -791,89 +682,57 @@ class CostAnomalyDetector:
         baseline_avg: float,
         drift_pct: float,
     ) -> int:
-        """Update drift tracking and return days count."""
-        existing = self.session.execute(
-            text(
-                """
-                SELECT id, drift_days_count, first_drift_date, last_check_date
-                FROM cost_drift_tracking
-                WHERE tenant_id = :tenant_id
-                  AND entity_type = :entity_type
-                  AND COALESCE(entity_id, '') = COALESCE(:entity_id, '')
-                  AND is_active = true
-            """
-            ),
-            {
-                "tenant_id": tenant_id,
-                "entity_type": entity_type,
-                "entity_id": entity_id or "",
-            },
-        ).first()
+        """
+        Update drift tracking and return days count.
+
+        M6 Extraction (Phase-2.5A): DB access delegated to _driver.
+        Engine retains: continuity logic (yesterday check), ID generation.
+        """
+        # M6 Extraction: Fetch existing drift tracking
+        existing = self._driver.fetch_drift_tracking(
+            tenant_id=tenant_id,
+            entity_type=entity_type,
+            entity_id=entity_id,
+        )
 
         if existing:
-            # Check if last_check_date was yesterday (continuous drift)
-            last_check = existing[3]
+            drift_id, current_count, first_drift_date, last_check = existing
+
+            # L4 logic: Check if last_check_date was yesterday (continuous drift)
             expected_prev = self.today - timedelta(days=1)
 
             if last_check == expected_prev:
                 # Continuous drift - increment
-                new_count = existing[1] + 1
+                new_count = current_count + 1
             else:
                 # Gap in drift - reset counter but keep tracking
                 new_count = 1
 
-            self.session.execute(
-                text(
-                    """
-                    UPDATE cost_drift_tracking
-                    SET rolling_7d_avg_cents = :rolling_avg,
-                        baseline_7d_avg_cents = :baseline_avg,
-                        drift_pct = :drift_pct,
-                        drift_days_count = :count,
-                        last_check_date = :today,
-                        updated_at = :now
-                    WHERE id = :id
-                """
-                ),
-                {
-                    "id": existing[0],
-                    "rolling_avg": rolling_avg,
-                    "baseline_avg": baseline_avg,
-                    "drift_pct": drift_pct,
-                    "count": new_count,
-                    "today": self.today,
-                    "now": utc_now(),
-                },
+            # M6 Extraction: Update drift tracking
+            self._driver.update_drift_tracking(
+                drift_id=drift_id,
+                rolling_avg=rolling_avg,
+                baseline_avg=baseline_avg,
+                drift_pct=drift_pct,
+                drift_days_count=new_count,
+                today=self.today,
+                updated_at=utc_now(),
             )
-            self.session.commit()
             return int(new_count)
         else:
-            # New drift tracking
+            # M6 Extraction: Insert new drift tracking
             drift_id = f"dt_{uuid.uuid4().hex[:16]}"
-            self.session.execute(
-                text(
-                    """
-                    INSERT INTO cost_drift_tracking
-                    (id, tenant_id, entity_type, entity_id, rolling_7d_avg_cents,
-                     baseline_7d_avg_cents, drift_pct, drift_days_count,
-                     first_drift_date, last_check_date, is_active, created_at, updated_at)
-                    VALUES (:id, :tenant_id, :entity_type, :entity_id, :rolling_avg,
-                            :baseline_avg, :drift_pct, 1, :today, :today, true, :now, :now)
-                """
-                ),
-                {
-                    "id": drift_id,
-                    "tenant_id": tenant_id,
-                    "entity_type": entity_type,
-                    "entity_id": entity_id or "",
-                    "rolling_avg": rolling_avg,
-                    "baseline_avg": baseline_avg,
-                    "drift_pct": drift_pct,
-                    "today": self.today,
-                    "now": utc_now(),
-                },
+            self._driver.insert_drift_tracking(
+                drift_id=drift_id,
+                tenant_id=tenant_id,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                rolling_avg=rolling_avg,
+                baseline_avg=baseline_avg,
+                drift_pct=drift_pct,
+                today=self.today,
+                created_at=utc_now(),
             )
-            self.session.commit()
             return 1
 
     def _reset_drift_tracking(
@@ -882,26 +741,17 @@ class CostAnomalyDetector:
         entity_type: str,
         entity_id: str,
     ) -> None:
-        """Mark drift tracking as inactive."""
-        self.session.execute(
-            text(
-                """
-                UPDATE cost_drift_tracking
-                SET is_active = false, updated_at = :now
-                WHERE tenant_id = :tenant_id
-                  AND entity_type = :entity_type
-                  AND COALESCE(entity_id, '') = COALESCE(:entity_id, '')
-                  AND is_active = true
-            """
-            ),
-            {
-                "tenant_id": tenant_id,
-                "entity_type": entity_type,
-                "entity_id": entity_id or "",
-                "now": utc_now(),
-            },
+        """
+        Mark drift tracking as inactive.
+
+        M7 Extraction (Phase-2.5A): DB access delegated to _driver.
+        """
+        self._driver.reset_drift_tracking(
+            tenant_id=tenant_id,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            updated_at=utc_now(),
         )
-        self.session.commit()
 
     def _derive_cause(
         self,
@@ -911,6 +761,9 @@ class CostAnomalyDetector:
     ) -> DerivedCause:
         """
         Derive the cause of a cost anomaly.
+
+        M8 Extraction (Phase-2.5A): DB access delegated to _driver.
+        Engine retains: threshold comparisons, cause classification.
 
         Rules (deterministic, no ML):
         - RETRY_LOOP: retries/request increased > 50%
@@ -922,99 +775,59 @@ class CostAnomalyDetector:
         today_start = datetime.combine(self.today, datetime.min.time())
         yesterday_start = datetime.combine(self.today - timedelta(days=1), datetime.min.time())
 
-        # Compare today vs yesterday metrics
-        where_clause = "tenant_id = :tenant_id"
-        params: dict = {"tenant_id": tenant_id, "today_start": today_start, "yesterday_start": yesterday_start}
+        # M8 Extraction: Delegate retry comparison query to driver
+        today_retry, yesterday_retry = self._driver.fetch_retry_comparison(
+            tenant_id=tenant_id,
+            today_start=today_start,
+            yesterday_start=yesterday_start,
+            entity_type=entity_type if entity_type != "tenant" else None,
+            entity_id=entity_id if entity_type != "tenant" else None,
+        )
 
-        if entity_type == "user":
-            where_clause += " AND user_id = :entity_id"
-            params["entity_id"] = entity_id
-        elif entity_type == "feature":
-            where_clause += " AND feature_tag = :entity_id"
-            params["entity_id"] = entity_id
-
-        # Get retry ratio comparison
-        retry_result = self.session.execute(
-            text(
-                f"""
-                SELECT
-                    (SELECT COUNT(*) FILTER (WHERE is_retry = true)::float /
-                            NULLIF(COUNT(*), 0)
-                     FROM cost_records WHERE {where_clause} AND created_at >= :today_start) as today_retry_ratio,
-                    (SELECT COUNT(*) FILTER (WHERE is_retry = true)::float /
-                            NULLIF(COUNT(*), 0)
-                     FROM cost_records WHERE {where_clause}
-                       AND created_at >= :yesterday_start AND created_at < :today_start) as yesterday_retry_ratio
-            """
-            ),
-            params,
-        ).first()
-
-        if retry_result and retry_result[0] and retry_result[1]:
-            if retry_result[1] > 0 and retry_result[0] / retry_result[1] > 1.5:
+        # L4 logic: threshold comparison
+        if today_retry and yesterday_retry:
+            if yesterday_retry > 0 and today_retry / yesterday_retry > 1.5:
                 return DerivedCause.RETRY_LOOP
 
-        # Get avg prompt tokens comparison
-        prompt_result = self.session.execute(
-            text(
-                f"""
-                SELECT
-                    (SELECT AVG(input_tokens)
-                     FROM cost_records WHERE {where_clause} AND created_at >= :today_start) as today_avg,
-                    (SELECT AVG(input_tokens)
-                     FROM cost_records WHERE {where_clause}
-                       AND created_at >= :yesterday_start AND created_at < :today_start) as yesterday_avg
-            """
-            ),
-            params,
-        ).first()
+        # M8 Extraction: Delegate prompt comparison query to driver
+        today_avg, yesterday_avg = self._driver.fetch_prompt_comparison(
+            tenant_id=tenant_id,
+            today_start=today_start,
+            yesterday_start=yesterday_start,
+            entity_type=entity_type if entity_type != "tenant" else None,
+            entity_id=entity_id if entity_type != "tenant" else None,
+        )
 
-        if prompt_result and prompt_result[0] and prompt_result[1]:
-            if prompt_result[1] > 0 and prompt_result[0] / prompt_result[1] > 1.3:
+        # L4 logic: threshold comparison
+        if today_avg and yesterday_avg:
+            if yesterday_avg > 0 and today_avg / yesterday_avg > 1.3:
                 return DerivedCause.PROMPT_GROWTH
 
         # Check feature concentration (only for tenant-level)
         if entity_type == "tenant":
-            feature_result = self.session.execute(
-                text(
-                    """
-                    SELECT
-                        COALESCE(SUM(cost_cents), 0) as total,
-                        COALESCE(MAX(feature_cost), 0) as max_feature
-                    FROM (
-                        SELECT feature_tag, COALESCE(SUM(cost_cents), 0) as feature_cost
-                        FROM cost_records
-                        WHERE tenant_id = :tenant_id
-                          AND created_at >= :today_start
-                          AND feature_tag IS NOT NULL
-                        GROUP BY feature_tag
-                    ) sq
-                """
-                ),
-                params,
-            ).first()
+            # M8 Extraction: Delegate feature concentration query to driver
+            total, max_feature = self._driver.fetch_feature_concentration(
+                tenant_id=tenant_id,
+                today_start=today_start,
+            )
 
-            if feature_result and feature_result[0] and feature_result[1]:
-                if feature_result[1] / feature_result[0] > 0.6:
+            # L4 logic: threshold comparison
+            if total and max_feature:
+                if max_feature / total > 0.6:
                     return DerivedCause.FEATURE_SURGE
 
-        # Check request growth without other factors
-        request_result = self.session.execute(
-            text(
-                f"""
-                SELECT
-                    (SELECT COUNT(*) FROM cost_records
-                     WHERE {where_clause} AND created_at >= :today_start) as today_count,
-                    (SELECT COUNT(*) FROM cost_records
-                     WHERE {where_clause}
-                       AND created_at >= :yesterday_start AND created_at < :today_start) as yesterday_count
-            """
-            ),
-            params,
-        ).first()
+        # M8 Extraction: Delegate request comparison query to driver
+        today_count, yesterday_count = self._driver.fetch_request_comparison(
+            tenant_id=tenant_id,
+            today_start=today_start,
+            yesterday_start=yesterday_start,
+            entity_type=entity_type if entity_type != "tenant" else None,
+            entity_id=entity_id if entity_type != "tenant" else None,
+        )
 
-        if request_result and request_result[0] and request_result[1]:
-            if request_result[1] > 0 and request_result[0] / request_result[1] > 1.3:
+        # L4 logic: threshold comparison
+        if today_count and yesterday_count:
+            if yesterday_count > 0 and today_count / yesterday_count > 1.3:
                 return DerivedCause.TRAFFIC_GROWTH
 
         return DerivedCause.UNKNOWN
@@ -1048,7 +861,7 @@ class CostAnomalyDetector:
         for anomaly in anomalies:
             today_start = datetime.combine(self.today, datetime.min.time())
 
-            # Check for existing similar anomaly today
+            # TRANSITIONAL_READ_OK: ORM deduplication query, scheduled for driver migration
             existing = self.session.exec(
                 select(CostAnomaly).where(
                     CostAnomaly.tenant_id == tenant_id,
@@ -1123,61 +936,124 @@ async def run_anomaly_detection(session: Session, tenant_id: str) -> List[CostAn
     return persisted
 
 
-async def run_anomaly_detection_with_governance(
+async def run_anomaly_detection_with_facts(
     session: Session,
     tenant_id: str,
 ) -> dict:
     """
-    Run anomaly detection AND create incidents for HIGH anomalies.
+    Run anomaly detection and emit CostAnomalyFact for HIGH anomalies.
 
-    MANDATORY GOVERNANCE: Every HIGH+ anomaly creates an incident or crashes.
-    There is no optional dispatcher. Governance is not negotiable.
+    R1 RESOLUTION: Analytics no longer creates incidents directly.
+    This function returns pure facts that callers can pass to the
+    incidents domain bridge for incident creation.
+
+    Authority model:
+    - Analytics: Detect anomalies, compute severity/confidence (this function)
+    - Incidents: Decide if anomaly warrants incident creation (bridge)
 
     Returns:
         {
             "detected": [CostAnomaly, ...],
-            "incidents_created": [{"anomaly_id": str, "incident_id": str}, ...],
+            "facts": [CostAnomalyFact, ...],  # Pure facts for HIGH+ anomalies
         }
 
-    Raises:
-        GovernanceError: If incident creation fails (mandatory)
+    Note:
+        Callers that need incident creation should use:
+        from app.houseofcards.customer.incidents.bridges import AnomalyIncidentBridge
+        bridge = AnomalyIncidentBridge(session)
+        for fact in result["facts"]:
+            incident_id = bridge.ingest(fact)
     """
+    # Import locally to avoid circular dependency during file loading
+    from app.houseofcards.customer.incidents.bridges.anomaly_bridge import CostAnomalyFact
+
     persisted = await run_anomaly_detection(session, tenant_id)
 
     if not persisted:
-        return {"detected": [], "incidents_created": []}
+        return {"detected": [], "facts": []}
 
-    incidents_created = []
+    facts = []
 
-    # Only HIGH severity anomalies create incidents (no CRITICAL - severity bands changed)
+    # Only HIGH severity anomalies become facts for incident consideration
     high_anomalies = [a for a in persisted if a.severity == "HIGH"]
 
-    # MANDATORY: Every HIGH anomaly creates an incident or raises GovernanceError
     for cost_anomaly in high_anomalies:
-        incident_id = create_incident_from_cost_anomaly_sync(
-            session=session,
+        # Emit pure fact - no side effects, no incident creation
+        fact = CostAnomalyFact(
             tenant_id=tenant_id,
-            anomaly_id=cost_anomaly.id,
+            anomaly_id=str(cost_anomaly.id),
             anomaly_type=cost_anomaly.anomaly_type,
             severity=cost_anomaly.severity,
             current_value_cents=int(cost_anomaly.current_value_cents),
             expected_value_cents=int(cost_anomaly.expected_value_cents),
             entity_type=cost_anomaly.entity_type,
             entity_id=cost_anomaly.entity_id,
+            deviation_pct=float(cost_anomaly.deviation_pct) if cost_anomaly.deviation_pct else 0.0,
+            confidence=1.0,  # Analytics doesn't compute confidence yet
+            metadata=cost_anomaly.metadata_json or {},
         )
-
-        incidents_created.append(
-            {
-                "anomaly_id": cost_anomaly.id,
-                "incident_id": incident_id,
-            }
-        )
+        facts.append(fact)
 
         logger.info(
-            f"[GOVERNANCE] Created incident {incident_id} from cost anomaly {cost_anomaly.id}"
+            f"[ANALYTICS] Emitted CostAnomalyFact for anomaly {cost_anomaly.id} "
+            f"(severity={cost_anomaly.severity}, type={cost_anomaly.anomaly_type})"
         )
 
     return {
         "detected": persisted,
+        "facts": facts,
+    }
+
+
+# =============================================================================
+# LEGACY COMPATIBILITY (DEPRECATED - use run_anomaly_detection_with_facts)
+# =============================================================================
+
+
+async def run_anomaly_detection_with_governance(
+    session: Session,
+    tenant_id: str,
+) -> dict:
+    """
+    DEPRECATED: Use run_anomaly_detection_with_facts + AnomalyIncidentBridge.
+
+    This function now emits facts and uses the bridge for incident creation.
+    Kept for backward compatibility during transition.
+
+    Authority model:
+    - Analytics: Detect anomalies, emit facts
+    - Incidents: Decide incident creation via bridge
+
+    Returns:
+        {
+            "detected": [CostAnomaly, ...],
+            "incidents_created": [{"anomaly_id": str, "incident_id": str}, ...],
+        }
+    """
+    # Import bridge for incident creation
+    from app.houseofcards.customer.incidents.bridges.anomaly_bridge import (
+        AnomalyIncidentBridge,
+    )
+
+    # Get facts from analytics
+    result = await run_anomaly_detection_with_facts(session, tenant_id)
+
+    if not result["facts"]:
+        return {"detected": result["detected"], "incidents_created": []}
+
+    # Use incidents bridge to create incidents (incidents domain owns this decision)
+    bridge = AnomalyIncidentBridge(session)
+    incidents_created = []
+
+    for fact in result["facts"]:
+        incident_id = bridge.ingest(fact)
+        if incident_id:
+            incidents_created.append({
+                "anomaly_id": fact.anomaly_id,
+                "incident_id": incident_id,
+            })
+
+    return {
+        "detected": result["detected"],
         "incidents_created": incidents_created,
     }

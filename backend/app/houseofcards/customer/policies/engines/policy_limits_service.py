@@ -1,13 +1,29 @@
-# Layer: L4 — Domain Engines
+# Layer: L4 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: async
 # Role: Policy limits CRUD service (PIN-LIM-01)
 # Callers: api/policies.py
-# Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
-# Reference: PIN-LIM-01
+# Allowed Imports: L6 drivers (via injection)
+# Forbidden Imports: L1, L2, L3, sqlalchemy, sqlmodel (at runtime)
+# Reference: PIN-LIM-01, PIN-468
+#
+# EXTRACTION STATUS: Phase-2.5A (2026-01-24)
+# - All DB operations extracted to PolicyLimitsDriver
+# - Engine contains ONLY decision logic
+# - NO sqlalchemy/sqlmodel imports at runtime
+#
+# ============================================================================
+# L4 ENGINE INVARIANT — POLICY LIMITS (LOCKED)
+# ============================================================================
+# This file MUST NOT import sqlalchemy/sqlmodel at runtime.
+# All persistence is delegated to policy_limits_driver.py.
+# Business decisions ONLY.
+#
+# Any violation is a Phase-2.5 regression.
+# ============================================================================
 
 """
 Policy Limits Service (PIN-LIM-01)
@@ -19,15 +35,23 @@ Responsibilities:
 - Validate scope (tenant / worker / global)
 - Enforce immutables (category, type cannot change after creation)
 - Emit audit events
+
+All DB operations delegated to PolicyLimitsDriver.
 """
 
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+# L6 driver import (allowed)
+from app.houseofcards.customer.policies.drivers.policy_limits_driver import (
+    PolicyLimitsDriver,
+    get_policy_limits_driver,
+)
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.policy_control_plane import (
     Limit,
@@ -84,8 +108,9 @@ class PolicyLimitsService:
     - Deletions are soft (status = DISABLED)
     """
 
-    def __init__(self, session: AsyncSession):
-        self.session = session
+    def __init__(self, session: "AsyncSession"):
+        self._session = session
+        self._driver = get_policy_limits_driver(session)
         self._audit = AuditLedgerServiceAsync(session)
 
     async def create(
@@ -139,8 +164,8 @@ class PolicyLimitsService:
         )
 
         # ATOMIC BLOCK: state change + audit must succeed together
-        async with self.session.begin():
-            self.session.add(limit)
+        async with self._session.begin():
+            self._driver.add_limit(limit)
 
             # Create integrity record (INVARIANT: every active limit needs one)
             integrity = LimitIntegrity(
@@ -150,7 +175,7 @@ class PolicyLimitsService:
                 integrity_score=Decimal("1.0000"),
                 computed_at=now,
             )
-            self.session.add(integrity)
+            self._driver.add_integrity(integrity)
 
             # Build limit state for audit
             limit_state = {
@@ -216,7 +241,7 @@ class PolicyLimitsService:
         }
 
         # ATOMIC BLOCK: state change + audit must succeed together
-        async with self.session.begin():
+        async with self._session.begin():
             # Update mutable fields only
             if request.name is not None:
                 limit.name = request.name
@@ -281,7 +306,7 @@ class PolicyLimitsService:
         limit = await self._get_limit(tenant_id, limit_id)
         limit.status = LimitStatus.DISABLED.value
         limit.updated_at = utc_now()
-        await self.session.flush()
+        await self._driver.flush()
 
     async def get(
         self,
@@ -306,12 +331,7 @@ class PolicyLimitsService:
 
     async def _get_limit(self, tenant_id: str, limit_id: str) -> Limit:
         """Get limit by ID with tenant check."""
-        stmt = select(Limit).where(
-            Limit.id == limit_id,
-            Limit.tenant_id == tenant_id,
-        )
-        result = await self.session.execute(stmt)
-        limit = result.scalar_one_or_none()
+        limit = await self._driver.fetch_limit_by_id(tenant_id, limit_id)
 
         if not limit:
             raise LimitNotFoundError(f"Limit {limit_id} not found")

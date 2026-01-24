@@ -3,6 +3,11 @@
 # Role: Overview Facade - Centralized access to overview domain operations
 # Pattern: app/houseofcards/customer/overview/facades/overview_facade.py
 # Reference: DIRECTORY_REORGANIZATION_PLAN.md
+#
+# PHASE 2.5B EXTRACTION (2026-01-24):
+# All DB operations extracted to overview_facade_driver.py (L6).
+# This facade now delegates to driver for data access and composes business results.
+# Reference: OVERVIEW_PHASE2.5_IMPLEMENTATION_PLAN.md
 
 """
 Overview Facade (L4 Domain Logic)
@@ -21,6 +26,7 @@ ARCHITECTURAL RULE:
 - Overview DOES NOT own any tables
 - Overview aggregates/projects from existing domains
 - All operations are READ-ONLY
+- All DB access is delegated to overview_facade_driver.py (L6)
 
 L2 API Routes:
 - GET /api/v1/overview/highlights      → O1 system pulse & domain counts
@@ -38,22 +44,20 @@ Usage:
     highlights = await facade.get_highlights(session, tenant_id)
 """
 
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
-
-from sqlalchemy import and_, case, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from app.houseofcards.customer.general.utils.time import utc_now
+from app.houseofcards.customer.overview.drivers.overview_facade_driver import (
+    OverviewFacadeDriver,
+)
 
-# L6 model imports (allowed for L4)
-from app.models.audit_ledger import AuditLedger
-from app.models.killswitch import Incident, IncidentLifecycleState
-from app.models.policy import PolicyProposal
-from app.models.policy_control_plane import Limit, LimitBreach, LimitCategory
-from app.models.tenant import WorkerRun
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("nova.houseofcards.customer.overview.facades")
 
@@ -66,6 +70,7 @@ logger = logging.getLogger("nova.houseofcards.customer.overview.facades")
 @dataclass
 class SystemPulse:
     """System health pulse summary."""
+
     status: str  # HEALTHY, ATTENTION_NEEDED, CRITICAL
     active_incidents: int
     pending_decisions: int
@@ -87,6 +92,7 @@ class SystemPulse:
 @dataclass
 class DomainCount:
     """Count for a specific domain."""
+
     domain: str
     total: int
     pending: int
@@ -104,6 +110,7 @@ class DomainCount:
 @dataclass
 class HighlightsResult:
     """Result from get_highlights."""
+
     pulse: SystemPulse
     domain_counts: List[DomainCount]
     last_activity_at: Optional[datetime]
@@ -119,6 +126,7 @@ class HighlightsResult:
 @dataclass
 class DecisionItem:
     """A pending decision requiring human action."""
+
     source_domain: str
     entity_type: str
     entity_id: str
@@ -142,6 +150,7 @@ class DecisionItem:
 @dataclass
 class DecisionsResult:
     """Result from get_decisions."""
+
     items: List[DecisionItem]
     total: int
     has_more: bool
@@ -159,6 +168,7 @@ class DecisionsResult:
 @dataclass
 class CostPeriod:
     """Time period for cost calculation."""
+
     start: datetime
     end: datetime
 
@@ -172,6 +182,7 @@ class CostPeriod:
 @dataclass
 class LimitCostItem:
     """Single limit with cost status."""
+
     limit_id: str
     name: str
     category: str
@@ -195,6 +206,7 @@ class LimitCostItem:
 @dataclass
 class CostsResult:
     """Result from get_costs."""
+
     currency: str
     period: CostPeriod
     llm_run_cost: float
@@ -218,6 +230,7 @@ class CostsResult:
 @dataclass
 class DecisionsCountResult:
     """Result from get_decisions_count."""
+
     total: int
     by_domain: Dict[str, int]
     by_priority: Dict[str, int]
@@ -233,6 +246,7 @@ class DecisionsCountResult:
 @dataclass
 class RecoveryStatsResult:
     """Result from get_recovery_stats."""
+
     total_incidents: int
     recovered: int
     pending_recovery: int
@@ -265,7 +279,14 @@ class OverviewFacade:
     - Incidents (Incident)
     - Policies (PolicyProposal, Limit, LimitBreach)
     - Logs (AuditLedger)
+
+    All DB access is delegated to OverviewFacadeDriver (L6).
+    This facade only contains business logic composition.
     """
+
+    def __init__(self) -> None:
+        """Initialize the facade with its driver."""
+        self._driver = OverviewFacadeDriver()
 
     async def get_highlights(
         self,
@@ -280,71 +301,19 @@ class OverviewFacade:
         now = utc_now()
         last_24h = now - timedelta(hours=24)
 
-        # Incident counts
-        incident_stmt = select(
-            func.count(Incident.id).label("total"),
-            func.sum(case((Incident.lifecycle_state == IncidentLifecycleState.ACTIVE.value, 1), else_=0)).label("pending"),
-            func.sum(
-                case(
-                    (
-                        and_(
-                            Incident.lifecycle_state == IncidentLifecycleState.ACTIVE.value,
-                            Incident.severity.in_(["critical", "high"]),
-                        ),
-                        1,
-                    ),
-                    else_=0,
-                )
-            ).label("critical"),
-        ).where(Incident.tenant_id == tenant_id)
-        incident_result = await session.execute(incident_stmt)
-        incident_row = incident_result.one()
+        # Fetch data from driver
+        incidents = await self._driver.fetch_incident_counts(session, tenant_id)
+        proposals = await self._driver.fetch_proposal_counts(session, tenant_id)
+        breaches = await self._driver.fetch_breach_counts(session, tenant_id, last_24h)
+        runs = await self._driver.fetch_run_counts(session, tenant_id)
+        audit = await self._driver.fetch_last_activity(session, tenant_id)
 
-        # Policy proposal counts
-        proposal_stmt = select(
-            func.count(PolicyProposal.id).label("total"),
-            func.count(case((PolicyProposal.status == "draft", 1))).label("pending"),
-        ).where(PolicyProposal.tenant_id == tenant_id)
-        proposal_result = await session.execute(proposal_stmt)
-        proposal_row = proposal_result.one()
+        # Calculate system pulse (business logic)
+        active_incidents = incidents.active
+        pending_decisions = incidents.active + proposals.pending
+        recent_breaches = breaches.recent
 
-        # Limit breach counts (last 24h) - DEFENSIVE QUERY
-        try:
-            breach_stmt = select(
-                func.count(LimitBreach.id).label("recent"),
-            ).where(
-                LimitBreach.tenant_id == tenant_id,
-                LimitBreach.breached_at >= last_24h,
-            )
-            breach_result = await session.execute(breach_stmt)
-            breach_row = breach_result.one()
-            recent_breach_count = breach_row.recent or 0
-        except Exception as breach_err:
-            logger.warning(f"[OVERVIEW] limit_breaches query failed (degrading): {breach_err}")
-            recent_breach_count = 0
-
-        # Last activity
-        last_activity_stmt = select(func.max(AuditLedger.created_at)).where(AuditLedger.tenant_id == tenant_id)
-        last_activity_result = await session.execute(last_activity_stmt)
-        last_activity_at = last_activity_result.scalar()
-
-        # Activity metrics: live and queued runs
-        activity_stmt = select(
-            func.sum(case((WorkerRun.status == "running", 1), else_=0)).label("live"),
-            func.sum(case((WorkerRun.status == "queued", 1), else_=0)).label("queued"),
-            func.count(WorkerRun.id).label("total"),
-        ).where(WorkerRun.tenant_id == tenant_id)
-        activity_result = await session.execute(activity_stmt)
-        activity_row = activity_result.one()
-        live_runs = activity_row.live or 0
-        queued_runs = activity_row.queued or 0
-
-        # Calculate system pulse
-        active_incidents = incident_row.pending or 0
-        pending_decisions = (incident_row.pending or 0) + (proposal_row.pending or 0)
-        recent_breaches = recent_breach_count
-
-        if incident_row.critical and incident_row.critical > 0:
+        if incidents.critical > 0:
             pulse_status = "CRITICAL"
         elif pending_decisions > 0 or recent_breaches > 0:
             pulse_status = "ATTENTION_NEEDED"
@@ -356,27 +325,27 @@ class OverviewFacade:
             active_incidents=active_incidents,
             pending_decisions=pending_decisions,
             recent_breaches=recent_breaches,
-            live_runs=live_runs,
-            queued_runs=queued_runs,
+            live_runs=runs.running,
+            queued_runs=runs.queued,
         )
 
         domain_counts = [
             DomainCount(
                 domain="Activity",
-                total=activity_row.total or 0,
-                pending=queued_runs,
+                total=runs.total,
+                pending=runs.queued,
                 critical=0,
             ),
             DomainCount(
                 domain="Incidents",
-                total=incident_row.total or 0,
-                pending=incident_row.pending or 0,
-                critical=incident_row.critical or 0,
+                total=incidents.total,
+                pending=incidents.active,
+                critical=incidents.critical,
             ),
             DomainCount(
                 domain="Policies",
-                total=proposal_row.total or 0,
-                pending=proposal_row.pending or 0,
+                total=proposals.total,
+                pending=proposals.pending,
                 critical=recent_breaches,
             ),
         ]
@@ -384,7 +353,7 @@ class OverviewFacade:
         return HighlightsResult(
             pulse=pulse,
             domain_counts=domain_counts,
-            last_activity_at=last_activity_at,
+            last_activity_at=audit.last_activity_at,
         )
 
     async def get_decisions(
@@ -411,20 +380,14 @@ class OverviewFacade:
 
         # 1. Project pending incidents (ACTIVE = needs ACK)
         if source_domain is None or source_domain == "INCIDENT":
-            incident_stmt = (
-                select(Incident)
-                .where(
-                    Incident.tenant_id == tenant_id,
-                    Incident.lifecycle_state == IncidentLifecycleState.ACTIVE.value,
-                )
-                .order_by(Incident.created_at.desc())
-            )
-            incident_result = await session.execute(incident_stmt)
-            incidents = incident_result.scalars().all()
+            incident_snapshots = await self._driver.fetch_pending_incidents(session, tenant_id)
 
-            for inc in incidents:
+            for inc in incident_snapshots:
+                # Business logic: map severity to priority
                 inc_priority = (
-                    "CRITICAL" if inc.severity in ["critical"] else ("HIGH" if inc.severity in ["high"] else "MEDIUM")
+                    "CRITICAL"
+                    if inc.severity in ["critical"]
+                    else ("HIGH" if inc.severity in ["high"] else "MEDIUM")
                 )
                 if priority is not None and inc_priority != priority:
                     continue
@@ -437,7 +400,7 @@ class OverviewFacade:
                     DecisionItem(
                         source_domain="INCIDENT",
                         entity_type="INCIDENT",
-                        entity_id=str(inc.id),
+                        entity_id=inc.id,
                         decision_type="ACK",
                         priority=inc_priority,
                         summary=inc.title or f"Incident {inc.id}",
@@ -447,19 +410,10 @@ class OverviewFacade:
 
         # 2. Project pending policy proposals (draft = needs approval)
         if source_domain is None or source_domain == "POLICY":
-            proposal_stmt = (
-                select(PolicyProposal)
-                .where(
-                    PolicyProposal.tenant_id == tenant_id,
-                    PolicyProposal.status == "draft",
-                )
-                .order_by(PolicyProposal.created_at.desc())
-            )
-            proposal_result = await session.execute(proposal_stmt)
-            proposals = proposal_result.scalars().all()
+            proposal_snapshots = await self._driver.fetch_pending_proposals(session, tenant_id)
 
-            for prop in proposals:
-                prop_priority = "MEDIUM"
+            for prop in proposal_snapshots:
+                prop_priority = "MEDIUM"  # Business logic: proposals are always MEDIUM
                 if priority is not None and prop_priority != priority:
                     continue
 
@@ -471,7 +425,7 @@ class OverviewFacade:
                     DecisionItem(
                         source_domain="POLICY",
                         entity_type="POLICY_PROPOSAL",
-                        entity_id=str(prop.id),
+                        entity_id=prop.id,
                         decision_type="APPROVE",
                         priority=prop_priority,
                         summary=prop.proposal_name,
@@ -479,7 +433,7 @@ class OverviewFacade:
                     )
                 )
 
-        # Sort by created_at descending
+        # Sort by created_at descending (business logic)
         items.sort(key=lambda x: x.created_at, reverse=True)
 
         # Apply pagination
@@ -508,34 +462,21 @@ class OverviewFacade:
         now = utc_now()
         period_start = now - timedelta(days=period_days)
 
-        # 1. Calculate actual LLM cost from worker_runs
-        cost_stmt = select(func.coalesce(func.sum(WorkerRun.cost_cents), 0).label("total_cost_cents")).where(
-            WorkerRun.tenant_id == tenant_id,
-            WorkerRun.created_at >= period_start,
-        )
-        cost_result = await session.execute(cost_stmt)
-        total_cost_cents = cost_result.scalar() or 0
-        llm_run_cost = float(total_cost_cents) / 100.0
+        # Fetch data from driver
+        run_cost = await self._driver.fetch_run_cost(session, tenant_id, period_start)
+        limit_snapshots = await self._driver.fetch_budget_limits(session, tenant_id)
+        breach_stats = await self._driver.fetch_breach_stats(session, tenant_id, period_start)
 
-        # 2. Get budget limits
-        limits_stmt = (
-            select(Limit)
-            .where(
-                Limit.tenant_id == tenant_id,
-                Limit.limit_category == LimitCategory.BUDGET.value,
-                Limit.status == "ACTIVE",
-            )
-            .order_by(Limit.name)
-        )
-        limits_result = await session.execute(limits_stmt)
-        limits = limits_result.scalars().all()
+        llm_run_cost = float(run_cost.total_cost_cents) / 100.0
 
+        # Build limit items with status calculation (business logic)
         limit_items: List[LimitCostItem] = []
-        for lim in limits:
-            max_val = float(lim.max_value)
+        for lim in limit_snapshots:
+            max_val = lim.max_value
             used_val = llm_run_cost
             remaining_val = max(0, max_val - used_val)
 
+            # Business logic: status thresholds
             if used_val >= max_val:
                 status = "BREACHED"
             elif used_val >= max_val * 0.8:
@@ -555,31 +496,13 @@ class OverviewFacade:
                 )
             )
 
-        # 3. Get breach statistics - DEFENSIVE QUERY
-        try:
-            breach_stmt = select(
-                func.count(LimitBreach.id).label("breach_count"),
-                func.coalesce(func.sum(LimitBreach.value_at_breach - LimitBreach.limit_value), 0).label("total_overage"),
-            ).where(
-                LimitBreach.tenant_id == tenant_id,
-                LimitBreach.breached_at >= period_start,
-            )
-            breach_result = await session.execute(breach_stmt)
-            breach_row = breach_result.one()
-            breach_count = breach_row.breach_count or 0
-            total_overage = max(0, float(breach_row.total_overage or 0))
-        except Exception as breach_err:
-            logger.warning(f"[OVERVIEW] limit_breaches cost query failed (degrading): {breach_err}")
-            breach_count = 0
-            total_overage = 0.0
-
         return CostsResult(
             currency="USD",
             period=CostPeriod(start=period_start, end=now),
             llm_run_cost=llm_run_cost,
             limits=limit_items,
-            breach_count=breach_count,
-            total_overage=total_overage,
+            breach_count=breach_stats.breach_count,
+            total_overage=breach_stats.total_overage,
         )
 
     async def get_decisions_count(
@@ -592,29 +515,12 @@ class OverviewFacade:
 
         Returns count of pending decisions by domain and priority.
         """
-        # Count incidents by severity
-        incident_stmt = select(
-            func.count(Incident.id).label("total"),
-            func.sum(case((Incident.severity == "critical", 1), else_=0)).label("critical"),
-            func.sum(case((Incident.severity == "high", 1), else_=0)).label("high"),
-            func.sum(case((Incident.severity.in_(["medium", "low"]), 1), else_=0)).label("other"),
-        ).where(
-            Incident.tenant_id == tenant_id,
-            Incident.lifecycle_state == IncidentLifecycleState.ACTIVE.value,
-        )
-        incident_result = await session.execute(incident_stmt)
-        inc_row = incident_result.one()
+        # Fetch data from driver
+        inc_counts = await self._driver.fetch_incident_decision_counts(session, tenant_id)
+        prop_total = await self._driver.fetch_proposal_count(session, tenant_id)
 
-        # Count policy proposals (all draft = MEDIUM priority)
-        proposal_stmt = select(func.count(PolicyProposal.id).label("total")).where(
-            PolicyProposal.tenant_id == tenant_id,
-            PolicyProposal.status == "draft",
-        )
-        proposal_result = await session.execute(proposal_stmt)
-        prop_total = proposal_result.scalar() or 0
-
-        # Build response
-        incident_total = inc_row.total or 0
+        # Build response (business logic: aggregation)
+        incident_total = inc_counts.total
         policy_total = prop_total
         total = incident_total + policy_total
 
@@ -624,9 +530,9 @@ class OverviewFacade:
         }
 
         by_priority = {
-            "CRITICAL": inc_row.critical or 0,
-            "HIGH": inc_row.high or 0,
-            "MEDIUM": (inc_row.other or 0) + policy_total,
+            "CRITICAL": inc_counts.critical,
+            "HIGH": inc_counts.high,
+            "MEDIUM": inc_counts.other + policy_total,  # Proposals are always MEDIUM
             "LOW": 0,
         }
 
@@ -650,35 +556,17 @@ class OverviewFacade:
         now = utc_now()
         period_start = now - timedelta(days=period_days)
 
-        # Count incidents by lifecycle state
-        stmt = select(
-            func.count(Incident.id).label("total"),
-            func.sum(case((Incident.lifecycle_state == IncidentLifecycleState.RESOLVED.value, 1), else_=0)).label("recovered"),
-            func.sum(
-                case(
-                    (Incident.lifecycle_state.in_([IncidentLifecycleState.ACTIVE.value, "investigating"]), 1), else_=0
-                )
-            ).label("pending"),
-            func.sum(case((Incident.lifecycle_state == "failed", 1), else_=0)).label("failed"),
-        ).where(
-            Incident.tenant_id == tenant_id,
-            Incident.created_at >= period_start,
-        )
-        result = await session.execute(stmt)
-        row = result.one()
+        # Fetch data from driver
+        recovery = await self._driver.fetch_recovery_stats(session, tenant_id, period_start)
 
-        total = row.total or 0
-        recovered = row.recovered or 0
-        pending = row.pending or 0
-        failed = row.failed or 0
-
-        recovery_rate = (recovered / total * 100.0) if total > 0 else 0.0
+        # Business logic: calculate recovery rate
+        recovery_rate = (recovery.recovered / recovery.total * 100.0) if recovery.total > 0 else 0.0
 
         return RecoveryStatsResult(
-            total_incidents=total,
-            recovered=recovered,
-            pending_recovery=pending,
-            failed_recovery=failed,
+            total_incidents=recovery.total,
+            recovered=recovery.recovered,
+            pending_recovery=recovery.pending,
+            failed_recovery=recovery.failed,
             recovery_rate_pct=round(recovery_rate, 2),
             period=CostPeriod(start=period_start, end=now),
         )

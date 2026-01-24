@@ -451,6 +451,11 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-459](PIN-459-t1-governance-tier-complete.md) | **T1 Governance Tier Complete — Explainability & Proof** | Governance / Implementation | **✅ COMPLETE** | 2026-01-21 |
 | [PIN-463](PIN-463-l4-facade-architecture-pattern.md) | **L4 Facade Architecture Pattern** | Architecture / Patterns | **REFERENCE** | 2026-01-22 |
 | [PIN-464](PIN-464-hoc-customer-domain-comprehensive-audit.md) | **HOC Customer Domain Comprehensive Audit** | Architecture / HOC Audit | **✅ COMPLETE** | 2026-01-23 |
+| [PIN-465](PIN-465-hoc-layer-topology-v1.md) | **HOC Layer Topology V1** | Architecture / HOC | **REFERENCE** | 2026-01-23 |
+| [PIN-466](PIN-466-hoc-migration-plan.md) | **HOC Migration Plan** | Architecture / Migration | **ACTIVE** | 2026-01-23 |
+| [PIN-467](PIN-467-hoc-migration-phase2-step1-complete.md) | **HOC Migration Phase 2 - Step 1 Complete** | Architecture / Migration | **✅ COMPLETE** | 2026-01-23 |
+| [PIN-468](PIN-468-phase2-step2-hoc-layer-extraction.md) | **Phase 2 Step 2 — HOC Layer Extraction (L4/L6)** | Architecture / HOC Migration | **IN_PROGRESS** | 2026-01-23 |
+| [PIN-469](PIN-469-phase-25a-policyengine-extraction-complete.md) | **Phase-2.5A PolicyEngine Extraction Complete** | Architecture / L4-L6 Separation | **✅ COMPLETE** | 2026-01-24 |
 
 ---
 
@@ -1220,6 +1225,15 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-24 | **PIN-469 Phase-2.5A PolicyEngine Extraction Complete** - Created via memory_trail. |
+| 2026-01-24 | **PIN-468 Phase 2 Step 2 — HOC Layer Extraction (L4/L6 Segregation)** - Updated: Updates |
+| 2026-01-23 | **PIN-468 Phase 2 Step 2 — HOC Layer Extraction (L4/L6 Segregation)** - Updated: Updates |
+| 2026-01-23 | **PIN-468 Phase 2 Step 2 — HOC Layer Extraction (L4/L6 Segregation)** - Updated: Phase-2.5 Scoping |
+| 2026-01-23 | **PIN-468 Phase 2 Step 2 — HOC Layer Extraction (L4/L6 Segregation)** - Updated: Updates |
+| 2026-01-23 | **PIN-468 Phase 2 Step 2 — HOC Layer Extraction (L4/L6)** - Extracted 5 write services (Batch 2), 4 read services verified (Batch 1). Created drivers: incident_write_driver, cost_write_driver, founder_action_write_driver, guard_write_driver, user_write_driver. 14+ mixed services pending. |
+| 2026-01-23 | **PIN-467 HOC Migration Phase 2 - Step 1 Complete** - Copied 573 files to HOC, ran post-migration audit, cleaned 15 duplicates. All 10 domains CLEAN. |
+| 2026-01-23 | **PIN-466 HOC Migration Plan** - Phase 2 migration execution plan. |
+| 2026-01-23 | **PIN-465 HOC Layer Topology V1** - Reference documentation for HOC layer structure. |
 | 2026-01-23 | **PIN-464 HOC Customer Domain Comprehensive Audit** - Created via memory_trail. |
 | 2026-01-21 | **PIN-459 T1 Governance Tier Complete** - All 11 T1 gaps implemented with 333 tests passing. |
 | 2026-01-20 | **PIN-458 Phase 5 — Enhancements Complete (PIN-454 Final)** - Created via memory_trail. |
