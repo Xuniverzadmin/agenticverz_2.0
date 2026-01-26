@@ -1,0 +1,342 @@
+# Domain Classification Criteria
+# Status: LOCKED
+# Created: 2026-01-26
+# Purpose: Machine-readable rules for domain_classifier_v1.py
+#
+# INVARIANT: Keywords alone have ZERO classificatory power.
+# Only qualified phrases determine domain ownership.
+
+version: "1.0"
+
+# Keywords that CANNOT determine domain alone
+ambiguous_keywords:
+  - enforcement
+  - runtime
+  - threshold
+  - governance
+  - policy
+  - aggregat
+  - config
+  - limit
+
+# Scoring rules
+scoring:
+  qualifier_phrase_weight: 3
+  weak_keyword_weight: 1
+  weak_keyword_max: 2
+  ambiguous_margin_threshold: 3  # If margin < 3, mark AMBIGUOUS
+
+domains:
+  general:
+    exclusive_decision: "WHEN and HOW system actions execute"
+    qualifier_test: "Enforcement of system invariants, for system orchestration"
+
+    qualifier_phrases:
+      - "governance orchestrat"
+      - "runtime orchestrat"
+      - "execution coordinator"
+      - "gateway control"
+      - "retry logic"
+      - "governance enforcement"
+      - "runtime enforcement"
+      - "contract activation"
+      - "job state"
+      - "system-wide"
+      - "workflow orchestrat"
+      - "execution order"
+      - "L4_runtime"
+      - "orchestrator"
+      - "coordinator"
+
+    veto_phrases:
+      - "policy enforcement"
+      - "limit enforcement"
+      - "threshold violation"
+      - "customer rule"
+      - "tenant config"
+      - "incident classif"
+      - "run lifecycle"
+
+    weak_keywords:
+      - "orchestrat"
+      - "gateway"
+
+  policies:
+    exclusive_decision: "WHAT rules govern behavior"
+    qualifier_test: "Enforcement of customer-defined rules"
+
+    qualifier_phrases:
+      - "policy definition"
+      - "policy evaluation"
+      - "policy proposal"
+      - "policy enforcement"
+      - "rule engine"
+      - "lesson learned"
+      - "customer rule"
+      - "governance rule"
+      - "policy rule"
+      - "rule activation"
+      - "policy version"
+      - "policy status"
+
+    veto_phrases:
+      - "runtime orchestrat"
+      - "gateway control"
+      - "system invariant"
+      - "execution coordinator"
+
+    weak_keywords:
+      - "policy"
+      - "rule"
+      - "proposal"
+
+  controls:
+    exclusive_decision: "WHAT limits and configurations apply"
+    qualifier_test: "Customer-configured limits and thresholds"
+
+    qualifier_phrases:
+      - "killswitch"
+      - "circuit breaker"
+      - "feature flag"
+      - "rate limit"
+      - "token limit"
+      - "cost limit"
+      - "credit limit"
+      - "quota"
+      - "threshold config"
+      - "limit enforcement"
+      - "control config"
+      - "throttle"
+      - "budget"
+      - "usage limit"
+
+    veto_phrases:
+      - "threshold violation"
+      - "near-threshold incident"
+      - "runtime orchestrat"
+      - "policy evaluation"
+
+    weak_keywords:
+      - "limit"
+      - "control"
+      - "config"
+
+  incidents:
+    exclusive_decision: "WHETHER an outcome is a problem"
+    qualifier_test: "Classification of failures and violations"
+
+    qualifier_phrases:
+      - "incident classif"
+      - "failure classif"
+      - "threshold violation"
+      - "near-threshold"
+      - "violation detect"
+      - "recovery signal"
+      - "incident pattern"
+      - "problem classif"
+      - "incident engine"
+      - "failure detect"
+      - "severity"
+      - "incident"
+      - "guard"
+      - "recurrence"
+
+    veto_phrases:
+      - "threshold config"
+      - "policy definition"
+      - "limit config"
+
+    weak_keywords:
+      - "incident"
+      - "failure"
+      - "violation"
+
+  activity:
+    exclusive_decision: "WHAT LLM run occurred"
+    qualifier_test: "Run lifecycle and execution metadata"
+
+    qualifier_phrases:
+      - "run lifecycle"
+      - "execution metadata"
+      - "run state"
+      - "llm run"
+      - "worker run"
+      - "run history"
+      - "trace step"
+      - "run pattern"
+      - "activity pattern"
+      - "run"
+      - "trace"
+      - "execution record"
+
+    veto_phrases:
+      - "runtime orchestrat"
+      - "policy evaluation"
+      - "governance enforcement"
+
+    weak_keywords:
+      - "run"
+      - "trace"
+      - "activity"
+
+  analytics:
+    exclusive_decision: "WHAT can be derived"
+    qualifier_test: "Derived metrics, not source-of-truth"
+
+    qualifier_phrases:
+      - "cost intelligence"
+      - "statistical"
+      - "behavioral analysis"
+      - "derived metric"
+      - "divergence"
+      - "aggregate metric"
+      - "kl divergence"
+      - "cost analysis"
+      - "metric engine"
+      - "analytics"
+      - "cost sim"
+      - "computation"
+
+    veto_phrases:
+      - "dashboard"
+      - "summary view"
+      - "source-of-truth"
+      - "audit"
+
+    weak_keywords:
+      - "metric"
+      - "cost"
+      - "analytic"
+
+  overview:
+    exclusive_decision: "WHAT consolidated state is visible"
+    qualifier_test: "Read-only summaries for display"
+
+    qualifier_phrases:
+      - "dashboard"
+      - "summary view"
+      - "consolidated state"
+      - "read-only aggregat"
+      - "status overview"
+      - "health summary"
+      - "overview"
+      - "snapshot"
+      - "summary"
+
+    veto_phrases:
+      - "write"
+      - "mutate"
+      - "trigger action"
+      - "enforcement"
+
+    weak_keywords:
+      - "overview"
+      - "summary"
+      - "dashboard"
+
+  logs:
+    exclusive_decision: "WHAT immutable record exists"
+    qualifier_test: "Append-only audit trail"
+
+    qualifier_phrases:
+      - "audit ledger"
+      - "audit trail"
+      - "append-only"
+      - "immutable record"
+      - "evidence record"
+      - "system log"
+      - "evidence report"
+      - "proof"
+      - "audit"
+      - "log record"
+      - "completeness"
+
+    veto_phrases:
+      - "classif"
+      - "aggregat"
+      - "mutation"
+      - "incident pattern"
+
+    weak_keywords:
+      - "log"
+      - "audit"
+      - "evidence"
+
+  integrations:
+    exclusive_decision: "HOW external systems connect"
+    qualifier_test: "External adapters and bridges"
+
+    qualifier_phrases:
+      - "sdk setup"
+      - "external adapter"
+      - "data bridge"
+      - "webhook"
+      - "external auth"
+      - "integration config"
+      - "connector"
+      - "integration"
+      - "adapter"
+      - "external"
+      - "graduation"
+
+    veto_phrases:
+      - "policy decision"
+      - "runtime orchestrat"
+      - "incident"
+      - "run lifecycle"
+
+    weak_keywords:
+      - "integration"
+      - "adapter"
+      - "webhook"
+
+  apis:
+    exclusive_decision: "WHO can call what"
+    qualifier_test: "API key and scope management"
+
+    qualifier_phrases:
+      - "api key"
+      - "access scope"
+      - "api permission"
+      - "key management"
+      - "scope definition"
+      - "api access"
+      - "key"
+      - "scope"
+
+    veto_phrases:
+      - "business logic"
+      - "policy evaluation"
+      - "tenant"
+      - "membership"
+
+    weak_keywords:
+      - "key"
+      - "api"
+      - "scope"
+
+  account:
+    exclusive_decision: "WHO owns what"
+    qualifier_test: "Tenancy and ownership"
+
+    qualifier_phrases:
+      - "tenant"
+      - "subscription"
+      - "user role"
+      - "membership"
+      - "billing"
+      - "sub-tenant"
+      - "organization"
+      - "account"
+      - "owner"
+
+    veto_phrases:
+      - "runtime"
+      - "analytic"
+      - "policy rule"
+      - "incident"
+
+    weak_keywords:
+      - "tenant"
+      - "account"
+      - "member"
