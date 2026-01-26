@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api/worker
 #   Execution: async
+# Lifecycle:
+#   Emits: notification_sent, notification_failed
+#   Subscribes: none
+# Data Access:
+#   Reads: ChannelConfig (via driver)
+#   Writes: none
 # Role: Configurable notification channel management
 # Callers: alert_emitter, incident_service, policy_engine
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: GAP-017 (Notify Channels)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-017 (Notify Channels)
 # NOTE: Renamed channel_service.py → channel_engine.py (2026-01-24)
 #       per BANNED_NAMING rule (*_service.py → *_engine.py)
 #       Reclassified L4→L5 - Per HOC topology, engines are L5 (business logic)

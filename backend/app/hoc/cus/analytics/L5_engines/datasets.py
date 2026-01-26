@@ -1,13 +1,19 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Product: system-wide
 # Temporal:
-#   Trigger: import
+#   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (static reference data)
+#   Writes: none
 # Role: CostSim V2 reference datasets (validation samples)
 # Callers: canary runner, divergence engine
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470
 
 # CostSim V2 Reference Datasets (M6)
 """

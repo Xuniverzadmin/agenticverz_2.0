@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: any
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Guard contract DTOs for access control (Pydantic schemas, no boundary crossing)
 # Callers: API routes, engines
 # Allowed Imports: None (foundational schema)
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: Contract System
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, Contract System
 # NOTE: Reclassified L6→L5 (2026-01-24) - Pure Pydantic DTOs, no DB/cache/external boundary
 
 """

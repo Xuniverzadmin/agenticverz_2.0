@@ -882,7 +882,8 @@ class LifecycleWorker:
                 return False, f"No handler for stage: {payload.stage_name}", {}
 
             # Build execution context
-            from app.services.lifecycle_stages.base import StageContext
+            # L5 engine import (migrated to HOC per SWEEP-11)
+            from app.hoc.cus.general.L5_lifecycle.engines.base import StageContext
             from app.models.knowledge_lifecycle import KnowledgePlaneLifecycleState
 
             context = StageContext(
@@ -1025,7 +1026,8 @@ class LifecycleWorker:
     def _get_stage_registry(self) -> Dict[str, Any]:
         """Get the stage handler registry."""
         try:
-            from app.services.lifecycle_stages import (
+            # L5 engine imports (migrated to HOC per SWEEP-11)
+            from app.hoc.cus.general.L5_lifecycle.engines.onboarding import (
                 RegisterHandler,
                 VerifyHandler,
                 IngestHandler,
@@ -1033,6 +1035,8 @@ class LifecycleWorker:
                 ClassifyHandler,
                 ActivateHandler,
                 GovernHandler,
+            )
+            from app.hoc.cus.general.L5_lifecycle.engines.offboarding import (
                 DeregisterHandler,
                 VerifyDeactivateHandler,
                 DeactivateHandler,

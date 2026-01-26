@@ -1,13 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: discovery_ledger (SQL)
+#   Writes: discovery_ledger (SQL)
+# Database:
+#   Scope: domain (general)
+#   Models: discovery_ledger (via raw SQL)
 # Role: Discovery ledger for artifact tracking
 # Callers: API routes, workers
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: Discovery System
+# Allowed Imports: L6, L7 (models)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: PIN-470, Discovery System
 
 """
 Discovery Ledger - signal recording helpers.

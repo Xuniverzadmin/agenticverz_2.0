@@ -1,13 +1,23 @@
-# Layer: L6 — Driver
-# Product: system-wide
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Temporal:
-#   Trigger: worker
+#   Trigger: api (via L5 engine)
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: CoordinationAuditRecordDB
+#   Writes: CoordinationAuditRecordDB
+# Database:
+#   Scope: domain (analytics)
+#   Models: CoordinationAuditRecordDB
 # Role: Optimization audit trail persistence
-# Callers: optimization/coordinator
-# Allowed Imports: None (foundational)
+# Callers: coordinator.py (L5 engine)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: M10 Optimization
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, M10 Optimization
 
 from app.infra import FeatureIntent, RetryPolicy
 
@@ -128,7 +138,7 @@ def persist_audit_record(
             tenant_id=tenant_id,
         )
         db.add(record)
-        db.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         logger.debug(
             "audit_persisted",

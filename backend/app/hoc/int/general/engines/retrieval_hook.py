@@ -44,7 +44,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from app.services.mediation.retrieval_mediator import (
+from app.hoc.cus.integrations.L5_engines.retrieval_mediator import (
     MediatedResult,
     MediationDeniedError,
     RetrievalMediator,

@@ -8,6 +8,7 @@
 # Callers: FastAPI application
 # Allowed Imports: L3, L4, L6
 # Forbidden Imports: L1, L5
+# Forbidden: session.commit(), session.rollback() — DEPRECATED CODE MUST NOT COMMIT
 # Reference: C2 Prediction
 #
 # STATUS: DEPRECATED
@@ -100,7 +101,7 @@ def create_incident_risk_prediction(
     )
 
     db.add(p)
-    db.commit()
+    # NO COMMIT — L4 coordinator owns transaction boundary
     db.refresh(p)
 
     return {
@@ -193,7 +194,7 @@ def create_spend_spike_prediction(
     )
 
     db.add(p)
-    db.commit()
+    # NO COMMIT — L4 coordinator owns transaction boundary
     db.refresh(p)
 
     return {
@@ -257,7 +258,7 @@ def create_policy_drift_prediction(
     )
 
     db.add(p)
-    db.commit()
+    # NO COMMIT — L4 coordinator owns transaction boundary
     db.refresh(p)
 
     return {

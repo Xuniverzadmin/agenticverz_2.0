@@ -1,13 +1,19 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Product: system-wide
 # Temporal:
-#   Trigger: import
+#   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (environment variables)
+#   Writes: none
 # Role: CostSim V2 configuration and feature flags
 # Callers: costsim engine, sandbox runner
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470
 
 # CostSim V2 Configuration (M6)
 """

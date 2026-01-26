@@ -1,14 +1,20 @@
 # Layer: L5 — Domain Engine (Schema)
 # AUDIENCE: CUSTOMER
-# Role: Common contract definitions (pure Pydantic DTOs)
 # Product: system-wide
 # Temporal:
 #   Trigger: import-time
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
+# Role: Common contract definitions (pure Pydantic DTOs)
 # Callers: contracts/*, engines
 # Allowed Imports: None (foundational)
-# Forbidden Imports: L1, L2, L3, L4, L6 (no DB)
-# Reference: Contract System
+# Forbidden Imports: L1, L2, L3, L4, L6 (no DB), sqlalchemy
+# Reference: PIN-470, Contract System
 # NOTE: Reclassified L6→L5 (2026-01-24) - Pure Pydantic schemas, no boundary crossing
 
 

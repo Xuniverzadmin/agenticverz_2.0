@@ -1,6 +1,22 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (data models only)
+#   Writes: none
+# Database:
+#   Scope: domain (integrations)
+#   Models: KnowledgePlane, KnowledgeNode
+# Role: Knowledge plane models and registry
 # Product: system-wide
-# Reference: GAP-056 (KnowledgePlane model)
+# Callers: L5 engines
+# Allowed Imports: L6, L7 (models)
+# Reference: PIN-470, GAP-056 (KnowledgePlane model)
 """
 KnowledgePlane - Knowledge plane models and registry.
 

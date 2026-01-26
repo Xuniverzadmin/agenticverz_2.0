@@ -1,14 +1,20 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (pure identity resolution)
+#   Writes: none
 # Role: Identity resolution from various providers (JWT parsing)
+# Product: system-wide
 # Callers: IAMService, Auth middleware
-# Allowed Imports: L6, L7 (stdlib, jwt)
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: GAP-173 (IAM Integration)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-173 (IAM Integration)
 # NOTE: Reclassified L6→L5 (2026-01-24) - Pure identity resolution logic, not SQL driver
 #       Remains in drivers/ per Layer ≠ Directory principle
 

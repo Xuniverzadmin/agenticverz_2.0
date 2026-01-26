@@ -1,15 +1,20 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# PHASE: W2
-# Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (in-memory role/permission logic)
+#   Writes: none
 # Role: IAM engine for identity and access management
+# Product: system-wide
 # Callers: Auth middleware, API routes
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: GAP-173 (IAM Integration)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-173 (IAM Integration)
 # NOTE: Renamed iam_service.py → iam_engine.py (2026-01-24)
 #       per BANNED_NAMING rule (*_service.py → *_engine.py)
 #       Reclassified L4→L5 - Per HOC topology, engines are L5 (business logic)

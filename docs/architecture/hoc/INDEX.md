@@ -117,11 +117,90 @@ hoc/cus/general/
 
 **All paths now use new structure:** `backend/app/hoc/cus/{domain}/L{n}_{folder}/`
 
-### Phase 4-5: (PLANNED)
+### Phase 3B: SQLAlchemy Extraction (COMPLETE)
+
+Phase 3B focuses on extracting SQLAlchemy imports from L5 engines to L6 drivers.
+
+| Document | Location | Status | Description |
+|----------|----------|--------|-------------|
+| P3 Completion Report | [`PHASE3B_P3_COMPLETION_REPORT.md`](PHASE3B_P3_COMPLETION_REPORT.md) | **COMPLETE** | P3 design-first extractions |
+| Scanner | [`scripts/ops/phase_3b_scanner.py`](../../../scripts/ops/phase_3b_scanner.py) | ACTIVE | SQLAlchemy violation scanner |
+
+**Phase 3B Status Summary:**
+
+| Priority | Files | Status |
+|----------|-------|--------|
+| P1-P2 (mechanical) | 6 files | COMPLETE |
+| P3 (design-first) | 2 files | COMPLETE |
+| FROZEN (M25 debt) | 3 files | Deferred |
+
+**P3 Extractions Completed (2026-01-25):**
+
+1. **policy_proposal.py** → Reclassified L3→L5, split into:
+   - `policy_proposal_engine.py` (L5)
+   - `policy_proposal_read_driver.py` (L6)
+   - `policy_proposal_write_driver.py` (L6)
+
+2. **policies_facade.py** → Split into 3 query engines:
+   - `policies_rules_query_engine.py` + `policy_rules_read_driver.py`
+   - `policies_limits_query_engine.py` + `limits_read_driver.py`
+   - `policies_proposals_query_engine.py` + `proposals_read_driver.py`
+
+**Scanner Results:**
+```
+BLOCKING violations: 0
+DEFERRED (P3): 0
+FROZEN (M25): 3
+```
+
+### Phase 4: Wiring (IN PROGRESS)
+
+Phase 4 focuses on wiring general domain services to other customer domains.
+
+| Document | Location | Status | Description |
+|----------|----------|--------|-------------|
+| General Domain Wiring Phase 1 | [`GENERAL_DOMAIN_WIRING_PHASE1.md`](GENERAL_DOMAIN_WIRING_PHASE1.md) | **RESEARCH COMPLETE** | Analysis of general→domain wiring gaps |
+| General Domain Wiring Phase 2 | [`GENERAL_DOMAIN_WIRING_PHASE2.md`](GENERAL_DOMAIN_WIRING_PHASE2.md) | **RESEARCH COMPLETE** | Comprehensive function catalog of general domain |
+| Authority Violation Spec v1 | [`AUTHORITY_VIOLATION_SPEC_V1.md`](AUTHORITY_VIOLATION_SPEC_V1.md) | **DRAFT** | First-principles authority enforcement specification |
+| Runtime Context Model v1 | [`RUNTIME_CONTEXT_MODEL.md`](RUNTIME_CONTEXT_MODEL.md) | **DRAFT** | How authority constraints enter the system via context objects |
+| L4/L5 Contracts v1 | [`L4_L5_CONTRACTS_V1.md`](L4_L5_CONTRACTS_V1.md) | **DRAFT** | Protocol-based contracts enforced by type system |
+| **Authority Analyzer** | [`scripts/ops/hoc_authority_analyzer.py`](../../../scripts/ops/hoc_authority_analyzer.py) | **ACTIVE** | Mechanical enforcer of authority contracts |
+| Authority Violations Report | [`HOC_AUTHORITY_VIOLATIONS.yaml`](HOC_AUTHORITY_VIOLATIONS.yaml) | **GENERATED** | Automated violation scan output |
+| **TRANSACTION_BYPASS Checklist** | [`TRANSACTION_BYPASS_REMEDIATION_CHECKLIST.md`](TRANSACTION_BYPASS_REMEDIATION_CHECKLIST.md) | **ACTIVE** | Step-by-step remediation for session.commit violations |
+| **Remediation Report** | [`TRANSACTION_BYPASS_REMEDIATION_REPORT_2026-01-25.md`](TRANSACTION_BYPASS_REMEDIATION_REPORT_2026-01-25.md) | **IN PROGRESS** | Progress report: 2/5 P1 files, 6 commits removed, 131 CRITICAL remaining |
+
+**Phase 4 Research Summary (2026-01-25):**
+
+| Category | Files Affected | Status |
+|----------|----------------|--------|
+| DateTime standardization | 9 files | Identified |
+| Governance orchestrator duplication | 2 files | CRITICAL - needs consolidation analysis |
+| Transaction coordinator duplication | 2 files | CRITICAL - needs consolidation analysis |
+| Missing orchestration wiring | 19 files | Identified |
+| Multi-model writes without coordinator | 4 files | Identified |
+
+**Phase 2 Function Catalog (2026-01-25):**
+
+| Folder | Files | Classes | Functions | Wiring Candidates |
+|--------|-------|---------|-----------|-------------------|
+| L4_runtime | 6 | 12+ | 40+ | 19 files |
+| L5_lifecycle | 6 | 15+ | 60+ | 8 files |
+| L5_controls | 2 | 2 | 12 | 4 files |
+| L5_workflow | 1 | 3 | 25+ | 3 files |
+| L5_engines | 24 | 20+ | 100+ | 17 files |
+| **TOTAL** | **39** | **52+** | **237+** | **51 files** |
+
+**Key Findings:**
+- `policies/L5_engines/governance_orchestrator.py` duplicates `general/L4_runtime/engines/governance_orchestrator.py`
+- `policies/L6_drivers/transaction_coordinator.py` duplicates `general/L4_runtime/drivers/transaction_coordinator.py`
+- L4_runtime services have **0 imports** from other domains (only `utc_now` utility is used)
+- General domain provides 237+ functions across 39 files that other domains could leverage
+- 51 files across 6 domains identified as wiring candidates
+
+### Phase 5: Cleanup (PLANNED)
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| Phase 4: Wiring | PLANNED | Connect all layers, validate contracts |
 | Phase 5: Cleanup | PLANNED | Delete `app/services/*` legacy code |
 
 ---
@@ -366,6 +445,15 @@ This index is referenced in `/CLAUDE.md` under:
 | 2026-01-24 | **Phase 3 UPDATE** — Package & audience rename added: `hoc` → `hoc`, `customer` → `cus`, `founder` → `fdr`, `internal` → `int`. Saves 14 chars per import. PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md updated to v1.1.0. HOC_LAYER_TOPOLOGY_V1.md updated to v1.4.0. | Claude |
 | 2026-01-24 | **Phase 3 COMPLETE** — All 10 customer domains migrated (overview, api_keys, account, activity, incidents, policies, logs, analytics, integrations, general). Layer-prefixed folders deployed. Facades merged into L5_engines or L3_adapters. L4 centralized to general/L4_runtime/ only. | Claude |
 | 2026-01-24 | **Phase 3 L5/L6 FIX** — Relocated 52 L5 engine files from L6_drivers/ to L5_engines/ based on content analysis. Files declared L5 with no DB ops. Domains: policies (18), general (13), logs (6), integrations (6), incidents (4), account (2), analytics (2), activity (1). BLCA customer domain: 0 structure errors. PIN-470. | Claude |
+| 2026-01-25 | **Phase 3B P3 COMPLETE** — SQLAlchemy extraction from L5 to L6 complete. `policy_proposal.py` reclassified L3→L5 and split (engine + read/write drivers). `policies_facade.py` split into 3 query engines (`policies_rules_query_engine.py`, `policies_limits_query_engine.py`, `policies_proposals_query_engine.py`) with corresponding L6 drivers. Scanner: 0 BLOCKING, 0 DEFERRED. 3 FROZEN files remain (M25 debt). | Claude |
+| 2026-01-25 | **Phase 4 Research COMPLETE** — General domain wiring analysis. Found: 9 datetime gaps, 2 CRITICAL governance/transaction coordinator duplicates (policies vs general), 19 files needing orchestration wiring, 4 multi-model write gaps. L4_runtime services have 0 imports from other domains. GENERAL_DOMAIN_WIRING_PHASE1.md created. | Claude |
+| 2026-01-25 | **Phase 4 Phase 2 Research COMPLETE** — Comprehensive function catalog of general domain. Documented: 39 files, 52+ classes, 237+ functions across L4_runtime (6), L5_lifecycle (6), L5_controls (2), L5_workflow (1), L5_engines (24). Identified 51 wiring candidate files across 6 domains (policies, incidents, analytics, account, logs, integrations). GENERAL_DOMAIN_WIRING_PHASE2.md created. | Claude |
+| 2026-01-25 | **Authority Violation Spec v1.0 DRAFT** — First-principles specification defining 4 authorities (TIME, TRANSACTION, ORCHESTRATION, STATE) and 6 violation categories (TIME_LEAK, STATE_MACHINE_DUPLICATION, TRANSACTION_BYPASS, ORCHESTRATION_LEAK, AUTHORITY_LEAK, DECISION_VS_EXECUTION). Includes severity matrix, decision tables, and CI enforcement phases. AUTHORITY_VIOLATION_SPEC_V1.md created. | Claude |
+| 2026-01-25 | **Runtime Context Model v1.0 DRAFT** — Defines how authority constraints enter the system via 4 context objects (TimeContext, TransactionContext, OrchestrationContext, StateContext). Core rule: "Contexts are PASSED, never fetched." Includes construction rules, passing rules, forbidden patterns, and migration path. RUNTIME_CONTEXT_MODEL.md created. | Claude |
+| 2026-01-25 | **L4/L5 Contracts v1.0 DRAFT** — Protocol-based contracts for each layer: RuntimeCoordinatorContract (L4), OrchestratorContract (L4), DomainEngineContract (L5), TransactionalEngineContract (L5), StatefulEngineContract (L5_workflow), PersistenceDriverContract (L6). Enforced by type system (mypy) + analyzer. Forbidden dependency matrix defined. L4_L5_CONTRACTS_V1.md created. | Claude |
+| 2026-01-25 | **Authority Analyzer v1.0 ACTIVE** — Mechanical enforcer implemented at `scripts/ops/hoc_authority_analyzer.py`. Scans HOC customer domains for authority violations. First scan: 448 files, 1147 violations (137 CRITICAL, 1010 HIGH). Violations by type: TIME_LEAK (903), TRANSACTION_BYPASS (116), AUTHORITY_LEAK (109), ORCHESTRATION_LEAK (19). Top domains: general (235), policies (227), logs (198). Supports `--check` for CI integration. | Claude |
+| 2026-01-25 | **TRANSACTION_BYPASS Remediation Checklist v1.0** — Step-by-step guide for eliminating session.commit() from L6 drivers. Target: 116→0 violations. Defines session injection patterns (constructor, method, context), common pitfalls, verification steps, and CI gate criteria. Fixed transaction_coordinator.py header (L6→L4). | Claude |
+| 2026-01-25 | **TRANSACTION_BYPASS Remediation: 2/5 P1 files complete** — Remediated `policies/L6_drivers/alert_emitter.py` (4 commits removed) and `policies/L6_drivers/recovery_matcher.py` (2 commits removed). Applied 6 governing principles: L6 no commit, session required, no session creation, no singletons, orphans valid targets, one-way dependency. CRITICAL: 137→131 (-6). Report: `TRANSACTION_BYPASS_REMEDIATION_REPORT_2026-01-25.md`. | Claude |
 
 ---
 

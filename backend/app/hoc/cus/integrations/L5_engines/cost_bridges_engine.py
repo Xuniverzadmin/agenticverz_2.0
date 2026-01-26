@@ -3,11 +3,17 @@
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: (via driver)
+#   Writes: none (pure business logic)
 # Role: Cost-related integration bridges (cost loop business logic)
 # Callers: cost services, workers
-# Allowed Imports: L6, schemas
-# Forbidden Imports: L1, L2, L3
-# Reference: HOC_LAYER_TOPOLOGY_V1.md, INTEGRATIONS_PHASE2.5_IMPLEMENTATION_PLAN.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, HOC_LAYER_TOPOLOGY_V1.md, INTEGRATIONS_PHASE2.5_IMPLEMENTATION_PLAN.md
 
 """
 M27 Cost Loop Integration Bridges
@@ -42,8 +48,8 @@ from ..schemas.loop_events import (
     ensure_json_serializable,
 )
 
-# NOTE: This import is from legacy location - deferred until cross_domain is migrated to HOC
-from app.services.governance.cross_domain import create_incident_from_cost_anomaly_sync
+# Rewired to L4_runtime (Sweep-02A)
+from app.hoc.cus.general.L4_runtime.engines import create_incident_from_cost_anomaly_sync
 
 logger = logging.getLogger("nova.integrations.cost")
 

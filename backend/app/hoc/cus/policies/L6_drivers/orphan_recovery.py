@@ -1,8 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: runs
+#   Writes: runs
+# Database:
+#   Scope: domain (runs)
+#   Models: Run
 # Role: Orphan detection logic, PB-S2 truth guarantee
 # Callers: L5 workers (startup), L7 ops scripts
-# Reference: PIN-242 (Baseline Freeze)
+# Allowed Imports: L6, L7 (models)
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, PIN-242 (Baseline Freeze)
 
 from app.infra import FeatureIntent, RetryPolicy
 
@@ -185,7 +200,7 @@ async def recover_orphaned_runs(
                 else:
                     result["failed"] += 1
 
-            await session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
             logger.info(
                 "orphan_recovery_complete",

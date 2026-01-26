@@ -1,8 +1,20 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Role: Determinism verification and input validation
 # Product: ai-console
-# Reference: L2_1_SLOT_DETERMINISM_MATRIX.csv
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
+# Role: Determinism verification and input validation
+# Callers: Panel adapters (L3)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, L2_1_SLOT_DETERMINISM_MATRIX.csv
 
 
 """

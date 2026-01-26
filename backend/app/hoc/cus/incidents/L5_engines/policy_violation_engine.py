@@ -4,11 +4,18 @@
 # Temporal:
 #   Trigger: api/worker
 #   Execution: async
+# Lifecycle:
+#   Emits: violation_detected, violation_verified
+#   Subscribes: none
+# Data Access:
+#   Reads: Policy, PreventionRecord (via driver)
+#   Writes: PreventionRecord, PolicyEvaluation (via driver)
 # Role: S3 violation truth model, fact persistence, evidence linking
 # Callers: L5 policy engine, L5 workers
-# Allowed Imports: L6 drivers (via injection), L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel (at runtime)
-# Reference: PIN-242 (Baseline Freeze), PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
+# Reference: PIN-470, PIN-242 (Baseline Freeze), PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
 # NOTE: Renamed policy_violation_service.py → policy_violation_engine.py (2026-01-24)
 #       per BANNED_NAMING rule (*_service.py → *_engine.py)
 #       Reclassified L4→L5 - Per HOC topology, engines are L5 (business logic)
@@ -181,7 +188,7 @@ class PolicyViolationService:
             tenant_id=violation.tenant_id,
             created_at=violation.timestamp,
         )
-        await self._driver.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         violation.persisted = True
         logger.info(
@@ -225,7 +232,7 @@ class PolicyViolationService:
             violation_id=violation_id,
             evidence=evidence,
         )
-        await self._driver.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         logger.info(f"Persisted evidence: id={evidence_id}, violation={violation_id}")
         return evidence_id
@@ -266,7 +273,8 @@ class PolicyViolationService:
         from sqlmodel import Session
 
         from app.db import engine
-        from app.services.incident_aggregator import create_incident_aggregator
+        # L6 driver import (migrated to HOC per SWEEP-38)
+        from app.hoc.cus.incidents.L6_drivers.incident_aggregator import create_incident_aggregator
 
         # Need sync session for IncidentAggregator
         with Session(engine) as sync_session:
@@ -297,7 +305,7 @@ class PolicyViolationService:
                 },
             )
 
-            sync_session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
             incident_id = incident.id
 
         logger.info(
@@ -514,7 +522,7 @@ async def create_policy_evaluation_record(
         is_synthetic=is_synthetic,
         synthetic_scenario_id=synthetic_scenario_id,
     )
-    await driver.commit()
+    # NO COMMIT — L4 coordinator owns transaction boundary
 
     logger.info(
         f"Created policy evaluation record: id={evaluation_id}, run={run_id}, "

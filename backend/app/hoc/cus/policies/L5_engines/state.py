@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: import-time
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Phase-6 Billing State enum (pure enum definitions)
 # Callers: BillingProvider, Tenant model (when extended), billing middleware
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: PIN-399 Phase-6 (Billing, Plans & Limits)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-399 Phase-6 (Billing, Plans & Limits)
 # NOTE: Reclassified L6→L5 (2026-01-24) - no Session imports, pure enum
 
 """

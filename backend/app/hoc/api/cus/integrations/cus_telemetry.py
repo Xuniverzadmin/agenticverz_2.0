@@ -43,7 +43,8 @@ from app.schemas.cus_schemas import (
     CusUsageSummary,
 )
 from app.schemas.response import wrap_dict, wrap_error, wrap_list
-from app.services.cus_telemetry_service import CusTelemetryService
+# L5 engine import (migrated to HOC per SWEEP-03 Batch 2)
+from app.hoc.cus.integrations.L5_engines.cus_telemetry_service import CusTelemetryService
 
 router = APIRouter(prefix="/telemetry", tags=["Customer Telemetry"])
 

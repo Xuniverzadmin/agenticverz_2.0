@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Render export bundles to PDF format
 # Callers: api/incidents.py
-# Allowed Imports: L6, L7 (stdlib, reportlab)
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: BACKEND_REMEDIATION_PLAN.md GAP-004, GAP-005
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, BACKEND_REMEDIATION_PLAN.md GAP-004, GAP-005
 # NOTE: Reclassified L6→L5 (2026-01-24) - Pure PDF rendering logic, not SQL driver
 #       Remains in drivers/ per Layer ≠ Directory principle
 

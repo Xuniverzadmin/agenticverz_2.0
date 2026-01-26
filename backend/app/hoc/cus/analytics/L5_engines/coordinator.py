@@ -1,13 +1,19 @@
-# Layer: L5 — Execution & Workers
-# Product: system-wide
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Temporal:
 #   Trigger: worker
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via audit_persistence (L6)
+#   Writes: via audit_persistence (L6)
 # Role: Optimization envelope coordination
 # Callers: workers
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: M10 Optimization
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, M10 Optimization
 
 from app.infra import FeatureIntent, RetryPolicy
 

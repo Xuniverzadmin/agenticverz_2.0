@@ -505,7 +505,10 @@ class LimitHook:
             return self._limit_enforcer
 
         try:
-            from app.services.limits import get_limit_enforcer
+            # L5 engine import (migrated to HOC per SWEEP-03, GAP-055)
+            from app.hoc.int.policies.L5_engines.limit_enforcer_contract import (
+                get_limit_enforcer,
+            )
             return get_limit_enforcer()
         except ImportError:
             logger.debug("limit_hook.limit_enforcer_not_available")
@@ -517,7 +520,10 @@ class LimitHook:
             return self._usage_monitor
 
         try:
-            from app.services.monitors import get_usage_monitor
+            # L5 engine import (migrated to HOC per SWEEP-03, GAP-053)
+            from app.hoc.int.policies.L5_engines.usage_monitor_contract import (
+                get_usage_monitor,
+            )
             return get_usage_monitor()
         except ImportError:
             logger.debug("limit_hook.usage_monitor_not_available")

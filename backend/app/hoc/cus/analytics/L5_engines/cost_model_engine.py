@@ -1,13 +1,19 @@
-# Layer: L5 — Domain Engine (System Truth)
-# Product: system-wide (NOT console-owned)
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Temporal:
-#   Trigger: api|worker
+#   Trigger: api/worker
 #   Execution: sync
-# Role: Cost modeling and risk estimation domain authority
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (pure computation)
+#   Writes: none
+# Role: Cost modeling and risk estimation domain authority (System Truth)
 # Callers: CostSimV2Adapter (L3), simulation endpoints
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
-# Reference: PIN-254 Phase B Fix
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-254 Phase B Fix
 
 """
 L4 Cost Model Engine - Domain Authority for Cost/Risk Estimation

@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: runtime
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Phase-7 AbuseProtectionProvider protocol and MockAbuseProtectionProvider
 # Callers: protection middleware, SDK endpoints, runtime paths
-# Allowed Imports: L4 (protection.decisions, billing)
-# Forbidden Imports: L1, L2, L3, L5, L6
-# Reference: PIN-399 Phase-7 (Abuse & Protection Layer)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-399 Phase-7 (Abuse & Protection Layer)
 
 """
 Phase-7 Abuse Protection Provider — Interface and Mock Implementation

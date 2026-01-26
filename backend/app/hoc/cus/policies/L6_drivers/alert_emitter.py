@@ -1,13 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: AI Console
 # Temporal:
-#   Trigger: worker
+#   Trigger: api (via L5 engine)
 #   Execution: async
-# Role: Emit alerts for near-threshold and breach events
-# Callers: policy/prevention_engine.py
-# Allowed Imports: L4, L5, L6
-# Forbidden Imports: L1, L2
-# Reference: POLICY_CONTROL_LEVER_IMPLEMENTATION_PLAN.md PCL-007
+# Lifecycle:
+#   Emits: alert_sent
+#   Subscribes: none
+# Data Access:
+#   Reads: alert_config
+#   Writes: alert_records (via session.add, NO COMMIT)
+# Database:
+#   Scope: domain (policies)
+#   Models: AlertConfig, AlertRecord
+# Role: Emit alerts for near-threshold and breach events — L6 DOES NOT COMMIT
+# Callers: L5 engines (must provide session, must own transaction boundary)
+# Allowed Imports: L6, L7 (models)
+# Forbidden: session.commit() — L4 owns commit authority
+# Reference: PIN-470, POLICY_CONTROL_LEVER_IMPLEMENTATION_PLAN.md PCL-007, TRANSACTION_BYPASS_REMEDIATION_CHECKLIST.md
 
 """
 Alert Emitter Service
@@ -25,19 +35,16 @@ Alert flow:
 4. Record alert sent status
 """
 
-import json
 import logging
-from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
-from sqlmodel import Session, select
+from sqlmodel import Session
 
-from app.db import engine
 from app.models.alert_config import AlertChannel, AlertConfig
-from app.models.threshold_signal import SignalType, ThresholdSignal
+from app.models.threshold_signal import ThresholdSignal
 
-logger = logging.getLogger("nova.services.alert_emitter")
+logger = logging.getLogger("nova.hoc.policies.alert_emitter")
 
 
 class AlertEmitter:
@@ -45,18 +52,22 @@ class AlertEmitter:
     Emits alerts for threshold events.
 
     Handles alert throttling, channel routing, and delivery tracking.
+
+    Transaction Boundary: L6 drivers DO NOT commit.
+    The caller (L5 engine or L4 coordinator) owns the transaction.
+    This driver only calls session.add() — never session.commit().
     """
 
     def __init__(
         self,
-        session: Optional[Session] = None,
+        session: Session,
         http_client: Optional[httpx.AsyncClient] = None,
     ):
         """
         Initialize alert emitter.
 
         Args:
-            session: Optional SQLModel session (for testing)
+            session: SQLModel session (REQUIRED — caller owns transaction)
             http_client: Optional HTTP client (for testing)
         """
         self._session = session
@@ -379,33 +390,41 @@ class AlertEmitter:
         return True
 
     async def _persist_signal(self, signal: ThresholdSignal) -> None:
-        """Persist signal changes to database."""
-        if self._session:
-            self._session.add(signal)
-            self._session.commit()
-        else:
-            with Session(engine) as session:
-                session.add(signal)
-                session.commit()
+        """
+        Add signal to session for persistence.
+
+        NOTE: L6 drivers DO NOT commit. The caller owns the transaction.
+        This method only calls session.add() — the commit happens at L4/L5.
+        """
+        self._session.add(signal)
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
     async def _persist_config(self, config: AlertConfig) -> None:
-        """Persist config changes to database."""
-        if self._session:
-            self._session.add(config)
-            self._session.commit()
-        else:
-            with Session(engine) as session:
-                session.add(config)
-                session.commit()
+        """
+        Add config to session for persistence.
+
+        NOTE: L6 drivers DO NOT commit. The caller owns the transaction.
+        This method only calls session.add() — the commit happens at L4/L5.
+        """
+        self._session.add(config)
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
 
-# Singleton instance
-_alert_emitter: Optional[AlertEmitter] = None
+def create_alert_emitter(
+    session: Session,
+    http_client: Optional[httpx.AsyncClient] = None,
+) -> AlertEmitter:
+    """
+    Create AlertEmitter with required session.
 
+    L6 drivers are NOT singletons — each operation gets its own instance
+    because the caller owns the session/transaction lifecycle.
 
-def get_alert_emitter() -> AlertEmitter:
-    """Get or create AlertEmitter singleton."""
-    global _alert_emitter
-    if _alert_emitter is None:
-        _alert_emitter = AlertEmitter()
-    return _alert_emitter
+    Args:
+        session: SQLModel session (REQUIRED — caller owns transaction)
+        http_client: Optional HTTP client (for testing)
+
+    Returns:
+        AlertEmitter instance bound to the provided session
+    """
+    return AlertEmitter(session=session, http_client=http_client)

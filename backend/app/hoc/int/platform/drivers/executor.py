@@ -397,7 +397,8 @@ class APSchedulerExecutor:
     ) -> None:
         """Record execution result in JobScheduler."""
         try:
-            from app.services.scheduler import get_job_scheduler
+            # L6 driver import (migrated to HOC per SWEEP-10)
+            from app.hoc.int.platform.drivers.job_scheduler import get_job_scheduler
 
             scheduler = get_job_scheduler()
             scheduler.record_execution(job_id, success, error)
@@ -411,8 +412,11 @@ class APSchedulerExecutor:
     async def _update_job_status(self, job_id: str, status: str) -> None:
         """Update job status in JobScheduler."""
         try:
-            from app.services.scheduler import get_job_scheduler
-            from app.services.scheduler.job_scheduler import JobStatus
+            # L6 driver imports (migrated to HOC per SWEEP-10)
+            from app.hoc.int.platform.drivers.job_scheduler import (
+                JobStatus,
+                get_job_scheduler,
+            )
 
             scheduler = get_job_scheduler()
             job = scheduler.get_job(job_id)
@@ -428,8 +432,11 @@ class APSchedulerExecutor:
     async def _load_pending_jobs(self) -> None:
         """Load pending jobs from JobScheduler and schedule them."""
         try:
-            from app.services.scheduler import get_job_scheduler
-            from app.services.scheduler.job_scheduler import JobStatus
+            # L6 driver imports (migrated to HOC per SWEEP-10)
+            from app.hoc.int.platform.drivers.job_scheduler import (
+                JobStatus,
+                get_job_scheduler,
+            )
 
             scheduler = get_job_scheduler()
             pending_jobs = scheduler.get_jobs(status=JobStatus.PENDING)

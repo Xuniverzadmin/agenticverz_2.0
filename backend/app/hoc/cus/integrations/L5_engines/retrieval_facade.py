@@ -1,14 +1,20 @@
-# Layer: L5 — Driver
+# Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Role: Retrieval Facade - Centralized access to mediated data retrieval
-# Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: (via RetrievalMediator)
+#   Writes: none (facade orchestration only)
+# Role: Retrieval Facade - Centralized access to mediated data retrieval
+# Product: system-wide
 # Callers: L2 retrieval.py API, SDK
-# Allowed Imports: L4 retrieval mediator, L6 (models, db)
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: GAP-094 (Mediated Data Retrieval API)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-094 (Mediated Data Retrieval API)
 
 
 """
@@ -165,7 +171,7 @@ class RetrievalFacade:
         """Lazy-load RetrievalMediator."""
         if self._mediator is None:
             try:
-                from app.services.mediation.retrieval_mediator import (
+                from app.hoc.cus.integrations.L5_engines.retrieval_mediator import (
                     get_retrieval_mediator,
                 )
                 self._mediator = get_retrieval_mediator()

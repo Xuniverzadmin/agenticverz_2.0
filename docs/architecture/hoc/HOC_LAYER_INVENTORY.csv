@@ -19,10 +19,12 @@ engines/phase_status_invariants.py
 engines/plan_generation_engine.py
 facades/run_governance_facade.py",6,"alert_log_linker.py
 alerts_facade.py
+audit_store.py
 canonical_json.py
 compliance_facade.py
 concurrent_runs.py
 control_registry.py
+cus_credential_service.py
 cus_health_shim.py
 db_helpers.py
 deterministic.py
@@ -39,13 +41,15 @@ panel_invariant_monitor.py
 plan_inspector.py
 rate_limiter.py
 runtime.py
+runtime_switch.py
 scheduler_facade.py
-webhook_verify.py",24,"agent.py
+webhook_verify.py",27,"agent.py
 artifact.py
 common.py
 plan.py
+rac_models.py
 response.py
-skill.py",6,"L5_lifecycle/drivers/execution.py
+skill.py",7,"L5_lifecycle/drivers/execution.py
 L5_lifecycle/drivers/knowledge_plane.py
 L5_lifecycle/engines/base.py
 L5_lifecycle/engines/offboarding.py
@@ -69,7 +73,7 @@ governance.py
 run_lifecycle.py
 contract.py
 knowledge_lifecycle.py
-governance_job.py",6,67,Missing: L1
+governance_job.py",6,71,Missing: L1
 2,overview,MISSING: To be built with UI projection,0 (MISSING),MISSING: No dedicated facade,0 (MISSING),overview.py,1,MISSING: No adapters needed,0 (MISSING),L4 only in general/,0,overview_facade.py,1,MISSING: No schemas,0 (MISSING),-,0,overview_facade_driver.py,1,Uses shared models,0,3,Missing: L1
 3,activity,"RunsListPage.tsx
 RunDetailPage.tsx",2,MISSING: No dedicated facade,0 (MISSING),activity.py,1,MISSING: No adapters needed,0 (MISSING),L4 only in general/,0,"activity_enums.py
@@ -80,9 +84,11 @@ pattern_detection_engine.py
 run_governance_facade.py
 signal_feedback_engine.py
 signal_identity.py
-threshold_engine.py",9,MISSING: No schemas,0 (MISSING),-,0,threshold_driver.py,1,"run_lifecycle.py
+threshold_engine.py",9,MISSING: No schemas,0 (MISSING),-,0,"activity_read_driver.py
+run_signal_service.py
+threshold_driver.py",3,"run_lifecycle.py
 execution_envelope.py
-threshold_signal.py",3,16,Complete
+threshold_signal.py",3,18,Complete
 4,incidents,MISSING: To be built with UI projection,0 (MISSING),MISSING: No dedicated facade,0 (MISSING),"cost_guard.py
 incidents.py",2,anomaly_bridge.py,1,L4 only in general/,0,"alert_log_linker.py
 channel_engine.py
@@ -177,6 +183,7 @@ content_accuracy.py
 contract_engine.py
 control_registry.py
 controls_facade.py
+cus_enforcement_service.py
 customer_policy_read_engine.py
 dag_sorter.py
 decisions.py
@@ -203,6 +210,7 @@ keys_shim.py
 kill_switch.py
 limits.py
 limits_facade.py
+limits_simulation_service.py
 llm_policy_engine.py
 mapper.py
 mcp_connector.py
@@ -211,6 +219,9 @@ phase_status_invariants.py
 plan.py
 plan_generation_engine.py
 policies_facade.py
+policies_limits_query_engine.py
+policies_proposals_query_engine.py
+policies_rules_query_engine.py
 policy_command.py
 policy_conflict_resolver.py
 policy_driver.py
@@ -218,7 +229,7 @@ policy_graph_engine.py
 policy_limits_engine.py
 policy_mapper.py
 policy_models.py
-policy_proposal.py
+policy_proposal_engine.py
 policy_rules_engine.py
 prevention_engine.py
 prevention_hook.py
@@ -235,7 +246,7 @@ tokenizer.py
 validator.py
 validator_engine.py
 visitors.py
-worker_execution_command.py",74,"overrides.py
+worker_execution_command.py",79,"overrides.py
 policy_limits.py
 policy_rules.py
 retry.py
@@ -244,29 +255,35 @@ L5_controls/drivers/runtime_switch.py
 L5_controls/engines/customer_killswitch_read_engine.py
 L5_controls/engines/degraded_mode_checker.py",4,"alert_emitter.py
 arbitrator.py
+budget_enforcement_driver.py
 capture.py
 cross_domain.py
 dag_executor.py
 governance_signal_driver.py
 keys_driver.py
+limits_read_driver.py
 llm_threshold_driver.py
 optimizer_conflict_resolver.py
 orphan_recovery.py
 override_driver.py
 policy_engine_driver.py
+policy_graph_driver.py
 policy_limits_driver.py
+policy_proposal_read_driver.py
+policy_proposal_write_driver.py
 policy_read_driver.py
 policy_rules_driver.py
+policy_rules_read_driver.py
+proposals_read_driver.py
 recovery_matcher.py
 recovery_write_driver.py
 scope_resolver.py
-symbol_table.py
-transaction_coordinator.py",20,"policy_control_plane.py
+symbol_table.py",26,"policy_control_plane.py
 override_authority.py
 policy_scope.py
 policy.py
 policy_precedence.py
-policy_snapshot.py",6,147,Missing: L1
+policy_snapshot.py",6,158,Missing: L1
 6,logs,LoginPage.tsx,1,MISSING: No dedicated facade,0 (MISSING),"cost_intelligence.py
 guard_logs.py
 tenants.py
@@ -274,6 +291,7 @@ traces.py",4,export_bundle_adapter.py,1,L4 only in general/,0,"alert_fatigue.py
 alerts_facade.py
 audit_durability.py
 audit_evidence.py
+audit_ledger_service.py
 audit_reconciler.py
 certificate.py
 completeness_checker.py
@@ -303,8 +321,9 @@ scheduler_facade.py
 service.py
 trace_facade.py
 traces_metrics.py
-traces_models.py",34,"audit_models.py
-models.py",2,-,0,"audit_store.py
+traces_models.py",35,"audit_models.py
+models.py",2,-,0,"audit_ledger_service_async.py
+audit_store.py
 export_bundle_store.py
 idempotency.py
 integrity.py
@@ -314,10 +333,10 @@ panel_consistency_checker.py
 pg_store.py
 replay.py
 store.py
-traces_store.py",11,"export_bundles.py
+traces_store.py",12,"export_bundles.py
 audit_ledger.py
 logs_records.py
-log_exports.py",4,57,Complete
+log_exports.py",4,59,Complete
 7,analytics,"CostPage.tsx
 UsagePage.tsx",2,MISSING: No dedicated facade,0 (MISSING),"costsim.py
 feedback.py
@@ -347,18 +366,20 @@ provenance.py
 s1_retry_backoff.py
 s2_cost_smoothing.py
 sandbox.py",24,MISSING: No schemas,0 (MISSING),-,0,"alert_driver.py
+analytics_read_driver.py
 audit_persistence.py
 circuit_breaker.py
 circuit_breaker_async.py
 cost_anomaly_driver.py
 cost_write_driver.py
 leader.py
+pattern_detection_driver.py
 prediction_driver.py
-provenance_async.py",9,"costsim_cb.py
+provenance_async.py",11,"costsim_cb.py
 feedback.py
 monitor_config.py
 prediction.py
-alert_config.py",5,46,Complete
+alert_config.py",5,48,Complete
 8,integrations,MISSING: To be built with UI projection,0 (MISSING),MISSING: No dedicated facade,0 (MISSING),"cus_telemetry.py
 protection_dependencies.py
 session_context.py",3,"cloud_functions_adapter.py
@@ -392,6 +413,8 @@ cost_safety_rails.py
 cost_snapshots.py
 credentials/protocol.py
 cus_health_engine.py
+cus_integration_service.py
+cus_telemetry_service.py
 datasources_facade.py
 dispatcher.py
 graduation_engine.py
@@ -405,7 +428,7 @@ prevention_contract.py
 retrieval_facade.py
 retrieval_mediator.py
 sql_gateway.py
-types.py",21,"audit_schemas.py
+types.py",23,"audit_schemas.py
 cost_snapshot_schemas.py
 cus_schemas.py
 datasource_model.py
@@ -416,7 +439,7 @@ connector_registry.py
 execution.py
 external_response_driver.py
 knowledge_plane.py",5,"external_response.py
-retrieval_evidence.py",2,64,Missing: L1
+retrieval_evidence.py",2,66,Missing: L1
 9,api_keys,MISSING: To be built with UI projection,0 (MISSING),MISSING: No dedicated facade,0 (MISSING),"auth_helpers.py
 embedding.py",2,MISSING: No adapters needed,0 (MISSING),L4 only in general/,0,"api_keys_facade.py
 email_verification.py
@@ -436,4 +459,4 @@ tenant_driver.py
 user_write_driver.py
 worker_registry_driver.py",4,"tenant.py
 cus_models.py",2,19,Complete
-,TOTAL,,6,,0,,60,,29,,6,,225,,18,,22,,76,,30,472,
+,TOTAL,,6,,0,,60,,29,,6,,236,,19,,22,,87,,30,495,

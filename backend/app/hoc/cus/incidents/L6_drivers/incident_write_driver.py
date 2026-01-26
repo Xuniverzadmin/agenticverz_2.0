@@ -1,10 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Incident, IncidentEvent, Policy, Run, AosTrace
+#   Writes: Incident, IncidentEvent, PreventionRecord, PolicyProposal, Run, AosTrace
+# Database:
+#   Scope: domain (incidents)
+#   Models: Incident, IncidentEvent, IncidentStatus
 # Role: Data access for incident write operations
-# Callers: incident engines (L4)
-# Allowed Imports: ORM models, sqlalchemy
+# Callers: incident engines (L5)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-281, PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, PIN-281, PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
 #
 # GOVERNANCE NOTE:
 # This L6 driver provides pure data access for incident writes.
@@ -513,9 +526,7 @@ class IncidentWriteDriver:
             })
         return incidents
 
-    def commit(self) -> None:
-        """Commit the current transaction."""
-        self._session.commit()
+    # REMOVED: commit() helper — L6 DOES NOT COMMIT (L4 coordinator owns transaction boundary)
 
 
 def get_incident_write_driver(session: Session) -> IncidentWriteDriver:

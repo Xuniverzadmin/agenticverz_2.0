@@ -1,14 +1,19 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Product: system-wide (Cost Intelligence)
 # Temporal:
 #   Trigger: api
-#   Execution: sync (delegates to L6 driver)
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via cost_write_driver (L6)
+#   Writes: via cost_write_driver (L6)
 # Role: Cost write operations (L5 facade over L6 driver)
 # Callers: api/cost_intelligence.py
-# Allowed Imports: L6 (drivers only, NOT ORM models)
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
 # NOTE: Renamed cost_write_service.py → cost_write_engine.py (2026-01-24)
 #       per BANNED_NAMING rule (*_service.py → *_engine.py)
 #       Layer reclassified L4→L5 per HOC Layer Topology V1

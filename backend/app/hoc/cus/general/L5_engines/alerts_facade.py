@@ -1,14 +1,20 @@
 # Layer: L5 — Adapter (Facade)
 # AUDIENCE: CUSTOMER
-# Role: Alerts Facade - Thin translation layer for alert operations
 # Product: system-wide
 # Temporal:
 #   Trigger: api or worker (alert processing)
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via L6 drivers
+#   Writes: via L6 drivers
+# Role: Alerts Facade - Thin translation layer for alert operations
 # Callers: L2 alerts.py API, SDK, Worker
 # Allowed Imports: L5 (engines), L6 (drivers)
-# Forbidden Imports: L1, L2
-# Reference: GAP-110 (Alert Configuration API), GAP-111 (Alert History API), GAP-124 (Alert Routing API)
+# Forbidden Imports: L1, L2, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-110 (Alert Configuration API), GAP-111 (Alert History API), GAP-124 (Alert Routing API)
 # NOTE: Reclassified L6→L3 (2026-01-24) - Per HOC topology, facades are L3 (adapters)
 
 

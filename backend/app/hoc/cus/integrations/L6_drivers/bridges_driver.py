@@ -1,13 +1,23 @@
-# Layer: L6 — Drivers
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Temporal:
-#   Trigger: api|worker
+#   Trigger: api|worker (via L5 engine)
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: PolicyActivationAudit, ConfidenceCalculator
+#   Writes: PolicyActivationAudit (session.commit)
+# Database:
+#   Scope: domain (integrations)
+#   Models: PolicyActivationAudit
 # Role: Database operations for integration bridges
 # Callers: bridges_engine
-# Allowed Imports: stdlib, sqlalchemy
-# Forbidden Imports: L1-L5 business logic
-# Reference: HOC_LAYER_TOPOLOGY_V1.md, INTEGRATIONS_PHASE2.5_IMPLEMENTATION_PLAN.md
+# Allowed Imports: L6, L7 (models)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, HOC_LAYER_TOPOLOGY_V1.md, INTEGRATIONS_PHASE2.5_IMPLEMENTATION_PLAN.md
 
 """
 M25 Bridges Driver
@@ -87,7 +97,7 @@ async def record_policy_activation(
                 "tenant_id": audit.tenant_id,
             },
         )
-        await session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
     logger.info(f"Policy activation audit recorded: {policy_id} (confidence={confidence:.2f}, path={approval_path})")
 

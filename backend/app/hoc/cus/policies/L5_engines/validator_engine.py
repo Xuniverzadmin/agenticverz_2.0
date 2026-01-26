@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: issues (via driver)
+#   Writes: verdicts (via driver)
 # Role: Issue Validator - pure analysis, advisory verdicts (pure business logic)
 # Callers: L3 (adapters), L4 (orchestrators)
-# Allowed Imports: L6 (drivers)
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: PIN-287, VALIDATOR_LOGIC.md, part2-design-v1
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-287, VALIDATOR_LOGIC.md, part2-design-v1
 # NOTE: Renamed validator_service.py → validator_engine.py (2026-01-24) - BANNED_NAMING fix
 #       Reclassified L4→L5 per HOC Topology V1
 #

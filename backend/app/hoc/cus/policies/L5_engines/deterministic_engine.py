@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: policies (via driver)
+#   Writes: none
 # Role: Deterministic policy execution engine
 # Callers: policy evaluators, workers
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
-# Reference: Policy System
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, Policy System
 
 # M20 Policy Runtime - Deterministic Engine
 # MN-OS Layer 0: No randomness, reproducible execution

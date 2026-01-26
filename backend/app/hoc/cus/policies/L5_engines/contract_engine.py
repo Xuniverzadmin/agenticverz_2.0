@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: contract_state_change
+#   Subscribes: none
+# Data Access:
+#   Reads: contracts (via driver)
+#   Writes: contracts (via driver)
 # Role: Contract Engine - stateful contract state machine (pure business logic)
 # Callers: L3 (adapters), L4 (orchestrators)
-# Allowed Imports: L6 (drivers)
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: PIN-291, SYSTEM_CONTRACT_OBJECT.md, part2-design-v1
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-291, SYSTEM_CONTRACT_OBJECT.md, part2-design-v1
 # NOTE: Renamed contract_service.py → contract_engine.py (2026-01-24) - BANNED_NAMING fix
 #       Reclassified L4→L5 per HOC Topology V1
 #
@@ -87,11 +93,12 @@ from app.models.contract import (
     TransitionRecord,
     ValidatorVerdictData,
 )
-from app.services.governance.eligibility_engine import (
+# Rewired to L4_runtime (Sweep-02A)
+from app.hoc.cus.general.L4_runtime.engines import (
     EligibilityDecision,
     EligibilityVerdict,
+    ValidatorVerdict,
 )
-from app.services.governance.validator_service import ValidatorVerdict
 
 # Contract Service version
 CONTRACT_SERVICE_VERSION = "1.0.0"

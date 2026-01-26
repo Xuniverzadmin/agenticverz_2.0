@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: import-time
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (dataclass definitions)
+#   Writes: none
 # Role: KnowledgePlane domain models and registry (pure dataclass definitions)
 # Callers: lifecycle engines, drivers
 # Allowed Imports: None (foundational)
-# Forbidden Imports: L1, L2, L3, L4, L6 (no DB)
-# Reference: GAP-056 (KnowledgePlane model)
+# Forbidden Imports: L1, L2, L3, L4, L6 (no DB), sqlalchemy
+# Reference: PIN-470, GAP-056 (KnowledgePlane model)
 # NOTE: Reclassified L6→L5 (2026-01-24) - Pure dataclass definitions, no DB imports
 """
 KnowledgePlane - Knowledge plane models and registry.

@@ -2,11 +2,20 @@
 # AUDIENCE: CUSTOMER
 # Product: ai-console
 # Location: hoc/cus/activity/L5_engines/threshold_engine.py
+# Temporal:
+#   Trigger: api, worker
+#   Execution: async/sync
+# Lifecycle:
+#   Emits: THRESHOLD_EVALUATED
+#   Subscribes: none
+# Data Access:
+#   Reads: Limit (via driver)
+#   Writes: none (evaluation only)
 # Role: Threshold resolution and evaluation logic (decision engine)
 # Callers: L3 Adapters, API routes
-# Allowed Imports: L5, L6 (driver interface)
-# Forbidden Imports: L1, L2, L3, L7, sqlalchemy, sqlmodel
-# Reference: PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
 #
 # L4 is reserved for general/L4_runtime/ only per HOC Layer Topology.
 #

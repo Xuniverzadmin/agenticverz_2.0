@@ -34,7 +34,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import List
 
-from app.services.ops_domain_models import OpsIncident
+from app.hoc.fdr.ops.schemas.ops_domain_models import OpsIncident
 
 # =============================================================================
 # L3 View DTOs (Founder-facing, not domain models)

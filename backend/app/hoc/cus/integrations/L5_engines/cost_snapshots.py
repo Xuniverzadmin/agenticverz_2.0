@@ -3,12 +3,21 @@
 # Temporal:
 #   Trigger: api|worker
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: (via embedded DB)
+#   Writes: (via embedded DB - session.commit)
 # Role: Cost snapshot computation with embedded DB operations
 # Callers: workers, cost services
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
 # Note: This file contains L5 business logic with embedded L6 DB operations.
 #       Schemas have been extracted to schemas/cost_snapshot_schemas.py.
 #       Full L5/L6 separation requires refactoring the Computer classes.
-# Reference: HOC_LAYER_TOPOLOGY_V1.md, INTEGRATIONS_PHASE2.5_IMPLEMENTATION_PLAN.md
+# Reference: PIN-470, HOC_LAYER_TOPOLOGY_V1.md, INTEGRATIONS_PHASE2.5_IMPLEMENTATION_PLAN.md
 
 """M27 Cost Snapshots - Deterministic Enforcement Barrier
 
@@ -444,7 +453,7 @@ class SnapshotComputer:
                 "created_at": snapshot.created_at,
             },
         )
-        await self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
     async def _update_snapshot(self, snapshot: CostSnapshot) -> None:
         """Update snapshot record."""
@@ -468,7 +477,7 @@ class SnapshotComputer:
                 "error_message": snapshot.error_message,
             },
         )
-        await self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
     async def _insert_aggregate(self, agg: SnapshotAggregate) -> None:
         """Insert aggregate record."""
@@ -514,7 +523,7 @@ class SnapshotComputer:
                 "created_at": datetime.now(timezone.utc),
             },
         )
-        await self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
 
 # =============================================================================
@@ -648,7 +657,7 @@ class BaselineComputer:
                 "last_snapshot_id": baseline.last_snapshot_id,
             },
         )
-        await self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
 
 # =============================================================================
@@ -798,7 +807,7 @@ class SnapshotAnomalyDetector:
                 "evaluated_at": evaluation.evaluated_at,
             },
         )
-        await self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
     async def _create_anomaly_from_evaluation(
         self,
@@ -846,7 +855,7 @@ class SnapshotAnomalyDetector:
                 "detected_at": evaluation.evaluated_at,
             },
         )
-        await self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         logger.info(f"Created anomaly {anomaly_id} from snapshot evaluation")
         return anomaly_id

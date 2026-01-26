@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: import-time
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (static registry)
+#   Writes: none
 # Role: SOC2 Trust Service Criteria control registry (pure business logic)
 # Callers: services/soc2/mapper.py, services/export_bundle_service.py
 # Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: GAP-025 (SOC2 Control Mapping)
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-025 (SOC2 Control Mapping)
 # NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 
 """

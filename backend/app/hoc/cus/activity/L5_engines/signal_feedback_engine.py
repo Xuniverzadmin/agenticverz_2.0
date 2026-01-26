@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: SIGNAL_ACKNOWLEDGED, SIGNAL_SUPPRESSED
+#   Subscribes: none
+# Data Access:
+#   Reads: none (in-memory)
+#   Writes: none (in-memory)
 # Role: Signal feedback engine for acknowledging/suppressing signals
 # Callers: activity_facade.py
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: Activity Domain
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, Activity Domain
 # NOTE: Renamed signal_feedback_service.py → signal_feedback_engine.py (2026-01-24)
 #       per BANNED_NAMING rule (*_service.py → *_engine.py)
 """Signal feedback engine for user interactions with signals."""

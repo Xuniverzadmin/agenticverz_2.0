@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api or worker (scheduled execution)
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via L6 drivers
+#   Writes: via L6 drivers
 # Role: Scheduler Facade - Thin translation layer for job scheduling operations
 # Callers: L2 scheduler.py API, SDK, Worker
 # Allowed Imports: L5 (engines), L6 (drivers)
-# Forbidden Imports: L1, L2
-# Reference: GAP-112 (Scheduled Job API)
+# Forbidden Imports: L1, L2, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-112 (Scheduled Job API)
 # NOTE: Reclassified L4→L3 (2026-01-24) - Per HOC topology, facades are L3 (adapters)
 
 """
@@ -36,7 +42,8 @@ L2 API Routes (GAP-112):
 - GET /api/v1/scheduler/jobs/{id}/runs (job run history)
 
 Usage:
-    from app.services.scheduler.facade import get_scheduler_facade
+    # L5 engine import (migrated to HOC per SWEEP-10)
+    from app.hoc.cus.general.L5_engines.scheduler_facade import get_scheduler_facade
 
     facade = get_scheduler_facade()
 

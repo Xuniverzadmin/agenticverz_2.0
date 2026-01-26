@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Severity calculation and escalation decisions for incidents
 # Callers: incident_aggregator.py (L6), incident engines
-# Allowed Imports: models (types only)
-# Forbidden Imports: L1, L2, L3, L5, L6, sqlalchemy
-# Reference: INCIDENTS_PHASE2.5_IMPLEMENTATION_PLAN.md — Violation I.3
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, INCIDENTS_PHASE2.5_IMPLEMENTATION_PLAN.md — Violation I.3
 
 """
 Incident Severity Engine (L4)

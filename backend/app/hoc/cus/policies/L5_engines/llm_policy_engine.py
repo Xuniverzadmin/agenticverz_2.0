@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: llm_config (via driver)
+#   Writes: none
 # Role: LLM policy and safety limits enforcement (pure logic)
 # Callers: OpenAIAdapter (L3), TenantLLMConfig (L3), llm_invoke skills
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: PIN-254 Phase B Fix
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-254 Phase B Fix
 # NOTE: Reclassified L6→L5 (2026-01-24) - no Session imports, pure logic
 
 """

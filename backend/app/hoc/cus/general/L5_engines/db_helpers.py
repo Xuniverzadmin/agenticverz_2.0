@@ -4,12 +4,20 @@
 # Temporal:
 #   Trigger: any
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via session (passed in)
+#   Writes: via session (get_or_create)
 # Role: Database row extraction utilities (pure computation on Row objects)
 # Callers: services, drivers
 # Allowed Imports: None (foundational)
-# Forbidden Imports: L1, L2, L3, L4, L6 (no DB Session)
-# Reference: Core Infrastructure
+# Forbidden Imports: L1, L2, L3, L4
+# Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
+# Reference: PIN-470, Core Infrastructure
 # NOTE: Reclassified L6→L5 (2026-01-24) - Operates on Row objects passed in, no Session imports
+# NOTE: Contains get_or_create() which writes via passed session
 
 """Database helper functions for SQLModel row extraction.
 
@@ -423,7 +431,7 @@ def get_or_create(
 
     instance = model_class(**create_kwargs)
     session.add(instance)
-    session.commit()
+    session.flush()  # Get generated data, NO COMMIT — L4 owns transaction
     session.refresh(instance)
 
     return instance, True

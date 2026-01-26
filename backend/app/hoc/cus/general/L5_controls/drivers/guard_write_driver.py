@@ -1,10 +1,24 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
+# Product: AI Console (Guard)
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: KillSwitchState, Incident
+#   Writes: KillSwitchState, Incident, IncidentEvent
+# Database:
+#   Scope: domain (general)
+#   Models: KillSwitchState, Incident, IncidentEvent
 # Role: Data access for guard/killswitch write operations
-# Callers: guard engines (L4)
-# Allowed Imports: ORM models
+# Callers: guard engines (L5)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
 #
 # GOVERNANCE NOTE:
 # This L6 driver provides pure data access for guard writes.
@@ -124,7 +138,7 @@ class GuardWriteDriver:
             trigger=trigger or TriggerType.MANUAL.value,
         )
         self._session.add(state)
-        self._session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
         return state
 
     def unfreeze_killswitch(
@@ -141,7 +155,7 @@ class GuardWriteDriver:
         """
         state.unfreeze(by=by)
         self._session.add(state)
-        self._session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
         return state
 
     # =========================================================================
@@ -157,7 +171,7 @@ class GuardWriteDriver:
         """
         incident.status = IncidentStatus.ACKNOWLEDGED.value
         self._session.add(incident)
-        self._session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
         return incident
 
     def resolve_incident(self, incident: Incident) -> Incident:
@@ -172,7 +186,7 @@ class GuardWriteDriver:
         if incident.started_at:
             incident.duration_seconds = int((incident.ended_at - incident.started_at).total_seconds())
         self._session.add(incident)
-        self._session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
         return incident
 
     def create_demo_incident(
@@ -241,7 +255,7 @@ class GuardWriteDriver:
             self._session.add(event)
             created_events.append(event)
 
-        self._session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         return incident, created_events
 

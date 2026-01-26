@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: scheduler
 #   Execution: async
+# Lifecycle:
+#   Emits: panel_empty_alert, panel_stale_alert
+#   Subscribes: none
+# Data Access:
+#   Reads: Panel metrics (via driver)
+#   Writes: none
 # Role: Monitor panel invariants and detect silent governance failures
 # Callers: main.py (scheduler), ops endpoints
-# Allowed Imports: L6, L7 (stdlib, yaml, prometheus_client)
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: PIN-411 (Gap Closure - Part B)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-411 (Gap Closure - Part B)
 # NOTE: Reclassified L6→L5 (2026-01-24) - Pure monitoring logic, not SQL driver
 #       Remains in drivers/ per Layer ≠ Directory principle
 

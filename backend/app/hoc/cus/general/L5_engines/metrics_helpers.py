@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: any
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none (Prometheus metrics are in-memory)
 # Role: Metrics helper functions (Prometheus)
 # Callers: all modules
 # Allowed Imports: L6, L7 (stdlib, prometheus_client)
 # Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: Observability
+# Reference: PIN-470, Observability
 # NOTE: Reclassified L6→L5 (2026-01-24) - Prometheus utilities, not SQL driver
 #       Remains in drivers/ per Layer ≠ Directory principle
 

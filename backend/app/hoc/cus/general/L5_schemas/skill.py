@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: import-time
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Skill API schemas (pure Pydantic DTOs)
 # Callers: API routes, engines
 # Allowed Imports: None (foundational)
-# Forbidden Imports: L1, L2, L3, L4, L6 (no DB)
-# Reference: API Schemas
+# Forbidden Imports: L1, L2, L3, L4, L6 (no DB), sqlalchemy
+# Reference: PIN-470, API Schemas
 # NOTE: Reclassified L6→L5 (2026-01-24) - Pure Pydantic schemas, no boundary crossing
 
 # Skill I/O Schemas

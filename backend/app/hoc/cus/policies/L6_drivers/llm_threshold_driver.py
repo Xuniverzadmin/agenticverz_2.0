@@ -1,13 +1,22 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
-#   Trigger: api | worker
+#   Trigger: api (via L5 engine)
 #   Execution: sync
+# Lifecycle:
+#   Emits: threshold_signal
+#   Subscribes: none
+# Data Access:
+#   Reads: thresholds, runs
+#   Writes: ops_events, run_signals
+# Database:
+#   Scope: domain (policies)
+#   Models: Threshold, Run, OpsEvent
 # Role: LLM run threshold resolution and evaluation
 # Callers: api/activity/*, worker/runtime/*
-# Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
-# Reference: Policies → Limits → Thresholds → Set Params panel
+# Allowed Imports: L6, L7 (models)
+# Reference: PIN-470, Policies → Limits → Thresholds → Set Params panel
 #
 # =============================================================================
 # SIGNAL EMISSION ARCHITECTURE
@@ -709,7 +718,7 @@ def emit_threshold_signal_sync(
 
     For use in sync contexts (e.g., worker callbacks).
     """
-    from app.services.event_emitter import (
+    from app.hoc.int.agent.drivers.event_emitter import (
         EntityType,
         EventEmitter,
         EventType,
@@ -790,7 +799,8 @@ def emit_and_persist_threshold_signal(
 
     Reference: Threshold Signal Wiring to Customer Console Plan
     """
-    from app.services.activity.run_signal_service import RunSignalService
+    # L6 driver import (migrated to HOC per SWEEP-03)
+    from app.hoc.cus.activity.L6_drivers.run_signal_service import RunSignalService
 
     # 1. Emit to ops_events for Founder Console monitoring
     # NOTE: ops_events is FOUNDER CONSOLE ONLY - not transmitted to customer endpoints

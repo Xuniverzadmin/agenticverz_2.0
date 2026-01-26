@@ -1,13 +1,20 @@
-# Layer: L5 — Domain Engines
-# Product: system-wide
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Temporal:
 #   Trigger: api (aos_sdk.access calls)
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: (via injected connectors)
+#   Writes: none (mediation only)
 # Role: Unified mediation layer for all external data access
+# Product: system-wide
 # Callers: L2 API routes, skill execution
-# Allowed Imports: L6 (logging, datetime)
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: GAP-065
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-065
 
 """
 Module: retrieval_mediator

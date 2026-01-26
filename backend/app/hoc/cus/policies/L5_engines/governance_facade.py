@@ -36,7 +36,7 @@ L2 API Routes (GAP-090 to GAP-095):
 - GET /api/v1/governance/boot-status (GAP-095)
 
 Usage:
-    from app.services.governance.facade import get_governance_facade
+    from app.hoc.cus.policies.L5_engines.governance_facade import get_governance_facade
 
     facade = get_governance_facade()
 
@@ -197,7 +197,7 @@ class GovernanceFacade:
         )
 
         try:
-            from app.services.governance.runtime_switch import (
+            from app.hoc.cus.general.L5_engines.runtime_switch import (
                 disable_governance_runtime,
                 get_governance_state,
                 is_governance_active,
@@ -261,7 +261,7 @@ class GovernanceFacade:
         )
 
         try:
-            from app.services.governance.runtime_switch import (
+            from app.hoc.cus.general.L5_engines.runtime_switch import (
                 enable_governance_runtime,
                 is_governance_active,
             )
@@ -321,7 +321,7 @@ class GovernanceFacade:
         )
 
         try:
-            from app.services.governance.runtime_switch import (
+            from app.hoc.cus.general.L5_engines.runtime_switch import (
                 enter_degraded_mode,
                 exit_degraded_mode,
                 enable_governance_runtime,
@@ -384,7 +384,7 @@ class GovernanceFacade:
             GovernanceStateResult with current state details
         """
         try:
-            from app.services.governance.runtime_switch import (
+            from app.hoc.cus.general.L5_engines.runtime_switch import (
                 get_governance_state as get_runtime_state,
                 is_governance_active,
                 is_degraded_mode,
@@ -531,7 +531,7 @@ class GovernanceFacade:
             BootStatusResult with component health details
         """
         try:
-            from app.services.governance.runtime_switch import is_governance_active
+            from app.hoc.cus.general.L5_engines.runtime_switch import is_governance_active
 
             # Check core components
             components = {
@@ -551,7 +551,8 @@ class GovernanceFacade:
 
             # Check optional components
             try:
-                from app.services.policy.facade import get_policy_facade
+                # L5 engine import (migrated to HOC per SWEEP-47)
+                from app.hoc.cus.policies.L5_engines.policy_driver import get_policy_facade
                 policy_facade = get_policy_facade()
                 components["policy_facade"] = {
                     "status": "healthy",

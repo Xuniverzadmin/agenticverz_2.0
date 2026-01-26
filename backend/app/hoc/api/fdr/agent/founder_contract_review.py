@@ -62,7 +62,8 @@ from app.models.contract import (
     ContractStatus,
     InvalidTransitionError,
 )
-from app.services.governance.contract_service import (
+# L5 engine import (migrated to HOC per SWEEP-03)
+from app.hoc.cus.policies.L5_engines.contract_engine import (
     ContractService,
     ContractState,
 )

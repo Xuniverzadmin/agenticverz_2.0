@@ -1,13 +1,20 @@
-# Layer: L5 — Domain Engines
-# Product: system-wide
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Temporal:
 #   Trigger: api (via mediation layer)
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (external HTTP calls)
+#   Writes: none
 # Role: Machine-controlled HTTP connector (NOT LLM-controlled)
+# Product: system-wide
 # Callers: RetrievalMediator
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: GAP-059
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-059
 
 """
 Module: http_connector

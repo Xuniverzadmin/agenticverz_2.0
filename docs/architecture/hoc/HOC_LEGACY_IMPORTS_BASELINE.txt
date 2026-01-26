@@ -1,0 +1,286 @@
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L6_drivers/transaction_coordinator.py:65:    from app.services.governance.transaction_coordinator import (
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L6_drivers/transaction_coordinator.py:93:from app.services.audit import (
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L6_drivers/transaction_coordinator.py:403:            from app.services.incidents.facade import get_incident_facade
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L6_drivers/transaction_coordinator.py:470:            from app.services.governance.run_governance_facade import get_run_governance_facade
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L6_drivers/transaction_coordinator.py:533:            from app.services.observability.trace_facade import get_trace_facade
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L6_drivers/llm_threshold_driver.py:721:    from app.services.event_emitter import (
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L6_drivers/llm_threshold_driver.py:802:    from app.services.activity.run_signal_service import RunSignalService
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/run_governance_facade.py:37:    from app.services.governance.run_governance_facade import get_run_governance_facade
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/run_governance_facade.py:88:            from app.services.policy.lessons_engine import get_lessons_learned_engine
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/run_governance_facade.py:134:            from app.services.policy_violation_service import create_policy_evaluation_sync
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/run_governance_facade.py:169:            from app.services.audit.models import AuditAction, AuditDomain, DomainAck
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/run_governance_facade.py:170:            from app.services.audit.store import get_audit_store
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/governance_facade.py:39:    from app.services.governance.facade import get_governance_facade
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/governance_facade.py:200:            from app.services.governance.runtime_switch import (
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/governance_facade.py:264:            from app.services.governance.runtime_switch import (
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/governance_facade.py:324:            from app.services.governance.runtime_switch import (
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/governance_facade.py:387:            from app.services.governance.runtime_switch import (
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/governance_facade.py:534:            from app.services.governance.runtime_switch import is_governance_active
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/governance_facade.py:554:                from app.services.policy.facade import get_policy_facade
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/profile.py:31:    from app.services.governance.profile import (
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/eligibility_engine.py:74:from app.services.governance.validator_service import (
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/certificate.py:21:    from app.services.certificate import CertificateService, CertificateRequest
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/certificate.py:44:from app.services.replay_determinism import (
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/replay_determinism.py:40:    from app.services.replay_determinism import (
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/policy_limits_engine.py:75:from app.services.logs.audit_ledger_service_async import AuditLedgerServiceAsync
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/policy_mapper.py:432:            from app.services.policies import get_policy_engine
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/policy_rules_engine.py:76:from app.services.logs.audit_ledger_service_async import AuditLedgerServiceAsync
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/limits_facade.py:42:    from app.services.limits.facade import get_limits_facade
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/mapper.py:34:from app.services.soc2.control_registry import (
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/policy_driver.py:42:    from app.services.policy.policy_driver import get_policy_driver
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/governance_orchestrator.py:81:from app.services.governance.contract_service import ContractService, ContractState
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/policy_proposal_engine.py:51:from app.services.logs.audit_ledger_service_async import AuditLedgerServiceAsync
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/policy_proposal_engine.py:52:from app.services.policy_graph_engine import (
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/controls_facade.py:42:    from app.services.controls.facade import get_controls_facade
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/contract_engine.py:96:from app.services.governance.eligibility_engine import (
+/root/agenticverz2.0/backend/app/hoc/cus/policies/L5_engines/contract_engine.py:100:from app.services.governance.validator_service import ValidatorVerdict
+/root/agenticverz2.0/backend/app/hoc/cus/duplicates/cost_anomaly_detector.py:55:from app.services.governance.cross_domain import create_incident_from_cost_anomaly_sync
+/root/agenticverz2.0/backend/app/hoc/cus/activity/L6_drivers/threshold_driver.py:279:    from app.services.event_emitter import (
+/root/agenticverz2.0/backend/app/hoc/cus/activity/L6_drivers/threshold_driver.py:360:    from app.services.activity.run_signal_service import RunSignalService
+/root/agenticverz2.0/backend/app/hoc/cus/activity/L5_engines/run_governance_facade.py:45:    from app.services.governance.run_governance_facade import get_run_governance_facade
+/root/agenticverz2.0/backend/app/hoc/cus/activity/L5_engines/run_governance_facade.py:96:            from app.services.policy.lessons_engine import get_lessons_learned_engine
+/root/agenticverz2.0/backend/app/hoc/cus/activity/L5_engines/run_governance_facade.py:142:            from app.services.policy_violation_service import create_policy_evaluation_sync
+/root/agenticverz2.0/backend/app/hoc/cus/activity/L5_engines/run_governance_facade.py:177:            from app.services.audit.models import AuditAction, AuditDomain, DomainAck
+/root/agenticverz2.0/backend/app/hoc/cus/activity/L5_engines/run_governance_facade.py:178:            from app.services.audit.store import get_audit_store
+/root/agenticverz2.0/backend/app/hoc/cus/activity/L5_engines/activity_facade.py:63:from app.services.activity.attention_ranking_service import AttentionRankingService
+/root/agenticverz2.0/backend/app/hoc/cus/activity/L5_engines/activity_facade.py:64:from app.services.activity.cost_analysis_service import CostAnalysisService
+/root/agenticverz2.0/backend/app/hoc/cus/activity/L5_engines/activity_facade.py:65:from app.services.activity.pattern_detection_service import PatternDetectionService
+/root/agenticverz2.0/backend/app/hoc/cus/activity/L5_engines/activity_facade.py:66:from app.services.activity.signal_feedback_service import (
+/root/agenticverz2.0/backend/app/hoc/cus/activity/L5_engines/activity_facade.py:72:from app.services.activity.signal_identity import compute_signal_fingerprint_from_row
+/root/agenticverz2.0/backend/app/hoc/cus/activity/L5_engines/activity_facade.py:319:from app.services.activity.pattern_detection_service import (
+/root/agenticverz2.0/backend/app/hoc/cus/activity/L5_engines/activity_facade.py:323:from app.services.activity.cost_analysis_service import (
+/root/agenticverz2.0/backend/app/hoc/cus/activity/L5_engines/activity_facade.py:327:from app.services.activity.attention_ranking_service import (
+/root/agenticverz2.0/backend/app/hoc/cus/account/L5_engines/profile.py:31:    from app.services.governance.profile import (
+/root/agenticverz2.0/backend/app/hoc/cus/analytics/L3_adapters/v2_adapter.py:130:        from app.services.cost_model_engine import get_skill_coefficients
+/root/agenticverz2.0/backend/app/hoc/cus/analytics/L3_adapters/v2_adapter.py:141:        from app.services.cost_model_engine import estimate_step_cost
+/root/agenticverz2.0/backend/app/hoc/cus/analytics/L3_adapters/v2_adapter.py:334:        from app.services.cost_model_engine import classify_drift
+/root/agenticverz2.0/backend/app/hoc/cus/analytics/L5_engines/detection_facade.py:46:    from app.services.detection.facade import get_detection_facade
+/root/agenticverz2.0/backend/app/hoc/cus/analytics/L5_engines/detection_facade.py:203:            from app.services.cost_anomaly_detector import CostAnomalyDetector
+/root/agenticverz2.0/backend/app/hoc/cus/analytics/L5_engines/detection_facade.py:303:            from app.services.cost_anomaly_detector import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L5_workflow/contracts/engines/contract_engine.py:97:from app.services.governance.eligibility_engine import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L5_workflow/contracts/engines/contract_engine.py:101:from app.services.governance.validator_service import ValidatorVerdict
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/drivers/transaction_coordinator.py:65:    from app.services.governance.transaction_coordinator import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/drivers/transaction_coordinator.py:93:from app.services.audit import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/drivers/transaction_coordinator.py:403:            from app.services.incidents.facade import get_incident_facade
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/drivers/transaction_coordinator.py:470:            from app.services.governance.run_governance_facade import get_run_governance_facade
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/drivers/transaction_coordinator.py:533:            from app.services.observability.trace_facade import get_trace_facade
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/facades/run_governance_facade.py:42:    from app.services.governance.run_governance_facade import get_run_governance_facade
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/facades/run_governance_facade.py:93:            from app.services.policy.lessons_engine import get_lessons_learned_engine
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/facades/run_governance_facade.py:139:            from app.services.policy_violation_service import create_policy_evaluation_sync
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/facades/run_governance_facade.py:174:            from app.services.audit.models import AuditAction, AuditDomain, DomainAck
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/facades/run_governance_facade.py:175:            from app.services.audit.store import get_audit_store
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/engines/__init__.py:34:from app.services.governance.audit_service import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/engines/__init__.py:46:from app.services.governance.contract_service import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/engines/__init__.py:52:from app.services.governance.eligibility_engine import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/engines/__init__.py:66:from app.services.governance.governance_orchestrator import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/engines/__init__.py:79:from app.services.governance.job_executor import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/engines/__init__.py:92:from app.services.governance.rollout_projection import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/engines/__init__.py:109:from app.services.governance.validator_service import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/engines/__init__.py:119:from app.services.governance.cross_domain import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/engines/__init__.py:128:from app.services.governance.run_governance_facade import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/engines/__init__.py:134:from app.services.governance.transaction_coordinator import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L4_runtime/engines/governance_orchestrator.py:81:from app.services.governance.contract_service import ContractService, ContractState
+/root/agenticverz2.0/backend/app/hoc/cus/general/L6_drivers/cus_health_driver.py:65:from app.services.cus_credential_service import CusCredentialService
+/root/agenticverz2.0/backend/app/hoc/cus/general/L5_lifecycle/drivers/execution.py:275:            from app.services.connectors import get_connector
+/root/agenticverz2.0/backend/app/hoc/cus/general/L5_lifecycle/drivers/execution.py:791:            from app.services.connectors import get_connector
+/root/agenticverz2.0/backend/app/hoc/cus/general/L5_lifecycle/engines/onboarding.py:286:            from app.services.lifecycle_stages.execution import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L5_lifecycle/engines/onboarding.py:377:            from app.services.lifecycle_stages.execution import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L5_lifecycle/engines/onboarding.py:489:            from app.services.lifecycle_stages.execution import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L5_engines/monitors_facade.py:45:    from app.services.monitors.facade import get_monitors_facade
+/root/agenticverz2.0/backend/app/hoc/cus/general/L5_engines/alerts_facade.py:45:    from app.services.alerts.facade import get_alerts_facade
+/root/agenticverz2.0/backend/app/hoc/cus/general/L5_engines/scheduler_facade.py:45:    from app.services.scheduler.facade import get_scheduler_facade
+/root/agenticverz2.0/backend/app/hoc/cus/general/L5_engines/compliance_facade.py:42:    from app.services.compliance.facade import get_compliance_facade
+/root/agenticverz2.0/backend/app/hoc/cus/general/L5_engines/knowledge_sdk.py:22:# Full migration blocked until KnowledgeLifecycleManager moves from app.services to HOC.
+/root/agenticverz2.0/backend/app/hoc/cus/general/L5_engines/knowledge_sdk.py:62:from app.services.knowledge_lifecycle_manager import (
+/root/agenticverz2.0/backend/app/hoc/cus/general/L5_engines/lifecycle_facade.py:50:    from app.services.lifecycle.facade import get_lifecycle_facade
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L6_drivers/store.py:53:from app.services.audit.models import (
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L6_drivers/audit_store.py:53:from app.services.audit.models import (
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/reconciler.py:49:from app.services.audit.models import (
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/reconciler.py:57:from app.services.audit.store import AuditStore, get_audit_store
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/monitors_facade.py:42:    from app.services.monitors.facade import get_monitors_facade
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/notifications_facade.py:40:    from app.services.notifications.facade import get_notifications_facade
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/certificate.py:33:    from app.services.certificate import CertificateService, CertificateRequest
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/certificate.py:56:from app.services.replay_determinism import (
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/alerts_facade.py:42:    from app.services.alerts.facade import get_alerts_facade
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/scheduler_facade.py:43:    from app.services.scheduler.facade import get_scheduler_facade
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/detection_facade.py:44:    from app.services.detection.facade import get_detection_facade
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/detection_facade.py:201:            from app.services.cost_anomaly_detector import CostAnomalyDetector
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/detection_facade.py:301:            from app.services.cost_anomaly_detector import (
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/compliance_facade.py:39:    from app.services.compliance.facade import get_compliance_facade
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/alert_fatigue.py:37:    from app.services.alert_fatigue import get_alert_fatigue_controller
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/trace_facade.py:37:    from app.services.observability.trace_facade import get_trace_facade
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/trace_facade.py:239:            from app.services.audit.models import AuditAction, AuditDomain, DomainAck
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/trace_facade.py:240:            from app.services.audit.store import get_audit_store
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/datasources_facade.py:43:    from app.services.datasources.facade import get_datasources_facade
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/datasources_facade.py:60:from app.services.datasources.datasource_model import (
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/evidence_facade.py:43:    from app.services.evidence.facade import get_evidence_facade
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/retrieval_facade.py:40:    from app.services.retrieval.facade import get_retrieval_facade
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/retrieval_facade.py:172:                from app.services.mediation.retrieval_mediator import (
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/connectors_facade.py:46:    from app.services.connectors.facade import get_connectors_facade
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/connectors_facade.py:149:                from app.services.connectors.connector_registry import ConnectorRegistry
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/lifecycle_facade.py:46:    from app.services.lifecycle.facade import get_lifecycle_facade
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/audit_reconciler.py:49:from app.services.audit.models import (
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/audit_reconciler.py:57:from app.services.audit.store import AuditStore, get_audit_store
+/root/agenticverz2.0/backend/app/hoc/cus/logs/L5_engines/controls_facade.py:40:    from app.services.controls.facade import get_controls_facade
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L6_drivers/execution.py:276:            from app.services.connectors import get_connector
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L6_drivers/execution.py:792:            from app.services.connectors import get_connector
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L3_adapters/customer_incidents_adapter.py:42:from app.services.incident_read_service import get_incident_read_service
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L3_adapters/customer_incidents_adapter.py:43:from app.services.incident_write_service import get_incident_write_service
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L3_adapters/founder_ops_adapter.py:37:from app.services.ops_domain_models import OpsIncident
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L3_adapters/customer_killswitch_adapter.py:45:from app.services.guard_write_service import GuardWriteService
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L3_adapters/customer_killswitch_adapter.py:46:from app.services.killswitch.customer_killswitch_read_service import (
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L3_adapters/customer_policies_adapter.py:44:from app.services.policy.customer_policy_read_service import (
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L3_adapters/customer_activity_adapter.py:44:from app.services.activity.customer_activity_read_service import (
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L3_adapters/customer_keys_adapter.py:41:from app.services.keys_driver import (
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L3_adapters/customer_logs_adapter.py:132:            from app.services.logs_read_service import get_logs_read_service
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L3_adapters/founder_contract_review_adapter.py:38:from app.services.governance.contract_service import ContractState
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L5_engines/integrations_facade.py:41:from app.services.cus_integration_engine import CusIntegrationService
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L5_engines/cus_health_engine.py:63:from app.services.cus_credential_service import CusCredentialService
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L5_engines/datasources_facade.py:44:    from app.services.datasources.facade import get_datasources_facade
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L5_engines/datasources_facade.py:61:from app.services.datasources.datasource_model import (
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L5_engines/retrieval_facade.py:42:    from app.services.retrieval.facade import get_retrieval_facade
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L5_engines/retrieval_facade.py:174:                from app.services.mediation.retrieval_mediator import (
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L5_engines/connectors_facade.py:48:    from app.services.connectors.facade import get_connectors_facade
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L5_engines/connectors_facade.py:151:                from app.services.connectors.connector_registry import ConnectorRegistry
+/root/agenticverz2.0/backend/app/hoc/cus/integrations/L5_engines/cost_bridges_engine.py:52:from app.services.governance.cross_domain import create_incident_from_cost_anomaly_sync
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/policy_violation_engine.py:275:        from app.services.incident_aggregator import create_incident_aggregator
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/incident_write_engine.py:58:from app.services.logs.audit_ledger_service import AuditLedgerService
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/incident_engine.py:88:    from app.services.policy.lessons_engine import get_lessons_learned_engine
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/prevention_engine.py:819:        from app.services.policy_violation_service import (
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/prevention_engine.py:848:    from app.services.policy_violation_service import (
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/incident_driver.py:41:    from app.services.incidents.incident_driver import get_incident_driver
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/incident_driver.py:83:            from app.services.incidents.incident_engine import IncidentEngine
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/incident_driver.py:209:            from app.services.audit.models import AuditAction, AuditDomain, DomainAck
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/incident_driver.py:210:            from app.services.audit.store import get_audit_store
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/incidents_facade.py:792:        from app.services.incidents.incident_pattern_service import IncidentPatternService
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/incidents_facade.py:837:        from app.services.incidents.recurrence_analysis_driver import RecurrenceAnalysisService  # PIN-468
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/incidents_facade.py:882:        from app.services.incidents.postmortem_service import PostMortemService
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/failure_mode_handler.py:96:        from app.services.governance.profile import get_governance_config
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/mapper.py:34:from app.services.soc2.control_registry import (
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/recovery_evaluation_engine.py:54:from app.services.recovery_matcher import RecoveryMatcher
+/root/agenticverz2.0/backend/app/hoc/cus/incidents/L5_engines/recovery_evaluation_engine.py:55:from app.services.recovery_rule_engine import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/recovery/recovery.py:33:from app.services.recovery_matcher import RecoveryMatcher
+/root/agenticverz2.0/backend/app/hoc/api/cus/recovery/recovery.py:34:from app.services.recovery_write_service import RecoveryWriteService
+/root/agenticverz2.0/backend/app/hoc/api/cus/recovery/recovery.py:789:        from app.services.recovery_rule_engine import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/recovery/recovery.py:890:    from app.services.scoped_execution import test_recovery_scope as do_scope_test
+/root/agenticverz2.0/backend/app/hoc/api/cus/recovery/recovery.py:990:    from app.services.scoped_execution import create_recovery_scope
+/root/agenticverz2.0/backend/app/hoc/api/cus/recovery/recovery.py:1042:    from app.services.scoped_execution import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/recovery/recovery.py:1153:    from app.services.scoped_execution import get_scope_store
+/root/agenticverz2.0/backend/app/hoc/api/cus/recovery/recovery.py:1177:    from app.services.scoped_execution import get_scope_store
+/root/agenticverz2.0/backend/app/hoc/api/cus/recovery/recovery_ingest.py:49:from app.services.recovery_write_service import RecoveryWriteService
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/cus_enforcement.py:40:from app.services.cus_enforcement_service import CusEnforcementService
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/governance.py:39:from app.services.governance.facade import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/detection.py:39:from app.services.detection.facade import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/rate_limits.py:41:from app.services.limits.facade import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/policy_rules_crud.py:40:from app.services.limits.policy_rules_service import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/simulate.py:41:from app.services.limits.simulation_service import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/logs.py:70:from app.services.logs_facade import get_logs_facade
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/aos_accounts.py:64:from app.services.accounts_facade import get_accounts_facade
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/aos_accounts.py:612:        from app.services.accounts_facade import AccountsErrorResult
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/aos_accounts.py:684:        from app.services.accounts_facade import AccountsErrorResult
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/aos_accounts.py:747:        from app.services.accounts_facade import AccountsErrorResult
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/aos_accounts.py:1007:        from app.services.accounts_facade import AccountsErrorResult
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/aos_accounts.py:1049:        from app.services.accounts_facade import AccountsErrorResult
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/aos_accounts.py:1192:        from app.services.accounts_facade import AccountsErrorResult
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/aos_accounts.py:1244:        from app.services.accounts_facade import AccountsErrorResult
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/guard.py:82:from app.services.certificate import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/guard.py:87:from app.services.guard_write_service import GuardWriteService
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/guard.py:90:from app.services.replay_determinism import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/guard.py:94:from app.services.replay_determinism import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/guard.py:1833:    from app.services.evidence_report import generate_evidence_report
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/policies.py:51:from app.services.policies_facade import get_policies_facade
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/retrieval.py:41:from app.services.retrieval.facade import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/scheduler.py:43:from app.services.scheduler.facade import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/compliance.py:39:from app.services.compliance.facade import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/datasources.py:42:from app.services.datasources.facade import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/analytics.py:56:from app.services.analytics_facade import get_analytics_facade
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/analytics.py:293:    from app.services.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/analytics.py:466:    from app.services.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/analytics.py:599:    from app.services.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/analytics.py:839:    from app.services.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/policy_layer.py:38:from app.services.policy.facade import get_policy_facade
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/policy_layer.py:1284:    from app.services.policy.lessons_engine import get_lessons_learned_engine
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/policy_layer.py:1324:    from app.services.policy.lessons_engine import get_lessons_learned_engine
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/policy_layer.py:1346:    from app.services.policy.lessons_engine import get_lessons_learned_engine
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/policy_layer.py:1373:    from app.services.policy.lessons_engine import get_lessons_learned_engine
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/policy_layer.py:1407:    from app.services.policy.lessons_engine import get_lessons_learned_engine
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/policy_layer.py:1441:    from app.services.policy.lessons_engine import get_lessons_learned_engine
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/aos_cus_integrations.py:68:from app.services.integrations_facade import get_integrations_facade
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/monitors.py:43:from app.services.monitors.facade import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/policy.py:1618:    from app.services.policy.lessons_engine import get_lessons_learned_engine
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/policy.py:1680:    from app.services.policy.lessons_engine import get_lessons_learned_engine
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/lifecycle.py:48:from app.services.lifecycle.facade import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/controls.py:41:from app.services.controls.facade import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/alerts.py:45:from app.services.alerts.facade import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/workers.py:62:from app.services.worker_write_service_async import WorkerWriteServiceAsync
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/workers.py:1278:        from app.services.recovery_matcher import RecoveryMatcher
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/workers.py:1287:        from app.services.recovery_matcher import RecoveryMatcher
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/connectors.py:39:from app.services.connectors.facade import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/evidence.py:41:from app.services.evidence.facade import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/policy_limits_crud.py:44:from app.services.limits.policy_limits_service import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/policies/override.py:42:from app.services.limits.override_service import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/activity/activity.py:67:from app.services.activity_facade import get_activity_facade
+/root/agenticverz2.0/backend/app/hoc/api/cus/activity/activity.py:2101:        from app.services.activity.signal_identity import compute_signal_fingerprint_from_row
+/root/agenticverz2.0/backend/app/hoc/api/cus/activity/activity.py:2102:        from app.services.activity.signal_feedback_service import SignalFeedbackService
+/root/agenticverz2.0/backend/app/hoc/api/cus/logs/cost_intelligence.py:43:from app.services.cost_write_service import CostWriteService
+/root/agenticverz2.0/backend/app/hoc/api/cus/logs/cost_intelligence.py:1240:    from app.services.cost_anomaly_detector import (
+/root/agenticverz2.0/backend/app/hoc/api/cus/integrations/cus_telemetry.py:46:from app.services.cus_telemetry_service import CusTelemetryService
+/root/agenticverz2.0/backend/app/hoc/api/cus/incidents/incidents.py:56:from app.services.incidents_facade import get_incidents_facade
+/root/agenticverz2.0/backend/app/hoc/api/cus/incidents/incidents.py:1849:    from app.services.export_bundle_service import get_export_bundle_service
+/root/agenticverz2.0/backend/app/hoc/api/cus/incidents/incidents.py:1850:    from app.services.pdf_renderer import get_pdf_renderer
+/root/agenticverz2.0/backend/app/hoc/api/cus/incidents/incidents.py:1914:    from app.services.export_bundle_service import get_export_bundle_service
+/root/agenticverz2.0/backend/app/hoc/api/cus/incidents/incidents.py:1915:    from app.services.pdf_renderer import get_pdf_renderer
+/root/agenticverz2.0/backend/app/hoc/api/cus/incidents/incidents.py:1979:    from app.services.export_bundle_service import get_export_bundle_service
+/root/agenticverz2.0/backend/app/hoc/api/cus/incidents/incidents.py:1980:    from app.services.pdf_renderer import get_pdf_renderer
+/root/agenticverz2.0/backend/app/hoc/api/fdr/ops/founder_actions.py:45:from app.services.founder_action_write_service import FounderActionWriteService
+/root/agenticverz2.0/backend/app/hoc/api/fdr/agent/founder_contract_review.py:65:from app.services.governance.contract_service import (
+/root/agenticverz2.0/backend/app/hoc/api/fdr/incidents/ops.py:1482:    from app.services.ops import get_ops_facade
+/root/agenticverz2.0/backend/app/hoc/api/int/agent/main.py:1657:            from app.services.plan_generation_engine import generate_plan_for_run
+/root/agenticverz2.0/backend/app/hoc/__init__.py:27:    1. COPY files from app/services/ to app/hoc/
+/root/agenticverz2.0/backend/app/hoc/duplicate/general/alert_fatigue.py:61:    from app.services.alert_fatigue import get_alert_fatigue_controller
+/root/agenticverz2.0/backend/app/hoc/fdr/ops/facades/founder_review_adapter.py:38:from app.services.governance.contract_service import ContractState
+/root/agenticverz2.0/backend/app/hoc/fdr/ops/facades/ops_facade.py:25:    from app.services.ops import get_ops_facade
+/root/agenticverz2.0/backend/app/hoc/fdr/ops/facades/ops_facade.py:63:            from app.services.ops.error_store import DatabaseErrorStore
+/root/agenticverz2.0/backend/app/hoc/fdr/ops/facades/ops_facade.py:71:            from app.services.ops_incident_service import OpsIncidentService
+/root/agenticverz2.0/backend/app/hoc/fdr/ops/engines/founder_review.py:61:from app.services.governance.contract_service import (
+/root/agenticverz2.0/backend/app/hoc/fdr/ops/engines/ops_incident_service.py:40:from app.services.ops_domain_models import (
+/root/agenticverz2.0/backend/app/hoc/fdr/incidents/engines/ops_incident_service.py:40:from app.services.ops_domain_models import (
+/root/agenticverz2.0/backend/app/hoc/int/platform/drivers/executor.py:400:            from app.services.scheduler import get_job_scheduler
+/root/agenticverz2.0/backend/app/hoc/int/platform/drivers/executor.py:414:            from app.services.scheduler import get_job_scheduler
+/root/agenticverz2.0/backend/app/hoc/int/platform/drivers/executor.py:415:            from app.services.scheduler.job_scheduler import JobStatus
+/root/agenticverz2.0/backend/app/hoc/int/platform/drivers/executor.py:431:            from app.services.scheduler import get_job_scheduler
+/root/agenticverz2.0/backend/app/hoc/int/platform/drivers/executor.py:432:            from app.services.scheduler.job_scheduler import JobStatus
+/root/agenticverz2.0/backend/app/hoc/int/platform/policy/engines/policy_driver.py:33:    from app.services.policy.policy_driver import get_policy_driver
+/root/agenticverz2.0/backend/app/hoc/int/platform/facades/platform_eligibility_adapter.py:36:from app.services.platform.platform_health_service import (
+/root/agenticverz2.0/backend/app/hoc/int/platform/engines/failure_intelligence.py:68:from app.services.recovery_rule_engine import (
+/root/agenticverz2.0/backend/app/hoc/int/platform/engines/failure_intelligence.py:71:from app.services.recovery_rule_engine import (
+/root/agenticverz2.0/backend/app/hoc/int/platform/engines/kill_switch_guard.py:36:from app.services.governance.runtime_switch import (
+/root/agenticverz2.0/backend/app/hoc/int/recovery/engines/incident_driver.py:33:    from app.services.incidents.incident_driver import get_incident_driver
+/root/agenticverz2.0/backend/app/hoc/int/recovery/engines/incident_driver.py:75:            from app.services.incidents.incident_engine import IncidentEngine
+/root/agenticverz2.0/backend/app/hoc/int/recovery/engines/incident_driver.py:201:            from app.services.audit.models import AuditAction, AuditDomain, DomainAck
+/root/agenticverz2.0/backend/app/hoc/int/recovery/engines/incident_driver.py:202:            from app.services.audit.store import get_audit_store
+/root/agenticverz2.0/backend/app/hoc/int/policies/drivers/boot_guard.py:86:        from app.services.governance.profile import get_governance_config
+/root/agenticverz2.0/backend/app/hoc/int/policies/drivers/boot_guard.py:99:        from app.services.governance.profile import validate_governance_config, get_governance_config
+/root/agenticverz2.0/backend/app/hoc/int/policies/drivers/boot_guard.py:109:        from app.services.governance.runtime_switch import is_governance_active
+/root/agenticverz2.0/backend/app/hoc/int/policies/engines/limit_hook.py:509:            from app.services.limits import get_limit_enforcer
+/root/agenticverz2.0/backend/app/hoc/int/policies/engines/limit_hook.py:521:            from app.services.monitors import get_usage_monitor
+/root/agenticverz2.0/backend/app/hoc/int/agent/drivers/tenant_config.py:82:        from app.services.llm_policy_engine import get_effective_model
+/root/agenticverz2.0/backend/app/hoc/int/agent/drivers/tenant_config.py:251:    from app.services.llm_policy_engine import get_model_for_task
+/root/agenticverz2.0/backend/app/hoc/int/agent/facades/openai_adapter.py:195:        from app.services.llm_policy_engine import estimate_tokens
+/root/agenticverz2.0/backend/app/hoc/int/agent/facades/openai_adapter.py:205:        from app.services.llm_policy_engine import estimate_cost_cents
+/root/agenticverz2.0/backend/app/hoc/int/agent/facades/openai_adapter.py:220:        from app.services.llm_policy_engine import check_safety_limits
+/root/agenticverz2.0/backend/app/hoc/int/activity/engines/run_orchestration_kernel.py:176:            from app.services.audit.models import create_run_expectations
+/root/agenticverz2.0/backend/app/hoc/int/activity/engines/run_orchestration_kernel.py:177:            from app.services.audit.store import get_audit_store
+/root/agenticverz2.0/backend/app/hoc/int/activity/engines/run_orchestration_kernel.py:333:            from app.services.audit.reconciler import get_audit_reconciler
+/root/agenticverz2.0/backend/app/hoc/int/activity/engines/run_orchestration_kernel.py:507:            from app.services.audit.models import AuditAction, AuditDomain, DomainAck
+/root/agenticverz2.0/backend/app/hoc/int/activity/engines/run_orchestration_kernel.py:508:            from app.services.audit.store import get_audit_store
+/root/agenticverz2.0/backend/app/hoc/int/general/drivers/step_enforcement.py:107:        from app.services.governance.runtime_switch import is_governance_active, is_degraded_mode
+/root/agenticverz2.0/backend/app/hoc/int/general/drivers/hallucination_hook.py:47:from app.services.hallucination.hallucination_detector import (
+/root/agenticverz2.0/backend/app/hoc/int/general/engines/retrieval_hook.py:47:from app.services.mediation.retrieval_mediator import (
+/root/agenticverz2.0/backend/app/hoc/int/logs/drivers/reactor_initializer.py:59:    from app.services.governance.profile import get_governance_config
+/root/agenticverz2.0/backend/app/hoc/int/integrations/engines/worker.py:168:            from app.services.recovery_matcher import RecoveryMatcher
+/root/agenticverz2.0/backend/app/hoc/int/integrations/engines/worker.py:177:            from app.services.recovery_matcher import RecoveryMatcher
+/root/agenticverz2.0/backend/app/hoc/int/incidents/drivers/failure_classification_engine.py:50:from app.services.recovery_rule_engine import (
+/root/agenticverz2.0/backend/app/hoc/int/incidents/engines/recovery_evaluator.py:673:#   from app.services.recovery_evaluation_engine import evaluate_and_execute
+/root/agenticverz2.0/backend/app/hoc/int/incidents/engines/lifecycle_worker.py:885:            from app.services.lifecycle_stages.base import StageContext
+/root/agenticverz2.0/backend/app/hoc/int/incidents/engines/lifecycle_worker.py:1028:            from app.services.lifecycle_stages import (

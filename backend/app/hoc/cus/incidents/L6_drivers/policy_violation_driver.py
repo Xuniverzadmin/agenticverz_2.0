@@ -1,10 +1,24 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: async/sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: PreventionRecord, Policy, Incident, PolicyEvaluation
+#   Writes: PreventionRecord, PolicyEvaluation
+# Database:
+#   Scope: domain (incidents)
+#   Models: PreventionRecord, PolicyEvaluation
 # Role: Data access for policy violation operations (async + sync)
-# Callers: PolicyViolationService (L4)
-# Allowed Imports: sqlalchemy, psycopg2
+# Callers: PolicyViolationEngine (L5)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# NOTE: insert_policy_evaluation_sync uses raw psycopg2 with its own connection (design debt)
+# Reference: PIN-470, PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
 #
 # GOVERNANCE NOTE:
 # This L6 driver provides pure data access for policy violation operations.
@@ -388,9 +402,7 @@ class PolicyViolationDriver:
             },
         )
 
-    async def commit(self) -> None:
-        """Commit the current transaction."""
-        await self._session.commit()
+    # REMOVED: commit() helper — L6 DOES NOT COMMIT (L4 coordinator owns transaction boundary)
 
 
 def insert_policy_evaluation_sync(

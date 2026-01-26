@@ -4,13 +4,20 @@
 # Temporal:
 #   Trigger: worker (run events), incident_engine (failure events)
 #   Execution: sync
+# Lifecycle:
+#   Emits: lesson_created, lesson_converted
+#   Subscribes: incident_created, run_completed
+# Data Access:
+#   Reads: LessonsLearned (via driver)
+#   Writes: LessonsLearned, PolicyProposal (via driver)
 # Role: Lessons learned creation and management (domain logic)
 # Authority: Lesson generation from system events (SDSR pattern)
 # Callers: IncidentEngine, Worker runtime, API endpoints
-# Allowed Imports: L6 drivers (via injection)
-# Forbidden Imports: L1, L2, L3, sqlalchemy, sqlmodel (at runtime)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
 # Contract: SDSR (PIN-370), PB-S4 (Policy Proposals)
-# Reference: PIN-411, PIN-468, POLICIES_DOMAIN_AUDIT.md Section 11
+# Reference: PIN-470, PIN-411, PIN-468, POLICIES_DOMAIN_AUDIT.md Section 11
 #
 # GOVERNANCE NOTE: This L4 engine owns LESSON CREATION logic.
 # Scenarios inject causes (events), this engine creates lessons.
@@ -640,7 +647,7 @@ class LessonsLearnedEngine:
                 converted_at=now,
             )
 
-            driver.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
             logger.info(f"Converted lesson {lesson_id} to draft proposal {proposal_id}")
             return proposal_id
@@ -696,7 +703,7 @@ class LessonsLearnedEngine:
                 deferred_status=LESSON_STATUS_DEFERRED,
                 defer_until=defer_until,
             )
-            driver.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
             if success:
                 logger.info(f"Deferred lesson {lesson_id} until {defer_until}")
@@ -760,7 +767,7 @@ class LessonsLearnedEngine:
                 dismissed_by=dismissed_by,
                 reason=reason,
             )
-            driver.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
             if success:
                 logger.info(f"Dismissed lesson {lesson_id} by {dismissed_by}")
@@ -856,7 +863,7 @@ class LessonsLearnedEngine:
                 pending_status=LESSON_STATUS_PENDING,
                 from_status=LESSON_STATUS_DEFERRED,
             )
-            driver.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
             if success:
                 logger.info(f"Reactivated lesson {lesson_id} (deferred → pending)")
@@ -957,7 +964,7 @@ class LessonsLearnedEngine:
                 is_synthetic=is_synthetic,
                 synthetic_scenario_id=synthetic_scenario_id,
             )
-            driver.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
             if success:
                 logger.info(f"Created lesson {lesson_id} (type={lesson_type}, tenant={tenant_id})")

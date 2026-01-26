@@ -1,14 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
-# Product: AI Console
 # Temporal:
-#   Trigger: engine call
+#   Trigger: api (via L5 engine)
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: PatternFeedback, PredictionEvent, WorkerRun
+#   Writes: PredictionEvent
+# Database:
+#   Scope: domain (analytics)
+#   Models: PatternFeedback, PredictionEvent, WorkerRun
 # Role: Data access for prediction operations
-# Callers: prediction.py (L4 engine)
-# Allowed Imports: sqlalchemy, sqlmodel, ORM models
+# Callers: prediction.py (L5 engine)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5, httpx
-# Reference: Phase-2.5A Analytics Extraction
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, Phase-2.5A Analytics Extraction
 #
 # GOVERNANCE NOTE:
 # This L6 driver provides pure data access for prediction management.
@@ -296,13 +305,7 @@ class PredictionDriver:
 
         return record
 
-    # =========================================================================
-    # TRANSACTION HELPERS
-    # =========================================================================
-
-    async def commit(self) -> None:
-        """Commit the current transaction."""
-        await self._session.commit()
+    # TRANSACTION HELPERS section removed — L6 DOES NOT COMMIT
 
 
 def get_prediction_driver(session: AsyncSession) -> PredictionDriver:

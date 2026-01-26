@@ -1,10 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
+# Product: AI Console
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: tenant_settings, proxy_calls, guardrails
+#   Writes: none
+# Database:
+#   Scope: domain (policies)
+#   Models: TenantSettings, ProxyCall, Guardrail
 # Role: Data access for customer policy read operations
-# Callers: policy engines (L4)
-# Allowed Imports: ORM models
+# Callers: policy engines (L5)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-281, PHASE2_EXTRACTION_PROTOCOL.md
+# Reference: PIN-470, PIN-281, PHASE2_EXTRACTION_PROTOCOL.md
 #
 # GOVERNANCE NOTE:
 # This L6 driver provides pure data access for policy reads.

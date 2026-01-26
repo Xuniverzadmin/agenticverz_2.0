@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: import-time
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (redirect only)
+#   Writes: none
 # Role: DEPRECATED SHIM - Redirect to drivers/cus_health_driver.py
 # Callers: Legacy imports
 # Allowed Imports: L6 (drivers)
 # Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: docs/architecture/CUSTOMER_INTEGRATIONS_ARCHITECTURE.md
+# Reference: PIN-470, docs/architecture/CUSTOMER_INTEGRATIONS_ARCHITECTURE.md
 # NOTE: Renamed cus_health_service.py → cus_health_shim.py (2026-01-24)
 #       per BANNED_NAMING rule (*_service.py → *_shim.py for redirects)
 #

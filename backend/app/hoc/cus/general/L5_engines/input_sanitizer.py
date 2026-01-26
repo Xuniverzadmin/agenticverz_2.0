@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Input sanitization for security (pure regex validation and URL parsing)
 # Callers: API routes
 # Allowed Imports: None (foundational)
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: Input Security
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, Input Security
 # NOTE: Reclassified L6→L5 (2026-01-24) - Pure computation with regex/URL parsing, no DB/cache boundary
 
 # Input Sanitizer

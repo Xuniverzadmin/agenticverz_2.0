@@ -1,13 +1,23 @@
-# Layer: L6 — Platform Substrate
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
-#   Trigger: any
+#   Trigger: startup
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: database schema (introspection)
+#   Writes: none
+# Database:
+#   Scope: domain (general)
+#   Models: all (schema verification)
 # Role: Schema parity checking utilities
-# Callers: SDK, API
-# Allowed Imports: None (foundational)
+# Callers: startup, SDK, API
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: Schema Parity
+# Reference: PIN-470, Schema Parity
 
 """
 M26 Prevention Mechanism #2: Startup Schema Parity Guard

@@ -1,13 +1,19 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via circuit_breaker_async (L6)
+#   Writes: via provenance_async (L6)
 # Role: CostSim V2 sandbox routing (V1/V2 comparison, shadow mode)
 # Callers: cost simulation API
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470
 
 # CostSim V2 Sandbox Routing (M6)
 """

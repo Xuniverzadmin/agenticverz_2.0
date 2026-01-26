@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: governance_action
+#   Subscribes: none
+# Data Access:
+#   Reads: contracts, jobs (via driver)
+#   Writes: jobs (via driver)
 # Role: Governance Orchestrator - orchestrates contract execution
 # Callers: L3 (adapters), L2 (governance APIs)
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: PIN-292, PART2_CRM_WORKFLOW_CHARTER.md, part2-design-v1
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-292, PART2_CRM_WORKFLOW_CHARTER.md, part2-design-v1
 #
 # ==============================================================================
 # GOVERNANCE RULE: ORCHESTRATOR-AUTHORITY (Non-Negotiable)
@@ -71,7 +78,8 @@ from app.models.governance_job import (
     StepResult,
     StepStatus,
 )
-from app.services.governance.contract_service import ContractService, ContractState
+# Rewired to L4_runtime (Sweep-02A)
+from app.hoc.cus.general.L4_runtime.engines import ContractService, ContractState
 
 # Orchestrator version
 ORCHESTRATOR_VERSION = "1.0.0"

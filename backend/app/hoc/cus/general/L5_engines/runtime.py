@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Runtime utilities (pure uuid/datetime generation, no boundary crossing)
 # Callers: runtime, workers
 # Allowed Imports: None (foundational)
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: Runtime
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, Runtime
 # NOTE: Reclassified L6→L5 (2026-01-24) - Pure stdlib computation (uuid4, datetime), no DB/cache boundary
 
 """

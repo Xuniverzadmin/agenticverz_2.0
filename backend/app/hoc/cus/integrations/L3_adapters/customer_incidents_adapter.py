@@ -39,8 +39,8 @@ from pydantic import BaseModel
 from sqlmodel import Session
 
 # L4 imports (allowed) - no L6 direct access per PIN-281
-from app.services.incident_read_service import get_incident_read_service
-from app.services.incident_write_service import get_incident_write_service
+from app.hoc.cus.incidents.L5_engines.incident_read_engine import get_incident_read_service
+from app.hoc.cus.incidents.L5_engines.incident_write_engine import get_incident_write_service
 
 # =============================================================================
 # Customer-Safe DTOs (Calm Vocabulary per M29)

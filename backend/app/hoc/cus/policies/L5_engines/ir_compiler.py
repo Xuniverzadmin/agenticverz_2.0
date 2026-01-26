@@ -4,8 +4,17 @@
 # Temporal:
 #   Trigger: import
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Policy DSL IR Compiler (AST → bytecode) - pure compilation logic
-# Reference: PIN-341 Section 1.8, PIN-345
+# Callers: policy engine
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-341 Section 1.8, PIN-345
 # NOTE: Reclassified L6→L5 (2026-01-24) - no Session imports, pure logic
 
 """

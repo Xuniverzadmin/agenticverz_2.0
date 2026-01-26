@@ -4,13 +4,18 @@
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (external provider lookup only)
+#   Writes: none
 # Role: Identity resolution from various providers
 # Callers: IAMService, Auth middleware
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: GAP-173 (IAM Integration)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-173 (IAM Integration)
 # NOTE: Reclassified L6→L5 (2026-01-24) - pure identity logic, no DB ops
-#       Remains in drivers/ per Layer ≠ Directory principle
 
 """
 Identity Resolver (GAP-173)

@@ -1,14 +1,24 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: sync (DB reads/writes)
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: api_keys, proxy_calls
+#   Writes: api_keys
+# Database:
+#   Scope: domain (policies)
+#   Models: ApiKey, ProxyCall
 # Role: API Keys data access operations
-# Callers: keys_service.py (L4 shim), customer_keys_adapter.py (L3)
-# Allowed Imports: ORM models, sqlalchemy, sqlmodel
+# Callers: keys_service.py (L5 shim), customer_keys_adapter.py (L3)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-468, PIN-281 (L3 Adapter Closure)
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, PIN-468, PIN-281 (L3 Adapter Closure)
 #
 # EXTRACTION STATUS: Phase-2.5A (2026-01-24)
 # - RECLASSIFIED from keys_service.py (was labeled L4, is actually L6)
@@ -170,7 +180,7 @@ class KeysDriver:
         key.is_frozen = is_frozen
         key.frozen_at = datetime.now(timezone.utc) if is_frozen else None
         self._session.add(key)
-        self._session.commit()
+        self._session.flush()  # Get generated data, NO COMMIT — L4 owns transaction
         self._session.refresh(key)
         return key
 

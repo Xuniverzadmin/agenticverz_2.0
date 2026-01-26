@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync/async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via L6 drivers
+#   Writes: via L6 drivers
 # Role: Offboarding Stage Handlers (GAP-078 to GAP-082) - pure business logic
 # Callers: KnowledgeLifecycleManager via StageRegistry
 # Allowed Imports: stdlib, L6
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: GAP-078-082, GAP_IMPLEMENTATION_PLAN_V1.md
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-078-082, GAP_IMPLEMENTATION_PLAN_V1.md
 # NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 
 """

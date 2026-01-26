@@ -31,7 +31,11 @@ Implementation Order (from VALIDATOR_LOGIC.md):
 8. Rollout projection - DONE (PIN-296) *** PART-2 COMPLETE ***
 """
 
-from app.services.governance.audit_service import (
+# =============================================================================
+# L5 Engine Imports (migrated to HOC per SWEEP-03)
+# =============================================================================
+
+from app.hoc.cus.policies.L5_engines.audit_engine import (
     AUDIT_SERVICE_VERSION,
     AuditCheck,
     AuditChecks,
@@ -43,13 +47,13 @@ from app.services.governance.audit_service import (
     audit_result_to_record,
     create_audit_input_from_evidence,
 )
-from app.services.governance.contract_service import (
+from app.hoc.cus.policies.L5_engines.contract_engine import (
     CONTRACT_SERVICE_VERSION,
     ContractService,
     ContractState,
     ContractStateMachine,
 )
-from app.services.governance.eligibility_engine import (
+from app.hoc.cus.policies.L5_engines.eligibility_engine import (
     DefaultCapabilityLookup,
     DefaultContractLookup,
     DefaultGovernanceSignalLookup,
@@ -63,7 +67,7 @@ from app.services.governance.eligibility_engine import (
     RuleResult,
     SystemHealthStatus,
 )
-from app.services.governance.governance_orchestrator import (
+from app.hoc.cus.general.L4_runtime.engines.governance_orchestrator import (
     ORCHESTRATOR_VERSION,
     AuditEvidence,
     AuditTrigger,
@@ -76,7 +80,7 @@ from app.services.governance.governance_orchestrator import (
     JobStateMachine,
     JobStateTracker,
 )
-from app.services.governance.job_executor import (
+from app.hoc.cus.policies.L5_engines.job_executor import (
     EXECUTOR_VERSION,
     ExecutionContext,
     ExecutionResult,
@@ -89,7 +93,7 @@ from app.services.governance.job_executor import (
     create_default_executor,
     execution_result_to_evidence,
 )
-from app.services.governance.rollout_projection import (
+from app.hoc.cus.policies.L5_engines.rollout_projection import (
     PROJECTION_VERSION,
     STAGE_ORDER,
     AuditSummary,
@@ -106,7 +110,7 @@ from app.services.governance.rollout_projection import (
     completion_report_to_dict,
     founder_view_to_dict,
 )
-from app.services.governance.validator_service import (
+from app.hoc.cus.policies.L5_engines.validator_engine import (
     IssueType,
     RecommendedAction,
     Severity,
@@ -116,7 +120,7 @@ from app.services.governance.validator_service import (
 )
 
 # Cross-Domain Governance (mandatory functions - design/CROSS_DOMAIN_GOVERNANCE.md)
-from app.services.governance.cross_domain import (
+from app.hoc.cus.general.L6_drivers.cross_domain import (
     create_incident_from_cost_anomaly,
     create_incident_from_cost_anomaly_sync,
     record_limit_breach,
@@ -125,13 +129,15 @@ from app.services.governance.cross_domain import (
 )
 
 # Run Governance Facade (PIN-454 FIX-002 - L5→L4 layer compliance)
-from app.services.governance.run_governance_facade import (
+# migrated to HOC per SWEEP-03
+from app.hoc.cus.policies.L5_engines.run_governance_facade import (
     RunGovernanceFacade,
     get_run_governance_facade,
 )
 
 # Transaction Coordinator (PIN-454 FIX-001 - Atomic cross-domain writes)
-from app.services.governance.transaction_coordinator import (
+# migrated to HOC per SWEEP-03
+from app.hoc.cus.general.L4_runtime.drivers.transaction_coordinator import (
     DomainResult,
     RunCompletionTransaction,
     TransactionFailed,

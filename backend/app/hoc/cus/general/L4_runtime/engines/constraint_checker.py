@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (in-memory logic)
+#   Writes: none
 # Role: Enforce MonitorConfig inspection constraints before logging (pure business logic)
 # Callers: worker/runtime/trace_collector.py, services/logging_service.py
 # Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: GAP-033 (Inspection Constraints)
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-033 (Inspection Constraints)
 # NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 
 """

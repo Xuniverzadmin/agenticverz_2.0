@@ -1,13 +1,24 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: AI Console
 # Temporal:
 #   Trigger: worker
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: AlertConfig, ThresholdSignal
+#   Writes: ThresholdSignal, AlertConfig
+# Database:
+#   Scope: domain (general)
+#   Models: AlertConfig, ThresholdSignal
 # Role: Emit alerts for near-threshold and breach events
 # Callers: policy/prevention_engine.py
-# Allowed Imports: L4, L5, L6
-# Forbidden Imports: L1, L2
-# Reference: POLICY_CONTROL_LEVER_IMPLEMENTATION_PLAN.md PCL-007
+# Allowed Imports: L6, L7 (models)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, POLICY_CONTROL_LEVER_IMPLEMENTATION_PLAN.md PCL-007
 
 """
 Alert Emitter Service
@@ -382,21 +393,21 @@ class AlertEmitter:
         """Persist signal changes to database."""
         if self._session:
             self._session.add(signal)
-            self._session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
         else:
             with Session(engine) as session:
                 session.add(signal)
-                session.commit()
+                # NO COMMIT — L4 coordinator owns transaction boundary
 
     async def _persist_config(self, config: AlertConfig) -> None:
         """Persist config changes to database."""
         if self._session:
             self._session.add(config)
-            self._session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
         else:
             with Session(engine) as session:
                 session.add(config)
-                session.commit()
+                # NO COMMIT — L4 coordinator owns transaction boundary
 
 
 # Singleton instance

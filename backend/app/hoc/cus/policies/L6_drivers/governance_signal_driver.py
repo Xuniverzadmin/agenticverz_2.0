@@ -1,13 +1,22 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
-#   Trigger: api|worker|scheduler
+#   Trigger: api (via L5 engine)
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: governance_signals
+#   Writes: governance_signals
+# Database:
+#   Scope: domain (policies)
+#   Models: GovernanceSignal
 # Role: Governance signal persistence service
 # Callers: L7 (BLCA, CI) for writes, L4/L5 for reads
-# Allowed Imports: L6 (db, models)
-# Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-256 Phase E FIX-03
+# Allowed Imports: L6, L7 (models)
+# Reference: PIN-470, PIN-256 Phase E FIX-03
 
 """
 Governance Signal Service (Phase E FIX-03)

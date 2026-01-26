@@ -8,6 +8,7 @@
 # Callers: Orchestrators that process CostAnomalyFact from analytics
 # Allowed Imports: L6 (incidents drivers), L4 (incident engines)
 # Forbidden Imports: L1, L2, L3, analytics engines/drivers
+# Forbidden: session.commit(), session.rollback() — L3 DOES NOT COMMIT (L4 coordinator owns)
 # Reference: R1 Resolution — Analytics Authority Boundary
 #
 # GOVERNANCE NOTE:
@@ -288,7 +289,7 @@ class AnomalyIncidentBridge:
                     "synthetic_scenario_id": None,
                 },
             )
-            self._session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
             # Emit metric
             governance_incidents_created_total.labels(

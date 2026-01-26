@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Plan structure inspection and validation (pure computation, no boundary crossing)
 # Callers: runtime API
 # Allowed Imports: None (foundational)
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: Plan System
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, Plan System
 # NOTE: Reclassified L6→L5 (2026-01-24) - Pure validation logic with dataclasses/URL parsing, no DB/cache/external service
 
 # Plan Safety Inspector

@@ -1,5 +1,21 @@
-# Layer: L6 — Driver
-# CostSim Leader Election via PostgreSQL Advisory Locks
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: pg_advisory_lock (PostgreSQL system)
+#   Writes: none
+# Database:
+#   Scope: domain (analytics)
+#   Models: none (advisory locks only)
+# Role: CostSim Leader Election via PostgreSQL Advisory Locks
+# Callers: canary.py, alert_worker.py (L5 engines)
+# Allowed Imports: L6, L7 (models)
+# Reference: PIN-470, M6 CostSim
 """
 Leader election using PostgreSQL advisory locks.
 

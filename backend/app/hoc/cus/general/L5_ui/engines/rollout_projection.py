@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: query-time
 #   Execution: sync (read-only projection)
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via L6 models (read-only projection)
+#   Writes: none
 # Role: Rollout Projection - read-only projection of audited truth (pure business logic)
 # Callers: L2 (founder console, customer console)
 # Allowed Imports: L6 models only
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: PIN-296, GOVERNANCE_AUDIT_MODEL.md, part2-design-v1
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-296, GOVERNANCE_AUDIT_MODEL.md, part2-design-v1
 # NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 #
 # ==============================================================================

@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: policy_evaluation_complete
+#   Subscribes: none
+# Data Access:
+#   Reads: policies, violations (via driver)
+#   Writes: evaluations, violations (via driver)
 # Role: Policy rule evaluation engine
 # Callers: API routes, workers, services
 # Allowed Imports: L5, L6
 # Forbidden Imports: L1, L2, L3, sqlalchemy (at runtime)
-# Reference: Policy System, PIN-468 (Phase-2.5A)
+# Reference: PIN-470, Policy System, PIN-468 (Phase-2.5A)
 #
 # EXTRACTION STATUS: Phase-2.5A COMPLETE (2026-01-24)
 # - PolicyEngineDriver contains all DB operations

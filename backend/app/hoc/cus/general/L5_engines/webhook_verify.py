@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Webhook HMAC-SHA256 signature verification (pure cryptographic computation)
 # Callers: webhook API
 # Allowed Imports: None (foundational)
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: Webhook Security
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, Webhook Security
 # NOTE: Reclassified L6→L5 (2026-01-24) - Core verification is pure computation; optional loaders are factories
 
 """

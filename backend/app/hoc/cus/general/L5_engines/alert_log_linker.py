@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api/worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: in-memory link storage
+#   Writes: in-memory link storage
 # Role: Link alerts to log records for explicit correlation (pure business logic)
 # Callers: alert_emitter, incident_service, trace_service
 # Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: GAP-019 (Alert → Log Linking)
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-019 (Alert → Log Linking)
 # NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 
 """

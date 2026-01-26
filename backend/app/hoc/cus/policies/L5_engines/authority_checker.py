@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: overrides (via driver)
+#   Writes: none
 # Role: Check override authority before policy enforcement
 # Callers: policy/prevention_engine.py, services/enforcement/
 # Allowed Imports: L6, L7
 # Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: GAP-034 (Override Authority Integration)
+# Reference: PIN-470, GAP-034 (Override Authority Integration)
 # NOTE: Reclassified L6→L5 (2026-01-24) - no Session imports, pure check logic
 
 """

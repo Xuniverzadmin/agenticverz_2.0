@@ -3,13 +3,19 @@
 # Product: ai-console
 # Location: hoc/cus/activity/L5_engines/activity_facade.py
 # Temporal:
-#   Trigger: internal (called by L2 API)
+#   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: WorkerRun, AuditLedger (via driver)
+#   Writes: none (read-only facade)
 # Role: Activity Facade - Centralized access to activity domain operations
 # Callers: app.api.activity (L2)
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3, L7
-# Reference: PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
 #
 # L4 is reserved for general/L4_runtime/ only per HOC Layer Topology.
 
@@ -45,21 +51,25 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
+from app.hoc.cus.activity.L6_drivers.activity_read_driver import (
+    get_activity_read_driver,
+)
 
-from app.services.activity.attention_ranking_service import AttentionRankingService
-from app.services.activity.cost_analysis_service import CostAnalysisService
-from app.services.activity.pattern_detection_service import PatternDetectionService
-from app.services.activity.signal_feedback_service import (
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from app.hoc.cus.activity.L6_drivers.activity_read_driver import ActivityReadDriver
+from app.hoc.cus.activity.L5_engines.attention_ranking_engine import AttentionRankingService
+from app.hoc.cus.activity.L5_engines.cost_analysis_engine import CostAnalysisService
+from app.hoc.cus.activity.L5_engines.pattern_detection_engine import PatternDetectionService
+from app.hoc.cus.activity.L5_engines.signal_feedback_engine import (
     SignalFeedbackService,
     AcknowledgeResult,
     SuppressResult,
     SignalFeedbackStatus,  # Canonical feedback state - engines own state DTOs
 )
-from app.services.activity.signal_identity import compute_signal_fingerprint_from_row
+from app.hoc.cus.activity.L5_engines.signal_identity import compute_signal_fingerprint_from_row
 
 # Import canonical enums from engines (engines own enums, facades import)
 from app.hoc.cus.activity.L5_engines.activity_enums import (
@@ -306,15 +316,15 @@ class RiskSignalsResult:
 
 
 # Import service result types for pass-through
-from app.services.activity.pattern_detection_service import (
+from app.hoc.cus.activity.L5_engines.pattern_detection_engine import (
     PatternDetectionResult,
     DetectedPattern,
 )
-from app.services.activity.cost_analysis_service import (
+from app.hoc.cus.activity.L5_engines.cost_analysis_engine import (
     CostAnalysisResult,
     CostAnomaly,
 )
-from app.services.activity.attention_ranking_service import (
+from app.hoc.cus.activity.L5_engines.attention_ranking_engine import (
     AttentionQueueResult,
     AttentionSignal,
 )
@@ -339,6 +349,10 @@ class ActivityFacade:
     def __init__(self) -> None:
         """Initialize facade."""
         pass  # Services are instantiated per-request
+
+    def _get_driver(self, session: AsyncSession) -> ActivityReadDriver:
+        """Get activity read driver for this session."""
+        return get_activity_read_driver(session)
 
     def _get_pattern_service(self, session: AsyncSession) -> PatternDetectionService:
         """Get pattern detection service for this session."""
@@ -498,31 +512,10 @@ class ActivityFacade:
         where_sql = " AND ".join(where_clauses)
         sort_dir = "DESC" if sort_order.lower() == "desc" else "ASC"
 
-        # Count query
-        count_sql = f"SELECT COUNT(*) as total FROM v_runs_o2 WHERE {where_sql}"
-
-        # Data query
-        data_sql = f"""
-            SELECT
-                run_id, tenant_id, project_id, is_synthetic, source, provider_type,
-                state, status, started_at, last_seen_at, completed_at, duration_ms,
-                risk_level, latency_bucket, evidence_health, integrity_status,
-                incident_count, policy_draft_count, policy_violation,
-                input_tokens, output_tokens, estimated_cost_usd
-            FROM v_runs_o2
-            WHERE {where_sql}
-            ORDER BY {sort_by} {sort_dir}
-            LIMIT :limit OFFSET :offset
-        """
-
-        params["limit"] = limit
-        params["offset"] = offset
-
-        count_result = await session.execute(text(count_sql), params)
-        total = count_result.scalar() or 0
-
-        data_result = await session.execute(text(data_sql), params)
-        rows = data_result.mappings().all()
+        # L6: Delegate data access to driver
+        driver = self._get_driver(session)
+        total = await driver.count_runs(where_sql, params)
+        rows = await driver.fetch_runs(where_sql, params, sort_by, sort_dir, limit, offset)
 
         items = [
             RunSummaryResult(
@@ -580,16 +573,9 @@ class ActivityFacade:
         Returns:
             RunDetailResult or None if not found
         """
-        sql = """
-            SELECT *
-            FROM v_runs_o2
-            WHERE run_id = :run_id AND tenant_id = :tenant_id
-        """
-
-        result = await session.execute(
-            text(sql), {"run_id": run_id, "tenant_id": tenant_id}
-        )
-        row = result.mappings().first()
+        # L6: Delegate data access to driver
+        driver = self._get_driver(session)
+        row = await driver.fetch_run_detail(tenant_id, run_id)
 
         if not row:
             return None
@@ -703,16 +689,9 @@ class ActivityFacade:
 
         where_sql = " AND ".join(where_clauses)
 
-        sql = f"""
-            SELECT status, COUNT(*) as count
-            FROM v_runs_o2
-            WHERE {where_sql}
-            GROUP BY status
-            ORDER BY count DESC
-        """
-
-        result = await session.execute(text(sql), params)
-        rows = result.mappings().all()
+        # L6: Delegate data access to driver
+        driver = self._get_driver(session)
+        rows = await driver.fetch_status_summary(where_sql, params)
 
         statuses = [
             StatusCount(status=row["status"], count=row["count"]) for row in rows
@@ -847,42 +826,12 @@ class ActivityFacade:
         where_sql = " AND ".join(where_clauses)
         sort_dir = "DESC" if sort_order.lower() == "desc" else "ASC"
 
-        # Count query
-        count_sql = f"SELECT COUNT(*) as total FROM v_runs_o2 WHERE {where_sql}"
-
-        # Data query with policy context columns
-        data_sql = f"""
-            SELECT
-                run_id, tenant_id, project_id, is_synthetic, source, provider_type,
-                state, status, started_at, last_seen_at, completed_at, duration_ms,
-                risk_level, latency_bucket, evidence_health, integrity_status,
-                incident_count, policy_draft_count, policy_violation,
-                input_tokens, output_tokens, estimated_cost_usd,
-                COALESCE(policy_id, 'default') as policy_id,
-                COALESCE(policy_name, 'Default Policy') as policy_name,
-                COALESCE(policy_scope, 'TENANT') as policy_scope,
-                limit_type,
-                threshold_value,
-                threshold_unit,
-                COALESCE(threshold_source, 'DEFAULT') as threshold_source,
-                COALESCE(evaluation_outcome, 'OK') as evaluation_outcome,
-                actual_value,
-                risk_type,
-                proximity_pct
-            FROM v_runs_o2
-            WHERE {where_sql}
-            ORDER BY {sort_by} {sort_dir}
-            LIMIT :limit OFFSET :offset
-        """
-
-        params["limit"] = limit
-        params["offset"] = offset
-
-        count_result = await session.execute(text(count_sql), params)
-        total = count_result.scalar() or 0
-
-        data_result = await session.execute(text(data_sql), params)
-        rows = data_result.mappings().all()
+        # L6: Delegate data access to driver
+        driver = self._get_driver(session)
+        total = await driver.count_runs(where_sql, params)
+        rows = await driver.fetch_runs_with_policy_context(
+            where_sql, params, sort_by, sort_dir, limit, offset
+        )
 
         items = []
         for row in rows:
@@ -979,39 +928,13 @@ class ActivityFacade:
 
         where_sql = " AND ".join(where_clauses)
 
-        # Query runs with risk signals
-        sql = f"""
-            SELECT
-                run_id, tenant_id, project_id, is_synthetic, source, provider_type,
-                state, status, started_at, risk_level, evidence_health,
-                COALESCE(policy_id, 'default') as policy_id,
-                COALESCE(policy_name, 'Default Policy') as policy_name,
-                COALESCE(policy_scope, 'TENANT') as policy_scope,
-                limit_type,
-                threshold_value,
-                threshold_unit,
-                COALESCE(threshold_source, 'DEFAULT') as threshold_source,
-                COALESCE(evaluation_outcome, 'OK') as evaluation_outcome,
-                actual_value,
-                risk_type,
-                proximity_pct
-            FROM v_runs_o2
-            WHERE {where_sql}
-            ORDER BY started_at DESC
-            LIMIT :limit OFFSET :offset
-        """
-
-        params["limit"] = limit
-        params["offset"] = offset
-
-        result = await session.execute(text(sql), params)
-        rows = result.mappings().all()
+        # L6: Delegate data access to driver
+        driver = self._get_driver(session)
+        rows = await driver.fetch_at_risk_runs(where_sql, params, limit, offset)
 
         # Count total
-        count_sql = f"SELECT COUNT(*) FROM v_runs_o2 WHERE {where_sql}"
-        count_params = {k: v for k, v in params.items() if k not in ("limit", "offset")}
-        count_result = await session.execute(text(count_sql), count_params)
-        total = count_result.scalar() or 0
+        count_params = {k: v for k, v in params.items()}
+        total = await driver.count_runs(where_sql, count_params)
 
         signals = []
         for row_mapping in rows:
@@ -1134,27 +1057,9 @@ class ActivityFacade:
 
         where_sql = " AND ".join(where_clauses)
 
-        sql = f"""
-            SELECT
-                COUNT(*) FILTER (WHERE risk_level = 'AT_RISK') as at_risk_count,
-                COUNT(*) FILTER (WHERE risk_level = 'VIOLATED') as violated_count,
-                COUNT(*) FILTER (WHERE risk_level = 'NEAR_THRESHOLD') as near_threshold_count,
-                COUNT(*) FILTER (WHERE risk_level != 'NORMAL') as total_at_risk,
-                COUNT(*) FILTER (WHERE state = 'LIVE') as live_count,
-                COUNT(*) FILTER (WHERE state = 'COMPLETED') as completed_count,
-                COUNT(*) FILTER (WHERE evidence_health = 'FLOWING') as evidence_flowing_count,
-                COUNT(*) FILTER (WHERE evidence_health = 'DEGRADED') as evidence_degraded_count,
-                COUNT(*) FILTER (WHERE evidence_health = 'MISSING') as evidence_missing_count,
-                COUNT(*) FILTER (WHERE risk_type = 'COST') as cost_risk_count,
-                COUNT(*) FILTER (WHERE risk_type = 'TIME') as time_risk_count,
-                COUNT(*) FILTER (WHERE risk_type = 'TOKENS') as token_risk_count,
-                COUNT(*) FILTER (WHERE risk_type = 'RATE') as rate_risk_count
-            FROM v_runs_o2
-            WHERE {where_sql}
-        """
-
-        result = await session.execute(text(sql), params)
-        row = result.mappings().first()
+        # L6: Delegate data access to driver
+        driver = self._get_driver(session)
+        row = await driver.fetch_metrics(where_sql, params)
 
         if not row:
             return MetricsResult(
@@ -1230,37 +1135,13 @@ class ActivityFacade:
 
         where_sql = " AND ".join(where_clauses)
 
-        sql = f"""
-            SELECT
-                run_id,
-                COALESCE(limit_type, 'UNKNOWN') as limit_type,
-                COALESCE(proximity_pct, 0) as proximity_pct,
-                COALESCE(evaluation_outcome, 'OK') as evaluation_outcome,
-                COALESCE(policy_id, 'default') as policy_id,
-                COALESCE(policy_name, 'Default Policy') as policy_name,
-                COALESCE(policy_scope, 'TENANT') as policy_scope,
-                threshold_value,
-                threshold_unit,
-                COALESCE(threshold_source, 'DEFAULT') as threshold_source,
-                actual_value,
-                risk_type
-            FROM v_runs_o2
-            WHERE {where_sql}
-            ORDER BY proximity_pct DESC
-            LIMIT :limit OFFSET :offset
-        """
-
-        params["limit"] = limit
-        params["offset"] = offset
-
-        result = await session.execute(text(sql), params)
-        rows = result.mappings().all()
+        # L6: Delegate data access to driver
+        driver = self._get_driver(session)
+        rows = await driver.fetch_threshold_signals(where_sql, params, limit, offset)
 
         # Count total
-        count_sql = f"SELECT COUNT(*) FROM v_runs_o2 WHERE {where_sql}"
-        count_params = {k: v for k, v in params.items() if k not in ("limit", "offset")}
-        count_result = await session.execute(text(count_sql), count_params)
-        total = count_result.scalar() or 0
+        count_params = {k: v for k, v in params.items()}
+        total = await driver.count_runs(where_sql, count_params)
 
         signals = []
         for row in rows:

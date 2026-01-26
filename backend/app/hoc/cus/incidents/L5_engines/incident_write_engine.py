@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync (delegates to L6 driver)
+# Lifecycle:
+#   Emits: incident_acknowledged, incident_resolved
+#   Subscribes: none
+# Data Access:
+#   Reads: Incident (via driver)
+#   Writes: Incident, IncidentEvent (via driver)
 # Role: Incident domain write operations with audit (L5 facade over L6 driver)
 # Callers: customer_incidents_adapter.py (L3)
-# Allowed Imports: L6 (drivers only, NOT ORM models), L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: PIN-281, PIN-413, PHASE2_EXTRACTION_PROTOCOL.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-281, PIN-413, PHASE2_EXTRACTION_PROTOCOL.md
 # NOTE: Renamed incident_write_service.py → incident_write_engine.py (2026-01-24)
 #       per BANNED_NAMING rule (*_service.py → *_engine.py)
 #       Reclassified L4→L5 - Per HOC topology, engines are L5 (business logic)
@@ -47,9 +53,9 @@ from app.hoc.cus.incidents.L6_drivers.incident_write_driver import (
     get_incident_write_driver,
 )
 
-# L4 imports (audit ledger)
+# L5 imports (audit ledger - migrated to HOC per SWEEP-03 Batch 3)
 from app.models.audit_ledger import ActorType
-from app.services.logs.audit_ledger_service import AuditLedgerService
+from app.hoc.cus.logs.L5_engines.audit_ledger_service import AuditLedgerService
 
 if TYPE_CHECKING:
     from sqlmodel import Session

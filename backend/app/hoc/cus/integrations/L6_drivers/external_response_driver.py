@@ -1,14 +1,22 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
-# Product: system-wide
 # Temporal:
-#   Trigger: api|worker|scheduler
+#   Trigger: api|worker|scheduler (via L5 engine)
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: ExternalResponse
+#   Writes: ExternalResponse (session.add)
+# Database:
+#   Scope: domain (integrations)
+#   Models: ExternalResponse
 # Role: External response persistence and interpretation driver
+# Product: system-wide
 # Callers: L3 adapters (record_raw), L4/L5 engines (interpret), L2 (read_interpreted)
-# Allowed Imports: L7 (models)
-# Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-256 Phase E FIX-04
+# Allowed Imports: L6, L7 (models)
+# Reference: PIN-470, PIN-256 Phase E FIX-04
 # NOTE: Renamed external_response_service.py → external_response_driver.py (2026-01-24)
 #       per BANNED_NAMING rule (*_service.py → *_driver.py for L6 files)
 

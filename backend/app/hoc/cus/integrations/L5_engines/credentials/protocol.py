@@ -1,14 +1,20 @@
-# Layer: L4 — Domain Engines
+# Layer: L5 — Domain Engine
 # AUDIENCE: INTERNAL
-# Product: system-wide
 # Temporal:
 #   Trigger: api (via connectors)
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (protocol definition)
+#   Writes: none
 # Role: Canonical CredentialService protocol for connector services
+# Product: system-wide
 # Callers: http_connector.py, mcp_connector.py, sql_gateway.py
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: INT-DUP-002 (Quarantine Resolution)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, INT-DUP-002 (Quarantine Resolution)
 
 """
 CredentialService Protocol — Canonical Definition

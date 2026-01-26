@@ -40,8 +40,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
-# L4 imports ONLY (no L6!)
-from app.services.policy.customer_policy_read_service import (
+# L5 imports ONLY (no L6!)
+from app.hoc.cus.policies.L5_engines.customer_policy_read_engine import (
     CustomerPolicyReadService,
     GuardrailSummary,
     PolicyConstraints,

@@ -1,10 +1,22 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: User
+#   Writes: User (create, update)
+# Database:
+#   Scope: domain (account)
+#   Models: User
 # Role: Data access for user write operations
-# Callers: user engines (L4)
-# Allowed Imports: ORM models
-# Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
+# Callers: user_write_engine.py (L5)
+# Allowed Imports: L6, L7 (models)
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
 #
 # GOVERNANCE NOTE:
 # This L6 driver provides pure data access for user writes.
@@ -80,7 +92,7 @@ class UserWriteDriver:
             status=status,
         )
         self._session.add(user)
-        self._session.commit()
+        self._session.flush()  # Get generated ID, NO COMMIT — L4 owns transaction
         self._session.refresh(user)
         return user
 
@@ -98,7 +110,7 @@ class UserWriteDriver:
         user.last_login_at = now
         user.updated_at = now
         self._session.add(user)
-        self._session.commit()
+        self._session.flush()  # Get updated data, NO COMMIT — L4 owns transaction
         self._session.refresh(user)
         return user
 

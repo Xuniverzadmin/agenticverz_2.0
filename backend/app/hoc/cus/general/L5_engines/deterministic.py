@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: any
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Deterministic execution utilities (pure computation, no boundary crossing)
 # Callers: runtime, workers
 # Allowed Imports: None (foundational)
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: Determinism
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, Determinism
 # NOTE: Reclassified L6→L5 (2026-01-24) - No DB/cache boundary, pure algorithmic computation
 
 # Deterministic Utilities for M11 Skills

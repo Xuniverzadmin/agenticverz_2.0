@@ -1,14 +1,23 @@
-# Layer: L6 — Platform Substrate
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
-#   Trigger: api
-#   Execution: async/sync (DB reads/writes)
-# Role: Tenant domain driver - pure data access for tenant operations
-# Callers: tenant_engine.py (L4)
-# Allowed Imports: L7 (models)
-# Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: ACCOUNT_PHASE2.5_IMPLEMENTATION_PLAN.md
+#   Trigger: api (via L5 engine)
+#   Execution: async/sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Tenant, Membership, APIKey, UsageRecord, WorkerRun, AuditLedger
+#   Writes: Tenant, Membership, APIKey, UsageRecord, WorkerRun, AuditLedger (via session.add, NO COMMIT)
+# Database:
+#   Scope: domain (account)
+#   Models: Tenant, Membership, APIKey, UsageRecord, WorkerRun, AuditLedger
+# Role: Tenant domain driver - pure data access for tenant operations — L6 DOES NOT COMMIT
+# Callers: tenant_engine.py (L5), must provide session, must own transaction boundary
+# Allowed Imports: L6, L7 (models)
+# Forbidden: session.commit() — L4 coordinator owns transaction boundary
+# Reference: PIN-470, ACCOUNT_PHASE2.5_IMPLEMENTATION_PLAN.md
 #
 # PHASE 2.5B EXTRACTION (2026-01-24):
 # This driver was extracted from tenant_service.py to enforce L4/L6 separation.
@@ -208,7 +217,7 @@ class TenantDriver:
             max_api_keys=max_api_keys,
         )
         self.session.add(tenant)
-        self.session.commit()
+        self.session.flush()  # Get generated ID, NO COMMIT — L4 owns transaction
         self.session.refresh(tenant)
         return tenant
 
@@ -231,8 +240,7 @@ class TenantDriver:
         tenant.max_api_keys = max_api_keys
         tenant.updated_at = utc_now()
         self.session.add(tenant)
-        self.session.commit()
-        self.session.refresh(tenant)
+        # NO COMMIT — L4 coordinator owns transaction boundary
         return tenant
 
     def update_tenant_status(
@@ -247,7 +255,7 @@ class TenantDriver:
             tenant.suspended_reason = suspended_reason
         tenant.updated_at = utc_now()
         self.session.add(tenant)
-        self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
         return tenant
 
     def update_tenant_usage(
@@ -268,14 +276,14 @@ class TenantDriver:
         if last_run_reset_at is not None:
             tenant.last_run_reset_at = last_run_reset_at
         self.session.add(tenant)
-        self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
         return tenant
 
     def increment_tenant_usage(self, tenant: Tenant, tokens: int = 0) -> None:
         """Increment usage counters."""
         tenant.increment_usage(tokens)
         self.session.add(tenant)
-        self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
     # ============== Membership Operations ==============
 
@@ -300,7 +308,7 @@ class TenantDriver:
                 user.default_tenant_id = tenant_id
                 self.session.add(user)
 
-        self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
         return membership
 
     # ============== API Key Operations ==============
@@ -342,7 +350,7 @@ class TenantDriver:
             expires_at=expires_at,
         )
         self.session.add(api_key)
-        self.session.commit()
+        self.session.flush()  # Get generated ID, NO COMMIT — L4 owns transaction
         self.session.refresh(api_key)
         return api_key
 
@@ -371,7 +379,7 @@ class TenantDriver:
         api_key.revoked_at = utc_now()
         api_key.revoked_reason = reason
         self.session.add(api_key)
-        self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
         return api_key
 
     # ============== Run Count Operations ==============
@@ -408,7 +416,7 @@ class TenantDriver:
             status="queued",
         )
         self.session.add(run)
-        self.session.commit()
+        self.session.flush()  # Get generated ID, NO COMMIT — L4 owns transaction
         self.session.refresh(run)
         return run
 
@@ -444,8 +452,7 @@ class TenantDriver:
         run.error = error
         run.completed_at = utc_now()
         self.session.add(run)
-        self.session.commit()
-        self.session.refresh(run)
+        # NO COMMIT — L4 coordinator owns transaction boundary
         return run
 
     def fetch_runs(
@@ -494,7 +501,7 @@ class TenantDriver:
             metadata_json=json.dumps(metadata) if metadata else None,
         )
         self.session.add(record)
-        self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
         return record
 
     def fetch_usage_records(

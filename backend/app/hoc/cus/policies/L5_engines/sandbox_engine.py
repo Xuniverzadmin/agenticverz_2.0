@@ -5,11 +5,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: sandbox_execution
+#   Subscribes: none
+# Data Access:
+#   Reads: sandbox_config (via driver)
+#   Writes: sandbox_results (via driver)
 # Role: High-level sandbox engine with policy enforcement (pure business logic)
 # Callers: Runtime, API routes, Skill executors
-# Allowed Imports: L6 (drivers)
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: GAP-174 (Execution Sandboxing)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-174 (Execution Sandboxing)
 # NOTE: Renamed sandbox_service.py → sandbox_engine.py (2026-01-24) - BANNED_NAMING fix
 #       Reclassified L4→L5 per HOC Topology V1
 

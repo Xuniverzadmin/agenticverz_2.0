@@ -1,14 +1,20 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Role: Cost safety rail enforcement (business rules)
-# Product: system-wide
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (pure business rules)
+#   Writes: none
+# Role: Cost safety rail enforcement (business rules)
+# Product: system-wide
 # Callers: cost services, workers
-# Allowed Imports: L6, L7 (stdlib)
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: Cost Safety
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, Cost Safety
 # NOTE: Reclassified L6→L5 (2026-01-24) - Pure business rules for cost safety, not SQL driver
 #       Remains in drivers/ per Layer ≠ Directory principle
 

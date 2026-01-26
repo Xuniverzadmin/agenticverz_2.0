@@ -1,14 +1,23 @@
-# Layer: L6 — Platform Substrate
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Product: ai-console
 # Temporal:
-#   Trigger: api
+#   Trigger: api (via L5 engine)
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Incident
+#   Writes: none
+# Database:
+#   Scope: domain (incidents)
+#   Models: Incident
 # Role: Database operations for incidents facade - pure data access
-# Callers: incidents_facade.py (L4)
-# Allowed Imports: sqlalchemy, models
+# Callers: incidents_facade.py (L5)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: INCIDENTS_PHASE2.5_IMPLEMENTATION_PLAN.md — Violation I.1
+# Reference: PIN-470, INCIDENTS_PHASE2.5_IMPLEMENTATION_PLAN.md — Violation I.1
 
 """
 Incidents Facade Driver (L6)

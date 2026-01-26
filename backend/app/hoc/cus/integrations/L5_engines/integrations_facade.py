@@ -1,14 +1,20 @@
-# Layer: L5 — Driver
+# Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Role: Integrations domain facade - unified entry point for integration management
-# Product: ai-console
 # Temporal:
 #   Trigger: api
 #   Execution: async (DB operations)
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: (via CusIntegrationService)
+#   Writes: (via CusIntegrationService)
+# Role: Integrations domain facade - unified entry point for integration management
+# Product: ai-console
 # Callers: L2 integrations API (aos_cus_integrations.py)
-# Allowed Imports: L4 (CusIntegrationService), L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: Connectivity Domain - Customer Console v1 Constitution
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, Connectivity Domain - Customer Console v1 Constitution
 #
 
 """
@@ -31,8 +37,8 @@ from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID
 
-# PIN-468: Import from engine (provides CusIntegrationService alias for compatibility)
-from app.services.cus_integration_engine import CusIntegrationService
+# L5 engine import (migrated to HOC per SWEEP-03 Batch 3)
+from app.hoc.cus.integrations.L5_engines.cus_integration_service import CusIntegrationService
 
 
 # =============================================================================

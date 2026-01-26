@@ -1,14 +1,19 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Product: system-wide
 # Temporal:
-#   Trigger: api|worker
+#   Trigger: api/worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (in-memory state)
+#   Writes: none
 # Role: Optimization killswitch for emergency stops (pure state logic)
 # Callers: API routes, workers
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: M10 Optimization
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, M10 Optimization
 # NOTE: Reclassified L6→L5 (2026-01-24) - no Session imports, pure state logic
 #       Remains in drivers/ per Layer ≠ Directory principle
 

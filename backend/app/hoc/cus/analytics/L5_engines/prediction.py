@@ -1,14 +1,20 @@
-# Layer: L5 — Domain Engine (Advisory)
+# Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Product: AI Console
 # Temporal:
-#   Trigger: API call, scheduler
+#   Trigger: api/scheduler
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via prediction_driver (L6)
+#   Writes: via prediction_driver (L6)
 # Role: Prediction generation and orchestration (advisory only)
 # Callers: predictions API (read-side)
-# Allowed Imports: L5, L6 (drivers)
-# Forbidden Imports: L1, L2, sqlalchemy direct queries
-# Reference: Phase-2.5A Analytics Extraction, PIN-240
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
+# Reference: PIN-470, Phase-2.5A Analytics Extraction, PIN-240
 #
 # GOVERNANCE NOTE:
 # This L4 engine handles PREDICTION LOGIC only:
@@ -392,8 +398,7 @@ async def run_prediction_cycle(
                 except Exception as e:
                     result["errors"].append(f"Failed to emit cost prediction: {e}")
 
-            # Phase-2.5A: Delegate commit to driver
-            await driver.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
     except Exception as e:
         logger.error(f"prediction_cycle_error: {e}", exc_info=True)

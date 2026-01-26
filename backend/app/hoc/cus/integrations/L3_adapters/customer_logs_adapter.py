@@ -129,7 +129,8 @@ class CustomerLogsAdapter:
     async def _get_service(self):
         """Get the L4 LogsReadService (lazy loaded)."""
         if self._service is None:
-            from app.services.logs_read_service import get_logs_read_service
+            # L5 engine import (migrated to HOC per SWEEP-03)
+            from app.hoc.cus.logs.L5_engines.logs_read_engine import get_logs_read_service
 
             self._service = get_logs_read_service()
         return self._service

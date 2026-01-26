@@ -1,15 +1,27 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
 # Role: Overview Engine - Centralized access to overview domain operations
-# Location: hoc/cus/overview/L5_engines/overview_facade.py
-# Reference: DIRECTORY_REORGANIZATION_PLAN.md, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
+# Temporal:
+#   Trigger: api
+#   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: incidents, policies, activity, logs (via driver)
+#   Writes: none (read-only projection domain)
+# Callers: L2 API routes (/api/v1/overview/*)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470
+#
+# ARCHITECTURAL RULE:
+# Overview is a PROJECTION domain - it aggregates from other domains.
+# It DOES NOT own any tables. All operations are READ-ONLY.
 #
 # PHASE 2.5B EXTRACTION (2026-01-24):
 # All DB operations extracted to overview_facade_driver.py (L6).
 # This engine now delegates to driver for data access and composes business results.
-#
-# PHASE 3 MIGRATION (2026-01-24):
-# Moved from facades/ to L5_engines/ - this is business logic, not API organization.
 
 """
 Overview Engine (L5 Domain Logic)

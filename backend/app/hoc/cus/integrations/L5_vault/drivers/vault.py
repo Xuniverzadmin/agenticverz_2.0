@@ -1,15 +1,22 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: INTERNAL
-# PHASE: W2
-# Product: system-wide
 # Temporal:
-#   Trigger: api
+#   Trigger: api (via L5 engine)
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: (external vault providers)
+#   Writes: (external vault providers)
+# Database:
+#   Scope: domain (integrations)
+#   Models: none (external vault)
 # Role: Credential vault abstraction with multiple provider support
+# Product: system-wide
 # Callers: CredentialService
-# Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
-# Reference: GAP-171 (Credential Vault Integration), HOC_integrations_analysis_v1.md
+# Allowed Imports: L6, L7 (models)
+# Reference: PIN-470, GAP-171 (Credential Vault Integration), HOC_integrations_analysis_v1.md
 #
 # GOVERNANCE: TRANSITIONAL FILE — INV-INT-006
 # This file is AUDIENCE: INTERNAL but currently lives under customer/.

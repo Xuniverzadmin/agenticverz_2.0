@@ -1,10 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: FeatureTag, CostRecord, CostBudget
+#   Writes: FeatureTag, CostRecord, CostBudget
+# Database:
+#   Scope: domain (analytics)
+#   Models: FeatureTag, CostRecord, CostBudget
 # Role: Data access for cost write operations
-# Callers: cost engines (L4)
-# Allowed Imports: ORM models
+# Callers: cost_write_engine.py (L5 engine)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
 #
 # GOVERNANCE NOTE:
 # This L6 driver provides pure data access for cost writes.
@@ -84,7 +97,7 @@ class CostWriteDriver:
             budget_cents=budget_cents,
         )
         self._session.add(feature_tag)
-        self._session.commit()
+        self._session.flush()  # Get generated ID, NO COMMIT — L4 owns transaction
         self._session.refresh(feature_tag)
         return feature_tag
 
@@ -121,7 +134,7 @@ class CostWriteDriver:
         feature_tag.updated_at = utc_now()
 
         self._session.add(feature_tag)
-        self._session.commit()
+        self._session.flush()  # Get updated data, NO COMMIT — L4 owns transaction
         self._session.refresh(feature_tag)
         return feature_tag
 
@@ -173,7 +186,7 @@ class CostWriteDriver:
             cost_cents=cost_cents,
         )
         self._session.add(record)
-        self._session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
         return record
 
     # =========================================================================
@@ -226,7 +239,7 @@ class CostWriteDriver:
             )
             self._session.add(budget)
 
-        self._session.commit()
+        self._session.flush()  # Get generated/updated data, NO COMMIT — L4 owns transaction
         self._session.refresh(budget)
         return budget
 

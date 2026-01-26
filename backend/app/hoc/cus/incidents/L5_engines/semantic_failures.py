@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Semantic failure taxonomy and fix guidance for incidents domain
-# Callers: Panel adapters (L3), incident engines (L4)
-# Allowed Imports: sibling types only
-# Forbidden Imports: L1, L2, L3, L5, L6, sqlalchemy
-# Reference: PIN-420, INCIDENTS_PHASE2.5_IMPLEMENTATION_PLAN.md — Phase II.1
+# Callers: Panel adapters (L3), incident engines (L5)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-420, INCIDENTS_PHASE2.5_IMPLEMENTATION_PLAN.md — Phase II.1
 #
 # RECLASSIFICATION NOTE (2026-01-24):
 # This file was previously declared as L2.1 (Panel Adapter Layer).

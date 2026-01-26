@@ -38,7 +38,8 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-from app.services.evidence.facade import (
+# L5 engine imports (migrated to HOC per SWEEP-17)
+from app.hoc.cus.logs.L5_engines.evidence_facade import (
     EvidenceFacade,
     get_evidence_facade,
 )

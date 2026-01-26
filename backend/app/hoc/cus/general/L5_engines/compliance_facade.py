@@ -1,14 +1,20 @@
 # Layer: L5 — Adapter (Facade)
 # AUDIENCE: CUSTOMER
-# Role: Compliance Facade - Thin translation layer for compliance operations
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via L6 drivers
+#   Writes: via L6 drivers
+# Role: Compliance Facade - Thin translation layer for compliance operations
 # Callers: L2 compliance.py API, SDK
 # Allowed Imports: L5 (engines), L6 (drivers)
-# Forbidden Imports: L1, L2
-# Reference: GAP-103 (Compliance Verification API)
+# Forbidden Imports: L1, L2, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-103 (Compliance Verification API)
 # NOTE: Reclassified L6→L3 (2026-01-24) - Per HOC topology, facades are L3 (adapters)
 
 

@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: scheduler
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (in-memory logic)
+#   Writes: none
 # Role: Monitor panel invariants and detect silent governance failures (in-memory logic)
 # Callers: main.py (scheduler), ops endpoints
 # Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: PIN-411 (Gap Closure - Part B)
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-411 (Gap Closure - Part B)
 # NOTE: Reclassified L6→L5 (2026-01-24) - In-memory monitoring logic; YAML config load is initialization, not data access
 
 """

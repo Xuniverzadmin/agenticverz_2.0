@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
-# Product: system-wide
+# AUDIENCE: CUSTOMER
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: (via datasource services)
+#   Writes: none (facade orchestration only)
 # Role: DataSources Facade - Centralized access to data source operations
+# Product: system-wide
 # Callers: L2 datasources.py API, SDK
-# Allowed Imports: L4 datasource services, L6 (models, db)
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: GAP-113 (Data Sources API)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-113 (Data Sources API)
 
 """
 DataSources Facade (L4 Domain Logic)
@@ -51,7 +58,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from app.services.datasources.datasource_model import (
+from app.hoc.cus.integrations.L5_schemas.datasource_model import (
     CustomerDataSource,
     DataSourceConfig,
     DataSourceRegistry,

@@ -1,7 +1,19 @@
-# Layer: L5 — Domain Engines
+# Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api|worker
+#   Execution: async|sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: (module exports)
+#   Writes: none
 # Role: integrations domain - engines (business logic, decisions)
-# Reference: HOC_LAYER_TOPOLOGY_V1.md, INTEGRATIONS_PHASE2.5_IMPLEMENTATION_PLAN.md
+# Callers: L2 APIs, L3 adapters
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, HOC_LAYER_TOPOLOGY_V1.md, INTEGRATIONS_PHASE2.5_IMPLEMENTATION_PLAN.md
 
 """
 integrations / engines

@@ -1,16 +1,23 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Wiring Type: policy-gate
 # Parent Gap: GAP-063 (MCPConnector), GAP-087 (PolicyGate)
-# Reference: GAP-142
 # Depends On: GAP-141 (MCPServerRegistry)
 # Temporal:
 #   Trigger: worker (tool invocation)
 #   Execution: async
+# Lifecycle:
+#   Emits: policy_gate_decision
+#   Subscribes: none
+# Data Access:
+#   Reads: tools, policies (via driver)
+#   Writes: none
 # Role: Map MCP tool invocations to policy gates
 # Callers: Runner, skill executor
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-142
 
 """
 Module: policy_mapper
@@ -422,7 +429,8 @@ class MCPPolicyMapper:
             return self._policy_engine
 
         try:
-            from app.services.policies import get_policy_engine
+            # L5 engine import (migrated to HOC per SWEEP-06)
+            from app.hoc.cus.policies.L5_engines.engine import get_policy_engine
             return get_policy_engine()
         except ImportError:
             logger.debug("mcp_policy.policy_engine_not_available")

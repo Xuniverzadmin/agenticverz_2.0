@@ -1,10 +1,22 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Incident
+#   Writes: none
+# Database:
+#   Scope: domain (incidents)
+#   Models: Incident
 # Role: Data access for post-mortem analytics operations (async)
-# Callers: PostMortemEngine (L4)
-# Allowed Imports: sqlalchemy
+# Callers: PostMortemEngine (L5)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
+# Reference: PIN-470, PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
 #
 # GOVERNANCE NOTE:
 # This L6 driver provides pure data access for post-mortem analytics.

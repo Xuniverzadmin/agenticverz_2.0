@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: system-condition or operator-action
 #   Execution: sync
+# Lifecycle:
+#   Emits: degraded_mode_change
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Degraded mode for governance system (pure state logic)
 # Callers: main.py, prevention_engine.py
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: GAP-070
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-070
 # NOTE: Reclassified L6→L5 (2026-01-24) - no Session imports, pure logic
 
 """

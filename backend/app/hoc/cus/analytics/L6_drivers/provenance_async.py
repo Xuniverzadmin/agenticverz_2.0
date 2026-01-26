@@ -1,5 +1,22 @@
-# Layer: L6 — Driver
-# CostSim V2 Provenance Logger - Async Implementation
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: CostSimProvenanceModel
+#   Writes: CostSimProvenanceModel
+# Database:
+#   Scope: domain (analytics)
+#   Models: CostSimProvenanceModel
+# Role: CostSim V2 Provenance Logger - Async Implementation
+# Callers: sandbox.py (L5 engine)
+# Allowed Imports: L6, L7 (models)
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, M6 CostSim
 """
 Async provenance logging for CostSim V2.
 
@@ -126,7 +143,7 @@ async def write_provenance(
         )
 
         session.add(record)
-        await session.commit()
+        await session.flush()  # Get generated ID, NO COMMIT — L4 owns transaction
         await session.refresh(record)
 
         logger.debug(f"Provenance record created: id={record.id}, variant={variant_slug}, input_hash={input_hash}")
@@ -135,8 +152,7 @@ async def write_provenance(
 
     except Exception as e:
         logger.error(f"Failed to write provenance: {e}")
-        if own_session:
-            await session.rollback()
+        # NO ROLLBACK — L4 coordinator owns transaction boundary
         raise
 
     finally:
@@ -198,9 +214,8 @@ async def write_provenance_batch(
 
             session.add(record)
 
-        await session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
-        # Get IDs after commit
         # Note: This is a simplification - in production you'd want to
         # return the actual IDs via RETURNING clause
         logger.info(f"Batch wrote {len(records)} provenance records")
@@ -208,8 +223,7 @@ async def write_provenance_batch(
 
     except Exception as e:
         logger.error(f"Failed to write provenance batch: {e}")
-        if own_session:
-            await session.rollback()
+        # NO ROLLBACK — L4 coordinator owns transaction boundary
         raise
 
     finally:

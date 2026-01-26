@@ -5,11 +5,17 @@
 # Temporal:
 #   Trigger: api or worker (async delivery)
 #   Execution: async
+# Lifecycle:
+#   Emits: NOTIFICATION_SENT
+#   Subscribes: none
+# Data Access:
+#   Reads: User, Tenant (via driver)
+#   Writes: NotificationLog (via driver)
 # Role: Notifications Facade - Centralized access to notification operations
 # Callers: L2 notifications.py API, SDK, Worker
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3, L7
-# Reference: GAP-109, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-109, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
 #
 # L4 is reserved for general/L4_runtime/ only per HOC Layer Topology.
 

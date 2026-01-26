@@ -1,13 +1,24 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide (Worker API)
 # Temporal:
-#   Trigger: api
+#   Trigger: api (via L5 engine)
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: WorkerRun, CostRecord
+#   Writes: WorkerRun, CostRecord, CostAnomaly
+# Database:
+#   Scope: domain (general)
+#   Models: WorkerRun, CostRecord, CostAnomaly
 # Role: DB write delegation for Worker API (Phase 2B extraction)
 # Callers: api/workers.py
-# Allowed Imports: L6 (models, db)
-# Forbidden Imports: L2 (api), L3 (adapters)
-# Reference: PIN-250 Phase 2B Batch 4
+# Allowed Imports: L6, L7 (models)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, PIN-250 Phase 2B Batch 4
 
 """
 Worker Write Service (Async) - DB write operations for Worker API.
@@ -195,9 +206,7 @@ class WorkerWriteServiceAsync:
         """
         await self.session.delete(run)
 
-    async def commit(self) -> None:
-        """Commit the current transaction."""
-        await self.session.commit()
+    # REMOVED: commit() helper — L6 DOES NOT COMMIT (L4 coordinator owns transaction boundary)
 
     async def get_worker_run(self, run_id: str) -> Optional[WorkerRun]:
         """

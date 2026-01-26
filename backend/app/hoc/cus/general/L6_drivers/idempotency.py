@@ -1,13 +1,23 @@
-# Layer: L6 — Platform Substrate
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Run
+#   Writes: none
+# Database:
+#   Scope: domain (general)
+#   Models: Run
 # Role: Idempotency key utilities
 # Callers: API routes, workers
-# Allowed Imports: None (foundational)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: Idempotency
+# Reference: PIN-470, Idempotency
 
 # Idempotency Handling
 # Prevents duplicate runs using idempotency keys

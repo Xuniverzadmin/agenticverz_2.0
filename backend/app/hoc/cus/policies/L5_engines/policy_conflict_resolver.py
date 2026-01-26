@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api (during policy evaluation)
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Resolve conflicts when multiple policies trigger different actions (pure logic)
 # Callers: prevention_engine.py
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: GAP-068
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-068
 # NOTE: Reclassified L6→L5 (2026-01-24) - no Session imports, pure logic
 
 """

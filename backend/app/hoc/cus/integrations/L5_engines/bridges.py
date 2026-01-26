@@ -3,12 +3,21 @@
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: (via embedded DB)
+#   Writes: (via embedded DB - session.commit)
 # Role: Integration bridge abstractions with embedded DB operations
 # Callers: dispatcher, workers
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
 # Note: This file contains L5 business logic with embedded L6 DB operations.
 #       The bridge classes are M25_FROZEN and require governance approval to
 #       extract DB operations to drivers. See INTEGRATIONS_PHASE2.5_IMPLEMENTATION_PLAN.md
-# Reference: HOC_LAYER_TOPOLOGY_V1.md, INTEGRATIONS_PHASE2.5_IMPLEMENTATION_PLAN.md
+# Reference: PIN-470, HOC_LAYER_TOPOLOGY_V1.md, INTEGRATIONS_PHASE2.5_IMPLEMENTATION_PLAN.md
 
 """
 M25 Integration Bridges
@@ -331,7 +340,7 @@ class IncidentToCatalogBridge(BaseBridge):
             ),
             {"id": pattern_id},
         )
-        await session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
     async def _create_pattern(
         self,
@@ -369,7 +378,7 @@ class IncidentToCatalogBridge(BaseBridge):
                 "incident_id": incident_id,
             },
         )
-        await session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         logger.info(f"Created new pattern {pattern_id} for incident {incident_id}")
         return pattern_id
@@ -608,7 +617,7 @@ class PatternToRecoveryBridge(BaseBridge):
                     "requires_conf": suggestion.requires_confirmation,
                 },
             )
-            await session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
 
 # =============================================================================
@@ -813,7 +822,7 @@ class RecoveryToPolicyBridge(BaseBridge):
                     "confirmations_received": policy.confirmations_received,
                 },
             )
-            await session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
 
 # =============================================================================
@@ -1071,7 +1080,7 @@ class PolicyToRoutingBridge(BaseBridge):
                     "is_active": adjustment.is_active,
                 },
             )
-            await session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
 
 # =============================================================================

@@ -1,4 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: CostSimCBState, CostSimCBIncident
+#   Writes: CostSimCBState, CostSimCBIncident (via session.add, NO COMMIT)
+# Database:
+#   Scope: domain (analytics)
+#   Models: CostSimCBState, CostSimCBIncident
+# Role: DB-backed circuit breaker state tracking (sync) — L6 DOES NOT COMMIT
+# Callers: L5 engines (must provide session, must own transaction boundary)
+# Allowed Imports: L6, L7 (models)
+# Forbidden: session.commit() — L4 owns commit authority
+# Migration Note: Orphan during HOC migration. Authority enforcement applies regardless.
+# Reference: PIN-470, M6 CostSim, TRANSACTION_BYPASS_REMEDIATION_CHECKLIST.md
 from __future__ import annotations
 
 from app.infra import FeatureIntent, RetryPolicy
@@ -64,7 +83,6 @@ from app.costsim.config import get_config
 from app.db import (
     CostSimCBIncident,
     CostSimCBState,
-    engine,
     log_status_change,
 )
 
@@ -145,8 +163,12 @@ class CircuitBreaker:
     Uses PostgreSQL for centralized state management across replicas.
     Sends alerts to Alertmanager when state changes.
 
+    Transaction Boundary: L6 drivers DO NOT commit.
+    The caller (L5 engine or L4 coordinator) owns the transaction.
+    This driver only calls session.add() — never session.commit().
+
     Usage:
-        breaker = CircuitBreaker()
+        breaker = create_circuit_breaker(session=session)
 
         # Check before running V2
         if not await breaker.is_disabled():
@@ -165,6 +187,7 @@ class CircuitBreaker:
 
     def __init__(
         self,
+        session: Session,
         failure_threshold: Optional[int] = None,
         drift_threshold: Optional[float] = None,
         name: str = CB_NAME,
@@ -173,10 +196,12 @@ class CircuitBreaker:
         Initialize circuit breaker.
 
         Args:
+            session: SQLModel session (REQUIRED — caller owns transaction)
             failure_threshold: Consecutive failures to trip breaker (default from config)
             drift_threshold: Override drift threshold (default from config)
             name: Circuit breaker name (default: costsim_v2)
         """
+        self._session = session
         config = get_config()
 
         self.name = name
@@ -206,10 +231,6 @@ class CircuitBreaker:
             self.incident_dir = fallback_dir
             logger.warning(f"Cannot create {config.incident_dir}, using fallback: {fallback_dir}")
 
-    def _get_session(self) -> Session:
-        """Get a database session."""
-        return Session(engine)
-
     # ========== State Management ==========
 
     def _get_or_create_state(self, session: Session) -> CostSimCBState:
@@ -238,7 +259,8 @@ class CircuitBreaker:
                 consecutive_failures=0,
             )
             session.add(state)
-            session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
+            session.flush()  # Ensure state is available for subsequent queries
             session.refresh(state)
 
         return state
@@ -255,27 +277,27 @@ class CircuitBreaker:
         - disabled=False
         - disabled=True AND disabled_until <= now (TTL expired, auto-recover)
         """
-        with self._get_session() as session:
-            state = self._get_or_create_state(session)
+        session = self._session
+        state = self._get_or_create_state(session)
 
-            if not state.disabled:
-                return False
+        if not state.disabled:
+            return False
 
-            # Check TTL expiration
-            if state.disabled_until is not None:
-                now = datetime.now(timezone.utc)
-                # Convert to naive datetime for comparison if needed
-                disabled_until = state.disabled_until
-                if disabled_until.tzinfo is None:
-                    disabled_until = disabled_until.replace(tzinfo=timezone.utc)
+        # Check TTL expiration
+        if state.disabled_until is not None:
+            now = datetime.now(timezone.utc)
+            # Convert to naive datetime for comparison if needed
+            disabled_until = state.disabled_until
+            if disabled_until.tzinfo is None:
+                disabled_until = disabled_until.replace(tzinfo=timezone.utc)
 
-                if now >= disabled_until:
-                    # TTL expired - auto-recover
-                    if self.config.auto_recover_enabled:
-                        await self._auto_recover(session)
-                        return False
+            if now >= disabled_until:
+                # TTL expired - auto-recover
+                if self.config.auto_recover_enabled:
+                    await self._auto_recover(session)
+                    return False
 
-            return True
+        return True
 
     async def _auto_recover(self, session: Session) -> None:
         """Auto-recover circuit breaker after TTL expires."""
@@ -294,7 +316,7 @@ class CircuitBreaker:
         state.incident_id = None
         state.consecutive_failures = 0
         state.updated_at = datetime.now(timezone.utc)
-        session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         # Resolve incident
         if old_incident_id:
@@ -331,9 +353,9 @@ class CircuitBreaker:
 
         Note: For async code, use is_disabled() instead.
         """
-        with self._get_session() as session:
-            state = self._get_or_create_state(session)
-            return state.disabled
+        session = self._session
+        state = self._get_or_create_state(session)
+        return state.disabled
 
     def is_closed(self) -> bool:
         """Check if circuit breaker is closed (V2 enabled)."""
@@ -341,18 +363,18 @@ class CircuitBreaker:
 
     def get_state(self) -> CircuitBreakerState:
         """Get current circuit breaker state."""
-        with self._get_session() as session:
-            db_state = self._get_or_create_state(session)
-            return CircuitBreakerState(
-                is_open=db_state.disabled,
-                opened_at=db_state.updated_at if db_state.disabled else None,
-                reason=db_state.disabled_reason,
-                incident_id=db_state.incident_id,
-                consecutive_failures=db_state.consecutive_failures,
-                last_failure_at=db_state.last_failure_at,
-                disabled_until=db_state.disabled_until,
-                disabled_by=db_state.disabled_by,
-            )
+        session = self._session
+        db_state = self._get_or_create_state(session)
+        return CircuitBreakerState(
+            is_open=db_state.disabled,
+            opened_at=db_state.updated_at if db_state.disabled else None,
+            reason=db_state.disabled_reason,
+            incident_id=db_state.incident_id,
+            consecutive_failures=db_state.consecutive_failures,
+            last_failure_at=db_state.last_failure_at,
+            disabled_until=db_state.disabled_until,
+            disabled_by=db_state.disabled_by,
+        )
 
     # ========== Drift Reporting ==========
 
@@ -375,41 +397,41 @@ class CircuitBreaker:
         Returns:
             Incident if circuit breaker tripped, None otherwise
         """
-        with self._get_session() as session:
-            state = self._get_or_create_state(session)
-            now = datetime.now(timezone.utc)
+        session = self._session
+        state = self._get_or_create_state(session)
+        now = datetime.now(timezone.utc)
 
-            # Check if drift exceeds threshold
-            if drift_score > self.drift_threshold:
-                state.consecutive_failures += 1
-                state.last_failure_at = now
-                state.updated_at = now
-                session.commit()
+        # Check if drift exceeds threshold
+        if drift_score > self.drift_threshold:
+            state.consecutive_failures += 1
+            state.last_failure_at = now
+            state.updated_at = now
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
-                logger.warning(
-                    f"Drift threshold exceeded: {drift_score:.4f} > {self.drift_threshold}, "
-                    f"consecutive_failures={state.consecutive_failures}"
+            logger.warning(
+                f"Drift threshold exceeded: {drift_score:.4f} > {self.drift_threshold}, "
+                f"consecutive_failures={state.consecutive_failures}"
+            )
+
+            # Trip breaker after consecutive failures
+            if state.consecutive_failures >= self.failure_threshold:
+                return await self._trip(
+                    session=session,
+                    reason=f"Drift exceeded threshold: {drift_score:.4f} > {self.drift_threshold}",
+                    drift_score=drift_score,
+                    sample_count=sample_count,
+                    details=details,
+                    disabled_by="circuit_breaker",
                 )
+        else:
+            # Reset consecutive failures on success
+            if state.consecutive_failures > 0:
+                logger.info("Drift within threshold, resetting consecutive failures")
+                state.consecutive_failures = 0
+                state.updated_at = now
+                # NO COMMIT — L4 coordinator owns transaction boundary
 
-                # Trip breaker after consecutive failures
-                if state.consecutive_failures >= self.failure_threshold:
-                    return await self._trip(
-                        session=session,
-                        reason=f"Drift exceeded threshold: {drift_score:.4f} > {self.drift_threshold}",
-                        drift_score=drift_score,
-                        sample_count=sample_count,
-                        details=details,
-                        disabled_by="circuit_breaker",
-                    )
-            else:
-                # Reset consecutive failures on success
-                if state.consecutive_failures > 0:
-                    logger.info("Drift within threshold, resetting consecutive failures")
-                    state.consecutive_failures = 0
-                    state.updated_at = now
-                    session.commit()
-
-            return None
+        return None
 
     async def report_schema_error(
         self,
@@ -427,16 +449,16 @@ class CircuitBreaker:
             Incident if threshold exceeded, None otherwise
         """
         if error_count >= self.config.schema_error_threshold:
-            with self._get_session() as session:
-                return await self._trip(
-                    session=session,
-                    reason=f"Schema error threshold exceeded: {error_count} >= {self.config.schema_error_threshold}",
-                    drift_score=1.0,  # Schema errors are severe
-                    sample_count=error_count,
-                    details=details,
-                    severity="P3",
-                    disabled_by="circuit_breaker",
-                )
+            session = self._session
+            return await self._trip(
+                session=session,
+                reason=f"Schema error threshold exceeded: {error_count} >= {self.config.schema_error_threshold}",
+                drift_score=1.0,  # Schema errors are severe
+                sample_count=error_count,
+                details=details,
+                severity="P3",
+                disabled_by="circuit_breaker",
+            )
 
         return None
 
@@ -461,29 +483,29 @@ class CircuitBreaker:
         Returns:
             Tuple of (state_changed, incident)
         """
-        with self._get_session() as session:
-            state = self._get_or_create_state(session)
+        session = self._session
+        state = self._get_or_create_state(session)
 
-            # Check if already disabled with same reason
-            # Note: We only check reason, not disabled_until, because the TTL may
-            # have been defaulted (e.g., 24h) on the first call. Re-disabling with
-            # the same reason should be idempotent regardless of TTL differences.
-            if state.disabled and state.disabled_reason == reason:
-                return False, None
+        # Check if already disabled with same reason
+        # Note: We only check reason, not disabled_until, because the TTL may
+        # have been defaulted (e.g., 24h) on the first call. Re-disabling with
+        # the same reason should be idempotent regardless of TTL differences.
+        if state.disabled and state.disabled_reason == reason:
+            return False, None
 
-            # Trip the breaker
-            incident = await self._trip(
-                session=session,
-                reason=reason,
-                drift_score=0.0,  # Manual disable, not drift-triggered
-                sample_count=0,
-                details={"manual_disable": True},
-                severity="P2",
-                disabled_by=disabled_by,
-                disabled_until=disabled_until,
-            )
+        # Trip the breaker
+        incident = await self._trip(
+            session=session,
+            reason=reason,
+            drift_score=0.0,  # Manual disable, not drift-triggered
+            sample_count=0,
+            details={"manual_disable": True},
+            severity="P2",
+            disabled_by=disabled_by,
+            disabled_until=disabled_until,
+        )
 
-            return True, incident
+        return True, incident
 
     async def enable_v2(
         self,
@@ -519,63 +541,63 @@ class CircuitBreaker:
         Returns:
             True if reset successful
         """
-        with self._get_session() as session:
-            state = self._get_or_create_state(session)
+        session = self._session
+        state = self._get_or_create_state(session)
 
-            if not state.disabled:
-                logger.info("Circuit breaker already closed")
-                return True
-
-            old_incident_id = state.incident_id
-            old_reason = state.disabled_reason
-
-            # Reset state
-            state.disabled = False
-            state.disabled_by = None
-            state.disabled_reason = None
-            state.disabled_until = None
-            state.incident_id = None
-            state.consecutive_failures = 0
-            state.updated_at = datetime.now(timezone.utc)
-            session.commit()
-
-            # Resolve incident
-            if old_incident_id:
-                self._resolve_incident_db(
-                    session,
-                    old_incident_id,
-                    resolved_by=reset_by or "manual",
-                    resolution_notes=reason or "Manual reset",
-                )
-
-            # Log status change
-            log_status_change(
-                session=session,
-                entity_type="circuit_breaker",
-                entity_id=self.name,
-                old_status="disabled",
-                new_status="enabled",
-                actor_type="user" if reset_by else "system",
-                actor_id=reset_by,
-                reason=reason or "Manual reset",
-                metadata={
-                    "old_incident_id": old_incident_id,
-                    "old_reason": old_reason,
-                },
-            )
-
-            logger.info(
-                f"Circuit breaker RESET: incident_id={old_incident_id}, "
-                f"reason={reason or 'Manual reset'}, reset_by={reset_by}"
-            )
-
-            # Send resolved alert
-            await self._send_alert_enable(
-                enabled_by=reset_by or "manual",
-                reason=reason or "Manual reset",
-            )
-
+        if not state.disabled:
+            logger.info("Circuit breaker already closed")
             return True
+
+        old_incident_id = state.incident_id
+        old_reason = state.disabled_reason
+
+        # Reset state
+        state.disabled = False
+        state.disabled_by = None
+        state.disabled_reason = None
+        state.disabled_until = None
+        state.incident_id = None
+        state.consecutive_failures = 0
+        state.updated_at = datetime.now(timezone.utc)
+        # NO COMMIT — L4 coordinator owns transaction boundary
+
+        # Resolve incident
+        if old_incident_id:
+            self._resolve_incident_db(
+                session,
+                old_incident_id,
+                resolved_by=reset_by or "manual",
+                resolution_notes=reason or "Manual reset",
+            )
+
+        # Log status change
+        log_status_change(
+            session=session,
+            entity_type="circuit_breaker",
+            entity_id=self.name,
+            old_status="disabled",
+            new_status="enabled",
+            actor_type="user" if reset_by else "system",
+            actor_id=reset_by,
+            reason=reason or "Manual reset",
+            metadata={
+                "old_incident_id": old_incident_id,
+                "old_reason": old_reason,
+            },
+        )
+
+        logger.info(
+            f"Circuit breaker RESET: incident_id={old_incident_id}, "
+            f"reason={reason or 'Manual reset'}, reset_by={reset_by}"
+        )
+
+        # Send resolved alert
+        await self._send_alert_enable(
+            enabled_by=reset_by or "manual",
+            reason=reason or "Manual reset",
+        )
+
+        return True
 
     # ========== Trip Logic ==========
 
@@ -634,7 +656,7 @@ class CircuitBreaker:
         state.disabled_until = disabled_until
         state.incident_id = incident_id
         state.updated_at = now
-        session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         # Create in-memory incident object
         incident = Incident(
@@ -678,7 +700,7 @@ class CircuitBreaker:
         if alert_result:
             db_incident.alert_sent = True
             db_incident.alert_sent_at = datetime.now(timezone.utc)
-            session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
             incident.alert_sent = True
             incident.alert_sent_at = datetime.now(timezone.utc)
 
@@ -712,7 +734,7 @@ class CircuitBreaker:
             incident.resolved_at = datetime.now(timezone.utc)
             incident.resolved_by = resolved_by
             incident.resolution_notes = resolution_notes
-            session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
     def _save_incident_file(self, incident: Incident) -> None:
         """Save incident to file (legacy backup)."""
@@ -738,37 +760,37 @@ class CircuitBreaker:
         Returns:
             List of incidents
         """
-        with self._get_session() as session:
-            statement = select(CostSimCBIncident).where(CostSimCBIncident.circuit_breaker_name == self.name)
+        session = self._session
+        statement = select(CostSimCBIncident).where(CostSimCBIncident.circuit_breaker_name == self.name)
 
-            if not include_resolved:
-                statement = statement.where(CostSimCBIncident.resolved == False)
+        if not include_resolved:
+            statement = statement.where(CostSimCBIncident.resolved == False)
 
-            statement = statement.order_by(cast(Any, CostSimCBIncident.timestamp).desc()).limit(limit)
+        statement = statement.order_by(cast(Any, CostSimCBIncident.timestamp).desc()).limit(limit)
 
-            result = session.exec(statement)
-            incidents = []
+        result = session.exec(statement)
+        incidents = []
 
-            for db_incident in result:
-                incidents.append(
-                    Incident(
-                        id=db_incident.id,
-                        timestamp=db_incident.timestamp,
-                        reason=db_incident.reason,
-                        severity=db_incident.severity,
-                        drift_score=db_incident.drift_score or 0.0,
-                        sample_count=db_incident.sample_count or 0,
-                        details=db_incident.get_details(),
-                        resolved=db_incident.resolved,
-                        resolved_at=db_incident.resolved_at,
-                        resolved_by=db_incident.resolved_by,
-                        resolution_notes=db_incident.resolution_notes,
-                        alert_sent=db_incident.alert_sent,
-                        alert_sent_at=db_incident.alert_sent_at,
-                    )
+        for db_incident in result:
+            incidents.append(
+                Incident(
+                    id=db_incident.id,
+                    timestamp=db_incident.timestamp,
+                    reason=db_incident.reason,
+                    severity=db_incident.severity,
+                    drift_score=db_incident.drift_score or 0.0,
+                    sample_count=db_incident.sample_count or 0,
+                    details=db_incident.get_details(),
+                    resolved=db_incident.resolved,
+                    resolved_at=db_incident.resolved_at,
+                    resolved_by=db_incident.resolved_by,
+                    resolution_notes=db_incident.resolution_notes,
+                    alert_sent=db_incident.alert_sent,
+                    alert_sent_at=db_incident.alert_sent_at,
                 )
+            )
 
-            return incidents
+        return incidents
 
     # ========== Alertmanager Integration ==========
 
@@ -889,34 +911,59 @@ class CircuitBreaker:
         return False
 
 
-# ========== Global Instance ==========
-
-_circuit_breaker: Optional[CircuitBreaker] = None
+# ========== Factory Function ==========
 
 
-def get_circuit_breaker() -> CircuitBreaker:
-    """Get the global circuit breaker instance."""
-    global _circuit_breaker
-    if _circuit_breaker is None:
-        _circuit_breaker = CircuitBreaker()
-    return _circuit_breaker
+def create_circuit_breaker(
+    session: Session,
+    failure_threshold: Optional[int] = None,
+    drift_threshold: Optional[float] = None,
+    name: str = CB_NAME,
+) -> CircuitBreaker:
+    """
+    Create CircuitBreaker with required session.
+
+    L6 drivers are NOT singletons — each operation gets its own instance
+    because the caller owns the session/transaction lifecycle.
+
+    Args:
+        session: SQLModel session (REQUIRED — caller owns transaction)
+        failure_threshold: Consecutive failures to trip breaker (default from config)
+        drift_threshold: Override drift threshold (default from config)
+        name: Circuit breaker name (default: costsim_v2)
+
+    Returns:
+        CircuitBreaker instance bound to the provided session
+    """
+    return CircuitBreaker(
+        session=session,
+        failure_threshold=failure_threshold,
+        drift_threshold=drift_threshold,
+        name=name,
+    )
 
 
 # ========== Convenience Functions ==========
+# NOTE: These functions require session parameter since L6 drivers
+# do not create sessions. The caller (L5 engine or L4 coordinator)
+# must provide the session and own the transaction lifecycle.
 
 
-async def is_v2_disabled() -> bool:
+async def is_v2_disabled(session: Session) -> bool:
     """Check if CostSim V2 is disabled."""
-    return await get_circuit_breaker().is_disabled()
+    breaker = create_circuit_breaker(session=session)
+    return await breaker.is_disabled()
 
 
 async def disable_v2(
+    session: Session,
     reason: str,
     disabled_by: str,
     disabled_until: Optional[datetime] = None,
 ) -> Tuple[bool, Optional[Incident]]:
     """Disable CostSim V2."""
-    return await get_circuit_breaker().disable_v2(
+    breaker = create_circuit_breaker(session=session)
+    return await breaker.disable_v2(
         reason=reason,
         disabled_by=disabled_by,
         disabled_until=disabled_until,
@@ -924,11 +971,13 @@ async def disable_v2(
 
 
 async def enable_v2(
+    session: Session,
     enabled_by: str,
     reason: Optional[str] = None,
 ) -> bool:
     """Enable CostSim V2."""
-    return await get_circuit_breaker().enable_v2(
+    breaker = create_circuit_breaker(session=session)
+    return await breaker.enable_v2(
         enabled_by=enabled_by,
         reason=reason,
     )

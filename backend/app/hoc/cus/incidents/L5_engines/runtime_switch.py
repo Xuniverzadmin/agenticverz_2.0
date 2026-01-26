@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api (emergency) or internal (failure detection)
 #   Execution: sync
+# Lifecycle:
+#   Emits: governance_disabled, governance_enabled, degraded_mode_entered, degraded_mode_exited
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Runtime toggle for governance enforcement (in-memory state)
 # Callers: ops_api.py, failure_mode_handler.py, health.py
-# Allowed Imports: L6, L7 (stdlib, threading)
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: GAP-069
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-069
 # NOTE: Reclassified L6→L5 (2026-01-24) - Pure state management, not SQL driver
 #       Remains in drivers/ per Layer ≠ Directory principle
 

@@ -1,17 +1,26 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # PHASE: W0
 # Product: system-wide
 # Wiring Type: registry
 # Parent Gap: GAP-063 (MCPConnector)
-# Reference: GAP-141, HOC_integrations_analysis_v1.md, HOC_LAYER_TOPOLOGY_V1.md
 # Temporal:
 #   Trigger: api (MCP server management)
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: mcp_servers (SQL)
+#   Writes: mcp_servers (SQL)
+# Database:
+#   Scope: domain (general)
+#   Models: mcp_servers (via SQL)
 # Role: Registry for external MCP servers (cross-domain within customer audience)
 # Callers: L2 API routes, skill execution
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
+# Allowed Imports: L6, L7 (models)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: PIN-470, GAP-141, HOC_integrations_analysis_v1.md, HOC_LAYER_TOPOLOGY_V1.md
 
 """
 Module: server_registry

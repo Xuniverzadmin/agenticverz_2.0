@@ -1,14 +1,20 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Product: system-wide
 # Temporal:
-#   Trigger: background worker
+#   Trigger: worker
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via alert_driver (L6)
+#   Writes: via alert_driver (L6)
 # Role: Alert queue processing decisions and orchestration
 # Callers: background task, cron
-# Allowed Imports: L5, L6 (drivers), L3 (adapters)
-# Forbidden Imports: L1, L2, sqlalchemy direct queries, httpx
-# Reference: Phase-2.5A Analytics Extraction
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
+# Reference: PIN-470, Phase-2.5A Analytics Extraction
 #
 # GOVERNANCE NOTE:
 # This L4 engine handles DECISIONS only:
@@ -79,9 +85,10 @@ RETRY_POLICY = RetryPolicy.NEVER
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from sqlalchemy.ext.asyncio import AsyncSession
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.costsim.config import get_config
 from app.costsim.leader import (
@@ -223,7 +230,7 @@ class AlertWorker:
                             error_type=result.error_type,
                         )
 
-            await driver.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
         return processed
 
@@ -324,16 +331,14 @@ async def enqueue_alert(
             circuit_breaker_name=circuit_breaker_name,
             incident_id=incident_id,
         )
-        await driver.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         logger.debug(f"Alert enqueued: id={alert.id}, type={alert_type}")
         return alert.id
 
     except Exception as e:
         logger.error(f"Failed to enqueue alert: {e}")
-        if own_session:
-            assert session is not None
-            await session.rollback()
+        # NO ROLLBACK — L4 coordinator owns transaction boundary
         raise
 
     finally:
@@ -365,7 +370,7 @@ async def retry_failed_alerts(
         driver = get_alert_driver(session)
 
         count = await driver.retry_failed_alerts(max_retries=max_retries, now=now)
-        await driver.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         if count > 0:
             logger.info(f"Reset {count} failed alerts for retry")
@@ -400,7 +405,7 @@ async def purge_old_alerts(
         driver = get_alert_driver(session)
 
         count = await driver.purge_old_alerts(cutoff=cutoff, statuses=statuses)
-        await driver.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         if count > 0:
             logger.info(f"Purged {count} old alerts")

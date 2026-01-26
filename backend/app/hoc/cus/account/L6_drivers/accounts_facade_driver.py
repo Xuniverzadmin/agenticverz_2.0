@@ -1,14 +1,23 @@
-# Layer: L6 — Platform Substrate
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Product: ai-console
 # Temporal:
-#   Trigger: api
-#   Execution: async (DB reads/writes)
-# Role: Accounts domain facade driver - pure data access for accounts operations
-# Callers: accounts_facade.py (L4)
-# Allowed Imports: L7 (models)
-# Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: ACCOUNT_PHASE2.5_IMPLEMENTATION_PLAN.md
+#   Trigger: api (via L5 engine)
+#   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Tenant, User, Membership, BillingRecord, SupportTicket, Invitation
+#   Writes: Tenant, User, Membership, BillingRecord, SupportTicket, Invitation (via session.add, NO COMMIT)
+# Database:
+#   Scope: domain (account)
+#   Models: Tenant, User, Membership, BillingRecord, SupportTicket, Invitation
+# Role: Accounts domain facade driver - pure data access — L6 DOES NOT COMMIT
+# Callers: accounts_facade.py (L5), must own transaction boundary
+# Allowed Imports: L6, L7 (models)
+# Forbidden: session.commit() — L4 coordinator owns transaction boundary
+# Reference: PIN-470, ACCOUNT_PHASE2.5_IMPLEMENTATION_PLAN.md
 #
 # PHASE 2.5B EXTRACTION (2026-01-24):
 # This driver was extracted from accounts_facade.py to enforce L4/L6 separation.
@@ -493,7 +502,7 @@ class AccountsFacadeDriver:
     ) -> MembershipSnapshot:
         """Update membership role."""
         membership.role = new_role
-        await session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         # Get user for snapshot
         user_stmt = select(User).where(User.id == membership.user_id)
@@ -515,7 +524,7 @@ class AccountsFacadeDriver:
     ) -> bool:
         """Delete a membership."""
         await session.delete(membership)
-        await session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
         return True
 
     # -------------------------------------------------------------------------
@@ -611,7 +620,7 @@ class AccountsFacadeDriver:
             user.set_preferences(prefs)
 
         user.updated_at = utc_now()
-        await session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
         await session.refresh(user)
         return user
 
@@ -676,7 +685,7 @@ class AccountsFacadeDriver:
         )
 
         session.add(new_ticket)
-        await session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
         await session.refresh(new_ticket)
 
         return TicketSnapshot(
@@ -770,7 +779,7 @@ class AccountsFacadeDriver:
         )
 
         session.add(new_invitation)
-        await session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
         await session.refresh(new_invitation)
 
         return InvitationSnapshot(
@@ -889,7 +898,7 @@ class AccountsFacadeDriver:
         now = utc_now()
         invitation.status = "accepted"
         invitation.accepted_at = now
-        await session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         return InvitationSnapshot(
             id=invitation.id,
@@ -910,7 +919,7 @@ class AccountsFacadeDriver:
     ) -> None:
         """Mark invitation as expired."""
         invitation.status = "expired"
-        await session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
 
 # =============================================================================

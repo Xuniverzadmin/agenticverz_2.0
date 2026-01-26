@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: monitor_config (via driver)
+#   Writes: none
 # Role: Enforce MonitorConfig inspection constraints before logging
 # Callers: worker/runtime/trace_collector.py, services/logging_service.py
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
-# Reference: GAP-033 (Inspection Constraints)
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-033 (Inspection Constraints)
 
 """
 Module: constraint_checker

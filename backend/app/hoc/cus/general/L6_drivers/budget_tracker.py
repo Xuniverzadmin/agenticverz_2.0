@@ -1,13 +1,24 @@
-# Layer: L6 — Platform Substrate
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Agent
+#   Writes: Agent (budget updates)
+# Database:
+#   Scope: domain (general)
+#   Models: Agent
 # Role: Budget tracking utility
 # Callers: runtime, workers
-# Allowed Imports: None (foundational)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: Budget System
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, Budget System
 
 # Budget Tracker
 # Tracks LLM costs and enforces budget limits per agent/tenant
@@ -343,7 +354,7 @@ class BudgetTracker:
                 """
                 )
                 session.exec(query, {"agent_id": agent_id})
-                session.commit()
+                # NO COMMIT — L4 coordinator owns transaction boundary
 
                 logger.warning("agent_paused_budget_breach", extra={"agent_id": agent_id, "reason": reason})
         except Exception as e:
@@ -394,7 +405,7 @@ class BudgetTracker:
                 result = session.execute(query, {"agent_id": agent_id, "cost": cost_cents})
 
             row = result.first()
-            session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
             if row:
                 logger.info(
@@ -449,7 +460,7 @@ class BudgetTracker:
                         "created_at": datetime.now(timezone.utc),
                     },
                 )
-                session.commit()
+                # NO COMMIT — L4 coordinator owns transaction boundary
 
         except Exception as e:
             # Table might not exist yet, just log

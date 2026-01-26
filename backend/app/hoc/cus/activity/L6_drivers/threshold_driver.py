@@ -1,11 +1,22 @@
-# Layer: L6 — Database Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Product: ai-console
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: async/sync
+# Lifecycle:
+#   Emits: THRESHOLD_SIGNAL
+#   Subscribes: none
+# Data Access:
+#   Reads: Limit, LimitBreach
+#   Writes: none (read-only, signals via EventEmitter)
+# Database:
+#   Scope: domain (activity)
+#   Models: Limit, LimitBreach
 # Role: Database operations for threshold limits
-# Callers: L4 threshold_engine
-# Allowed Imports: sqlalchemy, sqlmodel, app.models
-# Forbidden Imports: L1, L2, L3, L4 business logic
-# Reference: docs/architecture/hoc/INDEX.md → Activity Phase 2.5A
+# Callers: threshold_engine.py (L5)
+# Allowed Imports: L6, L7 (models)
+# Reference: PIN-470, docs/architecture/hoc/INDEX.md → Activity Phase 2.5A
 #
 # DRIVER CONTRACT:
 # - Returns domain objects (LimitSnapshot), not ORM models
@@ -265,7 +276,7 @@ def emit_threshold_signal_sync(
         signal: ThresholdSignal enum value
         params_used: The params that were evaluated against
     """
-    from app.services.event_emitter import (
+    from app.hoc.int.agent.drivers.event_emitter import (
         EntityType,
         EventEmitter,
         EventType,
@@ -346,7 +357,8 @@ def emit_and_persist_threshold_signal(
 
     Reference: Threshold Signal Wiring to Customer Console Plan
     """
-    from app.services.activity.run_signal_service import RunSignalService
+    # L6 driver import (migrated to HOC per SWEEP-03)
+    from app.hoc.cus.activity.L6_drivers.run_signal_service import RunSignalService
 
     # 1. Emit to ops_events for Founder Console monitoring
     # NOTE: ops_events is FOUNDER CONSOLE ONLY - not transmitted to customer endpoints

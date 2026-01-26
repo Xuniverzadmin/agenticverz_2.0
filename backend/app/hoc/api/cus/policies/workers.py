@@ -59,7 +59,8 @@ from app.evidence.capture import capture_environment_evidence
 from app.models.tenant import WorkerRun
 from app.policy.engine import PolicyEngine
 from app.schemas.response import wrap_dict
-from app.services.worker_write_service_async import WorkerWriteServiceAsync
+# L6 driver import (migrated to HOC per SWEEP-26)
+from app.hoc.cus.general.L6_drivers.worker_write_service_async import WorkerWriteServiceAsync
 
 logger = logging.getLogger("nova.api.workers")
 
@@ -1275,7 +1276,8 @@ async def worker_health():
 
     # Check M9 Failure Catalog (via RecoveryMatcher)
     try:
-        from app.services.recovery_matcher import RecoveryMatcher
+        # L6 driver import (migrated to HOC per SWEEP-09)
+        from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
 
         RecoveryMatcher()
         moat_status["m9_failure_catalog"] = "available"
@@ -1284,7 +1286,8 @@ async def worker_health():
 
     # Check M10 Recovery (via RecoveryMatcher)
     try:
-        from app.services.recovery_matcher import RecoveryMatcher
+        # L6 driver import (migrated to HOC per SWEEP-09)
+        from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
 
         RecoveryMatcher()
         moat_status["m10_recovery"] = "available"

@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync (delegates to L6 driver)
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: policies, budgets (via driver)
+#   Writes: none
 # Role: Customer policy domain read operations with business logic (pure logic)
 # Callers: customer_policies_adapter.py (L3)
-# Allowed Imports: L6 (drivers only, NOT ORM models)
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: PIN-281, PHASE2_EXTRACTION_PROTOCOL.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-281, PHASE2_EXTRACTION_PROTOCOL.md
 #
 # GOVERNANCE NOTE:
 # This L5 engine delegates DB operations to PolicyReadDriver (L6).

@@ -1,15 +1,22 @@
 # Layer: L4 — Domain Engine (System Truth)
+# AUDIENCE: CUSTOMER
 # Product: system-wide (NOT console-owned)
 # Temporal:
 #   Trigger: api (run creation)
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via L6 drivers
+#   Writes: via L6 drivers
 # Role: Plan generation (domain logic)
 # Authority: Plan generation decisions (M7 pattern)
 # Callers: API endpoints (L2), run creation flow
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
 # Contract: EXECUTION_SEMANTIC_CONTRACT.md
-# Reference: PIN-257 Phase R-2 (L5→L4 Violation Fix)
+# Reference: PIN-470, PIN-257 Phase R-2 (L5→L4 Violation Fix)
 #
 # GOVERNANCE NOTE: This L4 engine owns PLAN GENERATION logic.
 # L5 runner.py owns only PLAN EXECUTION logic.

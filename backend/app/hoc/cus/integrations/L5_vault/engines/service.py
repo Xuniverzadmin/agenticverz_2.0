@@ -1,13 +1,20 @@
-# Layer: L4 — Domain Engines
-# Product: system-wide
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: (via CredentialVault)
+#   Writes: (via CredentialVault)
 # Role: High-level credential service with validation and auditing
+# Product: system-wide
 # Callers: ConnectorRegistry, LifecycleHandlers, API routes
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
-# Reference: GAP-171 (Credential Vault Integration)
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-171 (Credential Vault Integration)
 
 """
 Credential Service (GAP-171)

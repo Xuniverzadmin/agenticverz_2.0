@@ -1,15 +1,22 @@
 # Layer: L5 — Domain Engine (System Truth)
+# AUDIENCE: CUSTOMER
 # Product: system-wide (NOT console-owned)
 # Temporal:
 #   Trigger: worker (via failure events)
 #   Execution: async
+# Lifecycle:
+#   Emits: recovery_decision_emitted
+#   Subscribes: run_failed
+# Data Access:
+#   Reads: RecoveryRule, FailureHistory (via driver)
+#   Writes: RecoveryDecision (via driver)
 # Role: Recovery evaluation decision-making (domain logic)
 # Authority: Recovery decision generation (M9/M10 pattern)
 # Callers: API endpoints, failure processing pipeline
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
 # Contract: DECISION_RECORD_CONTRACT.md
-# Reference: PIN-257 Phase R-1 (L5→L4 Violation Fix)
+# Reference: PIN-470, PIN-257 Phase R-1 (L5→L4 Violation Fix)
 #
 # GOVERNANCE NOTE: This L4 engine owns all DECISION logic.
 # L5 recovery_evaluator.py owns only EXECUTION logic.
@@ -44,8 +51,9 @@ logger = logging.getLogger("nova.services.recovery_evaluation_engine")
 
 # L4 imports (same layer - allowed)
 from app.contracts.decisions import emit_recovery_decision
-from app.services.recovery_matcher import RecoveryMatcher
-from app.services.recovery_rule_engine import (
+# L6/L5 imports (migrated to HOC per SWEEP-09)
+from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
+from app.hoc.cus.incidents.L5_engines.recovery_rule_engine import (
     combine_confidences,
     evaluate_rules,
     should_auto_execute,

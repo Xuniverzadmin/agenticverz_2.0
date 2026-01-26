@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
-# Product: system-wide
+# AUDIENCE: CUSTOMER
 # Temporal:
 #   Trigger: api|worker (called by L5)
 #   Execution: sync (REQUIRED - async forbidden)
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (pure computation)
+#   Writes: none
 # Role: Agent graduation evaluation domain logic (pure computation)
+# Product: system-wide
 # Callers: graduation_evaluator.py (L5)
-# Allowed Imports: L4 only (stdlib, dataclasses, typing, enum)
-# Forbidden Imports: L5, L6, L7, L8
-# Reference: PIN-256 Phase E FIX-01
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-256 Phase E FIX-01
 #
 # Extraction Source: Phase E purity enforcement
 # Semantic Promotion: Graduation level computation, gate evaluation, degradation detection

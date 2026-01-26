@@ -5,11 +5,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: async (Redis operations)
+# Lifecycle:
+#   Emits: OTP_SENT, OTP_VERIFIED
+#   Subscribes: none
+# Data Access:
+#   Reads: Redis (OTP state)
+#   Writes: Redis (OTP state)
 # Role: Email OTP verification engine for customer onboarding
 # Callers: onboarding.py (auth flow)
-# Allowed Imports: L5, L6 (Redis)
-# Forbidden Imports: L1, L2, L3, L7
-# Reference: PIN-240, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-240, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
 #
 # L4 is reserved for general/L4_runtime/ only per HOC Layer Topology.
 #

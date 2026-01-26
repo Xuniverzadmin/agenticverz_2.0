@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api/worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (in-memory logic)
+#   Writes: none
 # Role: Phase-status invariant enforcement from GovernanceConfig (pure business logic)
 # Callers: ROK, worker runtime
 # Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: GAP-051 (Phase-Status Invariants)
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-051 (Phase-Status Invariants)
 # NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 
 """

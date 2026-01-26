@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Policy language tokenizer (pure lexical analysis)
 # Callers: policy/compiler/parser
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: Policy System
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, Policy System
 # NOTE: Reclassified L6→L5 (2026-01-24) - no Session imports, pure logic
 
 # M20 PLang v2.0 Tokenizer

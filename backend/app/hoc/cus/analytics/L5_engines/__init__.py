@@ -1,7 +1,7 @@
-# Layer: L5 — Domain Services
+# Layer: L5 — Domain Engines
 # AUDIENCE: CUSTOMER
-# Role: analytics domain - engines
-# Reference: DIRECTORY_REORGANIZATION_PLAN.md
+# Role: Analytics domain business logic engines
+# Reference: PIN-470, DIRECTORY_REORGANIZATION_PLAN.md
 
 """
 analytics / engines

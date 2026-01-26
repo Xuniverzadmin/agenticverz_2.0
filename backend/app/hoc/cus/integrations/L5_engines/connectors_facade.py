@@ -1,14 +1,20 @@
-# Layer: L5 — Driver
+# Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Role: Connectors Facade - Centralized access to connector operations
-# Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: (via connector services)
+#   Writes: none (facade orchestration only)
+# Role: Connectors Facade - Centralized access to connector operations
+# Product: system-wide
 # Callers: L2 connectors.py API, SDK
-# Allowed Imports: L4 connector services, L6 (models, db)
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: GAP-093 (Connector Registry API)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-093 (Connector Registry API)
 
 
 """
@@ -39,7 +45,8 @@ L2 API Routes (GAP-093):
 - POST /api/v1/connectors/{id}/test (test connector)
 
 Usage:
-    from app.services.connectors.facade import get_connectors_facade
+    # L5 engine import (migrated to HOC per SWEEP-13)
+    from app.hoc.cus.integrations.L5_engines.connectors_facade import get_connectors_facade
 
     facade = get_connectors_facade()
 
@@ -142,7 +149,7 @@ class ConnectorsFacade:
         """Lazy-load ConnectorRegistry."""
         if self._registry is None:
             try:
-                from app.services.connectors.connector_registry import ConnectorRegistry
+                from app.hoc.cus.integrations.L6_drivers.connector_registry import ConnectorRegistry
                 self._registry = ConnectorRegistry()
             except ImportError:
                 logger.warning("ConnectorRegistry not available")

@@ -2,10 +2,20 @@
 # AUDIENCE: CUSTOMER
 # Product: ai-console
 # Location: hoc/cus/activity/L5_engines/signal_identity.py
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (pure computation)
+#   Writes: none
 # Role: Signal identity computation for deduplication
-# Reference: PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
-#
-# L4 is reserved for general/L4_runtime/ only per HOC Layer Topology.
+# Callers: activity_facade.py, signal engines
+# Allowed Imports: L5
+# Forbidden Imports: L1, L2, L3, L6, sqlalchemy (runtime)
+# Reference: PIN-470, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
 """Signal identity utilities for fingerprinting and deduplication."""
 
 import hashlib

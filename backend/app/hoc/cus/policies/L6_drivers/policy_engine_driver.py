@@ -1,14 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: evaluations, violations, ethical_constraints, risk_ceilings, safety_rules, business_rules, policy_versions
+#   Writes: evaluations, violations, risk_ceilings, safety_rules, policy_versions
+# Database:
+#   Scope: domain (policies)
+#   Models: PolicyEvaluation, PolicyViolation, EthicalConstraint, RiskCeiling, SafetyRule, BusinessRule, PolicyVersion
 # Role: Policy Engine data access operations
-# Callers: engine.py (L4)
-# Allowed Imports: sqlalchemy
+# Callers: engine.py (L5)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-468 (Phase-2.5A)
+# Reference: PIN-470, PIN-468 (Phase-2.5A)
 #
 # EXTRACTION STATUS: Phase-2.5A (2026-01-24)
 # - Extracted from engine.py (was 40+ inline DB operations)

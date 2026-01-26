@@ -5,10 +5,16 @@
 # Temporal:
 #   Trigger: api/worker
 #   Execution: sync/async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: policies (via driver)
+#   Writes: none
 # Callers: policy_layer API, governance services, worker runtime
-# Allowed Imports: L6, L7 (models)
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel (at runtime)
-# Reference: FACADE_CONSOLIDATION_PLAN.md, API-001 Guardrail
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, FACADE_CONSOLIDATION_PLAN.md, API-001 Guardrail
 #
 # GOVERNANCE NOTE:
 # This is the INTERNAL driver for policy evaluation operations.
@@ -33,7 +39,7 @@ Why Drivers (not Facades for internal use):
 - Import rules become enforceable
 
 Usage:
-    from app.services.policy.policy_driver import get_policy_driver
+    from app.hoc.cus.policies.L5_engines.policy_driver import get_policy_driver
 
     driver = get_policy_driver()
     result = await driver.evaluate(eval_request, db)

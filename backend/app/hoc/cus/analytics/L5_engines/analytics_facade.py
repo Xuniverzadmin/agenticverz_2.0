@@ -1,14 +1,19 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Product: ai-console
 # Temporal:
-#   Trigger: internal (called by L2 API)
+#   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via L6 drivers
+#   Writes: none
 # Role: Analytics Facade - Centralized access to analytics domain operations
 # Callers: app.api.analytics (L2)
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, sqlalchemy, sqlmodel
-# Reference: Analytics Domain Declaration v1, PIN-411, W4 Pattern
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, Analytics Domain Declaration v1, PIN-411, W4 Pattern
 # Location: hoc/cus/analytics/L5_engines/analytics_facade.py
 # L4 is reserved for general/L4_runtime/ only per HOC Layer Topology.
 
@@ -36,12 +41,16 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
+from app.hoc.cus.analytics.L6_drivers.analytics_read_driver import (
+    get_analytics_read_driver,
+)
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("nova.services.analytics.facade")
 
@@ -218,42 +227,9 @@ class SignalAdapter:
         """Fetch cost metrics from cost_records table."""
         try:
             time_trunc = "hour" if resolution == ResolutionType.HOUR else "day"
-
-            query = text("""
-                SELECT
-                    DATE_TRUNC(:time_trunc, created_at) as ts,
-                    COUNT(*) as requests,
-                    COALESCE(SUM(input_tokens + output_tokens), 0) as tokens
-                FROM cost_records
-                WHERE tenant_id = :tenant_id
-                  AND created_at >= :from_ts
-                  AND created_at < :to_ts
-                GROUP BY DATE_TRUNC(:time_trunc, created_at)
-                ORDER BY ts
-            """)
-
-            result = await session.execute(
-                query,
-                {
-                    "time_trunc": time_trunc,
-                    "tenant_id": tenant_id,
-                    "from_ts": from_ts,
-                    "to_ts": to_ts,
-                },
-            )
-            rows = result.fetchall()
-
-            return {
-                "source": "cost_records",
-                "data": [
-                    {
-                        "ts": row.ts.isoformat() if row.ts else None,
-                        "requests": row.requests or 0,
-                        "tokens": row.tokens or 0,
-                    }
-                    for row in rows
-                ],
-            }
+            driver = get_analytics_read_driver(session)
+            data = await driver.fetch_cost_metrics(tenant_id, from_ts, to_ts, time_trunc)
+            return {"source": "cost_records", "data": data}
         except Exception as e:
             logger.warning(f"Cost metrics fetch failed: {e}")
             return {"source": "cost_records", "data": [], "error": str(e)}
@@ -269,42 +245,9 @@ class SignalAdapter:
         """Fetch LLM usage from runs table."""
         try:
             time_trunc = "hour" if resolution == ResolutionType.HOUR else "day"
-
-            query = text("""
-                SELECT
-                    DATE_TRUNC(:time_trunc, created_at) as ts,
-                    COUNT(*) as requests,
-                    COALESCE(SUM(total_tokens), 0) as tokens
-                FROM runs
-                WHERE tenant_id = :tenant_id
-                  AND created_at >= :from_ts
-                  AND created_at < :to_ts
-                GROUP BY DATE_TRUNC(:time_trunc, created_at)
-                ORDER BY ts
-            """)
-
-            result = await session.execute(
-                query,
-                {
-                    "time_trunc": time_trunc,
-                    "tenant_id": tenant_id,
-                    "from_ts": from_ts,
-                    "to_ts": to_ts,
-                },
-            )
-            rows = result.fetchall()
-
-            return {
-                "source": "llm.usage",
-                "data": [
-                    {
-                        "ts": row.ts.isoformat() if row.ts else None,
-                        "requests": row.requests or 0,
-                        "tokens": row.tokens or 0,
-                    }
-                    for row in rows
-                ],
-            }
+            driver = get_analytics_read_driver(session)
+            data = await driver.fetch_llm_usage(tenant_id, from_ts, to_ts, time_trunc)
+            return {"source": "llm.usage", "data": data}
         except Exception as e:
             logger.warning(f"LLM usage fetch failed: {e}")
             return {"source": "llm.usage", "data": [], "error": str(e)}
@@ -320,40 +263,9 @@ class SignalAdapter:
         """Fetch worker execution metrics from aos_traces table."""
         try:
             time_trunc = "hour" if resolution == ResolutionType.HOUR else "day"
-
-            query = text("""
-                SELECT
-                    DATE_TRUNC(:time_trunc, created_at) as ts,
-                    COUNT(*) as requests
-                FROM aos_traces
-                WHERE tenant_id = :tenant_id
-                  AND created_at >= :from_ts
-                  AND created_at < :to_ts
-                GROUP BY DATE_TRUNC(:time_trunc, created_at)
-                ORDER BY ts
-            """)
-
-            result = await session.execute(
-                query,
-                {
-                    "time_trunc": time_trunc,
-                    "tenant_id": tenant_id,
-                    "from_ts": from_ts,
-                    "to_ts": to_ts,
-                },
-            )
-            rows = result.fetchall()
-
-            return {
-                "source": "worker.execution",
-                "data": [
-                    {
-                        "ts": row.ts.isoformat() if row.ts else None,
-                        "requests": row.requests or 0,
-                    }
-                    for row in rows
-                ],
-            }
+            driver = get_analytics_read_driver(session)
+            data = await driver.fetch_worker_execution(tenant_id, from_ts, to_ts, time_trunc)
+            return {"source": "worker.execution", "data": data}
         except Exception as e:
             logger.warning(f"Worker execution fetch failed: {e}")
             return {"source": "worker.execution", "data": [], "error": str(e)}
@@ -369,46 +281,9 @@ class SignalAdapter:
         """Fetch cost spend data from cost_records table."""
         try:
             time_trunc = "hour" if resolution == ResolutionType.HOUR else "day"
-
-            query = text("""
-                SELECT
-                    DATE_TRUNC(:time_trunc, created_at) as ts,
-                    COUNT(*) as requests,
-                    COALESCE(SUM(cost_cents), 0) as spend_cents,
-                    COALESCE(SUM(input_tokens), 0) as input_tokens,
-                    COALESCE(SUM(output_tokens), 0) as output_tokens
-                FROM cost_records
-                WHERE tenant_id = :tenant_id
-                  AND created_at >= :from_ts
-                  AND created_at < :to_ts
-                GROUP BY DATE_TRUNC(:time_trunc, created_at)
-                ORDER BY ts
-            """)
-
-            result = await session.execute(
-                query,
-                {
-                    "time_trunc": time_trunc,
-                    "tenant_id": tenant_id,
-                    "from_ts": from_ts,
-                    "to_ts": to_ts,
-                },
-            )
-            rows = result.fetchall()
-
-            return {
-                "source": "cost_records",
-                "data": [
-                    {
-                        "ts": row.ts.isoformat() if row.ts else None,
-                        "spend_cents": float(row.spend_cents or 0),
-                        "requests": row.requests or 0,
-                        "input_tokens": row.input_tokens or 0,
-                        "output_tokens": row.output_tokens or 0,
-                    }
-                    for row in rows
-                ],
-            }
+            driver = get_analytics_read_driver(session)
+            data = await driver.fetch_cost_spend(tenant_id, from_ts, to_ts, time_trunc)
+            return {"source": "cost_records", "data": data}
         except Exception as e:
             logger.warning(f"Cost spend fetch failed: {e}")
             return {"source": "cost_records", "data": [], "error": str(e)}
@@ -422,44 +297,9 @@ class SignalAdapter:
     ) -> dict[str, Any]:
         """Fetch cost breakdown by model from cost_records table."""
         try:
-            query = text("""
-                SELECT
-                    COALESCE(model, 'unknown') as model,
-                    COUNT(*) as requests,
-                    COALESCE(SUM(cost_cents), 0) as spend_cents,
-                    COALESCE(SUM(input_tokens), 0) as input_tokens,
-                    COALESCE(SUM(output_tokens), 0) as output_tokens
-                FROM cost_records
-                WHERE tenant_id = :tenant_id
-                  AND created_at >= :from_ts
-                  AND created_at < :to_ts
-                GROUP BY model
-                ORDER BY spend_cents DESC
-            """)
-
-            result = await session.execute(
-                query,
-                {
-                    "tenant_id": tenant_id,
-                    "from_ts": from_ts,
-                    "to_ts": to_ts,
-                },
-            )
-            rows = result.fetchall()
-
-            return {
-                "source": "cost_records",
-                "data": [
-                    {
-                        "model": row.model,
-                        "spend_cents": float(row.spend_cents or 0),
-                        "requests": row.requests or 0,
-                        "input_tokens": row.input_tokens or 0,
-                        "output_tokens": row.output_tokens or 0,
-                    }
-                    for row in rows
-                ],
-            }
+            driver = get_analytics_read_driver(session)
+            data = await driver.fetch_cost_by_model(tenant_id, from_ts, to_ts)
+            return {"source": "cost_records", "data": data}
         except Exception as e:
             logger.warning(f"Cost by model fetch failed: {e}")
             return {"source": "cost_records", "data": [], "error": str(e)}
@@ -473,40 +313,9 @@ class SignalAdapter:
     ) -> dict[str, Any]:
         """Fetch cost breakdown by feature tag from cost_records table."""
         try:
-            query = text("""
-                SELECT
-                    COALESCE(feature_tag, 'untagged') as feature_tag,
-                    COUNT(*) as requests,
-                    COALESCE(SUM(cost_cents), 0) as spend_cents
-                FROM cost_records
-                WHERE tenant_id = :tenant_id
-                  AND created_at >= :from_ts
-                  AND created_at < :to_ts
-                GROUP BY feature_tag
-                ORDER BY spend_cents DESC
-            """)
-
-            result = await session.execute(
-                query,
-                {
-                    "tenant_id": tenant_id,
-                    "from_ts": from_ts,
-                    "to_ts": to_ts,
-                },
-            )
-            rows = result.fetchall()
-
-            return {
-                "source": "cost_records",
-                "data": [
-                    {
-                        "feature_tag": row.feature_tag,
-                        "spend_cents": float(row.spend_cents or 0),
-                        "requests": row.requests or 0,
-                    }
-                    for row in rows
-                ],
-            }
+            driver = get_analytics_read_driver(session)
+            data = await driver.fetch_cost_by_feature(tenant_id, from_ts, to_ts)
+            return {"source": "cost_records", "data": data}
         except Exception as e:
             logger.warning(f"Cost by feature fetch failed: {e}")
             return {"source": "cost_records", "data": [], "error": str(e)}

@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Redis (semaphore state)
+#   Writes: Redis (semaphore slots)
 # Role: Concurrent run limit enforcement (Redis-backed)
 # Callers: API routes
 # Allowed Imports: L6, L7 (stdlib, redis)
 # Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: Run Limits
+# Reference: PIN-470, Run Limits
 # NOTE: Reclassified L6→L5 (2026-01-24) - Redis infrastructure, not SQL driver
 #       Remains in drivers/ per Layer ≠ Directory principle
 

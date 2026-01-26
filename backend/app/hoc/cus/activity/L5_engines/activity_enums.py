@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: N/A (static definitions)
 #   Execution: N/A
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (pure definitions)
+#   Writes: none
 # Role: Canonical enums for activity domain - owned by engines
 # Callers: activity_facade.py, signal engines
-# Allowed Imports: N/A (pure enums)
-# Forbidden Imports: L1, L2, L3, L4, L6, sqlalchemy, sqlmodel
-# Reference: ACT-DUP-006, ACTIVITY_DTO_RULES.md
+# Allowed Imports: none (pure enums)
+# Forbidden Imports: all (pure enums, no imports needed)
+# Reference: PIN-470, ACT-DUP-006, ACTIVITY_DTO_RULES.md
 # NOTE: Reclassified L6→L5 (2026-01-24) - pure enum definitions, no DB ops
 """
 Activity Domain Enums

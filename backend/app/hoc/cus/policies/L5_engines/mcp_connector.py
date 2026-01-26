@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api (via mediation layer)
 #   Execution: async
+# Lifecycle:
+#   Emits: mcp_tool_invocation
+#   Subscribes: none
+# Data Access:
+#   Reads: tools (via driver)
+#   Writes: none
 # Role: Model Context Protocol (MCP) tool invocation with governance
 # Callers: RetrievalMediator
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: GAP-063
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-063
 
 """
 Module: mcp_connector

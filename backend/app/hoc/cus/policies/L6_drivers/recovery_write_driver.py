@@ -1,14 +1,24 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Product: system-wide (Recovery API)
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: recovery_patterns
+#   Writes: recovery_patterns, recovery_suggestions
+# Database:
+#   Scope: domain (recovery)
+#   Models: RecoveryPattern, RecoverySuggestion
 # Role: DB write driver for Recovery APIs (DB boundary crossing)
 # Callers: L5 engines, api/recovery_ingest.py, api/recovery.py
-# Allowed Imports: L7 (models)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-250 Phase 2B Batch 4
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, PIN-250 Phase 2B Batch 4
 # NOTE: Reclassified L4→L6 (2026-01-24) - Has Session import, DB write operations
 #       Renamed recovery_write_service.py → recovery_write_driver.py (BANNED_NAMING fix)
 
@@ -250,10 +260,6 @@ class RecoveryWriteService:
             },
         )
 
-    def commit(self) -> None:
-        """Commit the current transaction."""
-        self.session.commit()
+    # REMOVED: commit() helper — L6 DOES NOT COMMIT (L4 coordinator owns transaction boundary)
 
-    def rollback(self) -> None:
-        """Rollback the current transaction."""
-        self.session.rollback()
+    # REMOVED: rollback() helper — L6 DOES NOT ROLLBACK (L4 coordinator owns transaction boundary)

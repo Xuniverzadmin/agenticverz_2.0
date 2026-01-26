@@ -1,8 +1,28 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide (NOT console-owned)
-# Callers: recovery_evaluator.py (worker)
-# Reference: PIN-240
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: failure_patterns, recovery_suggestions
+#   Writes: recovery_candidates (via session.add, NO COMMIT)
+# Database:
+#   Scope: domain (policies)
+#   Models: FailurePattern, RecoverySuggestion, RecoveryCandidate
+# Role: Match failure patterns and generate recovery suggestions — L6 DOES NOT COMMIT
+# Callers: L5 engines (must provide session, must own transaction boundary)
+# Allowed Imports: L6, L7 (models)
+# Forbidden: session.commit() — L4 owns commit authority
+# Reference: PIN-470, PIN-240, TRANSACTION_BYPASS_REMEDIATION_CHECKLIST.md
 # WARNING: If this logic is wrong, ALL products break.
+#
+# Migration Note:
+# This driver has no active HOC callers yet.
+# Legacy callers (if any) must provide session explicitly.
 
 from app.infra import FeatureIntent, RetryPolicy
 
@@ -35,9 +55,12 @@ import math
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from app.security.sanitize import sanitize_error_message
+
+if TYPE_CHECKING:
+    from sqlmodel import Session
 
 logger = logging.getLogger("nova.services.recovery_matcher")
 
@@ -71,25 +94,20 @@ class RecoveryMatcher:
     """
     Matches failures to recovery suggestions using pattern matching
     and confidence scoring.
+
+    Transaction Boundary: L6 drivers DO NOT commit.
+    The caller (L5 engine or L4 coordinator) owns the transaction.
+    This driver only calls session.add()/session.execute() — never session.commit().
     """
 
-    def __init__(self, db_session=None):
-        """Initialize matcher with optional database session."""
-        self._session = db_session
-        self._db_url = os.getenv("DATABASE_URL")
+    def __init__(self, session: "Session"):
+        """
+        Initialize matcher with required database session.
 
-    def _get_session(self):
-        """Get or create database session."""
-        if self._session:
-            return self._session
-
-        if not self._db_url:
-            raise RuntimeError("DATABASE_URL environment variable is required")
-
-        from sqlmodel import Session, create_engine
-
-        engine = create_engine(self._db_url)
-        return Session(engine)
+        Args:
+            session: SQLModel session (REQUIRED — caller owns transaction)
+        """
+        self._session = session
 
     def _normalize_error(self, payload: Dict[str, Any]) -> Tuple[str, str]:
         """
@@ -216,7 +234,7 @@ class RecoveryMatcher:
         try:
             from sqlalchemy import text
 
-            session = self._get_session()
+            session = self._session
 
             # Query for similar failures by error_code
             result = session.execute(
@@ -262,7 +280,7 @@ class RecoveryMatcher:
         try:
             from sqlalchemy import text
 
-            session = self._get_session()
+            session = self._session
 
             result = session.execute(
                 text(
@@ -350,7 +368,7 @@ class RecoveryMatcher:
 
             from sqlalchemy import text
 
-            session = self._get_session()
+            session = self._session
 
             # Vector similarity search on failure_catalog (if embeddings exist)
             result = session.execute(
@@ -602,7 +620,7 @@ Provide a JSON response with:
 
         from sqlalchemy import text
 
-        session = self._get_session()
+        session = self._session
 
         # Check if candidate exists
         result = session.execute(
@@ -672,8 +690,9 @@ Provide a JSON response with:
             )
             candidate_id = result.scalar()
 
-        session.commit()
-        return int(candidate_id)
+        # NO COMMIT — L4 coordinator owns transaction boundary
+        # Caller must commit after all operations complete
+        return int(candidate_id) if candidate_id else 0
 
     def suggest(self, request: Dict[str, Any]) -> MatchResult:
         """
@@ -776,7 +795,7 @@ Provide a JSON response with:
 
         from sqlalchemy import text
 
-        session = self._get_session()
+        session = self._session
 
         query = """
             SELECT
@@ -839,7 +858,7 @@ Provide a JSON response with:
         if decision not in ("approved", "rejected"):
             raise ValueError("decision must be 'approved' or 'rejected'")
 
-        session = self._get_session()
+        session = self._session
 
         # Get current state for audit
         result = session.execute(text("SELECT decision FROM recovery_candidates WHERE id = :id"), {"id": candidate_id})
@@ -891,7 +910,8 @@ Provide a JSON response with:
             },
         )
 
-        session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
+        # Caller must commit after all operations complete
 
         # Return updated candidate by querying directly
         result = session.execute(

@@ -30,8 +30,9 @@ from pydantic import BaseModel, Field
 from app.auth.console_auth import verify_fops_token
 from app.middleware.rate_limit import rate_limit_dependency
 from app.schemas.response import wrap_dict
-from app.services.recovery_matcher import RecoveryMatcher
-from app.services.recovery_write_service import RecoveryWriteService
+# L6 driver imports (migrated to HOC per SWEEP-09)
+from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
+from app.hoc.cus.policies.L6_drivers.recovery_write_driver import RecoveryWriteService
 
 logger = logging.getLogger("nova.api.recovery")
 
@@ -786,7 +787,8 @@ async def evaluate_rules(
     Does NOT create a candidate or modify any data.
     """
     try:
-        from app.services.recovery_rule_engine import (
+        # L5 engine import (migrated to HOC per SWEEP-09)
+        from app.hoc.cus.incidents.L5_engines.recovery_rule_engine import (
             evaluate_rules as run_evaluation,
         )
 
@@ -887,7 +889,8 @@ async def test_recovery_scope(
     - request_sample: Run on a sample of requests
     - budget_fraction: Run within a budget fraction
     """
-    from app.services.scoped_execution import test_recovery_scope as do_scope_test
+    # L6 driver import (migrated to HOC per SWEEP-30)
+    from app.hoc.cus.incidents.L6_drivers.scoped_execution import test_recovery_scope as do_scope_test
 
     try:
         result = await do_scope_test(
@@ -987,7 +990,8 @@ async def create_scope(request: CreateScopeRequest):
 
     INVARIANT: "A recovery action without a valid execution scope is invalid by definition."
     """
-    from app.services.scoped_execution import create_recovery_scope
+    # L6 driver import (migrated to HOC per SWEEP-30)
+    from app.hoc.cus.incidents.L6_drivers.scoped_execution import create_recovery_scope
 
     try:
         result = await create_recovery_scope(
@@ -1039,7 +1043,8 @@ async def execute_recovery(request: ExecuteRequest):
 
     Only with a valid, active scope can execution proceed.
     """
-    from app.services.scoped_execution import (
+    # L6 driver imports (migrated to HOC per SWEEP-30)
+    from app.hoc.cus.incidents.L6_drivers.scoped_execution import (
         ScopeActionMismatch,
         ScopedExecutionRequired,
         ScopeExhausted,
@@ -1150,7 +1155,8 @@ async def list_scopes(incident_id: str = Path(..., description="Incident ID")):
 
     Shows scope status (active, exhausted, expired, revoked) for visibility.
     """
-    from app.services.scoped_execution import get_scope_store
+    # L6 driver import (migrated to HOC per SWEEP-30)
+    from app.hoc.cus.incidents.L6_drivers.scoped_execution import get_scope_store
 
     try:
         store = get_scope_store()
@@ -1174,7 +1180,8 @@ async def revoke_scope(scope_id: str = Path(..., description="Scope ID to revoke
 
     Revoked scopes cannot be used for execution.
     """
-    from app.services.scoped_execution import get_scope_store
+    # L6 driver import (migrated to HOC per SWEEP-30)
+    from app.hoc.cus.incidents.L6_drivers.scoped_execution import get_scope_store
 
     try:
         store = get_scope_store()

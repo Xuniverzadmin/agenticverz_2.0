@@ -1,4 +1,22 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: CostSimCBStateModel, CostSimCBIncidentModel, CostSimAlertQueueModel
+#   Writes: CostSimCBStateModel, CostSimCBIncidentModel, CostSimAlertQueueModel
+# Database:
+#   Scope: domain (analytics)
+#   Models: CostSimCBStateModel, CostSimCBIncidentModel, CostSimAlertQueueModel
+# Role: Async DB-backed circuit breaker state tracking
+# Callers: sandbox.py, canary.py (L5 engines)
+# Allowed Imports: L6, L7 (models)
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, M6 CostSim
 from __future__ import annotations
 
 from app.infra import FeatureIntent, RetryPolicy
@@ -350,7 +368,7 @@ async def _auto_recover(
     state.consecutive_failures = 0
     state.updated_at = datetime.now(timezone.utc)
 
-    await session.commit()
+    # NO COMMIT — L4 coordinator owns transaction boundary
 
     # Resolve incident
     if old_incident_id:
@@ -715,7 +733,7 @@ async def _resolve_incident(
         incident.resolved_at = datetime.now(timezone.utc)
         incident.resolved_by = resolved_by
         incident.resolution_notes = resolution_notes
-        await session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
 
 async def get_incidents(

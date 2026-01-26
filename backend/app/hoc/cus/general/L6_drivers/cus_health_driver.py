@@ -1,14 +1,24 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api, scheduler
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: CusIntegration
+#   Writes: CusIntegration (health state updates)
+# Database:
+#   Scope: domain (general)
+#   Models: CusIntegration, CusHealthState
 # Role: Health checking driver for customer LLM integrations (DB boundary crossing)
 # Callers: L5 engines, scheduled health checks
-# Allowed Imports: L7 (models)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: docs/architecture/CUSTOMER_INTEGRATIONS_ARCHITECTURE.md
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, docs/architecture/CUSTOMER_INTEGRATIONS_ARCHITECTURE.md
 # NOTE: Moved from engines/cus_health_service.py → drivers/cus_health_driver.py (2026-01-24)
 #       Reason: Has DB Session imports - belongs in L6 Driver layer, not L5 Engine
 
@@ -53,7 +63,7 @@ from sqlmodel import Session, select
 
 from app.db import get_engine
 from app.models.cus_models import CusHealthState, CusIntegration
-from app.services.cus_credential_service import CusCredentialService
+from app.hoc.cus.general.L5_engines.cus_credential_service import CusCredentialService
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +199,7 @@ class CusHealthDriver:
             integration.updated_at = datetime.now(timezone.utc)
 
             session.add(integration)
-            session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
             logger.info(
                 f"Health check for integration {integration_id}: "

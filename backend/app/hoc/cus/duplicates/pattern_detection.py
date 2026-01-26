@@ -8,6 +8,7 @@
 # Callers: None (ORPHAN - pending integration)
 # Allowed Imports: none (QUARANTINED)
 # Forbidden Imports: all (QUARANTINED)
+# Forbidden: session.commit(), session.rollback() — QUARANTINED CODE MUST NOT COMMIT
 # Reference: PIN-240, LOGS_PHASE2.5_IMPLEMENTATION_PLAN.md
 #
 # STATUS: QUARANTINED
@@ -350,7 +351,7 @@ async def run_pattern_detection(
                 except Exception as e:
                     result["errors"].append(f"Failed to emit cost feedback: {e}")
 
-            await session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
     except Exception as e:
         logger.error(f"pattern_detection_error: {e}", exc_info=True)

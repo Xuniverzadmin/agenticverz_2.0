@@ -39,7 +39,8 @@ from app.schemas.limits.overrides import (
     LimitOverrideResponse,
     OverrideStatus,
 )
-from app.services.limits.override_service import (
+# L6 driver import (migrated to HOC per SWEEP-08)
+from app.hoc.cus.policies.L6_drivers.override_driver import (
     LimitNotFoundError,
     LimitOverrideService,
     LimitOverrideServiceError,

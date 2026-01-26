@@ -3,15 +3,21 @@
 # Product: system-wide
 # Wiring Type: audit
 # Parent Gap: GAP-063 (MCPConnector), GAP-081 (AuditDaemon)
-# Reference: GAP-143
 # Depends On: GAP-141 (MCPServerRegistry), GAP-142 (MCPPolicyMapper)
 # Temporal:
 #   Trigger: worker (tool invocation)
 #   Execution: async
+# Lifecycle:
+#   Emits: audit_evidence
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none (via driver)
 # Role: Emit compliance-grade audit for MCP tool calls (pure logic)
 # Callers: Runner, skill executor
 # Allowed Imports: L6, L7
 # Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
+# Reference: PIN-470, GAP-143
 # NOTE: Reclassified L6→L5 (2026-01-24) - no Session imports, pure logic
 
 """

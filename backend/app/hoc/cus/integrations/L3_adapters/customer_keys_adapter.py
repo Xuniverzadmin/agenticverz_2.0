@@ -37,10 +37,10 @@ from typing import List, Optional
 from pydantic import BaseModel
 from sqlmodel import Session
 
-# L6 driver imports (reclassified per PIN-468)
-from app.services.keys_driver import (
-    get_keys_read_driver as get_keys_read_service,
-    get_keys_write_driver as get_keys_write_service,
+# L5 engine imports (migrated to HOC per SWEEP-03)
+from app.hoc.cus.api_keys.L5_engines.keys_engine import (
+    get_keys_read_engine as get_keys_read_service,
+    get_keys_write_engine as get_keys_write_service,
 )
 
 # =============================================================================

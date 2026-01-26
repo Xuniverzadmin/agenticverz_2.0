@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: any
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Canonical JSON serialization for hashing (pure computation, no boundary crossing)
 # Callers: SDK, trace system
 # Allowed Imports: None (foundational)
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: Hash Parity
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, Hash Parity
 # NOTE: Reclassified L6→L5 (2026-01-24) - No DB/cache boundary, pure transformation logic
 
 # utils/canonical_json.py

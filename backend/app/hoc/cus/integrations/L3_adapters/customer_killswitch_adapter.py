@@ -41,9 +41,9 @@ from sqlmodel import Session
 # but for now we import the enum value directly)
 from app.models.killswitch import TriggerType
 
-# L4 imports ONLY (no L6 direct queries!)
-from app.services.guard_write_service import GuardWriteService
-from app.services.killswitch.customer_killswitch_read_service import (
+# L4/L5 imports ONLY (no L6 direct queries!)
+from app.hoc.cus.general.L5_controls.engines.guard_write_engine import GuardWriteService
+from app.hoc.cus.policies.L5_controls.engines.customer_killswitch_read_engine import (
     CustomerKillswitchReadService,
     get_customer_killswitch_read_service,
 )

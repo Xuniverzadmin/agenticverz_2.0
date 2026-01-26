@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: operator-action
 #   Execution: sync
+# Lifecycle:
+#   Emits: kill_switch_activated
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Runtime kill switch for governance bypass (pure state logic)
 # Callers: main.py, prevention_engine.py
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: GAP-069
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-069
 # NOTE: Reclassified L6→L5 (2026-01-24) - no Session imports, pure logic
 
 """

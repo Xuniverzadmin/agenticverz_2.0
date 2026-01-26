@@ -4,12 +4,18 @@
 # Location: hoc/cus/account/L5_engines/accounts_facade.py
 # Temporal:
 #   Trigger: api
-#   Execution: async (DB reads/writes)
+#   Execution: async (DB reads/writes via driver)
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Tenant, User, Membership (via driver)
+#   Writes: Tenant, User, Membership (via driver)
 # Role: Accounts domain facade - unified entry point for account management
 # Callers: L2 accounts API (accounts.py)
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3, L7 (at runtime)
-# Reference: Customer Console v1 Constitution, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, Customer Console v1 Constitution, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
 #
 # PHASE 2.5B REMEDIATION (2026-01-24):
 # This facade has been refactored to comply with HOC Layer Topology V1.

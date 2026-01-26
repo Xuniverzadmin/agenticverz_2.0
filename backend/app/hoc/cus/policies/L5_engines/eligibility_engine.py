@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: eligibility rules (via driver)
+#   Writes: none
 # Role: Eligibility Engine - pure rules, deterministic gating
 # Callers: L3 (adapters), L2 (governance APIs)
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: PIN-287, ELIGIBILITY_RULES.md, part2-design-v1
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-287, ELIGIBILITY_RULES.md, part2-design-v1
 #
 # ==============================================================================
 # GOVERNANCE RULE: ELIGIBILITY-IS-DETERMINISTIC (Non-Negotiable)
@@ -64,7 +71,8 @@ from enum import Enum
 from typing import Any, Optional, Protocol
 from uuid import UUID
 
-from app.services.governance.validator_service import (
+# Rewired to L4_runtime (Sweep-02A)
+from app.hoc.cus.general.L4_runtime.engines import (
     IssueType,
     RecommendedAction,
     Severity,

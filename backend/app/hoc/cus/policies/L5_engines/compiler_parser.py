@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Policy language parser
 # Callers: policy/engine
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: Policy System
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, Policy System
 
 # M20 PLang v2.0 Parser
 # Syntax analysis for policy language

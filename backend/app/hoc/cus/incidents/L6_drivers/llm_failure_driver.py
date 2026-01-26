@@ -1,10 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: RunFailure, FailureEvidence, WorkerRun
+#   Writes: RunFailure, FailureEvidence, WorkerRun
+# Database:
+#   Scope: domain (incidents)
+#   Models: RunFailure, FailureEvidence, WorkerRun
 # Role: Data access for LLM failure operations (async)
-# Callers: LLMFailureService (L4)
-# Allowed Imports: sqlalchemy
+# Callers: LLMFailureEngine (L5)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
 #
 # GOVERNANCE NOTE:
 # This L6 driver provides pure data access for LLM failure operations.
@@ -24,7 +37,6 @@
 # update_run_failed                   | Mark run as failed in worker_runs
 # fetch_failure_by_run_id             | Get failure by run ID
 # fetch_contamination_check           | Verify no downstream contamination
-# commit                              | Transaction commit
 # ============================================================================
 # This is the SINGLE persistence authority for LLM failure writes.
 # Do NOT create competing drivers. Extend this file.
@@ -305,9 +317,7 @@ class LLMFailureDriver:
             "other_incidents": incident_count,
         }
 
-    async def commit(self) -> None:
-        """Commit the current transaction."""
-        await self._session.commit()
+    # REMOVED: commit() helper — L6 DOES NOT COMMIT (L4 coordinator owns transaction boundary)
 
 
 def get_llm_failure_driver(session: AsyncSession) -> LLMFailureDriver:

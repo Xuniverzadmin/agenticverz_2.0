@@ -1,14 +1,19 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Product: system-wide
 # Temporal:
-#   Trigger: api (on-demand) or worker (scheduled)
+#   Trigger: api/worker
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via L6 drivers
+#   Writes: via L6 drivers
 # Role: Detection Facade - Centralized access to anomaly detection operations
 # Callers: L2 detection.py API, SDK, Worker
-# Allowed Imports: L6 drivers
-# Forbidden Imports: L1, L2, L3, sqlalchemy, sqlmodel
-# Reference: GAP-102 (Anomaly Detection API)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-102 (Anomaly Detection API)
 # Location: hoc/cus/analytics/L5_engines/detection_facade.py
 # L4 is reserved for general/L4_runtime/ only per HOC Layer Topology.
 
@@ -195,7 +200,7 @@ class DetectionFacade:
         # Note: CostAnomalyDetector requires a session, so we return the class
         # and instantiate it with session when needed
         try:
-            from app.services.cost_anomaly_detector import CostAnomalyDetector
+            from app.hoc.cus.analytics.L5_engines.cost_anomaly_detector import CostAnomalyDetector
             return CostAnomalyDetector
         except ImportError:
             logger.warning("CostAnomalyDetector not available")
@@ -295,7 +300,7 @@ class DetectionFacade:
             )
 
         try:
-            from app.services.cost_anomaly_detector import (
+            from app.hoc.cus.analytics.L5_engines.cost_anomaly_detector import (
                 run_anomaly_detection_with_governance,
             )
 

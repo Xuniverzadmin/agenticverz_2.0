@@ -5,11 +5,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: limits, quotas (via driver)
+#   Writes: limits (via driver)
 # Role: Limits Facade - Centralized access to rate limits and quotas
 # Callers: L2 limits.py API, SDK
-# Allowed Imports: L4 limit services, L6 (models, db)
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: GAP-122 (Limits API)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-122 (Limits API)
 
 """
 Limits Facade (L4 Domain Logic)
@@ -33,7 +39,7 @@ L2 API Routes (GAP-122):
 - POST /api/v1/limits/reset (reset usage)
 
 Usage:
-    from app.services.limits.facade import get_limits_facade
+    from app.hoc.cus.policies.L5_engines.limits_facade import get_limits_facade
 
     facade = get_limits_facade()
 

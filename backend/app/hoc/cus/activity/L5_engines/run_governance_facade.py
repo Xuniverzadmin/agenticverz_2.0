@@ -6,10 +6,16 @@
 # Temporal:
 #   Trigger: worker (run lifecycle events)
 #   Execution: sync
+# Lifecycle:
+#   Emits: none (facade only)
+#   Subscribes: RUN_STARTED, RUN_COMPLETED
+# Data Access:
+#   Reads: Policy, Limit (via L5 engines)
+#   Writes: none (delegates to engines)
 # Callers: L5 runner (worker runtime)
-# Allowed Imports: L5 domain engines, L6 (drivers)
-# Forbidden Imports: L1, L2, L3, L7
-# Reference: PIN-454, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-454, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
 #
 # L4 is reserved for general/L4_runtime/ only per HOC Layer Topology.
 
@@ -36,7 +42,7 @@ RAC Integration (PIN-454):
 - Action: EVALUATE_POLICY
 
 Usage:
-    from app.services.governance.run_governance_facade import get_run_governance_facade
+    from app.hoc.cus.activity.L5_engines.run_governance_facade import get_run_governance_facade
 
     facade = get_run_governance_facade()
 
@@ -87,7 +93,7 @@ class RunGovernanceFacade:
     def _lessons(self):
         """Lazy-load LessonsLearnedEngine."""
         if self._lessons_engine is None:
-            from app.services.policy.lessons_engine import get_lessons_learned_engine
+            from app.hoc.cus.incidents.L5_engines.lessons_engine import get_lessons_learned_engine
             self._lessons_engine = get_lessons_learned_engine()
         return self._lessons_engine
 
@@ -133,7 +139,7 @@ class RunGovernanceFacade:
 
         try:
             # Import here to avoid circular imports and maintain lazy loading
-            from app.services.policy_violation_service import create_policy_evaluation_sync
+            from app.hoc.cus.incidents.L5_engines.policy_violation_service import create_policy_evaluation_sync
 
             policy_evaluation_id = create_policy_evaluation_sync(
                 run_id=run_id,
@@ -168,8 +174,9 @@ class RunGovernanceFacade:
         PIN-454: Facades emit acks after domain operations.
         """
         try:
-            from app.services.audit.models import AuditAction, AuditDomain, DomainAck
-            from app.services.audit.store import get_audit_store
+            # L5 imports (migrated to HOC per SWEEP-04)
+            from app.hoc.cus.logs.L5_schemas.audit_models import AuditAction, AuditDomain, DomainAck
+            from app.hoc.cus.general.L5_engines.audit_store import get_audit_store
 
             ack = DomainAck(
                 run_id=UUID(run_id),

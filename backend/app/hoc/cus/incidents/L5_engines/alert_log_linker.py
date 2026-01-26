@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api/worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: alert_log_linked
+#   Subscribes: none
+# Data Access:
+#   Reads: AlertLogLink (via driver)
+#   Writes: AlertLogLink (via driver)
 # Role: Link alerts to log records for explicit correlation
 # Callers: alert_emitter, incident_service, trace_service
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
-# Reference: GAP-019 (Alert → Log Linking)
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-019 (Alert → Log Linking)
 
 """
 Module: alert_log_linker

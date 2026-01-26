@@ -41,7 +41,8 @@ from app.schemas.limits.policy_limits import (
     ResetPeriodEnum,
     UpdatePolicyLimitRequest,
 )
-from app.services.limits.policy_limits_service import (
+# L5 engine import (migrated to HOC per SWEEP-08)
+from app.hoc.cus.policies.L5_engines.policy_limits_engine import (
     ImmutableFieldError,
     LimitNotFoundError,
     LimitValidationError,

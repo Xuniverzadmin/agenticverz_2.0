@@ -1,14 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
-# Product: system-wide
 # Temporal:
-#   Trigger: engine call
+#   Trigger: api (via L5 engine)
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: CostSimAlertQueueModel, CostSimCBIncidentModel
+#   Writes: CostSimAlertQueueModel, CostSimCBIncidentModel
+# Database:
+#   Scope: domain (analytics)
+#   Models: CostSimAlertQueueModel, CostSimCBIncidentModel
 # Role: Data access for alert queue operations
-# Callers: alert_worker.py (L4 engine)
-# Allowed Imports: sqlalchemy, sqlmodel, ORM models
+# Callers: alert_worker.py (L5 engine)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5, httpx
-# Reference: Phase-2.5A Analytics Extraction
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, Phase-2.5A Analytics Extraction
 #
 # GOVERNANCE NOTE:
 # This L6 driver provides pure data access for alert queue management.
@@ -319,13 +328,7 @@ class AlertDriver:
         )
         return result.rowcount or 0
 
-    # =========================================================================
-    # TRANSACTION HELPERS
-    # =========================================================================
-
-    async def commit(self) -> None:
-        """Commit the current transaction."""
-        await self._session.commit()
+    # TRANSACTION HELPERS section removed — L6 DOES NOT COMMIT
 
 
 def get_alert_driver(session: AsyncSession) -> AlertDriver:

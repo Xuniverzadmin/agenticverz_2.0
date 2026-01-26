@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api/worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: governance_config (via driver)
+#   Writes: none
 # Role: Phase-status invariant enforcement from GovernanceConfig
 # Callers: ROK (L5), worker runtime
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
-# Reference: GAP-051 (Phase-Status Invariants)
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-051 (Phase-Status Invariants)
 
 """
 Module: phase_status_invariants

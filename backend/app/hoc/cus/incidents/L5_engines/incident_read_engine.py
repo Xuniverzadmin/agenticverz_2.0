@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync (delegates to L6 driver)
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Incident, IncidentEvent (via driver)
+#   Writes: none
 # Role: Incident domain read operations (L5 facade over L6 driver)
 # Callers: customer_incidents_adapter.py (L3)
-# Allowed Imports: L6 (drivers only, NOT ORM models), L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: PIN-281, PHASE2_EXTRACTION_PROTOCOL.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-281, PHASE2_EXTRACTION_PROTOCOL.md
 # NOTE: Renamed incident_read_service.py → incident_read_engine.py (2026-01-24)
 #       per BANNED_NAMING rule (*_service.py → *_engine.py)
 #       Reclassified L4→L5 - Per HOC topology, engines are L5 (business logic)

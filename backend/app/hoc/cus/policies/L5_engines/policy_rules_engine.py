@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: rules (via driver)
+#   Writes: rules (via driver)
 # Role: Policy rules CRUD engine (PIN-LIM-02) - pure business logic
 # Callers: api/policies.py
-# Allowed Imports: L6 drivers (via injection)
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel (at runtime)
-# Reference: PIN-LIM-02, PIN-468
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-LIM-02, PIN-468
 #
 # EXTRACTION STATUS: Phase-2.5A (2026-01-24)
 # - All DB operations extracted to PolicyRulesDriver
@@ -62,12 +68,12 @@ from app.models.policy_control_plane import (
     PolicyRuleStatus,
 )
 from app.models.audit_ledger import ActorType
-from app.schemas.limits.policy_rules import (
+from app.hoc.cus.policies.L5_schemas.policy_rules import (
     CreatePolicyRuleRequest,
     UpdatePolicyRuleRequest,
     PolicyRuleResponse,
 )
-from app.services.logs.audit_ledger_service_async import AuditLedgerServiceAsync
+from app.hoc.cus.logs.L6_drivers.audit_ledger_service_async import AuditLedgerServiceAsync
 
 
 def utc_now() -> datetime:

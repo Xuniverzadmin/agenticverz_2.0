@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api, worker
 #   Execution: sync (with async job coordination)
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via L6 drivers
+#   Writes: via L6 drivers
 # Role: GAP-086 Knowledge Lifecycle Manager (THE ORCHESTRATOR) - pure business logic
 # Callers: SDK facade, API endpoints, async workers
 # Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: GAP-086, DOMAINS_E2E_SCAFFOLD_V3.md Section 7.15
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-086, DOMAINS_E2E_SCAFFOLD_V3.md Section 7.15
 # NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 
 """

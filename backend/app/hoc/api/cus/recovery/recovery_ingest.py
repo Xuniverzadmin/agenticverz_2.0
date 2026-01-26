@@ -46,7 +46,8 @@ from app.metrics import (
     recovery_ingest_total,
 )
 from app.middleware.rate_limit import rate_limit_dependency
-from app.services.recovery_write_service import RecoveryWriteService
+# L6 driver import (migrated to HOC per SWEEP-09)
+from app.hoc.cus.policies.L6_drivers.recovery_write_driver import RecoveryWriteService
 
 logger = logging.getLogger("nova.api.recovery_ingest")
 

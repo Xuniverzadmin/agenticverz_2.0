@@ -5,11 +5,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: controls (via driver)
+#   Writes: controls (via driver)
 # Role: Controls Facade - Centralized access to control operations
 # Callers: L2 controls.py API, SDK
-# Allowed Imports: L4 control services, L6 (models, db)
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: GAP-123 (Controls API)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-123 (Controls API)
 
 """
 Controls Facade (L4 Domain Logic)

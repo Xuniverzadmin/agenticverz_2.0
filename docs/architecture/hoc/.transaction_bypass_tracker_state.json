@@ -1,0 +1,85 @@
+{
+  "checkpoints": [
+    {
+      "timestamp": "2026-01-25T14:40:06.951819",
+      "total": 101,
+      "by_domain": {
+        "policies": 5,
+        "account": 26,
+        "analytics": 20,
+        "api_keys": 2,
+        "general": 15,
+        "integrations": 16,
+        "incidents": 17
+      },
+      "note": "Initial baseline after 4 files remediated"
+    },
+    {
+      "timestamp": "2026-01-25T14:44:29.121384",
+      "total": 90,
+      "by_domain": {
+        "policies": 5,
+        "account": 15,
+        "analytics": 20,
+        "api_keys": 2,
+        "general": 15,
+        "integrations": 16,
+        "incidents": 17
+      },
+      "note": "tenant_driver.py -11 commits"
+    },
+    {
+      "timestamp": "2026-01-25T14:46:53.798396",
+      "total": 83,
+      "by_domain": {
+        "policies": 5,
+        "account": 8,
+        "analytics": 20,
+        "api_keys": 2,
+        "general": 15,
+        "integrations": 16,
+        "incidents": 17
+      },
+      "note": "accounts_facade_driver.py -7 commits"
+    },
+    {
+      "timestamp": "2026-01-25T14:49:34.300471",
+      "total": 75,
+      "by_domain": {
+        "policies": 5,
+        "analytics": 20,
+        "api_keys": 2,
+        "general": 15,
+        "integrations": 16,
+        "incidents": 17
+      },
+      "note": "ACCOUNT DOMAIN DONE: worker_registry_driver.py -4, user_write_driver.py -2, tenant_engine.py -2"
+    },
+    {
+      "timestamp": "2026-01-25T14:55:04.701996",
+      "total": 56,
+      "by_domain": {
+        "policies": 5,
+        "analytics": 1,
+        "api_keys": 2,
+        "general": 15,
+        "integrations": 16,
+        "incidents": 17
+      },
+      "note": "ANALYTICS DOMAIN DONE: cost_anomaly_driver.py -5, cost_write_driver.py -4, provenance_async.py -4, circuit_breaker_async.py -2, alert_driver.py -1, pattern_detection_driver.py -1, prediction_driver.py -1, alert_worker.py -4, cost_anomaly_detector.py -1"
+    },
+    {
+      "timestamp": "2026-01-25T14:55:56.303198",
+      "total": 55,
+      "by_domain": {
+        "policies": 5,
+        "api_keys": 2,
+        "general": 15,
+        "integrations": 16,
+        "incidents": 17
+      },
+      "note": "alert_worker.py -1 rollback"
+    }
+  ],
+  "start_count": 101
+}

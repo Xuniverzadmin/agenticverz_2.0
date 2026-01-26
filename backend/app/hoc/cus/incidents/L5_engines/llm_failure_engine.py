@@ -4,11 +4,18 @@
 # Temporal:
 #   Trigger: api/worker
 #   Execution: async
+# Lifecycle:
+#   Emits: llm_failure_recorded
+#   Subscribes: none
+# Data Access:
+#   Reads: RunFailure (via driver)
+#   Writes: RunFailure, FailureEvidence (via driver)
 # Role: S4 failure truth model, fact persistence
 # Callers: L5 workers (on LLM failure)
-# Allowed Imports: L6 drivers (via injection), L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel (at runtime)
-# Reference: PIN-242 (Baseline Freeze), PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
+# Reference: PIN-470, PIN-242 (Baseline Freeze), PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
 # NOTE: Renamed llm_failure_service.py → llm_failure_engine.py (2026-01-24)
 #       per BANNED_NAMING rule (*_service.py → *_engine.py)
 #       Reclassified L4→L5 - Per HOC topology, engines are L5 (business logic)
@@ -201,7 +208,7 @@ class LLMFailureService:
         if VERIFICATION_MODE:
             await self._verify_no_contamination(failure)
 
-        await self._session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         return LLMFailureResult(
             failure_id=failure.id,

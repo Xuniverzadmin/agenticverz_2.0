@@ -5,11 +5,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync (DB reads/writes via driver)
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: APIKey, ProxyCall (via driver)
+#   Writes: APIKey (via driver)
 # Role: API Keys domain engine - business logic for key operations
 # Callers: customer_keys_adapter.py (L3), runtime, gateway — NOT L2
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3, L7
-# Reference: PIN-281, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-281, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
 #
 # PHASE 2.5B EXTRACTION (2026-01-24):
 # This engine was created from keys_service.py to enforce L5/L6 separation.

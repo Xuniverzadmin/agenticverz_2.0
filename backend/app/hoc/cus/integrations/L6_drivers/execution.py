@@ -1,16 +1,25 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: lifecycle orchestrator (via L5 engine)
+#   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: ConnectorRegistry (via injected)
+#   Writes: internal storage (processed data)
+# Database:
+#   Scope: domain (integrations)
+#   Models: (via ConnectorRegistry)
+# Role: Real execution implementations for lifecycle stage handlers
 # Product: system-wide
 # Wiring Type: execution
 # Parent Gap: GAP-071-077 (Lifecycle Stages)
-# Reference: GAP-159, GAP-160, GAP-161
 # Depends On: GAP-057 (ConnectorRegistry), GAP-156/157/158 (Job infrastructure)
-# Temporal:
-#   Trigger: lifecycle orchestrator
-#   Execution: async
-# Role: Real execution implementations for lifecycle stage handlers
 # Callers: IngestHandler, IndexHandler, ClassifyHandler
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
+# Allowed Imports: L6, L7 (models)
+# Reference: PIN-470, GAP-159, GAP-160, GAP-161
 
 """
 Module: execution
@@ -264,7 +273,8 @@ class DataIngestionExecutor:
             return None
 
         try:
-            from app.services.connectors import get_connector
+            # L6 driver import (migrated to HOC per SWEEP-13)
+            from app.hoc.cus.integrations.L6_drivers.connector_registry import get_connector
             return get_connector(connector_id)
         except Exception as e:
             logger.warning(
@@ -780,7 +790,8 @@ class IndexingExecutor:
             return None
 
         try:
-            from app.services.connectors import get_connector
+            # L6 driver import (migrated to HOC per SWEEP-13)
+            from app.hoc.cus.integrations.L6_drivers.connector_registry import get_connector
             return get_connector(connector_id)
         except Exception as e:
             logger.warning(

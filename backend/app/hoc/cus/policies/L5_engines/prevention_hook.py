@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: prevention_check
+#   Subscribes: none
+# Data Access:
+#   Reads: policies (via driver)
+#   Writes: none
 # Role: Prevention hook for policy enforcement
 # Callers: workers, execution runtime
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: Policy System
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, Policy System
 
 # M23 Prevention Hook
 # Pre-response and post-response hooks for policy enforcement

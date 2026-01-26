@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api/worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: degraded_mode_incident_created
+#   Subscribes: none
+# Data Access:
+#   Reads: GovernanceState (via runtime_switch)
+#   Writes: Incident (via driver on mode change)
 # Role: Governance degraded mode checker with incident response
 # Callers: ROK (L5), prevention_engine, incident_engine
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
-# Reference: GAP-070 (Governance Degraded Mode)
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-070 (Governance Degraded Mode)
 
 """
 Module: degraded_mode_checker

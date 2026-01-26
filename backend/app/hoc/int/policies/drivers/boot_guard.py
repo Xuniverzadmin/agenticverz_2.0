@@ -83,7 +83,8 @@ def validate_spine_components() -> SpineValidationResult:
     # Check 1: EventReactor (GAP-046)
     try:
         from app.events.reactor_initializer import get_reactor_status
-        from app.services.governance.profile import get_governance_config
+        # L5 engine import (migrated to HOC per SWEEP-03)
+        from app.hoc.cus.policies.L5_engines.profile import get_governance_config
 
         config = get_governance_config()
 
@@ -96,7 +97,8 @@ def validate_spine_components() -> SpineValidationResult:
 
     # Check 2: Governance config valid
     try:
-        from app.services.governance.profile import validate_governance_config, get_governance_config
+        # L5 engine import (migrated to HOC per SWEEP-03)
+        from app.hoc.cus.policies.L5_engines.profile import validate_governance_config, get_governance_config
 
         config = get_governance_config()
         config_warnings = validate_governance_config(config)
@@ -106,7 +108,8 @@ def validate_spine_components() -> SpineValidationResult:
 
     # Check 3: Runtime switch is available (GAP-069)
     try:
-        from app.services.governance.runtime_switch import is_governance_active
+        # L5 engine import (migrated to HOC per SWEEP-03)
+        from app.hoc.cus.general.L5_engines.runtime_switch import is_governance_active
         if not is_governance_active():
             warnings.append("Governance is currently disabled at boot")
     except ImportError:

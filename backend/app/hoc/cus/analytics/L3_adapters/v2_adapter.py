@@ -127,7 +127,8 @@ class CostSimV2Adapter:
 
         B02 FIX: Delegates to L4 CostModelEngine.
         """
-        from app.services.cost_model_engine import get_skill_coefficients
+        # L5 engine import (migrated to HOC per SWEEP-44)
+        from app.hoc.cus.analytics.L5_engines.cost_model_engine import get_skill_coefficients
 
         return get_skill_coefficients(skill_id)
 
@@ -138,7 +139,8 @@ class CostSimV2Adapter:
         B02 FIX: Delegates to L4 CostModelEngine.estimate_step_cost().
         L3 no longer contains estimation logic.
         """
-        from app.services.cost_model_engine import estimate_step_cost
+        # L5 engine import (migrated to HOC per SWEEP-44)
+        from app.hoc.cus.analytics.L5_engines.cost_model_engine import estimate_step_cost
 
         skill_id = step.get("skill", "unknown")
         params = step.get("params", {})
@@ -331,7 +333,8 @@ class CostSimV2Adapter:
         B02 FIX: Delegates drift classification to L4 CostModelEngine.
         L3 only handles shape/transport, not classification thresholds.
         """
-        from app.services.cost_model_engine import classify_drift
+        # L5 engine import (migrated to HOC per SWEEP-44)
+        from app.hoc.cus.analytics.L5_engines.cost_model_engine import classify_drift
 
         # Delegate drift classification to L4
         drift_analysis = classify_drift(

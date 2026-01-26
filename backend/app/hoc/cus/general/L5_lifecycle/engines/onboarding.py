@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync/async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via L6 drivers
+#   Writes: via L6 drivers
 # Role: Onboarding Stage Handlers (GAP-071 to GAP-077) - pure business logic
 # Callers: KnowledgeLifecycleManager via StageRegistry
 # Allowed Imports: stdlib, L6
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: GAP-071-077, GAP_IMPLEMENTATION_PLAN_V1.md
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-071-077, GAP_IMPLEMENTATION_PLAN_V1.md
 # NOTE: Reclassified L4→L5 (2026-01-24) - Per HOC topology, engines are L5 (business logic)
 
 """
@@ -277,7 +283,7 @@ class IngestHandler(BaseStageHandler):
             config = context.config or {}
 
             # GAP-159: Use real ingestion executor
-            from app.services.lifecycle_stages.execution import (
+            from app.hoc.cus.general.L5_lifecycle.drivers.execution import (
                 get_ingestion_executor,
             )
 
@@ -368,7 +374,7 @@ class IndexHandler(BaseStageHandler):
             config = context.config or {}
 
             # GAP-160: Use real indexing executor
-            from app.services.lifecycle_stages.execution import (
+            from app.hoc.cus.general.L5_lifecycle.drivers.execution import (
                 get_indexing_executor,
                 IngestionBatch,
                 IngestionSourceType,
@@ -480,7 +486,7 @@ class ClassifyHandler(BaseStageHandler):
         """
         try:
             # GAP-161: Use real classification executor
-            from app.services.lifecycle_stages.execution import (
+            from app.hoc.cus.general.L5_lifecycle.drivers.execution import (
                 get_classification_executor,
                 IngestionBatch,
                 IngestionSourceType,

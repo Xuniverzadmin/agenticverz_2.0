@@ -1,13 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
+# Database:
+#   Scope: domain (policies)
+#   Models: none (in-memory symbol table)
 # Role: Policy symbol table management
 # Callers: policy/ir/ir_builder
-# Allowed Imports: L6
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L5
-# Reference: Policy System
+# Reference: PIN-470, Policy System
 
 # M20 Policy IR Symbol Table
 # Symbol management for policy compilation

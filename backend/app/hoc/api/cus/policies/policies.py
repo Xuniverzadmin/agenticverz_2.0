@@ -48,7 +48,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
 from app.schemas.response import wrap_dict
-from app.services.policies_facade import get_policies_facade
+# L5 engine import (migrated to HOC per SWEEP-03 Batch 3)
+from app.hoc.cus.policies.L5_engines.policies_facade import get_policies_facade
 
 # =============================================================================
 # Environment Configuration

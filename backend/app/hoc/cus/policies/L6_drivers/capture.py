@@ -1,22 +1,38 @@
-# Layer: L6 — Platform Substrate
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
-#   Trigger: api | worker | skill
+#   Trigger: api (via L5 engine)
 #   Execution: sync
-# Role: Taxonomy evidence capture service (ctx-aware)
-# Callers: workers.py, runner.py, adapters, decisions.py
-# Allowed Imports: L6 (database)
-# Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: Evidence Architecture v1.1, ExecutionContext Specification v1.1
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: activity_evidence, policy_decisions, integrity_evidence (via session.execute, NO COMMIT)
+# Database:
+#   Scope: domain (policies)
+#   Models: ActivityEvidence, PolicyDecision, IntegrityEvidence
+# Role: Taxonomy evidence capture service (ctx-aware) — L6 DOES NOT COMMIT
+# Callers: L5 engines (must provide session, must own transaction boundary)
+# Allowed Imports: L6, L7 (models)
+# Forbidden: session.commit(), conn.commit() — L4 owns commit authority
+# Migration Note: Orphan during HOC migration. Authority enforcement applies regardless.
+# Reference: PIN-470, Evidence Architecture v1.1, ExecutionContext Specification v1.1, TRANSACTION_BYPASS_REMEDIATION_CHECKLIST.md
 
 """
 Taxonomy Evidence Capture Service (v1.1)
 
 Single entry point for all governance taxonomy evidence writes (Classes B-J).
 
+Transaction Boundary: L6 drivers DO NOT commit.
+The caller (L5 engine or L4 coordinator) owns the transaction.
+All functions receive session from caller and only call session.execute().
+
 Rules:
 - All taxonomy writes go through this file
 - All functions require ExecutionContext (except integrity)
+- All functions require Session (caller owns transaction)
 - No context → No evidence (hard failure, not best-effort)
 - No business logic - thin DB writes only
 - No inference - fields must be provided explicitly
@@ -33,6 +49,11 @@ v1.1 Changes:
 - compute_integrity() now delegates to compute_integrity_v2() (split architecture)
 - IntegrityAssembler gathers facts, IntegrityEvaluator applies policy
 - Backward compatible: returns same dict structure with extra fields
+
+v1.2 Changes (HOC Authority Enforcement):
+- All functions now require session parameter (caller owns transaction)
+- Removed all conn.commit() / session.commit() calls
+- Removed create_engine usage (session provided by caller)
 """
 
 from __future__ import annotations
@@ -45,8 +66,9 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+from sqlmodel import Session
 
 from app.core.execution_context import ExecutionContext
 
@@ -103,8 +125,8 @@ def _assert_context_exists(ctx: ExecutionContext, evidence_type: str) -> None:
             f"No context → No evidence. This is a hard failure, not best-effort."
         )
 
-# Database connection
-DATABASE_URL = os.environ.get("DATABASE_URL")
+# NOTE: Session is now provided by caller (L5 engine or L4 coordinator)
+# This file no longer creates its own database connections
 
 
 # =============================================================================
@@ -157,6 +179,7 @@ _FAILURE_RESOLUTION_MAP = {
 
 
 def _record_capture_failure(
+    session: Session,
     run_id: str,
     evidence_type: str,
     failure_reason: str,
@@ -174,6 +197,7 @@ def _record_capture_failure(
     - superseded: Later capture succeeded
 
     Args:
+        session: SQLModel session (REQUIRED — caller owns transaction)
         run_id: Run identifier (scope)
         evidence_type: Evidence class (B/D/G/H/I scope)
         failure_reason: Why capture failed
@@ -184,51 +208,42 @@ def _record_capture_failure(
     propagate.
     """
     try:
-        if not DATABASE_URL:
-            return
-
         # Determine resolution
         if resolution is None:
             resolution = _FAILURE_RESOLUTION_MAP.get(
                 failure_reason, FailureResolution.TRANSIENT
             )
 
-        engine = create_engine(DATABASE_URL)
-        with engine.connect() as conn:
-            conn.execute(
-                text("""
-                    INSERT INTO evidence_capture_failures (
-                        id, run_id, evidence_type, failure_reason,
-                        error_message, resolution, created_at
-                    ) VALUES (
-                        :id, :run_id, :evidence_type, :failure_reason,
-                        :error_message, :resolution, :created_at
-                    )
-                    ON CONFLICT DO NOTHING
-                """),
-                {
-                    "id": f"ecf-{run_id}-{evidence_type}-{uuid4().hex[:8]}",
-                    "run_id": run_id,
-                    "evidence_type": evidence_type,
-                    "failure_reason": failure_reason,
-                    "error_message": error_message[:500] if error_message else None,
-                    "resolution": resolution,
-                    "created_at": datetime.now(timezone.utc),
-                },
-            )
-            conn.commit()
-        engine.dispose()
+        session.execute(
+            text("""
+                INSERT INTO evidence_capture_failures (
+                    id, run_id, evidence_type, failure_reason,
+                    error_message, resolution, created_at
+                ) VALUES (
+                    :id, :run_id, :evidence_type, :failure_reason,
+                    :error_message, :resolution, :created_at
+                )
+                ON CONFLICT DO NOTHING
+            """),
+            {
+                "id": f"ecf-{run_id}-{evidence_type}-{uuid4().hex[:8]}",
+                "run_id": run_id,
+                "evidence_type": evidence_type,
+                "failure_reason": failure_reason,
+                "error_message": error_message[:500] if error_message else None,
+                "resolution": resolution,
+                "created_at": datetime.now(timezone.utc),
+            },
+        )
+        # NO COMMIT — L4 coordinator owns transaction boundary
     except Exception as e:
         # Silent fail - this is best-effort tracking
         logger.debug(f"Failed to record capture failure: {e}")
 
 
-def _get_connection():
-    """Get a database connection for evidence writes."""
-    if not DATABASE_URL:
-        raise RuntimeError("DATABASE_URL not configured for evidence capture")
-    engine = create_engine(DATABASE_URL)
-    return engine.connect()
+# NOTE: _get_connection() removed in v1.2
+# Session is now provided by caller (L5 engine or L4 coordinator)
+# All functions accept session parameter directly
 
 
 def _hash_content(content: str) -> str:
@@ -242,6 +257,7 @@ def _hash_content(content: str) -> str:
 
 
 def capture_environment_evidence(
+    session: Session,
     ctx: ExecutionContext,
     *,
     sdk_mode: str,
@@ -259,6 +275,7 @@ def capture_environment_evidence(
     Called once per run, immediately after run is persisted.
 
     Args:
+        session: SQLModel session (REQUIRED — caller owns transaction)
         ctx: ExecutionContext (required)
         sdk_mode: SDK invocation mode (inline, async, degraded, offline)
         execution_environment: Environment context (prod, staging, dev, sandbox)
@@ -279,39 +296,38 @@ def capture_environment_evidence(
     evidence_id = f"ee-{ctx.run_id}"
 
     try:
-        with _get_connection() as conn:
-            conn.execute(
-                text("""
-                    INSERT INTO environment_evidence (
-                        id, run_id, sdk_mode, sdk_version, environment,
-                        telemetry_enabled, telemetry_delivery_status,
-                        capture_confidence_score, debug_mode, dry_run,
-                        is_synthetic, synthetic_scenario_id, created_at
-                    ) VALUES (
-                        :id, :run_id, :sdk_mode, :sdk_version, :environment,
-                        :telemetry_enabled, :telemetry_delivery_status,
-                        :capture_confidence_score, :debug_mode, :dry_run,
-                        :is_synthetic, :synthetic_scenario_id, :created_at
-                    )
-                    ON CONFLICT (run_id) DO NOTHING
-                """),
-                {
-                    "id": evidence_id,
-                    "run_id": ctx.run_id,
-                    "sdk_mode": sdk_mode,
-                    "sdk_version": sdk_version,
-                    "environment": execution_environment,
-                    "telemetry_enabled": telemetry_enabled,
-                    "telemetry_delivery_status": telemetry_delivery_status,
-                    "capture_confidence_score": capture_confidence_score,
-                    "debug_mode": debug_mode,
-                    "dry_run": dry_run,
-                    "is_synthetic": ctx.is_synthetic,
-                    "synthetic_scenario_id": ctx.synthetic_scenario_id,
-                    "created_at": datetime.now(timezone.utc),
-                },
-            )
-            conn.commit()
+        session.execute(
+            text("""
+                INSERT INTO environment_evidence (
+                    id, run_id, sdk_mode, sdk_version, environment,
+                    telemetry_enabled, telemetry_delivery_status,
+                    capture_confidence_score, debug_mode, dry_run,
+                    is_synthetic, synthetic_scenario_id, created_at
+                ) VALUES (
+                    :id, :run_id, :sdk_mode, :sdk_version, :environment,
+                    :telemetry_enabled, :telemetry_delivery_status,
+                    :capture_confidence_score, :debug_mode, :dry_run,
+                    :is_synthetic, :synthetic_scenario_id, :created_at
+                )
+                ON CONFLICT (run_id) DO NOTHING
+            """),
+            {
+                "id": evidence_id,
+                "run_id": ctx.run_id,
+                "sdk_mode": sdk_mode,
+                "sdk_version": sdk_version,
+                "environment": execution_environment,
+                "telemetry_enabled": telemetry_enabled,
+                "telemetry_delivery_status": telemetry_delivery_status,
+                "capture_confidence_score": capture_confidence_score,
+                "debug_mode": debug_mode,
+                "dry_run": dry_run,
+                "is_synthetic": ctx.is_synthetic,
+                "synthetic_scenario_id": ctx.synthetic_scenario_id,
+                "created_at": datetime.now(timezone.utc),
+            },
+        )
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         logger.info(
             "environment_evidence_captured",
@@ -326,6 +342,7 @@ def capture_environment_evidence(
         )
         # Watch-out #3: Record failure for integrity
         _record_capture_failure(
+            session=session,
             run_id=ctx.run_id,
             evidence_type="environment_evidence",
             failure_reason=CaptureFailureReason.DATABASE_ERROR,
@@ -362,6 +379,7 @@ def capture_environment_evidence(
 
 
 def capture_activity_evidence(
+    session: Session,
     ctx: ExecutionContext,
     *,
     skill_id: str,
@@ -387,6 +405,7 @@ def capture_activity_evidence(
     and optionally updated AFTER with response info.
 
     Args:
+        session: SQLModel session (REQUIRED — caller owns transaction)
         ctx: ExecutionContext (required)
         skill_id: Skill identifier
         model_name: LLM model name
@@ -408,51 +427,50 @@ def capture_activity_evidence(
     evidence_id = f"ae-{ctx.run_id}-{ctx.step_index}"
 
     try:
-        with _get_connection() as conn:
-            conn.execute(
-                text("""
-                    INSERT INTO activity_evidence (
-                        id, run_id, step_index, skill_id, model_name,
-                        prompt_fingerprint, prompt_token_length,
-                        prompt_template_id, prompt_template_version,
-                        response_fingerprint, response_token_length,
-                        completion_type, sensitivity_class, redaction_status,
-                        evidence_source, is_synthetic, synthetic_scenario_id, created_at
-                    ) VALUES (
-                        :id, :run_id, :step_index, :skill_id, :model_name,
-                        :prompt_fingerprint, :prompt_token_length,
-                        :prompt_template_id, :prompt_template_version,
-                        :response_fingerprint, :response_token_length,
-                        :completion_type, :sensitivity_class, :redaction_status,
-                        :evidence_source, :is_synthetic, :synthetic_scenario_id, :created_at
-                    )
-                    ON CONFLICT (run_id, step_index) DO UPDATE SET
-                        response_fingerprint = COALESCE(EXCLUDED.response_fingerprint, activity_evidence.response_fingerprint),
-                        response_token_length = COALESCE(EXCLUDED.response_token_length, activity_evidence.response_token_length),
-                        completion_type = COALESCE(EXCLUDED.completion_type, activity_evidence.completion_type)
-                """),
-                {
-                    "id": evidence_id,
-                    "run_id": ctx.run_id,
-                    "step_index": ctx.step_index,
-                    "skill_id": skill_id,
-                    "model_name": model_name,
-                    "prompt_fingerprint": prompt_fingerprint,
-                    "prompt_token_length": prompt_token_length,
-                    "prompt_template_id": prompt_template_id,
-                    "prompt_template_version": prompt_template_version,
-                    "response_fingerprint": response_fingerprint,
-                    "response_token_length": response_token_length,
-                    "completion_type": completion_type,
-                    "sensitivity_class": sensitivity_class,
-                    "redaction_status": redaction_status,
-                    "evidence_source": ctx.source.value,
-                    "is_synthetic": ctx.is_synthetic,
-                    "synthetic_scenario_id": ctx.synthetic_scenario_id,
-                    "created_at": datetime.now(timezone.utc),
-                },
-            )
-            conn.commit()
+        session.execute(
+            text("""
+                INSERT INTO activity_evidence (
+                    id, run_id, step_index, skill_id, model_name,
+                    prompt_fingerprint, prompt_token_length,
+                    prompt_template_id, prompt_template_version,
+                    response_fingerprint, response_token_length,
+                    completion_type, sensitivity_class, redaction_status,
+                    evidence_source, is_synthetic, synthetic_scenario_id, created_at
+                ) VALUES (
+                    :id, :run_id, :step_index, :skill_id, :model_name,
+                    :prompt_fingerprint, :prompt_token_length,
+                    :prompt_template_id, :prompt_template_version,
+                    :response_fingerprint, :response_token_length,
+                    :completion_type, :sensitivity_class, :redaction_status,
+                    :evidence_source, :is_synthetic, :synthetic_scenario_id, :created_at
+                )
+                ON CONFLICT (run_id, step_index) DO UPDATE SET
+                    response_fingerprint = COALESCE(EXCLUDED.response_fingerprint, activity_evidence.response_fingerprint),
+                    response_token_length = COALESCE(EXCLUDED.response_token_length, activity_evidence.response_token_length),
+                    completion_type = COALESCE(EXCLUDED.completion_type, activity_evidence.completion_type)
+            """),
+            {
+                "id": evidence_id,
+                "run_id": ctx.run_id,
+                "step_index": ctx.step_index,
+                "skill_id": skill_id,
+                "model_name": model_name,
+                "prompt_fingerprint": prompt_fingerprint,
+                "prompt_token_length": prompt_token_length,
+                "prompt_template_id": prompt_template_id,
+                "prompt_template_version": prompt_template_version,
+                "response_fingerprint": response_fingerprint,
+                "response_token_length": response_token_length,
+                "completion_type": completion_type,
+                "sensitivity_class": sensitivity_class,
+                "redaction_status": redaction_status,
+                "evidence_source": ctx.source.value,
+                "is_synthetic": ctx.is_synthetic,
+                "synthetic_scenario_id": ctx.synthetic_scenario_id,
+                "created_at": datetime.now(timezone.utc),
+            },
+        )
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         logger.debug(
             "activity_evidence_captured",
@@ -471,6 +489,7 @@ def capture_activity_evidence(
         )
         # Watch-out #3: Record failure for integrity
         _record_capture_failure(
+            session=session,
             run_id=ctx.run_id,
             evidence_type="activity_evidence",
             failure_reason=CaptureFailureReason.DATABASE_ERROR,
@@ -485,6 +504,7 @@ def capture_activity_evidence(
 
 
 def capture_provider_evidence(
+    session: Session,
     ctx: ExecutionContext,
     *,
     provider_name: str,
@@ -508,6 +528,7 @@ def capture_provider_evidence(
     Called AFTER each provider interaction.
 
     Args:
+        session: SQLModel session (REQUIRED — caller owns transaction)
         ctx: ExecutionContext (required)
         provider_name: Provider identifier (anthropic, openai, etc.)
         model_name: Model name used
@@ -529,54 +550,53 @@ def capture_provider_evidence(
     now = datetime.now(timezone.utc)
 
     try:
-        with _get_connection() as conn:
-            conn.execute(
-                text("""
-                    INSERT INTO provider_evidence (
-                        id, run_id, step_index, provider_name, provider_request_id,
-                        model_name, model_version, input_tokens, output_tokens,
-                        cache_read_tokens, cache_creation_tokens, total_tokens,
-                        api_version, provider_latency_ms, provider_http_status,
-                        provider_error_code, provider_retry_count,
-                        requested_at, responded_at,
-                        is_synthetic, synthetic_scenario_id, created_at
-                    ) VALUES (
-                        :id, :run_id, :step_index, :provider_name, :provider_request_id,
-                        :model_name, :model_version, :input_tokens, :output_tokens,
-                        :cache_read_tokens, :cache_creation_tokens, :total_tokens,
-                        :api_version, :provider_latency_ms, :provider_http_status,
-                        :provider_error_code, :provider_retry_count,
-                        :requested_at, :responded_at,
-                        :is_synthetic, :synthetic_scenario_id, :created_at
-                    )
-                    ON CONFLICT (run_id, step_index) DO NOTHING
-                """),
-                {
-                    "id": evidence_id,
-                    "run_id": ctx.run_id,
-                    "step_index": ctx.step_index,
-                    "provider_name": provider_name,
-                    "provider_request_id": provider_request_id,
-                    "model_name": model_name,
-                    "model_version": model_version,
-                    "input_tokens": input_tokens,
-                    "output_tokens": output_tokens,
-                    "cache_read_tokens": cache_read_tokens,
-                    "cache_creation_tokens": cache_creation_tokens,
-                    "total_tokens": total_tokens or ((input_tokens or 0) + (output_tokens or 0)),
-                    "api_version": api_version,
-                    "provider_latency_ms": provider_latency_ms,
-                    "provider_http_status": provider_http_status,
-                    "provider_error_code": provider_error_code,
-                    "provider_retry_count": provider_retry_count,
-                    "requested_at": now,
-                    "responded_at": now,
-                    "is_synthetic": ctx.is_synthetic,
-                    "synthetic_scenario_id": ctx.synthetic_scenario_id,
-                    "created_at": now,
-                },
-            )
-            conn.commit()
+        session.execute(
+            text("""
+                INSERT INTO provider_evidence (
+                    id, run_id, step_index, provider_name, provider_request_id,
+                    model_name, model_version, input_tokens, output_tokens,
+                    cache_read_tokens, cache_creation_tokens, total_tokens,
+                    api_version, provider_latency_ms, provider_http_status,
+                    provider_error_code, provider_retry_count,
+                    requested_at, responded_at,
+                    is_synthetic, synthetic_scenario_id, created_at
+                ) VALUES (
+                    :id, :run_id, :step_index, :provider_name, :provider_request_id,
+                    :model_name, :model_version, :input_tokens, :output_tokens,
+                    :cache_read_tokens, :cache_creation_tokens, :total_tokens,
+                    :api_version, :provider_latency_ms, :provider_http_status,
+                    :provider_error_code, :provider_retry_count,
+                    :requested_at, :responded_at,
+                    :is_synthetic, :synthetic_scenario_id, :created_at
+                )
+                ON CONFLICT (run_id, step_index) DO NOTHING
+            """),
+            {
+                "id": evidence_id,
+                "run_id": ctx.run_id,
+                "step_index": ctx.step_index,
+                "provider_name": provider_name,
+                "provider_request_id": provider_request_id,
+                "model_name": model_name,
+                "model_version": model_version,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "cache_read_tokens": cache_read_tokens,
+                "cache_creation_tokens": cache_creation_tokens,
+                "total_tokens": total_tokens or ((input_tokens or 0) + (output_tokens or 0)),
+                "api_version": api_version,
+                "provider_latency_ms": provider_latency_ms,
+                "provider_http_status": provider_http_status,
+                "provider_error_code": provider_error_code,
+                "provider_retry_count": provider_retry_count,
+                "requested_at": now,
+                "responded_at": now,
+                "is_synthetic": ctx.is_synthetic,
+                "synthetic_scenario_id": ctx.synthetic_scenario_id,
+                "created_at": now,
+            },
+        )
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         logger.debug(
             "provider_evidence_captured",
@@ -596,6 +616,7 @@ def capture_provider_evidence(
         )
         # Watch-out #3: Record failure for integrity
         _record_capture_failure(
+            session=session,
             run_id=ctx.run_id,
             evidence_type="provider_evidence",
             failure_reason=CaptureFailureReason.DATABASE_ERROR,
@@ -610,6 +631,7 @@ def capture_provider_evidence(
 
 
 def capture_policy_decision_evidence(
+    session: Session,
     ctx: ExecutionContext,
     *,
     policy_type: str,
@@ -632,6 +654,7 @@ def capture_policy_decision_evidence(
     Called whenever a policy/guardrail is evaluated.
 
     Args:
+        session: SQLModel session (REQUIRED — caller owns transaction)
         ctx: ExecutionContext (required)
         policy_type: Type of policy (budget, rate_limit, capability, permission)
         decision: Decision outcome (GRANTED, DENIED, PENDING_APPROVAL)
@@ -651,47 +674,46 @@ def capture_policy_decision_evidence(
     evidence_id = f"pd-{ctx.run_id}-{policy_type}-{uuid4().hex[:8]}"
 
     try:
-        with _get_connection() as conn:
-            conn.execute(
-                text("""
-                    INSERT INTO policy_decisions (
-                        id, run_id, policy_type, policy_rule_id, policy_version,
-                        decision, decision_reason, decision_confidence,
-                        policies_evaluated, policy_results, thresholds_used,
-                        customer_guardrail_result, provider_moderation_result,
-                        decision_reason_codes, evaluated_at,
-                        is_synthetic, synthetic_scenario_id, created_at
-                    ) VALUES (
-                        :id, :run_id, :policy_type, :policy_rule_id, :policy_version,
-                        :decision, :decision_reason, :decision_confidence,
-                        :policies_evaluated, :policy_results, :thresholds_used,
-                        :customer_guardrail_result, :provider_moderation_result,
-                        :decision_reason_codes, :evaluated_at,
-                        :is_synthetic, :synthetic_scenario_id, :created_at
-                    )
-                """),
-                {
-                    "id": evidence_id,
-                    "run_id": ctx.run_id,
-                    "policy_type": policy_type,
-                    "policy_rule_id": policy_rule_id,
-                    "policy_version": policy_version,
-                    "decision": decision,
-                    "decision_reason": decision_reason,
-                    "decision_confidence": decision_confidence,
-                    "policies_evaluated": policies_evaluated,
-                    "policy_results": policy_results,
-                    "thresholds_used": thresholds_used,
-                    "customer_guardrail_result": customer_guardrail_result,
-                    "provider_moderation_result": provider_moderation_result,
-                    "decision_reason_codes": decision_reason_codes,
-                    "evaluated_at": datetime.now(timezone.utc),
-                    "is_synthetic": ctx.is_synthetic,
-                    "synthetic_scenario_id": ctx.synthetic_scenario_id,
-                    "created_at": datetime.now(timezone.utc),
-                },
-            )
-            conn.commit()
+        session.execute(
+            text("""
+                INSERT INTO policy_decisions (
+                    id, run_id, policy_type, policy_rule_id, policy_version,
+                    decision, decision_reason, decision_confidence,
+                    policies_evaluated, policy_results, thresholds_used,
+                    customer_guardrail_result, provider_moderation_result,
+                    decision_reason_codes, evaluated_at,
+                    is_synthetic, synthetic_scenario_id, created_at
+                ) VALUES (
+                    :id, :run_id, :policy_type, :policy_rule_id, :policy_version,
+                    :decision, :decision_reason, :decision_confidence,
+                    :policies_evaluated, :policy_results, :thresholds_used,
+                    :customer_guardrail_result, :provider_moderation_result,
+                    :decision_reason_codes, :evaluated_at,
+                    :is_synthetic, :synthetic_scenario_id, :created_at
+                )
+            """),
+            {
+                "id": evidence_id,
+                "run_id": ctx.run_id,
+                "policy_type": policy_type,
+                "policy_rule_id": policy_rule_id,
+                "policy_version": policy_version,
+                "decision": decision,
+                "decision_reason": decision_reason,
+                "decision_confidence": decision_confidence,
+                "policies_evaluated": policies_evaluated,
+                "policy_results": policy_results,
+                "thresholds_used": thresholds_used,
+                "customer_guardrail_result": customer_guardrail_result,
+                "provider_moderation_result": provider_moderation_result,
+                "decision_reason_codes": decision_reason_codes,
+                "evaluated_at": datetime.now(timezone.utc),
+                "is_synthetic": ctx.is_synthetic,
+                "synthetic_scenario_id": ctx.synthetic_scenario_id,
+                "created_at": datetime.now(timezone.utc),
+            },
+        )
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         logger.debug(
             "policy_decision_evidence_captured",
@@ -711,6 +733,7 @@ def capture_policy_decision_evidence(
         )
         # Watch-out #3: Record failure for integrity
         _record_capture_failure(
+            session=session,
             run_id=ctx.run_id,
             evidence_type="policy_decisions",
             failure_reason=CaptureFailureReason.DATABASE_ERROR,
@@ -749,6 +772,7 @@ def compute_integrity(run_id: str) -> Dict[str, Any]:
 
 
 def capture_integrity_evidence(
+    session: Session,
     run_id: str,
     *,
     is_synthetic: bool = False,
@@ -764,6 +788,7 @@ def capture_integrity_evidence(
     Integrity is computed from run_id after execution ends.
 
     Args:
+        session: SQLModel session (REQUIRED — caller owns transaction)
         run_id: Run identifier
         is_synthetic: Whether this is SDSR execution
         synthetic_scenario_id: SDSR scenario ID if synthetic
@@ -782,39 +807,38 @@ def capture_integrity_evidence(
         missing_reasons_with_failures["_capture_failures"] = integrity_payload["capture_failures"]
 
     try:
-        with _get_connection() as conn:
-            conn.execute(
-                text("""
-                    INSERT INTO integrity_evidence (
-                        id, run_id, expected_artifacts, observed_artifacts,
-                        missing_artifacts, missing_reasons, integrity_score,
-                        integrity_status, verification_method, verification_timestamp,
-                        is_synthetic, synthetic_scenario_id, created_at
-                    ) VALUES (
-                        :id, :run_id, :expected_artifacts, :observed_artifacts,
-                        :missing_artifacts, :missing_reasons, :integrity_score,
-                        :integrity_status, :verification_method, :verification_timestamp,
-                        :is_synthetic, :synthetic_scenario_id, :created_at
-                    )
-                    ON CONFLICT (run_id) DO NOTHING
-                """),
-                {
-                    "id": evidence_id,
-                    "run_id": run_id,
-                    "expected_artifacts": integrity_payload["expected_artifacts"],
-                    "observed_artifacts": integrity_payload["observed_artifacts"],
-                    "missing_artifacts": integrity_payload["missing_artifacts"],
-                    "missing_reasons": json.dumps(missing_reasons_with_failures),  # JSONB needs JSON string
-                    "integrity_score": integrity_payload["integrity_score"],
-                    "integrity_status": integrity_payload["integrity_status"],
-                    "verification_method": "evidence_table_scan",
-                    "verification_timestamp": datetime.now(timezone.utc),
-                    "is_synthetic": is_synthetic,
-                    "synthetic_scenario_id": synthetic_scenario_id,
-                    "created_at": datetime.now(timezone.utc),
-                },
-            )
-            conn.commit()
+        session.execute(
+            text("""
+                INSERT INTO integrity_evidence (
+                    id, run_id, expected_artifacts, observed_artifacts,
+                    missing_artifacts, missing_reasons, integrity_score,
+                    integrity_status, verification_method, verification_timestamp,
+                    is_synthetic, synthetic_scenario_id, created_at
+                ) VALUES (
+                    :id, :run_id, :expected_artifacts, :observed_artifacts,
+                    :missing_artifacts, :missing_reasons, :integrity_score,
+                    :integrity_status, :verification_method, :verification_timestamp,
+                    :is_synthetic, :synthetic_scenario_id, :created_at
+                )
+                ON CONFLICT (run_id) DO NOTHING
+            """),
+            {
+                "id": evidence_id,
+                "run_id": run_id,
+                "expected_artifacts": integrity_payload["expected_artifacts"],
+                "observed_artifacts": integrity_payload["observed_artifacts"],
+                "missing_artifacts": integrity_payload["missing_artifacts"],
+                "missing_reasons": json.dumps(missing_reasons_with_failures),  # JSONB needs JSON string
+                "integrity_score": integrity_payload["integrity_score"],
+                "integrity_status": integrity_payload["integrity_status"],
+                "verification_method": "evidence_table_scan",
+                "verification_timestamp": datetime.now(timezone.utc),
+                "is_synthetic": is_synthetic,
+                "synthetic_scenario_id": synthetic_scenario_id,
+                "created_at": datetime.now(timezone.utc),
+            },
+        )
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         logger.info(
             "integrity_evidence_captured",

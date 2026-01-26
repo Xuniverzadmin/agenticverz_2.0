@@ -1,13 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: AI Console
 # Temporal:
 #   Trigger: worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: policy_scopes
+#   Writes: none
+# Database:
+#   Scope: domain (policies)
+#   Models: PolicyScope
 # Role: Resolve which policies apply to a given run context
 # Callers: policy/prevention_engine.py, worker/runner.py
-# Allowed Imports: L5, L6
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3
-# Reference: POLICY_CONTROL_LEVER_IMPLEMENTATION_PLAN.md PCL-002
+# Reference: PIN-470, POLICY_CONTROL_LEVER_IMPLEMENTATION_PLAN.md PCL-002
 
 """
 Scope Resolver Engine

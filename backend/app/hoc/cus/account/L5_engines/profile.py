@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: startup
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (configuration only)
+#   Writes: none (configuration only)
 # Role: Governance Profile configuration and validation
 # Callers: main.py (L2), workers (L5)
-# Allowed Imports: L6, L7 (stdlib, logging)
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: PIN-454 (Cross-Domain Orchestration Audit), Section 2.1
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-454 (Cross-Domain Orchestration Audit), Section 2.1
 # NOTE: Reclassified L6→L5 (2026-01-24) - pure configuration logic, no DB ops
 
 """
@@ -22,7 +28,7 @@ well-defined governance profiles:
 - OBSERVE_ONLY: Audit and observe without enforcement (safe rollout)
 
 Usage:
-    from app.services.governance.profile import (
+    from app.hoc.cus.account.L5_engines.profile import (
         get_governance_profile,
         validate_governance_config,
         GovernanceProfile,

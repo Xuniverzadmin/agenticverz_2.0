@@ -41,7 +41,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from app.services.replay_determinism import (
+from app.hoc.cus.logs.L5_engines.replay_determinism import (
     DeterminismLevel,
     ReplayResult,
 )

@@ -1,9 +1,20 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Role: See file: evidence_report.py
 # Product: AI Console
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
+# Role: Generate legal-grade PDF evidence reports for AI incidents
 # Callers: guard.py (incident export endpoint)
-# Reference: PIN-240
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-240
 
 
 """

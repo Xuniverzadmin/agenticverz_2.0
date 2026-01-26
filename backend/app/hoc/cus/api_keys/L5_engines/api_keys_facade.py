@@ -4,12 +4,18 @@
 # Temporal:
 #   Trigger: api
 #   Execution: async (DB reads via driver)
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: APIKey (via driver)
+#   Writes: none (read-only facade)
 # Role: API Keys domain engine - unified entry point for API key operations
 # Location: hoc/cus/api_keys/L5_engines/api_keys_facade.py
 # Callers: L2 api-keys API (aos_api_key.py)
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3, L7
-# Reference: Connectivity Domain - Customer Console v1 Constitution
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, Connectivity Domain - Customer Console v1 Constitution
 #
 # PHASE 2.5B EXTRACTION (2026-01-24):
 # All DB operations extracted to api_keys_facade_driver.py (L6).

@@ -1,13 +1,27 @@
-# Layer: L6 — Platform Substrate
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Role: Overview Facade Driver - Pure data access for overview aggregation
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: async
+# Data Access:
+#   Reads: Incident, PolicyProposal, Limit, LimitBreach, WorkerRun, AuditLedger
+#   Writes: none (read-only projection)
+# Database:
+#   Scope: cross-domain (reads from multiple domain tables)
+#   Models: Incident, PolicyProposal, Limit, LimitBreach, WorkerRun, AuditLedger
+# Callers: overview_facade.py (L5)
+# Allowed Imports: L6, L7 (models)
+# Reference: PIN-470
+#
+# ARCHITECTURAL RULE:
+# This driver ONLY performs data access - NO business logic.
+# Returns raw query results as typed snapshots.
+# The engine (L5) composes business results from these snapshots.
 #
 # PHASE 2.5B EXTRACTION (2026-01-24):
-# This driver was extracted from overview_facade.py to enforce L4/L6 separation.
-# All sqlalchemy runtime imports and model imports are now here (L6).
-# The facade (L4) delegates to this driver for data access.
-#
-# Reference: OVERVIEW_PHASE2.5_IMPLEMENTATION_PLAN.md
+# Extracted from overview_facade.py to enforce L5/L6 separation.
+# All sqlalchemy runtime imports and model imports are here (L6).
 
 """
 Overview Facade Driver (L6 Data Access)

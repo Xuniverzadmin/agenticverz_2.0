@@ -1,14 +1,24 @@
-# Layer: L6 — Driver
+# Layer: L4 — Runtime Coordinator
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: worker (run completion)
 #   Execution: sync
-# Role: Transaction Coordinator for atomic cross-domain writes
+# Lifecycle:
+#   Emits: RUN_COMPLETED, INCIDENT_CREATED
+#   Subscribes: none
+# Data Access:
+#   Reads: via domain facades
+#   Writes: via domain facades (transactional)
+# Database:
+#   Scope: cross-domain (general owns transaction boundary)
+#   Models: various (via facades)
+# Role: Transaction Coordinator for atomic cross-domain writes — OWNS COMMIT AUTHORITY
 # Callers: ROK (L5), RunRunner (L5)
-# Allowed Imports: L4 facades, L6 (db, models)
-# Forbidden Imports: L1, L2, L3, L4 engines directly
+# Allowed Imports: L5 facades, L6, L7 (models)
+# Forbidden Imports: L1, L2, L3
 # Contract: EXECUTION_SEMANTIC_CONTRACT.md
-# Reference: PIN-454 (Cross-Domain Orchestration Audit), FIX-001
+# Reference: PIN-470, PIN-454 (Cross-Domain Orchestration Audit), FIX-001
 
 """
 Transaction Coordinator for Cross-Domain Writes
@@ -52,7 +62,7 @@ Architecture:
 
 Usage:
 
-    from app.services.governance.transaction_coordinator import (
+    from app.hoc.cus.general.L4_runtime.drivers.transaction_coordinator import (
         RunCompletionTransaction,
         get_transaction_coordinator,
     )
@@ -80,13 +90,14 @@ from app.db import engine
 from app.events import get_publisher
 
 # RAC imports for rollback audit trail
-from app.services.audit import (
+from app.hoc.cus.general.L5_schemas.rac_models import (
     AckStatus,
     AuditAction,
     AuditDomain,
     DomainAck,
-    get_audit_store,
 )
+# L5 import (migrated to HOC per SWEEP-04)
+from app.hoc.cus.general.L5_engines.audit_store import get_audit_store
 
 # Feature flag for RAC audit trail on rollback
 RAC_ROLLBACK_AUDIT_ENABLED = os.getenv("RAC_ROLLBACK_AUDIT_ENABLED", "true").lower() == "true"
@@ -390,10 +401,11 @@ class RunCompletionTransaction:
         result = self._result
 
         try:
-            from app.services.incidents.facade import get_incident_facade
+            # L5 driver import (migrated to HOC per SWEEP-05)
+            from app.hoc.cus.incidents.L5_engines.incident_driver import get_incident_driver
 
-            facade = get_incident_facade()
-            incident_id = facade.create_incident_for_run(
+            driver = get_incident_driver()
+            incident_id = driver.create_incident_for_run(
                 run_id=run_id,
                 tenant_id=tenant_id,
                 run_status=run_status,
@@ -457,7 +469,8 @@ class RunCompletionTransaction:
         result = self._result
 
         try:
-            from app.services.governance.run_governance_facade import get_run_governance_facade
+            # L5 engine import (migrated to HOC per SWEEP-03)
+            from app.hoc.cus.policies.L5_engines.run_governance_facade import get_run_governance_facade
 
             facade = get_run_governance_facade()
             policy_id = facade.create_policy_evaluation(
@@ -520,7 +533,7 @@ class RunCompletionTransaction:
         txn_result = self._result
 
         try:
-            from app.services.observability.trace_facade import get_trace_facade
+            from app.hoc.cus.logs.L5_engines.trace_facade import get_trace_facade
             import asyncio
 
             facade = get_trace_facade()

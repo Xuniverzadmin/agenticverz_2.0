@@ -1,14 +1,21 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Product: system-wide
 # Temporal:
-#   Trigger: api, scheduler
+#   Trigger: api|scheduler
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Integration (via session)
+#   Writes: Integration (session.add, session.commit)
 # Role: Health checking engine for customer LLM integrations
+# Product: system-wide
 # Callers: cus_integration_service.py, scheduled health checks
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: docs/architecture/CUSTOMER_INTEGRATIONS_ARCHITECTURE.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
+# Reference: PIN-470, docs/architecture/CUSTOMER_INTEGRATIONS_ARCHITECTURE.md
 # NOTE: Renamed cus_health_service.py → cus_health_engine.py (2026-01-24)
 #       per BANNED_NAMING rule (*_service.py → *_engine.py)
 #       Reclassified L4→L5 - Per HOC topology, engines are L5 (business logic)
@@ -54,7 +61,7 @@ from sqlmodel import Session, select
 
 from app.db import get_engine
 from app.models.cus_models import CusHealthState, CusIntegration
-from app.services.cus_credential_service import CusCredentialService
+from app.hoc.cus.general.L5_engines.cus_credential_service import CusCredentialService
 
 logger = logging.getLogger(__name__)
 
@@ -188,7 +195,7 @@ class CusHealthService:
             integration.updated_at = datetime.now(timezone.utc)
 
             session.add(integration)
-            session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
             logger.info(
                 f"Health check for integration {integration_id}: "

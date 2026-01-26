@@ -1,14 +1,24 @@
-# Layer: L6 — Platform Substrate
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
-#   Trigger: api
+#   Trigger: api (via L5 engine)
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Incident, IncidentEvent
+#   Writes: Incident, IncidentEvent
+# Database:
+#   Scope: domain (incidents)
+#   Models: Incident, IncidentEvent, IncidentSeverity, IncidentStatus
 # Role: Incident aggregation persistence - pure data access
 # Callers: L2 APIs, L5 workers
-# Allowed Imports: sqlmodel, models, L4 engines (for severity)
-# Forbidden Imports: L1, L2, L3, L5 (except imported engines)
-# Reference: PIN-242 (Baseline Freeze), INCIDENTS_PHASE2.5_IMPLEMENTATION_PLAN.md — Violation I.3
+# Allowed Imports: L6, L7 (models)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, PIN-242 (Baseline Freeze), INCIDENTS_PHASE2.5_IMPLEMENTATION_PLAN.md — Violation I.3
 #
 # EXTRACTION COMPLETE (2026-01-24):
 # Severity logic extracted to incident_severity_engine.py (L4).
@@ -305,7 +315,7 @@ class IncidentAggregator:
             incident.calls_affected += 1
             incident.updated_at = now
             session.add(incident)
-            session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
             return incident
 
         # Create new rate-limit overflow incident
@@ -322,7 +332,7 @@ class IncidentAggregator:
             auto_action="aggregate",
         )
         session.add(incident)
-        session.commit()
+        session.flush()  # Get generated data, NO COMMIT — L4 owns transaction
         session.refresh(incident)
 
         # Safe: session is DI-managed and stays open for caller
@@ -366,7 +376,7 @@ class IncidentAggregator:
             incident.add_related_call(call_id)
 
         session.add(incident)
-        session.commit()
+        session.flush()  # Get generated data, NO COMMIT — L4 owns transaction
         session.refresh(incident)
 
         # Create initial event (session still open, accessing incident is safe)
@@ -430,7 +440,7 @@ class IncidentAggregator:
             )
 
         session.add(incident)
-        session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
     # NOTE: _calculate_severity, _get_initial_severity, and _generate_title
     # have been extracted to incident_severity_engine.py (L4).
@@ -455,7 +465,7 @@ class IncidentAggregator:
             event.set_data(data)
 
         session.add(event)
-        session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         return event
 
@@ -497,7 +507,7 @@ class IncidentAggregator:
             resolved_count += 1
 
         if resolved_count > 0:
-            session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
             logger.info(f"Auto-resolved {resolved_count} stale incidents")
 
         return resolved_count

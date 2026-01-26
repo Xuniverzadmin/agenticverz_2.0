@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync (delegates to L6 driver)
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via L6 driver
+#   Writes: via L6 driver
 # Role: Guard write operations (L5 engine delegating to L6 driver) - pure business logic
 # Callers: api/guard.py
 # Allowed Imports: L6 (drivers only, NOT ORM models)
 # Forbidden Imports: L1, L2 (api), L3 (adapters), L4, sqlalchemy, sqlmodel
-# Reference: PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
+# Reference: PIN-470, PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
 # NOTE: Renamed guard_write_service.py → guard_write_engine.py (2026-01-24)
 #       per BANNED_NAMING rule (*_service.py → *_engine.py)
 #       Reclassified L4→L5 - Per HOC topology, engines are L5 (business logic)

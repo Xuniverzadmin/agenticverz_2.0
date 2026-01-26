@@ -8,6 +8,7 @@
 # Callers: tests, future background job
 # Allowed Imports: none (QUARANTINED)
 # Forbidden Imports: all (QUARANTINED)
+# Forbidden: session.commit(), session.rollback() — QUARANTINED CODE MUST NOT COMMIT
 # Reference: PIN-240, LOGS_PHASE2.5_IMPLEMENTATION_PLAN.md
 #
 # STATUS: QUARANTINED
@@ -52,7 +53,7 @@ from app.db import (
     CostBudget,
     utc_now,
 )
-from app.services.governance.cross_domain import create_incident_from_cost_anomaly_sync
+from app.hoc.cus.general.L6_drivers.cross_domain import create_incident_from_cost_anomaly_sync
 
 logger = logging.getLogger("nova.cost_anomaly_detector")
 
@@ -749,7 +750,7 @@ class CostAnomalyDetector:
                     "now": utc_now(),
                 },
             )
-            self.session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
         # Count consecutive breaches (look at last N days)
         consecutive_count = self.session.execute(
@@ -859,7 +860,7 @@ class CostAnomalyDetector:
                     "now": utc_now(),
                 },
             )
-            self.session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
             return int(new_count)
         else:
             # New drift tracking
@@ -887,7 +888,7 @@ class CostAnomalyDetector:
                     "now": utc_now(),
                 },
             )
-            self.session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
             return 1
 
     def _reset_drift_tracking(
@@ -915,7 +916,7 @@ class CostAnomalyDetector:
                 "now": utc_now(),
             },
         )
-        self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
     def _derive_cause(
         self,
@@ -1107,7 +1108,7 @@ class CostAnomalyDetector:
                 self.session.add(cost_anomaly)
                 created.append(cost_anomaly)
 
-        self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         for ca in created:
             self.session.refresh(ca)

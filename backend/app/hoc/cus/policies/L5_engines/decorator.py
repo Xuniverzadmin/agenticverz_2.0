@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api | cli
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Optional ergonomic decorator over ExecutionKernel
 # Callers: HTTP route handlers, CLI commands
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2
-# Reference: PIN-337
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-337
 
 """
 @governed Decorator - PIN-337 Optional Ergonomic Wrapper

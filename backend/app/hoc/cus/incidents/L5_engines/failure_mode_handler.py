@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api (during policy evaluation)
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: GovernanceConfig
+#   Writes: none
 # Role: Handle failure modes - default to fail-closed
 # Callers: prevention_engine.py
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: GAP-035
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-035
 
 """
 Module: failure_mode_handler
@@ -86,7 +93,8 @@ def get_failure_mode() -> FailureMode:
         FailureMode from governance config, defaulting to FAIL_CLOSED
     """
     try:
-        from app.services.governance.profile import get_governance_config
+        # L5 engine import (migrated to HOC per SWEEP-03)
+        from app.hoc.cus.policies.L5_engines.profile import get_governance_config
 
         config = get_governance_config()
 

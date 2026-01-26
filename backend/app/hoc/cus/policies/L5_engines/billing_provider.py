@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: runtime
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Phase-6 BillingProvider protocol and MockBillingProvider
 # Callers: billing middleware, billing APIs, runtime enforcement
-# Allowed Imports: L4 (billing.state, billing.plan, billing.limits)
-# Forbidden Imports: L1, L2, L3, L5, L6
-# Reference: PIN-399 Phase-6 (Billing, Plans & Limits)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-399 Phase-6 (Billing, Plans & Limits)
 
 """
 Phase-6 Billing Provider — Interface and Mock Implementation

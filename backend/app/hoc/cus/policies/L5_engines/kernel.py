@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api | cli | worker | sdk | auto_execute
 #   Execution: sync
+# Lifecycle:
+#   Emits: execution_envelope
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Mandatory execution kernel - single choke point for all EXECUTE power
 # Callers: HTTP handlers, CLI dispatchers, SDK wrappers, workers, AUTO_EXECUTE
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2
-# Reference: PIN-337
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-337
 
 """
 ExecutionKernel - PIN-337 Governance Enforcement Infrastructure

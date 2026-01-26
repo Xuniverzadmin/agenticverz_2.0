@@ -1,13 +1,27 @@
-# Layer: L6 — Platform Substrate
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Role: Keys Driver - Pure data access for API key engine operations
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: APIKey, ProxyCall
+#   Writes: APIKey (freeze, unfreeze, create, revoke)
+# Database:
+#   Scope: domain (api_keys)
+#   Models: APIKey, ProxyCall
+# Callers: keys_engine.py (L5)
+# Allowed Imports: L6, L7 (models)
+# Reference: PIN-470
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
 #
 # PHASE 2.5B EXTRACTION (2026-01-24):
-# This driver was extracted from keys_service.py to enforce L4/L6 separation.
+# This driver was extracted from keys_service.py to enforce L5/L6 separation.
 # All sqlalchemy/sqlmodel runtime imports and model imports are now here (L6).
-# The engine (L4) delegates to this driver for data access.
-#
-# Reference: API_KEYS_PHASE2.5_IMPLEMENTATION_PLAN.md
+# The engine (L5) delegates to this driver for data access.
 
 """
 Keys Driver (L6 Data Access)
@@ -210,7 +224,7 @@ class KeysDriver:
         key.is_frozen = True
         key.frozen_at = frozen_at
         self._session.add(key)
-        self._session.commit()
+        self._session.flush()  # Get generated data, NO COMMIT — L4 owns transaction
         self._session.refresh(key)
 
         return KeySnapshot(
@@ -235,7 +249,7 @@ class KeysDriver:
         key.is_frozen = False
         key.frozen_at = None
         self._session.add(key)
-        self._session.commit()
+        self._session.flush()  # Get generated data, NO COMMIT — L4 owns transaction
         self._session.refresh(key)
 
         return KeySnapshot(

@@ -1,8 +1,20 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
 # Product: system-wide
+# Temporal:
+#   Trigger: api/worker
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Alert fatigue management (pure in-memory business logic, no boundary crossing)
-# Reference: GAP-049 (AlertFatigueController)
+# Callers: alert processing engines
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-049 (AlertFatigueController)
 # NOTE: Reclassified L6→L5 (2026-01-24) - No DB/cache boundary, contains decision logic
 """
 AlertFatigueController - Alert fatigue management service.

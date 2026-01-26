@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: worker
 #   Execution: async
+# Lifecycle:
+#   Emits: hallucination_detected
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Detect potential hallucinations in LLM outputs (non-blocking)
 # Callers: worker/runner.py, services/incident_engine.py
-# Allowed Imports: L6, L7 (stdlib, re, hashlib)
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: GAP-023, INV-002 (HALLU-INV-001)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-023, INV-002 (HALLU-INV-001)
 # NOTE: Reclassified L6→L5 (2026-01-24) - Pure detection logic, not SQL driver
 #       Remains in drivers/ per Layer ≠ Directory principle
 

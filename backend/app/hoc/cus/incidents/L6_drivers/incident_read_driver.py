@@ -1,10 +1,22 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Incident, IncidentEvent
+#   Writes: none
+# Database:
+#   Scope: domain (incidents)
+#   Models: Incident, IncidentEvent
 # Role: Data access for incident read operations
-# Callers: incident engines (L4)
-# Allowed Imports: ORM models
+# Callers: incident engines (L5)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-281, PHASE2_EXTRACTION_PROTOCOL.md
+# Reference: PIN-470, PIN-281, PHASE2_EXTRACTION_PROTOCOL.md
 #
 # GOVERNANCE NOTE:
 # This L6 driver provides pure data access for incident reads.

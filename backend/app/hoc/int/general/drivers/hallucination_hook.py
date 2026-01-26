@@ -44,7 +44,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from app.services.hallucination.hallucination_detector import (
+# L5 engine import (migrated to HOC per SWEEP-33)
+from app.hoc.cus.incidents.L5_engines.hallucination_detector import (
     HallucinationDetector,
     HallucinationResult,
     HallucinationSeverity,

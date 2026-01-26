@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api, sdk
 #   Execution: sync (with async wait support)
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via L6 drivers (delegated)
+#   Writes: via L6 drivers (delegated)
 # Role: GAP-083-085 Knowledge SDK Façade (thin wrapper over KnowledgeLifecycleManager)
 # Callers: External SDK consumers, API endpoints
 # Allowed Imports: L5, L6, L7 (via manager)
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: GAP-083-085, GAP_IMPLEMENTATION_PLAN_V1.md Section 7.18
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-083-085, GAP_IMPLEMENTATION_PLAN_V1.md Section 7.18
 #
 # NOTE: This is a thin domain-level SDK facade.
 # It contains dataclass schemas and delegates all decisions to KnowledgeLifecycleManager.
@@ -53,9 +59,9 @@ from app.models.knowledge_lifecycle import (
     KnowledgePlaneLifecycleState,
     LifecycleAction,
 )
-from app.services.knowledge_lifecycle_manager import (
+from app.hoc.cus.general.L5_engines.knowledge_lifecycle_manager import (
     KnowledgeLifecycleManager,
-    KnowledgePlane,
+    KnowledgePlaneLifecycle as KnowledgePlane,  # Renamed in HOC
     TransitionRequest,
     TransitionResponse,
     GateDecision,

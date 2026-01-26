@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: snapshots (via driver)
+#   Writes: snapshots (via driver)
 # Role: Policy snapshot immutability engine (pure business logic)
 # Callers: L4 orchestrators, policy engines
-# Allowed Imports: L6 (drivers)
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: GAP-029 (Policy snapshot immutability)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-029 (Policy snapshot immutability)
 # NOTE: Reclassified L6→L5 (2026-01-24) - No Session imports, pure dataclass/registry logic
 #       Renamed snapshot_service.py → snapshot_engine.py (BANNED_NAMING fix)
 """

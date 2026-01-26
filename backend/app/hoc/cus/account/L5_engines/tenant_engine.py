@@ -5,11 +5,18 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync (DB via driver)
+# Lifecycle:
+#   Emits: TENANT_CREATED, TENANT_UPDATED
+#   Subscribes: none
+# Data Access:
+#   Reads: Tenant, Membership, APIKey, UsageRecord (via driver)
+#   Writes: Tenant, Membership, APIKey, UsageRecord, AuditLedger (via driver)
 # Role: Tenant domain engine - business logic for tenant operations
 # Callers: L2 APIs, L5 workers
-# Allowed Imports: L5, L6 (drivers)
-# Forbidden Imports: L1, L2, L3, L7 (at runtime)
-# Reference: PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
+# Reference: PIN-470, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
 #
 # L4 is reserved for general/L4_runtime/ only per HOC Layer Topology.
 #
@@ -256,7 +263,7 @@ class TenantEngine:
             resource_id=api_key.id,
             new_value={"name": name, "prefix": prefix},
         )
-        self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         logger.info(
             "api_key_created",
@@ -297,7 +304,7 @@ class TenantEngine:
             resource_id=key_id,
             new_value={"reason": reason},
         )
-        self.session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         logger.info("api_key_revoked", extra={"key_id": key_id, "reason": reason})
         return api_key

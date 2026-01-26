@@ -37,7 +37,8 @@ from app.schemas.limits.policy_rules import (
     PolicyRuleResponse,
     UpdatePolicyRuleRequest,
 )
-from app.services.limits.policy_rules_service import (
+# L5 engine import (migrated to HOC per SWEEP-08)
+from app.hoc.cus.policies.L5_engines.policy_rules_engine import (
     PolicyRulesService,
     PolicyRulesServiceError,
     RuleNotFoundError,

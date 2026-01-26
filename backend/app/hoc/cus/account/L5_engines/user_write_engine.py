@@ -5,11 +5,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync (delegates to L6 driver)
+# Lifecycle:
+#   Emits: USER_CREATED, USER_UPDATED
+#   Subscribes: none
+# Data Access:
+#   Reads: User (via driver)
+#   Writes: User (via driver)
 # Role: User write operations (L5 engine over L6 driver)
 # Callers: api/onboarding.py
-# Allowed Imports: L5, L6 (drivers only, NOT ORM models)
-# Forbidden Imports: L2 (api), L3 (adapters), sqlalchemy, sqlmodel
-# Reference: PIN-250, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-250, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
 #
 # L4 is reserved for general/L4_runtime/ only per HOC Layer Topology.
 #

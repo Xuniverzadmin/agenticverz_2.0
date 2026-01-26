@@ -53,7 +53,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
-from app.services.analytics_facade import get_analytics_facade
+# L5 engine import (migrated to HOC per SWEEP-15)
+from app.hoc.cus.analytics.L5_engines.analytics_facade import get_analytics_facade
 
 logger = logging.getLogger(__name__)
 
@@ -290,7 +291,8 @@ async def get_usage_statistics(
         )
 
     # Delegate to L4 facade
-    from app.services.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+    # L5 engine import (migrated to HOC per SWEEP-15)
+    from app.hoc.cus.analytics.L5_engines.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
     facade = get_analytics_facade()
 
     # Map L2 enums to L4 enums
@@ -463,7 +465,8 @@ async def get_cost_statistics(
         )
 
     # Delegate to L4 facade
-    from app.services.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+    # L5 engine import (migrated to HOC per SWEEP-15)
+    from app.hoc.cus.analytics.L5_engines.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
     facade = get_analytics_facade()
 
     # Map L2 enums to L4 enums
@@ -596,7 +599,8 @@ async def _get_usage_data(
         )
 
     # Delegate to L4 facade
-    from app.services.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+    # L5 engine import (migrated to HOC per SWEEP-15)
+    from app.hoc.cus.analytics.L5_engines.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
     facade = get_analytics_facade()
 
     # Map L2 enums to L4 enums
@@ -836,7 +840,8 @@ async def _get_cost_data(
         )
 
     # Delegate to L4 facade
-    from app.services.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+    # L5 engine import (migrated to HOC per SWEEP-15)
+    from app.hoc.cus.analytics.L5_engines.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
     facade = get_analytics_facade()
 
     # Map L2 enums to L4 enums

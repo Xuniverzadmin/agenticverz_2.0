@@ -4,13 +4,20 @@
 # Temporal:
 #   Trigger: worker (run failure events)
 #   Execution: sync
+# Lifecycle:
+#   Emits: incident_created
+#   Subscribes: run_failed
+# Data Access:
+#   Reads: Run, Policy (via driver)
+#   Writes: Incident, IncidentEvent, PreventionRecord (via driver)
 # Role: Incident creation decision-making (domain logic)
 # Authority: Incident generation from run failures (SDSR pattern)
 # Callers: Worker runtime, API endpoints
-# Allowed Imports: L6 drivers (via injection)
-# Forbidden Imports: L1, L2, L3, sqlalchemy, sqlmodel (at runtime)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
 # Contract: SDSR (PIN-370)
-# Reference: PIN-370, PIN-468 (Phase-2.5A L4/L6 Segregation)
+# Reference: PIN-470, PIN-370, PIN-468 (Phase-2.5A L4/L6 Segregation)
 #
 # GOVERNANCE NOTE: This L4 engine owns INCIDENT CREATION logic.
 # Scenarios inject causes (failed runs), this engine creates incidents.
@@ -79,7 +86,7 @@ logger = logging.getLogger("nova.services.incident_engine")
 # Lazy import to avoid circular dependencies
 def _get_lessons_learned_engine():
     """Get the LessonsLearnedEngine singleton (lazy import)."""
-    from app.services.policy.lessons_engine import get_lessons_learned_engine
+    from app.hoc.cus.incidents.L5_engines.lessons_engine import get_lessons_learned_engine
     return get_lessons_learned_engine()
 
 
@@ -298,7 +305,7 @@ class IncidentEngine:
             is_synthetic=is_synthetic,
             synthetic_scenario_id=synthetic_scenario_id,
         )
-        driver.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
         logger.info(
             f"Prevention record {prevention_id}: run {run_id} suppressed by policy {policy_id}"
@@ -432,7 +439,7 @@ class IncidentEngine:
             except Exception as e:
                 logger.warning(f"Failed to update runs.incident_count for run {run_id}: {e}")
 
-            driver.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
             logger.info(
                 f"Created incident {incident_id} for run {run_id} "
@@ -444,7 +451,7 @@ class IncidentEngine:
                 # GAP-PROP-001 FIX: Propagate incident_id to aos_traces
                 try:
                     driver.update_trace_incident_id(run_id, incident_id)
-                    driver.commit()
+                    # NO COMMIT — L4 coordinator owns transaction boundary
                 except Exception as e:
                     logger.warning(f"Failed to propagate incident_id to trace: {e}")
 
@@ -592,7 +599,7 @@ class IncidentEngine:
             except Exception as e:
                 logger.warning(f"Failed to update runs.incident_count for run {run_id}: {e}")
 
-            driver.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
             logger.info(
                 f"Created incident {incident_id} for failed run {run_id} "
@@ -602,7 +609,7 @@ class IncidentEngine:
             # GAP-PROP-001 FIX: Propagate incident_id to aos_traces
             try:
                 driver.update_trace_incident_id(run_id, incident_id)
-                driver.commit()
+                # NO COMMIT — L4 coordinator owns transaction boundary
                 logger.debug(f"Propagated incident_id {incident_id} to trace for run {run_id}")
             except Exception as e:
                 # Don't fail incident creation if trace update fails
@@ -726,7 +733,7 @@ class IncidentEngine:
                 is_synthetic=is_synthetic,
                 synthetic_scenario_id=synthetic_scenario_id,
             )
-            driver.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
             logger.info(
                 f"Created policy proposal {proposal_id} for incident {incident_id} "

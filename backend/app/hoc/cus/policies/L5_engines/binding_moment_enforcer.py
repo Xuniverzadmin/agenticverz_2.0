@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api (during policy evaluation)
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: policies (via driver)
+#   Writes: none
 # Role: Enforce binding moments - when policies are evaluated
 # Callers: prevention_engine.py
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: GAP-031
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-031
 
 """
 Module: binding_moment_enforcer

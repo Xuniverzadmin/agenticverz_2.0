@@ -1,14 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
-# Product: system-wide
 # Temporal:
-#   Trigger: engine call
+#   Trigger: api (via L5 engine)
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: cost_records, cost_anomalies, breach_history, drift_tracking
+#   Writes: cost_anomalies, breach_history, drift_tracking
+# Database:
+#   Scope: domain (analytics)
+#   Models: CostRecord, CostAnomaly, BreachHistory, DriftTracking
 # Role: Data access for cost anomaly detection operations
-# Callers: cost_anomaly_detector.py (L4 engine)
-# Allowed Imports: sqlalchemy, sqlmodel, ORM models
+# Callers: cost_anomaly_detector.py (L5 engine)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: Phase-2.5A Analytics Extraction
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, Phase-2.5A Analytics Extraction
 #
 # GOVERNANCE NOTE:
 # This L6 driver provides pure data access for cost anomaly detection.
@@ -531,7 +540,7 @@ class CostAnomalyDriver:
                 "now": created_at,
             },
         )
-        self._session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
     def fetch_consecutive_breaches(
         self,
@@ -674,7 +683,7 @@ class CostAnomalyDriver:
                 "now": updated_at,
             },
         )
-        self._session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
     def insert_drift_tracking(
         self,
@@ -725,7 +734,7 @@ class CostAnomalyDriver:
                 "now": created_at,
             },
         )
-        self._session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
     # =========================================================================
     # M7: DRIFT RESET
@@ -765,7 +774,7 @@ class CostAnomalyDriver:
                 "now": updated_at,
             },
         )
-        self._session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
     # =========================================================================
     # M8: CAUSE DERIVATION QUERIES
@@ -969,13 +978,7 @@ class CostAnomalyDriver:
         row = result.first()
         return (row[0], row[1]) if row else (None, None)
 
-    # =========================================================================
-    # TRANSACTION HELPERS
-    # =========================================================================
-
-    def commit(self) -> None:
-        """Commit the current transaction."""
-        self._session.commit()
+    # TRANSACTION HELPERS section removed — L6 DOES NOT COMMIT
 
 
 def get_cost_anomaly_driver(session: Session) -> CostAnomalyDriver:

@@ -1,13 +1,26 @@
-# Layer: L6 — Platform Substrate
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Role: API Keys Facade Driver - Pure data access for API key queries
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: APIKey
+#   Writes: none (read-only projection)
+# Database:
+#   Scope: domain (api_keys)
+#   Models: APIKey
+# Callers: api_keys_facade.py (L5)
+# Allowed Imports: L6, L7 (models)
+# Reference: PIN-470
 #
 # PHASE 2.5B EXTRACTION (2026-01-24):
-# This driver was extracted from api_keys_facade.py to enforce L4/L6 separation.
+# This driver was extracted from api_keys_facade.py to enforce L5/L6 separation.
 # All sqlalchemy runtime imports and model imports are now here (L6).
-# The facade (L4) delegates to this driver for data access.
-#
-# Reference: API_KEYS_PHASE2.5_IMPLEMENTATION_PLAN.md
+# The facade (L5) delegates to this driver for data access.
 
 """
 API Keys Facade Driver (L6 Data Access)

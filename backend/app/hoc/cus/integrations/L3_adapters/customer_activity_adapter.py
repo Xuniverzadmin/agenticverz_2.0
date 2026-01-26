@@ -2,12 +2,12 @@
 # Product: ai-console (Customer Console)
 # Temporal:
 #   Trigger: api
-#   Execution: sync (delegates to L4)
-# Role: Customer activity boundary adapter (L2 → L3 → L4)
+#   Execution: async (delegates to L5 ActivityFacade)
+# Role: Customer activity boundary adapter (L2 → L3 → L5)
 # Callers: L2 activity routes
-# Allowed Imports: L4
-# Forbidden Imports: L1, L2, L5, L6
-# Reference: ACTIVITY Domain Qualification Task
+# Allowed Imports: L5
+# Forbidden Imports: L1, L2, L6
+# Reference: ACTIVITY Domain Qualification Task, SWEEP-03
 #
 # GOVERNANCE NOTE:
 # This L3 adapter is TRANSLATION ONLY. It enforces:
@@ -16,38 +16,47 @@
 # - RBAC context validation
 #
 # This adapter qualifies ACTIVITY_LIST and ACTIVITY_DETAIL capabilities.
+#
+# MIGRATION NOTE (SWEEP-03):
+# Updated to use HOC ActivityFacade. Field mapping:
+# - ActivitySummary → RunSummaryResult (with field translation)
+# - ActivityDetail → RunDetailResult (with field translation)
+# - ActivityListResult → RunListResult
 
 """
 Customer Activity Boundary Adapter (L3)
 
-This adapter sits between L2 (Activity API routes) and L4 (CustomerActivityReadService).
+This adapter sits between L2 (Activity API routes) and L5 (ActivityFacade).
 
-L2 (API) → L3 (this adapter) → L4 (CustomerActivityReadService)
+L2 (API) → L3 (this adapter) → L5 (ActivityFacade)
 
 The adapter:
 1. Receives API requests with tenant context
 2. Enforces tenant isolation (customer can only see their own activities)
 3. Transforms to customer-safe schema (no internal fields)
-4. Delegates to L4 service
+4. Delegates to L5 facade
 5. Returns customer-friendly results to L2
 
 This is a thin translation layer - no business logic, no domain decisions.
 
-Reference: ACTIVITY Domain Qualification Task
+Reference: ACTIVITY Domain Qualification Task, SWEEP-03 Migration
 """
 
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import BaseModel, Field
 
-# L4 imports ONLY (no L6!)
-from app.services.activity.customer_activity_read_service import (
-    ActivityDetail,
-    ActivityListResult,
-    ActivitySummary,
-    CustomerActivityReadService,
-    get_customer_activity_read_service,
+# L5 imports (migrated to HOC per SWEEP-03)
+from app.hoc.cus.activity.L5_engines.activity_facade import (
+    ActivityFacade,
+    RunDetailResult,
+    RunListResult,
+    RunSummaryResult,
+    get_activity_facade,
 )
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 # =============================================================================
 # Customer-Safe DTOs (No Internal Fields)
@@ -108,21 +117,24 @@ class CustomerActivityAdapter:
     L3 boundary adapter for customer activity operations.
 
     INVARIANT: All methods require tenant_id for isolation.
-    INVARIANT: No L6 imports - delegates to L4 only.
+    INVARIANT: No L6 imports - delegates to L5 only.
+
+    NOTE: This adapter now uses async methods to match HOC ActivityFacade.
     """
 
     def __init__(self):
-        """Initialize adapter with lazy L4 service loading."""
-        self._service: Optional[CustomerActivityReadService] = None
+        """Initialize adapter with lazy L5 facade loading."""
+        self._facade: Optional[ActivityFacade] = None
 
-    def _get_service(self) -> CustomerActivityReadService:
-        """Get the L4 CustomerActivityReadService (lazy loaded)."""
-        if self._service is None:
-            self._service = get_customer_activity_read_service()
-        return self._service
+    def _get_facade(self) -> ActivityFacade:
+        """Get the L5 ActivityFacade (lazy loaded)."""
+        if self._facade is None:
+            self._facade = get_activity_facade()
+        return self._facade
 
-    def list_activities(
+    async def list_activities(
         self,
+        session: "AsyncSession",
         tenant_id: str,
         limit: int = 20,
         offset: int = 0,
@@ -135,11 +147,12 @@ class CustomerActivityAdapter:
         INVARIANT: tenant_id REQUIRED - enforces tenant isolation.
 
         Args:
+            session: Database session
             tenant_id: Customer's tenant ID (REQUIRED)
             limit: Max items (1-100)
             offset: Pagination offset
             status: Filter by status
-            worker_id: Filter by worker
+            worker_id: Filter by worker (maps to source filter)
 
         Returns:
             CustomerActivityListResponse with customer-safe data
@@ -150,28 +163,36 @@ class CustomerActivityAdapter:
         if not tenant_id:
             raise ValueError("tenant_id is required for list_activities")
 
-        # Delegate to L4 service
-        result: ActivityListResult = self._get_service().list_activities(
+        # Map status filter to HOC format
+        status_list = [status] if status else None
+
+        # Map worker_id to source filter (HOC uses source/provider_type)
+        source_list = [worker_id] if worker_id else None
+
+        # Delegate to L5 facade
+        result: RunListResult = await self._get_facade().get_runs(
+            session=session,
             tenant_id=tenant_id,
             limit=limit,
             offset=offset,
-            status=status,
-            worker_id=worker_id,
+            status=status_list,
+            source=source_list,
         )
 
-        # Transform L4 DTOs to L3 customer-safe DTOs
+        # Transform L5 DTOs to L3 customer-safe DTOs
         items = [self._to_customer_summary(s) for s in result.items]
 
         return CustomerActivityListResponse(
             items=items,
             total=result.total,
-            limit=result.limit,
-            offset=result.offset,
+            limit=limit,
+            offset=offset,
             has_more=result.has_more,
         )
 
-    def get_activity(
+    async def get_activity(
         self,
+        session: "AsyncSession",
         tenant_id: str,
         run_id: str,
     ) -> Optional[CustomerActivityDetail]:
@@ -182,6 +203,7 @@ class CustomerActivityAdapter:
         If run doesn't exist or belongs to different tenant, returns None.
 
         Args:
+            session: Database session
             tenant_id: Customer's tenant ID (REQUIRED)
             run_id: Run ID to fetch
 
@@ -196,8 +218,9 @@ class CustomerActivityAdapter:
         if not run_id:
             raise ValueError("run_id is required for get_activity")
 
-        # Delegate to L4 service
-        detail: Optional[ActivityDetail] = self._get_service().get_activity(
+        # Delegate to L5 facade
+        detail: Optional[RunDetailResult] = await self._get_facade().get_run_detail(
+            session=session,
             tenant_id=tenant_id,
             run_id=run_id,
         )
@@ -207,36 +230,70 @@ class CustomerActivityAdapter:
 
         return self._to_customer_detail(detail)
 
-    def _to_customer_summary(self, summary: ActivitySummary) -> CustomerActivitySummary:
-        """Transform L4 ActivitySummary to L3 CustomerActivitySummary."""
+    def _to_customer_summary(self, summary: RunSummaryResult) -> CustomerActivitySummary:
+        """
+        Transform L5 RunSummaryResult to L3 CustomerActivitySummary.
+
+        Field mapping (HOC → Customer):
+        - run_id → run_id
+        - source → worker_name (best available approximation)
+        - status → task_preview (truncated)
+        - status → status
+        - status == 'COMPLETED' → success (derived)
+        - None → total_steps (not available in HOC summary)
+        - duration_ms → duration_ms
+        - started_at → created_at (ISO string)
+        - completed_at → completed_at (ISO string)
+        """
+        # Derive success from status
+        success = summary.status.upper() == "COMPLETED" if summary.status else None
+
         return CustomerActivitySummary(
             run_id=summary.run_id,
-            worker_name=summary.worker_name,
-            task_preview=summary.task_preview,
-            status=summary.status,
-            success=summary.success,
-            total_steps=summary.total_steps,
-            duration_ms=summary.duration_ms,
-            created_at=summary.created_at,
-            completed_at=summary.completed_at,
+            worker_name=summary.source or "unknown",
+            task_preview=f"Run {summary.run_id[:8]}... ({summary.status})"[:200],
+            status=summary.status or "unknown",
+            success=success,
+            total_steps=None,  # Not available in RunSummaryResult
+            duration_ms=int(summary.duration_ms) if summary.duration_ms else None,
+            created_at=summary.started_at.isoformat() if summary.started_at else "",
+            completed_at=summary.completed_at.isoformat() if summary.completed_at else None,
         )
 
-    def _to_customer_detail(self, detail: ActivityDetail) -> CustomerActivityDetail:
-        """Transform L4 ActivityDetail to L3 CustomerActivityDetail."""
+    def _to_customer_detail(self, detail: RunDetailResult) -> CustomerActivityDetail:
+        """
+        Transform L5 RunDetailResult to L3 CustomerActivityDetail.
+
+        Field mapping (HOC → Customer):
+        - run_id → run_id
+        - source → worker_name
+        - goal → task
+        - status → status
+        - status == 'COMPLETED' → success (derived)
+        - error_message → error_summary
+        - None → total_steps (not in HOC)
+        - 0 → recoveries (not in HOC)
+        - policy_violation (bool) → policy_violations (int, 1 if true)
+        - duration_ms → duration_ms
+        - started_at → created_at, started_at
+        - completed_at → completed_at
+        """
+        success = detail.status.upper() == "COMPLETED" if detail.status else None
+
         return CustomerActivityDetail(
             run_id=detail.run_id,
-            worker_name=detail.worker_name,
-            task=detail.task,
-            status=detail.status,
-            success=detail.success,
-            error_summary=detail.error_summary,
-            total_steps=detail.total_steps,
-            recoveries=detail.recoveries,
-            policy_violations=detail.policy_violations,
-            duration_ms=detail.duration_ms,
-            created_at=detail.created_at,
-            started_at=detail.started_at,
-            completed_at=detail.completed_at,
+            worker_name=detail.source or "unknown",
+            task=detail.goal or f"Run {detail.run_id}",
+            status=detail.status or "unknown",
+            success=success,
+            error_summary=detail.error_message[:500] if detail.error_message else None,
+            total_steps=None,  # Not available in RunDetailResult
+            recoveries=0,  # Not tracked in HOC
+            policy_violations=1 if detail.policy_violation else 0,
+            duration_ms=int(detail.duration_ms) if detail.duration_ms else None,
+            created_at=detail.started_at.isoformat() if detail.started_at else "",
+            started_at=detail.started_at.isoformat() if detail.started_at else None,
+            completed_at=detail.completed_at.isoformat() if detail.completed_at else None,
         )
 
 
@@ -257,7 +314,7 @@ def get_customer_activity_adapter() -> CustomerActivityAdapter:
     Returns:
         CustomerActivityAdapter singleton instance
 
-    Reference: ACTIVITY Domain Qualification (L2→L3→L4 pattern)
+    Reference: ACTIVITY Domain Qualification (L2→L3→L5 pattern)
     """
     global _customer_activity_adapter_instance
     if _customer_activity_adapter_instance is None:

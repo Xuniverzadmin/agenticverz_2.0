@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: skills, contracts (via driver)
+#   Writes: none
 # Role: Runtime domain commands and query logic (pure logic)
 # Callers: runtime_adapter.py (L3)
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: PIN-258 Phase F-3 Runtime Cluster
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-258 Phase F-3 Runtime Cluster
 # Contract: PHASE_F_FIX_DESIGN (L4 Command = Data)
 # NOTE: Reclassified L6→L5 (2026-01-24) - no Session imports, pure logic
 #

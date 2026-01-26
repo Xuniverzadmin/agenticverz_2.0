@@ -1,14 +1,23 @@
-# Layer: L6 — Platform Substrate
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api
-#   Execution: sync (DB reads)
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: WorkerRun, Tenant
+#   Writes: WorkerRun (status updates)
+# Database:
+#   Scope: domain (account)
+#   Models: WorkerRun, Tenant
 # Role: Worker discovery, status queries, capability registry driver
-# Callers: L2 APIs, L5 workers
-# Allowed Imports: L7 (models)
-# Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-242 (Baseline Freeze), ACCOUNT_PHASE2.5_IMPLEMENTATION_PLAN.md
+# Callers: L5 engines, L2 APIs
+# Allowed Imports: L6, L7 (models)
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, PIN-242 (Baseline Freeze), ACCOUNT_PHASE2.5_IMPLEMENTATION_PLAN.md
 #
 # RENAME NOTE (2026-01-24):
 # Renamed from worker_registry_service.py to worker_registry_driver.py
@@ -218,7 +227,7 @@ class WorkerRegistryService:
         )
 
         self.session.add(worker)
-        self.session.commit()
+        self.session.flush()  # Get generated data, NO COMMIT — L4 owns transaction
         self.session.refresh(worker)
 
         logger.info("worker_registered", extra={"worker_id": worker_id})
@@ -229,7 +238,7 @@ class WorkerRegistryService:
         worker = self.get_worker_or_raise(worker_id)
         worker.status = status
         self.session.add(worker)
-        self.session.commit()
+        self.session.flush()  # Get updated data, NO COMMIT — L4 owns transaction
         self.session.refresh(worker)
         logger.info("worker_status_updated", extra={"worker_id": worker_id, "status": status})
         return worker
@@ -277,7 +286,7 @@ class WorkerRegistryService:
                 max_tokens_per_run if max_tokens_per_run is not None else existing.max_tokens_per_run
             )
             self.session.add(existing)
-            self.session.commit()
+            self.session.flush()  # Get updated data, NO COMMIT — L4 owns transaction
             self.session.refresh(existing)
             return existing
         else:
@@ -291,7 +300,7 @@ class WorkerRegistryService:
                 max_tokens_per_run=max_tokens_per_run,
             )
             self.session.add(config_obj)
-            self.session.commit()
+            self.session.flush()  # Get generated data, NO COMMIT — L4 owns transaction
             self.session.refresh(config_obj)
             return config_obj
 

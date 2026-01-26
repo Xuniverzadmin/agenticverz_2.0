@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Map incidents to relevant SOC2 controls
 # Callers: services/export_bundle_service.py, api/incidents.py
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
-# Reference: GAP-025 (SOC2 Control Mapping)
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-025 (SOC2 Control Mapping)
 
 """
 Module: mapper
@@ -24,7 +31,7 @@ Exports:
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from app.services.soc2.control_registry import (
+from app.hoc.cus.general.L5_engines.control_registry import (
     SOC2ComplianceStatus,
     SOC2Control,
     SOC2ControlMapping,

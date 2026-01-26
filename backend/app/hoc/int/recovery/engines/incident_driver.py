@@ -30,7 +30,7 @@ Why Drivers (not Facades for internal use):
 - Import rules become enforceable
 
 Usage:
-    from app.services.incidents.incident_driver import get_incident_driver
+    from app.hoc.int.recovery.engines.incident_driver import get_incident_driver
 
     driver = get_incident_driver()
     incident_id = driver.create_incident_for_run(...)
@@ -72,7 +72,8 @@ class IncidentDriver:
     def _engine(self):
         """Lazy-load incident engine."""
         if self._incident_engine is None:
-            from app.services.incidents.incident_engine import IncidentEngine
+            # L5 engine import (migrated to HOC per SWEEP-05)
+            from app.hoc.cus.incidents.L5_engines.incident_engine import IncidentEngine
             self._incident_engine = IncidentEngine(db_url=self._db_url)
         return self._incident_engine
 
@@ -198,8 +199,9 @@ class IncidentDriver:
         PIN-454: Drivers emit acks after domain operations.
         """
         try:
-            from app.services.audit.models import AuditAction, AuditDomain, DomainAck
-            from app.services.audit.store import get_audit_store
+            # L5 imports (migrated to HOC per SWEEP-04)
+            from app.hoc.cus.logs.L5_schemas.audit_models import AuditAction, AuditDomain, DomainAck
+            from app.hoc.cus.general.L5_engines.audit_store import get_audit_store
 
             ack = DomainAck(
                 run_id=UUID(run_id),

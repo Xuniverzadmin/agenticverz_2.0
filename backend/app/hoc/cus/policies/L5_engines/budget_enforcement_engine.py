@@ -35,12 +35,16 @@ import logging
 import os
 from typing import Optional
 
-from sqlalchemy import create_engine, text
-
 logger = logging.getLogger("nova.services.budget_enforcement_engine")
 
 # L4 imports (same layer - allowed)
 from app.contracts.decisions import emit_budget_enforcement_decision
+
+# L6 driver import (allowed)
+from app.hoc.cus.policies.L6_drivers.budget_enforcement_driver import (
+    BudgetEnforcementDriver,
+    get_budget_enforcement_driver,
+)
 
 # =============================================================================
 # Budget Enforcement Engine (L4 Domain Logic)
@@ -166,87 +170,69 @@ class BudgetEnforcementEngine:
             return 0
 
         emitted = 0
+        driver = get_budget_enforcement_driver(self._db_url)
 
         try:
-            engine = create_engine(self._db_url)
-            with engine.connect() as conn:
-                # Find halted runs without budget_enforcement decision records
-                # The error_message pattern matches what runner.py writes
-                result = conn.execute(
-                    text(
-                        """
-                        SELECT r.id, r.tenant_id, r.error_message, p.plan_json, p.tool_calls_json
-                        FROM runs r
-                        LEFT JOIN provenances p ON p.run_id = r.id
-                        WHERE r.status = 'halted'
-                          AND r.error_message LIKE '%Hard budget limit%'
-                          AND NOT EXISTS (
-                              SELECT 1 FROM contracts.decision_records d
-                              WHERE d.run_id = r.id
-                                AND d.decision_type = 'budget_enforcement'
-                          )
-                        LIMIT 100
-                    """
+            # L6: Delegate query to driver
+            rows = driver.fetch_pending_budget_halts(limit=100)
+
+            for row in rows:
+                run_id = row["run_id"]
+                # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant.
+                # Skip rows without tenant_id (legacy data) rather than using fake tenant.
+                tenant_id = row["tenant_id"]
+                if not tenant_id:
+                    logger.warning("Skipping run without tenant_id", extra={"run_id": run_id})
+                    continue
+                error_message = row["error_message"] or ""
+                plan_json_str = row["plan_json"]
+                tool_calls_json_str = row["tool_calls_json"]
+
+                # L4 DECISION: Parse budget info from error message
+                # Format: "Hard budget limit reached: Xc consumed >= Yc limit"
+                budget_info = self._parse_budget_from_error(error_message)
+                if not budget_info:
+                    logger.warning(
+                        "Could not parse budget info from error message",
+                        extra={"run_id": run_id, "error_message": error_message[:100]},
                     )
+                    continue
+
+                # L4 DECISION: Count steps from plan and tool_calls
+                import json
+
+                total_steps = 0
+                completed_steps = 0
+
+                if plan_json_str:
+                    try:
+                        plan = json.loads(plan_json_str)
+                        total_steps = len(plan.get("steps", []))
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
+                if tool_calls_json_str:
+                    try:
+                        tool_calls = json.loads(tool_calls_json_str)
+                        completed_steps = len(tool_calls)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
+                # L4 DECISION: Emit decision
+                success = self.emit_decision_for_halt(
+                    run_id=run_id,
+                    budget_limit_cents=budget_info["limit_cents"],
+                    budget_consumed_cents=budget_info["consumed_cents"],
+                    step_cost_cents=0,  # Not available from error message
+                    completed_steps=completed_steps,
+                    total_steps=total_steps,
+                    tenant_id=tenant_id,
                 )
 
-                for row in result:
-                    run_id = row[0]
-                    # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant.
-                    # Skip rows without tenant_id (legacy data) rather than using fake tenant.
-                    tenant_id = row[1]
-                    if not tenant_id:
-                        logger.warning("Skipping run without tenant_id", extra={"run_id": run_id})
-                        continue
-                    error_message = row[2] or ""
-                    plan_json_str = row[3]
-                    tool_calls_json_str = row[4]
+                if success:
+                    emitted += 1
 
-                    # Parse budget info from error message
-                    # Format: "Hard budget limit reached: Xc consumed >= Yc limit"
-                    budget_info = self._parse_budget_from_error(error_message)
-                    if not budget_info:
-                        logger.warning(
-                            "Could not parse budget info from error message",
-                            extra={"run_id": run_id, "error_message": error_message[:100]},
-                        )
-                        continue
-
-                    # Count steps from plan and tool_calls
-                    import json
-
-                    total_steps = 0
-                    completed_steps = 0
-
-                    if plan_json_str:
-                        try:
-                            plan = json.loads(plan_json_str)
-                            total_steps = len(plan.get("steps", []))
-                        except (json.JSONDecodeError, TypeError):
-                            pass
-
-                    if tool_calls_json_str:
-                        try:
-                            tool_calls = json.loads(tool_calls_json_str)
-                            completed_steps = len(tool_calls)
-                        except (json.JSONDecodeError, TypeError):
-                            pass
-
-                    # Emit decision
-                    success = self.emit_decision_for_halt(
-                        run_id=run_id,
-                        budget_limit_cents=budget_info["limit_cents"],
-                        budget_consumed_cents=budget_info["consumed_cents"],
-                        step_cost_cents=0,  # Not available from error message
-                        completed_steps=completed_steps,
-                        total_steps=total_steps,
-                        tenant_id=tenant_id,
-                    )
-
-                    if success:
-                        emitted += 1
-
-            engine.dispose()
+            driver.dispose()
 
         except Exception as e:
             logger.error(

@@ -40,7 +40,8 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-from app.services.scheduler.facade import (
+# L5 engine imports (migrated to HOC per SWEEP-10)
+from app.hoc.cus.general.L5_engines.scheduler_facade import (
     SchedulerFacade,
     get_scheduler_facade,
 )

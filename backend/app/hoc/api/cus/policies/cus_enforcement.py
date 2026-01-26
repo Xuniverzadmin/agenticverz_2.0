@@ -37,7 +37,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from app.schemas.response import wrap_dict, wrap_list
-from app.services.cus_enforcement_service import CusEnforcementService
+# L5 engine import (migrated to HOC per SWEEP-03 Batch 2)
+from app.hoc.cus.policies.L5_engines.cus_enforcement_service import CusEnforcementService
 
 logger = logging.getLogger(__name__)
 

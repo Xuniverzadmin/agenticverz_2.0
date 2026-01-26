@@ -30,7 +30,7 @@ Why Drivers (not Facades for internal use):
 - Import rules become enforceable
 
 Usage:
-    from app.services.policy.policy_driver import get_policy_driver
+    from app.hoc.int.platform.policy.engines.policy_driver import get_policy_driver
 
     driver = get_policy_driver()
     result = await driver.evaluate(eval_request, db)

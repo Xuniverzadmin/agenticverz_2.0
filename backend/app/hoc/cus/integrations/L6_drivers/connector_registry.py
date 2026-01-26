@@ -1,6 +1,22 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (data models only)
+#   Writes: none
+# Database:
+#   Scope: domain (integrations)
+#   Models: Connector
+# Role: Connector management and registration
 # Product: system-wide
-# Reference: GAP-057 (ConnectorRegistry), GAP-061/062/064 (Connectors)
+# Callers: L5 engines
+# Allowed Imports: L6, L7 (models)
+# Reference: PIN-470, GAP-057 (ConnectorRegistry), GAP-061/062/064 (Connectors)
 """
 ConnectorRegistry - Connector management and registration.
 

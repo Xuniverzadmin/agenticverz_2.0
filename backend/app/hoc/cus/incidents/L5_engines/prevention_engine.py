@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
-#   Trigger: api|worker
+#   Trigger: api/worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: prevention_blocked, prevention_allowed
+#   Subscribes: none
+# Data Access:
+#   Reads: Policy, PreventionRecord (via driver)
+#   Writes: PreventionRecord (via driver)
 # Role: Prevention-based policy validation
 # Callers: policy/engine, workers
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: Policy System
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, Policy System
 
 # M24 Prevention Engine
 # Multi-policy prevention with severity levels, async incident creation, and metrics
@@ -809,7 +816,7 @@ async def create_incident_from_violation(
     # Use the PolicyViolationService for proper S3 truth handling
     try:
         from app.db_async import AsyncSessionLocal
-        from app.services.policy_violation_service import (
+        from app.hoc.cus.incidents.L5_engines.policy_violation_service import (
             PolicyViolationService,
             ViolationFact,
         )
@@ -838,7 +845,7 @@ async def _create_incident_with_service(
     evidence: dict,
 ) -> Optional[str]:
     """Helper to create incident using PolicyViolationService."""
-    from app.services.policy_violation_service import (
+    from app.hoc.cus.incidents.L5_engines.policy_violation_service import (
         PolicyViolationService,
         ViolationFact,
     )

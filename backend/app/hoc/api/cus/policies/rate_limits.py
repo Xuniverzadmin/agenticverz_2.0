@@ -38,7 +38,8 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-from app.services.limits.facade import (
+# L5 facade import (migrated to HOC per SWEEP-08)
+from app.hoc.cus.policies.L5_engines.limits_facade import (
     LimitsFacade,
     get_limits_facade,
 )

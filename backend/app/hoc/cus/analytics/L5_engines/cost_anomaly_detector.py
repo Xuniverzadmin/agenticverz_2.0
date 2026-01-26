@@ -1,7 +1,20 @@
-# Layer: L5 — Domain Engine (System Truth)
-# Product: system-wide (NOT console-owned)
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api/worker
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via cost_anomaly_driver (L6)
+#   Writes: via cost_anomaly_driver (L6)
+# Role: Cost anomaly detection business logic (System Truth)
 # Callers: tests, future background job
-# Reference: PIN-240
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
+# Reference: PIN-470, PIN-240
 # WARNING: If this logic is wrong, ALL products break.
 
 """
@@ -906,7 +919,7 @@ class CostAnomalyDetector:
                 self.session.add(cost_anomaly)
                 created.append(cost_anomaly)
 
-        self.session.commit()
+        self.session.flush()  # Get generated IDs, NO COMMIT — L4 owns transaction
 
         for ca in created:
             self.session.refresh(ca)

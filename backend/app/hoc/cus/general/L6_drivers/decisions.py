@@ -1,13 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: decision_records (SQL)
+# Database:
+#   Scope: domain (general)
+#   Models: decision_records (via raw SQL)
 # Role: Decision contract enforcement
 # Callers: API routes, workers
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: Contract System
+# Allowed Imports: L6, L7 (models)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: PIN-470, Contract System
 
 """Phase 4B: Decision Record Models and Service
 

@@ -1,13 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api/worker
 #   Execution: sync (async session)
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: incidents, policy_breaches
+#   Writes: incidents, policy_breaches
+# Database:
+#   Scope: cross-domain (policies, incidents)
+#   Models: Incident, PolicyBreach
 # Role: Cross-Domain Governance - Mandatory data integrity functions
 # Callers: cost_anomaly_detector, budget services, worker runtime
-# Allowed Imports: L5, L6 (models, db)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3
-# Reference: design/CROSS_DOMAIN_GOVERNANCE.md
+# Reference: PIN-470, design/CROSS_DOMAIN_GOVERNANCE.md
 
 """
 Cross-Domain Governance Functions (Mandatory)

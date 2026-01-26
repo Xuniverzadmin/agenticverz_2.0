@@ -1,8 +1,22 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Scope, Incident
+#   Writes: none
+# Database:
+#   Scope: domain (incidents)
+#   Models: Scope, Incident
 # Role: Pre-execution gate, scope enforcement
 # Callers: L2 APIs (recovery actions), L5 workers
-# Reference: PIN-242 (Baseline Freeze)
+# Allowed Imports: L6, L7 (models)
+# Reference: PIN-470, PIN-242 (Baseline Freeze)
 
 # app/services/scoped_execution.py
 """

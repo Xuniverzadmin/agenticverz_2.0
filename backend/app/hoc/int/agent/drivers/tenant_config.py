@@ -79,7 +79,8 @@ class TenantLLMConfig:
         B05 FIX: Delegates to L4 LLMPolicyEngine.get_effective_model().
         L3 no longer contains model selection policy logic.
         """
-        from app.services.llm_policy_engine import get_effective_model
+        # L5 engine import (migrated to HOC per SWEEP-12)
+        from app.hoc.cus.policies.L5_engines.llm_policy_engine import get_effective_model
 
         return get_effective_model(
             requested_model=requested_model,
@@ -248,7 +249,8 @@ async def get_model_for_tenant(
     Returns:
         Model identifier to use
     """
-    from app.services.llm_policy_engine import get_model_for_task
+    # L5 engine import (migrated to HOC per SWEEP-12)
+    from app.hoc.cus.policies.L5_engines.llm_policy_engine import get_model_for_task
 
     config = await get_tenant_config(tenant_id)
 

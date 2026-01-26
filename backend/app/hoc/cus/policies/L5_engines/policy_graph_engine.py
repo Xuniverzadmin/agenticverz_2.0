@@ -1,13 +1,20 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: policies (via driver)
+#   Writes: none
 # Role: Policy conflict detection and dependency graph computation
 # Callers: policies.py, policy_layer.py
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
-# Reference: PIN-411 (Gap Closure), DFT-O4, DFT-O5
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-411 (Gap Closure), DFT-O4, DFT-O5
 
 """
 Policy Graph Engine — Conflict Detection & Dependency Analysis
@@ -30,8 +37,10 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
 
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
+from app.hoc.cus.policies.L6_drivers.policy_graph_driver import (
+    PolicyGraphDriver,
+    get_policy_graph_driver,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -203,7 +212,7 @@ class PolicyConflictEngine:
 
     async def detect_conflicts(
         self,
-        session: AsyncSession,
+        driver: PolicyGraphDriver,
         policy_id: Optional[str] = None,
         severity_filter: Optional[ConflictSeverity] = None,
         include_resolved: bool = False,
@@ -212,7 +221,7 @@ class PolicyConflictEngine:
         Detect conflicts between policies.
 
         Args:
-            session: Database session
+            driver: L6 driver for data access
             policy_id: Optional - filter to conflicts involving this policy
             severity_filter: Optional - filter by severity (BLOCKING, WARNING)
             include_resolved: Include already-resolved conflicts
@@ -222,8 +231,8 @@ class PolicyConflictEngine:
         """
         conflicts: list[PolicyConflict] = []
 
-        # Fetch all active policies for this tenant
-        policies = await self._fetch_policies(session)
+        # L6: Delegate data access to driver
+        policies = await driver.fetch_active_policies(self.tenant_id)
 
         if not policies:
             return ConflictDetectionResult(conflicts=[], unresolved_count=0)
@@ -234,7 +243,7 @@ class PolicyConflictEngine:
 
         # Detect each conflict type
         conflicts.extend(await self._detect_scope_overlaps(policies))
-        conflicts.extend(await self._detect_threshold_contradictions(session))
+        conflicts.extend(await self._detect_threshold_contradictions(driver))
         conflicts.extend(await self._detect_temporal_conflicts(policies))
         conflicts.extend(await self._detect_priority_overrides(policies))
 
@@ -244,8 +253,8 @@ class PolicyConflictEngine:
 
         # Filter out resolved if not requested
         if not include_resolved:
-            # Check against persisted resolutions
-            resolved_pairs = await self._get_resolved_conflicts(session)
+            # L6: Check against persisted resolutions via driver
+            resolved_pairs = await driver.fetch_resolved_conflicts()
             conflicts = [
                 c
                 for c in conflicts
@@ -256,34 +265,6 @@ class PolicyConflictEngine:
         unresolved = len([c for c in conflicts if c.severity == ConflictSeverity.BLOCKING])
 
         return ConflictDetectionResult(conflicts=conflicts, unresolved_count=unresolved)
-
-    async def _fetch_policies(self, session: AsyncSession) -> list[dict]:
-        """Fetch all active policies for tenant."""
-        result = await session.execute(
-            text("""
-                SELECT id, name, rule_type, scope, scope_id, enforcement_mode,
-                       conditions, source, status
-                FROM policy_rules
-                WHERE tenant_id = :tenant_id AND status = 'ACTIVE'
-                ORDER BY created_at DESC
-            """),
-            {"tenant_id": self.tenant_id},
-        )
-        rows = result.fetchall()
-        return [
-            {
-                "id": str(row[0]),
-                "name": row[1],
-                "rule_type": row[2] or "SYSTEM",
-                "scope": row[3] or "GLOBAL",
-                "scope_id": row[4],
-                "enforcement_mode": row[5] or "WARN",
-                "conditions": row[6] or {},
-                "source": row[7] or "MANUAL",
-                "status": row[8] or "ACTIVE",
-            }
-            for row in rows
-        ]
 
     async def _detect_scope_overlaps(self, policies: list[dict]) -> list[PolicyConflict]:
         """
@@ -348,7 +329,7 @@ class PolicyConflictEngine:
 
         return conflicts
 
-    async def _detect_threshold_contradictions(self, session: AsyncSession) -> list[PolicyConflict]:
+    async def _detect_threshold_contradictions(self, driver: PolicyGraphDriver) -> list[PolicyConflict]:
         """
         Detect THRESHOLD_CONTRADICTION conflicts.
 
@@ -357,28 +338,8 @@ class PolicyConflictEngine:
         """
         conflicts = []
 
-        # Fetch all active limits for tenant
-        result = await session.execute(
-            text("""
-                SELECT id, name, limit_type, limit_value, scope, scope_id
-                FROM limits
-                WHERE tenant_id = :tenant_id AND status = 'ACTIVE'
-                ORDER BY limit_type, scope
-            """),
-            {"tenant_id": self.tenant_id},
-        )
-        rows = result.fetchall()
-        limits = [
-            {
-                "id": str(row[0]),
-                "name": row[1],
-                "limit_type": row[2],
-                "limit_value": row[3],
-                "scope": row[4],
-                "scope_id": row[5],
-            }
-            for row in rows
-        ]
+        # L6: Delegate data access to driver
+        limits = await driver.fetch_active_limits(self.tenant_id)
 
         # Group by limit_type and scope
         limit_groups: dict[str, list[dict]] = {}
@@ -524,19 +485,6 @@ class PolicyConflictEngine:
         """Check if a conflict involves a specific policy."""
         return policy.get("id") == policy_id
 
-    async def _get_resolved_conflicts(self, session: AsyncSession) -> set[tuple[str, str]]:
-        """Get set of resolved conflict pairs from database."""
-        try:
-            result = await session.execute(
-                text("""
-                    SELECT policy_a, policy_b FROM policy.policy_conflicts
-                    WHERE resolved = true
-                """)
-            )
-            return {(str(row[0]), str(row[1])) for row in result.fetchall()}
-        except Exception:
-            return set()
-
 
 # =============================================================================
 # Policy Dependency Engine (DFT-O5)
@@ -560,14 +508,14 @@ class PolicyDependencyEngine:
 
     async def compute_dependency_graph(
         self,
-        session: AsyncSession,
+        driver: PolicyGraphDriver,
         policy_id: Optional[str] = None,
     ) -> DependencyGraphResult:
         """
         Compute the policy dependency graph.
 
         Args:
-            session: Database session
+            driver: L6 driver for data access
             policy_id: Optional - filter to dependencies involving this policy
 
         Returns:
@@ -576,9 +524,9 @@ class PolicyDependencyEngine:
         nodes: list[PolicyNode] = []
         edges: list[PolicyDependency] = []
 
-        # Fetch all policies
-        policies = await self._fetch_policies(session)
-        limits = await self._fetch_limits(session)
+        # L6: Delegate data access to driver
+        policies = await driver.fetch_all_policies(self.tenant_id)
+        limits = await driver.fetch_all_limits(self.tenant_id)
 
         # Build policy nodes
         policy_map: dict[str, dict] = {}
@@ -594,8 +542,8 @@ class PolicyDependencyEngine:
             nodes.append(node)
             policy_map[p["id"]] = p
 
-        # Detect EXPLICIT dependencies
-        explicit_deps = await self._detect_explicit_dependencies(session, policies)
+        # Detect EXPLICIT dependencies (pure L5 business logic, no DB access)
+        explicit_deps = self._detect_explicit_dependencies(policies)
         edges.extend(explicit_deps)
 
         # Detect IMPLICIT_SCOPE dependencies
@@ -630,62 +578,8 @@ class PolicyDependencyEngine:
 
         return DependencyGraphResult(nodes=nodes, edges=edges)
 
-    async def _fetch_policies(self, session: AsyncSession) -> list[dict]:
-        """Fetch all policies for tenant."""
-        result = await session.execute(
-            text("""
-                SELECT id, name, rule_type, scope, scope_id, enforcement_mode,
-                       conditions, source, status, parent_rule_id
-                FROM policy_rules
-                WHERE tenant_id = :tenant_id
-                ORDER BY created_at DESC
-            """),
-            {"tenant_id": self.tenant_id},
-        )
-        rows = result.fetchall()
-        return [
-            {
-                "id": str(row[0]),
-                "name": row[1],
-                "rule_type": row[2] or "SYSTEM",
-                "scope": row[3] or "GLOBAL",
-                "scope_id": row[4],
-                "enforcement_mode": row[5] or "WARN",
-                "conditions": row[6] or {},
-                "source": row[7] or "MANUAL",
-                "status": row[8] or "ACTIVE",
-                "parent_rule_id": str(row[9]) if row[9] else None,
-            }
-            for row in rows
-        ]
-
-    async def _fetch_limits(self, session: AsyncSession) -> list[dict]:
-        """Fetch all limits for tenant."""
-        result = await session.execute(
-            text("""
-                SELECT id, name, limit_type, limit_value, scope, scope_id, status
-                FROM limits
-                WHERE tenant_id = :tenant_id
-                ORDER BY limit_type
-            """),
-            {"tenant_id": self.tenant_id},
-        )
-        rows = result.fetchall()
-        return [
-            {
-                "id": str(row[0]),
-                "name": row[1],
-                "limit_type": row[2],
-                "limit_value": row[3],
-                "scope": row[4],
-                "scope_id": row[5],
-                "status": row[6],
-            }
-            for row in rows
-        ]
-
-    async def _detect_explicit_dependencies(
-        self, session: AsyncSession, policies: list[dict]
+    def _detect_explicit_dependencies(
+        self, policies: list[dict]
     ) -> list[PolicyDependency]:
         """
         Detect EXPLICIT dependencies.
@@ -834,15 +728,19 @@ class PolicyDependencyEngine:
         return deps
 
     async def check_can_delete(
-        self, session: AsyncSession, policy_id: str
+        self, driver: PolicyGraphDriver, policy_id: str
     ) -> tuple[bool, list[str]]:
         """
         Check if a policy can be deleted.
 
+        Args:
+            driver: L6 driver for data access
+            policy_id: Policy ID to check
+
         Returns:
             (can_delete, list of blocking policy names)
         """
-        graph = await self.compute_dependency_graph(session, policy_id)
+        graph = await self.compute_dependency_graph(driver, policy_id)
 
         # Find the node
         node = next((n for n in graph.nodes if n.id == policy_id), None)
@@ -855,15 +753,19 @@ class PolicyDependencyEngine:
         return len(blocking) == 0, blocking
 
     async def check_can_activate(
-        self, session: AsyncSession, policy_id: str
+        self, driver: PolicyGraphDriver, policy_id: str
     ) -> tuple[bool, list[str]]:
         """
         Check if a policy can be activated.
 
+        Args:
+            driver: L6 driver for data access
+            policy_id: Policy ID to check
+
         Returns:
             (can_activate, list of missing dependency names)
         """
-        graph = await self.compute_dependency_graph(session, policy_id)
+        graph = await self.compute_dependency_graph(driver, policy_id)
 
         # Find the node
         node = next((n for n in graph.nodes if n.id == policy_id), None)

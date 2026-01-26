@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Incident (via driver)
+#   Writes: none
 # Role: Analyze recurring incident patterns (business logic)
 # Callers: Incidents API (L2), incidents_facade.py (L5)
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel (runtime)
-# Reference: docs/architecture/incidents/INCIDENTS_DOMAIN_SQL.md#9-hist-o3
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, docs/architecture/incidents/INCIDENTS_DOMAIN_SQL.md#9-hist-o3
 # NOTE: Renamed recurrence_analysis_service.py → recurrence_analysis_engine.py (2026-01-24)
 #       per BANNED_NAMING rule (*_service.py → *_engine.py)
 #       Reclassified L4→L5 - Per HOC topology, engines are L5 (business logic)

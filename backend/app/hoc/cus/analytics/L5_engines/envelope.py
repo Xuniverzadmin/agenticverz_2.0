@@ -1,13 +1,19 @@
 # Layer: L5 — Domain Engine
-# Product: system-wide
+# AUDIENCE: CUSTOMER
 # Temporal:
 #   Trigger: worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (pure data structures)
+#   Writes: none
 # Role: Base optimization envelope definition
 # Callers: optimization/*
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L5
-# Reference: M10 Optimization
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, M10 Optimization
 
 # C3/C4 Optimization Envelope
 # Reference: C3_ENVELOPE_ABSTRACTION.md (FROZEN), C4_ENVELOPE_COORDINATION_CONTRACT.md (FROZEN)

@@ -33,12 +33,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
-from app.schemas.limits.simulation import (
+from app.hoc.cus.policies.L5_schemas.simulation import (
     LimitSimulationRequest,
     LimitSimulationResponse,
     SimulationDecision,
 )
-from app.services.limits.simulation_service import (
+# L5 engine import (migrated to HOC per SWEEP-03 Batch 2)
+from app.hoc.cus.policies.L5_engines.limits_simulation_service import (
     LimitsSimulationService,
     LimitsSimulationServiceError,
     TenantNotFoundError,

@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: pattern_detected
+#   Subscribes: none
+# Data Access:
+#   Reads: Incident (via driver)
+#   Writes: none
 # Role: Detect structural patterns across incidents
 # Callers: Incidents API (L2)
-# Allowed Imports: L6 drivers (via injection), L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel (at runtime)
-# Reference: PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
 # NOTE: Renamed incident_pattern_service.py → incident_pattern_engine.py (2026-01-24)
 #       per BANNED_NAMING rule (*_service.py → *_engine.py)
 #       Reclassified L4→L5 - Per HOC topology, engines are L5 (business logic)

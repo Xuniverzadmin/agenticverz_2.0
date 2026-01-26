@@ -1,7 +1,20 @@
-# Layer: L5 — Domain Engine (System Truth)
-# Product: system-wide (NOT console-owned)
-# Callers: None
-# Reference: PIN-240
+# Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api/worker
+#   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: worker_runs, traces
+#   Writes: pattern_feedback
+# Role: Pattern detection (PB-S3) - observe → feedback → no mutation (System Truth)
+# Callers: None (DORMANT BY DESIGN)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
+# Reference: PIN-470, PIN-240
 #
 # STATUS: DORMANT BY DESIGN
 # =========================
@@ -38,14 +51,15 @@ from datetime import timedelta
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import select
-
 from app.hoc.cus.general.L5_utils.time import utc_now
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.db import get_async_session
-from app.models.feedback import PatternFeedback, PatternFeedbackCreate
-from app.models.tenant import WorkerRun
+from app.models.feedback import PatternFeedbackCreate
+
+# L6 driver import (allowed)
+from app.hoc.cus.analytics.L6_drivers.pattern_detection_driver import (
+    PatternDetectionDriver,
+    get_pattern_detection_driver,
+)
 
 logger = logging.getLogger("nova.services.pattern_detection")
 
@@ -80,7 +94,7 @@ def compute_error_signature(error: str) -> str:
 
 
 async def detect_failure_patterns(
-    session: AsyncSession,
+    driver: PatternDetectionDriver,
     tenant_id: Optional[UUID] = None,
     threshold: int = FAILURE_PATTERN_THRESHOLD,
     window_hours: int = FAILURE_PATTERN_WINDOW_HOURS,
@@ -98,19 +112,11 @@ async def detect_failure_patterns(
     """
     window_start = utc_now() - timedelta(hours=window_hours)
 
-    # Query failed runs within window
-    query = (
-        select(WorkerRun)
-        .where(WorkerRun.status == "failed")
-        .where(WorkerRun.created_at >= window_start)
-        .where(WorkerRun.error.isnot(None))
+    # L6: Delegate query to driver
+    failed_runs = await driver.fetch_failed_runs(
+        window_start=window_start,
+        tenant_id=tenant_id,
     )
-
-    if tenant_id:
-        query = query.where(WorkerRun.tenant_id == tenant_id)
-
-    result = await session.execute(query)
-    failed_runs = result.scalars().all()
 
     if not failed_runs:
         return []
@@ -151,7 +157,7 @@ async def detect_failure_patterns(
 
 
 async def detect_cost_spikes(
-    session: AsyncSession,
+    driver: PatternDetectionDriver,
     tenant_id: Optional[UUID] = None,
     spike_threshold_percent: float = COST_SPIKE_THRESHOLD_PERCENT,
     min_runs: int = COST_SPIKE_MIN_RUNS,
@@ -168,20 +174,8 @@ async def detect_cost_spikes(
     - spike_percent: percentage increase
     - run_ids: affected runs (provenance)
     """
-    # Get completed runs with costs
-    query = (
-        select(WorkerRun)
-        .where(WorkerRun.status == "completed")
-        .where(WorkerRun.cost_cents.isnot(None))
-        .where(WorkerRun.cost_cents > 0)
-        .order_by(WorkerRun.created_at.desc())
-    )
-
-    if tenant_id:
-        query = query.where(WorkerRun.tenant_id == tenant_id)
-
-    result = await session.execute(query)
-    runs = result.scalars().all()
+    # L6: Delegate query to driver
+    runs = await driver.fetch_completed_runs_with_costs(tenant_id=tenant_id)
 
     if len(runs) < min_runs:
         return []
@@ -239,17 +233,23 @@ async def detect_cost_spikes(
 
 
 async def emit_feedback(
-    session: AsyncSession,
+    driver: PatternDetectionDriver,
     feedback: PatternFeedbackCreate,
-) -> PatternFeedback:
+) -> dict:
     """
     Emit a feedback record.
 
     PB-S3: This creates a NEW record in pattern_feedback.
     It does NOT modify any execution data.
+
+    Returns:
+        Dictionary with feedback record info
     """
-    record = PatternFeedback(
-        tenant_id=feedback.tenant_id,
+    now = utc_now()
+
+    # L6: Delegate insert to driver
+    record = await driver.insert_feedback(
+        tenant_id=UUID(feedback.tenant_id) if isinstance(feedback.tenant_id, str) else feedback.tenant_id,
         pattern_type=feedback.pattern_type,
         severity=feedback.severity,
         description=feedback.description,
@@ -258,13 +258,10 @@ async def emit_feedback(
         occurrence_count=feedback.occurrence_count,
         time_window_minutes=feedback.time_window_minutes,
         threshold_used=feedback.threshold_used,
-        extra_data=feedback.metadata,  # Maps to 'metadata' column in DB
-        detected_at=utc_now(),
-        created_at=utc_now(),
+        extra_data=feedback.metadata,
+        detected_at=now,
+        created_at=now,
     )
-
-    session.add(record)
-    await session.flush()
 
     logger.info(
         "pattern_feedback_emitted",
@@ -272,11 +269,15 @@ async def emit_feedback(
             "feedback_id": str(record.id),
             "pattern_type": record.pattern_type,
             "tenant_id": str(record.tenant_id),
-            "provenance_count": len(record.provenance),
+            "provenance_count": len(record.provenance) if record.provenance else 0,
         },
     )
 
-    return record
+    return {
+        "id": str(record.id),
+        "pattern_type": record.pattern_type,
+        "tenant_id": str(record.tenant_id),
+    }
 
 
 async def run_pattern_detection(
@@ -298,8 +299,11 @@ async def run_pattern_detection(
 
     try:
         async with get_async_session() as session:
+            # L6: Create driver from session
+            driver = get_pattern_detection_driver(session)
+
             # Detect failure patterns
-            failure_patterns = await detect_failure_patterns(session, tenant_id)
+            failure_patterns = await detect_failure_patterns(driver, tenant_id)
             result["failure_patterns"] = failure_patterns
 
             # Emit feedback for each failure pattern
@@ -317,13 +321,13 @@ async def run_pattern_detection(
                         threshold_used=f"threshold={FAILURE_PATTERN_THRESHOLD}",
                         metadata={"worker_id": pattern["worker_id"]},
                     )
-                    await emit_feedback(session, feedback)
+                    await emit_feedback(driver, feedback)
                     result["feedback_created"] += 1
                 except Exception as e:
                     result["errors"].append(f"Failed to emit failure feedback: {e}")
 
             # Detect cost spikes
-            cost_spikes = await detect_cost_spikes(session, tenant_id)
+            cost_spikes = await detect_cost_spikes(driver, tenant_id)
             result["cost_spikes"] = cost_spikes
 
             # Emit feedback for each cost spike
@@ -345,12 +349,12 @@ async def run_pattern_detection(
                             "baseline_run_count": spike["baseline_run_count"],
                         },
                     )
-                    await emit_feedback(session, feedback)
+                    await emit_feedback(driver, feedback)
                     result["feedback_created"] += 1
                 except Exception as e:
                     result["errors"].append(f"Failed to emit cost feedback: {e}")
 
-            await session.commit()
+            # NO COMMIT — L4 coordinator owns transaction boundary
 
     except Exception as e:
         logger.error(f"pattern_detection_error: {e}", exc_info=True)
@@ -370,19 +374,17 @@ async def get_feedback_summary(
     PB-S3: Read-only query of feedback table.
     """
     async with get_async_session() as session:
-        query = select(PatternFeedback).order_by(PatternFeedback.detected_at.desc())
+        # L6: Create driver from session
+        driver = get_pattern_detection_driver(session)
 
-        if tenant_id:
-            query = query.where(PatternFeedback.tenant_id == tenant_id)
-        if acknowledged is not None:
-            query = query.where(PatternFeedback.acknowledged == acknowledged)
+        # L6: Delegate query to driver
+        feedback_records = await driver.fetch_feedback_records(
+            tenant_id=tenant_id,
+            acknowledged=acknowledged,
+            limit=limit,
+        )
 
-        query = query.limit(limit)
-
-        result = await session.execute(query)
-        feedback_records = result.scalars().all()
-
-        # Count by type
+        # L5: Business logic - count by type (decision layer)
         type_counts: dict[str, int] = {}
         for record in feedback_records:
             ptype = record.pattern_type
@@ -396,7 +398,7 @@ async def get_feedback_summary(
                     "id": str(r.id),
                     "pattern_type": r.pattern_type,
                     "severity": r.severity,
-                    "description": r.description[:200],
+                    "description": r.description[:200] if r.description else "",
                     "occurrence_count": r.occurrence_count,
                     "detected_at": r.detected_at.isoformat() if r.detected_at else None,
                     "acknowledged": r.acknowledged,

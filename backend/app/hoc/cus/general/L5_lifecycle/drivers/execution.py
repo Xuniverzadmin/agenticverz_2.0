@@ -3,15 +3,21 @@
 # Product: system-wide
 # Wiring Type: execution
 # Parent Gap: GAP-071-077 (Lifecycle Stages)
-# Reference: GAP-159, GAP-160, GAP-161
 # Depends On: GAP-057 (ConnectorRegistry), GAP-156/157/158 (Job infrastructure)
 # Temporal:
 #   Trigger: lifecycle orchestrator
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via connectors
+#   Writes: via L6 drivers
 # Role: Execution implementations for lifecycle stage handlers (pure business logic)
 # Callers: IngestHandler, IndexHandler, ClassifyHandler
 # Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L4
+# Forbidden Imports: L1, L2, L3, L4, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-159, GAP-160, GAP-161
 # NOTE: Reclassified L6→L5 (2026-01-24) - Business logic, no direct DB Session imports
 
 """
@@ -266,7 +272,8 @@ class DataIngestionExecutor:
             return None
 
         try:
-            from app.services.connectors import get_connector
+            # L6 driver import (migrated to HOC per SWEEP-13)
+            from app.hoc.cus.integrations.L6_drivers.connector_registry import get_connector
             return get_connector(connector_id)
         except Exception as e:
             logger.warning(
@@ -782,7 +789,8 @@ class IndexingExecutor:
             return None
 
         try:
-            from app.services.connectors import get_connector
+            # L6 driver import (migrated to HOC per SWEEP-13)
+            from app.hoc.cus.integrations.L6_drivers.connector_registry import get_connector
             return get_connector(connector_id)
         except Exception as e:
             logger.warning(

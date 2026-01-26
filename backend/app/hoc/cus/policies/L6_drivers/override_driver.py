@@ -1,14 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: override_signal
+#   Subscribes: none
+# Data Access:
+#   Reads: limits, limit_overrides
+#   Writes: limit_overrides
+# Database:
+#   Scope: domain (policies)
+#   Models: Limit, LimitOverride
 # Role: Limit override driver (PIN-LIM-05) - DB boundary crossing
 # Callers: L5 engines, api/limits/override.py
-# Allowed Imports: L7 (models)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-LIM-05
+# Reference: PIN-470, PIN-LIM-05
 # NOTE: Moved override_service.py → drivers/override_driver.py (2026-01-24)
 #       Reclassified L4→L6 - has runtime AsyncSession import - BANNED_NAMING fix
 
@@ -35,7 +44,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.policy_control_plane import Limit
-from app.schemas.limits.overrides import (
+from app.hoc.cus.policies.L5_schemas.overrides import (
     LimitOverrideRequest,
     LimitOverrideResponse,
     OverrideStatus,

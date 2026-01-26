@@ -1,13 +1,19 @@
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
-# Product: system-wide
 # Temporal:
-#   Trigger: internal
+#   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via circuit_breaker (L6)
+#   Writes: none
 # Role: Circuit breaker sync wrapper (thread-safe async bridge)
 # Callers: sync middleware, legacy code
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470
 
 # CostSim Circuit Breaker Sync Wrapper
 """

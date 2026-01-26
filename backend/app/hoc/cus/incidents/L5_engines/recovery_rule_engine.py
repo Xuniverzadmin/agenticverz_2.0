@@ -1,7 +1,20 @@
 # Layer: L5 — Domain Engine (System Truth)
+# AUDIENCE: CUSTOMER
 # Product: system-wide (NOT console-owned)
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: RecoveryRule
+#   Writes: none
+# Role: Rule-based evaluation engine for recovery suggestions
 # Callers: recovery_evaluator.py (worker)
-# Reference: PIN-240
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-240
 # WARNING: If this logic is wrong, ALL products break.
 
 # M10 Recovery Rule Engine

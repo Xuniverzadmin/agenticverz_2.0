@@ -1,8 +1,19 @@
-# Layer: L5 — Engine
+# Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (via L6 drivers)
+#   Writes: none
 # Role: Main orchestration engine for panel evaluation
-# Product: ai-console
-# Reference: L2_1_PANEL_ADAPTER_SPEC.yaml
+# Callers: L2 APIs (ai-console)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, L2_1_PANEL_ADAPTER_SPEC.yaml
 
 
 """

@@ -1,13 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: worker
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: policies, ir_modules
+#   Writes: none
+# Database:
+#   Scope: domain (policies)
+#   Models: IRModule
 # Role: DAG-based parallel policy executor
 # Callers: policy engine, workers
-# Allowed Imports: L6
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4
-# Reference: Policy System
+# Reference: PIN-470, Policy System
 
 # M20 Policy Runtime - DAG Executor
 # Parallel execution of policy DAG stages

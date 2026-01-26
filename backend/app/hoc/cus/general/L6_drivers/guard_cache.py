@@ -1,13 +1,23 @@
-# Layer: L6 — Platform Substrate
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Redis (cache)
+#   Writes: Redis (cache)
+# Database:
+#   Scope: domain (general)
+#   Models: none (Redis-only)
 # Role: Guard decision caching
 # Callers: guard API
-# Allowed Imports: None (foundational)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: Guard System
+# Reference: PIN-470, Guard System
 
 # Guard API Cache Layer
 """

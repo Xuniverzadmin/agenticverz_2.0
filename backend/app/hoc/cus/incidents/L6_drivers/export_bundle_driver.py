@@ -1,14 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Product: AI Console
 # Temporal:
-#   Trigger: api
+#   Trigger: api (via L5 engine)
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Incident, Run, AosTrace
+#   Writes: none
+# Database:
+#   Scope: domain (incidents)
+#   Models: Incident, Run
 # Role: Generate structured export bundles from incidents and traces
 # Callers: api/incidents.py
-# Allowed Imports: L4, L5, L6, L7
-# Forbidden Imports: L1, L2, L3
-# Reference: BACKEND_REMEDIATION_PLAN.md GAP-004, GAP-005, GAP-008
+# Allowed Imports: L6, L7 (models)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: PIN-470, BACKEND_REMEDIATION_PLAN.md GAP-004, GAP-005, GAP-008
 # NOTE: Renamed export_bundle_service.py → export_bundle_driver.py (2026-01-24)
 #       per BANNED_NAMING rule (*_service.py → *_driver.py for L6 files)
 

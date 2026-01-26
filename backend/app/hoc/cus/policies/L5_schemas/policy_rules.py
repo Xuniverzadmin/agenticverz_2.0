@@ -1,4 +1,4 @@
-# Layer: L6 — Platform Substrate
+# Layer: L5 — Domain Schema
 # Product: system-wide
 # Temporal:
 #   Trigger: import-time

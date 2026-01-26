@@ -173,8 +173,9 @@ class RunOrchestrationKernel:
             return
 
         try:
-            from app.services.audit.models import create_run_expectations
-            from app.services.audit.store import get_audit_store
+            # L5 imports (migrated to HOC per SWEEP-04)
+            from app.hoc.cus.logs.L5_schemas.audit_models import create_run_expectations
+            from app.hoc.cus.general.L5_engines.audit_store import get_audit_store
 
             expectations = create_run_expectations(
                 run_id=self._run_id,
@@ -330,7 +331,8 @@ class RunOrchestrationKernel:
             return True
 
         try:
-            from app.services.audit.reconciler import get_audit_reconciler
+            # L5 import (migrated to HOC per SWEEP-04)
+            from app.hoc.cus.logs.L5_engines.audit_reconciler import get_audit_reconciler
 
             reconciler = get_audit_reconciler()
             result = reconciler.reconcile(self._run_id)
@@ -504,8 +506,9 @@ class RunOrchestrationKernel:
             return
 
         try:
-            from app.services.audit.models import AuditAction, AuditDomain, DomainAck
-            from app.services.audit.store import get_audit_store
+            # L5 imports (migrated to HOC per SWEEP-04)
+            from app.hoc.cus.logs.L5_schemas.audit_models import AuditAction, AuditDomain, DomainAck
+            from app.hoc.cus.general.L5_engines.audit_store import get_audit_store
 
             ack = DomainAck(
                 run_id=self._run_id,

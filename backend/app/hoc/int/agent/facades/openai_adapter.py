@@ -192,7 +192,8 @@ class OpenAIAdapter:
 
         B01 FIX: Delegates to L4 LLMPolicyEngine.
         """
-        from app.services.llm_policy_engine import estimate_tokens
+        # L5 engine import (migrated to HOC per SWEEP-12)
+        from app.hoc.cus.policies.L5_engines.llm_policy_engine import estimate_tokens
 
         return estimate_tokens(text)
 
@@ -202,7 +203,8 @@ class OpenAIAdapter:
 
         B01 FIX: Delegates to L4 LLMPolicyEngine.
         """
-        from app.services.llm_policy_engine import estimate_cost_cents
+        # L5 engine import (migrated to HOC per SWEEP-12)
+        from app.hoc.cus.policies.L5_engines.llm_policy_engine import estimate_cost_cents
 
         return estimate_cost_cents(model, input_tokens, output_tokens)
 
@@ -217,7 +219,8 @@ class OpenAIAdapter:
 
         Returns error tuple if limits exceeded, None if OK.
         """
-        from app.services.llm_policy_engine import check_safety_limits
+        # L5 engine import (migrated to HOC per SWEEP-12)
+        from app.hoc.cus.policies.L5_engines.llm_policy_engine import check_safety_limits
 
         result = check_safety_limits(
             model=model,

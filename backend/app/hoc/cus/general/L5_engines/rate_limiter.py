@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Redis (rate limit state)
+#   Writes: Redis (rate limit counters)
 # Role: Rate limiting utilities (Redis-backed)
 # Callers: middleware, API routes
 # Allowed Imports: L6, L7 (stdlib, redis)
 # Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
-# Reference: Rate Limiting
+# Reference: PIN-470, Rate Limiting
 # NOTE: Reclassified L6→L5 (2026-01-24) - Redis infrastructure, not SQL driver
 #       Remains in drivers/ per Layer ≠ Directory principle
 

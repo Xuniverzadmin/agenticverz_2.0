@@ -1,13 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: policy_conflicts
+#   Writes: policy_conflict_resolutions
+# Database:
+#   Scope: domain (policies)
+#   Models: PolicyConflict, PolicyConflictResolution
 # Role: Policy conflict resolution
 # Callers: policy/engine
-# Allowed Imports: L6
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L5
-# Reference: Policy System
+# Reference: PIN-470, Policy System
 
 # M20 Policy Optimizer - Conflict Resolution
 # Resolves conflicts between policies using governance rules

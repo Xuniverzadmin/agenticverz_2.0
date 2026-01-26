@@ -1,15 +1,21 @@
 # Layer: L5 — Adapter (Facade)
 # AUDIENCE: CUSTOMER
-# Role: Lifecycle Facade - Thin translation layer for lifecycle operations
 # PHASE: W4
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: via L6 drivers
+#   Writes: via L6 drivers
+# Role: Lifecycle Facade - Thin translation layer for lifecycle operations
 # Callers: L2 lifecycle.py API, SDK
 # Allowed Imports: L5 (engines), L6 (drivers)
-# Forbidden Imports: L1, L2
-# Reference: GAP-131 to GAP-136 (Lifecycle APIs)
+# Forbidden Imports: L1, L2, sqlalchemy (runtime)
+# Reference: PIN-470, GAP-131 to GAP-136 (Lifecycle APIs)
 # NOTE: Reclassified L6→L3 (2026-01-24) - Per HOC topology, facades are L3 (adapters)
 
 
@@ -41,7 +47,8 @@ L2 API Routes (GAP-131 to GAP-136):
 - POST /api/v1/lifecycle/runs/{id}/cancel (cancel run)
 
 Usage:
-    from app.services.lifecycle.facade import get_lifecycle_facade
+    # L5 engine import (migrated to HOC per SWEEP-11)
+    from app.hoc.cus.general.L5_engines.lifecycle_facade import get_lifecycle_facade
 
     facade = get_lifecycle_facade()
 

@@ -4,10 +4,17 @@
 # Temporal:
 #   Trigger: internal
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Replay determinism semantics (policy decision validation)
 # Callers: replay, audit engines
-# Allowed Imports: L6, L7
-# Forbidden Imports: L1, L2, L3, L4, sqlalchemy, sqlmodel
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470
 
 """Replay Determinism Service - Defines and Enforces Determinism Semantics
 

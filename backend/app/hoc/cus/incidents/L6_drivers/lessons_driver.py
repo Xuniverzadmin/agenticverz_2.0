@@ -1,10 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: LessonsLearned, PolicyProposal
+#   Writes: LessonsLearned, PolicyProposal
+# Database:
+#   Scope: domain (incidents)
+#   Models: LessonsLearned, PolicyProposal
 # Role: Data access for lessons_learned operations
-# Callers: LessonsLearnedEngine (L4)
-# Allowed Imports: ORM models, sqlalchemy
+# Callers: LessonsLearnedEngine (L5)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-470, PIN-468, PHASE2_EXTRACTION_PROTOCOL.md
 #
 # GOVERNANCE NOTE:
 # This L6 driver provides pure data access for lessons_learned table.
@@ -622,9 +635,7 @@ class LessonsDriver:
         )
         return True
 
-    def commit(self) -> None:
-        """Commit the current transaction."""
-        self._session.commit()
+    # REMOVED: commit() helper — L6 DOES NOT COMMIT (L4 coordinator owns transaction boundary)
 
 
 def get_lessons_driver(session: Session) -> LessonsDriver:

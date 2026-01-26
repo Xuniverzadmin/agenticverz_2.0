@@ -1,13 +1,21 @@
 # Layer: L5 — Domain Engine
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: per-step
 #   Execution: sync
+# Lifecycle:
+#   Emits: policy_violation
+#   Subscribes: none
+# Data Access:
+#   Reads: policies (via driver)
+#   Writes: violations (via driver)
 # Role: Policy prevention engine for runtime enforcement
 # Callers: worker/runner.py
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
-# Reference: BACKEND_REMEDIATION_PLAN.md GAP-001, GAP-002
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
+# Reference: PIN-470, BACKEND_REMEDIATION_PLAN.md GAP-001, GAP-002
 
 """
 Prevention Engine
@@ -492,7 +500,7 @@ def create_policy_snapshot_for_run(
 
         with Session(engine) as session:
             session.add(snapshot)
-            session.commit()
+            session.flush()  # Get generated data, NO COMMIT — L4 owns transaction
             session.refresh(snapshot)
 
             logger.info(

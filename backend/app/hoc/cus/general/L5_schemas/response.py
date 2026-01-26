@@ -4,11 +4,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none
+#   Writes: none
 # Role: Standard API response envelope for consistent client experience (pure Pydantic DTO)
 # Callers: All API routes (L2)
 # Allowed Imports: None (foundational schema)
-# Forbidden Imports: L1, L2, L3, L4, L6 (no DB)
-# Reference: API-002 Guardrail (Response Envelope Consistency)
+# Forbidden Imports: L1, L2, L3, L4, L6 (no DB), sqlalchemy
+# Reference: PIN-470, API-002 Guardrail (Response Envelope Consistency)
 # NOTE: Reclassified L2→L5 (2026-01-24) - Pure Pydantic schemas, no boundary crossing
 
 """

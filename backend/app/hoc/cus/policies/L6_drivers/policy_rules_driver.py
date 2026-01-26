@@ -1,11 +1,23 @@
-# Layer: L6 — Driver
+# Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Product: system-wide
+# Temporal:
+#   Trigger: api (via L5 engine)
+#   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: policy_rules, policy_rule_integrity
+#   Writes: policy_rules, policy_rule_integrity
+# Database:
+#   Scope: domain (policies)
+#   Models: PolicyRule, PolicyRuleIntegrity
 # Role: Data access for policy rules CRUD operations
-# Callers: policy_rules_service.py (L4 engine)
-# Allowed Imports: ORM models, sqlalchemy
+# Callers: policy_rules_service.py (L5 engine)
+# Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
-# Reference: PIN-468, POLICIES_DOMAIN_LOCK.md
+# Reference: PIN-470, PIN-468, POLICIES_DOMAIN_LOCK.md
 #
 # EXTRACTION STATUS: Phase-2.5A (2026-01-24)
 # - Created from policy_rules_service.py extraction

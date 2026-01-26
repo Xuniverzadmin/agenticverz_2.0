@@ -5,11 +5,17 @@
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: Incident (via driver)
+#   Writes: none
 # Role: Incidents domain facade - unified entry point for incident management operations
 # Callers: L2 incidents API (incidents.py)
-# Allowed Imports: L5, L6 (via delegation)
-# Forbidden Imports: L1, L2, L3, L7, sqlalchemy (runtime)
-# Reference: PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
 #
 # L4 is reserved for general/L4_runtime/ only per HOC Layer Topology.
 #
@@ -783,7 +789,8 @@ class IncidentsFacade:
         - severity_spike: Multiple high/critical incidents in short window
         - cascade_failure: Multiple incidents from same source run
         """
-        from app.services.incidents.incident_pattern_service import IncidentPatternService
+        # L5 engine import (migrated to HOC per SWEEP-05)
+        from app.hoc.cus.incidents.L5_engines.incident_pattern_engine import IncidentPatternService
 
         service = IncidentPatternService(session)
         result = await service.detect_patterns(
@@ -828,7 +835,8 @@ class IncidentsFacade:
 
         Identifies incident categories that recur frequently.
         """
-        from app.services.incidents.recurrence_analysis_driver import RecurrenceAnalysisService  # PIN-468
+        # L5 engine import (migrated to HOC per SWEEP-05, PIN-468)
+        from app.hoc.cus.incidents.L5_engines.recurrence_analysis_engine import RecurrenceAnalysisService
 
         service = RecurrenceAnalysisService(session)
         result = await service.analyze_recurrence(
@@ -873,7 +881,8 @@ class IncidentsFacade:
 
         Provides resolution summary, similar incidents, and actionable insights.
         """
-        from app.services.incidents.postmortem_service import PostMortemService
+        # L5 engine import (migrated to HOC per SWEEP-05)
+        from app.hoc.cus.incidents.L5_engines.postmortem_engine import PostMortemService
 
         service = PostMortemService(session)
         result = await service.get_incident_learnings(

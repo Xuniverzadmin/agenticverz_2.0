@@ -3,12 +3,21 @@
 # Temporal:
 #   Trigger: worker
 #   Execution: async
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: (via embedded DB)
+#   Writes: (via embedded DB - session.commit)
 # Role: Integration event dispatcher with embedded DB persistence
 # Callers: workers, bridges
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
 # Note: This file contains L5 orchestration logic with embedded L6 DB operations.
 #       The IntegrationDispatcher class is M25_FROZEN and requires governance
 #       approval to extract DB operations to a separate driver.
-# Reference: HOC_LAYER_TOPOLOGY_V1.md, INTEGRATIONS_PHASE2.5_IMPLEMENTATION_PLAN.md
+# Reference: PIN-470, HOC_LAYER_TOPOLOGY_V1.md, INTEGRATIONS_PHASE2.5_IMPLEMENTATION_PLAN.md
 
 """
 M25 Integration Dispatcher
@@ -545,7 +554,7 @@ class IntegrationDispatcher:
                         "created_at": event.timestamp,
                     },
                 )
-                await session.commit()
+                # NO COMMIT — L4 coordinator owns transaction boundary
         except TypeError as e:
             # JSON serialization failed - this is a bug, log and raise
             logger.error(f"JSON serialization failed for event {event.event_id}: {e}")
@@ -585,7 +594,7 @@ class IntegrationDispatcher:
                         "is_complete": status.is_complete,
                     },
                 )
-                await session.commit()
+                # NO COMMIT — L4 coordinator owns transaction boundary
         except Exception as e:
             logger.error(f"Failed to persist loop status {status.loop_id}: {e}")
 
@@ -624,7 +633,7 @@ class IntegrationDispatcher:
                         "resolution": checkpoint.resolution,
                     },
                 )
-                await session.commit()
+                # NO COMMIT — L4 coordinator owns transaction boundary
         except Exception as e:
             logger.error(f"Failed to persist checkpoint {checkpoint.checkpoint_id}: {e}")
 

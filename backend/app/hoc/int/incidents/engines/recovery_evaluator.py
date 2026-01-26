@@ -670,8 +670,8 @@ class RecoveryExecutor:
 
 # NOTE: evaluate_failure() moved to L4 recovery_evaluation_engine.py
 # Callers should import from:
-#   from app.services.recovery_evaluation_engine import evaluate_and_execute
-# Reference: PIN-257 Phase R-1 (L5→L4 Violation Fix)
+#   from app.hoc.cus.incidents.L5_engines.recovery_evaluation_engine import evaluate_and_execute
+# Reference: PIN-257 Phase R-1 (L5→L4 Violation Fix), SWEEP-09
 
 
 def register_hook(hook_name: str, callback: Callable) -> None:

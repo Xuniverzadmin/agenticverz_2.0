@@ -45,9 +45,9 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-# L4 → L4 import: Classification authority from RecoveryRuleEngine
-# This is the ONLY correct way to get classification logic - L4 owns it.
-from app.services.recovery_rule_engine import (
+# L5 engine import (migrated to HOC per SWEEP-09)
+# Classification authority from RecoveryRuleEngine - L5 owns it.
+from app.hoc.cus.incidents.L5_engines.recovery_rule_engine import (
     classify_error_category,
     suggest_recovery_mode,
 )

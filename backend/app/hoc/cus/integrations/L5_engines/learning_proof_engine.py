@@ -3,11 +3,17 @@
 # Temporal:
 #   Trigger: worker
 #   Execution: sync
+# Lifecycle:
+#   Emits: none
+#   Subscribes: none
+# Data Access:
+#   Reads: none (pure computation)
+#   Writes: none
 # Role: Learning proof generation (graduation gates, regret tracking)
 # Callers: learning workers, policy engines
-# Allowed Imports: stdlib only
-# Forbidden Imports: L6, sqlalchemy
-# Reference: HOC_LAYER_TOPOLOGY_V1.md, INTEGRATIONS_PHASE2.5_IMPLEMENTATION_PLAN.md
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, HOC_LAYER_TOPOLOGY_V1.md, INTEGRATIONS_PHASE2.5_IMPLEMENTATION_PLAN.md
 
 """
 M25 Learning Proof System

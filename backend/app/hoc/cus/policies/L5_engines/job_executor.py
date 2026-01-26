@@ -1,13 +1,20 @@
 # Layer: L5 — Execution & Workers
+# AUDIENCE: CUSTOMER
 # Product: system-wide (Part-2 CRM Workflow)
 # Temporal:
 #   Trigger: worker|scheduler
 #   Execution: async (background execution)
+# Lifecycle:
+#   Emits: job_step_complete, job_evidence
+#   Subscribes: none
+# Data Access:
+#   Reads: jobs (via driver)
+#   Writes: job_steps, evidence (via driver)
 # Role: Job Executor - executes job steps and emits evidence
 # Callers: workers, governance orchestrator (via message queue)
-# Allowed Imports: L6
-# Forbidden Imports: L1, L2, L3, L4
-# Reference: PIN-294, PIN-292, PART2_CRM_WORKFLOW_CHARTER.md, part2-design-v1
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Reference: PIN-470, PIN-294, PIN-292, PART2_CRM_WORKFLOW_CHARTER.md, part2-design-v1
 #
 # ==============================================================================
 # GOVERNANCE RULE: EXECUTOR-AUTHORITY (Non-Negotiable)
