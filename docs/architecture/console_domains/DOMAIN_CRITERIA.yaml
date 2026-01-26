@@ -1,12 +1,21 @@
 # Domain Classification Criteria
 # Status: LOCKED
 # Created: 2026-01-26
+# Updated: 2026-01-26 (V3 Manual Audit lessons learned)
 # Purpose: Machine-readable rules for domain_classifier_v1.py
 #
 # INVARIANT: Keywords alone have ZERO classificatory power.
 # Only qualified phrases determine domain ownership.
+#
+# V3 AUDIT FINDINGS INCORPORATED:
+# - controls: Strengthened qualifiers (21 files were misclassified away)
+# - general: Added cross-domain/lifecycle/scheduler patterns (31 files missed)
+# - logs: Added verdict/certificate/compliance patterns (17 files missed)
+# - integrations: Added veto_phrases (only 21% confirmation rate)
+# - policies: Added veto_phrases to prevent overloading (31 files misplaced here)
+# - account: Added identity resolution pattern
 
-version: "1.0"
+version: "1.1"
 
 # Keywords that CANNOT determine domain alone
 ambiguous_keywords:
@@ -32,6 +41,7 @@ domains:
     qualifier_test: "Enforcement of system invariants, for system orchestration"
 
     qualifier_phrases:
+      # Core orchestration patterns
       - "governance orchestrat"
       - "runtime orchestrat"
       - "execution coordinator"
@@ -47,6 +57,23 @@ domains:
       - "L4_runtime"
       - "orchestrator"
       - "coordinator"
+      # V3 AUDIT: Cross-domain patterns (31 files missed)
+      - "cross-domain"
+      - "cross domain"
+      - "lifecycle state"
+      - "lifecycle facade"
+      - "lifecycle stage"
+      - "job scheduler"
+      - "scheduler facade"
+      - "constraint check"
+      - "mediator"
+      - "retrieval mediator"
+      - "determinism"
+      - "panel invariant"
+      - "panel verification"
+      - "durability"
+      - "RAC"
+      - "alert emit"
 
     veto_phrases:
       - "policy enforcement"
@@ -60,6 +87,7 @@ domains:
     weak_keywords:
       - "orchestrat"
       - "gateway"
+      - "facade"
 
   policies:
     exclusive_decision: "WHAT rules govern behavior"
@@ -78,12 +106,41 @@ domains:
       - "rule activation"
       - "policy version"
       - "policy status"
+      # V3 AUDIT: Recovery/failure rules are policies
+      - "recovery rule"
+      - "failure mode"
 
     veto_phrases:
       - "runtime orchestrat"
       - "gateway control"
       - "system invariant"
       - "execution coordinator"
+      # V3 AUDIT: Prevent controls items from landing here (31 misplaced)
+      - "killswitch"
+      - "circuit breaker"
+      - "budget enforcement"
+      - "limit driver"
+      - "limit read"
+      - "limit write"
+      - "rate limit"
+      - "token limit"
+      - "cost limit"
+      - "throttle"
+      # V3 AUDIT: Prevent general items from landing here
+      - "execution order"
+      - "dag executor"
+      - "cross-domain"
+      - "scheduler"
+      - "governance signal"
+      # V3 AUDIT: Prevent logs items from landing here
+      - "evidence record"
+      - "audit trail"
+      - "certificate"
+      - "proof"
+      - "SOC2"
+      # V3 AUDIT: Prevent apis items from landing here
+      - "api key"
+      - "key management"
 
     weak_keywords:
       - "policy"
@@ -95,6 +152,7 @@ domains:
     qualifier_test: "Customer-configured limits and thresholds"
 
     qualifier_phrases:
+      # Core controls patterns
       - "killswitch"
       - "circuit breaker"
       - "feature flag"
@@ -109,17 +167,38 @@ domains:
       - "throttle"
       - "budget"
       - "usage limit"
+      # V3 AUDIT: Strengthened qualifiers (21 files missed)
+      - "limit driver"
+      - "limits driver"
+      - "limit read"
+      - "limit write"
+      - "budget enforcement"
+      - "concurrency limit"
+      - "alert rule"
+      - "alert threshold"
+      - "cost safety"
+      - "safety rail"
+      - "override"
+      - "limit override"
+      - "execution scope"
+      - "scoped execution"
+      - "alert fatigue"
+      - "controls facade"
 
     veto_phrases:
       - "threshold violation"
       - "near-threshold incident"
       - "runtime orchestrat"
       - "policy evaluation"
+      # V3 AUDIT: Prevent incidents items
+      - "incident classif"
+      - "failure classif"
 
     weak_keywords:
       - "limit"
       - "control"
       - "config"
+      - "budget"
 
   incidents:
     exclusive_decision: "WHETHER an outcome is a problem"
@@ -156,6 +235,7 @@ domains:
     qualifier_test: "Run lifecycle and execution metadata"
 
     qualifier_phrases:
+      # Core activity patterns
       - "run lifecycle"
       - "execution metadata"
       - "run state"
@@ -168,11 +248,18 @@ domains:
       - "run"
       - "trace"
       - "execution record"
+      # V3 AUDIT: Telemetry and orphan patterns
+      - "telemetry"
+      - "orphan recovery"
+      - "orphan run"
 
     veto_phrases:
       - "runtime orchestrat"
       - "policy evaluation"
       - "governance enforcement"
+      # V3 AUDIT: Prevent controls items
+      - "threshold"
+      - "limit"
 
     weak_keywords:
       - "run"
@@ -184,6 +271,7 @@ domains:
     qualifier_test: "Derived metrics, not source-of-truth"
 
     qualifier_phrases:
+      # Core analytics patterns
       - "cost intelligence"
       - "statistical"
       - "behavioral analysis"
@@ -196,17 +284,29 @@ domains:
       - "analytics"
       - "cost sim"
       - "computation"
+      # V3 AUDIT: Detection/anomaly patterns
+      - "anomaly detect"
+      - "detection facade"
+      - "pattern detect"
+      - "cost snapshot"
+      - "prediction"
+      - "forecast"
 
     veto_phrases:
       - "dashboard"
       - "summary view"
       - "source-of-truth"
       - "audit"
+      # V3 AUDIT: Prevent controls items
+      - "circuit breaker"
+      - "killswitch"
+      - "rate limit"
 
     weak_keywords:
       - "metric"
       - "cost"
       - "analytic"
+      - "detect"
 
   overview:
     exclusive_decision: "WHAT consolidated state is visible"
@@ -239,6 +339,7 @@ domains:
     qualifier_test: "Append-only audit trail"
 
     qualifier_phrases:
+      # Core logs patterns
       - "audit ledger"
       - "audit trail"
       - "append-only"
@@ -250,23 +351,42 @@ domains:
       - "audit"
       - "log record"
       - "completeness"
+      # V3 AUDIT: Verdict/certificate/compliance patterns (17 files missed)
+      - "verdict"
+      - "certificate"
+      - "SOC2"
+      - "compliance"
+      - "control registry"
+      - "capture"
+      - "evidence capture"
+      - "pdf render"
+      - "mapper"
+      - "audit engine"
+      - "evidence engine"
+      - "bridges driver"
 
     veto_phrases:
       - "classif"
       - "aggregat"
       - "mutation"
       - "incident pattern"
+      # V3 AUDIT: Prevent controls items
+      - "alert rule"
+      - "alert threshold"
+      - "rate limit"
 
     weak_keywords:
       - "log"
       - "audit"
       - "evidence"
+      - "proof"
 
   integrations:
     exclusive_decision: "HOW external systems connect"
     qualifier_test: "External adapters and bridges"
 
     qualifier_phrases:
+      # Core integrations patterns
       - "sdk setup"
       - "external adapter"
       - "data bridge"
@@ -275,20 +395,42 @@ domains:
       - "integration config"
       - "connector"
       - "integration"
-      - "adapter"
       - "external"
       - "graduation"
+      # V3 AUDIT: Specific external service patterns
+      - "Slack"
+      - "PagerDuty"
+      - "Teams"
+      - "notification channel"
+      - "delivery channel"
+      - "monitors facade"
+      - "datasource"
+      - "data source"
+      - "worker registry"
 
     veto_phrases:
       - "policy decision"
       - "runtime orchestrat"
       - "incident"
       - "run lifecycle"
+      # V3 AUDIT: Prevent catch-all misuse (only 21% confirmation)
+      - "killswitch"
+      - "policy evaluation"
+      - "cost limit"
+      - "cost safety"
+      - "identity resolv"
+      - "lesson learned"
+      - "cost snapshot"
+      - "telemetry"
+      - "knowledge plane"
+      - "audit trail"
+      - "evidence"
+      - "budget"
 
     weak_keywords:
       - "integration"
-      - "adapter"
       - "webhook"
+      # V3 AUDIT: Removed "adapter" - too generic, causes false positives
 
   apis:
     exclusive_decision: "WHO can call what"
@@ -320,6 +462,7 @@ domains:
     qualifier_test: "Tenancy and ownership"
 
     qualifier_phrases:
+      # Core account patterns
       - "tenant"
       - "subscription"
       - "user role"
@@ -329,14 +472,25 @@ domains:
       - "organization"
       - "account"
       - "owner"
+      # V3 AUDIT: Identity resolution (user correction)
+      - "identity resolv"
+      - "identity resolver"
+      - "actor identity"
+      - "who is"
+      - "billing provider"
 
     veto_phrases:
       - "runtime"
       - "analytic"
       - "policy rule"
       - "incident"
+      # V3 AUDIT: Prevent integrations items
+      - "webhook"
+      - "connector"
+      - "external"
 
     weak_keywords:
       - "tenant"
       - "account"
       - "member"
+      - "identity"
