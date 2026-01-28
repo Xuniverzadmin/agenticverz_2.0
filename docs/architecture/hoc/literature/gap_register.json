@@ -1,0 +1,481 @@
+{
+  "gaps": [
+    {
+      "domain": "general",
+      "gap_type": "L2.1_facade",
+      "description": "No L2.1 facade to group 4 L2 routers",
+      "action": "Build hoc/api/facades/cus/general.py grouping: agents.py, debug_auth.py, health.py, sdk.py",
+      "related_files": [
+        "backend/app/hoc/api/cus/general/agents.py",
+        "backend/app/hoc/api/cus/general/debug_auth.py",
+        "backend/app/hoc/api/cus/general/health.py",
+        "backend/app/hoc/api/cus/general/sdk.py"
+      ]
+    },
+    {
+      "domain": "general",
+      "gap_type": "L3_adapter",
+      "description": "No L3 adapters but 36 L5 engines exist \u2014 L2 cannot reach L5",
+      "action": "Build hoc/cus/general/L3_adapters/ with domain adapter(s)",
+      "related_files": [
+        "backend/app/hoc/cus/general/L5_engines/alert_log_linker.py",
+        "backend/app/hoc/cus/general/L5_engines/alert_worker.py",
+        "backend/app/hoc/cus/general/L5_engines/alerts_facade.py",
+        "backend/app/hoc/cus/general/L5_engines/audit_durability.py",
+        "backend/app/hoc/cus/general/L5_engines/audit_store.py",
+        "backend/app/hoc/cus/general/L5_engines/canonical_json.py",
+        "backend/app/hoc/cus/general/L5_engines/compliance_facade.py",
+        "backend/app/hoc/cus/general/L5_engines/concurrent_runs.py",
+        "backend/app/hoc/cus/general/L5_engines/constraint_checker.py",
+        "backend/app/hoc/cus/general/L5_engines/control_registry.py",
+        "backend/app/hoc/cus/general/L5_engines/cus_credential_service.py",
+        "backend/app/hoc/cus/general/L5_engines/cus_health_shim.py",
+        "backend/app/hoc/cus/general/L5_engines/dag_sorter.py",
+        "backend/app/hoc/cus/general/L5_engines/db_helpers.py",
+        "backend/app/hoc/cus/general/L5_engines/deterministic.py",
+        "backend/app/hoc/cus/general/L5_engines/fatigue_controller.py",
+        "backend/app/hoc/cus/general/L5_engines/guard.py",
+        "backend/app/hoc/cus/general/L5_engines/input_sanitizer.py",
+        "backend/app/hoc/cus/general/L5_engines/knowledge_lifecycle_manager.py",
+        "backend/app/hoc/cus/general/L5_engines/knowledge_sdk.py",
+        "backend/app/hoc/cus/general/L5_engines/lifecycle_facade.py",
+        "backend/app/hoc/cus/general/L5_engines/lifecycle_stages_base.py",
+        "backend/app/hoc/cus/general/L5_engines/manager.py",
+        "backend/app/hoc/cus/general/L5_engines/metrics_helpers.py",
+        "backend/app/hoc/cus/general/L5_engines/monitors_facade.py",
+        "backend/app/hoc/cus/general/L5_engines/panel_invariant_monitor.py",
+        "backend/app/hoc/cus/general/L5_engines/panel_slot_evaluator.py",
+        "backend/app/hoc/cus/general/L5_engines/panel_verification_engine.py",
+        "backend/app/hoc/cus/general/L5_engines/plan_inspector.py",
+        "backend/app/hoc/cus/general/L5_engines/profile_policy_mode.py",
+        "backend/app/hoc/cus/general/L5_engines/rate_limiter.py",
+        "backend/app/hoc/cus/general/L5_engines/retrieval_facade.py",
+        "backend/app/hoc/cus/general/L5_engines/retrieval_mediator.py",
+        "backend/app/hoc/cus/general/L5_engines/runtime.py",
+        "backend/app/hoc/cus/general/L5_engines/scheduler_facade.py",
+        "backend/app/hoc/cus/general/L5_engines/webhook_verify.py"
+      ]
+    },
+    {
+      "domain": "general",
+      "gap_type": "L6_driver",
+      "description": "alert_worker.py has DB imports but no matching L6 driver",
+      "action": "Extract DB logic to hoc/cus/general/L6_drivers/alert_worker.py_driver.py",
+      "related_files": [
+        "backend/app/hoc/cus/general/L5_engines/alert_worker.py"
+      ]
+    },
+    {
+      "domain": "general",
+      "gap_type": "L7_models",
+      "description": "13 L6 drivers but no domain-specific L7 models",
+      "action": "FLAG: domain-localized data candidate (human decision)",
+      "related_files": [
+        "backend/app/hoc/cus/general/L6_drivers/alert_driver.py",
+        "backend/app/hoc/cus/general/L6_drivers/alert_emitter.py",
+        "backend/app/hoc/cus/general/L6_drivers/budget_tracker.py",
+        "backend/app/hoc/cus/general/L6_drivers/cross_domain.py",
+        "backend/app/hoc/cus/general/L6_drivers/cus_health_driver.py",
+        "backend/app/hoc/cus/general/L6_drivers/dag_executor.py",
+        "backend/app/hoc/cus/general/L6_drivers/decisions.py",
+        "backend/app/hoc/cus/general/L6_drivers/governance_signal_driver.py",
+        "backend/app/hoc/cus/general/L6_drivers/guard_cache.py",
+        "backend/app/hoc/cus/general/L6_drivers/idempotency.py",
+        "backend/app/hoc/cus/general/L6_drivers/ledger.py",
+        "backend/app/hoc/cus/general/L6_drivers/schema_parity.py",
+        "backend/app/hoc/cus/general/L6_drivers/worker_write_service_async.py"
+      ]
+    },
+    {
+      "domain": "overview",
+      "gap_type": "L2.1_facade",
+      "description": "No L2.1 facade to group 1 L2 routers",
+      "action": "Build hoc/api/facades/cus/overview.py grouping: overview.py",
+      "related_files": [
+        "backend/app/hoc/api/cus/overview/overview.py"
+      ]
+    },
+    {
+      "domain": "overview",
+      "gap_type": "L3_adapter",
+      "description": "No L3 adapters but 1 L5 engines exist \u2014 L2 cannot reach L5",
+      "action": "Build hoc/cus/overview/L3_adapters/ with domain adapter(s)",
+      "related_files": [
+        "backend/app/hoc/cus/overview/L5_engines/overview_facade.py"
+      ]
+    },
+    {
+      "domain": "overview",
+      "gap_type": "L7_models",
+      "description": "1 L6 drivers but no domain-specific L7 models",
+      "action": "FLAG: domain-localized data candidate (human decision)",
+      "related_files": [
+        "backend/app/hoc/cus/overview/L6_drivers/overview_facade_driver.py"
+      ]
+    },
+    {
+      "domain": "activity",
+      "gap_type": "L2.1_facade",
+      "description": "No L2.1 facade to group 1 L2 routers",
+      "action": "Build hoc/api/facades/cus/activity.py grouping: activity.py",
+      "related_files": [
+        "backend/app/hoc/api/cus/activity/activity.py"
+      ]
+    },
+    {
+      "domain": "activity",
+      "gap_type": "L3_adapter",
+      "description": "No L3 adapters but 8 L5 engines exist \u2014 L2 cannot reach L5",
+      "action": "Build hoc/cus/activity/L3_adapters/ with domain adapter(s)",
+      "related_files": [
+        "backend/app/hoc/cus/activity/L5_engines/activity_enums.py",
+        "backend/app/hoc/cus/activity/L5_engines/activity_facade.py",
+        "backend/app/hoc/cus/activity/L5_engines/attention_ranking_engine.py",
+        "backend/app/hoc/cus/activity/L5_engines/cost_analysis_engine.py",
+        "backend/app/hoc/cus/activity/L5_engines/cus_telemetry_service.py",
+        "backend/app/hoc/cus/activity/L5_engines/pattern_detection_engine.py",
+        "backend/app/hoc/cus/activity/L5_engines/signal_feedback_engine.py",
+        "backend/app/hoc/cus/activity/L5_engines/signal_identity.py"
+      ]
+    },
+    {
+      "domain": "activity",
+      "gap_type": "L7_models",
+      "description": "3 L6 drivers but no domain-specific L7 models",
+      "action": "FLAG: domain-localized data candidate (human decision)",
+      "related_files": [
+        "backend/app/hoc/cus/activity/L6_drivers/activity_read_driver.py",
+        "backend/app/hoc/cus/activity/L6_drivers/orphan_recovery.py",
+        "backend/app/hoc/cus/activity/L6_drivers/run_signal_service.py"
+      ]
+    },
+    {
+      "domain": "incidents",
+      "gap_type": "L2.1_facade",
+      "description": "No L2.1 facade to group 2 L2 routers",
+      "action": "Build hoc/api/facades/cus/incidents.py grouping: cost_guard.py, incidents.py",
+      "related_files": [
+        "backend/app/hoc/api/cus/incidents/cost_guard.py",
+        "backend/app/hoc/api/cus/incidents/incidents.py"
+      ]
+    },
+    {
+      "domain": "incidents",
+      "gap_type": "L7_models",
+      "description": "11 L6 drivers but no domain-specific L7 models",
+      "action": "FLAG: domain-localized data candidate (human decision)",
+      "related_files": [
+        "backend/app/hoc/cus/incidents/L6_drivers/export_bundle_driver.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/incident_aggregator.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/incident_pattern_driver.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/incident_read_driver.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/incident_write_driver.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/incidents_facade_driver.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/lessons_driver.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/llm_failure_driver.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/policy_violation_driver.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/postmortem_driver.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/recurrence_analysis_driver.py"
+      ]
+    },
+    {
+      "domain": "policies",
+      "gap_type": "L2.1_facade",
+      "description": "No L2.1 facade to group 38 L2 routers",
+      "action": "Build hoc/api/facades/cus/policies.py grouping: M25_integrations.py, alerts.py, analytics.py, aos_accounts.py, aos_api_key.py, aos_cus_integrations.py, billing_dependencies.py, compliance.py, connectors.py, controls.py, cus_enforcement.py, customer_visibility.py, datasources.py, detection.py, evidence.py, governance.py, guard.py, guard_policies.py, lifecycle.py, logs.py, monitors.py, notifications.py, override.py, policies.py, policy.py, policy_layer.py, policy_limits_crud.py, policy_proposals.py, policy_rules_crud.py, rate_limits.py, rbac_api.py, replay.py, retrieval.py, runtime.py, scheduler.py, simulate.py, status_history.py, workers.py",
+      "related_files": [
+        "backend/app/hoc/api/cus/policies/M25_integrations.py",
+        "backend/app/hoc/api/cus/policies/alerts.py",
+        "backend/app/hoc/api/cus/policies/analytics.py",
+        "backend/app/hoc/api/cus/policies/aos_accounts.py",
+        "backend/app/hoc/api/cus/policies/aos_api_key.py",
+        "backend/app/hoc/api/cus/policies/aos_cus_integrations.py",
+        "backend/app/hoc/api/cus/policies/billing_dependencies.py",
+        "backend/app/hoc/api/cus/policies/compliance.py",
+        "backend/app/hoc/api/cus/policies/connectors.py",
+        "backend/app/hoc/api/cus/policies/controls.py",
+        "backend/app/hoc/api/cus/policies/cus_enforcement.py",
+        "backend/app/hoc/api/cus/policies/customer_visibility.py",
+        "backend/app/hoc/api/cus/policies/datasources.py",
+        "backend/app/hoc/api/cus/policies/detection.py",
+        "backend/app/hoc/api/cus/policies/evidence.py",
+        "backend/app/hoc/api/cus/policies/governance.py",
+        "backend/app/hoc/api/cus/policies/guard.py",
+        "backend/app/hoc/api/cus/policies/guard_policies.py",
+        "backend/app/hoc/api/cus/policies/lifecycle.py",
+        "backend/app/hoc/api/cus/policies/logs.py",
+        "backend/app/hoc/api/cus/policies/monitors.py",
+        "backend/app/hoc/api/cus/policies/notifications.py",
+        "backend/app/hoc/api/cus/policies/override.py",
+        "backend/app/hoc/api/cus/policies/policies.py",
+        "backend/app/hoc/api/cus/policies/policy.py",
+        "backend/app/hoc/api/cus/policies/policy_layer.py",
+        "backend/app/hoc/api/cus/policies/policy_limits_crud.py",
+        "backend/app/hoc/api/cus/policies/policy_proposals.py",
+        "backend/app/hoc/api/cus/policies/policy_rules_crud.py",
+        "backend/app/hoc/api/cus/policies/rate_limits.py",
+        "backend/app/hoc/api/cus/policies/rbac_api.py",
+        "backend/app/hoc/api/cus/policies/replay.py",
+        "backend/app/hoc/api/cus/policies/retrieval.py",
+        "backend/app/hoc/api/cus/policies/runtime.py",
+        "backend/app/hoc/api/cus/policies/scheduler.py",
+        "backend/app/hoc/api/cus/policies/simulate.py",
+        "backend/app/hoc/api/cus/policies/status_history.py",
+        "backend/app/hoc/api/cus/policies/workers.py"
+      ]
+    },
+    {
+      "domain": "policies",
+      "gap_type": "L6_driver",
+      "description": "engine.py has DB imports but no matching L6 driver",
+      "action": "Extract DB logic to hoc/cus/policies/L6_drivers/engine.py_driver.py",
+      "related_files": [
+        "backend/app/hoc/cus/policies/L5_engines/engine.py"
+      ]
+    },
+    {
+      "domain": "policies",
+      "gap_type": "L7_models",
+      "description": "14 L6 drivers but no domain-specific L7 models",
+      "action": "FLAG: domain-localized data candidate (human decision)",
+      "related_files": [
+        "backend/app/hoc/cus/policies/L6_drivers/arbitrator.py",
+        "backend/app/hoc/cus/policies/L6_drivers/optimizer_conflict_resolver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_engine_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_graph_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_proposal_read_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_proposal_write_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_read_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_rules_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_rules_read_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/proposals_read_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/recovery_matcher.py",
+        "backend/app/hoc/cus/policies/L6_drivers/recovery_write_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/scope_resolver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/symbol_table.py"
+      ]
+    },
+    {
+      "domain": "controls",
+      "gap_type": "L2_api",
+      "description": "No L2 API routes but 9 engines exist",
+      "action": "Build hoc/api/cus/controls/ with route handlers",
+      "related_files": [
+        "backend/app/hoc/cus/controls/L5_engines/alert_fatigue.py",
+        "backend/app/hoc/cus/controls/L5_engines/budget_enforcement_engine.py",
+        "backend/app/hoc/cus/controls/L5_engines/cb_sync_wrapper.py",
+        "backend/app/hoc/cus/controls/L5_engines/controls_facade.py",
+        "backend/app/hoc/cus/controls/L5_engines/cost_safety_rails.py",
+        "backend/app/hoc/cus/controls/L5_engines/decisions.py",
+        "backend/app/hoc/cus/controls/L5_engines/killswitch.py",
+        "backend/app/hoc/cus/controls/L5_engines/s2_cost_smoothing.py",
+        "backend/app/hoc/cus/controls/L5_engines/threshold_engine.py"
+      ]
+    },
+    {
+      "domain": "controls",
+      "gap_type": "L7_models",
+      "description": "8 L6 drivers but no domain-specific L7 models",
+      "action": "FLAG: domain-localized data candidate (human decision)",
+      "related_files": [
+        "backend/app/hoc/cus/controls/L6_drivers/budget_enforcement_driver.py",
+        "backend/app/hoc/cus/controls/L6_drivers/circuit_breaker.py",
+        "backend/app/hoc/cus/controls/L6_drivers/circuit_breaker_async.py",
+        "backend/app/hoc/cus/controls/L6_drivers/limits_read_driver.py",
+        "backend/app/hoc/cus/controls/L6_drivers/override_driver.py",
+        "backend/app/hoc/cus/controls/L6_drivers/policy_limits_driver.py",
+        "backend/app/hoc/cus/controls/L6_drivers/scoped_execution.py",
+        "backend/app/hoc/cus/controls/L6_drivers/threshold_driver.py"
+      ]
+    },
+    {
+      "domain": "logs",
+      "gap_type": "L2.1_facade",
+      "description": "No L2.1 facade to group 4 L2 routers",
+      "action": "Build hoc/api/facades/cus/logs.py grouping: cost_intelligence.py, guard_logs.py, tenants.py, traces.py",
+      "related_files": [
+        "backend/app/hoc/api/cus/logs/cost_intelligence.py",
+        "backend/app/hoc/api/cus/logs/guard_logs.py",
+        "backend/app/hoc/api/cus/logs/tenants.py",
+        "backend/app/hoc/api/cus/logs/traces.py"
+      ]
+    },
+    {
+      "domain": "logs",
+      "gap_type": "L7_models",
+      "description": "12 L6 drivers but no domain-specific L7 models",
+      "action": "FLAG: domain-localized data candidate (human decision)",
+      "related_files": [
+        "backend/app/hoc/cus/logs/L6_drivers/audit_ledger_service_async.py",
+        "backend/app/hoc/cus/logs/L6_drivers/bridges_driver.py",
+        "backend/app/hoc/cus/logs/L6_drivers/capture.py",
+        "backend/app/hoc/cus/logs/L6_drivers/export_bundle_store.py",
+        "backend/app/hoc/cus/logs/L6_drivers/idempotency.py",
+        "backend/app/hoc/cus/logs/L6_drivers/integrity.py",
+        "backend/app/hoc/cus/logs/L6_drivers/job_execution.py",
+        "backend/app/hoc/cus/logs/L6_drivers/logs_domain_store.py",
+        "backend/app/hoc/cus/logs/L6_drivers/panel_consistency_checker.py",
+        "backend/app/hoc/cus/logs/L6_drivers/pg_store.py",
+        "backend/app/hoc/cus/logs/L6_drivers/replay.py",
+        "backend/app/hoc/cus/logs/L6_drivers/traces_store.py"
+      ]
+    },
+    {
+      "domain": "analytics",
+      "gap_type": "L2.1_facade",
+      "description": "No L2.1 facade to group 4 L2 routers",
+      "action": "Build hoc/api/facades/cus/analytics.py grouping: costsim.py, feedback.py, predictions.py, scenarios.py",
+      "related_files": [
+        "backend/app/hoc/api/cus/analytics/costsim.py",
+        "backend/app/hoc/api/cus/analytics/feedback.py",
+        "backend/app/hoc/api/cus/analytics/predictions.py",
+        "backend/app/hoc/api/cus/analytics/scenarios.py"
+      ]
+    },
+    {
+      "domain": "analytics",
+      "gap_type": "L6_driver",
+      "description": "coordinator.py has DB imports but no matching L6 driver",
+      "action": "Extract DB logic to hoc/cus/analytics/L6_drivers/coordinator.py_driver.py",
+      "related_files": [
+        "backend/app/hoc/cus/analytics/L5_engines/coordinator.py"
+      ]
+    },
+    {
+      "domain": "analytics",
+      "gap_type": "L6_driver",
+      "description": "cost_anomaly_detector.py has DB imports but no matching L6 driver",
+      "action": "Extract DB logic to hoc/cus/analytics/L6_drivers/cost_anomaly_detector.py_driver.py",
+      "related_files": [
+        "backend/app/hoc/cus/analytics/L5_engines/cost_anomaly_detector.py"
+      ]
+    },
+    {
+      "domain": "analytics",
+      "gap_type": "L6_driver",
+      "description": "cost_snapshots.py has DB imports but no matching L6 driver",
+      "action": "Extract DB logic to hoc/cus/analytics/L6_drivers/cost_snapshots.py_driver.py",
+      "related_files": [
+        "backend/app/hoc/cus/analytics/L5_engines/cost_snapshots.py"
+      ]
+    },
+    {
+      "domain": "analytics",
+      "gap_type": "L6_driver",
+      "description": "pattern_detection.py has DB imports but no matching L6 driver",
+      "action": "Extract DB logic to hoc/cus/analytics/L6_drivers/pattern_detection.py_driver.py",
+      "related_files": [
+        "backend/app/hoc/cus/analytics/L5_engines/pattern_detection.py"
+      ]
+    },
+    {
+      "domain": "analytics",
+      "gap_type": "L6_driver",
+      "description": "prediction.py has DB imports but no matching L6 driver",
+      "action": "Extract DB logic to hoc/cus/analytics/L6_drivers/prediction.py_driver.py",
+      "related_files": [
+        "backend/app/hoc/cus/analytics/L5_engines/prediction.py"
+      ]
+    },
+    {
+      "domain": "analytics",
+      "gap_type": "L7_models",
+      "description": "8 L6 drivers but no domain-specific L7 models",
+      "action": "FLAG: domain-localized data candidate (human decision)",
+      "related_files": [
+        "backend/app/hoc/cus/analytics/L6_drivers/analytics_read_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/audit_persistence.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/cost_anomaly_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/cost_write_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/leader.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/pattern_detection_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/prediction_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/provenance_async.py"
+      ]
+    },
+    {
+      "domain": "integrations",
+      "gap_type": "L2.1_facade",
+      "description": "No L2.1 facade to group 3 L2 routers",
+      "action": "Build hoc/api/facades/cus/integrations.py grouping: cus_telemetry.py, protection_dependencies.py, session_context.py",
+      "related_files": [
+        "backend/app/hoc/api/cus/integrations/cus_telemetry.py",
+        "backend/app/hoc/api/cus/integrations/protection_dependencies.py",
+        "backend/app/hoc/api/cus/integrations/session_context.py"
+      ]
+    },
+    {
+      "domain": "integrations",
+      "gap_type": "L6_driver",
+      "description": "cus_health_engine.py has DB imports but no matching L6 driver",
+      "action": "Extract DB logic to hoc/cus/integrations/L6_drivers/cus_health_driver.py",
+      "related_files": [
+        "backend/app/hoc/cus/integrations/L5_engines/cus_health_engine.py"
+      ]
+    },
+    {
+      "domain": "integrations",
+      "gap_type": "L7_models",
+      "description": "3 L6 drivers but no domain-specific L7 models",
+      "action": "FLAG: domain-localized data candidate (human decision)",
+      "related_files": [
+        "backend/app/hoc/cus/integrations/L6_drivers/connector_registry.py",
+        "backend/app/hoc/cus/integrations/L6_drivers/external_response_driver.py",
+        "backend/app/hoc/cus/integrations/L6_drivers/worker_registry_driver.py"
+      ]
+    },
+    {
+      "domain": "apis",
+      "gap_type": "L2_api",
+      "description": "No L2 API routes but 0 engines exist",
+      "action": "Build hoc/api/cus/apis/ with route handlers",
+      "related_files": []
+    },
+    {
+      "domain": "apis",
+      "gap_type": "L7_models",
+      "description": "1 L6 drivers but no domain-specific L7 models",
+      "action": "FLAG: domain-localized data candidate (human decision)",
+      "related_files": [
+        "backend/app/hoc/cus/apis/L6_drivers/keys_driver.py"
+      ]
+    },
+    {
+      "domain": "account",
+      "gap_type": "L2.1_facade",
+      "description": "No L2.1 facade to group 1 L2 routers",
+      "action": "Build hoc/api/facades/cus/account.py grouping: memory_pins.py",
+      "related_files": [
+        "backend/app/hoc/api/cus/account/memory_pins.py"
+      ]
+    },
+    {
+      "domain": "account",
+      "gap_type": "L3_adapter",
+      "description": "No L3 adapters but 8 L5 engines exist \u2014 L2 cannot reach L5",
+      "action": "Build hoc/cus/account/L3_adapters/ with domain adapter(s)",
+      "related_files": [
+        "backend/app/hoc/cus/account/L5_engines/accounts_facade.py",
+        "backend/app/hoc/cus/account/L5_engines/billing_provider.py",
+        "backend/app/hoc/cus/account/L5_engines/email_verification.py",
+        "backend/app/hoc/cus/account/L5_engines/identity_resolver.py",
+        "backend/app/hoc/cus/account/L5_engines/notifications_facade.py",
+        "backend/app/hoc/cus/account/L5_engines/profile.py",
+        "backend/app/hoc/cus/account/L5_engines/tenant_engine.py",
+        "backend/app/hoc/cus/account/L5_engines/user_write_engine.py"
+      ]
+    },
+    {
+      "domain": "account",
+      "gap_type": "L7_models",
+      "description": "3 L6 drivers but no domain-specific L7 models",
+      "action": "FLAG: domain-localized data candidate (human decision)",
+      "related_files": [
+        "backend/app/hoc/cus/account/L6_drivers/accounts_facade_driver.py",
+        "backend/app/hoc/cus/account/L6_drivers/tenant_driver.py",
+        "backend/app/hoc/cus/account/L6_drivers/user_write_driver.py"
+      ]
+    }
+  ],
+  "l7_model_classification": []
+}
