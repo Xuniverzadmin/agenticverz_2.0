@@ -15,15 +15,24 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Set
 
+# REDUNDANT PATHS — scheduled for deletion, skip guardrails entirely.
+# app/api/* and app/services/* are legacy layers being replaced by hoc/.
+# See PIN-470 (HOC Layer Inventory) and PIN-483 (HOC Migration Complete).
+REDUNDANT_PATHS: List[str] = [
+    'api/',
+    'services/',
+]
+
 # Map file patterns to relevant guardrails (same as watcher)
 FILE_TO_GUARDRAILS: Dict[str, List[str]] = {
-    'api/*.py': ['DOMAIN-001', 'DATA-002', 'API-001', 'API-002'],
-    'api/aos_accounts.py': ['DOMAIN-002'],
-    'api/overview.py': ['DOMAIN-003'],
-    'services/*.py': ['DOMAIN-001', 'CROSS-001', 'API-001'],
-    'services/limit*.py': ['LIMITS-001', 'LIMITS-002', 'LIMITS-003'],
-    'services/policy*.py': ['LIMITS-003', 'AUDIT-001'],
-    'services/incident*.py': ['CROSS-001', 'AUDIT-001'],
+    # Legacy app/api/ and app/services/ excluded — REDUNDANT, pending deletion
+    # 'api/*.py': ['DOMAIN-001', 'DATA-002', 'API-001', 'API-002'],
+    # 'api/aos_accounts.py': ['DOMAIN-002'],
+    # 'api/overview.py': ['DOMAIN-003'],
+    # 'services/*.py': ['DOMAIN-001', 'CROSS-001', 'API-001'],
+    # 'services/limit*.py': ['LIMITS-001', 'LIMITS-002', 'LIMITS-003'],
+    # 'services/policy*.py': ['LIMITS-003', 'AUDIT-001'],
+    # 'services/incident*.py': ['CROSS-001', 'AUDIT-001'],
     'models/*.py': ['DATA-001', 'LIMITS-001'],
     'worker/*.py': ['LIMITS-002', 'DOMAIN-001'],
     'AURORA_L2_CAPABILITY_REGISTRY/*.yaml': ['CAP-001', 'CAP-002', 'CAP-003'],
@@ -80,11 +89,21 @@ def matches_pattern(path: str, pattern: str) -> bool:
     return False
 
 
+def is_redundant(file_path: str) -> bool:
+    """Check if file is in a redundant path (pending deletion)."""
+    for prefix in REDUNDANT_PATHS:
+        if f"app/{prefix}" in file_path or file_path.startswith(prefix):
+            return True
+    return False
+
+
 def get_guardrails_for_files(files: List[str]) -> Set[str]:
     """Determine which guardrails apply to the staged files."""
     guardrails = set()
 
     for file_path in files:
+        if is_redundant(file_path):
+            continue
         for pattern, rules in FILE_TO_GUARDRAILS.items():
             if matches_pattern(file_path, pattern):
                 guardrails.update(rules)
