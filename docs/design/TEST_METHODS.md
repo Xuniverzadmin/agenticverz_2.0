@@ -175,7 +175,7 @@ backend/tests/unit/
 ```python
 # backend/tests/unit/test_attribution.py
 import pytest
-from aos_sdk.attribution import validate_attribution, AttributionContext
+from aos_sdk.aos_sdk_attribution import validate_attribution, AttributionContext
 
 def test_system_attribution_valid():
     ctx = AttributionContext(

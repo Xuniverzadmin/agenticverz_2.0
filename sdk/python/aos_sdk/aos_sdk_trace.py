@@ -22,7 +22,7 @@ Safety Compliance (PIN-332):
 - INT-003: Idempotency keys must be tenant-scoped
 
 Usage:
-    from aos_sdk.trace import Trace, TraceStep
+    from aos_sdk.aos_sdk_trace import Trace, TraceStep
 
     trace = Trace(seed=42, plan=[...])
     trace.add_step(...)
@@ -44,7 +44,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
-from .runtime import RuntimeContext, canonical_json
+from .aos_sdk_runtime import RuntimeContext, canonical_json
 
 logger = logging.getLogger(__name__)
 

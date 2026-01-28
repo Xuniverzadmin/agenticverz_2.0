@@ -20,8 +20,8 @@ SEMANTIC:
 
 USAGE:
     # Don't use CusBaseProvider directly - use provider-specific classes
-    from aos_sdk.cus_anthropic import CusAnthropicProvider
-    from aos_sdk.cus_openai import CusOpenAIProvider
+    from aos_sdk.aos_sdk_cus_anthropic import CusAnthropicProvider
+    from aos_sdk.aos_sdk_cus_openai import CusOpenAIProvider
 
     # Create a governed Anthropic client
     provider = CusAnthropicProvider(
@@ -45,7 +45,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, Generic, Optional, TypeVar
 
-from .cus_reporter import (
+from .aos_sdk_cus_reporter import (
     CusPolicyResult,
     CusReporter,
     CusUsageRecord,

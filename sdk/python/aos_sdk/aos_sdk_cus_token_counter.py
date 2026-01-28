@@ -18,7 +18,7 @@ SUPPORTED PROVIDERS:
     - Azure OpenAI: Same as OpenAI
 
 USAGE:
-    from aos_sdk.cus_token_counter import (
+    from aos_sdk.aos_sdk_cus_token_counter import (
         count_tokens,
         estimate_tokens,
         get_tokenizer,

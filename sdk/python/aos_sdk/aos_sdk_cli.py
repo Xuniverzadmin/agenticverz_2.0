@@ -27,9 +27,9 @@ import time
 from pathlib import Path
 
 from . import __version__
-from .client import AOSClient, AOSError
-from .runtime import RuntimeContext
-from .trace import Trace, create_trace_from_context, diff_traces, hash_data
+from .aos_sdk_client import AOSClient, AOSError
+from .aos_sdk_runtime import RuntimeContext
+from .aos_sdk_trace import Trace, create_trace_from_context, diff_traces, hash_data
 
 # Config directory and files
 AOS_DIR = ".aos"

@@ -16,7 +16,7 @@ SEMANTIC:
     Does NOT block, throttle, or enforce limits.
 
 USAGE:
-    from aos_sdk.cus_anthropic import CusAnthropicProvider
+    from aos_sdk.aos_sdk_cus_anthropic import CusAnthropicProvider
 
     # Create governed Anthropic provider
     provider = CusAnthropicProvider(
@@ -44,9 +44,9 @@ Reference: docs/architecture/CUSTOMER_INTEGRATIONS_ARCHITECTURE.md
 import logging
 from typing import Any, Dict, List, Optional, Union
 
-from .cus_base import CusBaseProvider, CusProviderConfig, CusProviderError
-from .cus_cost import calculate_cost
-from .cus_token_counter import extract_anthropic_usage
+from .aos_sdk_cus_base import CusBaseProvider, CusProviderConfig, CusProviderError
+from .aos_sdk_cus_cost import calculate_cost
+from .aos_sdk_cus_token_counter import extract_anthropic_usage
 
 logger = logging.getLogger(__name__)
 

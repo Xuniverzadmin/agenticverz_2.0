@@ -22,7 +22,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from .attribution import (
+from .aos_sdk_attribution import (
     ActorType,
     AttributionContext,
     AttributionError,

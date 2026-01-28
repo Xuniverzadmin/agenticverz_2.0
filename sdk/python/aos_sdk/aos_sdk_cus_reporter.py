@@ -11,7 +11,7 @@ SEMANTIC:
     and sends them to AOS for aggregation, visibility, and enforcement.
 
 USAGE:
-    from aos_sdk.cus_reporter import CusReporter, CusUsageRecord
+    from aos_sdk.aos_sdk_cus_reporter import CusReporter, CusUsageRecord
 
     # Initialize with integration credentials
     reporter = CusReporter(

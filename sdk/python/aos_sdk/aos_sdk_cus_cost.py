@@ -17,7 +17,7 @@ SUPPORTED PROVIDERS:
     - Azure OpenAI: Same pricing as OpenAI
 
 USAGE:
-    from aos_sdk.cus_cost import (
+    from aos_sdk.aos_sdk_cus_cost import (
         calculate_cost,
         get_model_pricing,
         CusPricingTable,

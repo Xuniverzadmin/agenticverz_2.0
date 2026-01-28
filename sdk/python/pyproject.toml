@@ -60,7 +60,7 @@ Issues = "https://github.com/xuniverz/agenticverz/issues"
 Changelog = "https://github.com/xuniverz/agenticverz/blob/main/CHANGELOG.md"
 
 [project.scripts]
-aos = "aos_sdk.cli:main"
+aos = "aos_sdk.aos_sdk_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

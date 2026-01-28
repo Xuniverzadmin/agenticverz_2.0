@@ -290,7 +290,7 @@ import json
 import sys
 sys.path.insert(0, ".")
 try:
-    from aos_sdk.trace import Trace
+    from aos_sdk.aos_sdk_trace import Trace
 
     trace = Trace(
         workflow_id="parity-test",
