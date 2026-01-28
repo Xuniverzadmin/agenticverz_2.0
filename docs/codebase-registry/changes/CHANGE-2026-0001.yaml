@@ -1,0 +1,30 @@
+# Code Change Record
+# Created: 2026-01-27
+# Schema: change-schema-v1.yaml
+
+change_id: CHANGE-2026-0001
+date: '2026-01-27'
+author: claude
+change_type: refactor
+purpose: 'P7 Group A: Removed inline utc_now() from 14 files, generate_uuid() from
+  3 files. Replaced with canonical imports from general/L5_utils/time and general/L6_drivers/cross_domain.
+  A15 skipped (file missing).'
+scope:
+  artifacts_modified:
+  - AOS-BE-API-RTM-001
+impact:
+  authority_change: none
+  behavior_change: 'no'
+  interface_change: 'no'
+  data_change: 'no'
+risk_level: low
+backward_compatibility: 'yes'
+validation:
+  tests_added: 'no'
+  tests_modified: 'no'
+  manual_verification: not_required
+related_pins:
+- PIN-470
+- PIN-479
+- PIN-480
+notes: P7 Execution Manifest Group A complete. 14/15 targets done.

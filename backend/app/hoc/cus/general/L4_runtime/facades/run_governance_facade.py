@@ -90,7 +90,7 @@ class RunGovernanceFacade:
     def _lessons(self):
         """Lazy-load LessonsLearnedEngine."""
         if self._lessons_engine is None:
-            from app.hoc.cus.incidents.L5_engines.lessons_engine import get_lessons_learned_engine
+            from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
             self._lessons_engine = get_lessons_learned_engine()
         return self._lessons_engine
 
@@ -172,7 +172,7 @@ class RunGovernanceFacade:
         """
         try:
             # L5 imports (migrated to HOC per SWEEP-04)
-            from app.hoc.cus.logs.L5_schemas.audit_models import AuditAction, AuditDomain, DomainAck
+            from app.hoc.cus.general.L5_schemas.rac_models import AuditAction, AuditDomain, DomainAck
             from app.hoc.cus.general.L5_engines.audit_store import get_audit_store
 
             ack = DomainAck(

@@ -26,10 +26,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-
-def _utc_now() -> datetime:
-    """Return timezone-aware UTC datetime."""
-    return datetime.now(timezone.utc)
+from app.hoc.cus.general.L5_utils.time import utc_now as _utc_now
 
 
 from .retry import RetryPolicy

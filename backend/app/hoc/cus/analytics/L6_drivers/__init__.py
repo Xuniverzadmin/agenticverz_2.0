@@ -15,7 +15,7 @@ Drivers:
 - PredictionDriver: Prediction event DB operations
 """
 
-from app.hoc.cus.analytics.L6_drivers.alert_driver import (
+from app.hoc.cus.general.L6_drivers.alert_driver import (
     AlertDriver,
     get_alert_driver,
 )

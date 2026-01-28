@@ -26,7 +26,7 @@ Exports:
 - signal_identity: Signal identity utilities
 """
 
-from app.hoc.cus.activity.L5_engines.threshold_engine import (
+from app.hoc.cus.controls.L5_engines.threshold_engine import (
     DEFAULT_LLM_RUN_PARAMS,
     LLMRunEvaluator,
     LLMRunEvaluatorSync,
@@ -44,7 +44,7 @@ from app.hoc.cus.activity.L5_engines.activity_facade import (
     ActivityFacade,
     get_activity_facade,
 )
-from app.hoc.cus.activity.L5_engines.run_governance_facade import (
+from app.hoc.cus.general.L4_runtime.facades.run_governance_facade import (
     RunGovernanceFacade,
     get_run_governance_facade,
 )

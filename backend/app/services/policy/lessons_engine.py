@@ -5,25 +5,25 @@
 #
 # MIGRATION PATH:
 #   Current:  from app.services.policy.lessons_engine import get_lessons_learned_engine
-#   Future:   from app.hoc.cus.incidents.L5_engines.lessons_engine import get_lessons_learned_engine
+#   Future:   from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
 #
 # This shim exists for Phase-2.5 migration. Delete when all callers are updated.
 # Reference: PIN-468, POLICIES_CROSS_DOMAIN_OWNERSHIP.md
 #
-# CANONICAL SOURCE: app/hoc/cus/incidents/L5_engines/lessons_engine.py
+# CANONICAL SOURCE: app/hoc/cus/policies/L5_engines/lessons_engine.py
 
 """
 Lessons Engine - DEPRECATED SHIM
 
 This file re-exports from the canonical incidents domain engine.
 Do not add logic here. All implementation is in:
-    app.hoc.cus.incidents.L5_engines.lessons_engine
+    app.hoc.cus.policies.L5_engines.lessons_engine
 
 Migration: Update imports to use the canonical path directly.
 """
 
 # Re-export everything from canonical source
-from app.hoc.cus.incidents.L5_engines.lessons_engine import (
+from app.hoc.cus.policies.L5_engines.lessons_engine import (
     # Constants
     DEBOUNCE_WINDOW_HOURS,
     LESSON_STATUS_CONVERTED,

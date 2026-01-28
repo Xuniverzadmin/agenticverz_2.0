@@ -883,7 +883,7 @@ class LifecycleWorker:
 
             # Build execution context
             # L5 engine import (migrated to HOC per SWEEP-11)
-            from app.hoc.cus.general.L5_lifecycle.engines.base import StageContext
+            from app.hoc.cus.general.L5_engines.lifecycle_stages_base import StageContext
             from app.models.knowledge_lifecycle import KnowledgePlaneLifecycleState
 
             context = StageContext(

@@ -890,7 +890,7 @@ async def test_recovery_scope(
     - budget_fraction: Run within a budget fraction
     """
     # L6 driver import (migrated to HOC per SWEEP-30)
-    from app.hoc.cus.incidents.L6_drivers.scoped_execution import test_recovery_scope as do_scope_test
+    from app.hoc.cus.controls.L6_drivers.scoped_execution import test_recovery_scope as do_scope_test
 
     try:
         result = await do_scope_test(
@@ -991,7 +991,7 @@ async def create_scope(request: CreateScopeRequest):
     INVARIANT: "A recovery action without a valid execution scope is invalid by definition."
     """
     # L6 driver import (migrated to HOC per SWEEP-30)
-    from app.hoc.cus.incidents.L6_drivers.scoped_execution import create_recovery_scope
+    from app.hoc.cus.controls.L6_drivers.scoped_execution import create_recovery_scope
 
     try:
         result = await create_recovery_scope(
@@ -1044,7 +1044,7 @@ async def execute_recovery(request: ExecuteRequest):
     Only with a valid, active scope can execution proceed.
     """
     # L6 driver imports (migrated to HOC per SWEEP-30)
-    from app.hoc.cus.incidents.L6_drivers.scoped_execution import (
+    from app.hoc.cus.controls.L6_drivers.scoped_execution import (
         ScopeActionMismatch,
         ScopedExecutionRequired,
         ScopeExhausted,
@@ -1156,7 +1156,7 @@ async def list_scopes(incident_id: str = Path(..., description="Incident ID")):
     Shows scope status (active, exhausted, expired, revoked) for visibility.
     """
     # L6 driver import (migrated to HOC per SWEEP-30)
-    from app.hoc.cus.incidents.L6_drivers.scoped_execution import get_scope_store
+    from app.hoc.cus.controls.L6_drivers.scoped_execution import get_scope_store
 
     try:
         store = get_scope_store()
@@ -1181,7 +1181,7 @@ async def revoke_scope(scope_id: str = Path(..., description="Scope ID to revoke
     Revoked scopes cannot be used for execution.
     """
     # L6 driver import (migrated to HOC per SWEEP-30)
-    from app.hoc.cus.incidents.L6_drivers.scoped_execution import get_scope_store
+    from app.hoc.cus.controls.L6_drivers.scoped_execution import get_scope_store
 
     try:
         store = get_scope_store()

@@ -44,7 +44,7 @@ from typing import Dict, List, Optional
 from uuid import UUID
 
 # L5 schema import (migrated to HOC per SWEEP-04)
-from app.hoc.cus.logs.L5_schemas.audit_models import (
+from app.hoc.cus.general.L5_schemas.rac_models import (
     AuditExpectation,
     AuditStatus,
     DomainAck,

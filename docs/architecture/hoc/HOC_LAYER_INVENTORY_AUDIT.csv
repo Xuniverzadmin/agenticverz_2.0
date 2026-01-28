@@ -1,0 +1,383 @@
+S.No,Domain,"L1 Frontend
+(UI Pages/Components)",L1 Count,"L2.1 Facades
+(HTTP grouping)",L2.1 Count,"L2 APIs
+(hoc/api/cus/{domain}/)",L2 Count,"L3 Adapters
+(hoc/cus/{domain}/L3_adapters/)",L3 Count,"L4 Runtime
+(hoc/cus/general/L4_runtime/)",L4 Count,"L5 Engines
+(hoc/cus/{domain}/L5_engines/)",L5 Eng Count,"L5 Schemas
+(hoc/cus/{domain}/L5_schemas/)",L5 Sch Count,"L5 Other
+(notifications, support, vault, etc.)",L5 Other Count,"L6 Drivers
+(hoc/cus/{domain}/L6_drivers/)",L6 Count,"L7 Models
+(app/models/)",L7 Count,Total Files,Status
+1,general,MISSING: To be built with UI projection,0 (MISSING),MISSING: No dedicated facade,0 (MISSING),"agents.py
+debug_auth.py
+health.py
+sdk.py",4,MISSING: No adapters needed,0 (MISSING),"drivers/transaction_coordinator.py
+engines/constraint_checker.py
+engines/governance_orchestrator.py
+engines/phase_status_invariants.py
+engines/plan_generation_engine.py
+facades/run_governance_facade.py",6,"alert_log_linker.py
+alert_worker.py
+alerts_facade.py
+audit_durability.py
+audit_store.py
+canonical_json.py
+compliance_facade.py
+concurrent_runs.py
+constraint_checker.py
+control_registry.py
+cus_credential_service.py
+cus_health_shim.py
+dag_sorter.py
+db_helpers.py
+deterministic.py
+fatigue_controller.py
+guard.py
+input_sanitizer.py
+knowledge_lifecycle_manager.py
+knowledge_sdk.py
+lifecycle_facade.py
+lifecycle_stages_base.py
+manager.py
+metrics_helpers.py
+monitors_facade.py
+panel_invariant_monitor.py
+panel_slot_evaluator.py
+panel_verification_engine.py
+plan_inspector.py
+profile_policy_mode.py
+rate_limiter.py
+retrieval_facade.py
+retrieval_mediator.py
+runtime.py
+scheduler_facade.py
+webhook_verify.py",36,"agent.py
+artifact.py
+common.py
+plan.py
+rac_models.py
+response.py
+retry.py
+skill.py",8,"L5_support/CRM/engines/job_executor.py
+L5_lifecycle/drivers/execution.py
+L5_lifecycle/drivers/knowledge_plane.py
+L5_lifecycle/engines/offboarding.py
+L5_lifecycle/engines/onboarding.py
+L5_lifecycle/engines/pool_manager.py
+L5_controls/drivers/guard_write_driver.py
+L5_controls/drivers/runtime_switch.py
+L5_controls/engines/degraded_mode_checker.py
+L5_controls/engines/guard_write_engine.py
+L5_ui/engines/rollout_projection.py
+L5_utils/time.py
+L5_workflow/contracts/engines/contract_engine.py",13,"alert_driver.py
+alert_emitter.py
+budget_tracker.py
+cross_domain.py
+cus_health_driver.py
+dag_executor.py
+decisions.py
+governance_signal_driver.py
+guard_cache.py
+idempotency.py
+ledger.py
+schema_parity.py
+worker_write_service_async.py",13,"tenant.py
+governance.py
+run_lifecycle.py
+contract.py
+knowledge_lifecycle.py
+governance_job.py",6,86,Missing: L1
+2,overview,MISSING: To be built with UI projection,0 (MISSING),MISSING: No dedicated facade,0 (MISSING),overview.py,1,MISSING: No adapters needed,0 (MISSING),L4 only in general/,0,overview_facade.py,1,MISSING: No schemas,0 (MISSING),-,0,overview_facade_driver.py,1,Uses shared models,0,3,Missing: L1
+3,activity,"RunsListPage.tsx
+RunDetailPage.tsx",2,MISSING: No dedicated facade,0 (MISSING),activity.py,1,MISSING: No adapters needed,0 (MISSING),L4 only in general/,0,"activity_enums.py
+activity_facade.py
+attention_ranking_engine.py
+cost_analysis_engine.py
+cus_telemetry_service.py
+pattern_detection_engine.py
+signal_feedback_engine.py
+signal_identity.py",8,MISSING: No schemas,0 (MISSING),-,0,"activity_read_driver.py
+orphan_recovery.py
+run_signal_service.py",3,"run_lifecycle.py
+execution_envelope.py
+threshold_signal.py",3,17,Complete
+4,incidents,MISSING: To be built with UI projection,0 (MISSING),MISSING: No dedicated facade,0 (MISSING),"cost_guard.py
+incidents.py",2,anomaly_bridge.py,1,L4 only in general/,0,"hallucination_detector.py
+incident_driver.py
+incident_engine.py
+incident_pattern_engine.py
+incident_read_engine.py
+incident_severity_engine.py
+incident_write_engine.py
+incidents_facade.py
+incidents_types.py
+llm_failure_engine.py
+policy_violation_engine.py
+postmortem_engine.py
+prevention_engine.py
+recovery_rule_engine.py
+recurrence_analysis_engine.py
+semantic_failures.py",16,MISSING: No schemas,0 (MISSING),-,0,"export_bundle_driver.py
+incident_aggregator.py
+incident_pattern_driver.py
+incident_read_driver.py
+incident_write_driver.py
+incidents_facade_driver.py
+lessons_driver.py
+llm_failure_driver.py
+policy_violation_driver.py
+postmortem_driver.py
+recurrence_analysis_driver.py",11,"killswitch.py
+lessons_learned.py",2,32,Missing: L1
+5,policies,MISSING: To be built with UI projection,0 (MISSING),MISSING: No dedicated facade,0 (MISSING),"M25_integrations.py
+alerts.py
+analytics.py
+aos_accounts.py
+aos_api_key.py
+aos_cus_integrations.py
+billing_dependencies.py
+compliance.py
+connectors.py
+controls.py
+cus_enforcement.py
+customer_visibility.py
+datasources.py
+detection.py
+evidence.py
+governance.py
+guard.py
+guard_policies.py
+lifecycle.py
+logs.py
+monitors.py
+notifications.py
+override.py
+policies.py
+policy.py
+policy_layer.py
+policy_limits_crud.py
+policy_proposals.py
+policy_rules_crud.py
+rate_limits.py
+rbac_api.py
+replay.py
+retrieval.py
+runtime.py
+scheduler.py
+simulate.py
+status_history.py
+workers.py",38,"founder_contract_review_adapter.py
+policy_adapter.py",2,L4 only in general/,0,"ast.py
+authority_checker.py
+binding_moment_enforcer.py
+claim_decision_engine.py
+compiler_parser.py
+content_accuracy.py
+cus_enforcement_service.py
+customer_policy_read_engine.py
+decorator.py
+degraded_mode.py
+deterministic_engine.py
+dsl_parser.py
+eligibility_engine.py
+engine.py
+failure_mode_handler.py
+folds.py
+governance_facade.py
+grammar.py
+intent.py
+interpreter.py
+ir_builder.py
+ir_compiler.py
+ir_nodes.py
+kernel.py
+keys_shim.py
+kill_switch.py
+learning_proof_engine.py
+lessons_engine.py
+limits.py
+limits_facade.py
+limits_simulation_service.py
+llm_policy_engine.py
+nodes.py
+phase_status_invariants.py
+plan.py
+plan_generation_engine.py
+policies_facade.py
+policies_limits_query_engine.py
+policies_proposals_query_engine.py
+policies_rules_query_engine.py
+policy_command.py
+policy_conflict_resolver.py
+policy_driver.py
+policy_graph_engine.py
+policy_limits_engine.py
+policy_mapper.py
+policy_models.py
+policy_proposal_engine.py
+policy_rules_engine.py
+prevention_engine.py
+prevention_hook.py
+protection_provider.py
+recovery_evaluation_engine.py
+runtime_command.py
+sandbox_engine.py
+snapshot_engine.py
+state.py
+tokenizer.py
+validator.py
+visitors.py
+worker_execution_command.py",61,policy_rules.py,1,-,0,"arbitrator.py
+optimizer_conflict_resolver.py
+policy_engine_driver.py
+policy_graph_driver.py
+policy_proposal_read_driver.py
+policy_proposal_write_driver.py
+policy_read_driver.py
+policy_rules_driver.py
+policy_rules_read_driver.py
+proposals_read_driver.py
+recovery_matcher.py
+recovery_write_driver.py
+scope_resolver.py
+symbol_table.py",14,"policy_control_plane.py
+override_authority.py
+policy_scope.py
+policy.py
+policy_precedence.py
+policy_snapshot.py",6,122,Missing: L1
+6,logs,LoginPage.tsx,1,MISSING: No dedicated facade,0 (MISSING),"cost_intelligence.py
+guard_logs.py
+tenants.py
+traces.py",4,export_bundle_adapter.py,1,L4 only in general/,0,"audit_evidence.py
+audit_ledger_service.py
+audit_reconciler.py
+certificate.py
+completeness_checker.py
+evidence_facade.py
+evidence_report.py
+logs_facade.py
+logs_read_engine.py
+mapper.py
+panel_response_assembler.py
+pdf_renderer.py
+redact.py
+replay_determinism.py
+trace_facade.py
+traces_metrics.py
+traces_models.py",17,MISSING: No schemas,0 (MISSING),L5_support/CRM/engines/audit_engine.py,1,"audit_ledger_service_async.py
+bridges_driver.py
+capture.py
+export_bundle_store.py
+idempotency.py
+integrity.py
+job_execution.py
+logs_domain_store.py
+panel_consistency_checker.py
+pg_store.py
+replay.py
+traces_store.py",12,"export_bundles.py
+audit_ledger.py
+logs_records.py
+log_exports.py",4,40,Complete
+7,analytics,"CostPage.tsx
+UsagePage.tsx",2,MISSING: No dedicated facade,0 (MISSING),"costsim.py
+feedback.py
+predictions.py
+scenarios.py",4,"alert_delivery.py
+v2_adapter.py",2,L4 only in general/,0,"ai_console_panel_engine.py
+analytics_facade.py
+canary.py
+config.py
+coordinator.py
+cost_anomaly_detector.py
+cost_model_engine.py
+cost_snapshots.py
+cost_write_engine.py
+costsim_models.py
+datasets.py
+detection_facade.py
+divergence.py
+envelope.py
+metrics.py
+pattern_detection.py
+prediction.py
+provenance.py
+s1_retry_backoff.py
+sandbox.py",20,cost_snapshot_schemas.py,1,-,0,"analytics_read_driver.py
+audit_persistence.py
+cost_anomaly_driver.py
+cost_write_driver.py
+leader.py
+pattern_detection_driver.py
+prediction_driver.py
+provenance_async.py",8,"costsim_cb.py
+feedback.py
+monitor_config.py
+prediction.py
+alert_config.py",5,42,Complete
+8,integrations,MISSING: To be built with UI projection,0 (MISSING),MISSING: No dedicated facade,0 (MISSING),"cus_telemetry.py
+protection_dependencies.py
+session_context.py",3,"cloud_functions_adapter.py
+customer_activity_adapter.py
+customer_incidents_adapter.py
+customer_keys_adapter.py
+customer_logs_adapter.py
+customer_policies_adapter.py
+file_storage_base.py
+founder_ops_adapter.py
+gcs_adapter.py
+lambda_adapter.py
+pgvector_adapter.py
+pinecone_adapter.py
+runtime_adapter.py
+s3_adapter.py
+serverless_base.py
+slack_adapter.py
+smtp_adapter.py
+vector_stores_base.py
+weaviate_adapter.py
+webhook_adapter.py
+workers_adapter.py",21,L4 only in general/,0,"bridges.py
+connectors_facade.py
+cost_bridges_engine.py
+credentials/protocol.py
+cus_health_engine.py
+cus_integration_service.py
+datasources_facade.py
+dispatcher.py
+graduation_engine.py
+http_connector.py
+iam_engine.py
+integrations_facade.py
+mcp_connector.py
+prevention_contract.py
+sql_gateway.py
+types.py",16,"audit_schemas.py
+cus_schemas.py
+datasource_model.py
+loop_events.py",4,"L5_notifications/engines/channel_engine.py
+L5_vault/drivers/vault.py
+L5_vault/engines/service.py",3,"connector_registry.py
+external_response_driver.py
+worker_registry_driver.py",3,"external_response.py
+retrieval_evidence.py",2,52,Missing: L1
+9,api_keys,MISSING: To be built with UI projection,0 (MISSING),MISSING: No dedicated facade,0 (MISSING),"auth_helpers.py
+embedding.py",2,MISSING: No adapters needed,0 (MISSING),L4 only in general/,0,"api_keys_facade.py
+keys_engine.py",2,MISSING: No schemas,0 (MISSING),-,0,"api_keys_facade_driver.py
+keys_driver.py",2,Uses shared models,0,6,Missing: L1
+10,account,CreditsPage.tsx,1,MISSING: No dedicated facade,0 (MISSING),memory_pins.py,1,MISSING: No adapters needed,0 (MISSING),L4 only in general/,0,"accounts_facade.py
+billing_provider.py
+email_verification.py
+identity_resolver.py
+notifications_facade.py
+profile.py
+tenant_engine.py
+user_write_engine.py",8,MISSING: No schemas,0 (MISSING),"L5_support/CRM/engines/crm_validator_engine.py
+L5_support/CRM/engines/validator_engine.py",2,"accounts_facade_driver.py
+tenant_driver.py
+user_write_driver.py",3,"tenant.py
+cus_models.py",2,17,Complete
+,TOTAL,,6,,0,,60,,27,,6,,185,,14,,19,,70,,30,417,

@@ -13,7 +13,7 @@ Exports:
 - activity_enums: Activity domain enumerations
 """
 
-from app.hoc.cus.activity.L6_drivers.threshold_driver import (
+from app.hoc.cus.controls.L6_drivers.threshold_driver import (
     LimitSnapshot,
     ThresholdDriver,
     ThresholdDriverSync,

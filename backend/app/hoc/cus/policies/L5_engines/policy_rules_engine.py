@@ -54,6 +54,8 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Optional
 
 # L6 driver import (allowed)
+from app.hoc.cus.general.L5_utils.time import utc_now
+from app.hoc.cus.general.L6_drivers.cross_domain import generate_uuid
 from app.hoc.cus.policies.L6_drivers.policy_rules_driver import (
     PolicyRulesDriver,
     get_policy_rules_driver,
@@ -74,16 +76,6 @@ from app.hoc.cus.policies.L5_schemas.policy_rules import (
     PolicyRuleResponse,
 )
 from app.hoc.cus.logs.L6_drivers.audit_ledger_service_async import AuditLedgerServiceAsync
-
-
-def utc_now() -> datetime:
-    """Return current UTC time."""
-    return datetime.now(timezone.utc)
-
-
-def generate_uuid() -> str:
-    """Generate a UUID string."""
-    return str(uuid.uuid4())
 
 
 class PolicyRulesServiceError(Exception):

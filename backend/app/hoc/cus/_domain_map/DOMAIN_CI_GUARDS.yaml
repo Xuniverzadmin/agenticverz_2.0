@@ -1,0 +1,174 @@
+# HOC Domain CI Guards
+# Generated: 2026-01-27T14:08:57Z
+# Generator: hoc_phase3_domain_locker.py
+# Reference: PIN-470, PIN-479
+
+domain_guards:
+  account:
+    locked_at: "2026-01-27T14:08:57Z"
+    lock_version: "2.0"
+    file_count: 16
+    domain_hash: "8065e7bcb89d69ff"
+    allowed_operations:
+      - ADD_FILE
+      - EDIT_FILE
+    blocked_operations:
+      - DELETE_FILE
+      - MOVE_FILE
+      - RENAME_FILE
+    enforcement: BLOCKING
+
+  activity:
+    locked_at: "2026-01-27T14:08:57Z"
+    lock_version: "2.0"
+    file_count: 17
+    domain_hash: "ae84ca9bacc5f047"
+    allowed_operations:
+      - ADD_FILE
+      - EDIT_FILE
+    blocked_operations:
+      - DELETE_FILE
+      - MOVE_FILE
+      - RENAME_FILE
+    enforcement: BLOCKING
+
+  analytics:
+    locked_at: "2026-01-27T14:08:57Z"
+    lock_version: "2.0"
+    file_count: 36
+    domain_hash: "15c05b1055dab853"
+    allowed_operations:
+      - ADD_FILE
+      - EDIT_FILE
+    blocked_operations:
+      - DELETE_FILE
+      - MOVE_FILE
+      - RENAME_FILE
+    enforcement: BLOCKING
+
+  api_keys:
+    locked_at: "2026-01-27T14:08:57Z"
+    lock_version: "2.0"
+    file_count: 9
+    domain_hash: "e2de55c838b4882a"
+    allowed_operations:
+      - ADD_FILE
+      - EDIT_FILE
+    blocked_operations:
+      - DELETE_FILE
+      - MOVE_FILE
+      - RENAME_FILE
+    enforcement: BLOCKING
+
+  controls:
+    locked_at: "2026-01-27T14:08:57Z"
+    lock_version: "2.0"
+    file_count: 29
+    domain_hash: "7b51ae0ede587c48"
+    allowed_operations:
+      - ADD_FILE
+      - EDIT_FILE
+    blocked_operations:
+      - DELETE_FILE
+      - MOVE_FILE
+      - RENAME_FILE
+    enforcement: BLOCKING
+
+  general:
+    locked_at: "2026-01-27T14:08:57Z"
+    lock_version: "2.0"
+    file_count: 93
+    domain_hash: "dfab73663efef85c"
+    allowed_operations:
+      - ADD_FILE
+      - EDIT_FILE
+    blocked_operations:
+      - DELETE_FILE
+      - MOVE_FILE
+      - RENAME_FILE
+    enforcement: BLOCKING
+
+  incidents:
+    locked_at: "2026-01-27T14:08:57Z"
+    lock_version: "2.0"
+    file_count: 35
+    domain_hash: "aa35ee6905b73e51"
+    allowed_operations:
+      - ADD_FILE
+      - EDIT_FILE
+    blocked_operations:
+      - DELETE_FILE
+      - MOVE_FILE
+      - RENAME_FILE
+    enforcement: BLOCKING
+
+  integrations:
+    locked_at: "2026-01-27T14:08:57Z"
+    lock_version: "2.0"
+    file_count: 62
+    domain_hash: "6a4601d5d6ed77ae"
+    allowed_operations:
+      - ADD_FILE
+      - EDIT_FILE
+    blocked_operations:
+      - DELETE_FILE
+      - MOVE_FILE
+      - RENAME_FILE
+    enforcement: BLOCKING
+
+  logs:
+    locked_at: "2026-01-27T14:08:57Z"
+    lock_version: "2.0"
+    file_count: 45
+    domain_hash: "ac5112dba536c960"
+    allowed_operations:
+      - ADD_FILE
+      - EDIT_FILE
+    blocked_operations:
+      - DELETE_FILE
+      - MOVE_FILE
+      - RENAME_FILE
+    enforcement: BLOCKING
+
+  overview:
+    locked_at: "2026-01-27T14:08:57Z"
+    lock_version: "2.0"
+    file_count: 6
+    domain_hash: "560c6d0afc5f5467"
+    allowed_operations:
+      - ADD_FILE
+      - EDIT_FILE
+    blocked_operations:
+      - DELETE_FILE
+      - MOVE_FILE
+      - RENAME_FILE
+    enforcement: BLOCKING
+
+  policies:
+    locked_at: "2026-01-27T14:08:57Z"
+    lock_version: "2.0"
+    file_count: 95
+    domain_hash: "4a4dd5b7b81e113d"
+    allowed_operations:
+      - ADD_FILE
+      - EDIT_FILE
+    blocked_operations:
+      - DELETE_FILE
+      - MOVE_FILE
+      - RENAME_FILE
+    enforcement: BLOCKING
+
+# Architecture rules (Phase 8 enforcement)
+architecture_rules:
+  ARCH-001:
+    description: "Domains MAY import from general/"
+    enforcement: WARNING
+  ARCH-002:
+    description: "Domains MUST NOT import from other domains (except via general)"
+    enforcement: BLOCKING
+  ARCH-003:
+    description: "general/ MUST NOT import from any domain"
+    enforcement: BLOCKING
+  ARCH-004:
+    description: "All shared utilities MUST be in general/"
+    enforcement: WARNING

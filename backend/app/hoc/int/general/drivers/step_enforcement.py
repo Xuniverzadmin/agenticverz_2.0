@@ -105,7 +105,7 @@ def enforce_before_step_completion(
     # Check governance state first (GAP-069)
     try:
         # L5 engine import (migrated to HOC per SWEEP-03)
-        from app.hoc.cus.general.L5_engines.runtime_switch import is_governance_active, is_degraded_mode
+        from app.hoc.cus.general.L5_controls.drivers.runtime_switch import is_governance_active, is_degraded_mode
 
         if not is_governance_active():
             logger.warning("step_enforcement.governance_disabled", extra={

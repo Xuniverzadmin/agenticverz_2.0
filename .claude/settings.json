@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": {
+          "tool": ["Edit", "Write"]
+        },
+        "command": "./scripts/hooks/post_edit_check.sh $FILE_PATH"
+      },
+      {
+        "matcher": {
+          "tool": ["Bash"]
+        },
+        "command": "./scripts/hooks/post_bash_check.sh \"$COMMAND\""
+      }
+    ]
+  }
+}

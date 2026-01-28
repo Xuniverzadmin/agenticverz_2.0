@@ -44,7 +44,7 @@ from app.schemas.cus_schemas import (
 )
 from app.schemas.response import wrap_dict, wrap_error, wrap_list
 # L5 engine import (migrated to HOC per SWEEP-03 Batch 2)
-from app.hoc.cus.integrations.L5_engines.cus_telemetry_service import CusTelemetryService
+from app.hoc.cus.activity.L5_engines.cus_telemetry_service import CusTelemetryService
 
 router = APIRouter(prefix="/telemetry", tags=["Customer Telemetry"])
 

@@ -93,6 +93,17 @@ These actions are BLOCKED until SESSION_BOOTSTRAP_CONFIRMATION is complete:
 | code_changes | Cannot modify code without knowing invariants |
 | migration_creation | Cannot create migrations without knowing schema rules |
 | api_creation | Cannot create APIs without knowing visibility contract |
+| hoc_topology_violation | HOC architecture topology must not be violated without explicit user approval |
+
+---
+
+## Behavioral Rules (Session-Wide)
+
+| Rule | Enforcement |
+|------|-------------|
+| BL-DESIGN-ADVICE-001 | Claude SHOULD auto-suggest or report software first principles based design advice, but MUST NOT auto-execute without explicit user approval |
+
+**Rationale:** Design advice is valuable proactively, but execution authority remains with the human. Claude may identify violations, propose fixes, and recommend patterns — but implementation requires consent.
 
 ---
 

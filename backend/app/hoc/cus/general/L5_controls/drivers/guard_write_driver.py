@@ -51,6 +51,7 @@ from typing import List, Optional, Tuple
 from sqlalchemy import and_, select
 from sqlmodel import Session
 
+from app.hoc.cus.general.L5_utils.time import utc_now
 from app.models.killswitch import (
     Incident,
     IncidentEvent,
@@ -59,11 +60,6 @@ from app.models.killswitch import (
     KillSwitchState,
     TriggerType,
 )
-
-
-def utc_now() -> datetime:
-    """Get current UTC time."""
-    return datetime.now(timezone.utc)
 
 
 class GuardWriteDriver:

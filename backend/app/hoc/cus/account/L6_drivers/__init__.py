@@ -22,7 +22,7 @@ from app.hoc.cus.account.L6_drivers.user_write_driver import (
     UserWriteDriver,
     get_user_write_driver,
 )
-from app.hoc.cus.account.L6_drivers.worker_registry_driver import (
+from app.hoc.cus.integrations.L6_drivers.worker_registry_driver import (
     WorkerRegistryService,
     WorkerRegistryError,
     WorkerNotFoundError,

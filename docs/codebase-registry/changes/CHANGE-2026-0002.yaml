@@ -1,0 +1,30 @@
+# Code Change Record
+# Created: 2026-01-27
+# Schema: change-schema-v1.yaml
+
+change_id: CHANGE-2026-0002
+date: '2026-01-27'
+author: claude
+change_type: cleanup
+purpose: 'P7 Group B: Deleted 18 zero-importer duplicate files (~11,000 LOC removed).
+  B03 and B06 deferred to Group C (have active importers).'
+scope:
+  artifacts_modified:
+  - AOS-BE-API-RTM-001
+impact:
+  authority_change: none
+  behavior_change: 'no'
+  interface_change: 'no'
+  data_change: 'no'
+risk_level: low
+backward_compatibility: 'yes'
+validation:
+  tests_added: 'no'
+  tests_modified: 'no'
+  manual_verification: not_required
+related_pins:
+- PIN-470
+- PIN-479
+- PIN-480
+notes: 18/20 deleted. B03 (activity/run_governance_facade) and B06 (policies/run_governance_facade)
+  deferred - have active importers.

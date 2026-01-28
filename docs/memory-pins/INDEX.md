@@ -459,6 +459,17 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-470](PIN-470-phase-3-directory-restructure-complete-l5l6-classification-fix.md) | **Phase 3 Directory Restructure Complete + L5/L6 Classification Fix** | Architecture / HOC Migration | **✅ COMPLETE** | 2026-01-24 |
 | [PIN-471](PIN-471-sweep-03-missing-module-creation.md) | **SWEEP-03 Missing Module Creation** | HOC Migration / Module Creation | **🏗️ ACTIVE** | 2026-01-25 |
 | [PIN-472](PIN-472-v3-manual-audit-complete---domain-classification.md) | **V3 Manual Audit Complete - Domain Classification** | HOC / Domain Classification | **✅ COMPLETE** | 2026-01-26 |
+| [PIN-473](PIN-473-hoc-domain-migration-cleanup-plan-phase-0-8.md) | **HOC Domain Migration & Cleanup Plan (Phase 0-8)** | Architecture / HOC / Migration | **🏗️ PROPOSED** | 2026-01-27 |
+| [PIN-474](PIN-474-replace-continuousvalidator-daemon-with-stateless-ageninternalsystemscan.md) | **Replace continuous_validator daemon with stateless agen_internal_system_scan** | Infrastructure / Optimization | **✅ COMPLETE** | 2026-01-27 |
+| [PIN-475](PIN-475-kill-worker-pool-manual-restart-model-for-neon-cost-control.md) | **Kill worker pool — manual restart model for Neon cost control** | Infrastructure / Optimization | **✅ COMPLETE** | 2026-01-27 |
+| [PIN-476](PIN-476-optimize-amavisd-reduce-to-1-worker-disable-broken-clamav.md) | **Optimize amavisd — reduce to 1 worker, disable broken ClamAV** | Infrastructure / Optimization | **✅ COMPLETE** | 2026-01-27 |
+| [PIN-477](PIN-477-journal-limits-system-bloat-audit-mechanism.md) | **Journal limits + system bloat audit mechanism** | Infrastructure / Optimization | **✅ COMPLETE** | 2026-01-27 |
+| [PIN-478](PIN-478-claude-context-modularization.md) | **Claude Context Modularization — CLAUDE.md split + rules + hooks + project context** | Infrastructure / Claude Memory Optimization | **✅ COMPLETE** | 2026-01-27 |
+| [PIN-479](PIN-479-phase-0-migration-manifest-duplicate-resolution.md) | **Phase 0: Migration Manifest + Duplicate Resolution** | HOC Migration | **✅ COMPLETE** | 2026-01-27 |
+| [PIN-480](PIN-480-p6-consolidation-review-complete-9090-candidates.md) | **P6 Consolidation Review Complete — 90/90 Candidates** | Architecture | **✅ COMPLETE** | 2026-01-27 |
+| [PIN-481](PIN-481-p7-execution-complete-40-files-deleted-3-relocated-14-edited.md) | **P7 Execution Complete — 40 files deleted, 3 relocated, 14 edited** | HOC Domain Migration | **✅ COMPLETE** | 2026-01-27 |
+| [PIN-482](PIN-482-p8-domain-lock-update-complete-all-11-locks-verified.md) | **P8 Domain Lock Update Complete — All 11 locks verified** | HOC Domain Migration | **✅ COMPLETE** | 2026-01-27 |
+| [PIN-483](PIN-483-hoc-domain-migration-complete-p1-p10-all-phases-done.md) | **HOC Domain Migration COMPLETE — P1-P10 All Phases Done** | HOC Domain Migration | **✅ COMPLETE** | 2026-01-27 |
 
 ---
 
@@ -1228,6 +1239,22 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-27 | **PIN-483 HOC Domain Migration COMPLETE — P1-P10 All Phases Done** - Created via memory_trail. |
+| 2026-01-27 | **PIN-479 HOC Domain Migration — Phase 0 Manifest + Phase 1 Execution** - Updated: P7-P10 Close-out (2026-01-27) |
+| 2026-01-27 | **PIN-482 P8 Domain Lock Update Complete — All 11 locks verified** - Created via memory_trail. |
+| 2026-01-27 | **PIN-481 P7 Execution Complete — 40 files deleted, 3 relocated, 14 edited** - Created via memory_trail. |
+| 2026-01-27 | **PIN-480 P6 Consolidation Review Complete — 90/90 Candidates** - Created via memory_trail. |
+| 2026-01-27 | **PIN-479 HOC Domain Migration — Phase 0 Manifest + Phase 1 Execution** - Updated: Phase 5 Duplicate Detection |
+| 2026-01-27 | **PIN-479 HOC Domain Migration — Phase 0 Manifest + Phase 1 Execution** - Updated: Phase 4 Post-Migration Validation |
+| 2026-01-27 | **PIN-479 HOC Domain Migration — Phase 0 Manifest + Phase 1 Execution** - Updated: Phase 3 Domain Locking |
+| 2026-01-27 | **PIN-479 Phase 0: Migration Manifest + Duplicate Resolution** - Updated: Phase 1 Execution |
+| 2026-01-27 | **PIN-479 Phase 0: Migration Manifest + Duplicate Resolution** - Created via memory_trail. |
+| 2026-01-27 | **PIN-478 Claude Context Modularization — CLAUDE.md split + rules + hooks + project context** - Split CLAUDE.md into modular rules, hooks, and project context files. |
+| 2026-01-27 | **PIN-477 Journal limits + system bloat audit mechanism** - Created via memory_trail. |
+| 2026-01-27 | **PIN-476 Optimize amavisd — reduce to 1 worker, disable broken ClamAV** - Created via memory_trail. |
+| 2026-01-27 | **PIN-475 Kill worker pool — manual restart model for Neon cost control** - Created via memory_trail. |
+| 2026-01-27 | **PIN-474 Replace continuous_validator daemon with stateless agen_internal_system_scan** - Created via memory_trail. |
+| 2026-01-27 | **PIN-473 HOC Domain Migration & Cleanup Plan (Phase 0-8)** - Created via memory_trail. |
 | 2026-01-26 | **PIN-472 V3 Manual Audit Complete - Domain Classification** - Created via memory_trail. |
 | 2026-01-25 | **PIN-471 SWEEP-03 Missing Module Creation** - Updated: Updates |
 | 2026-01-25 | **PIN-471 SWEEP-03 Missing Module Creation** - Created via memory_trail. |

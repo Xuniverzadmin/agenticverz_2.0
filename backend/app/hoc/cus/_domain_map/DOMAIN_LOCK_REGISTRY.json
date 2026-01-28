@@ -1,0 +1,196 @@
+{
+  "lock_version": "2.0",
+  "generated": "2026-01-27T14:08:57Z",
+  "generator": "hoc_phase3_domain_locker.py",
+  "reference": "PIN-470, PIN-479",
+  "total_domains": 11,
+  "total_files": 443,
+  "total_loc": 127042,
+  "domains": {
+    "account": {
+      "status": "LOCKED",
+      "locked_at": "2026-01-27T14:08:57Z",
+      "lock_version": "2.0",
+      "file_count": 16,
+      "total_loc": 4414,
+      "domain_hash": "8065e7bcb89d69ffcc34cddb6204fc6de98a2fd8e1b264fb3e69fbfc16629ec6",
+      "lock_file": "backend/app/hoc/cus/docs/domain-locks/ACCOUNT_DOMAIN_LOCK_FINAL.md",
+      "layers": {
+        "root": 1,
+        "L5_support": 1,
+        "L5_schemas": 1,
+        "L6_drivers": 4,
+        "L5_engines": 9
+      }
+    },
+    "activity": {
+      "status": "LOCKED",
+      "locked_at": "2026-01-27T14:08:57Z",
+      "lock_version": "2.0",
+      "file_count": 17,
+      "total_loc": 2984,
+      "domain_hash": "ae84ca9bacc5f04783d7ef1a21fccb90a41902eff42831fbab6f53f65f72d455",
+      "lock_file": "backend/app/hoc/cus/docs/domain-locks/ACTIVITY_DOMAIN_LOCK_FINAL.md",
+      "layers": {
+        "root": 1,
+        "L5_schemas": 1,
+        "L6_drivers": 4,
+        "L5_engines": 11
+      }
+    },
+    "analytics": {
+      "status": "LOCKED",
+      "locked_at": "2026-01-27T14:08:57Z",
+      "lock_version": "2.0",
+      "file_count": 36,
+      "total_loc": 10215,
+      "domain_hash": "15c05b1055dab85377e319ae123324431e457526144c6099840849ba0d8f8a7e",
+      "lock_file": "backend/app/hoc/cus/docs/domain-locks/ANALYTICS_DOMAIN_LOCK_FINAL.md",
+      "layers": {
+        "root": 1,
+        "L5_schemas": 2,
+        "L6_drivers": 9,
+        "L3_adapters": 3,
+        "L5_engines": 21
+      }
+    },
+    "api_keys": {
+      "status": "LOCKED",
+      "locked_at": "2026-01-27T14:08:57Z",
+      "lock_version": "2.0",
+      "file_count": 9,
+      "total_loc": 902,
+      "domain_hash": "e2de55c838b4882a0da665c24eb46c17c6a2eca142d7864dae7c58eb305a6ec6",
+      "lock_file": "backend/app/hoc/cus/docs/domain-locks/API_KEYS_DOMAIN_LOCK_FINAL.md",
+      "layers": {
+        "root": 1,
+        "L5_schemas": 1,
+        "L6_drivers": 3,
+        "L5_engines": 4
+      }
+    },
+    "controls": {
+      "status": "LOCKED",
+      "locked_at": "2026-01-27T14:08:57Z",
+      "lock_version": "2.0",
+      "file_count": 29,
+      "total_loc": 6675,
+      "domain_hash": "7b51ae0ede587c483140e6d0310bc2a57d64655b8047b13ba8b453bdfa56be66",
+      "lock_file": "backend/app/hoc/cus/docs/domain-locks/CONTROLS_DOMAIN_LOCK_FINAL.md",
+      "layers": {
+        "root": 1,
+        "L5_controls": 2,
+        "L5_schemas": 4,
+        "L6_drivers": 10,
+        "L3_adapters": 2,
+        "L5_engines": 10
+      }
+    },
+    "general": {
+      "status": "LOCKED",
+      "locked_at": "2026-01-27T14:08:57Z",
+      "lock_version": "2.0",
+      "file_count": 93,
+      "total_loc": 27264,
+      "domain_hash": "dfab73663efef85c832c313f9b93837dedf9dc57a3a791cc8fcbf3d39758953b",
+      "lock_file": "backend/app/hoc/cus/docs/domain-locks/GENERAL_DOMAIN_LOCK_FINAL.md",
+      "layers": {
+        "root": 1,
+        "L3_mcp": 2,
+        "L5_controls": 7,
+        "L5_workflow": 1,
+        "L5_ui": 1,
+        "L5_utils": 2,
+        "L4_runtime": 7,
+        "L5_support": 1,
+        "L5_schemas": 9,
+        "L6_drivers": 15,
+        "L5_lifecycle": 6,
+        "L5_engines": 41
+      }
+    },
+    "incidents": {
+      "status": "LOCKED",
+      "locked_at": "2026-01-27T14:08:57Z",
+      "lock_version": "2.0",
+      "file_count": 35,
+      "total_loc": 9800,
+      "domain_hash": "aa35ee6905b73e51f957ec9afcd52dbcaf9e67df70c823cac3b5baa44fbba539",
+      "lock_file": "backend/app/hoc/cus/docs/domain-locks/INCIDENTS_DOMAIN_LOCK_FINAL.md",
+      "layers": {
+        "root": 1,
+        "L5_schemas": 1,
+        "L6_drivers": 13,
+        "L3_adapters": 2,
+        "L5_engines": 18
+      }
+    },
+    "integrations": {
+      "status": "LOCKED",
+      "locked_at": "2026-01-27T14:08:57Z",
+      "lock_version": "2.0",
+      "file_count": 62,
+      "total_loc": 20156,
+      "domain_hash": "6a4601d5d6ed77aeec63acbfd6975d2116cc1723573853a1a644237f2ac355c9",
+      "lock_file": "backend/app/hoc/cus/docs/domain-locks/INTEGRATIONS_DOMAIN_LOCK_FINAL.md",
+      "layers": {
+        "root": 1,
+        "L5_vault": 3,
+        "L5_notifications": 1,
+        "L5_schemas": 5,
+        "L6_drivers": 5,
+        "L3_adapters": 23,
+        "L5_engines": 24
+      }
+    },
+    "logs": {
+      "status": "LOCKED",
+      "locked_at": "2026-01-27T14:08:57Z",
+      "lock_version": "2.0",
+      "file_count": 45,
+      "total_loc": 15509,
+      "domain_hash": "ac5112dba536c9605c6c3f7a0befba765eff2ab5fc4ef730c294ea4928ddb204",
+      "lock_file": "backend/app/hoc/cus/docs/domain-locks/LOGS_DOMAIN_LOCK_FINAL.md",
+      "layers": {
+        "root": 1,
+        "L5_support": 1,
+        "L5_schemas": 3,
+        "L6_drivers": 15,
+        "L3_adapters": 2,
+        "L5_engines": 23
+      }
+    },
+    "overview": {
+      "status": "LOCKED",
+      "locked_at": "2026-01-27T14:08:57Z",
+      "lock_version": "2.0",
+      "file_count": 6,
+      "total_loc": 937,
+      "domain_hash": "560c6d0afc5f54671c1f995d957d26cca06050ec0f245667c0f4c302959193ea",
+      "lock_file": "backend/app/hoc/cus/docs/domain-locks/OVERVIEW_DOMAIN_LOCK_FINAL.md",
+      "layers": {
+        "root": 1,
+        "L5_schemas": 1,
+        "L6_drivers": 2,
+        "L5_engines": 2
+      }
+    },
+    "policies": {
+      "status": "LOCKED",
+      "locked_at": "2026-01-27T14:08:57Z",
+      "lock_version": "2.0",
+      "file_count": 95,
+      "total_loc": 28186,
+      "domain_hash": "4a4dd5b7b81e113daf645274eca041375cb9a0bbd79262e7c7d91f68621139fc",
+      "lock_file": "backend/app/hoc/cus/docs/domain-locks/POLICIES_DOMAIN_LOCK_FINAL.md",
+      "layers": {
+        "root": 1,
+        "L5_controls": 2,
+        "L5_schemas": 2,
+        "L6_drivers": 15,
+        "L3_adapters": 2,
+        "L5_engines": 73
+      }
+    }
+  }
+}

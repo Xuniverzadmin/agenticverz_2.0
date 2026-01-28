@@ -39,7 +39,7 @@ from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
 # L5 engine imports (migrated to HOC per SWEEP-21)
-from app.hoc.cus.integrations.L5_engines.retrieval_facade import (
+from app.hoc.cus.general.L5_engines.retrieval_facade import (
     RetrievalFacade,
     get_retrieval_facade,
 )

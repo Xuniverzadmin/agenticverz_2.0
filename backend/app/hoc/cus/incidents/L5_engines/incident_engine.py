@@ -72,6 +72,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 # L6 driver import (allowed)
+from app.hoc.cus.general.L5_utils.time import utc_now
 from app.hoc.cus.incidents.L6_drivers.incident_write_driver import (
     IncidentWriteDriver,
     get_incident_write_driver,
@@ -86,13 +87,8 @@ logger = logging.getLogger("nova.services.incident_engine")
 # Lazy import to avoid circular dependencies
 def _get_lessons_learned_engine():
     """Get the LessonsLearnedEngine singleton (lazy import)."""
-    from app.hoc.cus.incidents.L5_engines.lessons_engine import get_lessons_learned_engine
+    from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
     return get_lessons_learned_engine()
-
-
-def utc_now() -> datetime:
-    """Return timezone-aware UTC datetime."""
-    return datetime.now(timezone.utc)
 
 
 # =============================================================================

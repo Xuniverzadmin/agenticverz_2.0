@@ -53,7 +53,9 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
 
 # L6 driver import (allowed)
-from app.hoc.cus.policies.L6_drivers.policy_limits_driver import (
+from app.hoc.cus.general.L5_utils.time import utc_now
+from app.hoc.cus.general.L6_drivers.cross_domain import generate_uuid
+from app.hoc.cus.controls.L6_drivers.policy_limits_driver import (
     PolicyLimitsDriver,
     get_policy_limits_driver,
 )
@@ -67,22 +69,12 @@ from app.models.policy_control_plane import (
     LimitStatus,
 )
 from app.models.audit_ledger import ActorType
-from app.hoc.cus.policies.L5_schemas.policy_limits import (
+from app.hoc.cus.controls.L5_schemas.policy_limits import (
     CreatePolicyLimitRequest,
     UpdatePolicyLimitRequest,
     PolicyLimitResponse,
 )
 from app.hoc.cus.logs.L6_drivers.audit_ledger_service_async import AuditLedgerServiceAsync
-
-
-def utc_now() -> datetime:
-    """Return current UTC time."""
-    return datetime.now(timezone.utc)
-
-
-def generate_uuid() -> str:
-    """Generate a UUID string."""
-    return str(uuid.uuid4())
 
 
 class PolicyLimitsServiceError(Exception):

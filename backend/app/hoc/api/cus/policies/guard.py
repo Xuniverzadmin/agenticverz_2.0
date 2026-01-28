@@ -80,21 +80,21 @@ from app.models.tenant import Tenant
 
 # M23: Import CertificateService for cryptographic proof of replay
 # L5 engine import (migrated to HOC per SWEEP-32)
-from app.hoc.cus.policies.L5_engines.certificate import (
+from app.hoc.cus.logs.L5_engines.certificate import (
     CertificateService,
 )
 
 # Phase 2B: Write service for DB operations
 # L6 driver import (migrated to HOC per SWEEP-32)
-from app.hoc.cus.incidents.L6_drivers.guard_write_driver import GuardWriteService
+from app.hoc.cus.general.L5_controls.drivers.guard_write_driver import GuardWriteDriver as GuardWriteService
 
 # M23: Import ReplayValidator for real determinism validation
 # L5 engine imports (migrated to HOC per SWEEP-32)
-from app.hoc.cus.policies.L5_engines.replay_determinism import (
+from app.hoc.cus.logs.L5_engines.replay_determinism import (
     DeterminismLevel,
     ReplayContextBuilder,
 )
-from app.hoc.cus.policies.L5_engines.replay_determinism import (
+from app.hoc.cus.logs.L5_engines.replay_determinism import (
     ReplayValidator as RealReplayValidator,
 )
 
@@ -1834,7 +1834,7 @@ async def export_incident_evidence(
     from fastapi.responses import Response
 
     # L5 engine import (migrated to HOC per SWEEP-32)
-    from app.hoc.cus.incidents.L5_engines.evidence_report import generate_evidence_report
+    from app.hoc.cus.logs.L5_engines.evidence_report import generate_evidence_report
 
     # Get incident
     stmt = select(Incident).where(

@@ -1849,7 +1849,7 @@ async def export_evidence(
 
     # L6 driver and L5 engine imports (migrated to HOC per SWEEP-31)
     from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_service
-    from app.hoc.cus.incidents.L5_engines.pdf_renderer import get_pdf_renderer
+    from app.hoc.cus.logs.L5_engines.pdf_renderer import get_pdf_renderer
 
     tenant_id = get_tenant_id_from_auth(request)
     auth_ctx = get_auth_context(request)
@@ -1915,7 +1915,7 @@ async def export_soc2(
 
     # L6 driver and L5 engine imports (migrated to HOC per SWEEP-31)
     from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_service
-    from app.hoc.cus.incidents.L5_engines.pdf_renderer import get_pdf_renderer
+    from app.hoc.cus.logs.L5_engines.pdf_renderer import get_pdf_renderer
 
     tenant_id = get_tenant_id_from_auth(request)
     auth_ctx = get_auth_context(request)
@@ -1981,7 +1981,7 @@ async def export_executive_debrief(
 
     # L6 driver and L5 engine imports (migrated to HOC per SWEEP-31)
     from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_service
-    from app.hoc.cus.incidents.L5_engines.pdf_renderer import get_pdf_renderer
+    from app.hoc.cus.logs.L5_engines.pdf_renderer import get_pdf_renderer
 
     tenant_id = get_tenant_id_from_auth(request)
     auth_ctx = get_auth_context(request)

@@ -559,12 +559,12 @@ class RunRunner:
 
             # Import sync threshold service (worker runs in ThreadPoolExecutor, not async)
             # L4 engine: business logic (resolver, evaluator)
-            from app.hoc.cus.activity.L5_engines.threshold_engine import (
+            from app.hoc.cus.controls.L5_engines.threshold_engine import (
                 LLMRunThresholdResolverSync,
                 LLMRunEvaluatorSync,
             )
             # L6 driver: DB operations (driver, signal emission)
-            from app.hoc.cus.activity.L6_drivers.threshold_driver import (
+            from app.hoc.cus.controls.L6_drivers.threshold_driver import (
                 ThresholdDriverSync,
                 emit_and_persist_threshold_signal,
             )

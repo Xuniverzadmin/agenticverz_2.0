@@ -50,6 +50,7 @@ from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
 
+from app.hoc.cus.general.L5_utils.time import utc_now
 from app.models.knowledge_lifecycle import (
     KnowledgePlaneLifecycleState,
     LifecycleAction,
@@ -68,11 +69,6 @@ logger = logging.getLogger("nova.services.knowledge_lifecycle_manager")
 # =============================================================================
 # Utility Functions
 # =============================================================================
-
-
-def utc_now() -> datetime:
-    """Return timezone-aware UTC datetime."""
-    return datetime.now(timezone.utc)
 
 
 def generate_id(prefix: str = "kp") -> str:

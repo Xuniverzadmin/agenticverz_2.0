@@ -49,7 +49,7 @@ from app.hoc.cus.policies.L6_drivers.policy_rules_read_driver import (
     PolicyRulesReadDriver,
     get_policy_rules_read_driver,
 )
-from app.hoc.cus.policies.L6_drivers.limits_read_driver import (
+from app.hoc.cus.controls.L6_drivers.limits_read_driver import (
     LimitsReadDriver,
     get_limits_read_driver,
 )

@@ -79,7 +79,7 @@ from app.models.governance_job import (
     StepStatus,
 )
 # L5 engine import (migrated to HOC per SWEEP-03)
-from app.hoc.cus.policies.L5_engines.contract_engine import ContractService, ContractState
+from app.hoc.cus.general.L5_workflow.contracts.engines.contract_engine import ContractService, ContractState
 
 # Orchestrator version
 ORCHESTRATOR_VERSION = "1.0.0"

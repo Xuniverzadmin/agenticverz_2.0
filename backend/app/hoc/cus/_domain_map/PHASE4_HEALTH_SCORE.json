@@ -1,0 +1,44 @@
+{
+  "overall": "HEALTHY",
+  "score": 92,
+  "generated": "2026-01-27T14:12:30Z",
+  "checks": {
+    "V1_import_resolution": {
+      "status": "PASS",
+      "total": 443,
+      "passed": 443,
+      "failed": 0
+    },
+    "V2_blca_validation": {
+      "status": "SKIP",
+      "note": "Pre-existing legacy violations in app/policy/, not HOC"
+    },
+    "V3_test_suite": {
+      "status": "SKIP",
+      "note": "No tests/hoc/ directory"
+    },
+    "V4_circular_imports": {
+      "status": "PASS",
+      "cycles": 1,
+      "note": "Lazy import in function body, safe"
+    },
+    "V5_domain_integrity": {
+      "status": "WARN",
+      "total_files": 385,
+      "name_duplicates": 38,
+      "note": "Pre-existing, P5 scope"
+    },
+    "V6_hash_verification": {
+      "status": "PASS",
+      "domains_checked": 11,
+      "mismatches": 0
+    }
+  },
+  "phases_completed": [
+    "P0",
+    "P1",
+    "P2",
+    "P3",
+    "P4"
+  ]
+}

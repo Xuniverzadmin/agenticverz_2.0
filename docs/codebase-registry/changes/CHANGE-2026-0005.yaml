@@ -1,0 +1,30 @@
+# Code Change Record
+# Created: 2026-01-27
+# Schema: change-schema-v1.yaml
+
+change_id: CHANGE-2026-0005
+date: '2026-01-27'
+author: claude
+change_type: documentation
+purpose: 'P8: Updated all 11 domain lock files — file counts corrected, P7 amendments
+  added, lock version bumped to 2.1, PIN-481 referenced.'
+scope:
+  artifacts_modified:
+  - AOS-BE-API-RTM-001
+impact:
+  authority_change: none
+  behavior_change: 'no'
+  interface_change: 'no'
+  data_change: 'no'
+risk_level: low
+backward_compatibility: 'yes'
+validation:
+  tests_added: 'no'
+  tests_modified: 'no'
+  manual_verification: not_required
+related_pins:
+- PIN-470
+- PIN-479
+- PIN-481
+notes: 10 locks amended (all except overview which had no P7 changes). All 11 lock
+  counts verified against actual file counts — 0 delta.

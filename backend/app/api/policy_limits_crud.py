@@ -361,7 +361,7 @@ async def get_threshold_params(
     Only valid for limits with limit_category = THRESHOLD.
     """
     from app.models.policy_control_plane import Limit, LimitCategory
-    from app.hoc.cus.activity.L5_engines.threshold_engine import (
+    from app.hoc.cus.controls.L5_engines.threshold_engine import (
         DEFAULT_LLM_RUN_PARAMS,
         ThresholdParams,
     )
@@ -440,7 +440,7 @@ async def set_threshold_params(
     from datetime import timezone
 
     from app.models.policy_control_plane import Limit, LimitCategory
-    from app.hoc.cus.activity.L5_engines.threshold_engine import (
+    from app.hoc.cus.controls.L5_engines.threshold_engine import (
         DEFAULT_LLM_RUN_PARAMS,
         ThresholdParams,
     )

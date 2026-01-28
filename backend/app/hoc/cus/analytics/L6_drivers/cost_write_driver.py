@@ -47,11 +47,7 @@ from typing import Optional
 from sqlmodel import Session
 
 from app.db import CostBudget, CostRecord, FeatureTag
-
-
-def utc_now() -> datetime:
-    """Get current UTC time."""
-    return datetime.now(timezone.utc)
+from app.hoc.cus.general.L5_utils.time import utc_now
 
 
 class CostWriteDriver:

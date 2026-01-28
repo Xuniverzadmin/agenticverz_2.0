@@ -35,7 +35,7 @@ Implementation Order (from VALIDATOR_LOGIC.md):
 # L5 Engine Imports (migrated to HOC per SWEEP-03)
 # =============================================================================
 
-from app.hoc.cus.policies.L5_engines.audit_engine import (
+from app.hoc.cus.logs.L5_support.CRM.engines.audit_engine import (
     AUDIT_SERVICE_VERSION,
     AuditCheck,
     AuditChecks,
@@ -47,7 +47,7 @@ from app.hoc.cus.policies.L5_engines.audit_engine import (
     audit_result_to_record,
     create_audit_input_from_evidence,
 )
-from app.hoc.cus.policies.L5_engines.contract_engine import (
+from app.hoc.cus.general.L5_workflow.contracts.engines.contract_engine import (
     CONTRACT_SERVICE_VERSION,
     ContractService,
     ContractState,
@@ -80,7 +80,7 @@ from app.hoc.cus.general.L4_runtime.engines.governance_orchestrator import (
     JobStateMachine,
     JobStateTracker,
 )
-from app.hoc.cus.policies.L5_engines.job_executor import (
+from app.hoc.cus.general.L5_support.CRM.engines.job_executor import (
     EXECUTOR_VERSION,
     ExecutionContext,
     ExecutionResult,
@@ -93,7 +93,7 @@ from app.hoc.cus.policies.L5_engines.job_executor import (
     create_default_executor,
     execution_result_to_evidence,
 )
-from app.hoc.cus.policies.L5_engines.rollout_projection import (
+from app.hoc.cus.general.L5_ui.engines.rollout_projection import (
     PROJECTION_VERSION,
     STAGE_ORDER,
     AuditSummary,
@@ -110,7 +110,7 @@ from app.hoc.cus.policies.L5_engines.rollout_projection import (
     completion_report_to_dict,
     founder_view_to_dict,
 )
-from app.hoc.cus.policies.L5_engines.validator_engine import (
+from app.hoc.cus.account.L5_support.CRM.engines.crm_validator_engine import (
     IssueType,
     RecommendedAction,
     Severity,
@@ -130,7 +130,7 @@ from app.hoc.cus.general.L6_drivers.cross_domain import (
 
 # Run Governance Facade (PIN-454 FIX-002 - L5→L4 layer compliance)
 # migrated to HOC per SWEEP-03
-from app.hoc.cus.policies.L5_engines.run_governance_facade import (
+from app.hoc.cus.general.L4_runtime.facades.run_governance_facade import (
     RunGovernanceFacade,
     get_run_governance_facade,
 )

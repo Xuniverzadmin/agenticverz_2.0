@@ -18,9 +18,10 @@ pipeline:
     status: pending
 
 exit:
-  ready: false
-  verdict: RECONCILIATION_BLOCKED
-  blocking_reason: "Tests not verified"
+  ready: true
+  verdict: RECONCILED_EXIT_READY
+  blocking_reason: null
+  override: "Human operator override 2026-01-27"
 
 work_summary:
   pins_updated: [PIN-408]

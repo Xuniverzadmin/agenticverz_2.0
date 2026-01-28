@@ -6,7 +6,7 @@
 #
 # MIGRATION PATH:
 #   Current:  from app.hoc.cus.policies.L5_engines.keys_shim import KeysReadService
-#   Future:   from app.hoc.cus.policies.L6_drivers.keys_driver import KeysDriver
+#   Future:   from app.hoc.cus.apis.L6_drivers.keys_driver import KeysDriver
 #
 # NOTE: Renamed keys_service.py → keys_shim.py (2026-01-24) - BANNED_NAMING fix
 # This shim exists for backward compatibility during Phase-2.5A.
@@ -38,7 +38,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 # L6 driver import (allowed)
-from app.hoc.cus.policies.L6_drivers.keys_driver import (
+from app.hoc.cus.apis.L6_drivers.keys_driver import (
     KeysDriver,
     get_keys_driver,
 )

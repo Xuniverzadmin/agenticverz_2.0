@@ -33,7 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
-from app.hoc.cus.policies.L5_schemas.simulation import (
+from app.hoc.cus.controls.L5_schemas.simulation import (
     LimitSimulationRequest,
     LimitSimulationResponse,
     SimulationDecision,

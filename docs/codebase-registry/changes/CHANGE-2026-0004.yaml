@@ -1,0 +1,30 @@
+# Code Change Record
+# Created: 2026-01-27
+# Schema: change-schema-v1.yaml
+
+change_id: CHANGE-2026-0004
+date: '2026-01-27'
+author: claude
+change_type: rename
+purpose: 'P7 Group D: Relocated 3 files (profile→profile_policy_mode, validator_engine→crm_validator_engine,
+  threshold_engine activity→controls). Repointed ~10 importers. D04 skipped (file
+  missing).'
+scope:
+  artifacts_modified:
+  - AOS-BE-API-RTM-001
+impact:
+  authority_change: none
+  behavior_change: 'no'
+  interface_change: 'yes'
+  data_change: 'no'
+risk_level: high
+backward_compatibility: 'no'
+validation:
+  tests_added: 'no'
+  tests_modified: 'no'
+  manual_verification: required
+related_pins:
+- PIN-470
+- PIN-479
+- PIN-480
+notes: 3 file relocations with renames. All import paths verified clean.

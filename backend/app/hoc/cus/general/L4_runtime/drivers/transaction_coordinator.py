@@ -470,7 +470,7 @@ class RunCompletionTransaction:
 
         try:
             # L5 engine import (migrated to HOC per SWEEP-03)
-            from app.hoc.cus.policies.L5_engines.run_governance_facade import get_run_governance_facade
+            from app.hoc.cus.general.L4_runtime.facades.run_governance_facade import get_run_governance_facade
 
             facade = get_run_governance_facade()
             policy_id = facade.create_policy_evaluation(

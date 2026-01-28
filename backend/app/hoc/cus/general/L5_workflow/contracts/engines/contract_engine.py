@@ -99,7 +99,7 @@ from app.hoc.cus.policies.L5_engines.eligibility_engine import (
     EligibilityDecision,
     EligibilityVerdict,
 )
-from app.hoc.cus.policies.L5_engines.validator_engine import ValidatorVerdict
+from app.hoc.cus.account.L5_support.CRM.engines.crm_validator_engine import ValidatorVerdict
 
 # Contract Service version
 CONTRACT_SERVICE_VERSION = "1.0.0"

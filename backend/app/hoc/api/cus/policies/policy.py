@@ -1616,7 +1616,7 @@ async def get_policy_lessons(
 ) -> LessonsResponse:
     """V2 Facade: What governance emerged?"""
     # L5 engine import (migrated to HOC per SWEEP-06)
-    from app.hoc.cus.incidents.L5_engines.lessons_engine import get_lessons_learned_engine
+    from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
 
     try:
         engine = get_lessons_learned_engine()
@@ -1679,7 +1679,7 @@ async def get_policy_lesson_detail(
     from uuid import UUID
 
     # L5 engine import (migrated to HOC per SWEEP-06)
-    from app.hoc.cus.incidents.L5_engines.lessons_engine import get_lessons_learned_engine
+    from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
 
     try:
         engine = get_lessons_learned_engine()

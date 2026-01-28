@@ -34,7 +34,7 @@ import time
 from typing import Optional, Callable, Awaitable
 
 # L5 engine import (migrated to HOC per SWEEP-03)
-from app.hoc.cus.general.L5_engines.runtime_switch import (
+from app.hoc.cus.general.L5_controls.drivers.runtime_switch import (
     is_governance_active,
     is_degraded_mode,
     get_governance_state,
