@@ -470,6 +470,14 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-481](PIN-481-p7-execution-complete-40-files-deleted-3-relocated-14-edited.md) | **P7 Execution Complete — 40 files deleted, 3 relocated, 14 edited** | HOC Domain Migration | **✅ COMPLETE** | 2026-01-27 |
 | [PIN-482](PIN-482-p8-domain-lock-update-complete-all-11-locks-verified.md) | **P8 Domain Lock Update Complete — All 11 locks verified** | HOC Domain Migration | **✅ COMPLETE** | 2026-01-27 |
 | [PIN-483](PIN-483-hoc-domain-migration-complete-p1-p10-all-phases-done.md) | **HOC Domain Migration COMPLETE — P1-P10 All Phases Done** | HOC Domain Migration | **✅ COMPLETE** | 2026-01-27 |
+| [PIN-485](PIN-485-hoc-v200-migration-complete-general-abolished.md) | **HOC V2.0.0 Migration Complete — general/ Abolished** | Architecture | **✅ COMPLETE** | 2026-01-28 |
+| [PIN-486](PIN-486-l3-adapters-absorbed-files-redistributed-to-l2l4l5.md) | **L3 Adapters Absorbed — Files Redistributed to L2/L4/L5** | Architecture | **✅ COMPLETE** | 2026-01-28 |
+| [PIN-487](PIN-487-l4-l5-linkage-analysis-loop-model-db-consistency-architecture.md) | **L4-L5 Linkage Analysis + Loop Model + DB Consistency Architecture** | Architecture | **✅ COMPLETE** | 2026-01-28 |
+| [PIN-488](PIN-488-hoc-spine-literature-study-complete-mcp-relocation.md) | **HOC Spine Literature Study Complete + MCP Relocation** | Architecture | **✅ COMPLETE** | 2026-01-29 |
+| [PIN-489](PIN-489-hoc-spine-constitutional-enforcement-p0p1-fixes-complete.md) | **HOC Spine Constitutional Enforcement — P0/P1 Fixes Complete** | Architecture | **✅ COMPLETE** | 2026-01-30 |
+| [PIN-490](PIN-490-hoc-spine-constitution-document-authoritative-audit-guide.md) | **HOC Spine Constitution Document — Authoritative Audit Guide** | Architecture | **✅ COMPLETE** | 2026-01-30 |
+| [PIN-491](PIN-491-hoc-spine-literature-upgrade-l5-pairing-gap-detector.md) | **HOC Spine Literature Upgrade + L5 Pairing Gap Detector** | Architecture | **✅ COMPLETE** | 2026-01-30 |
+| [PIN-492](PIN-492-hoc-domain-literature-generator-csv-matrix.md) | **HOC Domain Literature Generator + CSV Matrix** | Architecture | **✅ COMPLETE** | 2026-01-30 |
 
 ---
 
@@ -1239,6 +1247,14 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-30 | **PIN-492 HOC Domain Literature Generator + CSV Matrix** - Created via memory_trail. |
+| 2026-01-30 | **PIN-491 HOC Spine Literature Upgrade + L5 Pairing Gap Detector** — Upgraded 65 literature files with Export Contract, Import Boundary, L5 Pairing Declaration. Created gap detector: 185 L5 engines, 0 wired via L4, 32 direct L2→L5 gaps, 153 orphaned. |
+| 2026-01-30 | **PIN-490 HOC Spine Constitution Document — Authoritative Audit Guide** - Created via memory_trail. |
+| 2026-01-30 | **PIN-489 HOC Spine Constitutional Enforcement — P0/P1 Fixes Complete** - Created via memory_trail. |
+| 2026-01-29 | **PIN-488 HOC Spine Literature Study Complete + MCP Relocation** - Created via memory_trail. |
+| 2026-01-28 | **PIN-487 L4-L5 Linkage Analysis + Loop Model + DB Consistency Architecture** - Created via memory_trail. |
+| 2026-01-28 | **PIN-486 L3 Adapters Absorbed — Files Redistributed to L2/L4/L5** - Created via memory_trail. |
+| 2026-01-28 | **PIN-485 HOC V2.0.0 Migration Complete — general/ Abolished** - Created via memory_trail. |
 | 2026-01-27 | **PIN-483 HOC Domain Migration COMPLETE — P1-P10 All Phases Done** - Created via memory_trail. |
 | 2026-01-27 | **PIN-479 HOC Domain Migration — Phase 0 Manifest + Phase 1 Execution** - Updated: P7-P10 Close-out (2026-01-27) |
 | 2026-01-27 | **PIN-482 P8 Domain Lock Update Complete — All 11 locks verified** - Created via memory_trail. |
