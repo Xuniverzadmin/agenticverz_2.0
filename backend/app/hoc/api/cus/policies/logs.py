@@ -67,8 +67,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
-# L5 engine import (migrated to HOC per SWEEP-46)
-from app.hoc.cus.logs.L5_engines.logs_facade import get_logs_facade
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+)
 
 # =============================================================================
 # Router
@@ -528,21 +530,33 @@ async def list_llm_run_records(
 ) -> LLMRunRecordsResponse:
     """List LLM run records. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.list_llm_run_records(
-        session=session,
-        tenant_id=tenant_id,
-        run_id=run_id,
-        provider=provider,
-        model=model,
-        execution_status=execution_status,
-        is_synthetic=is_synthetic,
-        created_after=created_after,
-        created_before=created_before,
-        limit=limit,
-        offset=offset,
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "list_llm_run_records",
+                "run_id": run_id,
+                "provider": provider,
+                "model": model,
+                "execution_status": execution_status,
+                "is_synthetic": is_synthetic,
+                "created_after": created_after,
+                "created_before": created_before,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     items = [
         LLMRunRecordItem(
@@ -585,9 +599,22 @@ async def get_llm_run_envelope(
 ) -> LLMRunEnvelope:
     """O1: Canonical immutable run record. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_llm_run_envelope(session, tenant_id, run_id)
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_llm_run_envelope", "run_id": run_id},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     if not result:
         raise HTTPException(status_code=404, detail="Run not found")
@@ -635,9 +662,22 @@ async def get_llm_run_trace(
 ) -> LLMRunTrace:
     """O2: Step-by-step execution trace. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_llm_run_trace(session, tenant_id, run_id)
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_llm_run_trace", "run_id": run_id},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     if not result:
         raise HTTPException(status_code=404, detail="Trace not found")
@@ -688,9 +728,22 @@ async def get_llm_run_governance(
 ) -> LLMRunGovernance:
     """O3: Policy interaction trace. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_llm_run_governance(session, tenant_id, run_id)
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_llm_run_governance", "run_id": run_id},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     events = [
         GovernanceEvent(
@@ -736,9 +789,22 @@ async def get_llm_run_replay(
 ) -> LLMRunReplay:
     """O4: 60-second replay window. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_llm_run_replay(session, tenant_id, run_id)
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_llm_run_replay", "run_id": run_id},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     if not result:
         raise HTTPException(status_code=404, detail="Run not found")
@@ -788,9 +854,22 @@ async def get_llm_run_export(
 ) -> LLMRunExport:
     """O5: Export information. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_llm_run_export(session, tenant_id, run_id)
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_llm_run_export", "run_id": run_id},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     if not result:
         raise HTTPException(status_code=404, detail="Run not found")
@@ -839,19 +918,31 @@ async def list_system_records(
 ) -> SystemRecordsResponse:
     """List system records. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.list_system_records(
-        session=session,
-        tenant_id=tenant_id,
-        component=component,
-        event_type=event_type,
-        severity=severity,
-        created_after=created_after,
-        created_before=created_before,
-        limit=limit,
-        offset=offset,
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "list_system_records",
+                "component": component,
+                "event_type": event_type,
+                "severity": severity,
+                "created_after": created_after,
+                "created_before": created_before,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     items = [
         SystemRecordItem(
@@ -889,13 +980,22 @@ async def get_system_snapshot(
 ) -> SystemSnapshot:
     """O1: Environment baseline snapshot. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_system_snapshot(
-        session=session,
-        tenant_id=tenant_id,
-        run_id=run_id,
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_system_snapshot", "run_id": run_id},
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     metadata = EvidenceMetadata(
         tenant_id=result.metadata.tenant_id,
@@ -931,10 +1031,23 @@ async def get_system_telemetry(
     run_id: str,
 ) -> TelemetryStub:
     """O2: Telemetry stub - producer not implemented. READ-ONLY customer facade."""
-    get_tenant_id_from_auth(request)  # Validate auth
-    facade = get_logs_facade()
+    tenant_id = get_tenant_id_from_auth(request)
+    registry = get_operation_registry()
 
-    result = facade.get_system_telemetry(run_id=run_id)
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=None,  # type: ignore
+            tenant_id=tenant_id,
+            params={"method": "get_system_telemetry", "run_id": run_id},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
     return TelemetryStub(run_id=result.run_id)
 
 
@@ -951,13 +1064,22 @@ async def get_system_events(
 ) -> SystemEvents:
     """O3: Infra events affecting run. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_system_events(
-        session=session,
-        tenant_id=tenant_id,
-        run_id=run_id,
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_system_events", "run_id": run_id},
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     events = [
         SystemEvent(
@@ -1004,13 +1126,22 @@ async def get_system_replay(
 ) -> SystemReplay:
     """O4: Infra replay window. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_system_replay(
-        session=session,
-        tenant_id=tenant_id,
-        run_id=run_id,
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_system_replay", "run_id": run_id},
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     if not result:
         raise HTTPException(status_code=404, detail="Run not found")
@@ -1059,14 +1190,22 @@ async def get_system_audit(
 ) -> SystemAudit:
     """O5: Infra attribution. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_system_audit(
-        session=session,
-        tenant_id=tenant_id,
-        limit=limit,
-        offset=offset,
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_system_audit", "limit": limit, "offset": offset},
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     items = [
         SystemEvent(
@@ -1122,19 +1261,31 @@ async def list_audit_entries(
 ) -> AuditLedgerResponse:
     """List audit entries. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.list_audit_entries(
-        session=session,
-        tenant_id=tenant_id,
-        event_type=event_type,
-        entity_type=entity_type,
-        actor_type=actor_type,
-        created_after=created_after,
-        created_before=created_before,
-        limit=limit,
-        offset=offset,
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "list_audit_entries",
+                "event_type": event_type,
+                "entity_type": entity_type,
+                "actor_type": actor_type,
+                "created_after": created_after,
+                "created_before": created_before,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     items = [
         AuditLedgerItem(
@@ -1171,13 +1322,22 @@ async def get_audit_entry(
 ) -> AuditLedgerDetailItem:
     """Get audit entry detail. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_audit_entry(
-        session=session,
-        tenant_id=tenant_id,
-        entry_id=entry_id,
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_audit_entry", "entry_id": entry_id},
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     if not result:
         raise HTTPException(status_code=404, detail="Audit entry not found")
@@ -1210,13 +1370,22 @@ async def get_audit_identity(
 ) -> AuditIdentity:
     """O1: Identity lifecycle. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_audit_identity(
-        session=session,
-        tenant_id=tenant_id,
-        limit=limit,
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_audit_identity", "limit": limit},
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     events = [
         IdentityEvent(
@@ -1258,13 +1427,22 @@ async def get_audit_authorization(
 ) -> AuditAuthorization:
     """O2: Authorization decisions. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_audit_authorization(
-        session=session,
-        tenant_id=tenant_id,
-        limit=limit,
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_audit_authorization", "limit": limit},
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     decisions = [
         AuthorizationDecision(
@@ -1308,13 +1486,22 @@ async def get_audit_access(
 ) -> AuditAccess:
     """O3: Log access audit. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_audit_access(
-        session=session,
-        tenant_id=tenant_id,
-        limit=limit,
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_audit_access", "limit": limit},
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     events = [
         AccessEvent(
@@ -1356,9 +1543,22 @@ async def get_audit_integrity(
 ) -> AuditIntegrity:
     """O4: Tamper detection. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = facade.get_audit_integrity(tenant_id=tenant_id)
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=None,  # type: ignore
+            tenant_id=tenant_id,
+            params={"method": "get_audit_integrity"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     metadata = EvidenceMetadata(
         tenant_id=result.metadata.tenant_id,
@@ -1394,14 +1594,22 @@ async def get_audit_exports(
 ) -> AuditExports:
     """O5: Compliance exports. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_logs_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_audit_exports(
-        session=session,
-        tenant_id=tenant_id,
-        limit=limit,
-        offset=offset,
+    op = await registry.execute(
+        "logs.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_audit_exports", "limit": limit, "offset": offset},
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     exports = [
         ExportRecord(

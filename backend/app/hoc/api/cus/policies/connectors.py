@@ -36,10 +36,10 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-# L5 engine imports (migrated to HOC per SWEEP-13)
-from app.hoc.cus.integrations.L5_engines.connectors_facade import (
-    ConnectorsFacade,
-    get_connectors_facade,
+# L4 operation registry import
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
 )
 
 # =============================================================================
@@ -72,16 +72,6 @@ class UpdateConnectorRequest(BaseModel):
 
 
 # =============================================================================
-# Dependencies
-# =============================================================================
-
-
-def get_facade() -> ConnectorsFacade:
-    """Get the connectors facade."""
-    return get_connectors_facade()
-
-
-# =============================================================================
 # Endpoints
 # =============================================================================
 
@@ -93,7 +83,6 @@ async def list_connectors(
     limit: int = Query(100, le=1000, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: ConnectorsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("connectors.read")),
 ):
     """
@@ -101,13 +90,24 @@ async def list_connectors(
 
     Returns all registered connectors with optional filtering.
     """
-    connectors = await facade.list_connectors(
-        tenant_id=ctx.tenant_id,
-        connector_type=connector_type,
-        status=status,
-        limit=limit,
-        offset=offset,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "integrations.connectors",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "list_connectors",
+                "connector_type": connector_type,
+                "status": status,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    connectors = op.data
 
     return wrap_dict({
         "connectors": [c.to_dict() for c in connectors],
@@ -121,7 +121,6 @@ async def list_connectors(
 async def register_connector(
     request: RegisterConnectorRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: ConnectorsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("connectors.write")),
 ):
     """
@@ -135,14 +134,25 @@ async def register_connector(
     - file: File storage
     - serverless: Serverless functions
     """
-    connector = await facade.register_connector(
-        tenant_id=ctx.tenant_id,
-        name=request.name,
-        connector_type=request.connector_type,
-        endpoint=request.endpoint,
-        config=request.config,
-        metadata=request.metadata,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "integrations.connectors",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "register_connector",
+                "name": request.name,
+                "connector_type": request.connector_type,
+                "endpoint": request.endpoint,
+                "config": request.config,
+                "metadata": request.metadata,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    connector = op.data
 
     return wrap_dict(connector.to_dict())
 
@@ -151,16 +161,26 @@ async def register_connector(
 async def get_connector(
     connector_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: ConnectorsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("connectors.read")),
 ):
     """
     Get a specific connector by ID.
     """
-    connector = await facade.get_connector(
-        connector_id=connector_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "integrations.connectors",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "get_connector",
+                "connector_id": connector_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    connector = op.data
 
     if not connector:
         raise HTTPException(status_code=404, detail="Connector not found")
@@ -173,20 +193,30 @@ async def update_connector(
     connector_id: str,
     request: UpdateConnectorRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: ConnectorsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("connectors.write")),
 ):
     """
     Update a connector.
     """
-    connector = await facade.update_connector(
-        connector_id=connector_id,
-        tenant_id=ctx.tenant_id,
-        name=request.name,
-        endpoint=request.endpoint,
-        config=request.config,
-        metadata=request.metadata,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "integrations.connectors",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "update_connector",
+                "connector_id": connector_id,
+                "name": request.name,
+                "endpoint": request.endpoint,
+                "config": request.config,
+                "metadata": request.metadata,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    connector = op.data
 
     if not connector:
         raise HTTPException(status_code=404, detail="Connector not found")
@@ -198,16 +228,26 @@ async def update_connector(
 async def delete_connector(
     connector_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: ConnectorsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("connectors.write")),
 ):
     """
     Delete a connector.
     """
-    success = await facade.delete_connector(
-        connector_id=connector_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "integrations.connectors",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "delete_connector",
+                "connector_id": connector_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    success = op.data
 
     if not success:
         raise HTTPException(status_code=404, detail="Connector not found")
@@ -219,7 +259,6 @@ async def delete_connector(
 async def test_connector(
     connector_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: ConnectorsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("connectors.test")),
 ):
     """
@@ -227,9 +266,20 @@ async def test_connector(
 
     Attempts to establish a connection and returns the result.
     """
-    result = await facade.test_connector(
-        connector_id=connector_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "integrations.connectors",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "test_connector",
+                "connector_id": connector_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     return wrap_dict(result.to_dict())

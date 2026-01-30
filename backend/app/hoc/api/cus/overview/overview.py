@@ -48,7 +48,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
-from app.hoc.cus.overview.L5_engines.overview_facade import get_overview_facade
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+)
 
 logger = logging.getLogger("nova.api.overview")
 
@@ -262,10 +265,20 @@ async def get_highlights(
 ) -> HighlightsResponse:
     """System pulse and domain counts. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_overview_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.get_highlights(session, tenant_id)
+        op = await registry.execute(
+            "overview.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={"method": "get_highlights"},
+            ),
+        )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         return HighlightsResponse(
             pulse=SystemPulse(
@@ -332,17 +345,26 @@ async def get_decisions(
 ) -> DecisionsResponse:
     """Pending decisions from incidents and policy proposals. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_overview_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.get_decisions(
-            session=session,
-            tenant_id=tenant_id,
-            source_domain=source_domain,
-            priority=priority,
-            limit=limit,
-            offset=offset,
+        op = await registry.execute(
+            "overview.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_decisions",
+                    "source_domain": source_domain,
+                    "priority": priority,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         next_offset = offset + limit if result.has_more else None
 
@@ -394,14 +416,20 @@ async def get_costs(
 ) -> CostsResponse:
     """Cost intelligence summary. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_overview_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.get_costs(
-            session=session,
-            tenant_id=tenant_id,
-            period_days=period_days,
+        op = await registry.execute(
+            "overview.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={"method": "get_costs", "period_days": period_days},
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         return CostsResponse(
             currency=result.currency,
@@ -453,10 +481,20 @@ async def get_decisions_count(
 ) -> DecisionsCountResponse:
     """Decisions count by domain and priority. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_overview_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.get_decisions_count(session, tenant_id)
+        op = await registry.execute(
+            "overview.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={"method": "get_decisions_count"},
+            ),
+        )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         return DecisionsCountResponse(
             total=result.total,
@@ -493,14 +531,20 @@ async def get_recovery_stats(
 ) -> RecoveryStatsResponse:
     """Recovery statistics from incidents. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_overview_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.get_recovery_stats(
-            session=session,
-            tenant_id=tenant_id,
-            period_days=period_days,
+        op = await registry.execute(
+            "overview.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={"method": "get_recovery_stats", "period_days": period_days},
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         return RecoveryStatsResponse(
             total_incidents=result.total_incidents,

@@ -38,11 +38,9 @@ from app.hoc.cus.controls.L5_schemas.simulation import (
     LimitSimulationResponse,
     SimulationDecision,
 )
-# L5 engine import (migrated to HOC per SWEEP-03 Batch 2)
-from app.hoc.cus.policies.L5_engines.limits_simulation_service import (
-    LimitsSimulationService,
-    LimitsSimulationServiceError,
-    TenantNotFoundError,
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
 )
 
 
@@ -109,48 +107,59 @@ async def simulate_execution(
     auth_context = get_auth_context(request)
     tenant_id = auth_context.tenant_id
 
-    service = LimitsSimulationService(session)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.simulate",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "simulate",
+                "estimated_tokens": body.estimated_tokens,
+                "estimated_cost_cents": body.estimated_cost_cents,
+                "run_count": body.run_count,
+                "concurrency_delta": body.concurrency_delta,
+                "worker_id": body.worker_id,
+                "feature_id": body.feature_id,
+                "user_id": body.user_id,
+                "project_id": body.project_id,
+            },
+        ),
+    )
 
-    try:
-        # Build simulation request
-        sim_request = LimitSimulationRequest(
-            estimated_tokens=body.estimated_tokens,
-            estimated_cost_cents=body.estimated_cost_cents,
-            run_count=body.run_count,
-            concurrency_delta=body.concurrency_delta,
-            worker_id=body.worker_id,
-            feature_id=body.feature_id,
-            user_id=body.user_id,
-            project_id=body.project_id,
-        )
+    if not op.success:
+        error_code = getattr(op, "error_code", None) or ""
+        if error_code == "TENANT_NOT_FOUND":
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "tenant_not_found", "message": op.error},
+            )
+        elif error_code == "SIMULATION_ERROR":
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "simulation_error", "message": op.error},
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
 
-        # Run simulation
-        result = await service.simulate(tenant_id, sim_request)
+    result = op.data
 
-        # Convert to response
-        return SimulateResponse(
-            decision=result.decision.value,
-            allowed=result.decision == SimulationDecision.ALLOW,
-            blocking_limit_id=result.blocking_limit_id,
-            blocking_limit_type=result.blocking_limit_type,
-            message_code=result.blocking_message_code.value if result.blocking_message_code else None,
-            warnings=result.warnings,
-            headroom={
-                "tokens_remaining": result.headroom.tokens if result.headroom else 0,
-                "runs_remaining": result.headroom.runs if result.headroom else 0,
-                "cost_remaining_cents": result.headroom.cost_cents if result.headroom else 0,
-            } if result.headroom else None,
-            checks_performed=len(result.checks),
-            overrides_applied=result.overrides_applied,
-        )
-
-    except TenantNotFoundError as e:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "tenant_not_found", "message": str(e)},
-        )
-    except LimitsSimulationServiceError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "simulation_error", "message": str(e)},
-        )
+    # Convert to response
+    return SimulateResponse(
+        decision=result.decision.value,
+        allowed=result.decision == SimulationDecision.ALLOW,
+        blocking_limit_id=result.blocking_limit_id,
+        blocking_limit_type=result.blocking_limit_type,
+        message_code=result.blocking_message_code.value if result.blocking_message_code else None,
+        warnings=result.warnings,
+        headroom={
+            "tokens_remaining": result.headroom.tokens if result.headroom else 0,
+            "runs_remaining": result.headroom.runs if result.headroom else 0,
+            "cost_remaining_cents": result.headroom.cost_cents if result.headroom else 0,
+        } if result.headroom else None,
+        checks_performed=len(result.checks),
+        overrides_applied=result.overrides_applied,
+    )

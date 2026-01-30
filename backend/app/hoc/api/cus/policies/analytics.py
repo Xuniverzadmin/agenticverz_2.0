@@ -53,8 +53,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
-# L5 engine import (migrated to HOC per SWEEP-15)
-from app.hoc.cus.analytics.L5_engines.analytics_facade import get_analytics_facade
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -290,10 +292,9 @@ async def get_usage_statistics(
             detail="Time window cannot exceed 90 days",
         )
 
-    # Delegate to L4 facade
+    # Delegate to L4 operation registry
     # L5 engine import (migrated to HOC per SWEEP-15)
     from app.hoc.cus.analytics.L5_engines.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
-    facade = get_analytics_facade()
 
     # Map L2 enums to L4 enums
     facade_resolution = FacadeResolution.HOUR if resolution == ResolutionType.HOUR else FacadeResolution.DAY
@@ -303,14 +304,27 @@ async def get_usage_statistics(
     elif scope == ScopeType.ENV:
         facade_scope = FacadeScope.ENV
 
-    result = await facade.get_usage_statistics(
-        session=session,
-        tenant_id=tenant_id,
-        from_ts=from_ts,
-        to_ts=to_ts,
-        resolution=facade_resolution,
-        scope=facade_scope,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "analytics.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_usage_statistics",
+                "from_ts": from_ts,
+                "to_ts": to_ts,
+                "resolution": facade_resolution,
+                "scope": facade_scope,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     # Map L4 result to L2 response
     series = [
@@ -362,10 +376,23 @@ async def get_analytics_status() -> AnalyticsStatusResponse:
 
     Used by console/clients to discover available capabilities
     before attempting to render panels.
-    READ-ONLY customer facade - delegates to L4 AnalyticsFacade.
+    READ-ONLY customer facade - delegates to L4 operation registry.
     """
-    facade = get_analytics_facade()
-    result = facade.get_status()
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "analytics.query",
+        OperationContext(
+            session=None,
+            tenant_id="__system__",
+            params={"method": "get_status"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     # Map L4 result to L2 response
     topics = {
@@ -440,7 +467,7 @@ async def get_cost_statistics(
     Get cost statistics for the specified time window.
 
     Primary endpoint for the Cost topic.
-    READ-ONLY customer facade - delegates to L4 AnalyticsFacade.
+    READ-ONLY customer facade - delegates to L4 operation registry.
     """
     # Get tenant from auth context
     auth_context = get_auth_context(request)
@@ -464,10 +491,9 @@ async def get_cost_statistics(
             detail="Time window cannot exceed 90 days",
         )
 
-    # Delegate to L4 facade
+    # Delegate to L4 operation registry
     # L5 engine import (migrated to HOC per SWEEP-15)
     from app.hoc.cus.analytics.L5_engines.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
-    facade = get_analytics_facade()
 
     # Map L2 enums to L4 enums
     facade_resolution = FacadeResolution.HOUR if resolution == ResolutionType.HOUR else FacadeResolution.DAY
@@ -477,14 +503,27 @@ async def get_cost_statistics(
     elif scope == ScopeType.ENV:
         facade_scope = FacadeScope.ENV
 
-    result = await facade.get_cost_statistics(
-        session=session,
-        tenant_id=tenant_id,
-        from_ts=from_ts,
-        to_ts=to_ts,
-        resolution=facade_resolution,
-        scope=facade_scope,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "analytics.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_cost_statistics",
+                "from_ts": from_ts,
+                "to_ts": to_ts,
+                "resolution": facade_resolution,
+                "scope": facade_scope,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     # Map L4 result to L2 response
     series = [
@@ -574,7 +613,7 @@ async def _get_usage_data(
     Internal helper to get usage data (shared by read and export endpoints).
 
     Ensures export is bit-equivalent to read API - no alternate code paths.
-    Delegates to L4 AnalyticsFacade.
+    Delegates to L4 operation registry.
     """
     # Get tenant from auth context
     auth_context = get_auth_context(request)
@@ -598,10 +637,9 @@ async def _get_usage_data(
             detail="Time window cannot exceed 90 days",
         )
 
-    # Delegate to L4 facade
+    # Delegate to L4 operation registry
     # L5 engine import (migrated to HOC per SWEEP-15)
     from app.hoc.cus.analytics.L5_engines.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
-    facade = get_analytics_facade()
 
     # Map L2 enums to L4 enums
     facade_resolution = FacadeResolution.HOUR if resolution == ResolutionType.HOUR else FacadeResolution.DAY
@@ -611,14 +649,27 @@ async def _get_usage_data(
     elif scope == ScopeType.ENV:
         facade_scope = FacadeScope.ENV
 
-    result = await facade.get_usage_statistics(
-        session=session,
-        tenant_id=tenant_id,
-        from_ts=from_ts,
-        to_ts=to_ts,
-        resolution=facade_resolution,
-        scope=facade_scope,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "analytics.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_usage_statistics",
+                "from_ts": from_ts,
+                "to_ts": to_ts,
+                "resolution": facade_resolution,
+                "scope": facade_scope,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     # Map L4 result to L2 response
     series = [
@@ -815,7 +866,7 @@ async def _get_cost_data(
     Internal helper to get cost data (shared by read and export endpoints).
 
     Ensures export is bit-equivalent to read API - no alternate code paths.
-    Delegates to L4 AnalyticsFacade.
+    Delegates to L4 operation registry.
     """
     # Get tenant from auth context
     auth_context = get_auth_context(request)
@@ -839,10 +890,9 @@ async def _get_cost_data(
             detail="Time window cannot exceed 90 days",
         )
 
-    # Delegate to L4 facade
+    # Delegate to L4 operation registry
     # L5 engine import (migrated to HOC per SWEEP-15)
     from app.hoc.cus.analytics.L5_engines.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
-    facade = get_analytics_facade()
 
     # Map L2 enums to L4 enums
     facade_resolution = FacadeResolution.HOUR if resolution == ResolutionType.HOUR else FacadeResolution.DAY
@@ -852,14 +902,27 @@ async def _get_cost_data(
     elif scope == ScopeType.ENV:
         facade_scope = FacadeScope.ENV
 
-    result = await facade.get_cost_statistics(
-        session=session,
-        tenant_id=tenant_id,
-        from_ts=from_ts,
-        to_ts=to_ts,
-        resolution=facade_resolution,
-        scope=facade_scope,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "analytics.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_cost_statistics",
+                "from_ts": from_ts,
+                "to_ts": to_ts,
+                "resolution": facade_resolution,
+                "scope": facade_scope,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     # Map L4 result to L2 response
     series = [

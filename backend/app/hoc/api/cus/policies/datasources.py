@@ -39,10 +39,10 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-# L5 engine imports (migrated to HOC per SWEEP-22)
-from app.hoc.cus.integrations.L5_engines.datasources_facade import (
-    DataSourcesFacade,
-    get_datasources_facade,
+# L4 operation registry import
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
 )
 
 # =============================================================================
@@ -76,16 +76,6 @@ class UpdateSourceRequest(BaseModel):
 
 
 # =============================================================================
-# Dependencies
-# =============================================================================
-
-
-def get_facade() -> DataSourcesFacade:
-    """Get the datasources facade."""
-    return get_datasources_facade()
-
-
-# =============================================================================
 # Endpoints (GAP-113)
 # =============================================================================
 
@@ -94,7 +84,6 @@ def get_facade() -> DataSourcesFacade:
 async def create_source(
     request: CreateSourceRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: DataSourcesFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("datasources.write")),
 ):
     """
@@ -110,15 +99,26 @@ async def create_source(
     - stream: Streaming sources (Kafka, etc.)
     - custom: Custom connectors
     """
-    source = await facade.register_source(
-        tenant_id=ctx.tenant_id,
-        name=request.name,
-        source_type=request.source_type,
-        config=request.config,
-        description=request.description,
-        tags=request.tags,
-        metadata=request.metadata,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "integrations.datasources",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "register_source",
+                "name": request.name,
+                "source_type": request.source_type,
+                "config": request.config,
+                "description": request.description,
+                "tags": request.tags,
+                "metadata": request.metadata,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    source = op.data
 
     return wrap_dict(source.to_dict())
 
@@ -131,20 +131,30 @@ async def list_sources(
     limit: int = Query(100, le=1000, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: DataSourcesFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("datasources.read")),
 ):
     """
     List data sources.
     """
-    sources = await facade.list_sources(
-        tenant_id=ctx.tenant_id,
-        source_type=source_type,
-        status=status,
-        tag=tag,
-        limit=limit,
-        offset=offset,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "integrations.datasources",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "list_sources",
+                "source_type": source_type,
+                "status": status,
+                "tag": tag,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    sources = op.data
 
     return wrap_dict({
         "sources": [s.to_dict() for s in sources],
@@ -157,13 +167,25 @@ async def list_sources(
 @router.get("/stats", response_model=Dict[str, Any])
 async def get_statistics(
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: DataSourcesFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("datasources.read")),
 ):
     """
     Get data source statistics.
     """
-    stats = await facade.get_statistics(tenant_id=ctx.tenant_id)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "integrations.datasources",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "get_statistics",
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    stats = op.data
 
     return wrap_dict(stats.to_dict())
 
@@ -172,16 +194,26 @@ async def get_statistics(
 async def get_source(
     source_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: DataSourcesFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("datasources.read")),
 ):
     """
     Get a specific data source.
     """
-    source = await facade.get_source(
-        source_id=source_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "integrations.datasources",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "get_source",
+                "source_id": source_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    source = op.data
 
     if not source:
         raise HTTPException(status_code=404, detail="Data source not found")
@@ -194,20 +226,30 @@ async def update_source(
     source_id: str,
     request: UpdateSourceRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: DataSourcesFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("datasources.write")),
 ):
     """
     Update a data source.
     """
-    source = await facade.update_source(
-        source_id=source_id,
-        tenant_id=ctx.tenant_id,
-        name=request.name,
-        description=request.description,
-        config=request.config,
-        metadata=request.metadata,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "integrations.datasources",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "update_source",
+                "source_id": source_id,
+                "name": request.name,
+                "description": request.description,
+                "config": request.config,
+                "metadata": request.metadata,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    source = op.data
 
     if not source:
         raise HTTPException(status_code=404, detail="Data source not found")
@@ -219,16 +261,26 @@ async def update_source(
 async def delete_source(
     source_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: DataSourcesFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("datasources.write")),
 ):
     """
     Delete a data source.
     """
-    success = await facade.delete_source(
-        source_id=source_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "integrations.datasources",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "delete_source",
+                "source_id": source_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    success = op.data
 
     if not success:
         raise HTTPException(status_code=404, detail="Data source not found")
@@ -240,7 +292,6 @@ async def delete_source(
 async def test_connection(
     source_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: DataSourcesFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("datasources.test")),
 ):
     """
@@ -248,10 +299,21 @@ async def test_connection(
 
     Verifies that the data source can be reached with the current configuration.
     """
-    result = await facade.test_connection(
-        source_id=source_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "integrations.datasources",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "test_connection",
+                "source_id": source_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     if not result:
         raise HTTPException(status_code=404, detail="Data source not found")
@@ -263,7 +325,6 @@ async def test_connection(
 async def activate_source(
     source_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: DataSourcesFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("datasources.write")),
 ):
     """
@@ -271,10 +332,21 @@ async def activate_source(
 
     Makes the data source available for use.
     """
-    source = await facade.activate_source(
-        source_id=source_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "integrations.datasources",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "activate_source",
+                "source_id": source_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    source = op.data
 
     if not source:
         raise HTTPException(status_code=404, detail="Data source not found")
@@ -286,7 +358,6 @@ async def activate_source(
 async def deactivate_source(
     source_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: DataSourcesFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("datasources.write")),
 ):
     """
@@ -294,10 +365,21 @@ async def deactivate_source(
 
     Temporarily disables the data source.
     """
-    source = await facade.deactivate_source(
-        source_id=source_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "integrations.datasources",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "deactivate_source",
+                "source_id": source_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    source = op.data
 
     if not source:
         raise HTTPException(status_code=404, detail="Data source not found")

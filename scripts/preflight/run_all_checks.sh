@@ -73,6 +73,10 @@ fi
 run_check "Activity Domain Contract" \
     "python3 $SCRIPT_DIR/check_activity_domain.py"
 
+# L2-L4-L5 freeze enforcement (Phase C — PIN-491)
+run_check "L2-L4-L5 Freeze" \
+    "python3 $SCRIPT_DIR/check_l2_l4_l5_freeze.py"
+
 # Summary
 echo ""
 echo "════════════════════════════════════════════════════════════"

@@ -38,10 +38,9 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-# L5 facade import (migrated to HOC per SWEEP-08)
-from app.hoc.cus.policies.L5_engines.limits_facade import (
-    LimitsFacade,
-    get_limits_facade,
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
 )
 
 # =============================================================================
@@ -70,16 +69,6 @@ class CheckLimitRequest(BaseModel):
 
 
 # =============================================================================
-# Dependencies
-# =============================================================================
-
-
-def get_facade() -> LimitsFacade:
-    """Get the limits facade."""
-    return get_limits_facade()
-
-
-# =============================================================================
 # Endpoints (GAP-122)
 # =============================================================================
 
@@ -90,7 +79,6 @@ async def list_limits(
     limit: int = Query(100, le=1000, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: LimitsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("limits.read")),
 ):
     """
@@ -98,12 +86,23 @@ async def list_limits(
 
     Returns all configured limits for the tenant.
     """
-    limits = await facade.list_limits(
-        tenant_id=ctx.tenant_id,
-        limit_type=limit_type,
-        limit=limit,
-        offset=offset,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.rate_limits",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "list_limits",
+                "limit_type": limit_type,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    limits = op.data
 
     return wrap_dict({
         "limits": [l.to_dict() for l in limits],
@@ -116,7 +115,6 @@ async def list_limits(
 @router.get("/usage", response_model=Dict[str, Any])
 async def get_usage(
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: LimitsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("limits.read")),
 ):
     """
@@ -124,7 +122,18 @@ async def get_usage(
 
     Returns usage across all limits with aggregated totals.
     """
-    usage = await facade.get_usage(tenant_id=ctx.tenant_id)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.rate_limits",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={"method": "get_usage"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    usage = op.data
 
     return wrap_dict(usage.to_dict())
 
@@ -133,7 +142,6 @@ async def get_usage(
 async def check_limit(
     request: CheckLimitRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: LimitsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("limits.check")),
 ):
     """
@@ -141,11 +149,22 @@ async def check_limit(
 
     If allowed, increments the usage counter.
     """
-    result = await facade.check_limit(
-        tenant_id=ctx.tenant_id,
-        limit_type=request.limit_type,
-        increment=request.increment,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.rate_limits",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "check_limit",
+                "limit_type": request.limit_type,
+                "increment": request.increment,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     return wrap_dict(result.to_dict())
 
@@ -154,16 +173,23 @@ async def check_limit(
 async def get_limit(
     limit_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: LimitsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("limits.read")),
 ):
     """
     Get a specific limit.
     """
-    lim = await facade.get_limit(
-        limit_id=limit_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.rate_limits",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={"method": "get_limit", "limit_id": limit_id},
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    lim = op.data
 
     if not lim:
         raise HTTPException(status_code=404, detail="Limit not found")
@@ -176,19 +202,29 @@ async def update_limit(
     limit_id: str,
     request: UpdateLimitRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: LimitsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("limits.write")),
 ):
     """
     Update a limit configuration.
     """
-    lim = await facade.update_limit(
-        limit_id=limit_id,
-        tenant_id=ctx.tenant_id,
-        max_value=request.max_value,
-        enabled=request.enabled,
-        metadata=request.metadata,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.rate_limits",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "update_limit",
+                "limit_id": limit_id,
+                "max_value": request.max_value,
+                "enabled": request.enabled,
+                "metadata": request.metadata,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    lim = op.data
 
     if not lim:
         raise HTTPException(status_code=404, detail="Limit not found")
@@ -200,7 +236,6 @@ async def update_limit(
 async def reset_limit(
     limit_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: LimitsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("limits.admin")),
 ):
     """
@@ -209,17 +244,35 @@ async def reset_limit(
     **Requires admin permissions.**
     """
     # Get limit first to find its type
-    lim = await facade.get_limit(
-        limit_id=limit_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.rate_limits",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={"method": "get_limit", "limit_id": limit_id},
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    lim = op.data
 
     if not lim:
         raise HTTPException(status_code=404, detail="Limit not found")
 
-    lim = await facade.reset_limit(
-        tenant_id=ctx.tenant_id,
-        limit_type=lim.limit_type,
+    op = await registry.execute(
+        "policies.rate_limits",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "reset_limit",
+                "limit_type": lim.limit_type,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
-    return wrap_dict(lim.to_dict() if lim else {"success": True})
+    return wrap_dict(result.to_dict() if result else {"success": True})

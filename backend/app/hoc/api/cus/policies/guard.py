@@ -78,24 +78,19 @@ from app.models.killswitch import (
 )
 from app.models.tenant import Tenant
 
-# M23: Import CertificateService for cryptographic proof of replay
-# L5 engine import (migrated to HOC per SWEEP-32)
-from app.hoc.cus.logs.L5_engines.certificate import (
-    CertificateService,
+# Phase 2B: Write service for DB operations
+# V2.0.0 - hoc_spine drivers
+from app.hoc.hoc_spine.drivers.guard_write_driver import GuardWriteDriver as GuardWriteService
+
+# M23: L4 operation registry for certificate and replay operations
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
 )
 
-# Phase 2B: Write service for DB operations
-# L6 driver import (migrated to HOC per SWEEP-32)
-from app.hoc.cus.general.L5_controls.drivers.guard_write_driver import GuardWriteDriver as GuardWriteService
-
-# M23: Import ReplayValidator for real determinism validation
-# L5 engine imports (migrated to HOC per SWEEP-32)
+# M23: Keep DeterminismLevel enum for type usage (not a facade call)
 from app.hoc.cus.logs.L5_engines.replay_determinism import (
     DeterminismLevel,
-    ReplayContextBuilder,
-)
-from app.hoc.cus.logs.L5_engines.replay_determinism import (
-    ReplayValidator as RealReplayValidator,
 )
 
 # Guard Cache for latency optimization (EU server -> Singapore DB)
@@ -925,26 +920,35 @@ async def replay_call(
     except json_module.JSONDecodeError:
         pass
 
-    # Build original CallRecord
-    context_builder = ReplayContextBuilder()
-    original_record = context_builder.build_call_record(
-        call_id=original_call.id,
-        request=request_body,
-        response=response_body,
-        model_info={
-            "provider": "openai",  # Infer from model name
-            "model": original_call.model or "unknown",
-            "temperature": request_body.get("temperature"),
-            "seed": request_body.get("seed"),
-        },
-        policy_decisions=original_decisions,
-        duration_ms=original_call.latency_ms,
+    # Build original CallRecord using L4 operation registry
+    registry = get_operation_registry()
+    build_original_op = await registry.execute(
+        "logs.replay",
+        OperationContext(
+            session=None,
+            tenant_id=original_call.tenant_id,
+            params={
+                "method": "build_call_record",
+                "call_id": original_call.id,
+                "request": request_body,
+                "response": response_body,
+                "model_info": {
+                    "provider": "openai",  # Infer from model name
+                    "model": original_call.model or "unknown",
+                    "temperature": request_body.get("temperature"),
+                    "seed": request_body.get("seed"),
+                },
+                "policy_decisions": original_decisions,
+                "duration_ms": original_call.latency_ms,
+            },
+        ),
     )
+    if not build_original_op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": build_original_op.error})
+    original_record = build_original_op.data
 
     # M23: For LOGICAL validation, we re-evaluate guardrails without calling LLM
     # This proves policy determinism without incurring LLM costs
-    validator = RealReplayValidator()
-
     # Re-evaluate guardrails against the same request
     from app.models.killswitch import DefaultGuardrail as GuardrailModel
 
@@ -970,27 +974,49 @@ async def replay_call(
             }
         )
 
-    # Build replay CallRecord (same request, re-evaluated policies)
-    replay_record = context_builder.build_call_record(
-        call_id=f"replay_{original_call.id}",
-        request=request_body,
-        response=response_body,  # Same response for LOGICAL validation
-        model_info={
-            "provider": "openai",
-            "model": original_call.model or "unknown",
-            "temperature": request_body.get("temperature"),
-            "seed": request_body.get("seed"),
-        },
-        policy_decisions=replay_decisions,
-        duration_ms=0,  # Replay evaluation is instant
+    # Build replay CallRecord (same request, re-evaluated policies) using L4 operation registry
+    build_replay_op = await registry.execute(
+        "logs.replay",
+        OperationContext(
+            session=None,
+            tenant_id=original_call.tenant_id,
+            params={
+                "method": "build_call_record",
+                "call_id": f"replay_{original_call.id}",
+                "request": request_body,
+                "response": response_body,  # Same response for LOGICAL validation
+                "model_info": {
+                    "provider": "openai",
+                    "model": original_call.model or "unknown",
+                    "temperature": request_body.get("temperature"),
+                    "seed": request_body.get("seed"),
+                },
+                "policy_decisions": replay_decisions,
+                "duration_ms": 0,  # Replay evaluation is instant
+            },
+        ),
     )
+    if not build_replay_op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": build_replay_op.error})
+    replay_record = build_replay_op.data
 
-    # M23: Validate using real ReplayValidator
-    validation_result = validator.validate_replay(
-        original=original_record,
-        replay=replay_record,
-        level=determinism_level,
+    # M23: Validate using L4 operation registry
+    validate_op = await registry.execute(
+        "logs.replay",
+        OperationContext(
+            session=None,
+            tenant_id=original_call.tenant_id,
+            params={
+                "method": "validate_replay",
+                "original": original_record,
+                "replay": replay_record,
+                "level": determinism_level,
+            },
+        ),
     )
+    if not validate_op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": validate_op.error})
+    validation_result = validate_op.data
 
     # Create original snapshot for API response
     original_snapshot = ReplayCallSnapshot(
@@ -1028,17 +1054,44 @@ async def replay_call(
         cost_cents=0,  # No cost for replay validation
     )
 
-    # M23: Generate cryptographic certificate for the replay validation
-    cert_service = CertificateService()
-    certificate = cert_service.create_replay_certificate(
-        call_id=call_id,
-        validation_result=validation_result,
-        level=determinism_level,
-        tenant_id=original_call.tenant_id,
-        user_id=original_call.user_id if hasattr(original_call, "user_id") else None,
-        request_hash=original_call.request_hash,
-        response_hash=original_call.response_hash,
+    # M23: Generate cryptographic certificate using L4 operation registry
+    cert_op = await registry.execute(
+        "logs.certificate",
+        OperationContext(
+            session=None,
+            tenant_id=original_call.tenant_id,
+            params={
+                "method": "create_replay_certificate",
+                "call_id": call_id,
+                "validation_result": validation_result,
+                "level": determinism_level,
+                "tenant_id": original_call.tenant_id,
+                "user_id": original_call.user_id if hasattr(original_call, "user_id") else None,
+                "request_hash": original_call.request_hash,
+                "response_hash": original_call.response_hash,
+            },
+        ),
     )
+    if not cert_op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": cert_op.error})
+    certificate = cert_op.data
+
+    # Export certificate to PEM format using L4 operation registry
+    export_cert_op = await registry.execute(
+        "logs.certificate",
+        OperationContext(
+            session=None,
+            tenant_id=original_call.tenant_id,
+            params={
+                "method": "export_certificate",
+                "certificate": certificate,
+                "format": "pem",
+            },
+        ),
+    )
+    if not export_cert_op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": export_cert_op.error})
+    pem_format = export_cert_op.data
 
     # Convert certificate to response format
     cert_response = ReplayCertificate(
@@ -1048,7 +1101,7 @@ async def replay_call(
         valid_until=certificate.payload.valid_until,
         validation_passed=certificate.payload.validation_passed,
         signature=certificate.signature,
-        pem_format=cert_service.export_certificate(certificate, format="pem"),
+        pem_format=pem_format,
     )
 
     return ReplayResult(
@@ -1833,9 +1886,6 @@ async def export_incident_evidence(
     """
     from fastapi.responses import Response
 
-    # L5 engine import (migrated to HOC per SWEEP-32)
-    from app.hoc.cus.logs.L5_engines.evidence_report import generate_evidence_report
-
     # Get incident
     stmt = select(Incident).where(
         and_(
@@ -1972,27 +2022,38 @@ async def export_incident_evidence(
             "replay_hash": output_hash,
         }
 
-    # Generate PDF
-    pdf_bytes = generate_evidence_report(
-        incident_id=incident_id,
-        tenant_id=tenant_id,
-        tenant_name=tenant_name,
-        user_id=incident_data.get("user_id", "cust_8372"),
-        product_name=incident_data.get("product", "AI Support Chatbot"),
-        model_id=incident_data.get("model", "gpt-4.1"),
-        timestamp=incident.started_at.strftime("%Y-%m-%d %H:%M:%S UTC")
-        if incident.started_at
-        else datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
-        user_input=user_input,
-        context_data=context_data,
-        ai_output=ai_output,
-        policy_results=policy_results,
-        timeline_events=timeline_events,
-        replay_result=replay_result,
-        prevention_result=prevention_result,
-        root_cause="Policy enforcement gap: the system asserted a fact when required data was NULL.",
-        is_demo=is_demo,
+    # Generate PDF using L4 operation registry
+    registry = get_operation_registry()
+    report_op = await registry.execute(
+        "logs.evidence_report",
+        OperationContext(
+            session=None,
+            tenant_id=tenant_id,
+            params={
+                "incident_id": incident_id,
+                "tenant_id": tenant_id,
+                "tenant_name": tenant_name,
+                "user_id": incident_data.get("user_id", "cust_8372"),
+                "product_name": incident_data.get("product", "AI Support Chatbot"),
+                "model_id": incident_data.get("model", "gpt-4.1"),
+                "timestamp": incident.started_at.strftime("%Y-%m-%d %H:%M:%S UTC")
+                if incident.started_at
+                else datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+                "user_input": user_input,
+                "context_data": context_data,
+                "ai_output": ai_output,
+                "policy_results": policy_results,
+                "timeline_events": timeline_events,
+                "replay_result": replay_result,
+                "prevention_result": prevention_result,
+                "root_cause": "Policy enforcement gap: the system asserted a fact when required data was NULL.",
+                "is_demo": is_demo,
+            },
+        ),
     )
+    if not report_op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": report_op.error})
+    pdf_bytes = report_op.data
 
     # Return PDF with proper headers
     filename = f"evidence_report_{incident_id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.pdf"

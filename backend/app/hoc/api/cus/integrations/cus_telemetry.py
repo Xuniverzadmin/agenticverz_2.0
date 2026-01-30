@@ -43,8 +43,10 @@ from app.schemas.cus_schemas import (
     CusUsageSummary,
 )
 from app.schemas.response import wrap_dict, wrap_error, wrap_list
-# L5 engine import (migrated to HOC per SWEEP-03 Batch 2)
-from app.hoc.cus.activity.L5_engines.cus_telemetry_service import CusTelemetryService
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+)
 
 router = APIRouter(prefix="/telemetry", tags=["Customer Telemetry"])
 
@@ -54,9 +56,8 @@ router = APIRouter(prefix="/telemetry", tags=["Customer Telemetry"])
 # =============================================================================
 
 
-def get_telemetry_service() -> CusTelemetryService:
-    """Dependency to get telemetry service instance."""
-    return CusTelemetryService()
+
+
 
 
 async def get_integration_context(
@@ -109,7 +110,6 @@ async def get_integration_context(
 async def ingest_llm_usage(
     payload: CusLLMUsageIngest,
     ctx: dict = Depends(get_integration_context),
-    service: CusTelemetryService = Depends(get_telemetry_service),
 ):
     """Ingest a single LLM usage telemetry record.
 
@@ -142,12 +142,23 @@ async def ingest_llm_usage(
         )
 
     try:
-        result = await service.ingest_usage(
-            tenant_id=tenant_id,
-            integration_id=integration_id,
-            payload=payload,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "activity.telemetry",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "ingest_usage",
+                    "tenant_id": tenant_id,
+                    "integration_id": integration_id,
+                    "payload": payload,
+                },
+            ),
         )
-        return wrap_dict(result)
+        if not op.success:
+            return wrap_error(op.error, code="INGESTION_ERROR")
+        return wrap_dict(op.data)
     except ValueError as e:
         return wrap_error(str(e), code="VALIDATION_ERROR")
     except Exception as e:
@@ -161,7 +172,6 @@ async def ingest_llm_usage(
 async def ingest_llm_usage_batch(
     payload: CusLLMUsageBatchIngest,
     ctx: dict = Depends(get_integration_context),
-    service: CusTelemetryService = Depends(get_telemetry_service),
 ):
     """Ingest a batch of LLM usage telemetry records.
 
@@ -182,12 +192,23 @@ async def ingest_llm_usage_batch(
     integration_id = ctx.get("integration_id")
 
     try:
-        result = await service.ingest_batch(
-            tenant_id=tenant_id,
-            default_integration_id=integration_id,
-            records=payload.records,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "activity.telemetry",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "ingest_batch",
+                    "tenant_id": tenant_id,
+                    "default_integration_id": integration_id,
+                    "records": payload.records,
+                },
+            ),
         )
-        return wrap_dict(result)
+        if not op.success:
+            return wrap_error(op.error or "Batch ingestion failed", code="BATCH_INGESTION_ERROR")
+        return wrap_dict(op.data)
     except Exception as e:
         return wrap_error(
             f"Batch ingestion failed: {str(e)}",
@@ -207,7 +228,6 @@ async def get_usage_summary(
     start_date: Optional[date] = Query(None, description="Period start (default: 30 days ago)"),
     end_date: Optional[date] = Query(None, description="Period end (default: today)"),
     ctx: dict = Depends(get_integration_context),
-    service: CusTelemetryService = Depends(get_telemetry_service),
 ):
     """Get aggregated usage summary for dashboard.
 
@@ -232,12 +252,24 @@ async def get_usage_summary(
         start_date = end_date - timedelta(days=30)
 
     try:
-        summary = await service.get_usage_summary(
-            tenant_id=tenant_id,
-            integration_id=integration_id,
-            start_date=start_date,
-            end_date=end_date,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "activity.telemetry",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_usage_summary",
+                    "tenant_id": tenant_id,
+                    "integration_id": integration_id,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                },
+            ),
         )
+        if not op.success:
+            return wrap_error(op.error or "Query failed", code="QUERY_ERROR")
+        summary = op.data
         return wrap_dict(summary.model_dump())
     except Exception as e:
         return wrap_error(
@@ -253,7 +285,6 @@ async def get_usage_history(
     limit: int = Query(50, ge=1, le=1000, description="Max records to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     ctx: dict = Depends(get_integration_context),
-    service: CusTelemetryService = Depends(get_telemetry_service),
 ):
     """Get detailed usage history records.
 
@@ -272,12 +303,24 @@ async def get_usage_history(
     tenant_id = ctx["tenant_id"]
 
     try:
-        records, total = await service.get_usage_history(
-            tenant_id=tenant_id,
-            integration_id=integration_id,
-            limit=limit,
-            offset=offset,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "activity.telemetry",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_usage_history",
+                    "tenant_id": tenant_id,
+                    "integration_id": integration_id,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            ),
         )
+        if not op.success:
+            return wrap_error(op.error or "Query failed", code="QUERY_ERROR")
+        records, total = op.data
         return wrap_list(
             items=[r.model_dump() for r in records],
             total=total,
@@ -298,7 +341,6 @@ async def get_daily_aggregates(
     start_date: Optional[date] = Query(None, description="Period start"),
     end_date: Optional[date] = Query(None, description="Period end"),
     ctx: dict = Depends(get_integration_context),
-    service: CusTelemetryService = Depends(get_telemetry_service),
 ):
     """Get daily aggregated usage for charts.
 
@@ -323,12 +365,24 @@ async def get_daily_aggregates(
         start_date = end_date - timedelta(days=30)
 
     try:
-        aggregates = await service.get_daily_aggregates(
-            tenant_id=tenant_id,
-            integration_id=integration_id,
-            start_date=start_date,
-            end_date=end_date,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "activity.telemetry",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_daily_aggregates",
+                    "tenant_id": tenant_id,
+                    "integration_id": integration_id,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                },
+            ),
         )
+        if not op.success:
+            return wrap_error(op.error or "Query failed", code="QUERY_ERROR")
+        aggregates = op.data
         return wrap_list(items=aggregates)
     except Exception as e:
         return wrap_error(

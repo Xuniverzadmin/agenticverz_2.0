@@ -37,9 +37,9 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-from app.hoc.cus.account.L5_engines.notifications_facade import (
-    NotificationsFacade,
-    get_notifications_facade,
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
 )
 
 # =============================================================================
@@ -71,16 +71,6 @@ class UpdatePreferencesRequest(BaseModel):
 
 
 # =============================================================================
-# Dependencies
-# =============================================================================
-
-
-def get_facade() -> NotificationsFacade:
-    """Get the notifications facade."""
-    return get_notifications_facade()
-
-
-# =============================================================================
 # Endpoints
 # =============================================================================
 
@@ -89,7 +79,6 @@ def get_facade() -> NotificationsFacade:
 async def send_notification(
     request: SendNotificationRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: NotificationsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("notifications.send")),
 ):
     """
@@ -104,16 +93,27 @@ async def send_notification(
     - in_app: In-app notifications
     - sms: SMS messages (requires configuration)
     """
-    notification = await facade.send_notification(
-        tenant_id=ctx.tenant_id,
-        channel=request.channel,
-        recipient=request.recipient,
-        message=request.message,
-        subject=request.subject,
-        priority=request.priority,
-        metadata=request.metadata,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "account.notifications",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "send_notification",
+                "channel": request.channel,
+                "recipient": request.recipient,
+                "message": request.message,
+                "subject": request.subject,
+                "priority": request.priority,
+                "metadata": request.metadata,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
+    notification = op.data
     return wrap_dict(notification.to_dict())
 
 
@@ -125,21 +125,31 @@ async def list_notifications(
     limit: int = Query(100, le=1000, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: NotificationsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("notifications.read")),
 ):
     """
     List notifications for the tenant.
     """
-    notifications = await facade.list_notifications(
-        tenant_id=ctx.tenant_id,
-        channel=channel,
-        status=status,
-        recipient=recipient,
-        limit=limit,
-        offset=offset,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "account.notifications",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "list_notifications",
+                "channel": channel,
+                "status": status,
+                "recipient": recipient,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
+    notifications = op.data
     return wrap_dict({
         "notifications": [n.to_dict() for n in notifications],
         "total": len(notifications),
@@ -151,13 +161,23 @@ async def list_notifications(
 @router.get("/channels", response_model=Dict[str, Any])
 async def list_channels(
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: NotificationsFacade = Depends(get_facade),
 ):
     """
     List available notification channels.
     """
-    channels = await facade.list_channels()
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "account.notifications",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={"method": "list_channels"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
+    channels = op.data
     return wrap_dict({
         "channels": [c.to_dict() for c in channels],
     })
@@ -166,18 +186,28 @@ async def list_channels(
 @router.get("/preferences", response_model=Dict[str, Any])
 async def get_preferences(
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: NotificationsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("notifications.read")),
 ):
     """
     Get notification preferences for the current user.
     """
     user_id = ctx.user_id or "default"
-    prefs = await facade.get_preferences(
-        tenant_id=ctx.tenant_id,
-        user_id=user_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "account.notifications",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "get_preferences",
+                "user_id": user_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
+    prefs = op.data
     return wrap_dict(prefs.to_dict())
 
 
@@ -185,20 +215,30 @@ async def get_preferences(
 async def update_preferences(
     request: UpdatePreferencesRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: NotificationsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("notifications.write")),
 ):
     """
     Update notification preferences for the current user.
     """
     user_id = ctx.user_id or "default"
-    prefs = await facade.update_preferences(
-        tenant_id=ctx.tenant_id,
-        user_id=user_id,
-        channels=request.channels,
-        priorities=request.priorities,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "account.notifications",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "update_preferences",
+                "user_id": user_id,
+                "channels": request.channels,
+                "priorities": request.priorities,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
+    prefs = op.data
     return wrap_dict(prefs.to_dict())
 
 
@@ -206,17 +246,27 @@ async def update_preferences(
 async def get_notification(
     notification_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: NotificationsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("notifications.read")),
 ):
     """
     Get a specific notification.
     """
-    notification = await facade.get_notification(
-        notification_id=notification_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "account.notifications",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "get_notification",
+                "notification_id": notification_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
+    notification = op.data
     if not notification:
         raise HTTPException(status_code=404, detail="Notification not found")
 
@@ -227,17 +277,27 @@ async def get_notification(
 async def mark_as_read(
     notification_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: NotificationsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("notifications.write")),
 ):
     """
     Mark a notification as read.
     """
-    notification = await facade.mark_as_read(
-        notification_id=notification_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "account.notifications",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "mark_as_read",
+                "notification_id": notification_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
+    notification = op.data
     if not notification:
         raise HTTPException(status_code=404, detail="Notification not found")
 

@@ -36,11 +36,9 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-# L5 engine import (migrated to HOC per SWEEP-03)
-from app.hoc.cus.policies.L5_engines.governance_facade import (
-    GovernanceFacade,
-    GovernanceMode,
-    get_governance_facade,
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
 )
 
 # =============================================================================
@@ -108,10 +106,6 @@ class BootStatusResponse(BaseModel):
 # =============================================================================
 
 
-def get_facade() -> GovernanceFacade:
-    """Get the governance facade."""
-    return get_governance_facade()
-
 
 # =============================================================================
 # Endpoints
@@ -121,7 +115,6 @@ def get_facade() -> GovernanceFacade:
 @router.get("/state", response_model=Dict[str, Any])
 async def get_governance_state(
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: GovernanceFacade = Depends(get_facade),
 ):
     """
     Get current governance state.
@@ -129,15 +122,24 @@ async def get_governance_state(
     Returns the current governance mode, whether enforcement is active,
     and details about the last state change.
     """
-    state = facade.get_governance_state()
-    return wrap_dict(state.to_dict())
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.governance",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={"method": "get_governance_state"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    return wrap_dict(op.data)
 
 
 @router.post("/kill-switch", response_model=Dict[str, Any])
 async def toggle_kill_switch(
     request: KillSwitchRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: GovernanceFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("governance.kill_switch")),
 ):
     """
@@ -152,29 +154,29 @@ async def toggle_kill_switch(
     - enabled=false: Re-enable governance (kill switch OFF)
     """
     actor = ctx.user_id or "system"
-
+    method = "enable_kill_switch" if request.enabled else "disable_kill_switch"
+    params = {"method": method, "actor": actor}
     if request.enabled:
-        result = facade.enable_kill_switch(
-            reason=request.reason,
-            actor=actor,
-        )
-    else:
-        result = facade.disable_kill_switch(actor=actor)
+        params["reason"] = request.reason
 
-    if not result.success:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Kill switch operation failed: {result.error}",
-        )
-
-    return wrap_dict(result.to_dict())
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.governance",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params=params,
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    return wrap_dict(op.data)
 
 
 @router.post("/mode", response_model=Dict[str, Any])
 async def set_governance_mode(
     request: ModeRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: GovernanceFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("governance.mode")),
 ):
     """
@@ -187,9 +189,10 @@ async def set_governance_mode(
     - DEGRADED: Limited enforcement, new runs blocked
     - KILL: All governance disabled (emergency)
     """
-    try:
-        mode = GovernanceMode(request.mode.upper())
-    except ValueError:
+    # Validate mode string before dispatch
+    valid_modes = {"NORMAL", "DEGRADED", "KILL"}
+    mode_str = request.mode.upper()
+    if mode_str not in valid_modes:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid mode: {request.mode}. Valid modes: NORMAL, DEGRADED, KILL",
@@ -197,26 +200,29 @@ async def set_governance_mode(
 
     actor = ctx.user_id or "system"
 
-    result = facade.set_mode(
-        mode=mode,
-        reason=request.reason,
-        actor=actor,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.governance",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "set_mode",
+                "mode": mode_str,
+                "reason": request.reason,
+                "actor": actor,
+            },
+        ),
     )
-
-    if not result.success:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Mode change failed: {result.error}",
-        )
-
-    return wrap_dict(result.to_dict())
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    return wrap_dict(op.data)
 
 
 @router.post("/resolve-conflict", response_model=Dict[str, Any])
 async def resolve_conflict(
     request: ConflictResolutionRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: GovernanceFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("governance.resolve_conflict")),
 ):
     """
@@ -232,20 +238,24 @@ async def resolve_conflict(
     """
     actor = ctx.user_id or "system"
 
-    result = facade.resolve_conflict(
-        conflict_id=request.conflict_id,
-        resolution=request.resolution,
-        actor=actor,
-        notes=request.notes,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.governance",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "resolve_conflict",
+                "conflict_id": request.conflict_id,
+                "resolution": request.resolution,
+                "actor": actor,
+                "notes": request.notes,
+            },
+        ),
     )
-
-    if not result.success:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Conflict resolution failed: {result.error}",
-        )
-
-    return wrap_dict(result.to_dict())
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    return wrap_dict(op.data)
 
 
 @router.get("/conflicts", response_model=Dict[str, Any])
@@ -253,7 +263,6 @@ async def list_conflicts(
     tenant_id: Optional[str] = Query(None, description="Filter by tenant"),
     status: Optional[str] = Query(None, description="Filter by status"),
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: GovernanceFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("governance.read")),
 ):
     """
@@ -261,21 +270,27 @@ async def list_conflicts(
 
     Returns pending and resolved policy conflicts.
     """
-    conflicts = facade.list_conflicts(
-        tenant_id=tenant_id,
-        status=status,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.governance",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "list_conflicts",
+                "tenant_id": tenant_id,
+                "status": status,
+            },
+        ),
     )
-
-    return wrap_dict({
-        "conflicts": conflicts,
-        "total": len(conflicts),
-    })
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    return wrap_dict(op.data)
 
 
 @router.get("/boot-status", response_model=Dict[str, Any])
 async def get_boot_status(
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: GovernanceFacade = Depends(get_facade),
 ):
     """
     Get SPINE component health status (GAP-095).
@@ -286,5 +301,15 @@ async def get_boot_status(
     - audit_store: Audit event storage
     - policy_facade: Policy facade availability
     """
-    status = facade.get_boot_status()
-    return wrap_dict(status.to_dict())
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.governance",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={"method": "get_boot_status"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    return wrap_dict(op.data)

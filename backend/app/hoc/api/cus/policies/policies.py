@@ -48,8 +48,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
 from app.schemas.response import wrap_dict
-# L5 engine import (migrated to HOC per SWEEP-03 Batch 3)
-from app.hoc.cus.policies.L5_engines.policies_facade import get_policies_facade
+# L4 operation registry dispatch (migrated from L5 facade per HOC Topology V2.0.0)
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+)
 
 # =============================================================================
 # Environment Configuration
@@ -286,22 +289,31 @@ async def list_policy_rules(
 ) -> RulesListResponse:
     """List policy rules with unified query filters. READ-ONLY."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_policies_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.list_policy_rules(
-            session=session,
-            tenant_id=tenant_id,
-            status=status,
-            enforcement_mode=enforcement_mode,
-            scope=scope,
-            source=source,
-            rule_type=rule_type,
-            created_after=created_after,
-            created_before=created_before,
-            limit=limit,
-            offset=offset,
+        op = await registry.execute(
+            "policies.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "list_policy_rules",
+                    "status": status,
+                    "enforcement_mode": enforcement_mode,
+                    "scope": scope,
+                    "source": source,
+                    "rule_type": rule_type,
+                    "created_after": created_after,
+                    "created_before": created_before,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         # Convert facade result to API response
         items = [
@@ -355,14 +367,23 @@ async def get_policy_rule_detail(
     """Get policy rule detail (O3). Tenant isolation enforced."""
 
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_policies_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.get_policy_rule_detail(
-            session=session,
-            tenant_id=tenant_id,
-            rule_id=rule_id,
+        op = await registry.execute(
+            "policies.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_policy_rule_detail",
+                    "rule_id": rule_id,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         if not result:
             raise HTTPException(status_code=404, detail="Policy rule not found")
@@ -460,22 +481,31 @@ async def list_limits(
 ) -> LimitsListResponse:
     """List limits with unified query filters. READ-ONLY."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_policies_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.list_limits(
-            session=session,
-            tenant_id=tenant_id,
-            category=category,
-            status=status,
-            scope=scope,
-            enforcement=enforcement,
-            limit_type=limit_type,
-            created_after=created_after,
-            created_before=created_before,
-            limit=max_limit,
-            offset=offset,
+        op = await registry.execute(
+            "policies.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "list_limits",
+                    "category": category,
+                    "status": status,
+                    "scope": scope,
+                    "enforcement": enforcement,
+                    "limit_type": limit_type,
+                    "created_after": created_after,
+                    "created_before": created_before,
+                    "limit": max_limit,
+                    "offset": offset,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         # Convert facade result to API response
         items = [
@@ -532,14 +562,23 @@ async def get_limit_detail(
     """Get limit detail (O3). Tenant isolation enforced."""
 
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_policies_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.get_limit_detail(
-            session=session,
-            tenant_id=tenant_id,
-            limit_id=limit_id,
+        op = await registry.execute(
+            "policies.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_limit_detail",
+                    "limit_id": limit_id,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         if not result:
             raise HTTPException(status_code=404, detail="Limit not found")
@@ -724,17 +763,26 @@ async def list_lessons(
 ) -> LessonsListResponse:
     """List lessons learned (O2). READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_policies_facade()
+    registry = get_operation_registry()
 
-    result = await facade.list_lessons(
-        session=session,
-        tenant_id=tenant_id,
-        lesson_type=lesson_type,
-        status=status,
-        severity=severity,
-        limit=limit,
-        offset=offset,
+    op = await registry.execute(
+        "policies.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "list_lessons",
+                "lesson_type": lesson_type,
+                "status": status,
+                "severity": severity,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     items = [
         LessonSummaryResponse(
@@ -770,12 +818,21 @@ async def get_lesson_stats(
 ) -> LessonStatsResponse:
     """Get lesson statistics (O1). READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_policies_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_lesson_stats(
-        session=session,
-        tenant_id=tenant_id,
+    op = await registry.execute(
+        "policies.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_lesson_stats",
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     return LessonStatsResponse(
         total=result.total,
@@ -797,13 +854,22 @@ async def get_lesson_detail(
 ) -> LessonDetailResponse:
     """Get lesson detail (O3). READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_policies_facade()
+    registry = get_operation_registry()
 
-    result = await facade.get_lesson_detail(
-        session=session,
-        tenant_id=tenant_id,
-        lesson_id=lesson_id,
+    op = await registry.execute(
+        "policies.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_lesson_detail",
+                "lesson_id": lesson_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     if not result:
         raise HTTPException(status_code=404, detail="Lesson not found")
@@ -859,13 +925,22 @@ async def get_policy_state(
 ) -> PolicyStateResponse:
     """Get policy layer state (ACT-O4). Customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_policies_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.get_policy_state(
-            session=session,
-            tenant_id=tenant_id,
+        op = await registry.execute(
+            "policies.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_policy_state",
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         return PolicyStateResponse(
             total_policies=result.total_policies,
@@ -918,14 +993,23 @@ async def get_policy_metrics(
 ) -> PolicyMetricsResponse:
     """Get policy metrics (ACT-O5). Customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_policies_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.get_policy_metrics(
-            session=session,
-            tenant_id=tenant_id,
-            hours=hours,
+        op = await registry.execute(
+            "policies.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_policy_metrics",
+                    "hours": hours,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         return PolicyMetricsResponse(
             total_evaluations=result.total_evaluations,
@@ -1008,16 +1092,25 @@ async def list_policy_conflicts(
 ) -> ConflictsListResponse:
     """Detect policy conflicts (DFT-O4). Uses PolicyConflictEngine via facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_policies_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.list_policy_conflicts(
-            session=session,
-            tenant_id=tenant_id,
-            policy_id=policy_id,
-            severity=severity,
-            include_resolved=include_resolved,
+        op = await registry.execute(
+            "policies.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "list_policy_conflicts",
+                    "policy_id": policy_id,
+                    "severity": severity,
+                    "include_resolved": include_resolved,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         items = [
             PolicyConflictResponse(
@@ -1130,14 +1223,23 @@ async def get_policy_dependencies(
 ) -> DependencyGraphResponse:
     """Get policy dependency graph (DFT-O5). Uses PolicyDependencyEngine via facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_policies_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.get_policy_dependencies(
-            session=session,
-            tenant_id=tenant_id,
-            policy_id=policy_id,
+        op = await registry.execute(
+            "policies.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_policy_dependencies",
+                    "policy_id": policy_id,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         nodes = [
             PolicyNodeResponse(
@@ -1272,21 +1374,30 @@ async def list_policy_violations(
 ) -> ViolationsListResponse:
     """List policy violations (VIO-O1). Unified customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_policies_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.list_policy_violations(
-            session=session,
-            tenant_id=tenant_id,
-            violation_type=violation_type,
-            source=source,
-            severity_min=severity_min,
-            violation_kind=violation_kind,
-            hours=hours,
-            include_synthetic=include_synthetic,
-            limit=limit,
-            offset=offset,
+        op = await registry.execute(
+            "policies.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "list_policy_violations",
+                    "violation_type": violation_type,
+                    "source": source,
+                    "severity_min": severity_min,
+                    "violation_kind": violation_kind,
+                    "hours": hours,
+                    "include_synthetic": include_synthetic,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         items = [
             PolicyViolationSummary(
@@ -1377,17 +1488,26 @@ async def list_budget_definitions(
     """List budget definitions (THR-O2). Customer facade."""
 
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_policies_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.list_budgets(
-            session=session,
-            tenant_id=tenant_id,
-            scope=scope,
-            status=status,
-            limit=limit,
-            offset=offset,
+        op = await registry.execute(
+            "policies.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "list_budgets",
+                    "scope": scope,
+                    "status": status,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         # Map facade result to API response
         items = [
@@ -1487,19 +1607,28 @@ async def list_policy_requests(
 ) -> PolicyRequestsListResponse:
     """List pending policy requests (ACT-O3). Customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_policies_facade()
+    registry = get_operation_registry()
 
     try:
-        result = await facade.list_policy_requests(
-            session=session,
-            tenant_id=tenant_id,
-            status=status,
-            proposal_type=proposal_type,
-            days_old=days_old,
-            include_synthetic=include_synthetic,
-            limit=limit,
-            offset=offset,
+        op = await registry.execute(
+            "policies.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "list_policy_requests",
+                    "status": status,
+                    "proposal_type": proposal_type,
+                    "days_old": days_old,
+                    "include_synthetic": include_synthetic,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         items = [
             PolicyRequestSummary(

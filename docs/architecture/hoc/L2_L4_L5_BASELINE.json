@@ -1,0 +1,16 @@
+{
+  "frozen_at": "2026-01-30T11:04:44.826955",
+  "phase": "C",
+  "pin": "491",
+  "summary": {
+    "total_l5_engines": 185,
+    "wired_via_l4": 31,
+    "direct_l2_to_l5": 1,
+    "orphaned": 153
+  },
+  "known_gaps": {
+    "incidents": [
+      "recovery_rule_engine.py"
+    ]
+  }
+}

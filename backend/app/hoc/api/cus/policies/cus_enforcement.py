@@ -5,7 +5,7 @@
 #   Execution: sync
 # Role: Enforcement policy API for customer LLM integrations
 # Callers: SDK (cus_enforcer.py), customer console
-# Allowed Imports: L4 (cus_enforcement_service), L6 (schemas)
+# Allowed Imports: L4 (operation_registry), L6 (schemas)
 # Forbidden Imports: L1, L3
 # Reference: docs/architecture/CUSTOMER_INTEGRATIONS_ARCHITECTURE.md Section 15
 
@@ -33,12 +33,14 @@ AUTHENTICATION:
 import logging
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from app.schemas.response import wrap_dict, wrap_list
-# L5 engine import (migrated to HOC per SWEEP-03 Batch 2)
-from app.hoc.cus.policies.L5_engines.cus_enforcement_service import CusEnforcementService
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -75,11 +77,6 @@ class EnforcementBatchRequest(BaseModel):
 # =============================================================================
 
 
-def get_enforcement_service() -> CusEnforcementService:
-    """Dependency to get enforcement service instance."""
-    return CusEnforcementService()
-
-
 def get_tenant_id(request: Request) -> str:
     """Extract tenant_id from authenticated request."""
     # Try to get from auth context
@@ -105,7 +102,6 @@ def get_tenant_id(request: Request) -> str:
 async def check_enforcement(
     payload: EnforcementCheckRequest,
     request: Request,
-    service: CusEnforcementService = Depends(get_enforcement_service),
 ):
     """Check enforcement policy before making an LLM call.
 
@@ -123,15 +119,32 @@ async def check_enforcement(
     tenant_id = get_tenant_id(request)
 
     try:
-        decision = await service.evaluate(
-            tenant_id=tenant_id,
-            integration_id=payload.integration_id,
-            estimated_cost_cents=payload.estimated_cost_cents,
-            estimated_tokens=payload.estimated_tokens,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "policies.enforcement",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "evaluate",
+                    "tenant_id": tenant_id,
+                    "integration_id": payload.integration_id,
+                    "estimated_cost_cents": payload.estimated_cost_cents,
+                    "estimated_tokens": payload.estimated_tokens,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
-        return wrap_dict(decision.to_dict())
+        return wrap_dict(result)
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception(f"Enforcement check failed: {e}")
         # On failure, return allowed with degraded flag
@@ -155,7 +168,6 @@ async def check_enforcement(
 async def get_enforcement_status(
     request: Request,
     integration_id: str = Query(..., description="Integration ID"),
-    service: CusEnforcementService = Depends(get_enforcement_service),
 ):
     """Get current enforcement status for an integration.
 
@@ -167,15 +179,30 @@ async def get_enforcement_status(
     tenant_id = get_tenant_id(request)
 
     try:
-        status = await service.get_enforcement_status(
-            tenant_id=tenant_id,
-            integration_id=integration_id,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "policies.enforcement",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_enforcement_status",
+                    "tenant_id": tenant_id,
+                    "integration_id": integration_id,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
-        if "error" in status:
-            raise HTTPException(status_code=404, detail=status["error"])
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
 
-        return wrap_dict(status)
+        return wrap_dict(result)
 
     except HTTPException:
         raise
@@ -188,7 +215,6 @@ async def get_enforcement_status(
 async def batch_enforcement_check(
     payload: EnforcementBatchRequest,
     request: Request,
-    service: CusEnforcementService = Depends(get_enforcement_service),
 ):
     """Check enforcement for multiple requests at once.
 
@@ -198,7 +224,7 @@ async def batch_enforcement_check(
     tenant_id = get_tenant_id(request)
 
     try:
-        requests = [
+        requests_list = [
             {
                 "integration_id": r.integration_id,
                 "estimated_cost_cents": r.estimated_cost_cents,
@@ -207,16 +233,33 @@ async def batch_enforcement_check(
             for r in payload.requests
         ]
 
-        decisions = await service.evaluate_batch(
-            tenant_id=tenant_id,
-            requests=requests,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "policies.enforcement",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "evaluate_batch",
+                    "tenant_id": tenant_id,
+                    "requests": requests_list,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         return wrap_list(
-            [d.to_dict() for d in decisions],
-            total=len(decisions),
+            result,
+            total=len(result),
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception(f"Batch enforcement check failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

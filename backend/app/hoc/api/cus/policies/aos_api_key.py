@@ -46,7 +46,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
-from app.hoc.cus.api_keys.L5_engines.api_keys_facade import get_api_keys_facade
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+)
 
 # =============================================================================
 # Router
@@ -171,19 +174,31 @@ async def list_api_keys(
     # Dependencies
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> APIKeysListResponse:
-    """List API keys. READ-ONLY. Delegates to L4 APIKeysFacade."""
+    """List API keys. READ-ONLY. Delegates to L4 operation registry."""
 
     tenant_id = get_tenant_id_from_auth(request)
 
     try:
-        facade = get_api_keys_facade()
-        result = await facade.list_api_keys(
-            session=session,
-            tenant_id=tenant_id,
-            status=status,
-            limit=limit,
-            offset=offset,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "api_keys.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "list_api_keys",
+                    "status": status,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         # Map L4 result to L2 response
         items = [
@@ -230,17 +245,29 @@ async def get_api_key_detail(
     key_id: str,
     session: AsyncSession = Depends(get_async_session_dep),
 ) -> APIKeyDetailResponse:
-    """Get API key detail (O3). Delegates to L4 APIKeysFacade."""
+    """Get API key detail (O3). Delegates to L4 operation registry."""
 
     tenant_id = get_tenant_id_from_auth(request)
 
     try:
-        facade = get_api_keys_facade()
-        result = await facade.get_api_key_detail(
-            session=session,
-            tenant_id=tenant_id,
-            key_id=key_id,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "api_keys.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_api_key_detail",
+                    "key_id": key_id,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         if result is None:
             raise HTTPException(status_code=404, detail="API key not found")

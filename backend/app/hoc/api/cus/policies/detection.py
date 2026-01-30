@@ -36,10 +36,10 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-# L5 engine imports (migrated to HOC per SWEEP-39)
-from app.hoc.cus.analytics.L5_engines.detection_facade import (
-    DetectionFacade,
-    get_detection_facade,
+# L4 operation registry (L2-L4-L5 architecture per PIN-491)
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
 )
 
 # =============================================================================
@@ -75,10 +75,7 @@ class ResolveAnomalyRequest(BaseModel):
 # Dependencies
 # =============================================================================
 
-
-def get_facade() -> DetectionFacade:
-    """Get the detection facade."""
-    return get_detection_facade()
+# Removed: get_facade() - now using operation registry directly in endpoints
 
 
 # =============================================================================
@@ -90,7 +87,6 @@ def get_facade() -> DetectionFacade:
 async def run_detection(
     request: RunDetectionRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: DetectionFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("detection.run")),
 ):
     """
@@ -105,13 +101,25 @@ async def run_detection(
 
     Returns detection results including anomalies found and incidents created.
     """
-    # Note: For cost detection, we need a database session
-    # In production, this would be injected properly
-    result = await facade.run_detection(
-        tenant_id=ctx.tenant_id,
-        detection_type=request.detection_type,
-        session=None,  # Would be injected in production
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "analytics.detection",
+        OperationContext(
+            session=None,  # DetectionFacade accepts None for session
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "run_detection",
+                "detection_type": request.detection_type,
+                "session": None,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     return wrap_dict(result.to_dict())
 
@@ -124,7 +132,6 @@ async def list_anomalies(
     limit: int = Query(100, le=1000, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: DetectionFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("detection.read")),
 ):
     """
@@ -132,14 +139,28 @@ async def list_anomalies(
 
     Returns detected anomalies with optional filtering.
     """
-    anomalies = await facade.list_anomalies(
-        tenant_id=ctx.tenant_id,
-        detection_type=detection_type,
-        severity=severity,
-        status=status,
-        limit=limit,
-        offset=offset,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "analytics.detection",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "list_anomalies",
+                "detection_type": detection_type,
+                "severity": severity,
+                "status": status,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    anomalies = op.data
 
     return wrap_dict({
         "anomalies": [a.to_dict() for a in anomalies],
@@ -153,16 +174,29 @@ async def list_anomalies(
 async def get_anomaly(
     anomaly_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: DetectionFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("detection.read")),
 ):
     """
     Get a specific anomaly by ID.
     """
-    anomaly = await facade.get_anomaly(
-        anomaly_id=anomaly_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "analytics.detection",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "get_anomaly",
+                "anomaly_id": anomaly_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    anomaly = op.data
 
     if not anomaly:
         raise HTTPException(status_code=404, detail="Anomaly not found")
@@ -175,7 +209,6 @@ async def resolve_anomaly(
     anomaly_id: str,
     request: ResolveAnomalyRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: DetectionFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("detection.resolve")),
 ):
     """
@@ -187,13 +220,27 @@ async def resolve_anomaly(
     """
     actor = ctx.user_id or "system"
 
-    anomaly = await facade.resolve_anomaly(
-        anomaly_id=anomaly_id,
-        tenant_id=ctx.tenant_id,
-        resolution=request.resolution,
-        notes=request.notes,
-        actor=actor,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "analytics.detection",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "resolve_anomaly",
+                "anomaly_id": anomaly_id,
+                "resolution": request.resolution,
+                "notes": request.notes,
+                "actor": actor,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    anomaly = op.data
 
     if not anomaly:
         raise HTTPException(status_code=404, detail="Anomaly not found")
@@ -205,7 +252,6 @@ async def resolve_anomaly(
 async def acknowledge_anomaly(
     anomaly_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: DetectionFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("detection.acknowledge")),
 ):
     """
@@ -215,11 +261,25 @@ async def acknowledge_anomaly(
     """
     actor = ctx.user_id or "system"
 
-    anomaly = await facade.acknowledge_anomaly(
-        anomaly_id=anomaly_id,
-        tenant_id=ctx.tenant_id,
-        actor=actor,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "analytics.detection",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "acknowledge_anomaly",
+                "anomaly_id": anomaly_id,
+                "actor": actor,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    anomaly = op.data
 
     if not anomaly:
         raise HTTPException(status_code=404, detail="Anomaly not found")
@@ -230,7 +290,6 @@ async def acknowledge_anomaly(
 @router.get("/status", response_model=Dict[str, Any])
 async def get_detection_status(
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: DetectionFacade = Depends(get_facade),
 ):
     """
     Get detection engine status.
@@ -240,5 +299,21 @@ async def get_detection_status(
     - behavioral: Behavioral pattern detector
     - drift: Model/data drift detector
     """
-    status = facade.get_detection_status()
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "analytics.detection",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "get_detection_status",
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    status = op.data
     return wrap_dict(status.to_dict())

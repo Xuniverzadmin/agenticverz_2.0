@@ -61,8 +61,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
-# L5 engine import (migrated to HOC per SWEEP-29)
-from app.hoc.cus.account.L5_engines.accounts_facade import get_accounts_facade
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+)
 from app.models.tenant import (
     Invitation,
     Subscription,
@@ -304,14 +306,26 @@ async def list_projects(
     tenant_id = get_tenant_id_from_auth(request)
 
     try:
-        facade = get_accounts_facade()
-        result = await facade.list_projects(
-            session=session,
-            tenant_id=tenant_id,
-            status=status,
-            limit=limit,
-            offset=offset,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "list_projects",
+                    "status": status,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         # Map L4 result to L2 response
         items = [
@@ -361,12 +375,24 @@ async def get_project_detail(
     tenant_id = get_tenant_id_from_auth(request)
 
     try:
-        facade = get_accounts_facade()
-        result = await facade.get_project_detail(
-            session=session,
-            tenant_id=tenant_id,
-            project_id=project_id,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_project_detail",
+                    "project_id": project_id,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         if result is None:
             raise HTTPException(
@@ -442,15 +468,27 @@ async def list_users(
     tenant_id = get_tenant_id_from_auth(request)
 
     try:
-        facade = get_accounts_facade()
-        result = await facade.list_users(
-            session=session,
-            tenant_id=tenant_id,
-            role=role,
-            status=status,
-            limit=limit,
-            offset=offset,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "list_users",
+                    "role": role,
+                    "status": status,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         # Map L4 result to L2 response
         items = [
@@ -500,12 +538,24 @@ async def get_user_detail(
     tenant_id = get_tenant_id_from_auth(request)
 
     try:
-        facade = get_accounts_facade()
-        result = await facade.get_user_detail(
-            session=session,
-            tenant_id=tenant_id,
-            user_id=user_id,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_user_detail",
+                    "user_id": user_id,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         if result is None:
             raise HTTPException(status_code=404, detail="User not found in this tenant")
@@ -558,12 +608,24 @@ async def get_profile(
     clerk_user_id = get_user_id_from_auth(request)
 
     try:
-        facade = get_accounts_facade()
-        result = await facade.get_profile(
-            session=session,
-            tenant_id=tenant_id,
-            clerk_user_id=clerk_user_id,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_profile",
+                    "clerk_user_id": clerk_user_id,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         return ProfileResponse(
             user_id=result.user_id,
@@ -603,11 +665,23 @@ async def get_billing_summary(
     tenant_id = get_tenant_id_from_auth(request)
 
     try:
-        facade = get_accounts_facade()
-        result = await facade.get_billing_summary(
-            session=session,
-            tenant_id=tenant_id,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_billing_summary",
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         # Handle error result
         # L5 engine import (migrated to HOC per SWEEP-29)
@@ -673,14 +747,27 @@ async def update_profile(
     user_id = auth_ctx.user_id
 
     try:
-        facade = get_accounts_facade()
-        result = await facade.update_profile(
-            session=session,
-            user_id=user_id,
-            display_name=update.display_name,
-            timezone_str=update.timezone,
-            preferences=update.preferences,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=auth_ctx.tenant_id,
+                params={
+                    "method": "update_profile",
+                    "user_id": user_id,
+                    "display_name": update.display_name,
+                    "timezone_str": update.timezone,
+                    "preferences": update.preferences,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         # Handle error result
         # L5 engine import (migrated to HOC per SWEEP-29)
@@ -740,11 +827,23 @@ async def get_billing_invoices(
     tenant_id = auth_ctx.tenant_id
 
     try:
-        facade = get_accounts_facade()
-        result = await facade.get_billing_invoices(
-            session=session,
-            tenant_id=tenant_id,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_billing_invoices",
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         # Handle error result
         # L5 engine import (migrated to HOC per SWEEP-29)
@@ -825,10 +924,25 @@ class SupportContactResponse(BaseModel):
 
 
 @router.get("/support", response_model=SupportContactResponse)
-async def get_support_contact() -> SupportContactResponse:
+def get_support_contact() -> SupportContactResponse:
     """READ-ONLY customer facade - delegates to L4 AccountsFacade."""
-    facade = get_accounts_facade()
-    result = facade.get_support_contact()
+    registry = get_operation_registry()
+    op = registry.execute_sync(
+        "account.query",
+        OperationContext(
+            session=None,
+            tenant_id=None,
+            params={
+                "method": "get_support_contact",
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "operation_failed", "message": op.error},
+        )
+    result = op.data
 
     return SupportContactResponse(
         email=result.email,
@@ -847,16 +961,28 @@ async def create_support_ticket(
     auth_ctx = get_auth_context(request)
 
     try:
-        facade = get_accounts_facade()
-        result = await facade.create_support_ticket(
-            session=session,
-            tenant_id=auth_ctx.tenant_id,
-            user_id=auth_ctx.user_id,
-            subject=ticket.subject,
-            description=ticket.description,
-            category=ticket.category,
-            priority=ticket.priority,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=auth_ctx.tenant_id,
+                params={
+                    "method": "create_support_ticket",
+                    "user_id": auth_ctx.user_id,
+                    "subject": ticket.subject,
+                    "description": ticket.description,
+                    "category": ticket.category,
+                    "priority": ticket.priority,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         return SupportTicketResponse(
             id=result.id,
@@ -890,12 +1016,24 @@ async def list_support_tickets(
     auth_ctx = get_auth_context(request)
 
     try:
-        facade = get_accounts_facade()
-        result = await facade.list_support_tickets(
-            session=session,
-            tenant_id=auth_ctx.tenant_id,
-            status=status,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=auth_ctx.tenant_id,
+                params={
+                    "method": "list_support_tickets",
+                    "status": status,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         # Map L4 result to L2 response
         tickets = [
@@ -998,14 +1136,26 @@ async def invite_user(
     auth_ctx = get_auth_context(request)
 
     try:
-        facade = get_accounts_facade()
-        result = await facade.invite_user(
-            session=session,
-            tenant_id=auth_ctx.tenant_id,
-            caller_user_id=auth_ctx.user_id,
-            email=invite.email,
-            role=invite.role,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=auth_ctx.tenant_id,
+                params={
+                    "method": "invite_user",
+                    "caller_user_id": auth_ctx.user_id,
+                    "email": invite.email,
+                    "role": invite.role,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         # Handle error result
         # L5 engine import (migrated to HOC per SWEEP-29)
@@ -1042,13 +1192,25 @@ async def list_invitations(
     auth_ctx = get_auth_context(request)
 
     try:
-        facade = get_accounts_facade()
-        result = await facade.list_invitations(
-            session=session,
-            tenant_id=auth_ctx.tenant_id,
-            caller_user_id=auth_ctx.user_id,
-            status=status,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=auth_ctx.tenant_id,
+                params={
+                    "method": "list_invitations",
+                    "caller_user_id": auth_ctx.user_id,
+                    "status": status,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         # Handle error result
         # L5 engine import (migrated to HOC per SWEEP-29)
@@ -1099,12 +1261,25 @@ async def accept_invitation(
     Layer: L2 (Product APIs) — delegates to L4 AccountsFacade
     """
     try:
-        facade = get_accounts_facade()
-        result = await facade.accept_invitation(
-            session=session,
-            invitation_id=invitation_id,
-            token=accept.token,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=None,
+                params={
+                    "method": "accept_invitation",
+                    "invitation_id": invitation_id,
+                    "token": accept.token,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         # Handle failure cases
         if not result.success:
@@ -1148,11 +1323,23 @@ async def list_tenant_users(
     auth_ctx = get_auth_context(request)
 
     try:
-        facade = get_accounts_facade()
-        result = await facade.list_tenant_users(
-            session=session,
-            tenant_id=auth_ctx.tenant_id,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=auth_ctx.tenant_id,
+                params={
+                    "method": "list_tenant_users",
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         # Map L4 result to L2 response
         return TenantUserListResponse(
@@ -1198,14 +1385,26 @@ async def update_user_role(
         # L5 engine import (migrated to HOC per SWEEP-29)
         from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
 
-        facade = get_accounts_facade()
-        result = await facade.update_user_role(
-            session=session,
-            tenant_id=auth_ctx.tenant_id,
-            caller_user_id=auth_ctx.user_id,
-            target_user_id=user_id,
-            new_role=update.role,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=auth_ctx.tenant_id,
+                params={
+                    "method": "update_user_role",
+                    "caller_user_id": auth_ctx.user_id,
+                    "target_user_id": user_id,
+                    "new_role": update.role,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         # Handle error results
         if isinstance(result, AccountsErrorResult):
@@ -1251,13 +1450,25 @@ async def remove_user(
         # L5 engine import (migrated to HOC per SWEEP-29)
         from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
 
-        facade = get_accounts_facade()
-        result = await facade.remove_user(
-            session=session,
-            tenant_id=auth_ctx.tenant_id,
-            caller_user_id=auth_ctx.user_id,
-            target_user_id=user_id,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "account.query",
+            OperationContext(
+                session=session,
+                tenant_id=auth_ctx.tenant_id,
+                params={
+                    "method": "remove_user",
+                    "caller_user_id": auth_ctx.user_id,
+                    "target_user_id": user_id,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "operation_failed", "message": op.error},
+            )
+        result = op.data
 
         # Handle error results
         if isinstance(result, AccountsErrorResult):

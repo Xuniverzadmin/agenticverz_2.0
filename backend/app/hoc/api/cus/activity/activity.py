@@ -64,8 +64,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
-# L5 engine import (migrated to HOC per SWEEP-14)
-from app.hoc.cus.activity.L5_engines.activity_facade import get_activity_facade
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+)
 
 # =============================================================================
 # Logging
@@ -74,8 +76,8 @@ from app.hoc.cus.activity.L5_engines.activity_facade import get_activity_facade
 logger = logging.getLogger(__name__)
 from app.schemas.response import wrap_dict
 
-# NOTE: Services are accessed via facade (get_activity_facade())
-# Direct service imports removed per L4 facade architecture
+# NOTE: All L5 engine access routed through L4 operation registry
+# Direct L5 imports removed per PIN-491 construction plan
 
 # =============================================================================
 # Environment Configuration
@@ -1032,13 +1034,18 @@ async def get_run_detail(
 ) -> RunDetailResponse:
     """Get run detail (O3). Tenant isolation enforced."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_activity_facade()
-
-    result = await facade.get_run_detail(
-        session=session,
-        tenant_id=tenant_id,
-        run_id=run_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "activity.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_run_detail", "run_id": run_id},
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     if not result:
         raise HTTPException(status_code=404, detail="Run not found")
@@ -1428,13 +1435,18 @@ async def get_patterns(
 
     tenant_id = get_tenant_id_from_auth(request)
 
-    facade = get_activity_facade()
-    result = await facade.get_patterns(
-        session=session,
-        tenant_id=tenant_id,
-        window_hours=window_hours,
-        limit=limit,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "activity.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_patterns", "window_hours": window_hours, "limit": limit},
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     # Map L4 PatternDetectionResult to L2 PatternDetectionResponse
     # Compute window times from generated_at and window_hours
@@ -1489,13 +1501,18 @@ async def get_cost_analysis(
 
     tenant_id = get_tenant_id_from_auth(request)
 
-    facade = get_activity_facade()
-    result = await facade.get_cost_analysis(
-        session=session,
-        tenant_id=tenant_id,
-        baseline_days=baseline_days,
-        threshold_pct=anomaly_threshold,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "activity.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_cost_analysis", "baseline_days": baseline_days, "threshold_pct": anomaly_threshold},
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     # Map L4 CostAnalysisResult to L2 CostAnalysisResponse
     # Adapt anomalies to agent-style response for backwards compatibility
@@ -1549,12 +1566,18 @@ async def get_attention_queue(
 
     tenant_id = get_tenant_id_from_auth(request)
 
-    facade = get_activity_facade()
-    result = await facade.get_attention_queue(
-        session=session,
-        tenant_id=tenant_id,
-        limit=limit,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "activity.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_attention_queue", "limit": limit},
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     # Map L4 AttentionQueueResult to L2 AttentionQueueResponse
     return AttentionQueueResponse(
@@ -2098,13 +2121,12 @@ async def list_signals(
         result = await session.execute(text(sql), params)
         rows = result.mappings().all()
 
-        # Import fingerprint computation
-        from app.hoc.cus.activity.L5_engines.signal_identity import compute_signal_fingerprint_from_row
-        from app.hoc.cus.activity.L5_engines.signal_feedback_engine import SignalFeedbackService
+        # Use L4 registry for fingerprint computation and feedback
+        registry = get_operation_registry()
 
         # First pass: compute fingerprints and build signal data
         signal_data = []
-        fingerprints: list[str] = []
+        signal_rows_for_fingerprint = []
 
         for row in rows:
             # Determine signal type and severity
@@ -2122,27 +2144,49 @@ async def list_signals(
                 "requires attention"
             )
 
-            # Compute canonical fingerprint
-            signal_row = {
+            signal_rows_for_fingerprint.append({
                 "run_id": row["run_id"],
                 "signal_type": sig_type,
                 "risk_type": row.get("risk_type") or "UNKNOWN",
                 "evaluation_outcome": row.get("evaluation_outcome") or "UNKNOWN",
-            }
-            fingerprint = compute_signal_fingerprint_from_row(signal_row)
-            fingerprints.append(fingerprint)
+            })
 
             signal_data.append({
                 "row": row,
                 "sig_type": sig_type,
                 "sev": sev,
                 "summary": summary,
-                "fingerprint": fingerprint,
             })
 
-        # Fetch feedback for all signals in bulk
-        feedback_service = SignalFeedbackService(session)
-        feedback_map = await feedback_service.get_bulk_signal_feedback(tenant_id, fingerprints)
+        # Batch compute fingerprints via L4
+        fp_op = await registry.execute(
+            "activity.signal_fingerprint",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={"method": "compute_batch", "rows": signal_rows_for_fingerprint},
+            ),
+        )
+        if not fp_op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": fp_op.error})
+        fingerprints: list[str] = fp_op.data
+
+        # Attach fingerprints to signal data
+        for i, data in enumerate(signal_data):
+            data["fingerprint"] = fingerprints[i]
+
+        # Fetch feedback for all signals in bulk via L4
+        fb_op = await registry.execute(
+            "activity.signal_feedback",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={"method": "get_bulk_feedback", "signal_ids": fingerprints},
+            ),
+        )
+        if not fb_op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": fb_op.error})
+        feedback_map = fb_op.data
 
         # Second pass: build SignalProjection objects with feedback
         signals = []
@@ -2425,16 +2469,25 @@ async def acknowledge_signal(
     tenant_id = get_tenant_id_from_auth(request)
     actor_id = get_actor_id_from_auth(request)
 
-    # Use facade for signal feedback
-    facade = get_activity_facade()
+    # Use L4 registry for signal feedback
+    registry = get_operation_registry()
 
     try:
-        result = await facade.acknowledge_signal(
-            session=session,
-            tenant_id=tenant_id,
-            signal_id=signal_fingerprint,
-            acknowledged_by=actor_id,
+        op = await registry.execute(
+            "activity.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "acknowledge_signal",
+                    "signal_id": signal_fingerprint,
+                    "acknowledged_by": actor_id,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         # Map L4 AcknowledgeResult to L2 SignalAckResponse
         return SignalAckResponse(
@@ -2510,21 +2563,30 @@ async def suppress_signal(
             },
         )
 
-    # Use facade for signal feedback
-    facade = get_activity_facade()
+    # Use L4 registry for signal feedback
+    registry = get_operation_registry()
 
     # Convert minutes to hours for facade
     duration_hours = max(1, body.duration_minutes // 60)
 
     try:
-        result = await facade.suppress_signal(
-            session=session,
-            tenant_id=tenant_id,
-            signal_id=signal_fingerprint,
-            suppressed_by=actor_id,
-            duration_hours=duration_hours,
-            reason=body.reason,
+        op = await registry.execute(
+            "activity.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "suppress_signal",
+                    "signal_id": signal_fingerprint,
+                    "suppressed_by": actor_id,
+                    "duration_hours": duration_hours,
+                    "reason": body.reason,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         # Map L4 SuppressResult to L2 SignalSuppressResponse
         return SignalSuppressResponse(

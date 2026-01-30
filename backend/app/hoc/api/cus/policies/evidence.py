@@ -38,10 +38,9 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-# L5 engine imports (migrated to HOC per SWEEP-17)
-from app.hoc.cus.logs.L5_engines.evidence_facade import (
-    EvidenceFacade,
-    get_evidence_facade,
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
 )
 
 # =============================================================================
@@ -81,16 +80,6 @@ class CreateExportRequest(BaseModel):
 
 
 # =============================================================================
-# Dependencies
-# =============================================================================
-
-
-def get_facade() -> EvidenceFacade:
-    """Get the evidence facade."""
-    return get_evidence_facade()
-
-
-# =============================================================================
 # Chain Endpoints (GAP-104)
 # =============================================================================
 
@@ -101,7 +90,6 @@ async def list_chains(
     limit: int = Query(100, le=1000, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: EvidenceFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("evidence.read")),
 ):
     """
@@ -109,12 +97,24 @@ async def list_chains(
 
     Returns evidence chains for the tenant.
     """
-    chains = await facade.list_chains(
-        tenant_id=ctx.tenant_id,
-        run_id=run_id,
-        limit=limit,
-        offset=offset,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "logs.evidence",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "list_chains",
+                "run_id": run_id,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    chains = op.data
 
     return wrap_dict({
         "chains": [c.to_dict() for c in chains],
@@ -128,7 +128,6 @@ async def list_chains(
 async def create_chain(
     request: CreateChainRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: EvidenceFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("evidence.write")),
 ):
     """
@@ -138,11 +137,23 @@ async def create_chain(
 
     Creates a new evidence chain, optionally with initial evidence.
     """
-    chain = await facade.create_chain(
-        tenant_id=ctx.tenant_id,
-        run_id=request.run_id,
-        initial_evidence=request.initial_evidence,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "logs.evidence",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "create_chain",
+                "run_id": request.run_id,
+                "initial_evidence": request.initial_evidence,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    chain = op.data
 
     return wrap_dict(chain.to_dict())
 
@@ -151,16 +162,27 @@ async def create_chain(
 async def get_chain(
     chain_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: EvidenceFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("evidence.read")),
 ):
     """
     Get a specific evidence chain.
     """
-    chain = await facade.get_chain(
-        chain_id=chain_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "logs.evidence",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "get_chain",
+                "chain_id": chain_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    chain = op.data
 
     if not chain:
         raise HTTPException(status_code=404, detail="Chain not found")
@@ -173,7 +195,6 @@ async def add_evidence(
     chain_id: str,
     request: AddEvidenceRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: EvidenceFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("evidence.write")),
 ):
     """
@@ -186,12 +207,24 @@ async def add_evidence(
     - cost: Cost event evidence
     - incident: Incident evidence
     """
-    chain = await facade.add_evidence(
-        chain_id=chain_id,
-        tenant_id=ctx.tenant_id,
-        evidence_type=request.evidence_type,
-        data=request.data,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "logs.evidence",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "add_evidence",
+                "chain_id": chain_id,
+                "evidence_type": request.evidence_type,
+                "data": request.data,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    chain = op.data
 
     if not chain:
         raise HTTPException(status_code=404, detail="Chain not found")
@@ -203,7 +236,6 @@ async def add_evidence(
 async def verify_chain(
     chain_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: EvidenceFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("evidence.verify")),
 ):
     """
@@ -212,10 +244,22 @@ async def verify_chain(
     Verifies that all links in the chain have valid hashes
     and proper linkage.
     """
-    result = await facade.verify_chain(
-        chain_id=chain_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "logs.evidence",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "verify_chain",
+                "chain_id": chain_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    result = op.data
 
     return wrap_dict(result.to_dict())
 
@@ -229,7 +273,6 @@ async def verify_chain(
 async def create_export(
     request: CreateExportRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: EvidenceFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("evidence.export")),
 ):
     """
@@ -242,11 +285,23 @@ async def create_export(
     - csv: CSV format for spreadsheet import
     - pdf: PDF format for compliance reports
     """
-    export = await facade.create_export(
-        tenant_id=ctx.tenant_id,
-        chain_id=request.chain_id,
-        format=request.format,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "logs.evidence",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "create_export",
+                "chain_id": request.chain_id,
+                "format": request.format,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    export = op.data
 
     return wrap_dict(export.to_dict())
 
@@ -257,18 +312,29 @@ async def list_exports(
     limit: int = Query(100, le=1000, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: EvidenceFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("evidence.read")),
 ):
     """
     List evidence exports.
     """
-    exports = await facade.list_exports(
-        tenant_id=ctx.tenant_id,
-        chain_id=chain_id,
-        limit=limit,
-        offset=offset,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "logs.evidence",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "list_exports",
+                "chain_id": chain_id,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    exports = op.data
 
     return wrap_dict({
         "exports": [e.to_dict() for e in exports],
@@ -282,16 +348,27 @@ async def list_exports(
 async def get_export(
     export_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: EvidenceFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("evidence.read")),
 ):
     """
     Get export status.
     """
-    export = await facade.get_export(
-        export_id=export_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "logs.evidence",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "get_export",
+                "export_id": export_id,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    export = op.data
 
     if not export:
         raise HTTPException(status_code=404, detail="Export not found")

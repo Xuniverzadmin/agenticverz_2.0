@@ -53,8 +53,11 @@ from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
 from app.models.killswitch import Incident
 from app.schemas.response import wrap_dict
-# L5 engine import (migrated to HOC per SWEEP-05)
-from app.hoc.cus.incidents.L5_engines.incidents_facade import get_incidents_facade
+# L4 operation registry imports
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+)
 
 # =============================================================================
 # Module Configuration
@@ -751,13 +754,18 @@ async def detect_patterns(
     """Detect incident patterns. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
 
-    facade = get_incidents_facade()
-    result = await facade.detect_patterns(
-        session=session,
-        tenant_id=tenant_id,
-        window_hours=window_hours,
-        limit=limit,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "incidents.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "detect_patterns", "window_hours": window_hours, "limit": limit},
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     # Map facade result to L2 response model
     return PatternDetectionResponse(
@@ -804,14 +812,23 @@ async def analyze_recurrence(
     """Analyze recurring incident patterns. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
 
-    facade = get_incidents_facade()
-    result = await facade.analyze_recurrence(
-        session=session,
-        tenant_id=tenant_id,
-        baseline_days=baseline_days,
-        recurrence_threshold=recurrence_threshold,
-        limit=limit,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "incidents.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "analyze_recurrence",
+                "baseline_days": baseline_days,
+                "recurrence_threshold": recurrence_threshold,
+                "limit": limit,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     # Map facade result to L2 response model
     return RecurrenceAnalysisResponse(
@@ -954,23 +971,32 @@ async def list_active_incidents(
 ) -> IncidentListResponse:
     """List ACTIVE incidents. Topic enforced at endpoint boundary."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_incidents_facade()
 
     try:
-        result = await facade.list_active_incidents(
-            session=session,
-            tenant_id=tenant_id,
-            severity=severity.value if severity else None,
-            category=category,
-            cause_type=cause_type.value if cause_type else None,
-            is_synthetic=is_synthetic,
-            created_after=created_after,
-            created_before=created_before,
-            limit=limit,
-            offset=offset,
-            sort_by=sort_by.value,
-            sort_order=sort_order.value,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "incidents.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "list_active_incidents",
+                    "severity": severity.value if severity else None,
+                    "category": category,
+                    "cause_type": cause_type.value if cause_type else None,
+                    "is_synthetic": is_synthetic,
+                    "created_after": created_after,
+                    "created_before": created_before,
+                    "limit": limit,
+                    "offset": offset,
+                    "sort_by": sort_by.value,
+                    "sort_order": sort_order.value,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         # Convert facade result to API response
         items = [
@@ -1050,23 +1076,32 @@ async def list_resolved_incidents(
 ) -> IncidentListResponse:
     """List RESOLVED incidents. Topic enforced at endpoint boundary."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_incidents_facade()
 
     try:
-        result = await facade.list_resolved_incidents(
-            session=session,
-            tenant_id=tenant_id,
-            severity=severity.value if severity else None,
-            category=category,
-            cause_type=cause_type.value if cause_type else None,
-            is_synthetic=is_synthetic,
-            resolved_after=resolved_after,
-            resolved_before=resolved_before,
-            limit=limit,
-            offset=offset,
-            sort_by=sort_by.value,
-            sort_order=sort_order.value,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "incidents.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "list_resolved_incidents",
+                    "severity": severity.value if severity else None,
+                    "category": category,
+                    "cause_type": cause_type.value if cause_type else None,
+                    "is_synthetic": is_synthetic,
+                    "resolved_after": resolved_after,
+                    "resolved_before": resolved_before,
+                    "limit": limit,
+                    "offset": offset,
+                    "sort_by": sort_by.value,
+                    "sort_order": sort_order.value,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         # Convert facade result to API response
         items = [
@@ -1144,21 +1179,30 @@ async def list_historical_incidents(
 ) -> IncidentListResponse:
     """List HISTORICAL incidents (resolved beyond retention). Topic enforced."""
     tenant_id = get_tenant_id_from_auth(request)
-    facade = get_incidents_facade()
 
     try:
-        result = await facade.list_historical_incidents(
-            session=session,
-            tenant_id=tenant_id,
-            retention_days=retention_days,
-            severity=severity.value if severity else None,
-            category=category,
-            cause_type=cause_type.value if cause_type else None,
-            limit=limit,
-            offset=offset,
-            sort_by=sort_by.value,
-            sort_order=sort_order.value,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "incidents.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "list_historical_incidents",
+                    "retention_days": retention_days,
+                    "severity": severity.value if severity else None,
+                    "category": category,
+                    "cause_type": cause_type.value if cause_type else None,
+                    "limit": limit,
+                    "offset": offset,
+                    "sort_by": sort_by.value,
+                    "sort_order": sort_order.value,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         # Convert facade result to API response
         items = [
@@ -1754,12 +1798,18 @@ async def get_incident_learnings(
     """Get post-mortem learnings for an incident. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
 
-    facade = get_incidents_facade()
-    result = await facade.get_incident_learnings(
-        session=session,
-        tenant_id=tenant_id,
-        incident_id=incident_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "incidents.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_incident_learnings", "incident_id": incident_id},
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     if not result:
         raise HTTPException(
@@ -1847,9 +1897,8 @@ async def export_evidence(
     """Export incident evidence bundle."""
     from fastapi.responses import Response
 
-    # L6 driver and L5 engine imports (migrated to HOC per SWEEP-31)
+    # L6 driver import (migrated to HOC per SWEEP-31)
     from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_service
-    from app.hoc.cus.logs.L5_engines.pdf_renderer import get_pdf_renderer
 
     tenant_id = get_tenant_id_from_auth(request)
     auth_ctx = get_auth_context(request)
@@ -1872,8 +1921,22 @@ async def export_evidence(
             )
 
         if export_request.format == ExportFormat.PDF:
-            renderer = get_pdf_renderer()
-            pdf_bytes = renderer.render_evidence_pdf(bundle)
+            # L5 PDF renderer via L4 operation registry (Phase A.2)
+            registry = get_operation_registry()
+            pdf_op = await registry.execute(
+                "logs.pdf",
+                OperationContext(
+                    session=None,
+                    tenant_id=tenant_id,
+                    params={"method": "render_evidence_pdf", "bundle": bundle},
+                ),
+            )
+            if not pdf_op.success:
+                raise HTTPException(
+                    status_code=500,
+                    detail={"error": "operation_failed", "message": pdf_op.error},
+                )
+            pdf_bytes = pdf_op.data
             return Response(
                 content=pdf_bytes,
                 media_type="application/pdf",
@@ -1913,9 +1976,8 @@ async def export_soc2(
     """Export SOC2-compliant bundle as PDF."""
     from fastapi.responses import Response
 
-    # L6 driver and L5 engine imports (migrated to HOC per SWEEP-31)
+    # L6 driver import (migrated to HOC per SWEEP-31)
     from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_service
-    from app.hoc.cus.logs.L5_engines.pdf_renderer import get_pdf_renderer
 
     tenant_id = get_tenant_id_from_auth(request)
     auth_ctx = get_auth_context(request)
@@ -1937,8 +1999,22 @@ async def export_soc2(
             )
 
         if export_request.format == ExportFormat.PDF:
-            renderer = get_pdf_renderer()
-            pdf_bytes = renderer.render_soc2_pdf(bundle)
+            # L5 PDF renderer via L4 operation registry (Phase A.2)
+            registry = get_operation_registry()
+            pdf_op = await registry.execute(
+                "logs.pdf",
+                OperationContext(
+                    session=None,
+                    tenant_id=tenant_id,
+                    params={"method": "render_soc2_pdf", "bundle": bundle},
+                ),
+            )
+            if not pdf_op.success:
+                raise HTTPException(
+                    status_code=500,
+                    detail={"error": "operation_failed", "message": pdf_op.error},
+                )
+            pdf_bytes = pdf_op.data
             return Response(
                 content=pdf_bytes,
                 media_type="application/pdf",
@@ -1979,9 +2055,8 @@ async def export_executive_debrief(
     """Export executive debrief as PDF."""
     from fastapi.responses import Response
 
-    # L6 driver and L5 engine imports (migrated to HOC per SWEEP-31)
+    # L6 driver import (migrated to HOC per SWEEP-31)
     from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_service
-    from app.hoc.cus.logs.L5_engines.pdf_renderer import get_pdf_renderer
 
     tenant_id = get_tenant_id_from_auth(request)
     auth_ctx = get_auth_context(request)
@@ -2004,8 +2079,22 @@ async def export_executive_debrief(
             )
 
         if export_request.format == ExportFormat.PDF:
-            renderer = get_pdf_renderer()
-            pdf_bytes = renderer.render_executive_debrief_pdf(bundle)
+            # L5 PDF renderer via L4 operation registry (Phase A.2)
+            registry = get_operation_registry()
+            pdf_op = await registry.execute(
+                "logs.pdf",
+                OperationContext(
+                    session=None,
+                    tenant_id=tenant_id,
+                    params={"method": "render_executive_debrief_pdf", "bundle": bundle},
+                ),
+            )
+            if not pdf_op.success:
+                raise HTTPException(
+                    status_code=500,
+                    detail={"error": "operation_failed", "message": pdf_op.error},
+                )
+            pdf_bytes = pdf_op.data
             return Response(
                 content=pdf_bytes,
                 media_type="application/pdf",

@@ -15,8 +15,8 @@
 # 3. Simulate policy evaluation for testing
 # 4. Manage risk ceilings and safety rules
 #
-# NOTE: This file uses PolicyFacade per API-001 governance.
-# Direct imports of PolicyEngine are forbidden.
+# NOTE: This file uses L4 OperationRegistry dispatch per HOC Topology V2.0.0.
+# Direct imports of L5 engines are forbidden.
 
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
@@ -35,8 +35,11 @@ from app.policy import (
     PolicyViolation,
     ViolationType,
 )
-# L5 engine import (migrated to HOC per SWEEP-47)
-from app.hoc.cus.policies.L5_engines.policy_driver import get_policy_facade
+# L4 operation registry dispatch (migrated from L5 per HOC Topology V2.0.0)
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+)
 
 router = APIRouter(prefix="/policy-layer", tags=["policy-layer"])
 
@@ -154,8 +157,6 @@ async def evaluate_action(
 
     Returns ALLOW, BLOCK, or MODIFY with detailed reasoning.
     """
-    facade = get_policy_facade()
-
     eval_request = PolicyEvaluationRequest(
         action_type=request.action_type,
         agent_id=request.agent_id,
@@ -170,7 +171,18 @@ async def evaluate_action(
         proposed_modification=request.proposed_modification,
     )
 
-    result = await facade.evaluate(eval_request, db)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=request.tenant_id,
+            params={"method": "evaluate", "eval_request": eval_request},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
     return wrap_dict(result.model_dump())
 
 
@@ -193,8 +205,6 @@ async def simulate_evaluation(
     - Create violation records
     - Route to governor
     """
-    facade = get_policy_facade()
-
     eval_request = PolicyEvaluationRequest(
         action_type=request.action_type,
         agent_id=request.agent_id,
@@ -206,7 +216,18 @@ async def simulate_evaluation(
     )
 
     # Simulate with dry_run=True
-    result = await facade.evaluate(eval_request, db, dry_run=True)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=request.tenant_id,
+            params={"method": "evaluate", "eval_request": eval_request, "dry_run": True},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
     return wrap_dict(result.model_dump())
 
 
@@ -223,8 +244,18 @@ async def get_policy_state(
     - Violation counts
     - Risk ceiling status
     """
-    facade = get_policy_facade()
-    state = await facade.get_state(db)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "get_state"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    state = op.data
     return wrap_dict(state.model_dump())
 
 
@@ -238,8 +269,18 @@ async def reload_policies(
     Use this after updating policies to apply changes immediately
     without restarting the service.
     """
-    facade = get_policy_facade()
-    result = await facade.reload_policies(db)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "reload_policies"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
     return wrap_dict({
         "success": True,
         "policies_loaded": result.policies_loaded,
@@ -272,18 +313,26 @@ async def list_violations(
 
     Default: violations from last 24 hours.
     """
-    facade = get_policy_facade()
-
     since = datetime.now(timezone.utc) - timedelta(hours=hours)
-    violations = await facade.get_violations(
-        db,
-        violation_type=violation_type,
-        agent_id=agent_id,
-        tenant_id=tenant_id,
-        severity_min=severity_min,
-        since=since,
-        limit=limit,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_violations",
+                "violation_type": violation_type,
+                "agent_id": agent_id,
+                "severity_min": severity_min,
+                "since": since,
+                "limit": limit,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    violations = op.data
     return wrap_dict({"items": [v.model_dump() for v in violations], "total": len(violations)})
 
 
@@ -293,8 +342,18 @@ async def get_violation(
     db: AsyncSession = Depends(get_async_session),
 ) -> PolicyViolation:
     """Get a specific violation by ID."""
-    facade = get_policy_facade()
-    violation = await facade.get_violation(db, violation_id)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "get_violation", "violation_id": violation_id},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    violation = op.data
     if not violation:
         raise HTTPException(status_code=404, detail="Violation not found")
     return wrap_dict(violation.model_dump())
@@ -312,8 +371,18 @@ async def acknowledge_violation(
     This does NOT dismiss the violation - it records that
     a human has reviewed it.
     """
-    facade = get_policy_facade()
-    success = await facade.acknowledge_violation(db, violation_id, notes)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "acknowledge_violation", "violation_id": violation_id, "notes": notes},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    success = op.data
     if not success:
         raise HTTPException(status_code=404, detail="Violation not found")
     return wrap_dict({"acknowledged": True, "violation_id": violation_id})
@@ -331,8 +400,18 @@ async def list_risk_ceilings(
     db: AsyncSession = Depends(get_async_session),
 ) -> Dict[str, Any]:
     """List all risk ceilings with current values."""
-    facade = get_policy_facade()
-    ceilings = await facade.get_risk_ceilings(db, tenant_id=tenant_id, include_inactive=include_inactive)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=tenant_id,
+            params={"method": "get_risk_ceilings", "include_inactive": include_inactive},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    ceilings = op.data
     items = [
         {
             "id": c.id,
@@ -357,8 +436,18 @@ async def get_risk_ceiling(
     db: AsyncSession = Depends(get_async_session),
 ) -> Dict[str, Any]:
     """Get a specific risk ceiling with current utilization."""
-    facade = get_policy_facade()
-    ceiling = await facade.get_risk_ceiling(db, ceiling_id)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "get_risk_ceiling", "ceiling_id": ceiling_id},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    ceiling = op.data
     if not ceiling:
         raise HTTPException(status_code=404, detail="Risk ceiling not found")
 
@@ -385,8 +474,18 @@ async def update_risk_ceiling(
     db: AsyncSession = Depends(get_async_session),
 ) -> Dict[str, Any]:
     """Update a risk ceiling configuration."""
-    facade = get_policy_facade()
-    ceiling = await facade.update_risk_ceiling(db, ceiling_id, update.model_dump(exclude_none=True))
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "update_risk_ceiling", "ceiling_id": ceiling_id, "updates": update.model_dump(exclude_none=True)},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    ceiling = op.data
     if not ceiling:
         raise HTTPException(status_code=404, detail="Risk ceiling not found")
 
@@ -404,8 +503,18 @@ async def reset_risk_ceiling(
     db: AsyncSession = Depends(get_async_session),
 ) -> Dict[str, Any]:
     """Reset a risk ceiling's current value to 0."""
-    facade = get_policy_facade()
-    success = await facade.reset_risk_ceiling(db, ceiling_id)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "reset_risk_ceiling", "ceiling_id": ceiling_id},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    success = op.data
     if not success:
         raise HTTPException(status_code=404, detail="Risk ceiling not found")
 
@@ -424,8 +533,18 @@ async def list_safety_rules(
     db: AsyncSession = Depends(get_async_session),
 ) -> List[Dict[str, Any]]:
     """List all safety rules."""
-    facade = get_policy_facade()
-    rules = await facade.get_safety_rules(db, tenant_id=tenant_id, include_inactive=include_inactive)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=tenant_id,
+            params={"method": "get_safety_rules", "include_inactive": include_inactive},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    rules = op.data
     items = [
         {
             "id": r.id,
@@ -449,8 +568,18 @@ async def update_safety_rule(
     db: AsyncSession = Depends(get_async_session),
 ) -> Dict[str, Any]:
     """Update a safety rule configuration."""
-    facade = get_policy_facade()
-    rule = await facade.update_safety_rule(db, rule_id, update.model_dump(exclude_none=True))
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "update_safety_rule", "rule_id": rule_id, "updates": update.model_dump(exclude_none=True)},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    rule = op.data
     if not rule:
         raise HTTPException(status_code=404, detail="Safety rule not found")
 
@@ -472,8 +601,18 @@ async def list_ethical_constraints(
     db: AsyncSession = Depends(get_async_session),
 ) -> List[Dict[str, Any]]:
     """List all ethical constraints."""
-    facade = get_policy_facade()
-    constraints = await facade.get_ethical_constraints(db, include_inactive=include_inactive)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "get_ethical_constraints", "include_inactive": include_inactive},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    constraints = op.data
     items = [
         {
             "id": c.id,
@@ -500,8 +639,18 @@ async def list_active_cooldowns(
     db: AsyncSession = Depends(get_async_session),
 ) -> List[CooldownInfo]:
     """List all active cooldowns."""
-    facade = get_policy_facade()
-    cooldowns = await facade.get_active_cooldowns(db, agent_id=agent_id)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "get_active_cooldowns", "agent_id": agent_id},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    cooldowns = op.data
     return wrap_dict({"items": [c.model_dump() for c in cooldowns], "total": len(cooldowns)})
 
 
@@ -516,8 +665,18 @@ async def clear_cooldowns(
 
     Use with caution - bypasses safety cooldowns.
     """
-    facade = get_policy_facade()
-    count = await facade.clear_cooldowns(db, agent_id, rule_name)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "clear_cooldowns", "agent_id": agent_id, "rule_name": rule_name},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    count = op.data
     return wrap_dict({"cleared": count, "agent_id": agent_id})
 
 
@@ -532,8 +691,18 @@ async def get_policy_metrics(
     db: AsyncSession = Depends(get_async_session),
 ) -> PolicyMetrics:
     """Get policy engine metrics for the specified time window."""
-    facade = get_policy_facade()
-    metrics = await facade.get_metrics(db, hours=hours)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "get_metrics", "hours": hours},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    metrics = op.data
     return metrics
 
 
@@ -556,7 +725,7 @@ async def evaluate_batch(
     if len(requests) > 50:
         raise HTTPException(status_code=400, detail="Batch size limited to 50 requests")
 
-    facade = get_policy_facade()
+    registry = get_operation_registry()
     results = []
 
     for req in requests:
@@ -571,8 +740,17 @@ async def evaluate_batch(
             data_categories=req.data_categories,
             external_endpoints=req.external_endpoints,
         )
-        result = await facade.evaluate(eval_request, db)
-        results.append(result)
+        op = await registry.execute(
+            "policies.policy_facade",
+            OperationContext(
+                session=db,
+                tenant_id=req.tenant_id,
+                params={"method": "evaluate", "eval_request": eval_request},
+            ),
+        )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        results.append(op.data)
 
     return wrap_dict({"items": [r.model_dump() for r in results], "total": len(results)})
 
@@ -608,8 +786,18 @@ async def list_policy_versions(
 
     Returns version history for audit and rollback purposes.
     """
-    facade = get_policy_facade()
-    versions = await facade.get_policy_versions(db, limit=limit, include_inactive=include_inactive)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "get_policy_versions", "limit": limit, "include_inactive": include_inactive},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    versions = op.data
     return wrap_dict({"items": versions, "total": len(versions)})
 
 
@@ -622,8 +810,18 @@ async def get_current_version(
 
     This is the version being used for all evaluations.
     """
-    facade = get_policy_facade()
-    version = await facade.get_current_version(db)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "get_current_version"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    version = op.data
     if not version:
         return wrap_dict({"version": "1.0.0", "is_active": True, "description": "Default"})
     return wrap_dict(version)
@@ -640,12 +838,22 @@ async def create_policy_version(
     This captures the current state of all policies for audit
     and potential rollback.
     """
-    facade = get_policy_facade()
-    version = await facade.create_policy_version(
-        db,
-        description=request.description,
-        created_by=request.created_by,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={
+                "method": "create_policy_version",
+                "description": request.description,
+                "created_by": request.created_by,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    version = op.data
     return wrap_dict({
         "created": True,
         "version": version.version,
@@ -665,13 +873,23 @@ async def rollback_to_version(
     This restores all policies to the state captured in
     the specified version.
     """
-    facade = get_policy_facade()
-    result = await facade.rollback_to_version(
-        db,
-        target_version=request.target_version,
-        reason=request.reason,
-        rolled_back_by=request.rolled_back_by,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={
+                "method": "rollback_to_version",
+                "target_version": request.target_version,
+                "reason": request.reason,
+                "rolled_back_by": request.rolled_back_by,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result.get("error", "Rollback failed"))
@@ -689,8 +907,18 @@ async def get_version_provenance(
 
     Shows what changes were made and by whom.
     """
-    facade = get_policy_facade()
-    provenance = await facade.get_version_provenance(db, version_id)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "get_version_provenance", "version_id": version_id},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    provenance = op.data
     return wrap_dict({"items": provenance, "total": len(provenance)})
 
 
@@ -708,8 +936,18 @@ async def get_dependency_graph(
 
     Shows relationships and potential conflicts between policies.
     """
-    facade = get_policy_facade()
-    graph = await facade.get_dependency_graph(db)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "get_dependency_graph"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    graph = op.data
     return wrap_dict({
         "nodes": len(graph.nodes),
         "edges": len(graph.edges),
@@ -750,8 +988,18 @@ async def list_conflicts(
 
     Conflicts occur when policies have contradictory rules.
     """
-    facade = get_policy_facade()
-    conflicts = await facade.get_policy_conflicts(db, include_resolved=include_resolved)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "get_policy_conflicts", "include_resolved": include_resolved},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    conflicts = op.data
     items = [
         {
             "id": c.id,
@@ -788,13 +1036,23 @@ async def resolve_conflict(
 
     Documents how the conflict should be handled during evaluation.
     """
-    facade = get_policy_facade()
-    result = await facade.resolve_conflict(
-        db,
-        conflict_id=conflict_id,
-        resolution=request.resolution,
-        resolved_by=request.resolved_by,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={
+                "method": "resolve_conflict",
+                "conflict_id": conflict_id,
+                "resolution": request.resolution,
+                "resolved_by": request.resolved_by,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     if not result:
         raise HTTPException(status_code=404, detail="Conflict not found")
@@ -833,8 +1091,18 @@ async def list_temporal_policies(
 
     These policies track cumulative metrics over time windows.
     """
-    facade = get_policy_facade()
-    policies = await facade.get_temporal_policies(db, metric=metric, include_inactive=include_inactive)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "get_temporal_policies", "metric": metric, "include_inactive": include_inactive},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    policies = op.data
     items = [
         {
             "id": p.id,
@@ -862,8 +1130,18 @@ async def create_temporal_policy(
 
     Temporal policies track cumulative metrics over sliding windows.
     """
-    facade = get_policy_facade()
-    policy = await facade.create_temporal_policy(db, request.model_dump())
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "create_temporal_policy", "policy_data": request.model_dump()},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    policy = op.data
 
     return wrap_dict({
         "created": True,
@@ -883,8 +1161,18 @@ async def get_temporal_utilization(
 
     Shows how much of the limit has been consumed in the current window.
     """
-    facade = get_policy_facade()
-    utilization = await facade.get_temporal_utilization(db, policy_id=policy_id, agent_id=agent_id)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "get_temporal_utilization", "policy_id": policy_id, "agent_id": agent_id},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    utilization = op.data
     return wrap_dict(utilization)
 
 
@@ -936,8 +1224,6 @@ async def evaluate_with_context(
     """
     from app.policy import PolicyContext
 
-    facade = get_policy_facade()
-
     # Build policy context
     policy_context = PolicyContext(
         agent_id=request.agent_id,
@@ -951,16 +1237,27 @@ async def evaluate_with_context(
     )
 
     # Evaluate with context
-    result = await facade.evaluate_with_context(
-        db,
-        action_type=request.action_type,
-        policy_context=policy_context,
-        proposed_action=request.proposed_action,
-        target_resource=request.target_resource,
-        estimated_cost=request.estimated_cost,
-        data_categories=request.data_categories,
-        context=request.context,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=request.tenant_id,
+            params={
+                "method": "evaluate_with_context",
+                "action_type": request.action_type,
+                "policy_context": policy_context,
+                "proposed_action": request.proposed_action,
+                "target_resource": request.target_resource,
+                "estimated_cost": request.estimated_cost,
+                "data_categories": request.data_categories,
+                "context": request.context,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     return wrap_dict({
         "decision": result.decision.value,
@@ -1014,8 +1311,18 @@ async def validate_dependency_dag(
     - cycles: List of detected cycles (if any)
     - topological_order: Evaluation order (if DAG is valid)
     """
-    facade = get_policy_facade()
-    result = await facade.validate_dependency_dag(db)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "validate_dependency_dag"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
     return wrap_dict(result)
 
 
@@ -1048,16 +1355,26 @@ async def add_dependency_with_dag_check(
     - blocked: True if cycle detected
     - cycle_path: The path that would form a cycle
     """
-    facade = get_policy_facade()
-    result = await facade.add_dependency_with_dag_check(
-        db,
-        source_policy=request.source_policy,
-        target_policy=request.target_policy,
-        dependency_type=request.dependency_type,
-        resolution_strategy=request.resolution_strategy,
-        priority=request.priority,
-        description=request.description,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={
+                "method": "add_dependency_with_dag_check",
+                "source_policy": request.source_policy,
+                "target_policy": request.target_policy,
+                "dependency_type": request.dependency_type,
+                "resolution_strategy": request.resolution_strategy,
+                "priority": request.priority,
+                "description": request.description,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     if not result.get("success"):
         if result.get("blocked"):
@@ -1084,8 +1401,18 @@ async def get_evaluation_order(
     based on their dependencies. Policies that depend on
     others are evaluated after their dependencies.
     """
-    facade = get_policy_facade()
-    dag_result = await facade.validate_dependency_dag(db)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "validate_dependency_dag"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    dag_result = op.data
 
     if not dag_result.get("is_dag"):
         return wrap_dict({
@@ -1130,13 +1457,23 @@ async def prune_temporal_metrics(
 
     Should be run periodically (e.g., via cron job).
     """
-    facade = get_policy_facade()
-    result = await facade.prune_temporal_metrics(
-        db,
-        retention_hours=request.retention_hours,
-        compact_older_than_hours=request.compact_older_than_hours,
-        max_events_per_policy=request.max_events_per_policy,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={
+                "method": "prune_temporal_metrics",
+                "retention_hours": request.retention_hours,
+                "compact_older_than_hours": request.compact_older_than_hours,
+                "max_events_per_policy": request.max_events_per_policy,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     if not result.get("success"):
         raise HTTPException(status_code=500, detail=result.get("error"))
@@ -1154,8 +1491,18 @@ async def get_temporal_storage_stats(
     Use this to monitor storage growth and determine
     when pruning is needed.
     """
-    facade = get_policy_facade()
-    stats = await facade.get_temporal_storage_stats(db)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={"method": "get_temporal_storage_stats"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    stats = op.data
     return wrap_dict(stats)
 
 
@@ -1196,13 +1543,23 @@ async def activate_policy_version(
     - checks: Detailed results of each check
     - activated_version: The version that was activated
     """
-    facade = get_policy_facade()
-    result = await facade.activate_policy_version(
-        db,
-        version_id=request.version_id,
-        activated_by=request.activated_by,
-        dry_run=request.dry_run,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={
+                "method": "activate_policy_version",
+                "version_id": request.version_id,
+                "activated_by": request.activated_by,
+                "dry_run": request.dry_run,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     if not result.get("success"):
         if "Pre-activation checks failed" in result.get("error", ""):
@@ -1230,13 +1587,23 @@ async def check_version_integrity(
     Shortcut for activate with dry_run=True.
     Useful for validating a version before scheduling activation.
     """
-    facade = get_policy_facade()
-    result = await facade.activate_policy_version(
-        db,
-        version_id=version_id,
-        activated_by="check-only",
-        dry_run=True,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.policy_facade",
+        OperationContext(
+            session=db,
+            tenant_id=None,
+            params={
+                "method": "activate_policy_version",
+                "version_id": version_id,
+                "activated_by": "check-only",
+                "dry_run": True,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
     return wrap_dict(result)
 
 
@@ -1282,21 +1649,28 @@ async def list_lessons(
 
     Reference: PIN-411, POLICIES_DOMAIN_AUDIT.md Section 11
     """
-    # L5 engine import (migrated to HOC per SWEEP-06)
-    from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
-
     if not tenant_id:
         return wrap_dict({"error": "tenant_id required", "items": [], "total": 0})
 
-    engine = get_lessons_learned_engine()
-    lessons = engine.list_lessons(
-        tenant_id=tenant_id,
-        lesson_type=lesson_type,
-        status=status,
-        severity=severity,
-        limit=limit,
-        offset=offset,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.lessons",
+        OperationContext(
+            session=db,
+            tenant_id=tenant_id,
+            params={
+                "method": "list_lessons",
+                "lesson_type": lesson_type,
+                "status": status,
+                "severity": severity,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    lessons = op.data
 
     return wrap_dict({
         "items": lessons,
@@ -1323,11 +1697,18 @@ async def get_lesson_stats(
 
     Reference: PIN-411
     """
-    # L5 engine import (migrated to HOC per SWEEP-06)
-    from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
-
-    engine = get_lessons_learned_engine()
-    stats = engine.get_lesson_stats(tenant_id=tenant_id)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.lessons",
+        OperationContext(
+            session=db,
+            tenant_id=tenant_id,
+            params={"method": "get_lesson_stats"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    stats = op.data
 
     return wrap_dict(stats)
 
@@ -1346,11 +1727,19 @@ async def get_lesson(
     Reference: PIN-411
     """
     from uuid import UUID
-    # L5 engine import (migrated to HOC per SWEEP-06)
-    from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
 
-    engine = get_lessons_learned_engine()
-    lesson = engine.get_lesson(lesson_id=UUID(lesson_id), tenant_id=tenant_id)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.lessons",
+        OperationContext(
+            session=db,
+            tenant_id=tenant_id,
+            params={"method": "get_lesson", "lesson_id": str(UUID(lesson_id))},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    lesson = op.data
 
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
@@ -1374,15 +1763,23 @@ async def convert_lesson_to_draft(
     Reference: PIN-411, PB-S4
     """
     from uuid import UUID
-    # L5 engine import (migrated to HOC per SWEEP-06)
-    from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
 
-    engine = get_lessons_learned_engine()
-    proposal_id = engine.convert_lesson_to_draft(
-        lesson_id=UUID(lesson_id),
-        tenant_id=tenant_id,
-        converted_by=request.converted_by,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.lessons",
+        OperationContext(
+            session=db,
+            tenant_id=tenant_id,
+            params={
+                "method": "convert_lesson_to_draft",
+                "lesson_id": str(UUID(lesson_id)),
+                "converted_by": request.converted_by,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    proposal_id = op.data
 
     if not proposal_id:
         raise HTTPException(status_code=400, detail="Failed to convert lesson")
@@ -1409,15 +1806,23 @@ async def defer_lesson(
     Reference: PIN-411
     """
     from uuid import UUID
-    # L5 engine import (migrated to HOC per SWEEP-06)
-    from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
 
-    engine = get_lessons_learned_engine()
-    success = engine.defer_lesson(
-        lesson_id=UUID(lesson_id),
-        tenant_id=tenant_id,
-        defer_until=request.defer_until,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.lessons",
+        OperationContext(
+            session=db,
+            tenant_id=tenant_id,
+            params={
+                "method": "defer_lesson",
+                "lesson_id": str(UUID(lesson_id)),
+                "defer_until": request.defer_until.isoformat(),
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    success = op.data
 
     if not success:
         raise HTTPException(status_code=400, detail="Failed to defer lesson")
@@ -1444,16 +1849,24 @@ async def dismiss_lesson(
     Reference: PIN-411
     """
     from uuid import UUID
-    # L5 engine import (migrated to HOC per SWEEP-06)
-    from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
 
-    engine = get_lessons_learned_engine()
-    success = engine.dismiss_lesson(
-        lesson_id=UUID(lesson_id),
-        tenant_id=tenant_id,
-        dismissed_by=request.dismissed_by,
-        reason=request.reason,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.lessons",
+        OperationContext(
+            session=db,
+            tenant_id=tenant_id,
+            params={
+                "method": "dismiss_lesson",
+                "lesson_id": str(UUID(lesson_id)),
+                "dismissed_by": request.dismissed_by,
+                "reason": request.reason,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    success = op.data
 
     if not success:
         raise HTTPException(status_code=400, detail="Failed to dismiss lesson")

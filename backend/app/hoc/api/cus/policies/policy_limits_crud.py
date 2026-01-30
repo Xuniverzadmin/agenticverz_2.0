@@ -41,13 +41,9 @@ from app.schemas.limits.policy_limits import (
     ResetPeriodEnum,
     UpdatePolicyLimitRequest,
 )
-# L5 engine import (migrated to HOC per SWEEP-08)
-from app.hoc.cus.policies.L5_engines.policy_limits_engine import (
-    ImmutableFieldError,
-    LimitNotFoundError,
-    LimitValidationError,
-    PolicyLimitsService,
-    PolicyLimitsServiceError,
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
 )
 
 
@@ -181,51 +177,48 @@ async def create_limit(
     tenant_id = auth_context.tenant_id
     user_id = getattr(auth_context, "user_id", None)
 
-    service = PolicyLimitsService(session)
-
-    try:
-        # Parse enums
-        category = LimitCategoryEnum(body.limit_category)
-        scope = LimitScopeEnum(body.scope)
-        enforcement = LimitEnforcementEnum(body.enforcement)
-        reset_period = ResetPeriodEnum(body.reset_period) if body.reset_period else None
-
-        create_request = CreatePolicyLimitRequest(
-            name=body.name,
-            description=body.description,
-            limit_category=category,
-            limit_type=body.limit_type,
-            scope=scope,
-            scope_id=body.scope_id,
-            max_value=body.max_value,
-            enforcement=enforcement,
-            reset_period=reset_period,
-            window_seconds=body.window_seconds,
-        )
-
-        result = await service.create(
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.limits",
+        OperationContext(
+            session=session,
             tenant_id=tenant_id,
-            request=create_request,
-            created_by=user_id,
-        )
+            params={
+                "method": "create",
+                "name": body.name,
+                "description": body.description,
+                "limit_category": body.limit_category,
+                "limit_type": body.limit_type,
+                "scope": body.scope,
+                "scope_id": body.scope_id,
+                "max_value": str(body.max_value),
+                "enforcement": body.enforcement,
+                "reset_period": body.reset_period,
+                "window_seconds": body.window_seconds,
+                "created_by": user_id,
+            },
+        ),
+    )
 
-        return _to_detail(result)
+    if not op.success:
+        error_code = getattr(op, "error_code", None) or ""
+        if error_code == "VALIDATION_ERROR":
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "validation_error", "message": op.error},
+            )
+        elif error_code == "SERVICE_ERROR":
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "create_error", "message": op.error},
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "create_error", "message": op.error},
+            )
 
-    except ValueError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "invalid_enum", "message": str(e)},
-        )
-    except LimitValidationError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "validation_error", "message": str(e)},
-        )
-    except PolicyLimitsServiceError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "create_error", "message": str(e)},
-        )
+    return _to_detail(op.data)
 
 
 @router.put(
@@ -250,52 +243,51 @@ async def update_limit(
     tenant_id = auth_context.tenant_id
     user_id = getattr(auth_context, "user_id", None)
 
-    service = PolicyLimitsService(session)
-
-    try:
-        # Parse enums if provided
-        enforcement = LimitEnforcementEnum(body.enforcement) if body.enforcement else None
-        reset_period = ResetPeriodEnum(body.reset_period) if body.reset_period else None
-
-        update_request = UpdatePolicyLimitRequest(
-            name=body.name,
-            description=body.description,
-            max_value=body.max_value,
-            enforcement=enforcement,
-            reset_period=reset_period,
-            window_seconds=body.window_seconds,
-            status=body.status,
-        )
-
-        result = await service.update(
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.limits",
+        OperationContext(
+            session=session,
             tenant_id=tenant_id,
-            limit_id=limit_id,
-            request=update_request,
-            updated_by=user_id,
-        )
+            params={
+                "method": "update",
+                "limit_id": limit_id,
+                "name": body.name,
+                "description": body.description,
+                "max_value": str(body.max_value) if body.max_value is not None else None,
+                "enforcement": body.enforcement,
+                "reset_period": body.reset_period,
+                "window_seconds": body.window_seconds,
+                "status": body.status,
+                "updated_by": user_id,
+            },
+        ),
+    )
 
-        return _to_detail(result)
+    if not op.success:
+        error_code = getattr(op, "error_code", None) or ""
+        if error_code == "LIMIT_NOT_FOUND":
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "limit_not_found", "message": op.error},
+            )
+        elif error_code == "IMMUTABLE_FIELD":
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "immutable_field", "message": op.error},
+            )
+        elif error_code == "VALIDATION_ERROR":
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "validation_error", "message": op.error},
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "update_error", "message": op.error},
+            )
 
-    except LimitNotFoundError as e:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "limit_not_found", "message": str(e)},
-        )
-    except ImmutableFieldError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "immutable_field", "message": str(e)},
-        )
-    except LimitValidationError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "validation_error", "message": str(e)},
-        )
-    except PolicyLimitsServiceError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "update_error", "message": str(e)},
-        )
+    return _to_detail(op.data)
 
 
 @router.delete(
@@ -318,25 +310,32 @@ async def delete_limit(
     tenant_id = auth_context.tenant_id
     user_id = getattr(auth_context, "user_id", None)
 
-    service = PolicyLimitsService(session)
-
-    try:
-        await service.delete(
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.limits",
+        OperationContext(
+            session=session,
             tenant_id=tenant_id,
-            limit_id=limit_id,
-            deleted_by=user_id,
-        )
+            params={
+                "method": "delete",
+                "limit_id": limit_id,
+                "deleted_by": user_id,
+            },
+        ),
+    )
 
-    except LimitNotFoundError as e:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "limit_not_found", "message": str(e)},
-        )
-    except PolicyLimitsServiceError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "delete_error", "message": str(e)},
-        )
+    if not op.success:
+        error_code = getattr(op, "error_code", None) or ""
+        if error_code == "LIMIT_NOT_FOUND":
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "limit_not_found", "message": op.error},
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "delete_error", "message": op.error},
+            )
 
 
 # =============================================================================
@@ -362,10 +361,6 @@ async def get_threshold_params(
     Only valid for limits with limit_category = THRESHOLD.
     """
     from app.models.policy_control_plane import Limit, LimitCategory
-    from app.hoc.cus.controls.L5_engines.threshold_engine import (
-        DEFAULT_LLM_RUN_PARAMS,
-        ThresholdParams,
-    )
     from sqlmodel import select
 
     auth_context = get_auth_context(request)
@@ -394,12 +389,20 @@ async def get_threshold_params(
             },
         )
 
-    # Compute effective params
+    # Compute effective params via L4 operation registry
     raw_params = limit.params or {}
-    effective = DEFAULT_LLM_RUN_PARAMS.copy()
-    for key, value in raw_params.items():
-        if key in effective and value is not None:
-            effective[key] = value
+    registry = get_operation_registry()
+    eff_op = await registry.execute(
+        "controls.thresholds",
+        OperationContext(
+            session=None,
+            tenant_id=tenant_id,
+            params={"method": "get_effective_params", "raw_params": raw_params},
+        ),
+    )
+    if not eff_op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": eff_op.error})
+    effective = eff_op.data
 
     return ThresholdParamsResponse(
         limit_id=limit.id,
@@ -441,10 +444,6 @@ async def set_threshold_params(
     from datetime import timezone
 
     from app.models.policy_control_plane import Limit, LimitCategory
-    from app.hoc.cus.controls.L5_engines.threshold_engine import (
-        DEFAULT_LLM_RUN_PARAMS,
-        ThresholdParams,
-    )
     from sqlmodel import select
 
     auth_context = get_auth_context(request)
@@ -479,15 +478,22 @@ async def set_threshold_params(
 
     new_params = {**current_params, **update_data}
 
-    # Validate complete params
-    try:
-        ThresholdParams(**{**DEFAULT_LLM_RUN_PARAMS, **new_params})
-    except Exception as e:
+    # Validate params via L4 operation registry
+    registry = get_operation_registry()
+    validate_op = await registry.execute(
+        "controls.thresholds",
+        OperationContext(
+            session=None,
+            tenant_id=tenant_id,
+            params={"method": "validate_params", "params": new_params},
+        ),
+    )
+    if not validate_op.success:
         raise HTTPException(
             status_code=400,
             detail={
                 "error": "invalid_params",
-                "message": f"Invalid threshold params: {str(e)}",
+                "message": validate_op.error,
             },
         )
 
@@ -498,11 +504,18 @@ async def set_threshold_params(
     await session.commit()
     await session.refresh(limit)
 
-    # Compute effective params
-    effective = DEFAULT_LLM_RUN_PARAMS.copy()
-    for key, value in new_params.items():
-        if key in effective and value is not None:
-            effective[key] = value
+    # Compute effective params via L4 operation registry
+    eff_op = await registry.execute(
+        "controls.thresholds",
+        OperationContext(
+            session=None,
+            tenant_id=tenant_id,
+            params={"method": "get_effective_params", "raw_params": new_params},
+        ),
+    )
+    if not eff_op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": eff_op.error})
+    effective = eff_op.data
 
     return ThresholdParamsResponse(
         limit_id=limit.id,

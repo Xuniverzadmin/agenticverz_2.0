@@ -38,10 +38,9 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-# L5 engine imports (migrated to HOC per SWEEP-19)
-from app.hoc.cus.controls.L5_engines.controls_facade import (
-    ControlsFacade,
-    get_controls_facade,
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
 )
 
 # =============================================================================
@@ -63,16 +62,6 @@ class UpdateControlRequest(BaseModel):
 
 
 # =============================================================================
-# Dependencies
-# =============================================================================
-
-
-def get_facade() -> ControlsFacade:
-    """Get the controls facade."""
-    return get_controls_facade()
-
-
-# =============================================================================
 # Endpoints (GAP-123)
 # =============================================================================
 
@@ -84,7 +73,6 @@ async def list_controls(
     limit: int = Query(100, le=1000, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: ControlsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("controls.read")),
 ):
     """
@@ -92,13 +80,25 @@ async def list_controls(
 
     Returns all controls for the tenant.
     """
-    controls = await facade.list_controls(
-        tenant_id=ctx.tenant_id,
-        control_type=control_type,
-        state=state,
-        limit=limit,
-        offset=offset,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "controls.query",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "list_controls",
+                "control_type": control_type,
+                "state": state,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    controls = op.data
 
     return wrap_dict({
         "controls": [c.to_dict() for c in controls],
@@ -111,7 +111,6 @@ async def list_controls(
 @router.get("/status", response_model=Dict[str, Any])
 async def get_status(
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: ControlsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("controls.read")),
 ):
     """
@@ -119,7 +118,19 @@ async def get_status(
 
     Returns summary including killswitch and maintenance mode state.
     """
-    status = await facade.get_status(tenant_id=ctx.tenant_id)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "controls.query",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={"method": "get_status"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    status = op.data
 
     return wrap_dict(status.to_dict())
 
@@ -128,16 +139,24 @@ async def get_status(
 async def get_control(
     control_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: ControlsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("controls.read")),
 ):
     """
     Get a specific control.
     """
-    control = await facade.get_control(
-        control_id=control_id,
-        tenant_id=ctx.tenant_id,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "controls.query",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={"method": "get_control", "control_id": control_id},
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    control = op.data
 
     if not control:
         raise HTTPException(status_code=404, detail="Control not found")
@@ -150,18 +169,29 @@ async def update_control(
     control_id: str,
     request: UpdateControlRequest,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: ControlsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("controls.write")),
 ):
     """
     Update a control.
     """
-    control = await facade.update_control(
-        control_id=control_id,
-        tenant_id=ctx.tenant_id,
-        conditions=request.conditions,
-        metadata=request.metadata,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "controls.query",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "update_control",
+                "control_id": control_id,
+                "conditions": request.conditions,
+                "metadata": request.metadata,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    control = op.data
 
     if not control:
         raise HTTPException(status_code=404, detail="Control not found")
@@ -173,7 +203,6 @@ async def update_control(
 async def enable_control(
     control_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: ControlsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("controls.admin")),
 ):
     """
@@ -182,11 +211,23 @@ async def enable_control(
     **Requires admin permissions.**
     """
     actor = ctx.user_id or "system"
-    control = await facade.enable_control(
-        control_id=control_id,
-        tenant_id=ctx.tenant_id,
-        actor=actor,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "controls.query",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "enable_control",
+                "control_id": control_id,
+                "actor": actor,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    control = op.data
 
     if not control:
         raise HTTPException(status_code=404, detail="Control not found")
@@ -198,7 +239,6 @@ async def enable_control(
 async def disable_control(
     control_id: str,
     ctx: TenantContext = Depends(get_tenant_context),
-    facade: ControlsFacade = Depends(get_facade),
     _tier: None = Depends(requires_feature("controls.admin")),
 ):
     """
@@ -207,11 +247,23 @@ async def disable_control(
     **Requires admin permissions.**
     """
     actor = ctx.user_id or "system"
-    control = await facade.disable_control(
-        control_id=control_id,
-        tenant_id=ctx.tenant_id,
-        actor=actor,
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "controls.query",
+        OperationContext(
+            session=None,
+            tenant_id=ctx.tenant_id,
+            params={
+                "method": "disable_control",
+                "control_id": control_id,
+                "actor": actor,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    control = op.data
 
     if not control:
         raise HTTPException(status_code=404, detail="Control not found")

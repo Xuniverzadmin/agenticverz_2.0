@@ -65,8 +65,11 @@ from app.schemas.cus_schemas import (
     CusIntegrationUpdate,
 )
 from app.schemas.response import wrap_dict, wrap_list
-# L5 engine import (migrated to HOC per SWEEP-24)
-from app.hoc.cus.integrations.L5_engines.integrations_facade import get_integrations_facade
+# L4 operation registry import
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -111,14 +114,24 @@ async def list_integrations(
     tenant_id = resolve_tenant_id(request)
 
     try:
-        facade = get_integrations_facade()
-        result = await facade.list_integrations(
-            tenant_id=tenant_id,
-            offset=offset,
-            limit=limit,
-            status=status,
-            provider_type=provider_type,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "integrations.query",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "list_integrations",
+                    "offset": offset,
+                    "limit": limit,
+                    "status": status,
+                    "provider_type": provider_type,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         summaries = [
             CusIntegrationSummary(
@@ -157,11 +170,21 @@ async def get_integration(
     tenant_id = resolve_tenant_id(request)
 
     try:
-        facade = get_integrations_facade()
-        result = await facade.get_integration(
-            tenant_id=tenant_id,
-            integration_id=str(integration_id),
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "integrations.query",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_integration",
+                    "integration_id": str(integration_id),
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         if not result:
             raise HTTPException(status_code=404, detail="Integration not found")
@@ -216,19 +239,29 @@ async def create_integration(
     user_id = get_user_id(request)
 
     try:
-        facade = get_integrations_facade()
-        result = await facade.create_integration(
-            tenant_id=tenant_id,
-            name=payload.name,
-            provider_type=payload.provider_type.value,
-            credential_ref=payload.credential_ref,
-            config=payload.config,
-            default_model=payload.default_model,
-            budget_limit_cents=payload.budget_limit_cents,
-            token_limit_month=payload.token_limit_month,
-            rate_limit_rpm=payload.rate_limit_rpm,
-            created_by=user_id,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "integrations.query",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "create_integration",
+                    "name": payload.name,
+                    "provider_type": payload.provider_type.value,
+                    "credential_ref": payload.credential_ref,
+                    "config": payload.config,
+                    "default_model": payload.default_model,
+                    "budget_limit_cents": payload.budget_limit_cents,
+                    "token_limit_month": payload.token_limit_month,
+                    "rate_limit_rpm": payload.rate_limit_rpm,
+                    "created_by": user_id,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         response = CusIntegrationResponse(
             id=result.id,
@@ -278,12 +311,22 @@ async def update_integration(
         if not update_data:
             raise HTTPException(status_code=400, detail="No fields to update")
 
-        facade = get_integrations_facade()
-        result = await facade.update_integration(
-            tenant_id=tenant_id,
-            integration_id=str(integration_id),
-            **update_data,
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "integrations.query",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "update_integration",
+                    "integration_id": str(integration_id),
+                    **update_data,
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         if not result:
             raise HTTPException(status_code=404, detail="Integration not found")
@@ -331,11 +374,21 @@ async def delete_integration(
     tenant_id = resolve_tenant_id(request)
 
     try:
-        facade = get_integrations_facade()
-        result = await facade.delete_integration(
-            tenant_id=tenant_id,
-            integration_id=str(integration_id),
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "integrations.query",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "delete_integration",
+                    "integration_id": str(integration_id),
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         if not result.deleted:
             raise HTTPException(status_code=404, detail="Integration not found")
@@ -368,11 +421,21 @@ async def enable_integration(
     tenant_id = resolve_tenant_id(request)
 
     try:
-        facade = get_integrations_facade()
-        result = await facade.enable_integration(
-            tenant_id=tenant_id,
-            integration_id=str(integration_id),
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "integrations.query",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "enable_integration",
+                    "integration_id": str(integration_id),
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         if not result:
             raise HTTPException(status_code=404, detail="Integration not found")
@@ -406,11 +469,21 @@ async def disable_integration(
     tenant_id = resolve_tenant_id(request)
 
     try:
-        facade = get_integrations_facade()
-        result = await facade.disable_integration(
-            tenant_id=tenant_id,
-            integration_id=str(integration_id),
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "integrations.query",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "disable_integration",
+                    "integration_id": str(integration_id),
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         if not result:
             raise HTTPException(status_code=404, detail="Integration not found")
@@ -449,11 +522,21 @@ async def get_integration_health(
     tenant_id = resolve_tenant_id(request)
 
     try:
-        facade = get_integrations_facade()
-        result = await facade.get_health_status(
-            tenant_id=tenant_id,
-            integration_id=str(integration_id),
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "integrations.query",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_health_status",
+                    "integration_id": str(integration_id),
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         if not result:
             raise HTTPException(status_code=404, detail="Integration not found")
@@ -494,11 +577,21 @@ async def test_integration_credentials(
     tenant_id = resolve_tenant_id(request)
 
     try:
-        facade = get_integrations_facade()
-        result = await facade.test_credentials(
-            tenant_id=tenant_id,
-            integration_id=str(integration_id),
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "integrations.query",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "test_credentials",
+                    "integration_id": str(integration_id),
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         if result is None:
             raise HTTPException(status_code=404, detail="Integration not found")
@@ -539,11 +632,21 @@ async def get_integration_limits(
     tenant_id = resolve_tenant_id(request)
 
     try:
-        facade = get_integrations_facade()
-        result = await facade.get_limits_status(
-            tenant_id=tenant_id,
-            integration_id=str(integration_id),
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "integrations.query",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_limits_status",
+                    "integration_id": str(integration_id),
+                },
+            ),
         )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         if result is None:
             raise HTTPException(status_code=404, detail="Integration not found")

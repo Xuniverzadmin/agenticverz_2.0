@@ -61,6 +61,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import TenantTier, requires_feature, requires_tier
 from app.db_async import get_async_session
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+)
 from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.policy")
@@ -1615,21 +1619,41 @@ async def get_policy_lessons(
     ctx: TenantContext = Depends(get_tenant_context),
 ) -> LessonsResponse:
     """V2 Facade: What governance emerged?"""
-    # L5 engine import (migrated to HOC per SWEEP-06)
-    from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
+    # L4 operation registry dispatch (replaced L5 inline import per HOC Topology V2)
+    registry = get_operation_registry()
 
     try:
-        engine = get_lessons_learned_engine()
-        lessons = engine.list_lessons(
-            tenant_id=ctx.tenant_id,
-            lesson_type=lesson_type,
-            status=status,
-            limit=limit,
-            offset=offset,
+        # Fetch lessons via registry
+        lessons_op = await registry.execute(
+            "policies.lessons",
+            OperationContext(
+                session=None,
+                tenant_id=ctx.tenant_id,
+                params={
+                    "method": "list_lessons",
+                    "lesson_type": lesson_type,
+                    "status": status,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            ),
         )
+        if not lessons_op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": lessons_op.error})
+        lessons = lessons_op.data
 
-        # Get stats for counts
-        stats = engine.get_lesson_stats(tenant_id=ctx.tenant_id)
+        # Fetch stats via registry
+        stats_op = await registry.execute(
+            "policies.lessons",
+            OperationContext(
+                session=None,
+                tenant_id=ctx.tenant_id,
+                params={"method": "get_lesson_stats"},
+            ),
+        )
+        if not stats_op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": stats_op.error})
+        stats = stats_op.data
 
         items = [
             PolicyLessonSummary(
@@ -1655,6 +1679,8 @@ async def get_policy_lessons(
             converted_count=stats.get("by_status", {}).get("converted_to_draft", 0),
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Failed to get lessons")
         raise HTTPException(status_code=500, detail={"error": "query_failed", "message": str(e)})
@@ -1678,12 +1704,21 @@ async def get_policy_lesson_detail(
     """V2 Facade: Lesson detail for cross-domain navigation."""
     from uuid import UUID
 
-    # L5 engine import (migrated to HOC per SWEEP-06)
-    from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
+    # L4 operation registry dispatch (replaced L5 inline import per HOC Topology V2)
+    registry = get_operation_registry()
 
     try:
-        engine = get_lessons_learned_engine()
-        lesson = engine.get_lesson(lesson_id=UUID(lesson_id), tenant_id=ctx.tenant_id)
+        op = await registry.execute(
+            "policies.lessons",
+            OperationContext(
+                session=None,
+                tenant_id=ctx.tenant_id,
+                params={"method": "get_lesson", "lesson_id": str(UUID(lesson_id))},
+            ),
+        )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        lesson = op.data
 
         if not lesson:
             raise HTTPException(status_code=404, detail="Lesson not found")

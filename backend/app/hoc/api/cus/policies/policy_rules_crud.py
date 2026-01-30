@@ -37,12 +37,9 @@ from app.schemas.limits.policy_rules import (
     PolicyRuleResponse,
     UpdatePolicyRuleRequest,
 )
-# L5 engine import (migrated to HOC per SWEEP-08)
-from app.hoc.cus.policies.L5_engines.policy_rules_engine import (
-    PolicyRulesService,
-    PolicyRulesServiceError,
-    RuleNotFoundError,
-    RuleValidationError,
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
 )
 
 
@@ -133,39 +130,42 @@ async def create_rule(
     tenant_id = auth_context.tenant_id
     user_id = getattr(auth_context, "user_id", None)
 
-    service = PolicyRulesService(session)
-
-    try:
-        create_request = CreatePolicyRuleRequest(
-            name=body.name,
-            description=body.description,
-            enforcement_mode=body.enforcement_mode,
-            scope=body.scope,
-            scope_id=body.scope_id,
-            conditions=body.conditions,
-            source=body.source,
-            source_proposal_id=body.source_proposal_id,
-            parent_rule_id=body.parent_rule_id,
-        )
-
-        result = await service.create(
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.rules",
+        OperationContext(
+            session=session,
             tenant_id=tenant_id,
-            request=create_request,
-            created_by=user_id,
-        )
+            params={
+                "method": "create",
+                "name": body.name,
+                "description": body.description,
+                "enforcement_mode": body.enforcement_mode,
+                "scope": body.scope,
+                "scope_id": body.scope_id,
+                "conditions": body.conditions,
+                "source": body.source,
+                "source_proposal_id": body.source_proposal_id,
+                "parent_rule_id": body.parent_rule_id,
+                "created_by": user_id,
+            },
+        ),
+    )
 
-        return _to_detail(result)
+    if not op.success:
+        error_code = getattr(op, "error_code", None) or ""
+        if error_code == "VALIDATION_ERROR":
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "validation_error", "message": op.error},
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "create_error", "message": op.error},
+            )
 
-    except RuleValidationError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "validation_error", "message": str(e)},
-        )
-    except PolicyRulesServiceError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "create_error", "message": str(e)},
-        )
+    return _to_detail(op.data)
 
 
 @router.put(
@@ -194,43 +194,46 @@ async def update_rule(
     tenant_id = auth_context.tenant_id
     user_id = getattr(auth_context, "user_id", None)
 
-    service = PolicyRulesService(session)
-
-    try:
-        update_request = UpdatePolicyRuleRequest(
-            name=body.name,
-            description=body.description,
-            enforcement_mode=body.enforcement_mode,
-            conditions=body.conditions,
-            status=body.status,
-            retirement_reason=body.retirement_reason,
-            superseded_by=body.superseded_by,
-        )
-
-        result = await service.update(
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.rules",
+        OperationContext(
+            session=session,
             tenant_id=tenant_id,
-            rule_id=rule_id,
-            request=update_request,
-            updated_by=user_id,
-        )
+            params={
+                "method": "update",
+                "rule_id": rule_id,
+                "name": body.name,
+                "description": body.description,
+                "enforcement_mode": body.enforcement_mode,
+                "conditions": body.conditions,
+                "status": body.status,
+                "retirement_reason": body.retirement_reason,
+                "superseded_by": body.superseded_by,
+                "updated_by": user_id,
+            },
+        ),
+    )
 
-        return _to_detail(result)
+    if not op.success:
+        error_code = getattr(op, "error_code", None) or ""
+        if error_code == "RULE_NOT_FOUND":
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "rule_not_found", "message": op.error},
+            )
+        elif error_code == "VALIDATION_ERROR":
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "validation_error", "message": op.error},
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "update_error", "message": op.error},
+            )
 
-    except RuleNotFoundError as e:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "rule_not_found", "message": str(e)},
-        )
-    except RuleValidationError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "validation_error", "message": str(e)},
-        )
-    except PolicyRulesServiceError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "update_error", "message": str(e)},
-        )
+    return _to_detail(op.data)
 
 
 # =============================================================================
