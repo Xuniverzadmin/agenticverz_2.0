@@ -462,11 +462,12 @@ def main() -> int:
     if l6_init_path.exists():
         l6_init_source = l6_init_path.read_text()
 
-        ok = check_import_exists(l6_init_source, "app.hoc.cus.controls.L6_drivers.threshold_driver")
-        msg = "Imports from controls domain (threshold_driver)"
-        checks.append(("L6 __init__ cross-domain import", ok, msg))
+        # PIN-504: cross-domain controls import removed; now imports from hoc_spine
+        ok = check_import_exists(l6_init_source, "app.hoc.hoc_spine.schemas.threshold_types")
+        msg = "Imports LimitSnapshot from hoc_spine (PIN-504)"
+        checks.append(("L6 __init__ spine import", ok, msg))
         if not ok:
-            failures.append("L6 __init__.py missing cross-domain import from controls.threshold_driver")
+            failures.append("L6 __init__.py missing hoc_spine.schemas.threshold_types import (PIN-504)")
     else:
         failures.append("L6_drivers/__init__.py not found")
         checks.append(("L6 __init__ exists", False, "File missing"))

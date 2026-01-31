@@ -11,7 +11,7 @@ Account Domain Consolidation Verification Script
 
 Verifies:
 - L5_engines: 10 .py files
-- L5_schemas: 1 .py file
+- L5_schemas: 2 .py files (PIN-504: added result_types.py)
 - L6_drivers: 4 .py files
 - No *_service.py files in L5/L6
 - 4 renames completed with header notes
@@ -106,7 +106,7 @@ def check_file_counts() -> bool:
     success = True
     for label, path, expected in [
         ("L5_engines", L5_PATH, 10),
-        ("L5_schemas", SCHEMAS_PATH, 1),
+        ("L5_schemas", SCHEMAS_PATH, 2),
         ("L6_drivers", L6_PATH, 4),
     ]:
         actual, _ = count_py_files(path)
