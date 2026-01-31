@@ -1898,13 +1898,13 @@ async def export_evidence(
     from fastapi.responses import Response
 
     # L6 driver import (migrated to HOC per SWEEP-31)
-    from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_service
+    from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_driver
 
     tenant_id = get_tenant_id_from_auth(request)
     auth_ctx = get_auth_context(request)
     exported_by = getattr(auth_ctx, "user_id", "system") if auth_ctx else "system"
 
-    service = get_export_bundle_service()
+    service = get_export_bundle_driver()
 
     try:
         bundle = await service.create_evidence_bundle(
@@ -1977,13 +1977,13 @@ async def export_soc2(
     from fastapi.responses import Response
 
     # L6 driver import (migrated to HOC per SWEEP-31)
-    from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_service
+    from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_driver
 
     tenant_id = get_tenant_id_from_auth(request)
     auth_ctx = get_auth_context(request)
     exported_by = getattr(auth_ctx, "user_id", "system") if auth_ctx else "system"
 
-    service = get_export_bundle_service()
+    service = get_export_bundle_driver()
 
     try:
         bundle = await service.create_soc2_bundle(
@@ -2056,13 +2056,13 @@ async def export_executive_debrief(
     from fastapi.responses import Response
 
     # L6 driver import (migrated to HOC per SWEEP-31)
-    from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_service
+    from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_driver
 
     tenant_id = get_tenant_id_from_auth(request)
     auth_ctx = get_auth_context(request)
     prepared_by = getattr(auth_ctx, "user_id", "system") if auth_ctx else "system"
 
-    service = get_export_bundle_service()
+    service = get_export_bundle_driver()
 
     try:
         bundle = await service.create_executive_debrief(

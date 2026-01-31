@@ -34,10 +34,10 @@ State Machine:
 """
 
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
 
-from app.hoc.cus.general.L5_utils.time import utc_now
+from app.hoc.hoc_spine.services.time import utc_now
 from app.hoc.cus.policies.L6_drivers.policy_proposal_read_driver import (
     PolicyProposalReadDriver,
     get_policy_proposal_read_driver,
@@ -48,7 +48,6 @@ from app.hoc.cus.policies.L6_drivers.policy_proposal_write_driver import (
 )
 from app.models.audit_ledger import ActorType
 from app.models.policy import PolicyApprovalRequest, PolicyProposalCreate
-from app.hoc.cus.logs.L6_drivers.audit_ledger_service_async import AuditLedgerServiceAsync
 from app.hoc.cus.policies.L5_engines.policy_graph_engine import (
     ConflictSeverity,
     get_conflict_engine,
@@ -230,6 +229,7 @@ class PolicyProposalEngine:
         session: "AsyncSession",
         proposal_id: UUID,
         review: PolicyApprovalRequest,
+        audit: Any = None,
     ) -> dict:
         """
         Review (approve/reject) a policy proposal.
@@ -256,9 +256,6 @@ class PolicyProposalEngine:
                 f"Proposal {proposal_id} is not in draft status "
                 f"(current: {proposal['status']})"
             )
-
-        # Create audit service for this session
-        audit = AuditLedgerServiceAsync(session)
 
         now = utc_now()
 
@@ -326,14 +323,15 @@ class PolicyProposalEngine:
                 approved_by=review.reviewed_by,
             )
 
-            # Emit audit event for approval
-            await audit.policy_proposal_approved(
-                tenant_id=proposal["tenant_id"],
-                proposal_id=str(proposal_id),
-                actor_id=review.reviewed_by,
-                actor_type=ActorType.HUMAN,
-                reason=review.review_notes,
-            )
+            # Emit audit event for approval (PIN-504: audit injected by L4)
+            if audit:
+                await audit.policy_proposal_approved(
+                    tenant_id=proposal["tenant_id"],
+                    proposal_id=str(proposal_id),
+                    actor_id=review.reviewed_by,
+                    actor_type=ActorType.HUMAN,
+                    reason=review.review_notes,
+                )
 
             logger.info(
                 "policy_proposal_approved",
@@ -365,14 +363,15 @@ class PolicyProposalEngine:
                 review_notes=review.review_notes,
             )
 
-            # Emit audit event for rejection
-            await audit.policy_proposal_rejected(
-                tenant_id=proposal["tenant_id"],
-                proposal_id=str(proposal_id),
-                actor_id=review.reviewed_by,
-                actor_type=ActorType.HUMAN,
-                reason=review.review_notes,
-            )
+            # Emit audit event for rejection (PIN-504: audit injected by L4)
+            if audit:
+                await audit.policy_proposal_rejected(
+                    tenant_id=proposal["tenant_id"],
+                    proposal_id=str(proposal_id),
+                    actor_id=review.reviewed_by,
+                    actor_type=ActorType.HUMAN,
+                    reason=review.review_notes,
+                )
 
             logger.info(
                 "policy_proposal_rejected",
@@ -660,10 +659,11 @@ async def review_policy_proposal(
     session: "AsyncSession",
     proposal_id: UUID,
     review: PolicyApprovalRequest,
+    audit: Any = None,
 ) -> dict:
     """Backward-compatible wrapper for proposal review."""
     engine = get_policy_proposal_engine(session)
-    return await engine.review_proposal(session, proposal_id, review)
+    return await engine.review_proposal(session, proposal_id, review, audit=audit)
 
 
 async def delete_policy_rule(

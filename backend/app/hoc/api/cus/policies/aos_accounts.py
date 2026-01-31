@@ -685,7 +685,7 @@ async def get_billing_summary(
 
         # Handle error result
         # L5 engine import (migrated to HOC per SWEEP-29)
-        from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
+        from app.hoc.cus.account.L5_schemas.result_types import AccountsErrorResult
         if isinstance(result, AccountsErrorResult):
             raise HTTPException(status_code=result.status_code, detail=result.message)
 
@@ -771,7 +771,7 @@ async def update_profile(
 
         # Handle error result
         # L5 engine import (migrated to HOC per SWEEP-29)
-        from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
+        from app.hoc.cus.account.L5_schemas.result_types import AccountsErrorResult
         if isinstance(result, AccountsErrorResult):
             raise HTTPException(status_code=result.status_code, detail=result.message)
 
@@ -847,7 +847,7 @@ async def get_billing_invoices(
 
         # Handle error result
         # L5 engine import (migrated to HOC per SWEEP-29)
-        from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
+        from app.hoc.cus.account.L5_schemas.result_types import AccountsErrorResult
         if isinstance(result, AccountsErrorResult):
             raise HTTPException(status_code=result.status_code, detail=result.message)
 
@@ -1159,7 +1159,7 @@ async def invite_user(
 
         # Handle error result
         # L5 engine import (migrated to HOC per SWEEP-29)
-        from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
+        from app.hoc.cus.account.L5_schemas.result_types import AccountsErrorResult
         if isinstance(result, AccountsErrorResult):
             raise HTTPException(status_code=result.status_code, detail=result.message)
 
@@ -1214,7 +1214,7 @@ async def list_invitations(
 
         # Handle error result
         # L5 engine import (migrated to HOC per SWEEP-29)
-        from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
+        from app.hoc.cus.account.L5_schemas.result_types import AccountsErrorResult
         if isinstance(result, AccountsErrorResult):
             raise HTTPException(status_code=result.status_code, detail=result.message)
 
@@ -1383,7 +1383,7 @@ async def update_user_role(
 
     try:
         # L5 engine import (migrated to HOC per SWEEP-29)
-        from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
+        from app.hoc.cus.account.L5_schemas.result_types import AccountsErrorResult
 
         registry = get_operation_registry()
         op = await registry.execute(
@@ -1448,7 +1448,7 @@ async def remove_user(
 
     try:
         # L5 engine import (migrated to HOC per SWEEP-29)
-        from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
+        from app.hoc.cus.account.L5_schemas.result_types import AccountsErrorResult
 
         registry = get_operation_registry()
         op = await registry.execute(

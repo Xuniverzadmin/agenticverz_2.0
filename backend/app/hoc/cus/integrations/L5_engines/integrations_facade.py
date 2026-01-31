@@ -38,7 +38,7 @@ from typing import Any, Optional
 from uuid import UUID
 
 # L5 engine import (migrated to HOC per SWEEP-03 Batch 3)
-from app.hoc.cus.integrations.L5_engines.cus_integration_service import CusIntegrationService
+from app.hoc.cus.integrations.L5_engines.cus_integration_engine import CusIntegrationService
 
 
 # =============================================================================

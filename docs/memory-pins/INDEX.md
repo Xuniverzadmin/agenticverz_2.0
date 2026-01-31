@@ -478,6 +478,18 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-490](PIN-490-hoc-spine-constitution-document-authoritative-audit-guide.md) | **HOC Spine Constitution Document — Authoritative Audit Guide** | Architecture | **✅ COMPLETE** | 2026-01-30 |
 | [PIN-491](PIN-491-hoc-spine-literature-upgrade-l5-pairing-gap-detector.md) | **HOC Spine Literature Upgrade + L5 Pairing Gap Detector** | Architecture | **✅ COMPLETE** | 2026-01-30 |
 | [PIN-492](PIN-492-hoc-domain-literature-generator-csv-matrix.md) | **HOC Domain Literature Generator + CSV Matrix** | Architecture | **✅ COMPLETE** | 2026-01-30 |
+| [PIN-493](PIN-493-incidents-domain-canonical-consolidation.md) | **Incidents Domain Canonical Consolidation** | Architecture | **✅ COMPLETE** | 2026-01-31 |
+| [PIN-494](PIN-494-activity-domain-canonical-consolidation.md) | **Activity Domain Canonical Consolidation** | Architecture | **✅ COMPLETE** | 2026-01-31 |
+| [PIN-495](PIN-495-policies-domain-canonical-consolidation.md) | **Policies Domain Canonical Consolidation** | Architecture | **✅ COMPLETE** | 2026-01-31 |
+| [PIN-496](PIN-496-logs-domain-canonical-consolidation.md) | **Logs Domain Canonical Consolidation** | Architecture | **✅ COMPLETE** | 2026-01-31 |
+| [PIN-497](PIN-497-analytics-domain-canonical-consolidation.md) | **Analytics Domain Canonical Consolidation** | Architecture | **✅ COMPLETE** | 2026-01-31 |
+| [PIN-498](PIN-498-integrations-domain-canonical-consolidation.md) | **Integrations Domain Canonical Consolidation** | Architecture | **✅ COMPLETE** | 2026-01-31 |
+| [PIN-499](PIN-499-controls-domain-canonical-consolidation.md) | **Controls Domain Canonical Consolidation** | Architecture | **✅ COMPLETE** | 2026-01-31 |
+| [PIN-500](PIN-500-account-domain-canonical-consolidation.md) | **Account Domain Canonical Consolidation** | Architecture | **✅ COMPLETE** | 2026-01-31 |
+| [PIN-501](PIN-501-api-keys-domain-canonical-consolidation.md) | **API Keys Domain Canonical Consolidation** | Architecture | **✅ COMPLETE** | 2026-01-31 |
+| [PIN-502](PIN-502-overview-domain-canonical-consolidation.md) | **Overview Domain Canonical Consolidation** | Architecture | **✅ COMPLETE** | 2026-01-31 |
+| [PIN-503](PIN-503-cleansing-cycle-all-domains.md) | **Cleansing Cycle: All 10 Customer Domains** | Architecture | **✅ COMPLETE** | 2026-01-31 |
+| [PIN-504](PIN-504-cross-domain-violation-resolution.md) | **Cross-Domain Violation Resolution (Loop Model)** | Architecture | **✅ COMPLETE** | 2026-01-31 |
 
 ---
 
@@ -1247,6 +1259,9 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-31 | **PIN-504 Cross-Domain Violation Resolution (Loop Model)** — Resolved 14 cross-domain import violations using C4 Coordinator pattern. Created 3 coordinators (audit, signal, logs), extracted shared types to spine schemas + L5_schemas, dependency injection for audit atomicity. 6 new files, 12 modified. Zero remaining cross-domain L5→L5/L6 violations. |
+| 2026-01-31 | **PIN-503 Cleansing Cycle: All 10 Customer Domains** — Post-consolidation cleansing: 2 dead imports repointed, 2 legacy imports disconnected, 9 docstring references fixed, 31 cleansing checks added to tally scripts, 10 literature files updated. All 10 domains ALL PASS. |
+| 2026-01-31 | **PIN-493 through PIN-502 — All 10 Customer Domain Canonical Consolidations** — incidents, activity, policies, logs, analytics, integrations, controls, account, api_keys, overview. Naming violations fixed, headers corrected, import paths updated, tally scripts created, literature generated. |
 | 2026-01-30 | **PIN-492 HOC Domain Literature Generator + CSV Matrix** - Created via memory_trail. |
 | 2026-01-30 | **PIN-491 HOC Spine Literature Upgrade + L5 Pairing Gap Detector** — Upgraded 65 literature files with Export Contract, Import Boundary, L5 Pairing Declaration. Created gap detector: 185 L5 engines, 0 wired via L4, 32 direct L2→L5 gaps, 153 orphaned. |
 | 2026-01-30 | **PIN-490 HOC Spine Constitution Document — Authoritative Audit Guide** - Created via memory_trail. |

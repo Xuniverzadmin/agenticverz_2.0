@@ -13,18 +13,9 @@ Exports:
 - activity_enums: Activity domain enumerations
 """
 
-from app.hoc.cus.controls.L6_drivers.threshold_driver import (
-    LimitSnapshot,
-    ThresholdDriver,
-    ThresholdDriverSync,
-    emit_and_persist_threshold_signal,
-    emit_threshold_signal_sync,
-)
+# Type imports from spine schemas (PIN-504: no cross-domain L6 dependency)
+from app.hoc.hoc_spine.schemas.threshold_types import LimitSnapshot  # noqa: F401
 
 __all__ = [
     "LimitSnapshot",
-    "ThresholdDriver",
-    "ThresholdDriverSync",
-    "emit_and_persist_threshold_signal",
-    "emit_threshold_signal_sync",
 ]

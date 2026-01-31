@@ -39,7 +39,7 @@ L2 API Routes (GAP-123):
 - GET /api/v1/controls/status (overall status)
 
 Usage:
-    from app.services.controls.facade import get_controls_facade
+    from app.hoc.cus.controls.L5_engines.controls_facade import get_controls_facade
 
     facade = get_controls_facade()
 

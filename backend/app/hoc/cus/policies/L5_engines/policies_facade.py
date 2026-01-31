@@ -1,6 +1,8 @@
-# Layer: L5 — Domain Engine
+# Layer: L5 — Domain Engine (Facade)
 # AUDIENCE: CUSTOMER
 # Role: Policies facade - unified entry point for policy management
+# NOTE: Legacy import disconnected (2026-01-31) — was re-exporting from
+#       app.services.policies_facade. Stubbed pending HOC rewiring.
 # Temporal:
 #   Trigger: api
 #   Execution: async
@@ -20,90 +22,262 @@ INTERFACE:
     - PoliciesFacade
     - get_policies_facade() -> PoliciesFacade
 
-IMPLEMENTATION NOTES:
-    Re-exports from existing app.services.policies_facade which is
-    already properly structured as an L4/L5 facade.
+IMPLEMENTATION STATUS:
+    Legacy import from app.services.policies_facade DISCONNECTED.
+    Stubbed with placeholder classes pending HOC rewiring phase.
+    TODO: Rewire to HOC equivalent candidate during rewiring phase.
 """
 
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, field
+from typing import Any, Optional
 
-if TYPE_CHECKING:
+
+# =============================================================================
+# Stub result types — TODO: rewire to HOC equivalent candidate during rewiring phase
+# =============================================================================
+
+
+@dataclass
+class PolicyRuleSummaryResult:
+    """Policy rule summary — stub."""
+    id: str = ""
+    name: str = ""
+    status: str = ""
+
+
+@dataclass
+class PolicyRulesListResult:
+    """Policy rules list — stub."""
+    items: list[PolicyRuleSummaryResult] = field(default_factory=list)
+    total: int = 0
+
+
+@dataclass
+class PolicyRuleDetailResult(PolicyRuleSummaryResult):
+    """Policy rule detail — stub."""
+    description: str = ""
+
+
+@dataclass
+class LimitSummaryResult:
+    """Limit summary — stub."""
+    id: str = ""
+    name: str = ""
+
+
+@dataclass
+class LimitsListResult:
+    """Limits list — stub."""
+    items: list[LimitSummaryResult] = field(default_factory=list)
+    total: int = 0
+
+
+@dataclass
+class LimitDetailResult(LimitSummaryResult):
+    """Limit detail — stub."""
     pass
 
-# =============================================================================
-# Re-export from existing facade
-# =============================================================================
 
-from app.services.policies_facade import (
-    # Facade
-    PoliciesFacade,
-    get_policies_facade,
-    # Result types - Policy Rules
-    PolicyRuleSummaryResult,
-    PolicyRulesListResult,
-    PolicyRuleDetailResult,
-    # Result types - Limits
-    LimitSummaryResult,
-    LimitsListResult,
-    LimitDetailResult,
-    # Result types - State & Metrics
-    PolicyStateResult,
-    PolicyMetricsResult,
-    # Result types - Conflicts & Dependencies
-    PolicyConflictResult,
-    ConflictsListResult,
-    PolicyDependencyRelation,
-    PolicyNodeResult,
-    PolicyDependencyEdge,
-    DependencyGraphResult,
-    # Result types - Violations
-    PolicyViolationResult,
-    ViolationsListResult,
-    # Result types - Budgets
-    BudgetDefinitionResult,
-    BudgetsListResult,
-    # Result types - Requests
-    PolicyRequestResult,
-    PolicyRequestsListResult,
-    # Result types - Lessons
-    LessonSummaryResult,
-    LessonsListResult,
-    LessonDetailResult,
-    LessonStatsResult,
-)
+@dataclass
+class PolicyStateResult:
+    """Policy state — stub."""
+    state: str = "active"
+
+
+@dataclass
+class PolicyMetricsResult:
+    """Policy metrics — stub."""
+    total_policies: int = 0
+    active_policies: int = 0
+
+
+@dataclass
+class PolicyConflictResult:
+    """Policy conflict — stub."""
+    id: str = ""
+
+
+@dataclass
+class ConflictsListResult:
+    """Conflicts list — stub."""
+    items: list[PolicyConflictResult] = field(default_factory=list)
+    total: int = 0
+
+
+@dataclass
+class PolicyDependencyRelation:
+    """Policy dependency relation — stub."""
+    source: str = ""
+    target: str = ""
+
+
+@dataclass
+class PolicyNodeResult:
+    """Policy node — stub."""
+    id: str = ""
+
+
+@dataclass
+class PolicyDependencyEdge:
+    """Policy dependency edge — stub."""
+    source: str = ""
+    target: str = ""
+
+
+@dataclass
+class DependencyGraphResult:
+    """Dependency graph — stub."""
+    nodes: list[PolicyNodeResult] = field(default_factory=list)
+    edges: list[PolicyDependencyEdge] = field(default_factory=list)
+
+
+@dataclass
+class PolicyViolationResult:
+    """Policy violation — stub."""
+    id: str = ""
+
+
+@dataclass
+class ViolationsListResult:
+    """Violations list — stub."""
+    items: list[PolicyViolationResult] = field(default_factory=list)
+    total: int = 0
+
+
+@dataclass
+class BudgetDefinitionResult:
+    """Budget definition — stub."""
+    id: str = ""
+
+
+@dataclass
+class BudgetsListResult:
+    """Budgets list — stub."""
+    items: list[BudgetDefinitionResult] = field(default_factory=list)
+    total: int = 0
+
+
+@dataclass
+class PolicyRequestResult:
+    """Policy request — stub."""
+    id: str = ""
+
+
+@dataclass
+class PolicyRequestsListResult:
+    """Policy requests list — stub."""
+    items: list[PolicyRequestResult] = field(default_factory=list)
+    total: int = 0
+
+
+@dataclass
+class LessonSummaryResult:
+    """Lesson summary — stub."""
+    id: str = ""
+
+
+@dataclass
+class LessonsListResult:
+    """Lessons list — stub."""
+    items: list[LessonSummaryResult] = field(default_factory=list)
+    total: int = 0
+
+
+@dataclass
+class LessonDetailResult(LessonSummaryResult):
+    """Lesson detail — stub."""
+    pass
+
+
+@dataclass
+class LessonStatsResult:
+    """Lesson stats — stub."""
+    total: int = 0
+
+
+class PoliciesFacade:
+    """Policies facade — stub.
+
+    TODO: Rewire to HOC equivalent candidate during rewiring phase.
+    Previously re-exported from app.services.policies_facade (legacy, now disconnected).
+    """
+
+    async def list_policy_rules(self, **kwargs: Any) -> PolicyRulesListResult:
+        return PolicyRulesListResult()
+
+    async def get_policy_rule_detail(self, **kwargs: Any) -> Optional[PolicyRuleDetailResult]:
+        return None
+
+    async def list_limits(self, **kwargs: Any) -> LimitsListResult:
+        return LimitsListResult()
+
+    async def get_limit_detail(self, **kwargs: Any) -> Optional[LimitDetailResult]:
+        return None
+
+    async def get_policy_state(self, **kwargs: Any) -> PolicyStateResult:
+        return PolicyStateResult()
+
+    async def get_policy_metrics(self, **kwargs: Any) -> PolicyMetricsResult:
+        return PolicyMetricsResult()
+
+    async def list_conflicts(self, **kwargs: Any) -> ConflictsListResult:
+        return ConflictsListResult()
+
+    async def get_dependency_graph(self, **kwargs: Any) -> DependencyGraphResult:
+        return DependencyGraphResult()
+
+    async def list_violations(self, **kwargs: Any) -> ViolationsListResult:
+        return ViolationsListResult()
+
+    async def list_budgets(self, **kwargs: Any) -> BudgetsListResult:
+        return BudgetsListResult()
+
+    async def list_requests(self, **kwargs: Any) -> PolicyRequestsListResult:
+        return PolicyRequestsListResult()
+
+    async def list_lessons(self, **kwargs: Any) -> LessonsListResult:
+        return LessonsListResult()
+
+    async def get_lesson_stats(self, **kwargs: Any) -> LessonStatsResult:
+        return LessonStatsResult()
+
+
+_facade_instance: Optional[PoliciesFacade] = None
+
+
+def get_policies_facade() -> PoliciesFacade:
+    """Get the PoliciesFacade singleton instance."""
+    global _facade_instance
+    if _facade_instance is None:
+        _facade_instance = PoliciesFacade()
+    return _facade_instance
+
 
 __all__ = [
     # Facade
     "PoliciesFacade",
     "get_policies_facade",
-    # Result types - Policy Rules
+    # Result types
     "PolicyRuleSummaryResult",
     "PolicyRulesListResult",
     "PolicyRuleDetailResult",
-    # Result types - Limits
     "LimitSummaryResult",
     "LimitsListResult",
     "LimitDetailResult",
-    # Result types - State & Metrics
     "PolicyStateResult",
     "PolicyMetricsResult",
-    # Result types - Conflicts & Dependencies
     "PolicyConflictResult",
     "ConflictsListResult",
     "PolicyDependencyRelation",
     "PolicyNodeResult",
     "PolicyDependencyEdge",
     "DependencyGraphResult",
-    # Result types - Violations
     "PolicyViolationResult",
     "ViolationsListResult",
-    # Result types - Budgets
     "BudgetDefinitionResult",
     "BudgetsListResult",
-    # Result types - Requests
     "PolicyRequestResult",
     "PolicyRequestsListResult",
-    # Result types - Lessons
     "LessonSummaryResult",
     "LessonsListResult",
     "LessonDetailResult",

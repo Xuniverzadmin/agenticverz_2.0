@@ -53,7 +53,7 @@ if TYPE_CHECKING:
     from app.db import CostBudget, CostRecord, FeatureTag
 
 
-class CostWriteService:
+class CostWriteEngine:
     """
     DB write operations for Cost Intelligence.
 
@@ -159,3 +159,7 @@ class CostWriteService:
             warn_threshold_pct=warn_threshold_pct,
             hard_limit_enabled=hard_limit_enabled,
         )
+
+
+# Backward-compatible alias (class renamed CostWriteService → CostWriteEngine, 2026-01-31)
+CostWriteService = CostWriteEngine

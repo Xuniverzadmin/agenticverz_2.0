@@ -1,0 +1,416 @@
+path,filename,extension,directory,category,sub_category,status,customer_impact,purpose,lines
+scripts/ops/hoc_function_inventory_generator.py,hoc_function_inventory_generator.py,.py,scripts/ops,architecture-analysis,hoc-analysis,active,none,Extract flat function inventory from L5/L6/L7 files — one row per function/method with caller/callee/side-effect metadata,491
+scripts/ops/hoc_intent_classifier.py,hoc_intent_classifier.py,.py,scripts/ops,architecture-analysis,hoc-analysis,active,none,"Classify intent per function from FUNCTION_INVENTORY.csv — adds intent, intent_confidence, intent_reason columns",263
+scripts/ops/hoc_layer_inventory.py,hoc_layer_inventory.py,.py,scripts/ops,architecture-analysis,hoc-analysis,active,none,HOC Layer Inventory Generator,583
+scripts/ops/hoc_phase0_manifest_generator.py,hoc_phase0_manifest_generator.py,.py,scripts/ops,architecture-analysis,hoc-analysis,one-time-migration,none,HOC Phase 0 — Migration Manifest Generator,428
+scripts/ops/hoc_phase3_domain_locker.py,hoc_phase3_domain_locker.py,.py,scripts/ops,architecture-analysis,hoc-analysis,active,none,HOC Phase 3 — Domain Locker,326
+scripts/ops/hoc_phase3_migrate.py,hoc_phase3_migrate.py,.py,scripts/ops,architecture-analysis,hoc-analysis,one-time-migration,none,HOC Phase 3 Migration Script,817
+scripts/ops/hoc_phase4_post_migration_validator.py,hoc_phase4_post_migration_validator.py,.py,scripts/ops,architecture-analysis,hoc-analysis,one-time-migration,none,HOC Phase 4 — Post-Migration Validation,489
+scripts/ops/hoc_phase5_duplicate_detector.py,hoc_phase5_duplicate_detector.py,.py,scripts/ops,architecture-analysis,hoc-analysis,active,none,HOC Phase 5 — Duplicate Detection,627
+scripts/ops/hoc_placement_analyzer.py,hoc_placement_analyzer.py,.py,scripts/ops,architecture-analysis,hoc-analysis,active,none,Placement decisions + duplicate detection from classified function inventory,333
+scripts/ops/hoc_spine_study_validator.py,hoc_spine_study_validator.py,.py,scripts/ops,architecture-analysis,hoc-analysis,active,none,HOC Spine literature study validator — extracts function/class metadata from hoc_spine scripts,1252
+scripts/ops/l5_orphan_classifier.py,l5_orphan_classifier.py,.py,scripts/ops,architecture-analysis,hoc-analysis,active,none,L5 orphan classifier — classifies orphaned L5 engines by intra-domain usage,733
+scripts/ops/l5_spine_pairing_gap_detector.py,l5_spine_pairing_gap_detector.py,.py,scripts/ops,architecture-analysis,hoc-analysis,active,none,"L5 → HOC Spine pairing gap detector — finds L5 engines called directly by L2, not wired through L4",691
+scripts/ops/layer_validator.py,layer_validator.py,.py,scripts/ops,architecture-analysis,hoc-analysis,active,none,BLCA — Bidirectional Layer Consistency Auditor,903
+scripts/ops/scripts_registry_generator.py,scripts_registry_generator.py,.py,scripts/ops,architecture-analysis,hoc-analysis,active,indirect,"Walk scripts/ + tools/, classify each script into category/sub_category/status/customer_impact",398
+scripts/ops/system_bloat_audit.sh,system_bloat_audit.sh,.sh,scripts/ops,architecture-analysis,hoc-analysis,active,none,Layer: L8 — Catalyst / Meta,239
+scripts/inventory/find_unknown_files_v2.py,find_unknown_files_v2.py,.py,scripts/inventory,architecture-analysis,inventory,active,none,Find files with layer=UNKNOWN (handles both Python and TS),174
+scripts/inventory/full_inventory.py,full_inventory.py,.py,scripts/inventory,architecture-analysis,inventory,active,none,Complete Codebase Inventory vs Layered Inventory,573
+scripts/inventory/l1_api_usage.py,l1_api_usage.py,.py,scripts/inventory,architecture-analysis,inventory,active,indirect,Find API calls referenced in frontend code (L1),186
+scripts/inventory/l2_api_inventory.py,l2_api_inventory.py,.py,scripts/inventory,architecture-analysis,inventory,active,indirect,Extract all L2 API routes from FastAPI codebase,237
+scripts/inventory/l8_signal_inventory.py,l8_signal_inventory.py,.py,scripts/inventory,architecture-analysis,inventory,active,none,Scan L8 artifacts for signal emission patterns,223
+scripts/inventory/l8_to_l2_binding.py,l8_to_l2_binding.py,.py,scripts/inventory,architecture-analysis,inventory,active,none,Analyze signal consumption from L8 to L2 layer,228
+scripts/inventory/signal_auditor.py,signal_auditor.py,.py,scripts/inventory,architecture-analysis,inventory,active,none,Signal Registry Auditor (Observe-Only Mode),475
+scripts/ops/sce/passes/pass_1_layers.py,pass_1_layers.py,.py,scripts/ops/sce/passes,architecture-analysis,sce-extraction,active,none,Pass 1 - Layer & Boundary Indexing,356
+scripts/ops/sce/passes/pass_2_metadata.py,pass_2_metadata.py,.py,scripts/ops/sce/passes,architecture-analysis,sce-extraction,active,none,Pass 2 - Semantic Claim Extraction,337
+scripts/ops/sce/passes/pass_3_mechanics.py,pass_3_mechanics.py,.py,scripts/ops/sce/passes,architecture-analysis,sce-extraction,active,none,Pass 3 - Mechanical Observation,321
+scripts/ops/sce/passes/pass_4_diff.py,pass_4_diff.py,.py,scripts/ops/sce/passes,architecture-analysis,sce-extraction,active,none,Pass 4 - Diff & Drift Detection,395
+scripts/ops/sce/sce_runner.py,sce_runner.py,.py,scripts/ops/sce,architecture-analysis,sce-extraction,active,none,Signal Circuit Enumerator CLI entrypoint,650
+scripts/semantic_auditor/correlation/declared_semantics.py,declared_semantics.py,.py,scripts/semantic_auditor/correlation,architecture-analysis,semantic-audit,active,none,Declared Semantics Loader,195
+scripts/semantic_auditor/correlation/delta_engine.py,delta_engine.py,.py,scripts/semantic_auditor/correlation,architecture-analysis,semantic-audit,active,none,Semantic Delta Engine,224
+scripts/semantic_auditor/correlation/observed_behavior.py,observed_behavior.py,.py,scripts/semantic_auditor/correlation,architecture-analysis,semantic-audit,active,none,Observed Behavior Aggregator,182
+scripts/semantic_auditor/registry/semantic_contract_index.py,semantic_contract_index.py,.py,scripts/semantic_auditor/registry,architecture-analysis,semantic-audit,active,none,Semantic Contract Index,147
+scripts/semantic_auditor/registry/semantic_coordinate_map.py,semantic_coordinate_map.py,.py,scripts/semantic_auditor/registry,architecture-analysis,semantic-audit,active,none,Semantic Coordinate Map,154
+scripts/semantic_auditor/reporting/renderers/json.py,json.py,.py,scripts/semantic_auditor/reporting/renderers,architecture-analysis,semantic-audit,active,none,JSON Report Renderer,117
+scripts/semantic_auditor/reporting/renderers/markdown.py,markdown.py,.py,scripts/semantic_auditor/reporting/renderers,architecture-analysis,semantic-audit,active,none,Markdown Report Renderer,175
+scripts/semantic_auditor/reporting/report_builder.py,report_builder.py,.py,scripts/semantic_auditor/reporting,architecture-analysis,semantic-audit,active,none,Report Builder,208
+scripts/semantic_auditor/reporting/risk_model.py,risk_model.py,.py,scripts/semantic_auditor/reporting,architecture-analysis,semantic-audit,active,none,Risk Model Definitions,169
+scripts/semantic_auditor/runner.py,runner.py,.py,scripts/semantic_auditor,architecture-analysis,semantic-audit,active,none,CLI Entry Point,260
+scripts/semantic_auditor/scanner/ast_loader.py,ast_loader.py,.py,scripts/semantic_auditor/scanner,architecture-analysis,semantic-audit,active,none,AST Loader and Analyzer,302
+scripts/semantic_auditor/scanner/file_classifier.py,file_classifier.py,.py,scripts/semantic_auditor/scanner,architecture-analysis,semantic-audit,active,none,File Role Classifier,308
+scripts/semantic_auditor/scanner/repo_walker.py,repo_walker.py,.py,scripts/semantic_auditor/scanner,architecture-analysis,semantic-audit,active,none,Repository File Walker,180
+scripts/semantic_auditor/signals/affordance.py,affordance.py,.py,scripts/semantic_auditor/signals,architecture-analysis,semantic-audit,active,none,Affordance Signal Detector,184
+scripts/semantic_auditor/signals/authority.py,authority.py,.py,scripts/semantic_auditor/signals,architecture-analysis,semantic-audit,active,none,Authority Signal Detector,194
+scripts/semantic_auditor/signals/execution.py,execution.py,.py,scripts/semantic_auditor/signals,architecture-analysis,semantic-audit,active,none,Execution Signal Detector,159
+scripts/semantic_auditor/signals/layering.py,layering.py,.py,scripts/semantic_auditor/signals,architecture-analysis,semantic-audit,active,none,Layering Signal Detector,282
+scripts/ops/hoc_capability_doc_generator.py,hoc_capability_doc_generator.py,.py,scripts/ops,architecture-literature,hoc-literature,active,none,"Generate per-domain DOMAIN_CAPABILITY.md with operations, helpers, persistence, and non-features",331
+scripts/ops/hoc_domain_literature_csv.py,hoc_domain_literature_csv.py,.py,scripts/ops,architecture-literature,hoc-literature,active,none,CSV export of domain literature — crisp function/purpose + L4→L5→L6→L7 linkage chain,558
+scripts/ops/hoc_domain_literature_generator.py,hoc_domain_literature_generator.py,.py,scripts/ops,architecture-literature,hoc-literature,active,none,Domain literature generator — extracts AST metadata from L5/L6/L7 files for keep/modify/quarantine evaluation,869
+scripts/ops/hoc_feature_extractor.py,hoc_feature_extractor.py,.py,scripts/ops,architecture-literature,hoc-literature,active,indirect,Extract customer-facing features by grouping operations across domains into user-intent features,326
+scripts/ops/hoc_literature_generator.py,hoc_literature_generator.py,.py,scripts/ops,architecture-literature,hoc-literature,active,none,HOC Literature Generator — Prescriptive Architecture Documentation,1507
+scripts/ci/c2_guardrails/gr1_import_isolation.sh,gr1_import_isolation.sh,.sh,scripts/ci/c2_guardrails,ci-validation,guardrails,active,indirect,=============================================================================,47
+scripts/ci/c2_guardrails/gr2_advisory_enforcement.sh,gr2_advisory_enforcement.sh,.sh,scripts/ci/c2_guardrails,ci-validation,guardrails,active,indirect,=============================================================================,55
+scripts/ci/c2_guardrails/gr3_replay_blindness.sh,gr3_replay_blindness.sh,.sh,scripts/ci/c2_guardrails,ci-validation,guardrails,active,indirect,=============================================================================,51
+scripts/ci/c2_guardrails/gr4_semantic_lint.sh,gr4_semantic_lint.sh,.sh,scripts/ci/c2_guardrails,ci-validation,guardrails,active,indirect,=============================================================================,65
+scripts/ci/c2_guardrails/gr5_redis_authority.sh,gr5_redis_authority.sh,.sh,scripts/ci/c2_guardrails,ci-validation,guardrails,active,indirect,=============================================================================,53
+scripts/ci/c2_guardrails/run_all.sh,run_all.sh,.sh,scripts/ci/c2_guardrails,ci-validation,guardrails,active,indirect,=============================================================================,87
+scripts/ci/c3_guardrails/run_all.sh,run_all.sh,.sh,scripts/ci/c3_guardrails,ci-validation,guardrails,active,indirect,C3 Guardrails CI Script,99
+scripts/ci/c4_guardrails/check_audit.sh,check_audit.sh,.sh,scripts/ci/c4_guardrails,ci-validation,guardrails,active,indirect,CI-C4-6: Coordination audit is emitted,78
+scripts/ci/c4_guardrails/check_audit_immutability.sh,check_audit_immutability.sh,.sh,scripts/ci/c4_guardrails,ci-validation,guardrails,active,indirect,CI-C4-7: Audit Immutability Check,41
+scripts/ci/c4_guardrails/check_audit_isolation.sh,check_audit_isolation.sh,.sh,scripts/ci/c4_guardrails,ci-validation,guardrails,active,indirect,CI-C4-8: Audit Isolation Check,45
+scripts/ci/c4_guardrails/check_audit_replay_safety.sh,check_audit_replay_safety.sh,.sh,scripts/ci/c4_guardrails,ci-validation,guardrails,active,indirect,CI-C4-9: Audit Replay Safety Check,60
+scripts/ci/c4_guardrails/check_coordination_required.sh,check_coordination_required.sh,.sh,scripts/ci/c4_guardrails,ci-validation,guardrails,active,indirect,CI-C4-2: No envelope applies without coordination check,54
+scripts/ci/c4_guardrails/check_envelope_class.sh,check_envelope_class.sh,.sh,scripts/ci/c4_guardrails,ci-validation,guardrails,active,indirect,CI-C4-1: Every envelope declares exactly one class,54
+scripts/ci/c4_guardrails/check_killswitch.sh,check_killswitch.sh,.sh,scripts/ci/c4_guardrails,ci-validation,guardrails,active,indirect,CI-C4-5: Kill-switch reverts all envelopes,62
+scripts/ci/c4_guardrails/check_priority_immutable.sh,check_priority_immutable.sh,.sh,scripts/ci/c4_guardrails,ci-validation,guardrails,active,indirect,CI-C4-3: Priority order is not overridable,68
+scripts/ci/c4_guardrails/check_same_parameter.sh,check_same_parameter.sh,.sh,scripts/ci/c4_guardrails,ci-validation,guardrails,active,indirect,CI-C4-4: Same-parameter conflict is always rejected,53
+scripts/ci/c4_guardrails/run_all.sh,run_all.sh,.sh,scripts/ci/c4_guardrails,ci-validation,guardrails,active,indirect,C4 CI Guardrails - Run All Checks,87
+scripts/ci/c5_guardrails/check_advisory_only.sh,check_advisory_only.sh,.sh,scripts/ci/c5_guardrails,ci-validation,guardrails,active,indirect,CI-C5-1: Advisory-Only Output Check,96
+scripts/ci/c5_guardrails/check_approval_gate.sh,check_approval_gate.sh,.sh,scripts/ci/c5_guardrails,ci-validation,guardrails,active,indirect,CI-C5-2: Human Approval Gate Check,86
+scripts/ci/c5_guardrails/check_disable_flag.sh,check_disable_flag.sh,.sh,scripts/ci/c5_guardrails,ci-validation,guardrails,active,indirect,CI-C5-5: Learning Disable Flag Check,97
+scripts/ci/c5_guardrails/check_killswitch_isolation.sh,check_killswitch_isolation.sh,.sh,scripts/ci/c5_guardrails,ci-validation,guardrails,active,indirect,CI-C5-6: Kill-Switch Isolation Check,121
+scripts/ci/c5_guardrails/check_metadata_boundary.sh,check_metadata_boundary.sh,.sh,scripts/ci/c5_guardrails,ci-validation,guardrails,active,indirect,CI-C5-3: Metadata Boundary Check,97
+scripts/ci/c5_guardrails/check_versioning.sh,check_versioning.sh,.sh,scripts/ci/c5_guardrails,ci-validation,guardrails,active,indirect,CI-C5-4: Suggestion Versioning Check,98
+scripts/ci/c5_guardrails/run_all.sh,run_all.sh,.sh,scripts/ci/c5_guardrails,ci-validation,guardrails,active,indirect,C5 Guardrails CI Runner,138
+scripts/ci/o4_checks/rc1_language.sh,rc1_language.sh,.sh,scripts/ci/o4_checks,ci-validation,guardrails,active,indirect,=============================================================================,81
+scripts/ci/o4_checks/rc2_routes.sh,rc2_routes.sh,.sh,scripts/ci/o4_checks,ci-validation,guardrails,active,indirect,=============================================================================,66
+scripts/ci/o4_checks/rc3_imports.sh,rc3_imports.sh,.sh,scripts/ci/o4_checks,ci-validation,guardrails,active,indirect,=============================================================================,87
+scripts/ci/o4_checks/rc4_api.sh,rc4_api.sh,.sh,scripts/ci/o4_checks,ci-validation,guardrails,active,indirect,=============================================================================,87
+scripts/ci/o4_checks/rc5_banner.sh,rc5_banner.sh,.sh,scripts/ci/o4_checks,ci-validation,guardrails,active,indirect,=============================================================================,103
+scripts/ci/o4_checks/rc6_colors.sh,rc6_colors.sh,.sh,scripts/ci/o4_checks,ci-validation,guardrails,active,indirect,=============================================================================,103
+scripts/ci/o4_checks/run_all.sh,run_all.sh,.sh,scripts/ci/o4_checks,ci-validation,guardrails,active,indirect,=============================================================================,86
+backend/scripts/ci/check_dispatcher_pattern.sh,check_dispatcher_pattern.sh,.sh,backend/scripts/ci,ci-validation,guards,active,indirect,Layer: L8 — Catalyst / Meta,78
+backend/scripts/ci/check_feature_intent.py,check_feature_intent.py,.py,backend/scripts/ci,ci-validation,guards,active,indirect,Enforce feature-level intent declarations via static analysis,444
+backend/scripts/ci/check_forbidden_patterns.py,check_forbidden_patterns.py,.py,backend/scripts/ci,ci-validation,guards,active,indirect,Enforce forbidden code patterns via static analysis,309
+backend/scripts/ci/check_frozen_files.py,check_frozen_files.py,.py,backend/scripts/ci,ci-validation,guards,active,indirect,PIN-399 Design Freeze Enforcement,213
+backend/scripts/ci/check_intent_consistency.py,check_intent_consistency.py,.py,backend/scripts/ci,ci-validation,guards,active,indirect,Validate transaction intent/primitive consistency,336
+backend/scripts/ci/check_layer_boundaries.py,check_layer_boundaries.py,.py,backend/scripts/ci,ci-validation,guards,active,indirect,Layer boundary enforcement,314
+backend/scripts/ci/check_priority4_intent.py,check_priority4_intent.py,.py,backend/scripts/ci,ci-validation,guards,active,indirect,No-regression guard for Priority-4 intent declarations,214
+backend/scripts/ci/check_priority5_intent.py,check_priority5_intent.py,.py,backend/scripts/ci,ci-validation,guards,active,indirect,No-regression guard for Priority-5 intent declarations,232
+backend/scripts/ci/check_test_terminology.py,check_test_terminology.py,.py,backend/scripts/ci,ci-validation,guards,active,indirect,PIN-399 Phase-5 Test Terminology Lint,357
+scripts/ci/backend_structure_guard.py,backend_structure_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,Verify backend structure matches frozen declaration,201
+scripts/ci/capability_binding_validator.py,capability_binding_validator.py,.py,scripts/ci,ci-validation,guards,active,indirect,CI validator for capability binding enforcement (PIN-337),396
+scripts/ci/capability_invocation_guard.py,capability_invocation_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,CI guard for L2.1 frontend capability invocation compliance,731
+scripts/ci/check_account_boundaries.py,check_account_boundaries.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: DOMAIN-002 - No Domain Data in Account Section,108
+scripts/ci/check_audit_completeness.py,check_audit_completeness.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: AUDIT-002 - Audit Entry Completeness,220
+scripts/ci/check_bidirectional_queries.py,check_bidirectional_queries.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: CROSS-002 - Bidirectional Query Requirement,164
+scripts/ci/check_capability_endpoints.py,check_capability_endpoints.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: CAP-001 - Capability Must Match Endpoint,186
+scripts/ci/check_capability_status.py,check_capability_status.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: CAP-003 - Capability Status Progression,229
+scripts/ci/check_catalog_metrics.py,check_catalog_metrics.py,.py,scripts/ci,ci-validation,guards,active,indirect,Verify failure catalog metric labels match expected Prometheus format.,162
+scripts/ci/check_console_boundaries.py,check_console_boundaries.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: CAP-002 - Console Capability Boundaries,242
+scripts/ci/check_cross_domain_propagation.py,check_cross_domain_propagation.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: CROSS-001 - Mandatory Cross-Domain Propagation,153
+scripts/ci/check_domain_writes.py,check_domain_writes.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: DOMAIN-001 - Domain Ownership Enforcement,211
+scripts/ci/check_env_misuse.sh,check_env_misuse.sh,.sh,scripts/ci,ci-validation,guards,active,indirect,=============================================================================,103
+scripts/ci/check_facade_usage.py,check_facade_usage.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: API-001 - Domain Facade Required,193
+scripts/ci/check_foreign_keys.py,check_foreign_keys.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: DATA-001 - Foreign Key Enforcement,161
+scripts/ci/check_governance_audit.py,check_governance_audit.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: AUDIT-001 - Governance Actions Must Emit Audit,152
+scripts/ci/check_infra_registry.py,check_infra_registry.py,.py,scripts/ci,ci-validation,guards,active,indirect,Validate infrastructure declarations match INFRA_REGISTRY.md,300
+scripts/ci/check_limit_audit.py,check_limit_audit.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: LIMITS-003 - Audit on Limit Change,158
+scripts/ci/check_limit_enforcement.py,check_limit_enforcement.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: LIMITS-002 - Pre-Execution Check Required,162
+scripts/ci/check_limit_tables.py,check_limit_tables.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: LIMITS-001 - Single Source of Truth,166
+scripts/ci/check_m10_overloads.py,check_m10_overloads.py,.py,scripts/ci,ci-validation,guards,active,indirect,Enforce M10 contract - no function overloads,116
+scripts/ci/check_openapi_snapshot.py,check_openapi_snapshot.py,.py,scripts/ci,ci-validation,guards,active,indirect,CI Guard: OpenAPI Snapshot Validity,85
+scripts/ci/check_overview_readonly.py,check_overview_readonly.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: DOMAIN-003 - Overview is Read-Only Projection,101
+scripts/ci/check_rbac_alignment.py,check_rbac_alignment.py,.py,scripts/ci,ci-validation,guards,active,indirect,Validate RBAC alignment between gateway_config.py and RBAC_RULES.yaml,423
+scripts/ci/check_response_envelopes.py,check_response_envelopes.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: API-002 - Consistent Response Envelope,177
+scripts/ci/check_sqlmodel_exec.sh,check_sqlmodel_exec.sh,.sh,scripts/ci,ci-validation,guards,active,indirect,=============================================================================,61
+scripts/ci/check_tenant_queries.py,check_tenant_queries.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL: DATA-002 - Tenant Isolation Invariant,191
+scripts/ci/frontend_mapping_guard.py,frontend_mapping_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,CI guard for L2.1 frontend constitutional mapping compliance,618
+scripts/ci/guardrail_enforcer.py,guardrail_enforcer.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL ENFORCER - Governance enforcement with bypass accountability.,512
+scripts/ci/guardrail_precommit.py,guardrail_precommit.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL PRE-COMMIT - Runs guardrails only on staged files.,243
+scripts/ci/guardrail_watcher.py,guardrail_watcher.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL WATCHER - Event-driven pre-diagnosis system.,339
+scripts/ci/health_lifecycle_coherence_guard.py,health_lifecycle_coherence_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,Enforce HEALTH-LIFECYCLE-COHERENCE governance rule,386
+scripts/ci/interaction_semantics_guard.py,interaction_semantics_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,CI guard for L2.1 interaction semantics consistency,559
+scripts/ci/kernel_usage_validator.py,kernel_usage_validator.py,.py,scripts/ci,ci-validation,guards,active,indirect,CI validator for ExecutionKernel usage enforcement (PIN-337),462
+scripts/ci/l2_l3_l4_guard.py,l2_l3_l4_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,CI guard for L2→L3→L4 import chain compliance (GATE-7),425
+scripts/ci/lifecycle_qualifier_guard.py,lifecycle_qualifier_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,Enforce LIFECYCLE-DERIVED-FROM-QUALIFIER governance rule,201
+scripts/ci/lint_regression_guard.sh,lint_regression_guard.sh,.sh,scripts/ci,ci-validation,guards,active,indirect,Layer: L8 — Catalyst / Meta,181
+scripts/ci/m7_import_guard.py,m7_import_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,CI guard to prevent new M7 (rbac_engine) imports,169
+scripts/ci/part2_authority_boundary_guard.py,part2_authority_boundary_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,Enforce Part-2 authority separation via import boundaries,272
+scripts/ci/part2_contract_activation_guard.py,part2_contract_activation_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,Enforce contract activation prerequisites (GATE-4),324
+scripts/ci/part2_design_freeze_guard.py,part2_design_freeze_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,Enforce Part-2 design document freeze,162
+scripts/ci/part2_health_supremacy_guard.py,part2_health_supremacy_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,Enforce Phase-1 health supremacy in Part-2 context,253
+scripts/ci/part2_job_start_guard.py,part2_job_start_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,Enforce job start prerequisites (GATE-5),389
+scripts/ci/part2_semantic_contracts.py,part2_semantic_contracts.py,.py,scripts/ci,ci-validation,guards,active,indirect,"Define semantic contracts for Part-2 governance (GATE-7, GATE-8, GATE-9)",525
+scripts/ci/part2_workflow_structure_guard.py,part2_workflow_structure_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,Enforce Part-2 workflow structure integrity,367
+scripts/ci/query_authority_guard.py,query_authority_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,Validate query_authority on all panels in UI projection,486
+scripts/ci/run_guardrails.py,run_guardrails.py,.py,scripts/ci,ci-validation,guards,active,indirect,GUARDRAIL RUNNER - Execute all architectural guardrail checks.,221
+scripts/ci/structural_dryrun.sh,structural_dryrun.sh,.sh,scripts/ci,ci-validation,guards,active,indirect,Layer: L8 — Catalyst / Meta,408
+scripts/ci/structural_gates.sh,structural_gates.sh,.sh,scripts/ci,ci-validation,guards,active,indirect,Layer: L8 — Catalyst / Meta,265
+scripts/ci/surface_slot_coverage_guard.py,surface_slot_coverage_guard.py,.py,scripts/ci,ci-validation,guards,active,indirect,Ensure every STEP 1B surface maps to ≥1 UI slot or is marked non-UI,168
+scripts/ci/synthetic_alert.sh,synthetic_alert.sh,.sh,scripts/ci,ci-validation,guards,active,indirect,Synthetic Alert Verification Script,241
+scripts/ci/validate_projection_contract.py,validate_projection_contract.py,.py,scripts/ci,ci-validation,guards,active,indirect,Validate UI projection contract for CI enforcement,498
+scripts/ci/validate_projection_lock.py,validate_projection_lock.py,.py,scripts/ci,ci-validation,guards,active,indirect,Validate ui_projection_lock.json integrity (NO manual edits),245
+scripts/load/analyze_rbac_results.py,analyze_rbac_results.py,.py,scripts/load,ci-validation,load-testing,active,indirect,Analyze RBAC synthetic load results for discrepancy classification,413
+scripts/load/rbac_synthetic_load.py,rbac_synthetic_load.py,.py,scripts/load,ci-validation,load-testing,active,indirect,Generate synthetic authorization load for RBACv2 promotion readiness,609
+scripts/ops/tests/test_lint_frontend_api_calls.py,test_lint_frontend_api_calls.py,.py,scripts/ops/tests,ci-validation,ops-tests,active,indirect,Regression tests for lint_frontend_api_calls.py,204
+backend/scripts/preflight/rg_sdsr_execution_identity.py,rg_sdsr_execution_identity.py,.py,backend/scripts/preflight,ci-validation,preflight-scan,active,indirect,RG-SDSR-01 Execution Identity Guard,125
+backend/scripts/preflight/sdsr_e2e_preflight.sh,sdsr_e2e_preflight.sh,.sh,backend/scripts/preflight,ci-validation,preflight-scan,active,indirect,SDSR E2E Preflight Checks,195
+backend/scripts/preflight/sr1_migration_check.py,sr1_migration_check.py,.py,backend/scripts/preflight,ci-validation,preflight-scan,one-time-migration,indirect,SR-1 Migration Consistency Check (Canonical Implementation),114
+scripts/preflight/agen_internal_system_scan.py,agen_internal_system_scan.py,.py,scripts/preflight,ci-validation,preflight-scan,active,indirect,"Stateless contract scanner — runs once, reports, exits",331
+scripts/preflight/check_activity_deprecation.py,check_activity_deprecation.py,.py,scripts/preflight,ci-validation,preflight-scan,active,indirect,CI guard for Activity Domain V2 deprecation enforcement,348
+scripts/preflight/check_activity_domain.py,check_activity_domain.py,.py,scripts/preflight,ci-validation,preflight-scan,active,indirect,Activity Domain CI Contract,529
+scripts/preflight/check_alembic_parent.py,check_alembic_parent.py,.py,scripts/preflight,ci-validation,preflight-scan,one-time-migration,indirect,Migration lineage verification,228
+scripts/preflight/check_auth_context.sh,check_auth_context.sh,.sh,scripts/preflight,ci-validation,preflight-scan,active,indirect,=============================================================================,44
+scripts/preflight/check_incidents_deprecation.py,check_incidents_deprecation.py,.py,scripts/preflight,ci-validation,preflight-scan,active,indirect,Enforce deprecation of generic /incidents endpoint,233
+scripts/preflight/check_incidents_domain.py,check_incidents_domain.py,.py,scripts/preflight,ci-validation,preflight-scan,active,indirect,Incidents Domain CI Contract,550
+scripts/preflight/check_l2_l4_l5_freeze.py,check_l2_l4_l5_freeze.py,.py,scripts/preflight,ci-validation,preflight-scan,active,indirect,L2-L4-L5 freeze enforcement preflight check (Phase C — PIN-491),152
+scripts/preflight/check_naming_contract.py,check_naming_contract.py,.py,scripts/preflight,ci-validation,preflight-scan,active,indirect,Naming contract enforcement,231
+scripts/preflight/check_panel_invariant_registry.py,check_panel_invariant_registry.py,.py,scripts/preflight,ci-validation,preflight-scan,active,indirect,Ensure panel_invariant_registry.yaml is updated when policies API filters change,226
+scripts/preflight/check_router_registry.py,check_router_registry.py,.py,scripts/preflight,ci-validation,preflight-scan,active,indirect,Router wiring enforcement,247
+scripts/preflight/check_runtime_api_boundary.py,check_runtime_api_boundary.py,.py,scripts/preflight,ci-validation,preflight-scan,active,indirect,Runtime/API boundary enforcement,232
+scripts/preflight/continuous_validator.py,continuous_validator.py,.py,scripts/preflight,ci-validation,preflight-scan,active,indirect,Continuous file validation daemon,619
+scripts/preflight/run_all_checks.sh,run_all_checks.sh,.sh,scripts/preflight,ci-validation,preflight-scan,active,indirect,Layer: L8 — Catalyst / Meta,104
+scripts/preflight/setup_continuous_validation.sh,setup_continuous_validation.sh,.sh,scripts/preflight,ci-validation,preflight-scan,active,indirect,Layer: L8 — Catalyst / Meta,151
+scripts/preflight/validator_dashboard.py,validator_dashboard.py,.py,scripts/preflight,ci-validation,preflight-scan,active,indirect,Real-time validator status dashboard,317
+scripts/smoke/rbac_smoke.sh,rbac_smoke.sh,.sh,scripts/smoke,ci-validation,smoke-testing,active,indirect,RBAC Smoke Test Script for M5 Policy API,309
+scripts/smoke/test_rbac_keycloak.sh,test_rbac_keycloak.sh,.sh,scripts/smoke,ci-validation,smoke-testing,active,indirect,Test RBAC with Keycloak OIDC tokens,98
+scripts/stress/check_shadow_status.sh,check_shadow_status.sh,.sh,scripts/stress,ci-validation,stress-testing,active,indirect,Check 24-hour Shadow Run Status,49
+scripts/stress/golden_diff_debug.py,golden_diff_debug.py,.py,scripts/stress,ci-validation,stress-testing,active,indirect,Golden File Diff Debugger for M4 Workflow Engine,275
+scripts/stress/run_checkpoint_stress.sh,run_checkpoint_stress.sh,.sh,scripts/stress,ci-validation,stress-testing,active,indirect,Checkpoint Concurrency Stress Test,533
+scripts/stress/run_cpu_stress_replay.sh,run_cpu_stress_replay.sh,.sh,scripts/stress,ci-validation,stress-testing,active,indirect,M4-T3: Replay Under High CPU Load,514
+scripts/stress/run_fault_injection.sh,run_fault_injection.sh,.sh,scripts/stress,ci-validation,stress-testing,active,indirect,M4-T2: Fault Injection Rig,622
+scripts/stress/run_golden_stress.sh,run_golden_stress.sh,.sh,scripts/stress,ci-validation,stress-testing,active,indirect,Golden Stress Test Harness (Enhanced),635
+scripts/stress/run_multi_worker_determinism.sh,run_multi_worker_determinism.sh,.sh,scripts/stress,ci-validation,stress-testing,active,indirect,M4-T1: Multi-Worker Determinism Audit,464
+scripts/stress/run_shadow_simulation.sh,run_shadow_simulation.sh,.sh,scripts/stress,ci-validation,stress-testing,active,indirect,M4-T7: 24h Shadow-Run Simulation,636
+scripts/stress/shadow_cron_check.sh,shadow_cron_check.sh,.sh,scripts/stress,ci-validation,stress-testing,active,indirect,Shadow Run Cron Check - for crontab,42
+scripts/stress/shadow_debug.sh,shadow_debug.sh,.sh,scripts/stress,ci-validation,stress-testing,active,indirect,Shadow Run Debug Console,229
+scripts/stress/shadow_monitor_daemon.sh,shadow_monitor_daemon.sh,.sh,scripts/stress,ci-validation,stress-testing,active,indirect,Shadow Run Monitor Daemon,211
+scripts/stress/shadow_sanity_check.sh,shadow_sanity_check.sh,.sh,scripts/stress,ci-validation,stress-testing,active,indirect,M4 Shadow Run - 4-Hour Sanity Check,107
+scripts/stress/shadow_wrapper_notify.sh,shadow_wrapper_notify.sh,.sh,scripts/stress,ci-validation,stress-testing,active,indirect,M4 Shadow Run Wrapper with Webhook Notifications,194
+backend/scripts/verification/s3_policy_violation_verification.py,s3_policy_violation_verification.py,.py,backend/scripts/verification,ci-validation,verification,active,indirect,S3 Policy Violation Truth Verification Script,442
+backend/scripts/verification/s4_llm_failure_truth_verification.py,s4_llm_failure_truth_verification.py,.py,backend/scripts/verification,ci-validation,verification,active,indirect,S4 LLM Failure Truth Verification Script,627
+backend/scripts/verification/s4_llm_failure_verification.py,s4_llm_failure_verification.py,.py,backend/scripts/verification,ci-validation,verification,active,indirect,S4 — LLM Failure Truth Verification,522
+backend/scripts/verification/s5_memory_injection_verification.py,s5_memory_injection_verification.py,.py,backend/scripts/verification,ci-validation,verification,active,indirect,S5 — Memory Injection Truth Verification,812
+backend/scripts/verification/s6_trace_integrity_verification.py,s6_trace_integrity_verification.py,.py,backend/scripts/verification,ci-validation,verification,active,indirect,S6 — Trace Integrity Truth Verification,778
+scripts/verification/c1_telemetry_probes.py,c1_telemetry_probes.py,.py,scripts/verification,ci-validation,verification,active,indirect,C1 Telemetry Plane - SQL/API Verification Probes,1152
+scripts/verification/c2_regression.py,c2_regression.py,.py,scripts/verification,ci-validation,verification,active,indirect,C2 Prediction Plane - Regression Tests,1219
+scripts/verification/c4_synthetic_stability.py,c4_synthetic_stability.py,.py,scripts/verification,ci-validation,verification,active,indirect,C4 Synthetic Stability Execution Script,672
+scripts/verification/tenant_isolation_test.py,tenant_isolation_test.py,.py,scripts/verification,ci-validation,verification,active,indirect,Tenant Isolation Test for Phase A.5 Verification,156
+scripts/verification/truth_preflight.sh,truth_preflight.sh,.sh,scripts/verification,ci-validation,verification,active,indirect,truth_preflight.sh — Phase A.5 Preflight Truth Guard,345
+scripts/ops/archival/run_archival.sh,run_archival.sh,.sh,scripts/ops/archival,system-infra,archival,active,none,AOS Approval Request Archival Job,269
+backend/scripts/_db_guard.py,_db_guard.py,.py,backend/scripts,system-infra,backend-scripts,active,none,Database Authority Enforcement Guard,450
+backend/scripts/benchmark_registry.py,benchmark_registry.py,.py,backend/scripts,system-infra,backend-scripts,active,none,Registry Performance Benchmark,126
+backend/scripts/check_no_datetime_now.sh,check_no_datetime_now.sh,.sh,backend/scripts,system-infra,backend-scripts,active,none,check_no_datetime_now.sh,76
+backend/scripts/check_pydantic_config.sh,check_pydantic_config.sh,.sh,backend/scripts,system-infra,backend-scripts,active,none,check_pydantic_config.sh,35
+backend/scripts/ci_check_audit_immutability.py,ci_check_audit_immutability.py,.py,backend/scripts,system-infra,backend-scripts,active,none,Verify audit_ledger immutability at database level,137
+backend/scripts/ci_check_audit_no_commit.sh,ci_check_audit_no_commit.sh,.sh,backend/scripts,system-infra,backend-scripts,active,none,Layer: L8 — Catalyst / Meta,98
+backend/scripts/cus_usage_aggregator.py,cus_usage_aggregator.py,.py,backend/scripts,system-infra,backend-scripts,active,indirect,Aggregate cus_llm_usage into cus_usage_daily for reporting,406
+backend/scripts/deploy_migrations.sh,deploy_migrations.sh,.sh,backend/scripts,system-infra,backend-scripts,one-time-migration,none,M4 Migration Deployment Script,209
+backend/scripts/golden_archival.py,golden_archival.py,.py,backend/scripts,system-infra,backend-scripts,active,none,Golden File Archival and Key Rotation Tool,404
+backend/scripts/governance/t0_gate_check.sh,t0_gate_check.sh,.sh,backend/scripts/governance,system-infra,backend-scripts,active,none,Layer: L8 — Ops/Catalyst,306
+backend/scripts/load_test_approvals.py,load_test_approvals.py,.py,backend/scripts,system-infra,backend-scripts,active,none,Load Test Script for Approval Workflow,266
+backend/scripts/mypy_zones.py,mypy_zones.py,.py,backend/scripts,system-infra,backend-scripts,active,none,Mypy Type Safety Zones Validator (PIN-121),273
+backend/scripts/run_escalation.py,run_escalation.py,.py,backend/scripts,system-infra,backend-scripts,active,none,Escalation Worker Script,52
+backend/scripts/seed_sandbox_data.py,seed_sandbox_data.py,.py,backend/scripts,system-infra,backend-scripts,one-time-migration,none,Seed sandbox tenant data for local development,295
+backend/scripts/test_event_reactor.py,test_event_reactor.py,.py,backend/scripts,system-infra,backend-scripts,active,none,Test script for EventReactor cross-domain verification,482
+backend/scripts/test_http_three_modes.sh,test_http_three_modes.sh,.sh,backend/scripts,system-infra,backend-scripts,active,none,HTTP Tests for Three-Mode Authority System (PIN-440),133
+backend/scripts/test_policy_checker.py,test_policy_checker.py,.py,backend/scripts,system-infra,backend-scripts,active,none,Test script for MidExecutionPolicyChecker verification,241
+backend/scripts/test_three_mode_authority.py,test_three_mode_authority.py,.py,backend/scripts,system-infra,backend-scripts,active,none,Three-Mode Authority System Test (PIN-440),175
+scripts/ops/canary/canary_runner.py,canary_runner.py,.py,scripts/ops/canary,system-infra,canary,active,none,"AOS Canary Runner - Feature flag toggle, smoke test, Prometheus monitoring, rollback.",995
+scripts/ops/canary/generate_signoff.sh,generate_signoff.sh,.sh,scripts/ops/canary,system-infra,canary,active,none,generate_signoff.sh - Automated .m4_signoff generation with objective checks,228
+scripts/ops/canary_smoke_test.sh,canary_smoke_test.sh,.sh,scripts/ops,system-infra,canary,active,none,canary_smoke_test.sh - Automated smoke test with auto-rollback,354
+scripts/chaos/cpu_spike.sh,cpu_spike.sh,.sh,scripts/chaos,system-infra,chaos-testing,active,none,scripts/chaos/cpu_spike.sh,203
+scripts/chaos/memory_pressure.sh,memory_pressure.sh,.sh,scripts/chaos,system-infra,chaos-testing,active,none,scripts/chaos/memory_pressure.sh,236
+scripts/chaos/redis_stall.sh,redis_stall.sh,.sh,scripts/chaos,system-infra,chaos-testing,active,none,scripts/chaos/redis_stall.sh,207
+scripts/ops/chaos/cpu_spike.sh,cpu_spike.sh,.sh,scripts/ops/chaos,system-infra,chaos-testing,active,none,=============================================================================,108
+scripts/ops/chaos/kill_child.sh,kill_child.sh,.sh,scripts/ops/chaos,system-infra,chaos-testing,active,none,=============================================================================,75
+scripts/ops/chaos/redis_stall.sh,redis_stall.sh,.sh,scripts/ops/chaos,system-infra,chaos-testing,active,none,=============================================================================,110
+scripts/deploy/aos-console-deploy.sh,aos-console-deploy.sh,.sh,scripts/deploy,system-infra,deployment,active,indirect,AOS App Shell Production Deployment Script,85
+scripts/deploy/aos-smoke-test.sh,aos-smoke-test.sh,.sh,scripts/deploy,system-infra,deployment,active,indirect,AOS Console + Backend Smoke Test,88
+scripts/deploy/verify_config.py,verify_config.py,.py,scripts/deploy,system-infra,deployment,active,indirect,AOS Configuration Verification Script,221
+scripts/dev/fix_style.sh,fix_style.sh,.sh,scripts/dev,system-infra,dev-tools,active,none,=============================================================================,91
+scripts/tools/AURORA_L2_apply_sdsr_observations.py,AURORA_L2_apply_sdsr_observations.py,.py,scripts/tools,system-infra,dev-tools,active,none,Apply SDSR observation artifacts to AURORA_L2 capability state,677
+scripts/tools/AURORA_L2_seed_capability_registry.py,AURORA_L2_seed_capability_registry.py,.py,scripts/tools,system-infra,dev-tools,one-time-migration,none,AURORA_L2 Capability Registry Seeder,208
+scripts/tools/aurora_l2_migrate_csv_to_yaml.py,aurora_l2_migrate_csv_to_yaml.py,.py,scripts/tools,system-infra,dev-tools,one-time-migration,none,██████████████████████████████████████████████████████████████████████████████,294
+scripts/tools/bootstrap_intent_ledger.py,bootstrap_intent_ledger.py,.py,scripts/tools,system-infra,dev-tools,active,none,"Bootstrap INTENT_LEDGER.md from existing artifacts, constrained by topology (ONE TIME)",470
+scripts/tools/coherency_gate.py,coherency_gate.py,.py,scripts/tools,system-infra,dev-tools,active,none,"Validate coherency between topology, intent ledger, and generated artifacts",528
+scripts/tools/facet_completeness_checker.py,facet_completeness_checker.py,.py,scripts/tools,system-infra,dev-tools,active,none,Check facet completeness (blind spot detection) — READ ONLY diagnostic,440
+scripts/tools/facet_overlap_detector.py,facet_overlap_detector.py,.py,scripts/tools,system-infra,dev-tools,active,none,Detect overlapping panels within topics — READ ONLY diagnostic,417
+scripts/tools/facet_slot_pressure.py,facet_slot_pressure.py,.py,scripts/tools,system-infra,dev-tools,active,none,Analyze slot pressure per topic — READ ONLY diagnostic,343
+scripts/tools/generate_ui_plan_from_registries.py,generate_ui_plan_from_registries.py,.py,scripts/tools,system-infra,dev-tools,active,none,UI Plan Generator — Bootstrap Script,316
+scripts/tools/hisar_snapshot_backend.sh,hisar_snapshot_backend.sh,.sh,scripts/tools,system-infra,dev-tools,active,none,=============================================================================,116
+scripts/tools/intent_compiler.py,intent_compiler.py,.py,scripts/tools,system-infra,dev-tools,active,none,Compile normalized intent IR with strict validation (HOSTILE),342
+scripts/tools/intent_normalizer.py,intent_normalizer.py,.py,scripts/tools,system-infra,dev-tools,active,none,Normalize raw intent IR by applying safe defaults (GAP-BUILDER),225
+scripts/tools/l2_cap_expander.py,l2_cap_expander.py,.py,scripts/tools,system-infra,dev-tools,active,none,Expand L2.1 intent supertable with capability candidates (no decisions),954
+scripts/tools/l2_pipeline.py,l2_pipeline.py,.py,scripts/tools,system-infra,dev-tools,active,none,================================================================================,385
+scripts/tools/l2_raw_intent_parser.py,l2_raw_intent_parser.py,.py,scripts/tools,system-infra,dev-tools,active,none,================================================================================,204
+scripts/tools/pin_drift_detector.sh,pin_drift_detector.sh,.sh,scripts/tools,system-infra,dev-tools,active,none,PIN Drift Detector,247
+scripts/tools/promote_projection.sh,promote_projection.sh,.sh,scripts/tools,system-infra,dev-tools,active,none,Layer: L7 — Ops & Deployment,129
+scripts/tools/run_aurora_l2_pipeline.sh,run_aurora_l2_pipeline.sh,.sh,scripts/tools,system-infra,dev-tools,active,none,Layer: L8 — Catalyst / Meta,289
+scripts/tools/run_aurora_l2_pipeline_preflight.sh,run_aurora_l2_pipeline_preflight.sh,.sh,scripts/tools,system-infra,dev-tools,active,none,Layer: L7 — Ops & Deployment,202
+scripts/tools/run_hisar.sh,run_hisar.sh,.sh,scripts/tools,system-infra,dev-tools,active,none,HISAR — Human Intent → SDSR → Aurora → Rendering,816
+scripts/tools/run_l2_pipeline.sh,run_l2_pipeline.sh,.sh,scripts/tools,system-infra,dev-tools,active,none,================================================================================,81
+scripts/tools/sdsr_observation_watcher.sh,sdsr_observation_watcher.sh,.sh,scripts/tools,system-infra,dev-tools,active,none,Layer: L7 — Ops & Deployment,231
+scripts/tools/surface_to_slot_resolver.py,surface_to_slot_resolver.py,.py,scripts/tools,system-infra,dev-tools,active,none,Resolve mechanical surfaces to UI slots (STEP 2A),373
+scripts/tools/sync_from_intent_ledger.py,sync_from_intent_ledger.py,.py,scripts/tools,system-infra,dev-tools,active,none,"Generate YAMLs from INTENT_LEDGER.md, validated against topology (repeatable)",1109
+scripts/tools/ui_contract_generator.py,ui_contract_generator.py,.py,scripts/tools,system-infra,dev-tools,active,none,Transform L2.1 supertable v3 into UI contract JSON,581
+scripts/tools/ui_projection_builder.py,ui_projection_builder.py,.py,scripts/tools,system-infra,dev-tools,active,none,Build final UI projection lock from compiled intent IR (NO OPTIONALS),384
+scripts/tools/validate_all_intents.py,validate_all_intents.py,.py,scripts/tools,system-infra,dev-tools,active,none,Phase A Intent Guardrails validator for all intents,375
+scripts/ops/diagnostics/db_diagnostics.sh,db_diagnostics.sh,.sh,scripts/ops/diagnostics,system-infra,diagnostics,active,none,AOS Database Diagnostics Script,246
+scripts/hooks/post_bash_check.sh,post_bash_check.sh,.sh,scripts/hooks,system-infra,hooks,active,none,Layer: L8 — Catalyst / Meta,22
+scripts/hooks/post_edit_check.sh,post_edit_check.sh,.sh,scripts/hooks,system-infra,hooks,active,none,Layer: L8 — Catalyst / Meta,38
+backend/scripts/migrations/phase2_shadow_validation.py,phase2_shadow_validation.py,.py,backend/scripts/migrations,system-infra,migration,one-time-migration,indirect,Phase 2 Shadow Validation for Incidents Domain Migration,637
+scripts/migration/check_stop_condition.py,check_stop_condition.py,.py,scripts/migration,system-infra,migration,active,indirect,Check Phase 2 Stop Condition,90
+scripts/migration/classify_inventory.py,classify_inventory.py,.py,scripts/migration,system-infra,migration,one-time-migration,indirect,Classify Migration Inventory - Iteration 1,719
+scripts/migration/cleanup_duplicates.py,cleanup_duplicates.py,.py,scripts/migration,system-infra,migration,one-time-migration,indirect,Cleanup Duplicate Files from HOC Migration,162
+scripts/migration/cleanup_migration_copies.py,cleanup_migration_copies.py,.py,scripts/migration,system-infra,migration,one-time-migration,indirect,Cleanup Migration Copies,124
+scripts/migration/generate_copy_script.py,generate_copy_script.py,.py,scripts/migration,system-infra,migration,one-time-migration,indirect,Generate HOC Migration Copy Script,111
+scripts/migration/generate_domain_report.py,generate_domain_report.py,.py,scripts/migration,system-infra,migration,active,indirect,Generate customer domain-wise classification report from layer_fit_report.json.,272
+scripts/migration/generate_inventory.py,generate_inventory.py,.py,scripts/migration,system-infra,migration,one-time-migration,indirect,Generate Migration Inventory CSV,424
+scripts/migration/generate_phase2_backlog.py,generate_phase2_backlog.py,.py,scripts/migration,system-infra,migration,active,indirect,Generate Phase 2 Backlog YAML,126
+scripts/migration/layer_analysis.py,layer_analysis.py,.py,scripts/migration,system-infra,migration,active,indirect,Layer Analysis - Pass 1: Signal Detection,491
+scripts/migration/layer_classifier.py,layer_classifier.py,.py,scripts/migration,system-infra,migration,active,indirect,Layer Classifier - Pass 2: Classification & Violation Detection,803
+scripts/migration/layer_compliance_check.py,layer_compliance_check.py,.py,scripts/migration,system-infra,migration,active,indirect,Layer Compliance CI Check,240
+scripts/migration/mark_copied.py,mark_copied.py,.py,scripts/migration,system-infra,migration,one-time-migration,indirect,Mark Copied - Step 2 of Phase 2 Migration,217
+scripts/migration/phase1_header_fix.py,phase1_header_fix.py,.py,scripts/migration,system-infra,migration,active,indirect,Phase 1: HEADER_FIX_ONLY Execution,238
+scripts/migration/phase1_reclassify.py,phase1_reclassify.py,.py,scripts/migration,system-infra,migration,active,indirect,Phase 1: RECLASSIFY_ONLY Execution,310
+scripts/migration/phase2_extract_driver.py,phase2_extract_driver.py,.py,scripts/migration,system-infra,migration,active,indirect,Phase 2: EXTRACT_DRIVER Execution,362
+scripts/migration/post_migration_audit.py,post_migration_audit.py,.py,scripts/migration,system-infra,migration,one-time-migration,indirect,Post-Migration Audit Script,320
+backend/scripts/ops/audience_guard.py,audience_guard.py,.py,backend/scripts/ops,system-infra,ops,active,none,Audience Guard - CI enforcement for audience classification.,380
+backend/scripts/ops/backfill_lessons_from_incidents.py,backfill_lessons_from_incidents.py,.py,backend/scripts/ops,system-infra,ops,one-time-migration,none,Backfill lessons_learned from historical incidents,327
+backend/scripts/ops/check_redis_config.py,check_redis_config.py,.py,backend/scripts/ops,system-infra,ops,active,none,Redis Configuration Enforcement Check,237
+backend/scripts/ops/check_role_guards.py,check_role_guards.py,.py,backend/scripts/ops,system-infra,ops,active,none,PIN-399 Phase-5 Role Guard CI Scanner,403
+backend/scripts/ops/db_authority_drift_detector.py,db_authority_drift_detector.py,.py,backend/scripts/ops,system-infra,ops,active,none,DB-AUTH-001 Governance Drift Detector,569
+backend/scripts/ops/m10_retention_cleanup.py,m10_retention_cleanup.py,.py,backend/scripts/ops,system-infra,ops,active,none,M10 Recovery Retention Cleanup,529
+backend/scripts/ops/reconcile_dl.py,reconcile_dl.py,.py,backend/scripts/ops,system-infra,ops,active,none,Dead-Letter Reconciliation Script,447
+backend/scripts/ops/refresh_matview.py,refresh_matview.py,.py,backend/scripts/ops,system-infra,ops,active,none,Materialized View Refresh Automation,423
+backend/scripts/ops/shim_guard.py,shim_guard.py,.py,backend/scripts/ops,system-infra,ops,deprecated,none,Shim Kill Guard - Prevents modification of deprecated service shims.,310
+backend/scripts/ops/sweep_03_module_blocker.py,sweep_03_module_blocker.py,.py,backend/scripts/ops,system-infra,ops,active,none,Sweep-03 tracking - count blocking app.services imports in HOC,196
+scripts/bootstrap-dev.sh,bootstrap-dev.sh,.sh,scripts,system-infra,ops,active,none,AOS Development Environment Bootstrap Script,182
+scripts/e2e_integration.sh,e2e_integration.sh,.sh,scripts,system-infra,ops,active,none,AOS E2E Integration Test Harness,554
+scripts/list-failed.sh,list-failed.sh,.sh,scripts,system-infra,ops,active,none,NOVA Agent Manager - List Failed Runs,19
+scripts/nova-tunnel.sh,nova-tunnel.sh,.sh,scripts,system-infra,ops,active,none,NOVA API SSH Tunnel,29
+scripts/ops/add_lint_pattern.py,add_lint_pattern.py,.py,scripts/ops,system-infra,ops,active,none,Add New Lint Pattern - Helper for Prevention System Updates,186
+scripts/ops/aos_console_health_test.sh,aos_console_health_test.sh,.sh,scripts/ops,system-infra,ops,active,none,AOS Console Health & System Test,512
+scripts/ops/apply_phase2a1_affordances.py,apply_phase2a1_affordances.py,.py,scripts/ops,system-infra,ops,active,none,Apply Phase-2A.1 Affordance Controls to UI Projection Lock,288
+scripts/ops/architecture_incident_logger.py,architecture_incident_logger.py,.py,scripts/ops,system-infra,ops,active,none,Architecture Incident Logger,256
+scripts/ops/artifact_lookup.py,artifact_lookup.py,.py,scripts/ops,system-infra,ops,active,none,Artifact Lookup Tool - Search and display codebase registry artifacts.,274
+scripts/ops/aurora_l2_binding_report.py,aurora_l2_binding_report.py,.py,scripts/ops,system-infra,ops,active,none,AURORA_L2 Binding Status Report,153
+scripts/ops/auth_invariant_scanner.py,auth_invariant_scanner.py,.py,scripts/ops,system-infra,ops,active,none,Auth Invariant Scanner — Mechanical Enforcement of AUTH_DESIGN.md,305
+scripts/ops/build_preflight_console.sh,build_preflight_console.sh,.sh,scripts/ops,system-infra,ops,active,none,Layer: L7 — Ops & Deployment,128
+scripts/ops/c2_prediction_expiry_cleanup.py,c2_prediction_expiry_cleanup.py,.py,scripts/ops,system-infra,ops,active,none,C2 Prediction Expiry Cleanup Job,137
+scripts/ops/capability_applicability.py,capability_applicability.py,.py,scripts/ops,system-infra,ops,active,none,,632
+scripts/ops/capability_directional_ingest.py,capability_directional_ingest.py,.py,scripts/ops,system-infra,ops,active,none,,575
+scripts/ops/capability_opportunity_mapping.py,capability_opportunity_mapping.py,.py,scripts/ops,system-infra,ops,active,none,,717
+scripts/ops/capability_registry_enforcer.py,capability_registry_enforcer.py,.py,scripts/ops,system-infra,ops,active,none,"Capability Registry enforcement, gap detection, heatmap generation",2287
+scripts/ops/change_record.py,change_record.py,.py,scripts/ops,system-infra,ops,active,none,Change Record Helper - Create and manage code change records.,578
+scripts/ops/check_api_wiring.py,check_api_wiring.py,.py,scripts/ops,system-infra,ops,active,indirect,API Wiring Check - Verify Endpoint Routes Are Properly Connected,288
+scripts/ops/check_hardcoded_routes.sh,check_hardcoded_routes.sh,.sh,scripts/ops,system-infra,ops,active,none,=============================================================================,130
+scripts/ops/check_infra_obligations.py,check_infra_obligations.py,.py,scripts/ops,system-infra,ops,active,none,Infra Obligation Promotion Checker,402
+scripts/ops/check_intent_violations.py,check_intent_violations.py,.py,scripts/ops,system-infra,ops,active,none,Intent Violation Checker (PIN-265 Enforcement),347
+scripts/ops/check_migration_heads.sh,check_migration_heads.sh,.sh,scripts/ops,system-infra,ops,one-time-migration,none,check_migration_heads.sh - CI/Pre-commit check for migration fork prevention,59
+scripts/ops/check_migrations.sh,check_migrations.sh,.sh,scripts/ops,system-infra,ops,one-time-migration,none,Migration Drift Guard,139
+scripts/ops/ci_consistency_check.sh,ci_consistency_check.sh,.sh,scripts/ops,system-infra,ops,active,none,============================================================================,1973
+scripts/ops/claude_response_validator.py,claude_response_validator.py,.py,scripts/ops,system-infra,ops,active,none,AgenticVerz — Claude Response Validator v2,799
+scripts/ops/claude_session_boot.sh,claude_session_boot.sh,.sh,scripts/ops,system-infra,ops,active,none,AgenticVerz — Claude Session Boot Script,159
+scripts/ops/cli_demo_test.sh,cli_demo_test.sh,.sh,scripts/ops,system-infra,ops,active,none,CLI Demo Test - Verify M0-M20 Integration,137
+scripts/ops/compute_stickiness_cron.sh,compute_stickiness_cron.sh,.sh,scripts/ops,system-infra,ops,active,none,Compute Stickiness Cron Job,60
+scripts/ops/cost_snapshot_job.py,cost_snapshot_job.py,.py,scripts/ops,system-infra,ops,active,none,Cost Snapshot Job Runner,157
+scripts/ops/deploy_website.sh,deploy_website.sh,.sh,scripts/ops,system-infra,ops,active,none,deploy_website.sh - Deploy landing page and console with integrity validation,303
+scripts/ops/dev_sync.sh,dev_sync.sh,.sh,scripts/ops,system-infra,ops,active,none,=============================================================================,458
+scripts/ops/disable-workflows.sh,disable-workflows.sh,.sh,scripts/ops,system-infra,ops,active,none,Emergency workflow disable script,55
+scripts/ops/domain_classifier_v1.py,domain_classifier_v1.py,.py,scripts/ops,system-infra,ops,active,none,Domain Classifier V1 - Header-Based Classification,488
+scripts/ops/domain_classifier_v2.py,domain_classifier_v2.py,.py,scripts/ops,system-infra,ops,active,none,Domain Classifier V2 - Code Block Analysis,630
+scripts/ops/evaluate_qualifiers.py,evaluate_qualifiers.py,.py,scripts/ops,system-infra,ops,active,none,Governance Qualifier Evaluation Engine,586
+scripts/ops/expire_memory_pins.sh,expire_memory_pins.sh,.sh,scripts/ops,system-infra,ops,active,none,expire_memory_pins.sh - Clean up expired memory pins,83
+scripts/ops/extract_intent_ledger.py,extract_intent_ledger.py,.py,scripts/ops,system-infra,ops,active,none,Extract panel information from the INTENT_LEDGER.md file.,172
+scripts/ops/extract_l2_endpoints.py,extract_l2_endpoints.py,.py,scripts/ops,system-infra,ops,active,none,Extract L2 (Product API) endpoints from the AOS/AgenticVerz backend.,332
+scripts/ops/generate_step2a_artifacts.py,generate_step2a_artifacts.py,.py,scripts/ops,system-infra,ops,active,none,,341
+scripts/ops/golden_retention.sh,golden_retention.sh,.sh,scripts/ops,system-infra,ops,active,none,Golden File Retention & Archival Script,281
+scripts/ops/golden_test.py,golden_test.py,.py,scripts/ops,system-infra,ops,active,none,Golden Test Framework for Agenticverz Determinism Certification,618
+scripts/ops/governance_tripwire.py,governance_tripwire.py,.py,scripts/ops,system-infra,ops,active,none,Detect --no-verify bypasses without exception documentation,412
+scripts/ops/guard_health_test.sh,guard_health_test.sh,.sh,scripts/ops,system-infra,ops,active,none,Guard Console Health & Prevention System Test,411
+scripts/ops/hoc_authority_analyzer.py,hoc_authority_analyzer.py,.py,scripts/ops,system-infra,ops,active,none,HOC Authority Analyzer v1.0,889
+scripts/ops/housekeeping_scan.py,housekeeping_scan.py,.py,scripts/ops,system-infra,ops,active,none,HOUSEKEEPING Protocol (HK-01) - Automation Script,707
+scripts/ops/hygiene_check.sh,hygiene_check.sh,.sh,scripts/ops,system-infra,ops,active,none,=============================================================================,316
+scripts/ops/incident_classifier.py,incident_classifier.py,.py,scripts/ops,system-infra,ops,active,none,AgenticVerz — Incident Classifier,363
+scripts/ops/intent_validator.py,intent_validator.py,.py,scripts/ops,system-infra,ops,active,none,Validate artifact intent declarations for completeness and correctness,588
+scripts/ops/job_wrapper.sh,job_wrapper.sh,.sh,scripts/ops,system-infra,ops,active,none,=============================================================================,169
+scripts/ops/l21_capability_bind_scan.py,l21_capability_bind_scan.py,.py,scripts/ops,system-infra,ops,active,none,,585
+scripts/ops/layer_segregation_guard.py,layer_segregation_guard.py,.py,scripts/ops,system-infra,ops,active,none,Layer Segregation Guard,355
+scripts/ops/lint_frontend_api_calls.py,lint_frontend_api_calls.py,.py,scripts/ops,system-infra,ops,active,indirect,Frontend API Call Type Safety Linter,218
+scripts/ops/lint_schema_naming.py,lint_schema_naming.py,.py,scripts/ops,system-infra,ops,active,none,Schema Naming Convention Linter,165
+scripts/ops/lint_sqlmodel_patterns.py,lint_sqlmodel_patterns.py,.py,scripts/ops,system-infra,ops,active,none,SQLModel Pattern Linter v2.4 - Detect Unsafe Query Patterns,738
+scripts/ops/m10_48h_health_check.sh,m10_48h_health_check.sh,.sh,scripts/ops,system-infra,ops,active,none,M10 48h Pager Window Health Check,253
+scripts/ops/m10_prod_deploy_checklist.sh,m10_prod_deploy_checklist.sh,.sh,scripts/ops,system-infra,ops,active,none,M10 Production Deploy Checklist,147
+scripts/ops/m10_staging_verify.sh,m10_staging_verify.sh,.sh,scripts/ops,system-infra,ops,active,none,M10 Staging Verification Script,577
+scripts/ops/m5_ga_deploy.sh,m5_ga_deploy.sh,.sh,scripts/ops,system-infra,ops,active,none,=============================================================================,523
+scripts/ops/m7_monitoring_check.sh,m7_monitoring_check.sh,.sh,scripts/ops,system-infra,ops,active,none,=============================================================================,264
+scripts/ops/m9_monitoring_deploy.sh,m9_monitoring_deploy.sh,.sh,scripts/ops,system-infra,ops,active,none,M9 Monitoring Deployment Script,207
+scripts/ops/memory_trail.py,memory_trail.py,.py,scripts/ops,system-infra,ops,active,none,Memory Trail Automation System,570
+scripts/ops/metrics_validation.py,metrics_validation.py,.py,scripts/ops,system-infra,ops,active,none,Metrics Validation Script - Validates Prometheus metrics endpoint.,222
+scripts/ops/obligation_aging_report.py,obligation_aging_report.py,.py,scripts/ops,system-infra,ops,active,none,Obligation Aging Reporter (PIN-265 Enforcement),354
+scripts/ops/phase_3b_scanner.py,phase_3b_scanner.py,.py,scripts/ops,system-infra,ops,active,none,Phase 3B SQLAlchemy Extraction Scanner,356
+scripts/ops/postflight.py,postflight.py,.py,scripts/ops,system-infra,ops,active,none,postflight.py - Post-Implementation Hygiene Check Engine v2.0,1564
+scripts/ops/preflight.py,preflight.py,.py,scripts/ops,system-infra,ops,active,none,preflight.py - Pre-Implementation Evaluation System v2.0,1014
+scripts/ops/prom_reload.sh,prom_reload.sh,.sh,scripts/ops,system-infra,ops,active,none,scripts/ops/prom_reload.sh,339
+scripts/ops/promote_to_production.sh,promote_to_production.sh,.sh,scripts/ops,system-infra,ops,active,none,Layer: L7 — Ops & Deployment,311
+scripts/ops/r2_cleanup.sh,r2_cleanup.sh,.sh,scripts/ops,system-infra,ops,active,none,scripts/ops/r2_cleanup.sh,260
+scripts/ops/r2_lifecycle.sh,r2_lifecycle.sh,.sh,scripts/ops,system-infra,ops,active,none,R2 Lifecycle Configuration Script,144
+scripts/ops/r2_verify.sh,r2_verify.sh,.sh,scripts/ops,system-infra,ops,active,none,R2 Object Storage Verification Script,110
+scripts/ops/rbac_enable.sh,rbac_enable.sh,.sh,scripts/ops,system-infra,ops,active,none,=============================================================================,462
+scripts/ops/rbac_enable_smoke.sh,rbac_enable_smoke.sh,.sh,scripts/ops,system-infra,ops,active,none,=============================================================================,360
+scripts/ops/rbac_oneclick_enable.sh,rbac_oneclick_enable.sh,.sh,scripts/ops,system-infra,ops,active,none,=============================================================================,721
+scripts/ops/record_governance_signal.py,record_governance_signal.py,.py,scripts/ops,system-infra,ops,active,none,Record governance signals from ops scripts to DB,214
+scripts/ops/retry_r2_fallbacks.sh,retry_r2_fallbacks.sh,.sh,scripts/ops,system-infra,ops,active,none,R2 Fallback Retry Worker,122
+scripts/ops/runtime_smoke.py,runtime_smoke.py,.py,scripts/ops,system-infra,ops,active,none,Runtime Smoke Tests for Agenticverz Milestone Certification,649
+scripts/ops/scenario_executor.py,scenario_executor.py,.py,scripts/ops,system-infra,ops,active,none,SCENARIO EXECUTOR - Lifecycle Scenario Verification,459
+scripts/ops/scenario_test_matrix.py,scenario_test_matrix.py,.py,scripts/ops,system-infra,ops,active,none,Scenario Test Matrix - External Services & MOAT Validation,1147
+scripts/ops/schema_audit.py,schema_audit.py,.py,scripts/ops,system-infra,ops,one-time-migration,none,Schema Audit Script - Validates database schema integrity after migrations.,344
+scripts/ops/scope_diff_guard.py,scope_diff_guard.py,.py,scripts/ops,system-infra,ops,active,none,Prevent closure-tagged commits from mutating frozen scope,313
+scripts/ops/session_bootstrap_validator.py,session_bootstrap_validator.py,.py,scripts/ops,system-infra,ops,active,none,Session Bootstrap Validator (SPB),333
+scripts/ops/session_start.sh,session_start.sh,.sh,scripts/ops,system-infra,ops,active,none,=============================================================================,354
+scripts/ops/setup_ci_hooks.sh,setup_ci_hooks.sh,.sh,scripts/ops,system-infra,ops,active,none,Setup automatic CI consistency checks via git hooks,84
+scripts/ops/step3_scenario_runner.py,step3_scenario_runner.py,.py,scripts/ops,system-infra,ops,active,none,"STEP 3 Scenario Generation, Execution & Validation",904
+scripts/ops/sweep_02a_actionable_subset.py,sweep_02a_actionable_subset.py,.py,scripts/ops,system-infra,ops,active,none,Sweep-02A: Actionable Subset Identifier,230
+scripts/ops/sweep_02a_domain_status.py,sweep_02a_domain_status.py,.py,scripts/ops,system-infra,ops,active,none,Sweep-02A: Domain Status Report,256
+scripts/ops/sweep_02a_runtime_import_checker.py,sweep_02a_runtime_import_checker.py,.py,scripts/ops,system-infra,ops,active,none,Sweep-02A: RUNTIME_IMPORT_LEAK Detector,177
+scripts/ops/sweep_03_module_blocker.py,sweep_03_module_blocker.py,.py,scripts/ops,system-infra,ops,deprecated,none,Sweep-03: Legacy Module Migration Tracker,396
+scripts/ops/temporal_detector.py,temporal_detector.py,.py,scripts/ops,system-infra,ops,active,none,Detect temporal violations through import pattern analysis,577
+scripts/ops/test_cost_snapshots.py,test_cost_snapshots.py,.py,scripts/ops,system-infra,ops,active,none,Test Cost Snapshot Service,326
+scripts/ops/test_customer_console.py,test_customer_console.py,.py,scripts/ops,system-infra,ops,active,indirect,Customer Console Test Script,357
+scripts/ops/test_worker_events.py,test_worker_events.py,.py,scripts/ops,system-infra,ops,active,none,Worker Event Validation Script,384
+scripts/ops/trace_retention_cron.sh,trace_retention_cron.sh,.sh,scripts/ops,system-infra,ops,active,none,scripts/ops/trace_retention_cron.sh,59
+scripts/ops/transaction_bypass_tracker.py,transaction_bypass_tracker.py,.py,scripts/ops,system-infra,ops,active,none,TRANSACTION_BYPASS Sweep Tracker,358
+scripts/ops/verify_console_routes.sh,verify_console_routes.sh,.sh,scripts/ops,system-infra,ops,active,none,Console Route Verification Script,155
+scripts/ops/visibility_validator.py,visibility_validator.py,.py,scripts/ops,system-infra,ops,active,none,Visibility Contract Layer (VCL) Validator,990
+scripts/ops/worktree_sanity_check.py,worktree_sanity_check.py,.py,scripts/ops,system-infra,ops,active,none,Enforce intent-scoped worktree purity,497
+scripts/pg_backup.sh,pg_backup.sh,.sh,scripts,system-infra,ops,active,none,NOVA Agent Manager - PostgreSQL Backup Script,35
+scripts/preflight_m4_signoff.sh,preflight_m4_signoff.sh,.sh,scripts,system-infra,ops,active,none,preflight_m4_signoff.sh - Gate runtime changes until M4 validation complete,150
+scripts/rerun.sh,rerun.sh,.sh,scripts,system-infra,ops,active,none,NOVA Agent Manager - Rerun Failed Runs,48
+scripts/rollback_failure_catalog.sh,rollback_failure_catalog.sh,.sh,scripts,system-infra,ops,active,none,rollback_failure_catalog.sh - Rollback failure catalog integration,252
+scripts/run_worker_local.sh,run_worker_local.sh,.sh,scripts,system-infra,ops,active,none,Run NOVA worker pool locally (for development),18
+scripts/smoke_release.sh,smoke_release.sh,.sh,scripts,system-infra,ops,active,none,Release Smoke Test Script,69
+scripts/test-alerts.sh,test-alerts.sh,.sh,scripts,system-infra,ops,active,none,NOVA Agent Manager - Test Alert Routing,69
+scripts/test_webhook_receiver.sh,test_webhook_receiver.sh,.sh,scripts,system-infra,ops,active,none,Test script for webhook receiver,85
+backend/scripts/sdsr/SDSR_output_emit_AURORA_L2.py,SDSR_output_emit_AURORA_L2.py,.py,backend/scripts/sdsr,system-infra,sdsr,active,none,SDSR_output_emit_AURORA_L2.py,317
+backend/scripts/sdsr/Scenario_SDSR_output.py,Scenario_SDSR_output.py,.py,backend/scripts/sdsr,system-infra,sdsr,active,none,Scenario_SDSR_output.py,504
+backend/scripts/sdsr/aurora_promotion_guard.py,aurora_promotion_guard.py,.py,backend/scripts/sdsr,system-infra,sdsr,active,none,SDSR Promotion Guard - Enforce capability status transitions,396
+backend/scripts/sdsr/aurora_sdsr_runner.py,aurora_sdsr_runner.py,.py,backend/scripts/sdsr,system-infra,sdsr,active,none,SDSR Scenario Runner - Execute scenarios and validate invariants,570
+backend/scripts/sdsr/inject_synthetic.py,inject_synthetic.py,.py,backend/scripts/sdsr,system-infra,sdsr,active,none,SDSR Injector + Truth Producer (SDSR Pipeline Contract Section 3.2),2045
+backend/scripts/sdsr/report_status.py,report_status.py,.py,backend/scripts/sdsr,system-infra,sdsr,active,none,SDSR Status Report,304
+backend/scripts/sdsr/run_all_sdsr_scenarios.py,run_all_sdsr_scenarios.py,.py,backend/scripts/sdsr,system-infra,sdsr,active,none,Batch SDSR Runner - Execute all scenarios systematically by domain order.,207
+backend/scripts/sdsr/run_shadow_validation.sh,run_shadow_validation.sh,.sh,backend/scripts/sdsr,system-infra,sdsr,active,none,Layer: L8 — Catalyst / Meta,40
+backend/scripts/sdsr/shadow_validate_v2.py,shadow_validate_v2.py,.py,backend/scripts/sdsr,system-infra,sdsr,one-time-migration,none,Shadow validation for Activity Domain V2 Migration,670
+scripts/sdsr/sdsr_e2e_orchestrator.py,sdsr_e2e_orchestrator.py,.py,scripts/sdsr,system-infra,sdsr,active,none,SDSR End-to-End Orchestrator (LEAK-3 + LEAK-4 fix),379
+tools/e2e_results_parser.py,e2e_results_parser.py,.py,tools,system-infra,tools,active,none,E2E Results Parser for AOS,471
+tools/generate_synthetic_failures.py,generate_synthetic_failures.py,.py,tools,system-infra,tools,active,none,M9 Synthetic Failure Traffic Generator,459
+tools/inject_synthetic_alert.py,inject_synthetic_alert.py,.py,tools,system-infra,tools,active,none,Synthetic Alert Injector for AOS,302
+tools/k6_slo_mapper.py,k6_slo_mapper.py,.py,tools,system-infra,tools,active,none,k6 SLO Mapper for AOS,371
+tools/test_idempotency_atomicity.py,test_idempotency_atomicity.py,.py,tools,system-infra,tools,active,none,tools/test_idempotency_atomicity.py,158
+scripts/ops/vault/rotate_secret.sh,rotate_secret.sh,.sh,scripts/ops/vault,system-infra,vault,active,none,Rotate a secret in Vault and verify app picks up the new value,88
+scripts/ops/vault/unseal_vault.sh,unseal_vault.sh,.sh,scripts/ops/vault,system-infra,vault,active,none,Unseal Vault after container restart,32
+scripts/ops/vault/vault_env.sh,vault_env.sh,.sh,scripts/ops/vault,system-infra,vault,active,none,Export secrets from Vault to environment variables,35
+scripts/ops/webhook/rotate_webhook_key.sh,rotate_webhook_key.sh,.sh,scripts/ops/webhook,system-infra,webhook,active,none,Webhook Key Rotation Script,290
+tools/webhook_dev/app.py,app.py,.py,tools/webhook_dev,system-infra,webhook,active,none,Lightweight Flask Webhook Receiver for local development.,368
+tools/webhook_receiver/app/main.py,main.py,.py,tools/webhook_receiver/app,system-infra,webhook,active,none,Staging Webhook Receiver - FastAPI application.,674
+tools/webhook_receiver/app/models.py,models.py,.py,tools/webhook_receiver/app,system-infra,webhook,active,none,Database models for webhook receiver.,130
+tools/webhook_receiver/app/rate_limiter.py,rate_limiter.py,.py,tools/webhook_receiver/app,system-infra,webhook,active,none,Redis-backed distributed rate limiter for webhook receiver.,323
+tools/webhook_receiver/deploy-staging.sh,deploy-staging.sh,.sh,tools/webhook_receiver,system-infra,webhook,active,none,deploy-staging.sh - Deploy webhook receiver to staging Kubernetes cluster,305
+tools/webhook_receiver/tests/conftest.py,conftest.py,.py,tools/webhook_receiver/tests,system-infra,webhook,active,none,Pytest configuration for webhook receiver tests.,38
+tools/webhook_receiver/tests/test_log_correlation.py,test_log_correlation.py,.py,tools/webhook_receiver/tests,system-infra,webhook,active,none,Log correlation tests for rate-limit logging.,591
+tools/webhook_receiver/tests/test_metric_fuzzer.py,test_metric_fuzzer.py,.py,tools/webhook_receiver/tests,system-infra,webhook,active,none,Metric fuzzer tests for webhook receiver.,654
+tools/webhook_receiver/tests/test_rate_limiter.py,test_rate_limiter.py,.py,tools/webhook_receiver/tests,system-infra,webhook,active,none,Unit tests for Redis-backed rate limiter.,376
+tools/webhook_receiver/tests/test_rate_limiter_chaos.py,test_rate_limiter_chaos.py,.py,tools/webhook_receiver/tests,system-infra,webhook,active,none,Chaos tests for Redis rate limiter availability scenarios.,458
+tools/webhook_receiver/tests/test_readiness_probe.py,test_readiness_probe.py,.py,tools/webhook_receiver/tests,system-infra,webhook,active,none,Tests for readiness probe JSON response format.,466

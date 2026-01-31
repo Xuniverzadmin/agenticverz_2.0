@@ -1,4 +1,5 @@
-# Layer: L4 — Domain Services
+# Layer: L5 — Domain (Overview)
+# NOTE: Header corrected L4→L5 (2026-01-31) — this is a domain package, not L4 spine
 # AUDIENCE: CUSTOMER
 # Role: Overview domain - System health at a glance
 # Reference: DIRECTORY_REORGANIZATION_PLAN.md, HOC_overview_analysis_v1.md

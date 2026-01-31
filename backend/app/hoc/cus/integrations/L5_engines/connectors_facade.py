@@ -149,7 +149,7 @@ class ConnectorsFacade:
         """Lazy-load ConnectorRegistry."""
         if self._registry is None:
             try:
-                from app.hoc.cus.integrations.L6_drivers.connector_registry import ConnectorRegistry
+                from app.hoc.cus.integrations.L6_drivers.connector_registry_driver import ConnectorRegistry
                 self._registry = ConnectorRegistry()
             except ImportError:
                 logger.warning("ConnectorRegistry not available")

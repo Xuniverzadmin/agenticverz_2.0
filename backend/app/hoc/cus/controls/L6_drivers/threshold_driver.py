@@ -47,8 +47,6 @@ Reference: ACTIVITY_PHASE2.5_IMPLEMENTATION_PLAN.md
 
 import logging
 import uuid as uuid_module
-from dataclasses import dataclass
-from datetime import datetime
 from typing import Any, Optional
 
 from sqlalchemy import text
@@ -65,22 +63,8 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
-@dataclass(frozen=True)
-class LimitSnapshot:
-    """
-    Immutable snapshot of a Limit record returned to engines.
-
-    This is the boundary contract between L6 (driver) and L4 (engine).
-    Engines receive snapshots, not ORM models.
-    """
-
-    id: str
-    tenant_id: str
-    scope: str
-    scope_id: Optional[str]
-    params: dict
-    status: str
-    created_at: datetime
+# Re-export from spine schemas for backward compatibility (PIN-504)
+from app.hoc.hoc_spine.schemas.threshold_types import LimitSnapshot  # noqa: F401
 
 
 # =============================================================================
@@ -335,17 +319,8 @@ def emit_and_persist_threshold_signal(
     """
     Emit threshold signals to both Founder and Customer consoles.
 
-    This function performs DUAL emission:
-    1. ops_events (Founder Console) - via emit_threshold_signal_sync()
-       - For operational monitoring in Founder Console
-       - Protected by verify_fops_token() in api/ops.py
-       - NOTE: ops_events is FOUNDER CONSOLE ONLY - not transmitted to customer endpoints
-
-    2. runs.risk_level (Customer Console) - via RunSignalService
-       - For Activity panels in Customer Console
-       - Consumed by v_runs_o2 -> api/activity.py -> Customer Console
-
-    L6 CONTRACT: Pure DB writes, no business logic.
+    PIN-504: Delegates to SignalCoordinator (L4) to avoid cross-domain
+    controls→activity import. The coordinator handles dual emission.
 
     Args:
         session: SQLAlchemy sync session
@@ -357,24 +332,16 @@ def emit_and_persist_threshold_signal(
 
     Reference: Threshold Signal Wiring to Customer Console Plan
     """
-    # L6 driver import (migrated to HOC per SWEEP-03)
-    from app.hoc.cus.activity.L6_drivers.run_signal_service import RunSignalService
+    from app.hoc.hoc_spine.orchestrator.coordinators.signal_coordinator import (
+        get_signal_coordinator,
+    )
 
-    # 1. Emit to ops_events for Founder Console monitoring
-    # NOTE: ops_events is FOUNDER CONSOLE ONLY - not transmitted to customer endpoints
-    for signal in signals:
-        emit_threshold_signal_sync(session, tenant_id, run_id, state, signal, params_used)
-
-    # 2. Update runs.risk_level for Customer Console Activity panels
-    run_signal_service = RunSignalService(session)
-    run_signal_service.update_risk_level(run_id, signals)
-
-    logger.info(
-        "dual_signal_emission_complete",
-        extra={
-            "run_id": run_id,
-            "tenant_id": tenant_id,
-            "state": state,
-            "signal_count": len(signals),
-        },
+    coordinator = get_signal_coordinator()
+    coordinator.emit_and_update_risk(
+        session=session,
+        tenant_id=tenant_id,
+        run_id=run_id,
+        state=state,
+        signals=signals,
+        params_used=params_used,
     )

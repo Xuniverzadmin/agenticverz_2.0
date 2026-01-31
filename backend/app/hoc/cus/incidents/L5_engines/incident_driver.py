@@ -207,9 +207,9 @@ class IncidentDriver:
         PIN-454: Drivers emit acks after domain operations.
         """
         try:
-            # L5 imports (migrated to HOC per SWEEP-04)
-            from app.hoc.cus.general.L5_schemas.rac_models import AuditAction, AuditDomain, DomainAck
-            from app.hoc.cus.general.L5_engines.audit_store import get_audit_store
+            # L5 imports (V2.0.0 - hoc_spine)
+            from app.hoc.hoc_spine.schemas.rac_models import AuditAction, AuditDomain, DomainAck
+            from app.hoc.hoc_spine.services.audit_store import get_audit_store
 
             ack = DomainAck(
                 run_id=UUID(run_id),

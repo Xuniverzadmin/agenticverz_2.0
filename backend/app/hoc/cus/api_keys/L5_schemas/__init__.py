@@ -1,4 +1,5 @@
-# Layer: L4 — Domain Services
+# Layer: L5 — Domain Schemas
+# NOTE: Header corrected L4→L5 (2026-01-31)
 # AUDIENCE: CUSTOMER
 # Role: api_keys domain - schemas
 # Reference: DIRECTORY_REORGANIZATION_PLAN.md

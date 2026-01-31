@@ -8,6 +8,10 @@
 Account L5 Schemas
 
 Data types and contracts for account domain.
-
-Exports will be added as files are moved here.
 """
+
+from app.hoc.cus.account.L5_schemas.result_types import AccountsErrorResult  # noqa: F401
+
+__all__ = [
+    "AccountsErrorResult",
+]

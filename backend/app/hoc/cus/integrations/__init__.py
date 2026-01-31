@@ -1,4 +1,5 @@
-# Layer: L4 — Domain Services
+# Layer: L5 — Domain (Integrations)
+# NOTE: Header corrected L4→L5 (2026-01-31) — this is a domain package, not L4 spine
 # AUDIENCE: CUSTOMER
 # Role: Integrations domain - LLM provider management, connectors, retrieval mediation
 # Reference: DIRECTORY_REORGANIZATION_PLAN.md, HOC_integrations_analysis_v1.md

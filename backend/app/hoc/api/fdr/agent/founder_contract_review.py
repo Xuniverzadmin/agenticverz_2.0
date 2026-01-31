@@ -62,8 +62,8 @@ from app.models.contract import (
     ContractStatus,
     InvalidTransitionError,
 )
-# L5 engine import (migrated to HOC per SWEEP-03)
-from app.hoc.cus.general.L5_workflow.contracts.engines.contract_engine import (
+# V2.0.0 - hoc_spine authority
+from app.hoc.hoc_spine.authority.contracts.contract_engine import (
     ContractService,
     ContractState,
 )

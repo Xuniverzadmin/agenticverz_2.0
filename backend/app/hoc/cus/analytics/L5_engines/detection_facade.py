@@ -43,7 +43,7 @@ L2 API Routes (GAP-102):
 - GET /api/v1/detection/status (detection engine status)
 
 Usage:
-    from app.services.detection.facade import get_detection_facade
+    from app.hoc.cus.analytics.L5_engines.detection_facade import get_detection_facade
 
     facade = get_detection_facade()
 
@@ -74,7 +74,7 @@ class DetectionType(str, Enum):
 
 # AnomalySeverity enum removed — ANA-DUP-001 quarantine
 # Import from canonical source: cost_anomaly_detector.py
-from app.hoc.cus.analytics.L5_engines.cost_anomaly_detector import (
+from app.hoc.cus.analytics.L5_engines.cost_anomaly_detector_engine import (
     AnomalySeverity,
 )
 
@@ -200,7 +200,7 @@ class DetectionFacade:
         # Note: CostAnomalyDetector requires a session, so we return the class
         # and instantiate it with session when needed
         try:
-            from app.hoc.cus.analytics.L5_engines.cost_anomaly_detector import CostAnomalyDetector
+            from app.hoc.cus.analytics.L5_engines.cost_anomaly_detector_engine import CostAnomalyDetector
             return CostAnomalyDetector
         except ImportError:
             logger.warning("CostAnomalyDetector not available")
@@ -300,7 +300,7 @@ class DetectionFacade:
             )
 
         try:
-            from app.hoc.cus.analytics.L5_engines.cost_anomaly_detector import (
+            from app.hoc.cus.analytics.L5_engines.cost_anomaly_detector_engine import (
                 run_anomaly_detection_with_governance,
             )
 

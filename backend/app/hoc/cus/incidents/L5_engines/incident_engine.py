@@ -72,7 +72,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 # L6 driver import (allowed)
-from app.hoc.cus.general.L5_utils.time import utc_now
+from app.hoc.hoc_spine.services.time import utc_now
 from app.hoc.cus.incidents.L6_drivers.incident_write_driver import (
     IncidentWriteDriver,
     get_incident_write_driver,

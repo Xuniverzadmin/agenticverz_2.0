@@ -148,7 +148,7 @@ class ActivityTelemetryHandler:
     """
 
     async def execute(self, ctx: OperationContext) -> OperationResult:
-        from app.hoc.cus.activity.L5_engines.cus_telemetry_service import (
+        from app.hoc.cus.activity.L5_engines.cus_telemetry_engine import (
             get_cus_telemetry_service,
         )
 

@@ -45,7 +45,7 @@ Reference: PIN-281, PIN-413, PHASE2_EXTRACTION_PROTOCOL.md
 """
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 # L6 driver import (allowed)
 from app.hoc.cus.incidents.L6_drivers.incident_write_driver import (
@@ -53,9 +53,8 @@ from app.hoc.cus.incidents.L6_drivers.incident_write_driver import (
     get_incident_write_driver,
 )
 
-# L5 imports (audit ledger - migrated to HOC per SWEEP-03 Batch 3)
+# ActorType is L7 model (legal import)
 from app.models.audit_ledger import ActorType
-from app.hoc.cus.logs.L5_engines.audit_ledger_service import AuditLedgerService
 
 if TYPE_CHECKING:
     from sqlmodel import Session
@@ -64,19 +63,28 @@ if TYPE_CHECKING:
 
 class IncidentWriteService:
     """
-    L4 service for incident write operations.
+    L5 engine for incident write operations.
 
     Delegates DB operations to IncidentWriteDriver (L6).
-    Maintains business logic (audit events, transactions) in L4.
+    Maintains business logic (audit events, transactions) in L5.
+    Audit service is injected by L4 handler (PIN-504: no cross-domain imports).
 
     NO DIRECT DB ACCESS - driver calls only.
     """
 
-    def __init__(self, session: "Session"):
-        """Initialize with database session (passed to driver and audit)."""
+    def __init__(self, session: "Session", audit: Any = None):
+        """
+        Initialize with database session and optional audit service.
+
+        Args:
+            session: SQLAlchemy sync Session
+            audit: Audit service instance (injected by L4 handler).
+                   Must have incident_acknowledged, incident_resolved,
+                   incident_manually_closed methods.
+        """
         self._session = session
         self._driver = get_incident_write_driver(session)
-        self._audit = AuditLedgerService(session)
+        self._audit = audit
 
     def acknowledge_incident(
         self,
@@ -124,14 +132,15 @@ class IncidentWriteService:
             )
 
             # Emit audit event (PIN-413: Logs Domain)
-            # L4 responsibility - stays here
-            self._audit.incident_acknowledged(
-                tenant_id=incident.tenant_id,
-                incident_id=str(incident.id),
-                actor_id=acknowledged_by,
-                actor_type=actor_type,
-                reason=reason,
-            )
+            # Audit service injected by L4 handler (PIN-504)
+            if self._audit:
+                self._audit.incident_acknowledged(
+                    tenant_id=incident.tenant_id,
+                    incident_id=str(incident.id),
+                    actor_id=acknowledged_by,
+                    actor_type=actor_type,
+                    reason=reason,
+                )
 
         # Refresh after commit via driver
         return self._driver.refresh_incident(incident)
@@ -194,15 +203,16 @@ class IncidentWriteService:
             )
 
             # Emit audit event (PIN-413: Logs Domain)
-            # L4 responsibility - stays here
-            self._audit.incident_resolved(
-                tenant_id=incident.tenant_id,
-                incident_id=str(incident.id),
-                actor_id=resolved_by,
-                actor_type=actor_type,
-                reason=reason or resolution_notes,
-                resolution_method=resolution_method,
-            )
+            # Audit service injected by L4 handler (PIN-504)
+            if self._audit:
+                self._audit.incident_resolved(
+                    tenant_id=incident.tenant_id,
+                    incident_id=str(incident.id),
+                    actor_id=resolved_by,
+                    actor_type=actor_type,
+                    reason=reason or resolution_notes,
+                    resolution_method=resolution_method,
+                )
 
         # Refresh after commit via driver
         return self._driver.refresh_incident(incident)
@@ -277,24 +287,31 @@ class IncidentWriteService:
             }
 
             # Emit audit event (PIN-413: Logs Domain)
-            # L4 responsibility - stays here
-            self._audit.incident_manually_closed(
-                tenant_id=incident.tenant_id,
-                incident_id=str(incident.id),
-                actor_id=closed_by,
-                actor_type=actor_type,
-                reason=reason,
-                before_state=before_state,
-                after_state=after_state,
-            )
+            # Audit service injected by L4 handler (PIN-504)
+            if self._audit:
+                self._audit.incident_manually_closed(
+                    tenant_id=incident.tenant_id,
+                    incident_id=str(incident.id),
+                    actor_id=closed_by,
+                    actor_type=actor_type,
+                    reason=reason,
+                    before_state=before_state,
+                    after_state=after_state,
+                )
 
         # Refresh after commit via driver
         return self._driver.refresh_incident(incident)
 
 
-def get_incident_write_service(session: "Session") -> IncidentWriteService:
-    """Factory function to get IncidentWriteService instance."""
-    return IncidentWriteService(session)
+def get_incident_write_service(session: "Session", audit: Any = None) -> IncidentWriteService:
+    """
+    Factory function to get IncidentWriteService instance.
+
+    Args:
+        session: SQLAlchemy sync Session
+        audit: Optional audit service (injected by L4 handler for cross-domain audit)
+    """
+    return IncidentWriteService(session, audit=audit)
 
 
 __all__ = [

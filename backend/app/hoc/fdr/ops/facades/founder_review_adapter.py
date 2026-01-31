@@ -35,8 +35,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, List, Optional
 
-# L5 engine import (migrated to HOC per SWEEP-03)
-from app.hoc.cus.general.L5_workflow.contracts.engines.contract_engine import ContractState
+# V2.0.0 - hoc_spine authority
+from app.hoc.hoc_spine.authority.contracts.contract_engine import ContractState
 
 # =============================================================================
 # L3 VIEW DTOs (Founder-facing, not domain models)

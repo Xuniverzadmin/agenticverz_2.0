@@ -51,11 +51,11 @@ All DB operations delegated to PolicyRulesDriver.
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional  # Any used for audit injection (PIN-504)
 
 # L6 driver import (allowed)
-from app.hoc.cus.general.L5_utils.time import utc_now
-from app.hoc.cus.general.L6_drivers.cross_domain import generate_uuid
+from app.hoc.hoc_spine.services.time import utc_now
+from app.hoc.hoc_spine.drivers.cross_domain import generate_uuid
 from app.hoc.cus.policies.L6_drivers.policy_rules_driver import (
     PolicyRulesDriver,
     get_policy_rules_driver,
@@ -75,7 +75,6 @@ from app.hoc.cus.policies.L5_schemas.policy_rules import (
     UpdatePolicyRuleRequest,
     PolicyRuleResponse,
 )
-from app.hoc.cus.logs.L6_drivers.audit_ledger_service_async import AuditLedgerServiceAsync
 
 
 class PolicyRulesServiceError(Exception):
@@ -104,10 +103,15 @@ class PolicyRulesService:
     - Retirement creates audit trail
     """
 
-    def __init__(self, session: "AsyncSession"):
+    def __init__(self, session: "AsyncSession", audit: Any = None):
+        """
+        Args:
+            session: Async SQLAlchemy Session
+            audit: Audit service instance (injected by L4 handler, PIN-504).
+        """
         self._session = session
         self._driver = get_policy_rules_driver(session)
-        self._audit = AuditLedgerServiceAsync(session)
+        self._audit = audit
 
     async def create(
         self,
@@ -185,15 +189,16 @@ class PolicyRulesService:
             }
 
             # Emit audit event (PIN-413: Logs Domain)
-            # Must be inside transaction - commits with state change
-            await self._audit.policy_rule_created(
-                tenant_id=tenant_id,
-                rule_id=rule_id,
-                actor_id=created_by,
-                actor_type=ActorType.HUMAN if created_by else ActorType.SYSTEM,
-                reason=f"Rule created: {rule.name}",
-                rule_state=rule_state,
-            )
+            # Audit service injected by L4 handler (PIN-504)
+            if self._audit:
+                await self._audit.policy_rule_created(
+                    tenant_id=tenant_id,
+                    rule_id=rule_id,
+                    actor_id=created_by,
+                    actor_type=ActorType.HUMAN if created_by else ActorType.SYSTEM,
+                    reason=f"Rule created: {rule.name}",
+                    rule_state=rule_state,
+                )
 
         return self._to_response(rule)
 
@@ -258,15 +263,17 @@ class PolicyRulesService:
                 }
 
                 # Emit retirement audit event (PIN-413)
-                await self._audit.policy_rule_retired(
-                    tenant_id=tenant_id,
-                    rule_id=rule_id,
-                    actor_id=updated_by,
-                    actor_type=ActorType.HUMAN if updated_by else ActorType.SYSTEM,
-                    reason=request.retirement_reason,
-                    before_state=before_state,
-                    after_state=after_state,
-                )
+                # Audit service injected by L4 handler (PIN-504)
+                if self._audit:
+                    await self._audit.policy_rule_retired(
+                        tenant_id=tenant_id,
+                        rule_id=rule_id,
+                        actor_id=updated_by,
+                        actor_type=ActorType.HUMAN if updated_by else ActorType.SYSTEM,
+                        reason=request.retirement_reason,
+                        before_state=before_state,
+                        after_state=after_state,
+                    )
             else:
                 # Update mutable fields
                 if request.name is not None:
@@ -291,15 +298,17 @@ class PolicyRulesService:
                 }
 
                 # Emit modification audit event (PIN-413)
-                await self._audit.policy_rule_modified(
-                    tenant_id=tenant_id,
-                    rule_id=rule_id,
-                    actor_id=updated_by,
-                    actor_type=ActorType.HUMAN if updated_by else ActorType.SYSTEM,
-                    reason=f"Rule modified: {rule.name}",
-                    before_state=before_state,
-                    after_state=after_state,
-                )
+                # Audit service injected by L4 handler (PIN-504)
+                if self._audit:
+                    await self._audit.policy_rule_modified(
+                        tenant_id=tenant_id,
+                        rule_id=rule_id,
+                        actor_id=updated_by,
+                        actor_type=ActorType.HUMAN if updated_by else ActorType.SYSTEM,
+                        reason=f"Rule modified: {rule.name}",
+                        before_state=before_state,
+                        after_state=after_state,
+                    )
 
         return self._to_response(rule)
 

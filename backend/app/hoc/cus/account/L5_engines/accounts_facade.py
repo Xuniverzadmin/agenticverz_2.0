@@ -340,13 +340,8 @@ class AcceptInvitationResult:
 # =============================================================================
 
 
-@dataclass
-class AccountsErrorResult:
-    """Error result for accounts operations."""
-
-    error: str
-    message: str
-    status_code: int = 400
+# Re-export from L5_schemas for backward compatibility (PIN-504)
+from app.hoc.cus.account.L5_schemas.result_types import AccountsErrorResult  # noqa: F401
 
 
 # =============================================================================

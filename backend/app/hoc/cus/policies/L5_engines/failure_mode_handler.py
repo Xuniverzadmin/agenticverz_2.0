@@ -24,7 +24,7 @@ Key Principle: FAIL-CLOSED by default.
 If policy evaluation fails, the system MUST block the action, not allow it.
 
 Imports (Dependencies):
-    - app.services.governance.profile: get_governance_config
+    - app.hoc.hoc_spine.authority.profile_policy_mode: get_governance_config
 
 Exports (Provides):
     - handle_policy_failure(error, context) -> FailureDecision
@@ -93,8 +93,8 @@ def get_failure_mode() -> FailureMode:
         FailureMode from governance config, defaulting to FAIL_CLOSED
     """
     try:
-        # L5 engine import (migrated to HOC per SWEEP-03)
-        from app.hoc.cus.general.L5_engines.profile_policy_mode import get_governance_config
+        # V2.0.0 - hoc_spine authority
+        from app.hoc.hoc_spine.authority.profile_policy_mode import get_governance_config
 
         config = get_governance_config()
 

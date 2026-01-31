@@ -1,78 +1,23 @@
-# Layer: L7 — Legacy Shim (DEPRECATED)
+# Layer: L7 — Legacy Shim (DEPRECATED — DISCONNECTED)
 # AUDIENCE: INTERNAL
-# Role: Backward-compatible re-export for lessons engine
-# Status: DEPRECATED - Will be deleted when callers migrate to direct HOC imports
+# Role: DISCONNECTED legacy shim — no longer imports from HOC
+# Status: DISCONNECTED (2026-01-31) — legacy↔HOC link severed
 #
-# MIGRATION PATH:
-#   Current:  from app.services.policy.lessons_engine import get_lessons_learned_engine
-#   Future:   from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
+# Previously re-exported from:
+#   app.hoc.cus.policies.L5_engines.lessons_engine
 #
-# This shim exists for Phase-2.5 migration. Delete when all callers are updated.
-# Reference: PIN-468, POLICIES_CROSS_DOMAIN_OWNERSHIP.md
+# This shim is now EMPTY. Callers should migrate to direct HOC imports:
+#   from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
 #
-# CANONICAL SOURCE: app/hoc/cus/policies/L5_engines/lessons_engine.py
+# TODO: Delete this file once all legacy callers are verified migrated.
+# Reference: PIN-468, PIN-495
 
 """
-Lessons Engine - DEPRECATED SHIM
+Lessons Engine - DISCONNECTED LEGACY SHIM
 
-This file re-exports from the canonical incidents domain engine.
-Do not add logic here. All implementation is in:
-    app.hoc.cus.policies.L5_engines.lessons_engine
+This file previously re-exported from the HOC policies domain.
+The legacy↔HOC connection has been severed (2026-01-31).
 
-Migration: Update imports to use the canonical path directly.
+All callers should use the canonical HOC path:
+    from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
 """
-
-# Re-export everything from canonical source
-from app.hoc.cus.policies.L5_engines.lessons_engine import (
-    # Constants
-    DEBOUNCE_WINDOW_HOURS,
-    LESSON_STATUS_CONVERTED,
-    LESSON_STATUS_DEFERRED,
-    LESSON_STATUS_DISMISSED,
-    LESSON_STATUS_PENDING,
-    LESSON_TYPE_CRITICAL_SUCCESS,
-    LESSON_TYPE_FAILURE,
-    LESSON_TYPE_NEAR_THRESHOLD,
-    LESSONS_CREATION_FAILED,
-    NEAR_THRESHOLD_PERCENT,
-    SEVERITY_CRITICAL,
-    SEVERITY_HIGH,
-    SEVERITY_LOW,
-    SEVERITY_MEDIUM,
-    SEVERITY_NONE,
-    THRESHOLD_BANDS,
-    # Functions
-    get_lessons_learned_engine,
-    get_threshold_band,
-    is_valid_transition,
-    utc_now,
-    # Classes
-    LessonsLearnedEngine,
-)
-
-__all__ = [
-    # Constants
-    "DEBOUNCE_WINDOW_HOURS",
-    "LESSON_STATUS_CONVERTED",
-    "LESSON_STATUS_DEFERRED",
-    "LESSON_STATUS_DISMISSED",
-    "LESSON_STATUS_PENDING",
-    "LESSON_TYPE_CRITICAL_SUCCESS",
-    "LESSON_TYPE_FAILURE",
-    "LESSON_TYPE_NEAR_THRESHOLD",
-    "LESSONS_CREATION_FAILED",
-    "NEAR_THRESHOLD_PERCENT",
-    "SEVERITY_CRITICAL",
-    "SEVERITY_HIGH",
-    "SEVERITY_LOW",
-    "SEVERITY_MEDIUM",
-    "SEVERITY_NONE",
-    "THRESHOLD_BANDS",
-    # Functions
-    "get_lessons_learned_engine",
-    "get_threshold_band",
-    "is_valid_transition",
-    "utc_now",
-    # Classes
-    "LessonsLearnedEngine",
-]

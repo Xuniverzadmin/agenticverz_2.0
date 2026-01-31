@@ -71,7 +71,7 @@ class PoliciesEnforcementHandler:
     """
 
     async def execute(self, ctx: OperationContext) -> OperationResult:
-        from app.hoc.cus.policies.L5_engines.cus_enforcement_service import (
+        from app.hoc.cus.policies.L5_engines.cus_enforcement_engine import (
             get_cus_enforcement_service,
         )
 
@@ -189,6 +189,7 @@ class PoliciesLimitsHandler:
 
     Dispatches to PolicyLimitsService (create, update, delete).
     Error classes (LimitNotFoundError, etc.) are translated to OperationResult.fail.
+    Injects audit service into L5 engine (PIN-504: no cross-domain imports).
     """
 
     async def execute(self, ctx: OperationContext) -> OperationResult:
@@ -199,12 +200,17 @@ class PoliciesLimitsHandler:
             PolicyLimitsService,
             PolicyLimitsServiceError,
         )
+        from app.hoc.cus.logs.L6_drivers.audit_ledger_service_async import (
+            AuditLedgerServiceAsync,
+        )
 
         method_name = ctx.params.get("method")
         if not method_name:
             return OperationResult.fail("Missing 'method' in params", "MISSING_METHOD")
 
-        service = PolicyLimitsService(ctx.session)
+        # L4 creates audit service and injects into L5 engine (PIN-504)
+        audit = AuditLedgerServiceAsync(ctx.session)
+        service = PolicyLimitsService(ctx.session, audit=audit)
         method = getattr(service, method_name, None)
         if method is None:
             return OperationResult.fail(f"Unknown limits method: {method_name}", "UNKNOWN_METHOD")
@@ -233,6 +239,7 @@ class PoliciesRulesHandler:
 
     Dispatches to PolicyRulesService (create, update).
     Error classes translated to OperationResult.fail.
+    Injects audit service into L5 engine (PIN-504: no cross-domain imports).
     """
 
     async def execute(self, ctx: OperationContext) -> OperationResult:
@@ -242,12 +249,17 @@ class PoliciesRulesHandler:
             RuleNotFoundError,
             RuleValidationError,
         )
+        from app.hoc.cus.logs.L6_drivers.audit_ledger_service_async import (
+            AuditLedgerServiceAsync,
+        )
 
         method_name = ctx.params.get("method")
         if not method_name:
             return OperationResult.fail("Missing 'method' in params", "MISSING_METHOD")
 
-        service = PolicyRulesService(ctx.session)
+        # L4 creates audit service and injects into L5 engine (PIN-504)
+        audit = AuditLedgerServiceAsync(ctx.session)
+        service = PolicyRulesService(ctx.session, audit=audit)
         method = getattr(service, method_name, None)
         if method is None:
             return OperationResult.fail(f"Unknown rules method: {method_name}", "UNKNOWN_METHOD")
@@ -308,7 +320,7 @@ class PoliciesSimulateHandler:
     """
 
     async def execute(self, ctx: OperationContext) -> OperationResult:
-        from app.hoc.cus.policies.L5_engines.limits_simulation_service import (
+        from app.hoc.cus.policies.L5_engines.limits_simulation_engine import (
             LimitsSimulationService,
             LimitsSimulationServiceError,
             TenantNotFoundError,

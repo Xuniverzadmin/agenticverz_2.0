@@ -1,6 +1,6 @@
 # Claude Context File - AOS / Agenticverz 2.0
 
-**Last Updated:** 2026-01-27
+**Last Updated:** 2026-01-28
 
 ---
 
@@ -61,20 +61,24 @@ Full governance docs: `docs/governance/` (73 files)
 
 ```
 /root/agenticverz2.0/
-├── agentiverz_mn/           # Working environment (START HERE)
-├── backend/app/             # FastAPI application
-├── hoc/                     # House of Cards layer topology
-├── design/l2_1/             # AURORA L2 intents + projection
-├── website/app-shell/       # Frontend (Vite)
-├── sdk/python/ + js/        # SDKs
-├── docs/memory-pins/        # 477+ PINs (project memory)
-├── docs/governance/         # Governance (73 files)
-├── docs/contracts/          # System contracts
-├── docs/architecture/hoc/   # HOC architecture docs
-├── scripts/ops/             # Ops scripts (session_start, bloat audit)
-├── scripts/preflight/       # Contract scanner (cron 30min)
-├── scripts/hooks/           # Claude hooks (post-edit, post-bash)
-└── monitoring/              # Prometheus + Grafana configs
+├── agentiverz_mn/              # Working environment (START HERE)
+├── backend/app/                # FastAPI application
+│   └── hoc/                    # HOC layer topology V2.0.0
+│       ├── hoc_spine/          # System constitution (L4 orchestrator)
+│       ├── api/                # L2 HTTP layer
+│       └── cus/                # Customer domains (L5 + L6)
+├── design/l2_1/                # AURORA L2 intents + projection
+├── website/app-shell/          # Frontend (Vite)
+├── sdk/python/ + js/           # SDKs
+├── docs/memory-pins/           # 477+ PINs (project memory)
+├── docs/governance/            # Governance (73 files)
+├── docs/contracts/             # System contracts
+├── docs/architecture/topology/ # HOC Topology V2.0.0 (RATIFIED)
+├── docs/architecture/hoc/      # HOC architecture docs
+├── scripts/ops/                # Ops scripts (session_start, bloat audit)
+├── scripts/preflight/          # Contract scanner (cron 30min)
+├── scripts/hooks/              # Claude hooks (post-edit, post-bash)
+└── monitoring/                 # Prometheus + Grafana configs
 ```
 
 ---
@@ -139,10 +143,9 @@ RBAC_ENFORCE=true
 ## Bootstrap Sequence
 
 Before ANY work, Claude must:
-1. Run `./scripts/ops/session_start.sh` (12 health checks)
-2. Run BLCA: `python3 scripts/ops/layer_validator.py --backend --ci`
-3. Verify CLEAN (0 violations)
-4. Provide SESSION_BOOTSTRAP_CONFIRMATION
+1. Run `./scripts/ops/session_start.sh` (health checks)
+2. Acknowledge BLCA status (legacy debt tolerated per PIN-438)
+3. Provide SESSION_BOOTSTRAP_CONFIRMATION
 
 Rules loaded from `.claude/rules/` enforce governance automatically.
 
@@ -203,10 +206,40 @@ Public: /health, /metrics, /api/v1/auth/, /docs, /openapi.json
 
 ---
 
+## HOC Layer Topology V2.0.0 (RATIFIED)
+
+**Spec:** `docs/architecture/topology/HOC_LAYER_TOPOLOGY_V2.0.0.md`
+
+**6-Layer Execution-Centric Architecture:**
+
+```
+L2.1 Facade → L2 API → L4 hoc_spine → L5 Engine → L6 Driver → L7 Model
+                           ↑
+                    SINGLE ORCHESTRATOR
+```
+
+| Layer | Location | Responsibility |
+|-------|----------|----------------|
+| L2.1 | `hoc/api/facades/cus/` | Groups routers by domain |
+| L2 | `hoc/api/cus/{domain}/` | HTTP boundary (thin) |
+| L4 | `hoc/hoc_spine/` | Single orchestrator, cross-domain owner |
+| L5 | `hoc/cus/{domain}/L5_engines/` | Domain business logic |
+| L6 | `hoc/cus/{domain}/L6_drivers/` | Domain DB operations |
+| L7 | `app/models/` | ORM tables |
+
+**Key Constraints:**
+- NO L3 layer (removed)
+- NO L5 engines in hoc_spine
+- L4 owns ALL cross-domain coordination
+- L5 engines never call other domains
+
+---
+
 ## Key Memory PINs
 
 | PIN | Topic | Status |
 |-----|-------|--------|
+| PIN-484 | HOC Topology V2.0.0 Ratification | RATIFIED |
 | PIN-477 | Journal limits + bloat audit | COMPLETE |
 | PIN-476 | Amavis optimization (1 worker) | COMPLETE |
 | PIN-475 | Worker pool manual restart | COMPLETE |

@@ -19,7 +19,7 @@ For CUSTOMER account operations:
     from app.hoc.cus.account.L5_engines import get_accounts_facade
 """
 
-from app.hoc.cus.account.L5_engines.email_verification import (
+from app.hoc.cus.account.L5_engines.email_verification_engine import (
     EmailVerificationService,
     EmailVerificationError,
     VerificationResult,

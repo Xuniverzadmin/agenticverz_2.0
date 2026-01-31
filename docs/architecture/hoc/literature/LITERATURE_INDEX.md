@@ -115,6 +115,11 @@
 - [account/L5_other.md](11_account/L5_other.md)
 - [account/L6_drivers.md](11_account/L6_drivers.md)
 
+## Topology
+- [Topology Index](../../topology/INDEX.md) — Proposals, reviews, and ratified topology specs
+- [HOC_SPINE_TOPOLOGY_PROPOSAL.md](../../topology/HOC_SPINE_TOPOLOGY_PROPOSAL.md) — V1.5.0 proposal (REVIEWED)
+- [HOC_SPINE_TOPOLOGY_REVIEW.md](../../topology/HOC_SPINE_TOPOLOGY_REVIEW.md) — Architectural review & decisions
+
 ## Cross-Domain Documents
 - [GAP_REGISTER.md](GAP_REGISTER.md)
 - [WIRING_VIOLATIONS.md](WIRING_VIOLATIONS.md)

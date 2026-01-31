@@ -44,7 +44,7 @@ from typing import Any, List, Optional
 from sqlalchemy import and_, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.hoc.cus.general.L5_utils.time import utc_now
+from app.hoc.hoc_spine.services.time import utc_now
 
 # L7 model imports (allowed in L6)
 from app.models.audit_ledger import AuditLedger

@@ -61,7 +61,7 @@ from sqlmodel import Session, select
 
 from app.db import get_engine
 from app.models.cus_models import CusHealthState, CusIntegration
-from app.hoc.cus.general.L5_engines.cus_credential_service import CusCredentialService
+from app.hoc.hoc_spine.services.cus_credential_service import CusCredentialService
 
 logger = logging.getLogger(__name__)
 

@@ -1654,8 +1654,8 @@ async def post_goal(
         # the run is queued for L5 execution.
         # Reference: PIN-257 Phase R-2 (L5→L4 Violation Fix)
         try:
-            # L4 runtime engine import (migrated to HOC per SWEEP-35)
-            from app.hoc.cus.general.L4_runtime.engines.plan_generation_engine import generate_plan_for_run
+            # L4 runtime engine import (V2.0.0 - hoc_spine)
+            from app.hoc.hoc_spine.orchestrator.plan_generation_engine import generate_plan_for_run
 
             plan_result = generate_plan_for_run(
                 agent_id=agent_id,

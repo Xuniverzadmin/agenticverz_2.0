@@ -159,6 +159,10 @@ Phase 4 focuses on wiring general domain services to other customer domains.
 
 | Document | Location | Status | Description |
 |----------|----------|--------|-------------|
+| **L2→L4→L5 Construction Plan** | [`L2-L4-L5_CONSTRUCTION_PLAN.md`](L2-L4-L5_CONSTRUCTION_PLAN.md) | **PROPOSED** | 3-phase plan: 32 loop constructions (A), 153 orphan classifications (B), CI freeze (C) |
+
+| Document | Location | Status | Description |
+|----------|----------|--------|-------------|
 | General Domain Wiring Phase 1 | [`GENERAL_DOMAIN_WIRING_PHASE1.md`](GENERAL_DOMAIN_WIRING_PHASE1.md) | **RESEARCH COMPLETE** | Analysis of general→domain wiring gaps |
 | General Domain Wiring Phase 2 | [`GENERAL_DOMAIN_WIRING_PHASE2.md`](GENERAL_DOMAIN_WIRING_PHASE2.md) | **RESEARCH COMPLETE** | Comprehensive function catalog of general domain |
 | Authority Violation Spec v1 | [`AUTHORITY_VIOLATION_SPEC_V1.md`](AUTHORITY_VIOLATION_SPEC_V1.md) | **DRAFT** | First-principles authority enforcement specification |
@@ -168,6 +172,24 @@ Phase 4 focuses on wiring general domain services to other customer domains.
 | Authority Violations Report | [`HOC_AUTHORITY_VIOLATIONS.yaml`](HOC_AUTHORITY_VIOLATIONS.yaml) | **GENERATED** | Automated violation scan output |
 | **TRANSACTION_BYPASS Checklist** | [`TRANSACTION_BYPASS_REMEDIATION_CHECKLIST.md`](TRANSACTION_BYPASS_REMEDIATION_CHECKLIST.md) | **ACTIVE** | Step-by-step remediation for session.commit violations |
 | **Remediation Report** | [`TRANSACTION_BYPASS_REMEDIATION_REPORT_2026-01-25.md`](TRANSACTION_BYPASS_REMEDIATION_REPORT_2026-01-25.md) | **IN PROGRESS** | Progress report: 2/5 P1 files, 6 commits removed, 131 CRITICAL remaining |
+| **L5 Pairing Gap Detector** | [`scripts/ops/l5_spine_pairing_gap_detector.py`](../../../scripts/ops/l5_spine_pairing_gap_detector.py) | **ACTIVE** | AST-based scanner: L5 engines wired via L4 vs direct L2→L5 gaps |
+| **Spine Literature Validator** | [`scripts/ops/hoc_spine_study_validator.py`](../../../scripts/ops/hoc_spine_study_validator.py) | **UPGRADED** | Now generates Export Contract, Import Boundary, L5 Pairing Declaration sections |
+| **Spine Literature Index** | [`literature/INDEX.md`](../../../literature/INDEX.md) | **REGENERATED** | Master index with violation roll-up |
+
+**L5 Pairing Gap Summary (PIN-491, 2026-01-30):**
+
+| Metric | Initial | After A.1 |
+|--------|---------|-----------|
+| Total L5 engines | 185 | 185 |
+| Wired via L4 orchestrator | 0 | **10** |
+| Direct L2→L5 (gaps) | 32 | **22** |
+| Orphaned (no callers) | 153 | 153 |
+
+**Construction Plan Progress:**
+- **A.0** ✅ `operation_registry.py` + `OperationHandler` protocol + 16 invariant tests
+- **A.1** ✅ 10 facade-pattern operations wired (6 handler modules, 10 L2 files updated, 72 registry calls)
+- **A.2** 🔧 Logs compound facades (6 operations)
+- **A.3–A.5** ⬜ Controls, Activity, Policies (15 operations)
 
 **Phase 4 Research Summary (2026-01-25):**
 
@@ -454,6 +476,9 @@ This index is referenced in `/CLAUDE.md` under:
 | 2026-01-25 | **Authority Analyzer v1.0 ACTIVE** — Mechanical enforcer implemented at `scripts/ops/hoc_authority_analyzer.py`. Scans HOC customer domains for authority violations. First scan: 448 files, 1147 violations (137 CRITICAL, 1010 HIGH). Violations by type: TIME_LEAK (903), TRANSACTION_BYPASS (116), AUTHORITY_LEAK (109), ORCHESTRATION_LEAK (19). Top domains: general (235), policies (227), logs (198). Supports `--check` for CI integration. | Claude |
 | 2026-01-25 | **TRANSACTION_BYPASS Remediation Checklist v1.0** — Step-by-step guide for eliminating session.commit() from L6 drivers. Target: 116→0 violations. Defines session injection patterns (constructor, method, context), common pitfalls, verification steps, and CI gate criteria. Fixed transaction_coordinator.py header (L6→L4). | Claude |
 | 2026-01-25 | **TRANSACTION_BYPASS Remediation: 2/5 P1 files complete** — Remediated `policies/L6_drivers/alert_emitter.py` (4 commits removed) and `policies/L6_drivers/recovery_matcher.py` (2 commits removed). Applied 6 governing principles: L6 no commit, session required, no session creation, no singletons, orphans valid targets, one-way dependency. CRITICAL: 137→131 (-6). Report: `TRANSACTION_BYPASS_REMEDIATION_REPORT_2026-01-25.md`. | Claude |
+| 2026-01-30 | **PIN-491 HOC Spine Literature Upgrade + L5 Pairing Gap Detector** — Upgraded 65 literature files with Export Contract, Import Boundary, L5 Pairing Declaration sections. Created `l5_spine_pairing_gap_detector.py`: 185 L5 engines scanned, 0 wired via L4, 32 direct L2→L5 gaps, 153 orphaned. Validator upgraded with boundary validation. | Claude |
+| 2026-01-30 | **Phase A.0 COMPLETE** — Built `operation_registry.py` (OperationRegistry, OperationHandler protocol, OperationContext, OperationResult). 16 invariant tests at `hoc_spine/tests/test_operation_registry.py`. Created `handlers/__init__.py` with `register_all_handlers()`. | Claude |
+| 2026-01-30 | **Phase A.1 COMPLETE** — Wired 10 facade-pattern operations through L4 registry. Created 6 handler modules (overview, account, analytics, api_keys, incidents, integrations). Updated 10 L2 API files (72 registry.execute() calls). Gap detector: 32→22 gaps, 0→10 wired. | Claude |
 
 ---
 

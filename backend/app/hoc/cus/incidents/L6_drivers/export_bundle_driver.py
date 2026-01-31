@@ -56,7 +56,7 @@ from app.traces.store import TraceStore
 logger = logging.getLogger("nova.services.export_bundle")
 
 
-class ExportBundleService:
+class ExportBundleDriver:
     """Generate structured export bundles from incidents/traces."""
 
     def __init__(self, trace_store: Optional[TraceStore] = None):
@@ -410,12 +410,19 @@ class ExportBundleService:
 
 
 # Singleton instance
-_export_bundle_service: Optional[ExportBundleService] = None
+_export_bundle_driver: Optional[ExportBundleDriver] = None
+
+# Backward-compatible alias (deprecated, use get_export_bundle_driver)
+ExportBundleService = ExportBundleDriver
 
 
-def get_export_bundle_service() -> ExportBundleService:
-    """Get or create ExportBundleService singleton."""
-    global _export_bundle_service
-    if _export_bundle_service is None:
-        _export_bundle_service = ExportBundleService()
-    return _export_bundle_service
+def get_export_bundle_driver() -> ExportBundleDriver:
+    """Get or create ExportBundleDriver singleton."""
+    global _export_bundle_driver
+    if _export_bundle_driver is None:
+        _export_bundle_driver = ExportBundleDriver()
+    return _export_bundle_driver
+
+
+# Backward-compatible alias (deprecated, use get_export_bundle_driver)
+get_export_bundle_service = get_export_bundle_driver

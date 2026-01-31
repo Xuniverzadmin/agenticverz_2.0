@@ -1,4 +1,5 @@
-# Layer: L4 — Domain Engine (System Truth)
+# Layer: L5 — Domain Engine (System Truth)
+# NOTE: Header corrected L4→L5 (2026-01-31) — file is in L5_engines/
 # Product: system-wide (NOT console-owned)
 # Callers: L4 services (L5 no longer imports this module)
 # Reference: PIN-257 Phase R-4 (L5→L4 Violation Fix)

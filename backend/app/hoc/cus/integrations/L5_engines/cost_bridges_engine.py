@@ -48,8 +48,8 @@ from ..schemas.loop_events import (
     ensure_json_serializable,
 )
 
-# Rewired to L4_runtime (Sweep-02A)
-from app.hoc.cus.general.L4_runtime.engines import create_incident_from_cost_anomaly_sync
+# V2.0.0 - hoc_spine orchestrator
+from app.hoc.hoc_spine.orchestrator import create_incident_from_cost_anomaly_sync
 
 logger = logging.getLogger("nova.integrations.cost")
 

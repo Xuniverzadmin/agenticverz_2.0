@@ -1,6 +1,6 @@
 # HOC Literature Generation Plan
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Status:** ACTIVE
 **Created:** 2026-01-28
 **Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
@@ -19,10 +19,11 @@ Generate prescriptive architecture documentation for every file in `hoc/cus/` �
 
 | Included | Excluded |
 |----------|----------|
-| `hoc/cus/` (11 customer domains) | L1 Frontend (separate project) |
-| L2 APIs through L7 Models | `app/api/` (legacy, redundant) |
-| `app/models/` (L7 shared) | `app/services/` (legacy, redundant) |
-| Prescriptive wiring | Descriptive "how it works today" |
+| `hoc/cus/` (11 customer domains) | L1 Frontend (separate project, DEFERRED) |
+| L2.1 Facades through L6 Drivers | L7 Models (DEFERRED) |
+| Prescriptive wiring | `app/api/` (legacy, redundant) |
+| | `app/services/` (legacy, redundant) |
+| | Descriptive "how it works today" |
 
 ---
 
@@ -120,19 +121,9 @@ Generate prescriptive architecture documentation for every file in `hoc/cus/` �
 - Owns query logic — engines never write SQL
 - MUST NOT contain business logic
 
-### L7 Models — ORM TABLES
+### L7 Models — DEFERRED
 
-**Objective:** SQLModel/SQLAlchemy table definitions. Leaf node.
-
-**3 Classification Buckets:**
-
-| Bucket | Definition | Action |
-|--------|------------|--------|
-| **System Invariant** | Shared platform tables (tenant, base, audit) | STAYS in `app/models/` — never moves |
-| **Domain-Owned** | Data used by exactly 1 domain | FLAG: domain-localized data candidate (human decision) |
-| **Cross-Domain Fact** | Data consumed by 2+ domains | STAYS shared — cross-domain fact table |
-
-**Gap:** Domain-specific models (`app/cus/models/{domain}/`) do not exist yet. DB migration required.
+> L7 model classification, domain-specific model design, and DB migration are out of scope for this phase. Will be addressed in a separate plan.
 
 ---
 
@@ -149,7 +140,7 @@ L2.1 → L2 → L3 ─┬─→ L4 → L5 → L6 → L7
 | L2.1, L2 | FORBIDDEN | Stay within audience/domain |
 | **L3** | **ALLOWED** | Aggregation point for multi-domain data |
 | L4 | Same audience only | Shared runtime per audience |
-| L5, L6, L7 | FORBIDDEN | Domain isolation |
+| L5, L6 | FORBIDDEN | Domain isolation |
 
 ---
 
@@ -166,7 +157,6 @@ L2.1 → L2 → L3 ─┬─→ L4 → L5 → L6 → L7
 | Classify layer + domain | Path regex | Layer and domain assignment |
 | Apply LAYER_CONTRACT rules | Import analysis vs rules | Violations |
 | Detect missing pieces | Layer presence analysis | Gaps |
-| Classify L7 models | Usage analysis (3 buckets) | Model classification |
 | Find callers | ripgrep across backend/ | Current caller map (reference only) |
 
 ### What it does NOT do
@@ -187,7 +177,7 @@ L2.1 → L2 → L3 ─┬─→ L4 → L5 → L6 → L7
 
 **JSON (machine-readable):**
 - `literature_index.json` — Full parsed inventory per domain
-- `gap_register.json` — Gaps + L7 model classifications
+- `gap_register.json` — Gaps (L2.1 through L6)
 - `violations.json` — All violations with file, line, rule, fix
 
 ### Running
@@ -238,7 +228,6 @@ python scripts/ops/hoc_literature_generator.py --csv path/to/audit.csv --output 
 |----------|-------|---------|
 | L2.1 Facade | 11 | All domains — none built yet |
 | L3 Adapter | 6 | general, overview, activity, controls, apis, account |
-| L7 Models | 5 | controls, apis, overview, activity, account |
 | L6 Driver | 7 | L5 engines with DB imports but no matching driver |
 | L2 API | 2 | controls, apis — no route handlers |
 
@@ -249,24 +238,27 @@ python scripts/ops/hoc_literature_generator.py --csv path/to/audit.csv --output 
 | Phase | What | Prerequisite |
 |-------|------|-------------|
 | **DONE** | Literature generator built + first run | Audit CSV |
-| **NEXT** | Fix L7 model classification (currently 0 — CSV doesn't pass model paths correctly) | Script fix |
 | **NEXT** | Fix caller discovery (ripgrep patterns too narrow) | Script fix |
 | P1 | Review literature per domain — human validates prescriptive wiring | Literature outputs |
 | P2 | Build L2.1 facades (11 files, mechanical — group routers) | P1 approval |
 | P3 | Build missing L3 adapters (6 domains) | P1 approval |
-| P4 | Extract L5→L7 violations to L6 drivers | P1 approval |
-| P5 | Design domain-specific L7 models (human decision per model) | P1 + DBA review |
-| P6 | DB migration for domain models | P5 approval |
+| P4 | Extract L5→L6 violations (L5 engines doing DB directly → create L6 drivers) | P1 approval |
+| **DEFERRED** | L7 model classification + domain-specific models + DB migration | Separate plan |
+| **DEFERRED** | L1 Frontend | Separate project |
 
 ---
 
 ## Known Script Issues (to fix)
 
-1. **L7 model classification shows 0** — CSV "L7 File Paths" column contains `backend/app/models/` paths but the layer classifier doesn't match them to consuming domains properly. Need to scan L6 driver imports to build the usage map.
+1. **Caller discovery shows 0** — ripgrep patterns need broadening. Current patterns match exact module paths, but many imports use relative or shortened forms.
 
-2. **Caller discovery shows 0** — ripgrep patterns need broadening. Current patterns match exact module paths, but many imports use relative or shortened forms.
+2. **6 .tsx parse failures** — Expected. AST parser is Python-only. Frontend files should be excluded from CSV (L1 removed from scope).
 
-3. **6 .tsx parse failures** — Expected. AST parser is Python-only. Frontend files should be excluded from CSV (L1 removed from scope).
+## Deferred (separate plan)
+
+- L7 model classification (3-bucket: system invariant / domain-owned / cross-domain fact)
+- Domain-specific model design + DB migration
+- L1 Frontend
 
 ---
 

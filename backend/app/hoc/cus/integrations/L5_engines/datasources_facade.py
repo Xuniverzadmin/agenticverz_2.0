@@ -41,7 +41,7 @@ L2 API Routes (GAP-113):
 - GET /api/v1/datasources/stats (statistics)
 
 Usage:
-    from app.services.datasources.facade import get_datasources_facade
+    from app.hoc.cus.integrations.L5_engines.datasources_facade import get_datasources_facade
 
     facade = get_datasources_facade()
 

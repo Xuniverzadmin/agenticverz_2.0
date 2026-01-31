@@ -59,8 +59,8 @@ from app.evidence.capture import capture_environment_evidence
 from app.models.tenant import WorkerRun
 from app.policy.engine import PolicyEngine
 from app.schemas.response import wrap_dict
-# L6 driver import (migrated to HOC per SWEEP-26)
-from app.hoc.cus.general.L6_drivers.worker_write_service_async import WorkerWriteServiceAsync
+# V2.0.0 - hoc_spine drivers
+from app.hoc.hoc_spine.drivers.worker_write_service_async import WorkerWriteServiceAsync
 
 logger = logging.getLogger("nova.api.workers")
 

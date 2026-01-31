@@ -1,5 +1,6 @@
-# Layer: L6 — Driver
+# Layer: L5 — Domain Engine (Facade)
 # AUDIENCE: CUSTOMER
+# NOTE: Header corrected L6→L5 (2026-01-31) — file is in L5_engines/, acts as facade
 # Role: Governance Facade - Centralized access to governance control operations
 # Product: system-wide
 # Temporal:
@@ -197,7 +198,7 @@ class GovernanceFacade:
         )
 
         try:
-            from app.hoc.cus.general.L5_controls.drivers.runtime_switch import (
+            from app.hoc.hoc_spine.authority.runtime_switch import (
                 disable_governance_runtime,
                 get_governance_state,
                 is_governance_active,
@@ -261,7 +262,7 @@ class GovernanceFacade:
         )
 
         try:
-            from app.hoc.cus.general.L5_controls.drivers.runtime_switch import (
+            from app.hoc.hoc_spine.authority.runtime_switch import (
                 enable_governance_runtime,
                 is_governance_active,
             )
@@ -321,7 +322,7 @@ class GovernanceFacade:
         )
 
         try:
-            from app.hoc.cus.general.L5_controls.drivers.runtime_switch import (
+            from app.hoc.hoc_spine.authority.runtime_switch import (
                 enter_degraded_mode,
                 exit_degraded_mode,
                 enable_governance_runtime,
@@ -384,7 +385,7 @@ class GovernanceFacade:
             GovernanceStateResult with current state details
         """
         try:
-            from app.hoc.cus.general.L5_controls.drivers.runtime_switch import (
+            from app.hoc.hoc_spine.authority.runtime_switch import (
                 get_governance_state as get_runtime_state,
                 is_governance_active,
                 is_degraded_mode,
@@ -531,7 +532,7 @@ class GovernanceFacade:
             BootStatusResult with component health details
         """
         try:
-            from app.hoc.cus.general.L5_controls.drivers.runtime_switch import is_governance_active
+            from app.hoc.hoc_spine.authority.runtime_switch import is_governance_active
 
             # Check core components
             components = {

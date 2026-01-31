@@ -50,11 +50,11 @@ All DB operations delegated to PolicyLimitsDriver.
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 # L6 driver import (allowed)
-from app.hoc.cus.general.L5_utils.time import utc_now
-from app.hoc.cus.general.L6_drivers.cross_domain import generate_uuid
+from app.hoc.hoc_spine.services.time import utc_now
+from app.hoc.hoc_spine.drivers.cross_domain import generate_uuid
 from app.hoc.cus.controls.L6_drivers.policy_limits_driver import (
     PolicyLimitsDriver,
     get_policy_limits_driver,
@@ -74,7 +74,6 @@ from app.hoc.cus.controls.L5_schemas.policy_limits import (
     UpdatePolicyLimitRequest,
     PolicyLimitResponse,
 )
-from app.hoc.cus.logs.L6_drivers.audit_ledger_service_async import AuditLedgerServiceAsync
 
 
 class PolicyLimitsServiceError(Exception):
@@ -108,10 +107,16 @@ class PolicyLimitsService:
     - Deletions are soft (status = DISABLED)
     """
 
-    def __init__(self, session: "AsyncSession"):
+    def __init__(self, session: "AsyncSession", audit: Any = None):
+        """
+        Args:
+            session: Async SQLAlchemy Session
+            audit: Audit service instance (injected by L4 handler, PIN-504).
+                   Must have limit_created, limit_updated async methods.
+        """
         self._session = session
         self._driver = get_policy_limits_driver(session)
-        self._audit = AuditLedgerServiceAsync(session)
+        self._audit = audit
 
     async def create(
         self,
@@ -188,15 +193,16 @@ class PolicyLimitsService:
             }
 
             # Emit audit event (PIN-413: Logs Domain)
-            # Must be inside transaction - commits with state change
-            await self._audit.limit_created(
-                tenant_id=tenant_id,
-                limit_id=limit_id,
-                actor_id=created_by,
-                actor_type=ActorType.HUMAN if created_by else ActorType.SYSTEM,
-                reason=f"Limit created: {limit.name}",
-                limit_state=limit_state,
-            )
+            # Audit service injected by L4 handler (PIN-504)
+            if self._audit:
+                await self._audit.limit_created(
+                    tenant_id=tenant_id,
+                    limit_id=limit_id,
+                    actor_id=created_by,
+                    actor_type=ActorType.HUMAN if created_by else ActorType.SYSTEM,
+                    reason=f"Limit created: {limit.name}",
+                    limit_state=limit_state,
+                )
 
         return self._to_response(limit)
 
@@ -271,16 +277,17 @@ class PolicyLimitsService:
             }
 
             # Emit audit event (PIN-413: Logs Domain)
-            # Must be inside transaction - commits with state change
-            await self._audit.limit_updated(
-                tenant_id=tenant_id,
-                limit_id=limit_id,
-                actor_id=updated_by,
-                actor_type=ActorType.HUMAN if updated_by else ActorType.SYSTEM,
-                reason=f"Limit updated: {limit.name}",
-                before_state=before_state,
-                after_state=after_state,
-            )
+            # Audit service injected by L4 handler (PIN-504)
+            if self._audit:
+                await self._audit.limit_updated(
+                    tenant_id=tenant_id,
+                    limit_id=limit_id,
+                    actor_id=updated_by,
+                    actor_type=ActorType.HUMAN if updated_by else ActorType.SYSTEM,
+                    reason=f"Limit updated: {limit.name}",
+                    before_state=before_state,
+                    after_state=after_state,
+                )
 
         return self._to_response(limit)
 

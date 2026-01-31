@@ -1,4 +1,5 @@
-# Layer: L4 — Domain Services
+# Layer: L5 — Domain (API Keys)
+# NOTE: Header corrected L4→L5 (2026-01-31) — this is a domain package, not L4 spine
 # AUDIENCE: CUSTOMER
 # Role: API Keys domain - Programmatic access
 # Reference: DIRECTORY_REORGANIZATION_PLAN.md, HOC_api_keys_analysis_v1.md

@@ -58,6 +58,46 @@ class IncidentsQueryHandler:
         return OperationResult.ok(data)
 
 
+class IncidentsWriteHandler:
+    """
+    Handler for incidents.write operations.
+
+    Dispatches to IncidentWriteService with audit service injection (PIN-504).
+    The L4 handler creates the audit service via lazy import (legal: L4→L5/L6)
+    and injects it into the L5 engine, avoiding cross-domain L5→L5 imports.
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.incidents.L5_engines.incident_write_engine import (
+            get_incident_write_service,
+        )
+        from app.hoc.cus.logs.L5_engines.audit_ledger_service import (
+            AuditLedgerService,
+        )
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail(
+                "Missing 'method' in params", "MISSING_METHOD"
+            )
+
+        # L4 creates audit service and injects into L5 engine (PIN-504)
+        audit = AuditLedgerService(ctx.session)
+        service = get_incident_write_service(ctx.session, audit=audit)
+
+        method = getattr(service, method_name, None)
+        if method is None:
+            return OperationResult.fail(
+                f"Unknown write method: {method_name}", "UNKNOWN_METHOD"
+            )
+
+        kwargs = dict(ctx.params)
+        kwargs.pop("method", None)
+        data = method(**kwargs)
+        return OperationResult.ok(data)
+
+
 def register(registry: OperationRegistry) -> None:
     """Register incidents operations with the registry."""
     registry.register("incidents.query", IncidentsQueryHandler())
+    registry.register("incidents.write", IncidentsWriteHandler())

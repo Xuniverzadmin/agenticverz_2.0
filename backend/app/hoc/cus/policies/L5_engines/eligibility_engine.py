@@ -71,8 +71,8 @@ from enum import Enum
 from typing import Any, Optional, Protocol
 from uuid import UUID
 
-# Rewired to L4_runtime (Sweep-02A)
-from app.hoc.cus.general.L4_runtime.engines import (
+# V2.0.0 - hoc_spine orchestrator
+from app.hoc.hoc_spine.orchestrator import (
     IssueType,
     RecommendedAction,
     Severity,
