@@ -13,7 +13,7 @@
 # Role: Cost snapshot computation with embedded DB operations
 # Callers: workers, cost services
 # Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
+# Forbidden Imports: L1, L2, L3, sqlalchemy ORM (session, query); sqlalchemy.text is permitted (PIN-507 Law 5)
 # Forbidden: session.commit(), session.rollback() — L5 DOES NOT COMMIT (L4 coordinator owns)
 # Note: This file contains L5 business logic with embedded L6 DB operations.
 #       Schemas have been extracted to schemas/cost_snapshot_schemas.py.
@@ -53,6 +53,7 @@ import hashlib
 import logging
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..schemas.cost_snapshot_schemas import (
@@ -246,7 +247,7 @@ class SnapshotComputer:
               AND created_at < :period_end
         """
         result = await self.session.execute(
-            __import__("sqlalchemy").text(tenant_query),
+            text(tenant_query),
             {
                 "tenant_id": tenant_id,
                 "period_start": period_start,
@@ -284,7 +285,7 @@ class SnapshotComputer:
             GROUP BY user_id
         """
         result = await self.session.execute(
-            __import__("sqlalchemy").text(user_query),
+            text(user_query),
             {
                 "tenant_id": tenant_id,
                 "period_start": period_start,
@@ -321,7 +322,7 @@ class SnapshotComputer:
             GROUP BY feature_tag
         """
         result = await self.session.execute(
-            __import__("sqlalchemy").text(feature_query),
+            text(feature_query),
             {
                 "tenant_id": tenant_id,
                 "period_start": period_start,
@@ -357,7 +358,7 @@ class SnapshotComputer:
             GROUP BY model
         """
         result = await self.session.execute(
-            __import__("sqlalchemy").text(model_query),
+            text(model_query),
             {
                 "tenant_id": tenant_id,
                 "period_start": period_start,
@@ -399,7 +400,7 @@ class SnapshotComputer:
             LIMIT 1
         """
         result = await self.session.execute(
-            __import__("sqlalchemy").text(query),
+            text(query),
             {
                 "tenant_id": tenant_id,
                 "entity_type": entity_type.value if isinstance(entity_type, EntityType) else entity_type,
@@ -442,7 +443,7 @@ class SnapshotComputer:
             DO UPDATE SET status = :status, version = cost_snapshots.version + 1
         """
         await self.session.execute(
-            __import__("sqlalchemy").text(query),
+            text(query),
             {
                 "id": snapshot.id,
                 "tenant_id": snapshot.tenant_id,
@@ -468,7 +469,7 @@ class SnapshotComputer:
             WHERE id = :id
         """
         await self.session.execute(
-            __import__("sqlalchemy").text(query),
+            text(query),
             {
                 "id": snapshot.id,
                 "status": snapshot.status.value,
@@ -504,7 +505,7 @@ class SnapshotComputer:
                 deviation_from_7d_pct = :deviation_from_7d_pct
         """
         await self.session.execute(
-            __import__("sqlalchemy").text(query),
+            text(query),
             {
                 "id": agg.id,
                 "snapshot_id": agg.snapshot_id,
@@ -576,7 +577,7 @@ class BaselineComputer:
         # Note: Can't use :window_days in interval directly, need to format
         formatted_query = query.replace(":window_days days", f"{window_days} days")
 
-        result = await self.session.execute(__import__("sqlalchemy").text(formatted_query), {"tenant_id": tenant_id})
+        result = await self.session.execute(text(formatted_query), {"tenant_id": tenant_id})
 
         for row in result.fetchall():
             baseline = SnapshotBaseline.create(
@@ -603,7 +604,7 @@ class BaselineComputer:
         """Insert baseline, marking old ones as not current."""
         # Mark existing baselines as not current
         await self.session.execute(
-            __import__("sqlalchemy").text(
+            text(
                 """
                 UPDATE cost_snapshot_baselines SET is_current = false
                 WHERE tenant_id = :tenant_id
@@ -623,7 +624,7 @@ class BaselineComputer:
 
         # Insert new baseline
         await self.session.execute(
-            __import__("sqlalchemy").text(
+            text(
                 """
                 INSERT INTO cost_snapshot_baselines (
                     id, tenant_id, entity_type, entity_id,
@@ -710,7 +711,7 @@ class SnapshotAnomalyDetector:
               AND baseline_7d_avg_cents IS NOT NULL
               AND baseline_7d_avg_cents > 0
         """
-        result = await self.session.execute(__import__("sqlalchemy").text(query), {"snapshot_id": snapshot_id})
+        result = await self.session.execute(text(query), {"snapshot_id": snapshot_id})
 
         for row in result.fetchall():
             deviation = row.deviation_from_7d_pct or 0
@@ -759,7 +760,7 @@ class SnapshotAnomalyDetector:
     async def _get_snapshot(self, snapshot_id: str) -> CostSnapshot | None:
         """Get snapshot by ID."""
         query = "SELECT * FROM cost_snapshots WHERE id = :id"
-        result = await self.session.execute(__import__("sqlalchemy").text(query), {"id": snapshot_id})
+        result = await self.session.execute(text(query), {"id": snapshot_id})
         row = result.fetchone()
         if row:
             return CostSnapshot(
@@ -790,7 +791,7 @@ class SnapshotAnomalyDetector:
             )
         """
         await self.session.execute(
-            __import__("sqlalchemy").text(query),
+            text(query),
             {
                 "id": evaluation.id,
                 "tenant_id": evaluation.tenant_id,
@@ -839,7 +840,7 @@ class SnapshotAnomalyDetector:
             )
         """
         await self.session.execute(
-            __import__("sqlalchemy").text(query),
+            text(query),
             {
                 "id": anomaly_id,
                 "tenant_id": evaluation.tenant_id,

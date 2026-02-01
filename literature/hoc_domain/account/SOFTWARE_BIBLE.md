@@ -153,3 +153,9 @@ _58 thin delegation functions._
 |--------|--------|-----------|
 | `L5_schemas/result_types.py` | **NEW** — Extracted `AccountsErrorResult` dataclass from `accounts_facade.py` so L2 can import without pulling L5 engine. | PIN-504 Phase 1 |
 | `accounts_facade` | `AccountsErrorResult` re-exported from `L5_schemas.result_types` (backward compatible). | PIN-504 Phase 1 |
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| L4 `account_handler.py` | `AccountQueryHandler`: Replaced `getattr()` dispatch with explicit map (6 methods). `AccountNotificationsHandler`: Replaced `getattr()` dispatch with explicit map (4 methods). Zero reflection in dispatch paths. | PIN-507 Law 5 |

@@ -62,11 +62,8 @@ from prometheus_client import Counter
 
 from app.hoc.hoc_spine.services.time import utc_now
 
-# L6 driver import (allowed)
-from app.hoc.cus.incidents.L6_drivers.lessons_driver import (
-    LessonsDriver,
-    get_lessons_driver,
-)
+# PIN-504: LessonsDriver injected by L4 handler via DomainBridge.
+# No cross-domain import at module level.
 
 if TYPE_CHECKING:
     from sqlmodel import Session
@@ -180,27 +177,32 @@ class LessonsLearnedEngine:
     - API endpoints (for queries)
     """
 
-    def __init__(self, db_url: Optional[str] = None, driver: Optional[LessonsDriver] = None):
+    def __init__(self, db_url: Optional[str] = None, driver: Any = None):
         """
         Initialize the lessons learned engine.
 
         Args:
             db_url: Database URL (for creating Session internally)
-            driver: Optional pre-configured driver (for testing/injection)
+            driver: Optional pre-configured driver (for testing/injection).
+                    PIN-504: Injected by L4 handler via DomainBridge.
         """
         self._db_url = db_url or os.environ.get("DATABASE_URL")
         self._driver = driver
         self._session = None
 
-    def _get_driver(self) -> LessonsDriver:
+    def _get_driver(self) -> Any:
         """
         Get or create the lessons driver.
 
         DECISION: Lazy initialization of driver with Session.
         Creates Session from db_url if not injected.
+        PIN-504: Uses lazy import to avoid cross-domain module-level import.
         """
         if self._driver is not None:
             return self._driver
+
+        # Lazy import to avoid cross-domain module-level import (PIN-504)
+        from app.hoc.cus.incidents.L6_drivers.lessons_driver import get_lessons_driver
 
         if self._session is None:
             # Create Session from db_url

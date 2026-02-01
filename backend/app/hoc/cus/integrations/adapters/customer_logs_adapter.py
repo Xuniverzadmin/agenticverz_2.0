@@ -129,12 +129,12 @@ class CustomerLogsAdapter:
     async def _get_service(self):
         """Get the LogsReadService via L4 spine (lazy loaded, PIN-504)."""
         if self._service is None:
-            # Route through hoc_spine to avoid cross-domain L5→L5 import (PIN-504)
-            from app.hoc.hoc_spine.orchestrator.coordinators.logs_coordinator import (
-                get_logs_read_service_via_spine,
+            # Route through DomainBridge to avoid cross-domain L5→L5 import (PIN-504)
+            from app.hoc.hoc_spine.orchestrator.coordinators.domain_bridge import (
+                get_domain_bridge,
             )
 
-            self._service = get_logs_read_service_via_spine()
+            self._service = get_domain_bridge().logs_read_service()
         return self._service
 
     async def list_logs(

@@ -173,8 +173,78 @@ L2 API → L4 Handler → L5 Engine (with injected dependencies)
 
 ---
 
+## Phase 6: Categories D+E — L2 Bypass + Cross-Domain Violations (24 violations)
+
+Resolved 14 remaining violations across 4 domains. 10 recovery-domain violations deferred to PIN-505.
+
+### Phase 6a: Re-export Cleanup (2 violations)
+
+| # | Domain | File | Violation | Fix |
+|---|--------|------|-----------|-----|
+| 1 | account | `L6_drivers/__init__.py` | Re-exports `WorkerRegistryService` from integrations L6 | Deleted import block |
+| 2 | activity | `L5_engines/__init__.py` | Re-exports 12 symbols from controls L5 | Deleted import block |
+
+### Phase 6b: Type Extractions to L5_schemas (3 violations)
+
+| # | L2 File | Old Import (L5/L6) | New Import (L5_schemas) | Types Moved |
+|---|---------|--------------------|-----------------------|-------------|
+| 1 | `policies/analytics.py` | `analytics/L5_engines/analytics_facade` | `analytics/L5_schemas/query_types` | `ResolutionType`, `ScopeType` |
+| 2 | `policies/guard.py` | `logs/L5_engines/replay_determinism` | `logs/L5_schemas/determinism_types` | `DeterminismLevel` |
+| 3 | `policies/override.py` | `controls/L6_drivers/override_driver` | `controls/L5_schemas/override_types` | 5 error classes |
+
+### Phase 6c: L2→L6 Bypass Resolution (3 violations)
+
+| # | L2 File | Old Pattern | New Pattern |
+|---|---------|------------|-------------|
+| 1 | `incidents/incidents.py` (3 endpoints) | Direct `export_bundle_driver` L6 import | L4 `incidents.export` handler |
+| 2 | `policies/override.py` (4 endpoints) | Direct `LimitOverrideService` L6 import | L4 `controls.overrides` handler |
+| 3 | `policies/workers.py` (2 probes) | Direct `RecoveryMatcher` L6 import | L5 `RecoveryEvaluationEngine` |
+
+### Phase 6d: Cross-Domain L5→L5/L6 Resolution (6 violations)
+
+| # | Source File | Old Import | Resolution |
+|---|------------|-----------|------------|
+| 1 | `incidents/incident_engine.py` | `policies.L5_engines.lessons_engine` | LessonsCoordinator (L4) injected as `evidence_recorder` |
+| 2 | `policies/lessons_engine.py` | `incidents.L6_drivers.lessons_driver` | Lazy import inside `_get_driver()` |
+| 3 | `policies/policies_limits_query_engine.py` | `controls.L6_drivers.limits_read_driver` | Lazy import inside factory |
+| 4 | `policies/policy_limits_engine.py` | `controls.L6_drivers.policy_limits_driver` | Lazy import inside constructor |
+| 5 | `policies/recovery_evaluation_engine.py` | `incidents.L5_engines.recovery_rule_engine` | Moved pure functions to `hoc_spine/schemas/recovery_decisions.py` |
+| 6 | `policies/L6_drivers/__init__.py` | `controls.L6_drivers.limits_read_driver` | Deleted re-export block |
+
+### Phase 6e: Cleanup
+
+| # | Action | File |
+|---|--------|------|
+| 1 | Deleted deprecated shim | `policies/L5_engines/keys_shim.py` |
+| 2 | Absorbed into DomainBridge | `hoc_spine/orchestrator/coordinators/logs_coordinator.py` |
+
+### Files Created (Phase 6)
+
+| # | Path | Purpose |
+|---|------|---------|
+| 1 | `scripts/ops/hoc_cross_domain_validator.py` | Progressive enforcement (5 rules, --ci mode) |
+| 2 | `hoc_spine/orchestrator/coordinators/lessons_coordinator.py` | incidents→policies evidence recording |
+| 3 | `hoc_spine/orchestrator/coordinators/domain_bridge.py` | Cross-domain service accessor |
+| 4 | `analytics/L5_schemas/query_types.py` | `ResolutionType`, `ScopeType` enums |
+| 5 | `logs/L5_schemas/determinism_types.py` | `DeterminismLevel` enum |
+| 6 | `controls/L5_schemas/override_types.py` | Override error classes |
+| 7 | `hoc_spine/schemas/recovery_decisions.py` | Pure recovery decision functions |
+
+### Files Deleted (Phase 6)
+
+| # | Path | Reason |
+|---|------|--------|
+| 1 | `policies/L5_engines/keys_shim.py` | Deprecated, zero callers |
+| 2 | `hoc_spine/orchestrator/coordinators/logs_coordinator.py` | Absorbed into DomainBridge |
+
+### Validator Baseline
+
+Cross-domain validator (`hoc_cross_domain_validator.py --ci`) reports **0 violations** (excluding recovery domain, deferred to PIN-505).
+
+---
+
 ## What This PIN Does NOT Address
 
 - L5→L4 reaching-up violations (3 files) — requires event/callback pattern, separate PIN
 - TODO stubs from PIN-503 — requires HOC-native implementations
-- Phase 6 (recovery L2 bypass) — low priority, INTERNAL/Founder API only
+- Recovery domain L2→L6 bypass (8 violations) — deferred to PIN-505, INTERNAL/Founder API only

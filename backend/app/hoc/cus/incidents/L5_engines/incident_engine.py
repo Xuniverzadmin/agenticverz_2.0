@@ -84,11 +84,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger("nova.services.incident_engine")
 
 
-# Lazy import to avoid circular dependencies
-def _get_lessons_learned_engine():
-    """Get the LessonsLearnedEngine singleton (lazy import)."""
-    from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
-    return get_lessons_learned_engine()
 
 
 # =============================================================================
@@ -183,16 +178,24 @@ class IncidentEngine:
     - No sqlalchemy/sqlmodel imports at runtime
     """
 
-    def __init__(self, db_url: Optional[str] = None, driver: Optional[IncidentWriteDriver] = None):
+    def __init__(
+        self,
+        db_url: Optional[str] = None,
+        driver: Optional[IncidentWriteDriver] = None,
+        evidence_recorder: Any = None,
+    ):
         """
         Initialize the incident engine.
 
         Args:
             db_url: Database URL (for creating Session internally)
             driver: Optional pre-configured driver (for testing/injection)
+            evidence_recorder: Optional cross-domain evidence recorder (PIN-504).
+                Injected by L4 handler. Must have record_evidence(session, context) method.
         """
         self._db_url = db_url or os.environ.get("DATABASE_URL")
         self._driver = driver
+        self._evidence_recorder = evidence_recorder
         self._session = None
 
     def _get_driver(self) -> IncidentWriteDriver:
@@ -464,23 +467,22 @@ class IncidentEngine:
                         synthetic_scenario_id=synthetic_scenario_id,
                     )
 
-                # PIN-411: Detect lesson from ALL severity failures
-                # LessonsLearnedEngine captures learning signals for policy domain intelligence
-                try:
-                    from uuid import UUID as PyUUID
-                    lessons_engine = _get_lessons_learned_engine()
-                    lessons_engine.detect_lesson_from_failure(
-                        run_id=PyUUID(run_id) if isinstance(run_id, str) else run_id,
-                        tenant_id=tenant_id,
-                        error_code=error_code,
-                        error_message=error_message,
-                        severity=severity,
-                        is_synthetic=is_synthetic,
-                        synthetic_scenario_id=synthetic_scenario_id,
-                    )
-                except Exception as e:
-                    # Don't fail incident creation if lesson detection fails
-                    logger.warning(f"Failed to detect lesson from failure for incident {incident_id}: {e}")
+                # PIN-411: Record evidence for learning (PIN-504: via injected coordinator)
+                if self._evidence_recorder:
+                    try:
+                        from uuid import UUID as PyUUID
+                        self._evidence_recorder.record_evidence({
+                            "run_id": PyUUID(run_id) if isinstance(run_id, str) else run_id,
+                            "tenant_id": tenant_id,
+                            "error_code": error_code,
+                            "error_message": error_message,
+                            "severity": severity,
+                            "is_synthetic": is_synthetic,
+                            "synthetic_scenario_id": synthetic_scenario_id,
+                        })
+                    except Exception as e:
+                        # Don't fail incident creation if lesson detection fails
+                        logger.warning(f"Failed to record evidence for incident {incident_id}: {e}")
 
             return incident_id
 
@@ -624,23 +626,22 @@ class IncidentEngine:
                     synthetic_scenario_id=synthetic_scenario_id,
                 )
 
-            # PIN-411: Detect lesson from ALL severity failures
-            # LessonsLearnedEngine captures learning signals for policy domain intelligence
-            try:
-                from uuid import UUID as PyUUID
-                lessons_engine = _get_lessons_learned_engine()
-                lessons_engine.detect_lesson_from_failure(
-                    run_id=PyUUID(run_id) if isinstance(run_id, str) else run_id,
-                    tenant_id=tenant_id,
-                    error_code=error_code,
-                    error_message=error_message,
-                    severity=severity,
-                    is_synthetic=is_synthetic,
-                    synthetic_scenario_id=synthetic_scenario_id,
-                )
-            except Exception as e:
-                # Don't fail incident creation if lesson detection fails
-                logger.warning(f"Failed to detect lesson from failure for incident {incident_id}: {e}")
+            # PIN-411: Record evidence for learning (PIN-504: via injected coordinator)
+            if self._evidence_recorder:
+                try:
+                    from uuid import UUID as PyUUID
+                    self._evidence_recorder.record_evidence({
+                        "run_id": PyUUID(run_id) if isinstance(run_id, str) else run_id,
+                        "tenant_id": tenant_id,
+                        "error_code": error_code,
+                        "error_message": error_message,
+                        "severity": severity,
+                        "is_synthetic": is_synthetic,
+                        "synthetic_scenario_id": synthetic_scenario_id,
+                    })
+                except Exception as e:
+                    # Don't fail incident creation if lesson detection fails
+                    logger.warning(f"Failed to record evidence for incident {incident_id}: {e}")
 
             return incident_id
 
@@ -901,5 +902,9 @@ def get_incident_engine() -> IncidentEngine:
     """Get or create singleton incident engine instance."""
     global _incident_engine
     if _incident_engine is None:
-        _incident_engine = IncidentEngine()
+        # PIN-504: Inject lessons coordinator as evidence recorder
+        from app.hoc.hoc_spine.orchestrator.coordinators.lessons_coordinator import (
+            get_lessons_coordinator,
+        )
+        _incident_engine = IncidentEngine(evidence_recorder=get_lessons_coordinator())
     return _incident_engine

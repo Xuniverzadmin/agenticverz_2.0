@@ -44,7 +44,11 @@ class ApiKeysQueryHandler:
             )
 
         facade = get_api_keys_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "list_api_keys": facade.list_api_keys,
+            "get_api_key_detail": facade.get_api_key_detail,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"

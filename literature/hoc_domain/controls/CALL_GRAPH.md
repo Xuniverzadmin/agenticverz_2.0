@@ -511,7 +511,7 @@
 [CANONICAL] threshold_driver.ThresholdDriver.get_threshold_limit_by_scope → scoped_execution:ScopedExecutionContext.execute
 [WRAPPER] threshold_driver.ThresholdDriverSync.__init__
 [INTERNAL] threshold_driver.ThresholdDriverSync.get_active_threshold_limits → scoped_execution:ScopedExecutionContext.execute
-[ENTRY] threshold_driver.emit_and_persist_threshold_signal → threshold_driver:emit_threshold_signal_sync
+# [DELETED] threshold_driver.emit_and_persist_threshold_signal — moved to L4 signal_coordinator (PIN-507 Law 4)
 [LEAF] threshold_driver.emit_threshold_signal_sync
 [WRAPPER] threshold_engine.LLMRunEvaluator.__init__
 [SUPERSET] threshold_engine.LLMRunEvaluator.evaluate_completed_run → threshold_engine:LLMRunThresholdResolver.resolve, threshold_engine:LLMRunThresholdResolverSync.resolve

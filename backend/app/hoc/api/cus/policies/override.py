@@ -5,8 +5,8 @@
 #   Execution: async
 # Role: Limit override endpoint (PIN-LIM-05)
 # Callers: Customer Console, Ops Console
-# Allowed Imports: L3, L4, L6
-# Forbidden Imports: L1, L5
+# Allowed Imports: L4, L5_schemas
+# Forbidden Imports: L1, L5_engines, L6
 # Reference: PIN-LIM-05
 
 """
@@ -39,14 +39,9 @@ from app.schemas.limits.overrides import (
     LimitOverrideResponse,
     OverrideStatus,
 )
-# L6 driver import (migrated to HOC per SWEEP-08)
-from app.hoc.cus.controls.L6_drivers.override_driver import (
-    LimitNotFoundError,
-    LimitOverrideService,
-    LimitOverrideServiceError,
-    OverrideNotFoundError,
-    OverrideValidationError,
-    StackingAbuseError,
+from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
 )
 
 
@@ -143,46 +138,45 @@ async def create_override(
     tenant_id = auth_context.tenant_id
     user_id = getattr(auth_context, "user_id", None) or "unknown"
 
-    service = LimitOverrideService(session)
+    override_request = LimitOverrideRequest(
+        limit_id=body.limit_id,
+        override_value=body.override_value,
+        duration_hours=body.duration_hours,
+        reason=body.reason,
+        start_immediately=body.start_immediately,
+        scheduled_start=body.scheduled_start,
+    )
 
-    try:
-        override_request = LimitOverrideRequest(
-            limit_id=body.limit_id,
-            override_value=body.override_value,
-            duration_hours=body.duration_hours,
-            reason=body.reason,
-            start_immediately=body.start_immediately,
-            scheduled_start=body.scheduled_start,
-        )
-
-        result = await service.request_override(
+    # Route through L4 handler (PIN-504: L2 must not import L6 directly)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "controls.overrides",
+        OperationContext(
+            session=session,
             tenant_id=tenant_id,
-            request=override_request,
-            requested_by=user_id,
+            params={
+                "method": "request_override",
+                "tenant_id": tenant_id,
+                "request": override_request,
+                "requested_by": user_id,
+            },
+        ),
+    )
+
+    if not op.success:
+        error_map = {
+            "LIMIT_NOT_FOUND": (404, "limit_not_found"),
+            "STACKING_ABUSE": (429, "too_many_overrides"),
+            "VALIDATION_ERROR": (400, "validation_error"),
+            "SERVICE_ERROR": (400, "override_error"),
+        }
+        status_code, error_key = error_map.get(op.error_code, (400, "override_error"))
+        raise HTTPException(
+            status_code=status_code,
+            detail={"error": error_key, "message": op.error},
         )
 
-        return _to_detail(result)
-
-    except LimitNotFoundError as e:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "limit_not_found", "message": str(e)},
-        )
-    except StackingAbuseError as e:
-        raise HTTPException(
-            status_code=429,
-            detail={"error": "too_many_overrides", "message": str(e)},
-        )
-    except OverrideValidationError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "validation_error", "message": str(e)},
-        )
-    except LimitOverrideServiceError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "override_error", "message": str(e)},
-        )
+    return _to_detail(op.data)
 
 
 @router.get(
@@ -202,28 +196,35 @@ async def list_overrides(
     auth_context = get_auth_context(request)
     tenant_id = auth_context.tenant_id
 
-    service = LimitOverrideService(session)
-
-    try:
-        items, total = await service.list_overrides(
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "controls.overrides",
+        OperationContext(
+            session=session,
             tenant_id=tenant_id,
-            status=status,
-            limit=limit,
-            offset=offset,
-        )
+            params={
+                "method": "list_overrides",
+                "tenant_id": tenant_id,
+                "status": status,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
+    )
 
-        return OverrideListResponse(
-            items=[_to_list_item(o) for o in items],
-            total=total,
-            limit=limit,
-            offset=offset,
-        )
-
-    except LimitOverrideServiceError as e:
+    if not op.success:
         raise HTTPException(
             status_code=400,
-            detail={"error": "list_error", "message": str(e)},
+            detail={"error": "list_error", "message": op.error},
         )
+
+    items, total = op.data
+    return OverrideListResponse(
+        items=[_to_list_item(o) for o in items],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get(
@@ -241,17 +242,29 @@ async def get_override(
     auth_context = get_auth_context(request)
     tenant_id = auth_context.tenant_id
 
-    service = LimitOverrideService(session)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "controls.overrides",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_override",
+                "tenant_id": tenant_id,
+                "override_id": override_id,
+            },
+        ),
+    )
 
-    try:
-        result = await service.get_override(tenant_id, override_id)
-        return _to_detail(result)
+    if not op.success:
+        if op.error_code == "OVERRIDE_NOT_FOUND":
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "override_not_found", "message": op.error},
+            )
+        raise HTTPException(status_code=400, detail={"error": "service_error", "message": op.error})
 
-    except OverrideNotFoundError as e:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "override_not_found", "message": str(e)},
-        )
+    return _to_detail(op.data)
 
 
 @router.delete(
@@ -270,26 +283,33 @@ async def cancel_override(
     tenant_id = auth_context.tenant_id
     user_id = getattr(auth_context, "user_id", None) or "unknown"
 
-    service = LimitOverrideService(session)
-
-    try:
-        result = await service.cancel_override(
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "controls.overrides",
+        OperationContext(
+            session=session,
             tenant_id=tenant_id,
-            override_id=override_id,
-            cancelled_by=user_id,
-        )
-        return _to_detail(result)
+            params={
+                "method": "cancel_override",
+                "tenant_id": tenant_id,
+                "override_id": override_id,
+                "cancelled_by": user_id,
+            },
+        ),
+    )
 
-    except OverrideNotFoundError as e:
+    if not op.success:
+        error_map = {
+            "OVERRIDE_NOT_FOUND": (404, "override_not_found"),
+            "VALIDATION_ERROR": (400, "cannot_cancel"),
+        }
+        status_code, error_key = error_map.get(op.error_code, (400, "service_error"))
         raise HTTPException(
-            status_code=404,
-            detail={"error": "override_not_found", "message": str(e)},
+            status_code=status_code,
+            detail={"error": error_key, "message": op.error},
         )
-    except OverrideValidationError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "cannot_cancel", "message": str(e)},
-        )
+
+    return _to_detail(op.data)
 
 
 # =============================================================================

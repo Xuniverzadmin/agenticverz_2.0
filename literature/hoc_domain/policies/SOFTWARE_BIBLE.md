@@ -37,7 +37,7 @@ Each script's unique contribution and canonical function.
 | ir_compiler | L5 | `IRCompiler._compile_actions` | SUPERSET | 3 | L5:interpreter | ?:__init__ | ?:interpreter | ?:test_ir_compiler | ?:test_roundtrip | ?:test_interpreter | ?:test_replay, ast, compiler_parser +13 | YES |
 | ir_nodes | L5 | `IRAction.__str__` | LEAF | 2 | ?:conflict_resolver | ?:folds | ?:dag_sorter | ?:ir_builder | ?:__init__ | ?:dag_executor | ?:deterministic_engine | L6:optimizer_conflict_resolver | L5:ir_builder | L5:folds, ast, deterministic_engine +8 | INTERFACE |
 | kernel | L5 | `ExecutionKernel.invoke_async` | CANONICAL | 2 | ?:__init__ | ?:decorator | ?:recovery_claim_worker | ?:main | L5:decorator | ?:aos, decorator | YES |
-| keys_shim | L5 | `KeysReadService.__init__` | WRAPPER | 0 | compiler_parser, dsl_parser, interpreter +6 | **OVERLAP** |
+| ~~keys_shim~~ | ~~L5~~ | ~~`KeysReadService.__init__`~~ | **DELETED** (PIN-504 Phase 6) | — | — | — |
 | kill_switch | L5 | `activate_kill_switch` | LEAF | 1 | ?:test_kill_switch | YES |
 | learning_proof_engine | L5 | `PolicyRegretTracker.add_regret` | CANONICAL | 2 | L5:__init__, snapshot_engine | YES |
 | lessons_engine | L5 | `LessonsLearnedEngine.detect_lesson_from_near_threshold` | CANONICAL | 2 | ?:policy_layer | ?:policy | ?:policies_facade | ?:__init__ | ?:lessons_engine | ?:run_governance_facade | ?:incident_engine | ?:main | L5:incident_engine | L4:run_governance_facade, compiler_parser, dsl_parser +7 | YES |
@@ -2096,3 +2096,26 @@ _442 thin delegation functions._
 | `policy_limits_engine` | Removed cross-domain `AuditLedgerServiceAsync` import. Accepts `audit: Any = None` via dependency injection from L4 handler. | PIN-504 Phase 2 |
 | `policy_rules_engine` | Same pattern — audit injected from L4 handler. | PIN-504 Phase 2 |
 | `policy_proposal_engine` | `review_proposal` accepts `audit: Any = None` parameter. Removed inline audit creation. | PIN-504 Phase 2 |
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| L4 `policies_handler.py` | 9 handler classes: all `getattr()` replaced with explicit dispatch maps. `PoliciesGovernanceHandler` (7 sync), `PoliciesLessonsHandler` (14 sync), `PoliciesPolicyFacadeHandler` (34 async + 1 sync), `PoliciesRateLimitsHandler` (6 async). All `iscoroutinefunction` calls eliminated. `import asyncio` removed. Zero reflection in dispatch paths. | PIN-507 Law 5 |
+
+## PIN-507 Law 0 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| `app/services/policy/__init__.py` | Removed stale re-export of `LessonsLearnedEngine` from disconnected shim. Class moved to HOC `policies/L5_engines/lessons_engine.py` (PIN-468). | PIN-507 Law 0 |
+| `app/services/limits/policy_limits_service.py` | Import `AuditLedgerServiceAsync` rewired from abolished `app.services.logs.audit_ledger_service_async` → `app.hoc.cus.logs.L6_drivers.audit_ledger_driver`. Transitional `services→hoc`. | PIN-507 Law 0 |
+| `app/services/limits/policy_rules_service.py` | Same rewire as above. | PIN-507 Law 0 |
+| `app/services/policy_proposal.py` | Same rewire as above. | PIN-507 Law 0 |
+| `app/api/policy_layer.py` | Import `get_policy_facade` rewired from abolished `app.services.policy.facade` → `app.services.policy` (package re-export). | PIN-507 Law 0 |
+| `app/services/governance/facade.py` | Same rewire as above (lazy import inside health check). | PIN-507 Law 0 |
+
+## PIN-507 Law 6 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| `recovery_evaluation_engine` | Pure decision function imports changed from `hoc_spine.schemas.recovery_decisions` → `hoc_spine.utilities.recovery_decisions`. `evaluate_rules` imported directly from `incidents/L5_engines/recovery_rule_engine` (no longer via schemas proxy). | PIN-507 Law 6 |

@@ -53,29 +53,14 @@ from app.hoc.cus.controls.L5_schemas.overrides import (
 )
 
 
-class LimitOverrideServiceError(Exception):
-    """Base exception for override service."""
-    pass
-
-
-class LimitNotFoundError(LimitOverrideServiceError):
-    """Raised when limit is not found."""
-    pass
-
-
-class OverrideNotFoundError(LimitOverrideServiceError):
-    """Raised when override is not found."""
-    pass
-
-
-class OverrideValidationError(LimitOverrideServiceError):
-    """Raised when override validation fails."""
-    pass
-
-
-class StackingAbuseError(LimitOverrideServiceError):
-    """Raised when too many overrides are active."""
-    pass
+# Re-export error types from L5_schemas for backward compatibility (PIN-504)
+from app.hoc.cus.controls.L5_schemas.override_types import (
+    LimitOverrideServiceError,
+    LimitNotFoundError,
+    OverrideNotFoundError,
+    OverrideValidationError,
+    StackingAbuseError,
+)
 
 
 # Temporary in-memory storage until migration is created

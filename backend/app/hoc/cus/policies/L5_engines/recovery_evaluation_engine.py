@@ -53,11 +53,15 @@ logger = logging.getLogger("nova.services.recovery_evaluation_engine")
 from app.contracts.decisions import emit_recovery_decision
 # L6/L5 imports (migrated to HOC per SWEEP-09)
 from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
-from app.hoc.cus.incidents.L5_engines.recovery_rule_engine import (
+# PIN-507 Law 6: Import pure decision functions from utilities (not schemas)
+from app.hoc.hoc_spine.utilities.recovery_decisions import (
     combine_confidences,
-    evaluate_rules,
     should_auto_execute,
     should_select_action,
+)
+# PIN-507 Law 6: Import evaluate_rules directly from its engine (not via schemas proxy)
+from app.hoc.cus.incidents.L5_engines.recovery_rule_engine import (
+    evaluate_rules,
 )
 
 # =============================================================================

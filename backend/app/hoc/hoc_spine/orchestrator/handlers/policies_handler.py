@@ -27,8 +27,6 @@ Registers nine operations:
   - policies.simulate → LimitsSimulationService (simulate)
 """
 
-import asyncio
-
 from app.hoc.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     OperationRegistry,
@@ -52,7 +50,22 @@ class PoliciesQueryHandler:
             return OperationResult.fail("Missing 'method' in params", "MISSING_METHOD")
 
         facade = get_policies_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "list_policy_rules": facade.list_policy_rules,
+            "get_policy_rule_detail": facade.get_policy_rule_detail,
+            "list_limits": facade.list_limits,
+            "get_limit_detail": facade.get_limit_detail,
+            "get_policy_state": facade.get_policy_state,
+            "get_policy_metrics": facade.get_policy_metrics,
+            "list_conflicts": facade.list_conflicts,
+            "get_dependency_graph": facade.get_dependency_graph,
+            "list_violations": facade.list_violations,
+            "list_budgets": facade.list_budgets,
+            "list_requests": facade.list_requests,
+            "list_lessons": facade.list_lessons,
+            "get_lesson_stats": facade.get_lesson_stats,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(f"Unknown facade method: {method_name}", "UNKNOWN_METHOD")
 
@@ -80,7 +93,12 @@ class PoliciesEnforcementHandler:
             return OperationResult.fail("Missing 'method' in params", "MISSING_METHOD")
 
         service = get_cus_enforcement_service()
-        method = getattr(service, method_name, None)
+        dispatch = {
+            "evaluate": service.evaluate,
+            "get_enforcement_status": service.get_enforcement_status,
+            "evaluate_batch": service.evaluate_batch,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(f"Unknown enforcement method: {method_name}", "UNKNOWN_METHOD")
 
@@ -109,18 +127,23 @@ class PoliciesGovernanceHandler:
             return OperationResult.fail("Missing 'method' in params", "MISSING_METHOD")
 
         facade = get_governance_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "enable_kill_switch": facade.enable_kill_switch,
+            "disable_kill_switch": facade.disable_kill_switch,
+            "set_mode": facade.set_mode,
+            "get_governance_state": facade.get_governance_state,
+            "resolve_conflict": facade.resolve_conflict,
+            "list_conflicts": facade.list_conflicts,
+            "get_boot_status": facade.get_boot_status,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(f"Unknown governance method: {method_name}", "UNKNOWN_METHOD")
 
         kwargs = dict(ctx.params)
         kwargs.pop("method", None)
 
-        # GovernanceFacade methods are sync
-        if asyncio.iscoroutinefunction(method):
-            data = await method(**kwargs)
-        else:
-            data = method(**kwargs)
+        data = method(**kwargs)
         return OperationResult.ok(data)
 
 
@@ -139,17 +162,30 @@ class PoliciesLessonsHandler:
             return OperationResult.fail("Missing 'method' in params", "MISSING_METHOD")
 
         engine = get_lessons_learned_engine()
-        method = getattr(engine, method_name, None)
+        dispatch = {
+            "detect_lesson_from_failure": engine.detect_lesson_from_failure,
+            "detect_lesson_from_near_threshold": engine.detect_lesson_from_near_threshold,
+            "detect_lesson_from_critical_success": engine.detect_lesson_from_critical_success,
+            "emit_near_threshold": engine.emit_near_threshold,
+            "emit_critical_success": engine.emit_critical_success,
+            "list_lessons": engine.list_lessons,
+            "get_lesson": engine.get_lesson,
+            "convert_lesson_to_draft": engine.convert_lesson_to_draft,
+            "defer_lesson": engine.defer_lesson,
+            "dismiss_lesson": engine.dismiss_lesson,
+            "get_lesson_stats": engine.get_lesson_stats,
+            "reactivate_deferred_lesson": engine.reactivate_deferred_lesson,
+            "get_expired_deferred_lessons": engine.get_expired_deferred_lessons,
+            "reactivate_expired_deferred_lessons": engine.reactivate_expired_deferred_lessons,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(f"Unknown lessons method: {method_name}", "UNKNOWN_METHOD")
 
         kwargs = dict(ctx.params)
         kwargs.pop("method", None)
 
-        if asyncio.iscoroutinefunction(method):
-            data = await method(**kwargs)
-        else:
-            data = method(**kwargs)
+        data = method(**kwargs)
         return OperationResult.ok(data)
 
 
@@ -169,17 +205,56 @@ class PoliciesPolicyFacadeHandler:
             return OperationResult.fail("Missing 'method' in params", "MISSING_METHOD")
 
         facade = get_policy_facade()
-        method = getattr(facade, method_name, None)
-        if method is None:
-            return OperationResult.fail(f"Unknown policy_facade method: {method_name}", "UNKNOWN_METHOD")
+        async_dispatch = {
+            "evaluate": facade.evaluate,
+            "pre_check": facade.pre_check,
+            "get_state": facade.get_state,
+            "reload_policies": facade.reload_policies,
+            "get_violations": facade.get_violations,
+            "get_violation": facade.get_violation,
+            "acknowledge_violation": facade.acknowledge_violation,
+            "get_risk_ceilings": facade.get_risk_ceilings,
+            "get_risk_ceiling": facade.get_risk_ceiling,
+            "update_risk_ceiling": facade.update_risk_ceiling,
+            "reset_risk_ceiling": facade.reset_risk_ceiling,
+            "get_safety_rules": facade.get_safety_rules,
+            "update_safety_rule": facade.update_safety_rule,
+            "get_ethical_constraints": facade.get_ethical_constraints,
+            "get_active_cooldowns": facade.get_active_cooldowns,
+            "clear_cooldowns": facade.clear_cooldowns,
+            "get_metrics": facade.get_metrics,
+            "get_policy_versions": facade.get_policy_versions,
+            "get_current_version": facade.get_current_version,
+            "create_policy_version": facade.create_policy_version,
+            "rollback_to_version": facade.rollback_to_version,
+            "get_version_provenance": facade.get_version_provenance,
+            "activate_policy_version": facade.activate_policy_version,
+            "get_dependency_graph": facade.get_dependency_graph,
+            "get_policy_conflicts": facade.get_policy_conflicts,
+            "resolve_conflict": facade.resolve_conflict,
+            "validate_dependency_dag": facade.validate_dependency_dag,
+            "add_dependency_with_dag_check": facade.add_dependency_with_dag_check,
+            "get_temporal_policies": facade.get_temporal_policies,
+            "create_temporal_policy": facade.create_temporal_policy,
+            "get_temporal_utilization": facade.get_temporal_utilization,
+            "prune_temporal_metrics": facade.prune_temporal_metrics,
+            "get_temporal_storage_stats": facade.get_temporal_storage_stats,
+            "evaluate_with_context": facade.evaluate_with_context,
+        }
+        sync_dispatch = {
+            "get_topological_evaluation_order": facade.get_topological_evaluation_order,
+        }
 
         kwargs = dict(ctx.params)
         kwargs.pop("method", None)
 
-        if asyncio.iscoroutinefunction(method):
+        method = async_dispatch.get(method_name)
+        if method:
             data = await method(**kwargs)
+        elif method_name in sync_dispatch:
+            data = sync_dispatch[method_name](**kwargs)
         else:
-            data = method(**kwargs)
+            return OperationResult.fail(f"Unknown policy_facade method: {method_name}", "UNKNOWN_METHOD")
         return OperationResult.ok(data)
 
 
@@ -211,7 +286,13 @@ class PoliciesLimitsHandler:
         # L4 creates audit service and injects into L5 engine (PIN-504)
         audit = AuditLedgerServiceAsync(ctx.session)
         service = PolicyLimitsService(ctx.session, audit=audit)
-        method = getattr(service, method_name, None)
+        dispatch = {
+            "create": service.create,
+            "update": service.update,
+            "delete": service.delete,
+            "get": service.get,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(f"Unknown limits method: {method_name}", "UNKNOWN_METHOD")
 
@@ -260,7 +341,12 @@ class PoliciesRulesHandler:
         # L4 creates audit service and injects into L5 engine (PIN-504)
         audit = AuditLedgerServiceAsync(ctx.session)
         service = PolicyRulesService(ctx.session, audit=audit)
-        method = getattr(service, method_name, None)
+        dispatch = {
+            "create": service.create,
+            "update": service.update,
+            "get": service.get,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(f"Unknown rules method: {method_name}", "UNKNOWN_METHOD")
 
@@ -296,7 +382,15 @@ class PoliciesRateLimitsHandler:
             return OperationResult.fail("Missing 'method' in params", "MISSING_METHOD")
 
         facade = get_limits_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "list_limits": facade.list_limits,
+            "get_limit": facade.get_limit,
+            "update_limit": facade.update_limit,
+            "check_limit": facade.check_limit,
+            "get_usage": facade.get_usage,
+            "reset_limit": facade.reset_limit,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(f"Unknown rate_limits method: {method_name}", "UNKNOWN_METHOD")
 
@@ -305,10 +399,7 @@ class PoliciesRateLimitsHandler:
         if "tenant_id" not in kwargs:
             kwargs["tenant_id"] = ctx.tenant_id
 
-        if asyncio.iscoroutinefunction(method):
-            data = await method(**kwargs)
-        else:
-            data = method(**kwargs)
+        data = await method(**kwargs)
         return OperationResult.ok(data)
 
 
@@ -332,7 +423,10 @@ class PoliciesSimulateHandler:
             return OperationResult.fail("Missing 'method' in params", "MISSING_METHOD")
 
         service = get_limits_simulation_service(ctx.session)
-        method = getattr(service, method_name, None)
+        dispatch = {
+            "simulate": service.simulate,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(f"Unknown simulate method: {method_name}", "UNKNOWN_METHOD")
 

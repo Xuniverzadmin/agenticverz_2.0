@@ -60,19 +60,8 @@ logger = logging.getLogger("nova.services.analytics.facade")
 # =============================================================================
 
 
-class ResolutionType(str, Enum):
-    """Time resolution for analytics data."""
-
-    HOUR = "hour"
-    DAY = "day"
-
-
-class ScopeType(str, Enum):
-    """Scope of analytics aggregation."""
-
-    ORG = "org"
-    PROJECT = "project"
-    ENV = "env"
+# Re-export from L5_schemas for backward compatibility (PIN-504)
+from app.hoc.cus.analytics.L5_schemas.query_types import ResolutionType, ScopeType
 
 
 # =============================================================================

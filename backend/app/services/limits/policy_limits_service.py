@@ -40,7 +40,8 @@ from app.schemas.limits.policy_limits import (
     UpdatePolicyLimitRequest,
     PolicyLimitResponse,
 )
-from app.services.logs.audit_ledger_service_async import AuditLedgerServiceAsync
+# TRANSITIONAL: services→hoc (migrate policy_limits_service to HOC L5 per PIN-507)
+from app.hoc.cus.logs.L6_drivers.audit_ledger_driver import AuditLedgerServiceAsync
 
 
 def utc_now() -> datetime:

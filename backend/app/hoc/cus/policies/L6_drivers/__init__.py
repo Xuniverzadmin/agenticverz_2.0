@@ -49,10 +49,6 @@ from app.hoc.cus.policies.L6_drivers.policy_rules_read_driver import (
     PolicyRulesReadDriver,
     get_policy_rules_read_driver,
 )
-from app.hoc.cus.controls.L6_drivers.limits_read_driver import (
-    LimitsReadDriver,
-    get_limits_read_driver,
-)
 from app.hoc.cus.policies.L6_drivers.proposals_read_driver import (
     ProposalsReadDriver,
     get_proposals_read_driver,
@@ -73,8 +69,6 @@ __all__ = [
     # Split query engine drivers (Phase 3B P3)
     "PolicyRulesReadDriver",
     "get_policy_rules_read_driver",
-    "LimitsReadDriver",
-    "get_limits_read_driver",
     "ProposalsReadDriver",
     "get_proposals_read_driver",
 ]

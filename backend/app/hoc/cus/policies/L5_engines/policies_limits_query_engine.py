@@ -28,10 +28,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Optional
 
-from app.hoc.cus.controls.L6_drivers.limits_read_driver import (
-    LimitsReadDriver,
-    get_limits_read_driver,
-)
+# PIN-504: Driver injected by L4 handler via DomainBridge (no cross-domain module-level import)
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -139,7 +136,11 @@ class LimitsQueryEngine:
     All data access is delegated to L6 driver.
     """
 
-    def __init__(self, driver: LimitsReadDriver):
+    def __init__(self, driver: Any):
+        """
+        Args:
+            driver: LimitsReadDriver instance (PIN-504: injected by L4 handler via DomainBridge).
+        """
         self._driver = driver
 
     async def list_limits(
@@ -299,7 +300,12 @@ class LimitsQueryEngine:
 
 
 def get_limits_query_engine(session: "AsyncSession") -> LimitsQueryEngine:
-    """Get a LimitsQueryEngine instance."""
+    """Get a LimitsQueryEngine instance.
+
+    PIN-504: Uses lazy import to avoid cross-domain module-level import.
+    """
+    from app.hoc.cus.controls.L6_drivers.limits_read_driver import get_limits_read_driver
+
     return LimitsQueryEngine(
         driver=get_limits_read_driver(session),
     )

@@ -42,7 +42,10 @@ from typing import Optional
 
 from sqlmodel import Session, select
 
-from app.db import Incident, Run, engine
+# NOTE: L6 drivers must not import L7 models via app.db.
+# L7 models live under app.models/ by design (HOC Topology V2.0.0).
+from app.db import Run, engine
+from app.models.killswitch import Incident
 from app.models.export_bundles import (
     DEFAULT_SOC2_CONTROLS,
     EvidenceBundle,

@@ -55,10 +55,7 @@ from typing import TYPE_CHECKING, Any, Optional
 # L6 driver import (allowed)
 from app.hoc.hoc_spine.services.time import utc_now
 from app.hoc.hoc_spine.drivers.cross_domain import generate_uuid
-from app.hoc.cus.controls.L6_drivers.policy_limits_driver import (
-    PolicyLimitsDriver,
-    get_policy_limits_driver,
-)
+# PIN-504: Driver factory lazy-imported in constructor (no cross-domain module-level import)
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -114,6 +111,9 @@ class PolicyLimitsService:
             audit: Audit service instance (injected by L4 handler, PIN-504).
                    Must have limit_created, limit_updated async methods.
         """
+        # PIN-504: Lazy import to avoid cross-domain module-level import
+        from app.hoc.cus.controls.L6_drivers.policy_limits_driver import get_policy_limits_driver
+
         self._session = session
         self._driver = get_policy_limits_driver(session)
         self._audit = audit

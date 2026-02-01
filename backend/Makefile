@@ -18,22 +18,22 @@ help:
 
 # Run all tests (excluding live adapter tests)
 test:
-	PYTHONPATH=. python -m pytest tests/ -v --tb=short --ignore=tests/live/
+	PYTHONPATH=. python3 -m pytest tests/ -v --tb=short --ignore=tests/live/
 
 # Run unit tests only
 test-unit:
-	PYTHONPATH=. python -m pytest tests/ -v --tb=short \
+	PYTHONPATH=. python3 -m pytest tests/ -v --tb=short \
 		--ignore=tests/skills/ \
 		--ignore=tests/workflow/ \
 		--ignore=tests/live/
 
 # Run skill tests only
 test-skills:
-	PYTHONPATH=. python -m pytest tests/skills/ -v --tb=short
+	PYTHONPATH=. python3 -m pytest tests/skills/ -v --tb=short
 
 # Run integration tests (requires external services)
 test-integration:
-	PYTHONPATH=. python -m pytest tests/ -v --tb=short -m integration
+	PYTHONPATH=. python3 -m pytest tests/ -v --tb=short -m integration
 
 # Run full Dockerized integration tests
 docker-integration:
@@ -48,12 +48,12 @@ docker-integration-clean:
 
 # Run registry performance benchmark
 benchmark:
-	PYTHONPATH=. python scripts/benchmark_registry.py
+	PYTHONPATH=. python3 scripts/benchmark_registry.py
 
 # Import hygiene check
 import-check:
 	@echo "Checking import hygiene..."
-	@PYTHONPATH=. python -c "\
+	@PYTHONPATH=. python3 -c "\
 import sys; \
 before = set(sys.modules.keys()); \
 import app.skills; \
@@ -64,12 +64,12 @@ sys.exit(1) if violations else print('✓ Import hygiene PASSED')"
 # Determinism check - verify canonical outputs
 determinism-check:
 	@echo "Running determinism checks..."
-	PYTHONPATH=. python -m pytest tests/skills/test_m3_integration.py -v -k deterministic
+	PYTHONPATH=. python3 -m pytest tests/skills/test_m3_integration.py -v -k deterministic
 
 # Lint checks
 lint:
 	@echo "Running linting..."
-	python -m py_compile app/**/*.py 2>/dev/null || echo "Syntax check passed"
+	python3 -m py_compile app/**/*.py 2>/dev/null || echo "Syntax check passed"
 
 # Clean up artifacts
 clean:
@@ -78,9 +78,14 @@ clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
 
+# Init hygiene check (PIN-507 Law 0) — stale re-exports, layer boundary, abolished paths
+init-hygiene:
+	@echo "Checking init hygiene (PIN-507 Law 0)..."
+	PYTHONPATH=. python3 scripts/ci/check_init_hygiene.py --ci
+
 # CI targets
-ci-test: import-check test benchmark
+ci-test: import-check init-hygiene test benchmark
 	@echo "CI tests complete"
 
-ci-full: import-check test docker-integration benchmark
+ci-full: import-check init-hygiene test docker-integration benchmark
 	@echo "Full CI pipeline complete"

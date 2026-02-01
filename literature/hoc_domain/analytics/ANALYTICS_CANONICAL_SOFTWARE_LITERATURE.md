@@ -61,6 +61,12 @@
 
 **None.** The `from app.services.detection.facade` reference in `detection_facade.py` is inside a docstring (Usage example), not an active import.
 
+### New L5_schemas File (PIN-504 Phase 6)
+
+| File | Contents | Purpose |
+|------|----------|---------|
+| `L5_schemas/query_types.py` | `ResolutionType`, `ScopeType` enums | Type enums extracted from `analytics_facade.py` so L2 can import without L5_engines dependency |
+
 ### Cross-Domain Imports (Documented — Deferred to Rewiring)
 
 `cost_anomaly_detector_engine.py` has 3 lazy (function-scoped) imports from `app.hoc.cus.incidents.L3_adapters`:
@@ -272,3 +278,9 @@ No L4 handler import updates required — handler imports `analytics_facade` and
 ### Tally
 
 62/62 checks PASS (59 consolidation + 3 cleansing).
+
+---
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+**L4 Handler Update:** All `getattr()`-based reflection dispatch in this domain's L4 handler replaced with explicit `dispatch = {}` maps. All `asyncio.iscoroutinefunction()` eliminated via explicit sync/async split. Zero `__import__()` calls remain. See PIN-507 for full audit trail.

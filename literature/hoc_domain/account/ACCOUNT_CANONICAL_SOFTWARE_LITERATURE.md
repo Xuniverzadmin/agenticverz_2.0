@@ -46,13 +46,11 @@
 
 Zero active `app.services` imports. Clean.
 
-### Cross-Domain Import (1 — Documented, Deferred to Rewiring)
+### Cross-Domain Import (1 → 0 — RESOLVED)
 
-| File | Target Domain | Import Path |
-|------|--------------|-------------|
-| L6_drivers/__init__.py | integrations | `app.hoc.cus.integrations.L6_drivers.worker_registry_driver` — re-exports WorkerRegistryService |
-
-L6→L6 cross-domain. Should go through L4 spine. Deferred to rewiring phase.
+| File | Target Domain | Resolution |
+|------|--------------|-----------|
+| ~~L6_drivers/__init__.py~~ | ~~integrations~~ | **RESOLVED** (PIN-504 Phase 6): Deleted re-export block (`WorkerRegistryService` etc.). Zero callers used this path. |
 
 ### Empty Directory (Documented)
 
@@ -166,3 +164,9 @@ Domain has zero `app.services` imports (active or docstring) and zero `cus.gener
 ### Tally
 
 28/28 checks PASS (25 consolidation + 3 cleansing).
+
+---
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+**L4 Handler Update:** All `getattr()`-based reflection dispatch in this domain's L4 handler replaced with explicit `dispatch = {}` maps. All `asyncio.iscoroutinefunction()` eliminated via explicit sync/async split. Zero `__import__()` calls remain. See PIN-507 for full audit trail.

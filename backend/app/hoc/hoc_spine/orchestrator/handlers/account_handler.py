@@ -45,7 +45,15 @@ class AccountQueryHandler:
             )
 
         facade = get_accounts_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "list_projects": facade.list_projects,
+            "get_project_detail": facade.get_project_detail,
+            "list_users": facade.list_users,
+            "get_user_detail": facade.get_user_detail,
+            "get_profile": facade.get_profile,
+            "get_billing_summary": facade.get_billing_summary,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
@@ -77,7 +85,13 @@ class AccountNotificationsHandler:
             )
 
         facade = get_notifications_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "send_notification": facade.send_notification,
+            "list_notifications": facade.list_notifications,
+            "get_notification": facade.get_notification,
+            "mark_as_read": facade.mark_as_read,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"

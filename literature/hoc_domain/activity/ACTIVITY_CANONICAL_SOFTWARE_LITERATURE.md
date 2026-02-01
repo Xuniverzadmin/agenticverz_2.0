@@ -213,7 +213,7 @@ activity/L6 run_signal_driver        controls/L5 threshold_engine
 
 | # | Activity File | Imports From Controls | Purpose |
 |---|---------------|----------------------|---------|
-| 1 | `L5_engines/__init__.py` | `controls/L5_engines/threshold_engine` | ThresholdSignal, LLMRunEvaluator, ThresholdResult, evaluate_run_thresholds |
+| 1 | ~~`L5_engines/__init__.py`~~ | ~~`controls/L5_engines/threshold_engine`~~ | **RESOLVED** (PIN-504 Phase 6): Re-export block deleted, zero callers |
 | 2 | `L6_drivers/__init__.py` | `controls/L6_drivers/threshold_driver` | LimitSnapshot, ThresholdDriver, ThresholdDriverSync, emit_and_persist_threshold_signal, emit_threshold_signal_sync |
 
 ### Controls imports from activity domain
@@ -391,15 +391,21 @@ No L2→L5 bypasses in activity domain.
 
 **Deferred:** Requires L4 Coordinator to mediate cross-domain signal writes.
 
-### Cat E: Cross-Domain L5→L5/L6 Violations (Outbound — 1 — DOCUMENT ONLY)
+### Cat E: Cross-Domain L5→L5/L6 Violations (Outbound — 1 → 0 — RESOLVED)
 
-| Source File | Import Target |
-|------------|--------------|
-| `activity/L6_drivers/__init__.py` | `controls.L6_drivers.threshold_driver` |
+| Source File | Old Import | Resolution |
+|------------|-----------|-----------|
+| `activity/L5_engines/__init__.py` | 12 symbols from `controls.L5_engines.threshold_engine` | **RESOLVED** (PIN-504 Phase 6): Deleted re-export block. Zero callers used this path. |
 
-Re-export of controls threshold types. Deferred to Loop Model wiring.
+**Note:** `activity/L6_drivers/__init__.py` re-export of controls threshold types was resolved in PIN-504 Phase 3 (SignalCoordinator).
 
 ### Tally
 
 31/31 checks PASS (27 consolidation + 4 cleansing).
 
+
+---
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+**L4 Handler Update:** All `getattr()`-based reflection dispatch in this domain's L4 handler replaced with explicit `dispatch = {}` maps. All `asyncio.iscoroutinefunction()` eliminated via explicit sync/async split. Zero `__import__()` calls remain. See PIN-507 for full audit trail.

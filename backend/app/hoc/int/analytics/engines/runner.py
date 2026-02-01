@@ -566,6 +566,8 @@ class RunRunner:
             # L6 driver: DB operations (driver, signal emission)
             from app.hoc.cus.controls.L6_drivers.threshold_driver import (
                 ThresholdDriverSync,
+            )
+            from app.hoc.hoc_spine.orchestrator.coordinators.signal_coordinator import (
                 emit_and_persist_threshold_signal,
             )
 

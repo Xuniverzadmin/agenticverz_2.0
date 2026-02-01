@@ -46,7 +46,19 @@ class IncidentsQueryHandler:
             )
 
         facade = get_incidents_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "list_active_incidents": facade.list_active_incidents,
+            "list_resolved_incidents": facade.list_resolved_incidents,
+            "list_historical_incidents": facade.list_historical_incidents,
+            "get_incident_detail": facade.get_incident_detail,
+            "get_incidents_for_run": facade.get_incidents_for_run,
+            "get_metrics": facade.get_metrics,
+            "analyze_cost_impact": facade.analyze_cost_impact,
+            "detect_patterns": facade.detect_patterns,
+            "analyze_recurrence": facade.analyze_recurrence,
+            "get_incident_learnings": facade.get_incident_learnings,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
@@ -56,6 +68,49 @@ class IncidentsQueryHandler:
         kwargs.pop("method", None)
         data = await method(session=ctx.session, tenant_id=ctx.tenant_id, **kwargs)
         return OperationResult.ok(data)
+
+
+class IncidentsExportHandler:
+    """
+    Handler for incidents.export operations.
+
+    Dispatches to ExportBundleDriver methods (PIN-504: L2 must not import L6 directly).
+    Routes export_evidence, export_soc2, export_executive_debrief through L4.
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import (
+            get_export_bundle_driver,
+        )
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail(
+                "Missing 'method' in params", "MISSING_METHOD"
+            )
+
+        driver = get_export_bundle_driver()
+        dispatch = {
+            "create_evidence_bundle": driver.create_evidence_bundle,
+            "create_soc2_bundle": driver.create_soc2_bundle,
+            "create_executive_debrief": driver.create_executive_debrief,
+        }
+        method = dispatch.get(method_name)
+        if method is None:
+            return OperationResult.fail(
+                f"Unknown export method: {method_name}", "UNKNOWN_METHOD"
+            )
+
+        kwargs = dict(ctx.params)
+        kwargs.pop("method", None)
+
+        try:
+            data = await method(**kwargs)
+            return OperationResult.ok(data)
+        except ValueError as e:
+            return OperationResult.fail(str(e), "NOT_FOUND")
+        except Exception as e:
+            return OperationResult.fail(str(e), "EXPORT_ERROR")
 
 
 class IncidentsWriteHandler:
@@ -85,7 +140,12 @@ class IncidentsWriteHandler:
         audit = AuditLedgerService(ctx.session)
         service = get_incident_write_service(ctx.session, audit=audit)
 
-        method = getattr(service, method_name, None)
+        dispatch = {
+            "acknowledge_incident": service.acknowledge_incident,
+            "resolve_incident": service.resolve_incident,
+            "manual_close_incident": service.manual_close_incident,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown write method: {method_name}", "UNKNOWN_METHOD"
@@ -100,4 +160,5 @@ class IncidentsWriteHandler:
 def register(registry: OperationRegistry) -> None:
     """Register incidents operations with the registry."""
     registry.register("incidents.query", IncidentsQueryHandler())
+    registry.register("incidents.export", IncidentsExportHandler())
     registry.register("incidents.write", IncidentsWriteHandler())

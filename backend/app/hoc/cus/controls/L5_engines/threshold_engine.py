@@ -50,7 +50,6 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
-from enum import Enum
 from typing import TYPE_CHECKING, Optional, Protocol
 
 from pydantic import BaseModel, Field, field_validator
@@ -146,30 +145,16 @@ class ThresholdParamsUpdate(BaseModel):
 
 
 # =============================================================================
-# Signal Types (Canonical)
+# Signal Types — canonical home: controls/L5_schemas/threshold_signals.py
+# TOMBSTONE (PIN-507 Law 1): Re-exported here for legacy callers only.
+# Canonical import: app.hoc.cus.controls.L5_schemas.threshold_signals
+# Remove re-export after cleansing cycle.
 # =============================================================================
 
-
-class ThresholdSignal(str, Enum):
-    """
-    Signals emitted when runs breach thresholds.
-    These appear in Activity → LLM Runs → Signal panels.
-    """
-
-    EXECUTION_TIME_EXCEEDED = "EXECUTION_TIME_EXCEEDED"
-    TOKEN_LIMIT_EXCEEDED = "TOKEN_LIMIT_EXCEEDED"
-    COST_LIMIT_EXCEEDED = "COST_LIMIT_EXCEEDED"
-    RUN_FAILED = "RUN_FAILED"
-
-
-@dataclass(frozen=True)
-class ThresholdEvaluationResult:
-    """Result of threshold evaluation."""
-
-    run_id: str
-    signals: list[ThresholdSignal]
-    params_used: dict
-    evaluated_at: datetime
+from app.hoc.cus.controls.L5_schemas.threshold_signals import (  # noqa: F401
+    ThresholdEvaluationResult,
+    ThresholdSignal,
+)
 
 
 # =============================================================================

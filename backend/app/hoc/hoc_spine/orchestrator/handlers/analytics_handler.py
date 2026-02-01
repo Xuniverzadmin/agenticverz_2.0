@@ -47,7 +47,12 @@ class AnalyticsQueryHandler:
             )
 
         facade = get_analytics_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "get_usage_statistics": facade.get_usage_statistics,
+            "get_cost_statistics": facade.get_cost_statistics,
+            "get_status": facade.get_status,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
@@ -79,7 +84,15 @@ class AnalyticsDetectionHandler:
             )
 
         facade = get_detection_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "run_detection": facade.run_detection,
+            "list_anomalies": facade.list_anomalies,
+            "get_anomaly": facade.get_anomaly,
+            "resolve_anomaly": facade.resolve_anomaly,
+            "acknowledge_anomaly": facade.acknowledge_anomaly,
+            "get_detection_status": facade.get_detection_status,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"

@@ -45,7 +45,7 @@ from ..metrics import (
     nova_skill_duration_seconds,
 )
 # L4 Domain Facades (PIN-454 FIX-002: L5 must use facades, not direct engine imports)
-from ..services.incidents.facade import get_incident_facade
+from ..services.incidents import get_incident_facade
 from ..services.governance.run_governance_facade import get_run_governance_facade
 # PIN-454 FIX-001: Transaction Coordinator for atomic cross-domain writes
 from ..services.governance.transaction_coordinator import (
@@ -566,6 +566,8 @@ class RunRunner:
             # L6 driver: DB operations (driver, signal emission)
             from app.hoc.cus.controls.L6_drivers.threshold_driver import (
                 ThresholdDriverSync,
+            )
+            from app.hoc.hoc_spine.orchestrator.coordinators.signal_coordinator import (
                 emit_and_persist_threshold_signal,
             )
 

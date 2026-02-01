@@ -58,7 +58,8 @@ Incident Aggregation Driver - Prevents Incident Explosion Under Load
 
 | Category | Imports |
 |----------|---------|
-| L5 Engine | `app.hoc.cus.incidents.L5_engines.incident_severity_engine` |
+| L5 Schema | `app.hoc.cus.incidents.L5_schemas.severity_policy` (PIN-507 Law 1) |
+| L5 Engine | ~~`app.hoc.cus.incidents.L5_engines.incident_severity_engine`~~ REMOVED (PIN-507 Law 1) |
 | L7 Model | `app.models.killswitch` |
 | External | `app.utils.runtime`, `sqlalchemy`, `sqlmodel` |
 
@@ -82,7 +83,11 @@ exports:
       methods: [get_or_create_incident, resolve_stale_incidents, get_incident_stats]
 ```
 
+## PIN-507 Law 1 Amendment (2026-02-01)
+
+`IncidentSeverityEngine`, `SeverityConfig`, `generate_incident_title` import changed from `L5_engines.incident_severity_engine` → `L5_schemas.severity_policy`. Law 1: L6 must not reach up to L5 engines. Severity logic is pure stateless policy, canonically belonging in L5_schemas as a `*_policy.py` file. CI guard `check_l6_no_l5_engine_imports` prevents regression.
+
 ## Evaluation Notes
 
-- **Disposition:** KEEP / MODIFY / QUARANTINE / DEPRECATED
-- **Rationale:** ---
+- **Disposition:** KEEP
+- **Rationale:** Core L6 driver for incident aggregation. L6→L5 engine import remediated per PIN-507 Law 1.

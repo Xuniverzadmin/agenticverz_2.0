@@ -88,8 +88,8 @@ from app.hoc.hoc_spine.orchestrator.operation_registry import (
     get_operation_registry,
 )
 
-# M23: Keep DeterminismLevel enum for type usage (not a facade call)
-from app.hoc.cus.logs.L5_engines.replay_determinism import (
+# M23: DeterminismLevel enum (PIN-504: import from L5_schemas, not L5_engines)
+from app.hoc.cus.logs.L5_schemas.determinism_types import (
     DeterminismLevel,
 )
 

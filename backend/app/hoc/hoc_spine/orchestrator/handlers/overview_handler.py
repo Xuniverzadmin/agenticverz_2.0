@@ -49,7 +49,14 @@ class OverviewQueryHandler:
             )
 
         facade = get_overview_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "get_highlights": facade.get_highlights,
+            "get_decisions": facade.get_decisions,
+            "get_costs": facade.get_costs,
+            "get_decisions_count": facade.get_decisions_count,
+            "get_recovery_stats": facade.get_recovery_stats,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"

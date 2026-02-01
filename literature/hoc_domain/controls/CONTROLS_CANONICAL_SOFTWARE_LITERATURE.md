@@ -57,19 +57,25 @@ Two `app.services` references exist but both are inside docstring Usage examples
 - `alert_fatigue_engine.py` line 37: docstring
 - `controls_facade.py` line 42: docstring
 
+### New L5_schemas File (PIN-504 Phase 6)
+
+| File | Contents | Purpose |
+|------|----------|---------|
+| `L5_schemas/override_types.py` | `LimitOverrideServiceError`, `LimitNotFoundError`, `OverrideNotFoundError`, `OverrideValidationError`, `StackingAbuseError` | Error types extracted from `L6_drivers/override_driver.py` so L2 can import without L6 dependency |
+
 ### Cross-Domain Imports (3 — Documented, Deferred to Rewiring)
 
 | File | Target Domain | Import Path |
 |------|--------------|-------------|
 | customer_killswitch_read_engine.py | policies | `app.hoc.cus.policies.controls.drivers.killswitch_read_driver` |
 | customer_killswitch_adapter.py | **general (ABOLISHED)** | `app.hoc.cus.general.L5_controls.engines.guard_write_engine` — **DEAD IMPORT: `cus/general/` abolished per PIN-485. Must repoint to `hoc_spine.*` during cleansing cycle.** |
-| threshold_driver.py | activity | `app.hoc.cus.activity.L6_drivers.run_signal_driver` (lazy, function-scoped) |
+| ~~threshold_driver.py~~ | ~~activity~~ | ~~`app.hoc.cus.activity.L6_drivers.run_signal_driver`~~ **REMOVED** (PIN-507 Law 4) |
 
-**Correct architecture:** Cross-domain access should go through L4 spine. Currently L5→L5/L6→L6 cross-domain. Deferred to rewiring phase.
+**Correct architecture:** Cross-domain access should go through L4 spine. `threshold_driver.py` cross-domain import remediated (PIN-507 Law 4 — signal emission moved to L4). All L6→L5 engine imports remediated (PIN-507 Law 1).
 
-### L6→L5 Runtime Import (1 — Documented)
+### ~~L6→L5 Runtime Import~~ — REMEDIATED (PIN-507 Law 1, 2026-02-01)
 
-`threshold_driver.py` line 287 imports `ThresholdSignal` from `L5_engines.threshold_engine` inside a function body. Lazy/function-scoped — not circular at module level. Documented for future cleanup.
+~~`threshold_driver.py` line 287 imports `ThresholdSignal` from `L5_engines.threshold_engine`~~ **FIXED.** `ThresholdSignal` extracted to `controls/L5_schemas/threshold_signals.py`. `threshold_driver.py` now imports from L5_schemas (not L5_engines). CI guard `check_l6_no_l5_engine_imports` prevents regression.
 
 ### Layer Anomaly (1 — Documented)
 
@@ -176,8 +182,8 @@ Controls domain handles customer-facing control configurations:
 
 ### threshold_driver.py
 - **Role:** Threshold state persistence and signal emission
-- **Cross-domain:** Imports activity domain (lazy)
-- **L6→L5:** Imports ThresholdSignal from threshold_engine (function-scoped)
+- **Cross-domain:** ~~Imports activity domain (lazy)~~ REMOVED (PIN-507 Law 4 — signal emission moved to L4 `signal_coordinator.py`)
+- **L6→L5:** ~~Imports ThresholdSignal from threshold_engine~~ FIXED (PIN-507 Law 1 — now imports from `controls/L5_schemas/threshold_signals.py`)
 
 ---
 
@@ -252,3 +258,13 @@ Other domains importing from controls:
 ### Tally
 
 43/43 checks PASS (40 consolidation + 3 cleansing).
+
+---
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+**L4 Handler Update:** All `getattr()`-based reflection dispatch in this domain's L4 handler replaced with explicit `dispatch = {}` maps. All `asyncio.iscoroutinefunction()` eliminated via explicit sync/async split. Zero `__import__()` calls remain. See PIN-507 for full audit trail.
+
+## PIN-507 Law 4 Remediation (2026-02-01)
+
+`emit_and_persist_threshold_signal` deleted from `threshold_driver.py` — cross-domain orchestration (controls→activity) moved to L4 `signal_coordinator.py`. Activity domain import (`run_signal_driver`) removed from this L6 driver. `emit_threshold_signal_sync` retained (pure L6 single-domain DB write). CI guard added to `check_init_hygiene.py` to prevent future L6 cross-domain imports.

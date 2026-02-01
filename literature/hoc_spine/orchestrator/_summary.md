@@ -78,3 +78,11 @@ Cross-domain mediators created by PIN-504 (Loop Model C4 pattern).
 | pool_manager.py | _none_ | 0 | 0 |
 | run_governance_facade.py | _none_ | 0 | 0 |
 
+
+---
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+**Handlers updated:** All 9 handler files (18 handler classes) in `hoc_spine/orchestrator/handlers/` now use explicit dispatch maps instead of `getattr()` reflection. Zero `asyncio.iscoroutinefunction()` calls remain. Mixed sync/async handlers use split `async_dispatch` / `sync_dispatch` dictionaries. Dispatch maps are local per-call (built after lazy facade import inside `execute()`). Error semantics (codes, messages, exception mapping) preserved exactly.
+
+**Files:** `controls_handler.py`, `api_keys_handler.py`, `overview_handler.py`, `account_handler.py`, `analytics_handler.py`, `activity_handler.py`, `incidents_handler.py`, `integrations_handler.py`, `logs_handler.py`, `policies_handler.py`

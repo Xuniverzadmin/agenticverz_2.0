@@ -45,7 +45,15 @@ class ControlsQueryHandler:
             )
 
         facade = get_controls_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "list_controls": facade.list_controls,
+            "get_status": facade.get_status,
+            "get_control": facade.get_control,
+            "update_control": facade.update_control,
+            "enable_control": facade.enable_control,
+            "disable_control": facade.disable_control,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
@@ -106,7 +114,63 @@ class ControlsThresholdHandler:
             )
 
 
+class ControlsOverrideHandler:
+    """
+    Handler for controls.overrides operations.
+
+    Routes to LimitOverrideService (PIN-504: L2 must not import L6 directly).
+    Methods: request_override, list_overrides, get_override, cancel_override.
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.controls.L6_drivers.override_driver import (
+            LimitOverrideService,
+        )
+        from app.hoc.cus.controls.L5_schemas.override_types import (
+            LimitNotFoundError,
+            LimitOverrideServiceError,
+            OverrideNotFoundError,
+            OverrideValidationError,
+            StackingAbuseError,
+        )
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail("Missing 'method' in params", "MISSING_METHOD")
+
+        service = LimitOverrideService(ctx.session)
+        dispatch = {
+            "request_override": service.request_override,
+            "list_overrides": service.list_overrides,
+            "get_override": service.get_override,
+            "cancel_override": service.cancel_override,
+        }
+        method = dispatch.get(method_name)
+        if method is None:
+            return OperationResult.fail(f"Unknown override method: {method_name}", "UNKNOWN_METHOD")
+
+        kwargs = dict(ctx.params)
+        kwargs.pop("method", None)
+        if "tenant_id" not in kwargs:
+            kwargs["tenant_id"] = ctx.tenant_id
+
+        try:
+            data = await method(**kwargs)
+            return OperationResult.ok(data)
+        except LimitNotFoundError as e:
+            return OperationResult.fail(str(e), "LIMIT_NOT_FOUND")
+        except OverrideNotFoundError as e:
+            return OperationResult.fail(str(e), "OVERRIDE_NOT_FOUND")
+        except OverrideValidationError as e:
+            return OperationResult.fail(str(e), "VALIDATION_ERROR")
+        except StackingAbuseError as e:
+            return OperationResult.fail(str(e), "STACKING_ABUSE")
+        except LimitOverrideServiceError as e:
+            return OperationResult.fail(str(e), "SERVICE_ERROR")
+
+
 def register(registry: OperationRegistry) -> None:
     """Register controls operations with the registry."""
     registry.register("controls.query", ControlsQueryHandler())
     registry.register("controls.thresholds", ControlsThresholdHandler())
+    registry.register("controls.overrides", ControlsOverrideHandler())

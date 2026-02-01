@@ -1274,22 +1274,20 @@ async def worker_health():
     except ImportError:
         moat_status["m20_policy"] = "unavailable"
 
-    # Check M9 Failure Catalog (via RecoveryMatcher)
+    # Check M9 Failure Catalog (via RecoveryEvaluationEngine, PIN-504)
     try:
-        # L6 driver import (migrated to HOC per SWEEP-09)
-        from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
+        from app.hoc.cus.policies.L5_engines.recovery_evaluation_engine import RecoveryEvaluationEngine
 
-        RecoveryMatcher()
+        RecoveryEvaluationEngine()
         moat_status["m9_failure_catalog"] = "available"
     except ImportError:
         moat_status["m9_failure_catalog"] = "unavailable"
 
-    # Check M10 Recovery (via RecoveryMatcher)
+    # Check M10 Recovery (via RecoveryEvaluationEngine, PIN-504)
     try:
-        # L6 driver import (migrated to HOC per SWEEP-09)
-        from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
+        from app.hoc.cus.policies.L5_engines.recovery_evaluation_engine import RecoveryEvaluationEngine
 
-        RecoveryMatcher()
+        RecoveryEvaluationEngine()
         moat_status["m10_recovery"] = "available"
     except ImportError:
         moat_status["m10_recovery"] = "unavailable"

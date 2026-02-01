@@ -38,7 +38,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Optional
 
-from ..schemas.loop_events import (
+from app.hoc.cus.integrations.L5_schemas.loop_events import (
     LoopEvent,
     LoopStage,
     PatternMatchResult,

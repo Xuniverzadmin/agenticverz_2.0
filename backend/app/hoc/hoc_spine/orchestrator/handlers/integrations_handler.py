@@ -48,7 +48,19 @@ class IntegrationsQueryHandler:
             )
 
         facade = get_integrations_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "list_integrations": facade.list_integrations,
+            "get_integration": facade.get_integration,
+            "create_integration": facade.create_integration,
+            "update_integration": facade.update_integration,
+            "delete_integration": facade.delete_integration,
+            "enable_integration": facade.enable_integration,
+            "disable_integration": facade.disable_integration,
+            "get_health_status": facade.get_health_status,
+            "test_credentials": facade.test_credentials,
+            "get_limits_status": facade.get_limits_status,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
@@ -80,7 +92,15 @@ class IntegrationsConnectorsHandler:
             )
 
         facade = get_connectors_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "list_connectors": facade.list_connectors,
+            "get_connector": facade.get_connector,
+            "register_connector": facade.register_connector,
+            "update_connector": facade.update_connector,
+            "delete_connector": facade.delete_connector,
+            "test_connector": facade.test_connector,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
@@ -112,7 +132,18 @@ class IntegrationsDataSourcesHandler:
             )
 
         facade = get_datasources_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "register_source": facade.register_source,
+            "list_sources": facade.list_sources,
+            "get_source": facade.get_source,
+            "update_source": facade.update_source,
+            "delete_source": facade.delete_source,
+            "test_connection": facade.test_connection,
+            "activate_source": facade.activate_source,
+            "deactivate_source": facade.deactivate_source,
+            "get_statistics": facade.get_statistics,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"

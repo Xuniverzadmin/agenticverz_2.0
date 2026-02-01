@@ -30,7 +30,7 @@ Each script's unique contribution and canonical function.
 | circuit_breaker | L6 | `CircuitBreaker.reset` | CANONICAL | 2 | ?:__init__ | ?:canary | ?:circuit_breaker | L5:canary | ?:check_priority5_intent | ?:conftest | ?:test_circuit_breaker, cb_sync_wrapper, circuit_breaker_async +1 | YES |
 | circuit_breaker_async | L6 | `is_v2_disabled` | CANONICAL | 9 | ?:__init__ | ?:circuit_breaker_async | ?:sandbox | ?:canary | ?:cb_sync_wrapper | L5:sandbox | L5:canary | L5:cb_sync_wrapper | ?:check_priority5_intent | ?:test_circuit_breaker_async, cb_sync_wrapper, circuit_breaker +1 | YES |
 | limits_read_driver | L6 | `LimitsReadDriver.fetch_limits` | CANONICAL | 12 | L6:__init__ | L5:policies_limits_query_engine | YES |
-| override_driver | L6 | `LimitOverrideService.request_override` | CANONICAL | 3 | L2:override | YES |
+| override_driver | L6 | `LimitOverrideService.request_override` | CANONICAL | 3 | L4:controls_handler (controls.overrides) | YES |
 | policy_limits_driver | L6 | `PolicyLimitsDriver.fetch_limit_by_id` | ENTRY | 0 | L5:policy_limits_engine, circuit_breaker, circuit_breaker_async | YES |
 | scoped_execution | L6 | `execute_with_scope` | CANONICAL | 6 | ?:recovery | ?:scoped_execution | L2:recovery, budget_enforcement_driver, circuit_breaker +5 | YES |
 | threshold_driver | L6 | `ThresholdDriver.get_threshold_limit_by_scope` | CANONICAL | 2 | ?:runner | L6:__init__ | L5:threshold_engine, threshold_engine | YES |
@@ -134,4 +134,24 @@ _77 thin delegation functions._
 
 | Script | Change | Reference |
 |--------|--------|-----------|
-| `threshold_driver` | `LimitSnapshot` re-exported from `hoc_spine.schemas.threshold_types`. `emit_and_persist_threshold_signal` delegates to `SignalCoordinator` (L4). Removed cross-domain activity import. | PIN-504 Phases 1, 3 |
+| `threshold_driver` | `LimitSnapshot` re-exported from `hoc_spine.schemas.threshold_types`. ~~`emit_and_persist_threshold_signal` delegates to `SignalCoordinator` (L4).~~ **Function deleted** (PIN-507 Law 4) — moved to L4 `signal_coordinator.py`. Cross-domain activity import removed. | PIN-504 Phases 1, 3; PIN-507 Law 4 |
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| L4 `controls_handler.py` | `ControlsQueryHandler`: Replaced `getattr()` dispatch with explicit map (6 methods). `ControlsOverrideHandler`: Replaced `getattr()` dispatch with explicit map (4 methods). Zero reflection in dispatch paths. | PIN-507 Law 5 |
+
+## PIN-507 Law 4 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| `threshold_driver` | `emit_and_persist_threshold_signal` deleted — cross-domain orchestration moved to L4 `signal_coordinator.py`. Activity domain import removed. | PIN-507 Law 4 |
+
+## PIN-507 Law 1 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| `threshold_engine` | `ThresholdSignal` + `ThresholdEvaluationResult` extracted to `controls/L5_schemas/threshold_signals.py`. Tombstone re-exports retained for backward compat. Unused `Enum` import removed. | PIN-507 Law 1 |
+| `threshold_driver` | `ThresholdSignal` import changed from `L5_engines.threshold_engine` (lazy) → `L5_schemas.threshold_signals` (module-level). L6→L5 engine reach eliminated. | PIN-507 Law 1 |
+| **NEW** `L5_schemas/threshold_signals.py` | Created: `ThresholdSignal(str, Enum)`, `ThresholdEvaluationResult(dataclass)`. Canonical home for threshold signal types. | PIN-507 Law 1 |

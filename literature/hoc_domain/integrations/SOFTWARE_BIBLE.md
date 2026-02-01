@@ -327,3 +327,20 @@ _251 thin delegation functions._
 | Script | Change | Reference |
 |--------|--------|-----------|
 | `customer_logs_adapter` | Routes through `LogsCoordinator` (`hoc_spine.orchestrator.coordinators.logs_coordinator`) instead of direct logs L5 import. | PIN-504 Phase 4 |
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| L4 `integrations_handler.py` | `IntegrationsQueryHandler`: Replaced `getattr()` dispatch with explicit map (10 methods). `IntegrationsConnectorsHandler`: Replaced `getattr()` dispatch with explicit map (6 methods). `IntegrationsDataSourcesHandler`: Replaced `getattr()` dispatch with explicit map (9 methods). Zero reflection in dispatch paths. | PIN-507 Law 5 |
+
+## PIN-507 Law 0 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| `tests/test_m25_integration_loop.py` | Import of `IncidentToCatalogBridge`, `PatternToRecoveryBridge`, `RecoveryToPolicyBridge` rewired from abolished `app.integrations.L3_adapters` → `app.integrations.bridges`. L3 abolished per PIN-485. | PIN-507 Law 0 |
+| `tests/test_m25_policy_overreach.py` | Import of `ConfidenceCalculator` rewired from abolished `app.integrations.L3_adapters` → `app.integrations.events`. L3 abolished per PIN-485. | PIN-507 Law 0 |
+| `L5_engines/__init__.py` | Removed stale re-export of `learning_proof_engine` (16 symbols). Module moved to `policies/L5_engines/` during PIN-498 domain consolidation. | PIN-507 Law 0 |
+| `L5_schemas/__init__.py` | Removed stale re-export of `cost_snapshot_schemas` (8 symbols). Module lives in `analytics/L5_schemas/`, wrong domain. | PIN-507 Law 0 |
+| `L5_engines/cost_bridges_engine.py` | Fixed relative import `..schemas.loop_events` → absolute `app.hoc.cus.integrations.L5_schemas.loop_events`. | PIN-507 Law 0 |
+| `L5_engines/credentials/__init__.py` | Stale relative import `.types` → absolute `app.hoc.cus.integrations.L5_engines.types`. `Credential` class lives in parent package `L5_engines/types.py`, not `credentials/types.py`. Detected by `check_init_hygiene.py` STALE_REEXPORT check. | PIN-507 Law 0 |

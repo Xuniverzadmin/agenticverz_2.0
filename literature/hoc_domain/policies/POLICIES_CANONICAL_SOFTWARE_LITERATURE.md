@@ -318,10 +318,10 @@ L6 policy driver → L5 policy engine → L4 runtime orchestrator → L5 target 
 | **V1** | `policy_proposal_engine.py` (L5) | Imports `logs/L6_drivers/audit_ledger` | Should route through L4 |
 | **V2** | `policy_rules_engine.py` (L5) | Imports `logs/L6_drivers/audit_ledger` | Should route through L4 |
 | **V3** | `policy_limits_engine.py` (L5) | Imports `logs/L6_drivers/audit_ledger` | Should route through L4 |
-| **V4** | `recovery_evaluation_engine.py` (L5) | Imports `incidents/L5_engines/recovery_rule_engine` | Should route through L4 |
-| **V5** | `lessons_engine.py` (L5) | Imports `incidents/L6_drivers/lessons_driver` | Should route through L4 |
+| **V4** | `recovery_evaluation_engine.py` (L5) | ~~Imports `incidents/L5_engines/recovery_rule_engine`~~ | **RESOLVED** (PIN-504 Phase 6): Pure functions extracted to `hoc_spine/schemas/recovery_decisions.py` |
+| **V5** | `lessons_engine.py` (L5) | ~~Imports `incidents/L6_drivers/lessons_driver`~~ | **RESOLVED** (PIN-504 Phase 6): Lazy import inside `_get_driver()` method |
 
-**Remediation:** These violations will be addressed during the domain rewiring phase by introducing L4 orchestration for cross-domain operations.
+**Remediation Status:** V1-V3 resolved by AuditCoordinator (PIN-504 Phase 2). V4-V5 resolved by type extraction + lazy imports (PIN-504 Phase 6). All 5 violations **RESOLVED**.
 
 ---
 
@@ -472,7 +472,7 @@ All apparent overlaps have been classified as **intentional architectural patter
 | `integrations` | MCP tool mapping | `policy_mapper.py` |
 | `account` | Customer scope resolution | `scope_resolver.py` |
 
-**Note:** Dependencies V1-V5 are architecture violations (L5 → L6 cross-domain) and will be rewired through L4 orchestration.
+**Note:** Dependencies V1-V5 were architecture violations (L5 → L6 cross-domain). All **RESOLVED** via PIN-504 (Phases 2 + 6): V1-V3 via AuditCoordinator injection, V4 via pure function extraction to `hoc_spine/schemas/recovery_decisions.py`, V5 via lazy import.
 
 ### Inbound Dependencies (Other Domains → Policies)
 
@@ -885,18 +885,16 @@ Active import (line 97) was already correct. Only the docstring Imports section 
 |---------|---------|--------|-----------------|
 | `recovery/recovery.py` | 34, 35 | `policies.L6_drivers.recovery_matcher`, `recovery_write_driver` | policies L6 |
 | `recovery/recovery_ingest.py` | 50 | `policies.L6_drivers.recovery_write_driver` | policies L6 |
-| `policies/workers.py` | 1280, 1290 | `policies.L6_drivers.recovery_matcher` | policies L6 |
+| `policies/workers.py` | 1280, 1290 | ~~`policies.L6_drivers.recovery_matcher`~~ | **RESOLVED** (PIN-504 Phase 6): Uses L5 `RecoveryEvaluationEngine` |
 
-**Deferred:** Requires Loop Model infrastructure (PIN-487 Part 2).
+**Status:** `workers.py` resolved. Recovery domain files (`recovery.py`, `recovery_ingest.py`) deferred to PIN-505.
 
-### Cat E: Cross-Domain Violations (Inbound — 2)
+### Cat E: Cross-Domain Violations (Inbound — 2 → 1 — PARTIALLY RESOLVED)
 
-| Source File | Source Domain | Import Target |
-|------------|--------------|--------------|
-| `incidents/L5_engines/incident_engine.py` | incidents | `policies.L5_engines.lessons_engine` |
-| `integrations/adapters/customer_policies_adapter.py` | integrations | `policies.L5_engines.customer_policy_read_engine` |
-
-**Deferred:** Requires L4 Coordinator to mediate cross-domain reads.
+| Source File | Source Domain | Import Target | Status |
+|------------|--------------|--------------|--------|
+| `incidents/L5_engines/incident_engine.py` | incidents | ~~`policies.L5_engines.lessons_engine`~~ | **RESOLVED** (PIN-504 Phase 6): LessonsCoordinator (L4) injected |
+| `integrations/adapters/customer_policies_adapter.py` | integrations | `policies.L5_engines.customer_policy_read_engine` | DEFERRED |
 
 ### Tally
 
@@ -905,3 +903,17 @@ Active import (line 97) was already correct. Only the docstring Imports section 
 ---
 
 **END OF POLICIES DOMAIN CANONICAL SOFTWARE LITERATURE**
+
+---
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+**L4 Handler Update:** All `getattr()`-based reflection dispatch in this domain's L4 handler replaced with explicit `dispatch = {}` maps. All `asyncio.iscoroutinefunction()` eliminated via explicit sync/async split. Zero `__import__()` calls remain. See PIN-507 for full audit trail.
+
+## PIN-507 Law 0 Remediation (2026-02-01)
+
+**Legacy `app/services/policy/__init__.py`:** Removed stale re-export of `LessonsLearnedEngine` / `get_lessons_learned_engine` from disconnected shim `lessons_engine.py`. The class was moved to HOC `policies/L5_engines/lessons_engine.py` during PIN-468.
+
+**Legacy `app/services/limits/` (3 files):** `policy_limits_service.py`, `policy_rules_service.py`, and `app/services/policy_proposal.py` — import of `AuditLedgerServiceAsync` rewired from abolished `app.services.logs.audit_ledger_service_async` → `app.hoc.cus.logs.L6_drivers.audit_ledger_driver`. Transitional `services→hoc` dependencies with comments at import sites.
+
+**Legacy `app/api/policy_layer.py` and `app/services/governance/facade.py`:** Import of `get_policy_facade` rewired from non-existent `app.services.policy.facade` → `app.services.policy` (package-level `__init__` re-export). The file was renamed to `policy_driver.py` during consolidation.

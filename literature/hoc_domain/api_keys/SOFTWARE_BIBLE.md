@@ -98,3 +98,11 @@ _10 thin delegation functions._
 - `keys_driver.get_keys_driver` → ?
 - `keys_engine.get_keys_read_engine` → ?
 - `keys_engine.get_keys_write_engine` → ?
+
+---
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| L4 `api_keys_handler.py` | `ApiKeysQueryHandler`: Replaced `getattr()` dispatch with explicit map (2 methods). Zero reflection in dispatch paths. | PIN-507 Law 5 |

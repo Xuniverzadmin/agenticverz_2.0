@@ -72,3 +72,11 @@ _10 thin delegation functions._
 - `overview_facade.OverviewFacade.__init__` → ?
 - `overview_facade.RecoveryStatsResult.to_dict` → overview_facade:CostPeriod.to_dict
 - `overview_facade.SystemPulse.to_dict` → ?
+
+---
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| L4 `overview_handler.py` | `OverviewQueryHandler`: Replaced `getattr()` dispatch with explicit map (5 methods). Zero reflection in dispatch paths. | PIN-507 Law 5 |

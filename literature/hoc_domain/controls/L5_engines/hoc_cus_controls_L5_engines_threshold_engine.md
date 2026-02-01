@@ -47,12 +47,13 @@ Threshold Decision Engine (L5)
 - **Docstring:** Partial update for threshold params.
 - **Class Variables:** max_execution_time_ms: Optional[int], max_tokens: Optional[int], max_cost_usd: Optional[float], failure_signal: Optional[bool]
 
-### `ThresholdSignal(str, Enum)`
-- **Docstring:** Signals emitted when runs breach thresholds.
+### ~~`ThresholdSignal(str, Enum)`~~ — MOVED (PIN-507 Law 1, 2026-02-01)
+- **Canonical home:** `controls/L5_schemas/threshold_signals.py`
+- **Re-exported here** for backward compatibility (tombstone)
 
-### `ThresholdEvaluationResult`
-- **Docstring:** Result of threshold evaluation.
-- **Class Variables:** run_id: str, signals: list[ThresholdSignal], params_used: dict, evaluated_at: datetime
+### ~~`ThresholdEvaluationResult`~~ — MOVED (PIN-507 Law 1, 2026-02-01)
+- **Canonical home:** `controls/L5_schemas/threshold_signals.py`
+- **Re-exported here** for backward compatibility (tombstone)
 
 ### `ThresholdDriverProtocol(Protocol)`
 - **Docstring:** Protocol defining the interface for threshold drivers.
@@ -134,7 +135,11 @@ exports:
       methods: []
 ```
 
+## PIN-507 Law 1 Amendment (2026-02-01)
+
+`ThresholdSignal` and `ThresholdEvaluationResult` extracted to `controls/L5_schemas/threshold_signals.py`. This file retains tombstone re-exports for backward compatibility. Canonical import: `app.hoc.cus.controls.L5_schemas.threshold_signals`. Unused `from enum import Enum` removed.
+
 ## Evaluation Notes
 
-- **Disposition:** KEEP / MODIFY / QUARANTINE / DEPRECATED
-- **Rationale:** ---
+- **Disposition:** KEEP
+- **Rationale:** Core L5 engine for threshold decisions. Signal types moved to L5_schemas per PIN-507 Law 1.

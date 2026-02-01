@@ -10,16 +10,8 @@ L5 Schema exports for the integrations domain.
 """
 
 from .audit_schemas import PolicyActivationAudit
-from .cost_snapshot_schemas import (
-    SEVERITY_THRESHOLDS,
-    AnomalyEvaluation,
-    CostSnapshot,
-    EntityType,
-    SnapshotAggregate,
-    SnapshotBaseline,
-    SnapshotStatus,
-    SnapshotType,
-)
+# NOTE: cost_snapshot_schemas lives in analytics/L5_schemas/, not integrations.
+# Stale cross-domain re-export removed per PIN-507 Law 0.
 from .loop_events import (
     LOOP_MECHANICS_FROZEN_AT,
     LOOP_MECHANICS_VERSION,
@@ -42,15 +34,6 @@ from .loop_events import (
 __all__ = [
     # audit_schemas
     "PolicyActivationAudit",
-    # cost_snapshot_schemas
-    "SEVERITY_THRESHOLDS",
-    "AnomalyEvaluation",
-    "CostSnapshot",
-    "EntityType",
-    "SnapshotAggregate",
-    "SnapshotBaseline",
-    "SnapshotStatus",
-    "SnapshotType",
     # loop_events
     "LOOP_MECHANICS_FROZEN_AT",
     "LOOP_MECHANICS_VERSION",

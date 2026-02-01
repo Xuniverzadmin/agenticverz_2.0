@@ -294,7 +294,7 @@ async def get_usage_statistics(
 
     # Delegate to L4 operation registry
     # L5 engine import (migrated to HOC per SWEEP-15)
-    from app.hoc.cus.analytics.L5_engines.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+    from app.hoc.cus.analytics.L5_schemas.query_types import ResolutionType as FacadeResolution, ScopeType as FacadeScope
 
     # Map L2 enums to L4 enums
     facade_resolution = FacadeResolution.HOUR if resolution == ResolutionType.HOUR else FacadeResolution.DAY
@@ -493,7 +493,7 @@ async def get_cost_statistics(
 
     # Delegate to L4 operation registry
     # L5 engine import (migrated to HOC per SWEEP-15)
-    from app.hoc.cus.analytics.L5_engines.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+    from app.hoc.cus.analytics.L5_schemas.query_types import ResolutionType as FacadeResolution, ScopeType as FacadeScope
 
     # Map L2 enums to L4 enums
     facade_resolution = FacadeResolution.HOUR if resolution == ResolutionType.HOUR else FacadeResolution.DAY
@@ -639,7 +639,7 @@ async def _get_usage_data(
 
     # Delegate to L4 operation registry
     # L5 engine import (migrated to HOC per SWEEP-15)
-    from app.hoc.cus.analytics.L5_engines.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+    from app.hoc.cus.analytics.L5_schemas.query_types import ResolutionType as FacadeResolution, ScopeType as FacadeScope
 
     # Map L2 enums to L4 enums
     facade_resolution = FacadeResolution.HOUR if resolution == ResolutionType.HOUR else FacadeResolution.DAY
@@ -892,7 +892,7 @@ async def _get_cost_data(
 
     # Delegate to L4 operation registry
     # L5 engine import (migrated to HOC per SWEEP-15)
-    from app.hoc.cus.analytics.L5_engines.analytics_facade import ResolutionType as FacadeResolution, ScopeType as FacadeScope
+    from app.hoc.cus.analytics.L5_schemas.query_types import ResolutionType as FacadeResolution, ScopeType as FacadeScope
 
     # Map L2 enums to L4 enums
     facade_resolution = FacadeResolution.HOUR if resolution == ResolutionType.HOUR else FacadeResolution.DAY

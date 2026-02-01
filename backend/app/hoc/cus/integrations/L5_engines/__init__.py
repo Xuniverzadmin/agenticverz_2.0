@@ -31,22 +31,8 @@ from .prevention_contract import (
     validate_prevention_candidate,
     validate_prevention_for_graduation,
 )
-from .learning_proof_engine import (
-    AdaptiveConfidenceSystem,
-    CheckpointConfig,
-    CheckpointPriority,
-    GlobalRegretTracker,
-    M25GraduationStatus,
-    PatternCalibration,
-    PolicyRegretTracker,
-    PreventionOutcome,
-    PreventionRecord,
-    PreventionTimeline,
-    PreventionTracker,
-    PrioritizedCheckpoint,
-    RegretEvent,
-    RegretType,
-)
+# NOTE: learning_proof_engine was moved to policies/L5_engines/ during domain
+# consolidation (PIN-498). Stale re-export removed per PIN-507 Law 0.
 from .cost_bridges_engine import (
     AnomalySeverity,
     AnomalyType,
@@ -70,21 +56,6 @@ __all__ = [
     "assert_prevention_immutable",
     "validate_prevention_candidate",
     "validate_prevention_for_graduation",
-    # learning_proof_engine
-    "AdaptiveConfidenceSystem",
-    "CheckpointConfig",
-    "CheckpointPriority",
-    "GlobalRegretTracker",
-    "M25GraduationStatus",
-    "PatternCalibration",
-    "PolicyRegretTracker",
-    "PreventionOutcome",
-    "PreventionRecord",
-    "PreventionTimeline",
-    "PreventionTracker",
-    "PrioritizedCheckpoint",
-    "RegretEvent",
-    "RegretType",
     # cost_bridges_engine
     "AnomalySeverity",
     "AnomalyType",

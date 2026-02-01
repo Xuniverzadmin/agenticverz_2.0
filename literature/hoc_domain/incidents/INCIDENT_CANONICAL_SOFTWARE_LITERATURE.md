@@ -356,11 +356,11 @@ Complete map of all files outside incidents domain that call into it.
 | 1 | L4 spine | `incidents_handler.py` | `incidents_facade` | WIRED |
 | 2 | L4 spine | `transaction_coordinator.py` | `incident_driver` | COMMENTED OUT |
 | 3 | L4 spine | `run_governance_facade.py` | `policy_violation_service` | COMMENTED OUT |
-| 4 | L2 HOC API | `hoc/api/cus/incidents/incidents.py` | `export_bundle_driver` | WIRED (bypasses L4 — see W1) |
+| 4 | L2 HOC API | `hoc/api/cus/incidents/incidents.py` | `incidents.export` (L4 handler) | WIRED (PIN-504 Phase 6) |
 | 5 | L2 HOC API | `hoc/api/cus/recovery/recovery.py` | `recovery_rule_engine` | WIRED |
 | 6 | L2 Legacy | `app/api/incidents.py` | `incidents_facade` (via shim) | LEGACY |
-| 7 | L5 policies | `recovery_evaluation_engine.py` | `recovery_rule_engine` (4 fns) | WIRED |
-| 8 | L5 policies | `lessons_engine.py` | `lessons_driver` | VIOLATION V2 |
+| 7 | L5 policies | `recovery_evaluation_engine.py` | `hoc_spine/schemas/recovery_decisions` (pure fns extracted) | RESOLVED (PIN-504 Phase 6) |
+| 8 | L5 policies | `lessons_engine.py` | `lessons_driver` (lazy import) | RESOLVED (PIN-504 Phase 6) |
 | 9 | L5 analytics | `cost_anomaly_detector.py` | `anomaly_bridge` | STALE PATH V3 |
 | 10 | L5 integrations | `customer_incidents_adapter.py` | `incident_read_engine`, `incident_write_engine` | WIRED |
 | 11 | int/general | `hallucination_hook.py` | `hallucination_detector` | WIRED |
@@ -418,22 +418,33 @@ python3 scripts/ops/hoc_software_bible_generator.py --domain incidents
 
 Domain has zero `app.services` imports (active or docstring) and zero `cus.general` imports.
 
-### Cat D: L2→L5 Bypass Violations (3 — DOCUMENT ONLY)
+### Cat D: L2→L5 Bypass Violations (3 → 0 — RESOLVED PIN-504 Phase 6)
 
-| L2 File | Line | Import | Domain Reached |
-|---------|------|--------|----------------|
-| `incidents/incidents.py` | — | `incidents.L6_drivers.*` | incidents L6 |
+| L2 File | Resolution |
+|---------|-----------|
+| `incidents/incidents.py` (3 export endpoints) | Routed through L4 `incidents.export` handler via `IncidentsExportHandler` |
 
-**Deferred:** Requires Loop Model infrastructure (PIN-487 Part 2).
+### Cat E: Cross-Domain L5→L5/L6 Violations (Outbound — 1 → 0 — RESOLVED PIN-504 Phase 6)
 
-### Cat E: Cross-Domain L5→L5/L6 Violations (Outbound — 1 — DOCUMENT ONLY)
-
-| Source File | Import Target |
-|------------|--------------|
-| `incidents/L5_engines/incident_write_engine.py` | `logs.L5_engines.audit_ledger_engine` |
-
-**Deferred:** Requires L4 Coordinator to mediate cross-domain audit writes.
+| Source File | Old Import | Resolution |
+|------------|-----------|-----------|
+| `incident_engine.py` | `policies.L5_engines.lessons_engine` | LessonsCoordinator (L4) injected as `evidence_recorder` |
+| `incident_write_engine.py` | `logs.L5_engines.audit_ledger_engine` | AuditCoordinator (L4) injected (PIN-504 Phase 2) |
 
 ### Tally
 
 12/12 checks PASS (9 consolidation + 3 cleansing).
+
+---
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+**L4 Handler Update:** All `getattr()`-based reflection dispatch in this domain's L4 handler replaced with explicit `dispatch = {}` maps. All `asyncio.iscoroutinefunction()` eliminated via explicit sync/async split. Zero `__import__()` calls remain. See PIN-507 for full audit trail.
+
+## PIN-507 Law 0 Remediation (2026-02-01)
+
+**Legacy `app/services/incident_write_engine.py`:** Import of `AuditLedgerService` rewired from abolished `app.services.logs.audit_ledger_service` → `app.hoc.cus.logs.L5_engines.audit_ledger_engine`. This is a transitional `services→hoc` dependency (comment added at import site). Permanent fix: migrate entire `incident_write_engine.py` to `hoc/cus/incidents/L5_engines/`.
+
+**Legacy `app/worker/runner.py`:** Import of `get_incident_facade` rewired from non-existent `..services.incidents.facade` submodule → `..services.incidents` (package-level `__init__` export). Unblocks `test_phase5a_governance.py`.
+
+**`hoc/cus/incidents/L6_drivers/export_bundle_driver.py` (line 45):** L6→L7 boundary fix. `Incident` model import moved from `app.db` → `app.models.killswitch`. L6 drivers must not import L7 models via `app.db` per HOC Topology V2.0.0. Detected by `scripts/ci/check_init_hygiene.py` L6_L7_BOUNDARY check.

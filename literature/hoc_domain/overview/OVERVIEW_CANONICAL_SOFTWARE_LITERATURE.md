@@ -99,3 +99,9 @@ Domain has zero `app.services` imports, zero `cus.general` imports, zero cross-d
 ### Tally
 
 8/8 checks PASS (6 consolidation + 2 cleansing).
+
+---
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+**L4 Handler Update:** All `getattr()`-based reflection dispatch in this domain's L4 handler replaced with explicit `dispatch = {}` maps. All `asyncio.iscoroutinefunction()` eliminated via explicit sync/async split. Zero `__import__()` calls remain. See PIN-507 for full audit trail.

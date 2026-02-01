@@ -275,3 +275,12 @@ _78 thin delegation functions._
 - `cost_write_engine.CostWriteService.create_cost_record` → cost_write_driver:CostWriteDriver.create_cost_record
 - `cost_write_engine.CostWriteService.create_feature_tag` → cost_write_driver:CostWriteDriver.create_feature_tag
 - _...and 48 more_
+
+---
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| L4 `analytics_handler.py` | `AnalyticsQueryHandler`: Replaced `getattr()` dispatch with explicit map (3 methods). `AnalyticsDetectionHandler`: Replaced `getattr()` dispatch with explicit map (6 methods). Zero reflection in dispatch paths. | PIN-507 Law 5 |
+| `cost_snapshots_engine.py` | Added `from sqlalchemy import text` at top. Replaced 13 `__import__("sqlalchemy").text(...)` → `text(...)`. Updated header: `Forbidden Imports: sqlalchemy ORM (session, query); sqlalchemy.text is permitted (PIN-507 Law 5)`. | PIN-507 Law 5 |

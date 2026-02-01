@@ -50,7 +50,25 @@ class ActivityQueryHandler:
             )
 
         facade = get_activity_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "get_runs": facade.get_runs,
+            "get_run_detail": facade.get_run_detail,
+            "get_run_evidence": facade.get_run_evidence,
+            "get_run_proof": facade.get_run_proof,
+            "get_status_summary": facade.get_status_summary,
+            "get_live_runs": facade.get_live_runs,
+            "get_completed_runs": facade.get_completed_runs,
+            "get_signals": facade.get_signals,
+            "get_metrics": facade.get_metrics,
+            "get_threshold_signals": facade.get_threshold_signals,
+            "get_risk_signals": facade.get_risk_signals,
+            "get_patterns": facade.get_patterns,
+            "get_cost_analysis": facade.get_cost_analysis,
+            "get_attention_queue": facade.get_attention_queue,
+            "acknowledge_signal": facade.acknowledge_signal,
+            "suppress_signal": facade.suppress_signal,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
@@ -159,7 +177,13 @@ class ActivityTelemetryHandler:
             )
 
         service = get_cus_telemetry_service()
-        method = getattr(service, method_name, None)
+        dispatch = {
+            "ingest_usage": service.ingest_usage,
+            "ingest_batch": service.ingest_batch,
+            "get_usage": service.get_usage,
+            "get_usage_summary": service.get_usage_summary,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown telemetry method: {method_name}", "UNKNOWN_METHOD"

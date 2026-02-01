@@ -1897,21 +1897,35 @@ async def export_evidence(
     """Export incident evidence bundle."""
     from fastapi.responses import Response
 
-    # L6 driver import (migrated to HOC per SWEEP-31)
-    from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_driver
-
     tenant_id = get_tenant_id_from_auth(request)
     auth_ctx = get_auth_context(request)
     exported_by = getattr(auth_ctx, "user_id", "system") if auth_ctx else "system"
 
-    service = get_export_bundle_driver()
+    # Route through L4 handler (PIN-504: L2 must not import L6 directly)
+    registry = get_operation_registry()
+    export_op = await registry.execute(
+        "incidents.export",
+        OperationContext(
+            session=None,
+            tenant_id=tenant_id,
+            params={
+                "method": "create_evidence_bundle",
+                "incident_id": incident_id,
+                "exported_by": exported_by,
+                "export_reason": export_request.export_reason,
+            },
+        ),
+    )
+    if not export_op.success:
+        if export_op.error_code == "NOT_FOUND":
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "not_found", "message": export_op.error},
+            )
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": export_op.error})
 
     try:
-        bundle = await service.create_evidence_bundle(
-            incident_id=incident_id,
-            exported_by=exported_by,
-            export_reason=export_request.export_reason,
-        )
+        bundle = export_op.data
 
         # Verify tenant access
         if bundle.tenant_id != tenant_id:
@@ -1976,20 +1990,34 @@ async def export_soc2(
     """Export SOC2-compliant bundle as PDF."""
     from fastapi.responses import Response
 
-    # L6 driver import (migrated to HOC per SWEEP-31)
-    from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_driver
-
     tenant_id = get_tenant_id_from_auth(request)
     auth_ctx = get_auth_context(request)
     exported_by = getattr(auth_ctx, "user_id", "system") if auth_ctx else "system"
 
-    service = get_export_bundle_driver()
+    # Route through L4 handler (PIN-504: L2 must not import L6 directly)
+    registry = get_operation_registry()
+    export_op = await registry.execute(
+        "incidents.export",
+        OperationContext(
+            session=None,
+            tenant_id=tenant_id,
+            params={
+                "method": "create_soc2_bundle",
+                "incident_id": incident_id,
+                "exported_by": exported_by,
+            },
+        ),
+    )
+    if not export_op.success:
+        if export_op.error_code == "NOT_FOUND":
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "not_found", "message": export_op.error},
+            )
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": export_op.error})
 
     try:
-        bundle = await service.create_soc2_bundle(
-            incident_id=incident_id,
-            exported_by=exported_by,
-        )
+        bundle = export_op.data
 
         # Verify tenant access
         if bundle.tenant_id != tenant_id:
@@ -2055,21 +2083,35 @@ async def export_executive_debrief(
     """Export executive debrief as PDF."""
     from fastapi.responses import Response
 
-    # L6 driver import (migrated to HOC per SWEEP-31)
-    from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_driver
-
     tenant_id = get_tenant_id_from_auth(request)
     auth_ctx = get_auth_context(request)
     prepared_by = getattr(auth_ctx, "user_id", "system") if auth_ctx else "system"
 
-    service = get_export_bundle_driver()
+    # Route through L4 handler (PIN-504: L2 must not import L6 directly)
+    registry = get_operation_registry()
+    export_op = await registry.execute(
+        "incidents.export",
+        OperationContext(
+            session=None,
+            tenant_id=tenant_id,
+            params={
+                "method": "create_executive_debrief",
+                "incident_id": incident_id,
+                "prepared_for": export_request.prepared_for,
+                "prepared_by": prepared_by,
+            },
+        ),
+    )
+    if not export_op.success:
+        if export_op.error_code == "NOT_FOUND":
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "not_found", "message": export_op.error},
+            )
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": export_op.error})
 
     try:
-        bundle = await service.create_executive_debrief(
-            incident_id=incident_id,
-            prepared_for=export_request.prepared_for,
-            prepared_by=prepared_by,
-        )
+        bundle = export_op.data
 
         # Verify tenant access
         if bundle.tenant_id != tenant_id:

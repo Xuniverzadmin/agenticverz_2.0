@@ -41,11 +41,8 @@ from app.services.policy.policy_driver import (
     get_policy_facade,  # Alias for get_policy_driver
     reset_policy_facade,  # Alias for reset_policy_driver
 )
-# Lessons Learned Engine (moved from services root - Stage 2)
-from app.services.policy.lessons_engine import (
-    LessonsLearnedEngine,
-    get_lessons_learned_engine,
-)
+# NOTE: LessonsLearnedEngine was moved to HOC (app.hoc.cus.policies.L5_engines.lessons_engine).
+# Legacy shim is disconnected (PIN-468, PIN-495). Re-export removed per PIN-507 Law 0.
 
 from app.services.policy.snapshot_service import (
     ImmutabilityViolation,
@@ -72,9 +69,6 @@ __all__ = [
     "PolicyFacade",  # Use PolicyDriver instead
     "get_policy_facade",  # Use get_policy_driver instead
     "reset_policy_facade",  # Use reset_policy_driver instead
-    # Lessons Learned Engine (moved from services root - Stage 2)
-    "LessonsLearnedEngine",
-    "get_lessons_learned_engine",
     # Customer Policy Service
     "CustomerPolicyReadService",
     "get_customer_policy_read_service",

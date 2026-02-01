@@ -36,7 +36,8 @@ from app.models.policy import (
     PolicyProposalCreate,
     PolicyVersion,
 )
-from app.services.logs.audit_ledger_service_async import AuditLedgerServiceAsync
+# TRANSITIONAL: services→hoc (migrate policy_proposal to HOC L5 per PIN-507)
+from app.hoc.cus.logs.L6_drivers.audit_ledger_driver import AuditLedgerServiceAsync
 from app.services.policy_graph_engine import (
     ConflictSeverity,
     get_conflict_engine,

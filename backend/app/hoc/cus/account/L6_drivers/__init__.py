@@ -22,13 +22,6 @@ from app.hoc.cus.account.L6_drivers.user_write_driver import (
     UserWriteDriver,
     get_user_write_driver,
 )
-from app.hoc.cus.integrations.L6_drivers.worker_registry_driver import (
-    WorkerRegistryService,
-    WorkerRegistryError,
-    WorkerNotFoundError,
-    WorkerUnavailableError,
-    get_worker_registry_service,
-)
 
 __all__ = [
     # accounts_facade_driver
@@ -40,10 +33,4 @@ __all__ = [
     # user_write_driver
     "UserWriteDriver",
     "get_user_write_driver",
-    # worker_registry_driver
-    "WorkerRegistryService",
-    "WorkerRegistryError",
-    "WorkerNotFoundError",
-    "WorkerUnavailableError",
-    "get_worker_registry_service",
 ]

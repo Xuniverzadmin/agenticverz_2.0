@@ -74,7 +74,11 @@ exports:
       methods: [get_initial_severity, calculate_severity_for_calls, should_escalate]
 ```
 
+## PIN-507 Law 1 Amendment (2026-02-01)
+
+All severity logic moved to `incidents/L5_schemas/severity_policy.py`. This file is now a tombstone that re-exports for backward compatibility. Canonical import: `app.hoc.cus.incidents.L5_schemas.severity_policy`. Severity logic is pure stateless policy (no DB, no I/O) — it belongs in L5_schemas under the `*_policy.py` naming convention.
+
 ## Evaluation Notes
 
-- **Disposition:** KEEP / MODIFY / QUARANTINE / DEPRECATED
-- **Rationale:** ---
+- **Disposition:** TOMBSTONE
+- **Rationale:** Content moved to `incidents/L5_schemas/severity_policy.py` per PIN-507 Law 1. Re-exports retained for backward compat. Remove after cleansing cycle.

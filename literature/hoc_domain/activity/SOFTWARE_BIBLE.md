@@ -189,3 +189,9 @@ _30 thin delegation functions._
 | Script | Change | Reference |
 |--------|--------|-----------|
 | `L6_drivers/__init__.py` | Removed all controls domain re-exports (`ThresholdDriver`, `ThresholdDriverSync`, signal functions). Only exports `LimitSnapshot` from `hoc_spine.schemas.threshold_types`. | PIN-504 Phases 1, 3 |
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| L4 `activity_handler.py` | `ActivityQueryHandler`: Replaced `getattr()` dispatch with explicit map (16 methods). `ActivityTelemetryHandler`: Replaced `getattr()` dispatch with explicit map (4 methods). Zero reflection in dispatch paths. | PIN-507 Law 5 |

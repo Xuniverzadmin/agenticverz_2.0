@@ -267,8 +267,8 @@ def emit_threshold_signal_sync(
         OpsEvent,
     )
 
-    # Import ThresholdSignal for mapping
-    from app.hoc.cus.controls.L5_engines.threshold_engine import (
+    # Import ThresholdSignal from L5_schemas (PIN-507 Law 1: L6 must not import L5_engines)
+    from app.hoc.cus.controls.L5_schemas.threshold_signals import (
         ThresholdSignal,
     )
 
@@ -308,40 +308,6 @@ def emit_threshold_signal_sync(
     )
 
 
-def emit_and_persist_threshold_signal(
-    session: Any,
-    tenant_id: str,
-    run_id: str,
-    state: str,
-    signals: list,  # list[ThresholdSignal] from engine
-    params_used: dict,
-) -> None:
-    """
-    Emit threshold signals to both Founder and Customer consoles.
-
-    PIN-504: Delegates to SignalCoordinator (L4) to avoid cross-domain
-    controls→activity import. The coordinator handles dual emission.
-
-    Args:
-        session: SQLAlchemy sync session
-        tenant_id: Tenant identifier
-        run_id: Run identifier
-        state: Run state ("live" or "completed")
-        signals: List of ThresholdSignal values
-        params_used: The threshold params that were evaluated against
-
-    Reference: Threshold Signal Wiring to Customer Console Plan
-    """
-    from app.hoc.hoc_spine.orchestrator.coordinators.signal_coordinator import (
-        get_signal_coordinator,
-    )
-
-    coordinator = get_signal_coordinator()
-    coordinator.emit_and_update_risk(
-        session=session,
-        tenant_id=tenant_id,
-        run_id=run_id,
-        state=state,
-        signals=signals,
-        params_used=params_used,
-    )
+# TOMBSTONE: emit_and_persist_threshold_signal deleted (PIN-507 Law 4, 2026-02-01).
+# Moved to L4: app.hoc.hoc_spine.orchestrator.coordinators.signal_coordinator
+# Cross-domain orchestration belongs at L4, not L6.

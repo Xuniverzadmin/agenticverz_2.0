@@ -35,7 +35,9 @@ Exports:
     - CredentialService: Protocol for credential retrieval
 """
 
-from .types import Credential
+# NOTE: Credential lives in the parent package (L5_engines/types.py), not credentials/types.py.
+# Fixed per PIN-507 Law 0 — stale relative import.
+from app.hoc.cus.integrations.L5_engines.types import Credential
 from .protocol import CredentialService
 
 __all__ = ["Credential", "CredentialService"]

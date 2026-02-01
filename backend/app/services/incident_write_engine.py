@@ -26,7 +26,8 @@ from app.services.incident_write_driver import (
     IncidentWriteDriver,
     get_incident_write_driver,
 )
-from app.services.logs.audit_ledger_service import AuditLedgerService
+# TRANSITIONAL: services→hoc (migrate incident_write_engine to HOC L5 per PIN-507)
+from app.hoc.cus.logs.L5_engines.audit_ledger_engine import AuditLedgerService
 
 if TYPE_CHECKING:
     from sqlmodel import Session

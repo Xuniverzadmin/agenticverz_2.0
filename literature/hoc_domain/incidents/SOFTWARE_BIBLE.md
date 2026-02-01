@@ -29,7 +29,7 @@ Each script's unique contribution and canonical function.
 | recovery_rule_engine | L5 | RECOVERY | `RecoveryRuleEngine.evaluate` | CANONICAL | 4 | ?:recovery | ?:failure_intelligence | ?:failure_classification_engine | ?:recovery_evaluation_engine | L5:recovery_evaluation_engine | L2:recovery | ?:test_m10_recovery_enhanced, hallucination_detector, prevention_engine | FACADE_PATTERN |
 | recurrence_analysis_engine | L5 | PATTERN_ANALYSIS | `RecurrenceAnalysisService.analyze_recurrence` | INTERNAL | 0 | L5:incidents_facade, incidents_facade, recovery_rule_engine | YES |
 | semantic_failures | L5 | DETECTION | `get_failure_info` | LEAF | 0 | ?:semantic_validator | ?:__init__ | YES |
-| export_bundle_driver | L6 | PERSISTENCE | `ExportBundleService.create_evidence_bundle` | CANONICAL | 4 | L2:incidents, recovery_rule_engine | YES |
+| export_bundle_driver | L6 | PERSISTENCE | `ExportBundleService.create_evidence_bundle` | CANONICAL | 4 | L4:incidents_handler (incidents.export), recovery_rule_engine | YES |
 | incident_aggregator | L6 | AGGREGATION | `IncidentAggregator._add_call_to_incident` | SUPERSET | 3 | L5:policy_violation_engine, anomaly_bridge, policy_violation_engine +1 | YES |
 | incident_pattern_driver | L6 | PERSISTENCE | `IncidentPatternDriver.fetch_cascade_failures` | LEAF | 0 | L5:incident_pattern_engine, incident_pattern_engine, recovery_rule_engine | YES |
 | incident_read_driver | L6 | PERSISTENCE | `IncidentReadDriver.count_incidents_since` | LEAF | 0 | L6:__init__ | L5:incident_read_engine, incident_read_engine, recovery_rule_engine | YES |
@@ -264,3 +264,24 @@ _85 thin delegation functions._
 | Script | Change | Reference |
 |--------|--------|-----------|
 | `incident_write_engine` | Removed cross-domain `AuditLedgerService` import. Accepts `audit: Any = None` via dependency injection from L4 handler. | PIN-504 Phase 2 |
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| L4 `incidents_handler.py` | `IncidentsQueryHandler`: Replaced `getattr()` dispatch with explicit map (10 methods). `IncidentsExportHandler`: Replaced `getattr()` dispatch with explicit map (3 methods). `IncidentsWriteHandler`: Replaced `getattr()` dispatch with explicit map (3 methods). Zero reflection in dispatch paths. | PIN-507 Law 5 |
+
+## PIN-507 Law 0 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| `incident_write_engine` (legacy `app/services/`) | Import `AuditLedgerService` rewired from abolished `app.services.logs.audit_ledger_service` → `app.hoc.cus.logs.L5_engines.audit_ledger_engine`. Transitional `services→hoc` dependency documented at import site. Permanent fix: migrate `incident_write_engine.py` to `hoc/cus/incidents/L5_engines/`. | PIN-507 Law 0 |
+| `L6_drivers/export_bundle_driver.py` | L6→L7 boundary fix: `Incident` import moved from `app.db` → `app.models.killswitch`. L6 drivers must not import L7 models via `app.db` (HOC Topology V2.0.0). | PIN-507 Law 0 |
+
+## PIN-507 Law 1 Remediation (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| `incident_severity_engine` | All severity logic moved to `incidents/L5_schemas/severity_policy.py`. File is now a tombstone with re-exports for backward compat. | PIN-507 Law 1 |
+| `incident_aggregator` | Import changed from `L5_engines.incident_severity_engine` → `L5_schemas.severity_policy`. L6→L5 engine reach eliminated. | PIN-507 Law 1 |
+| **NEW** `L5_schemas/severity_policy.py` | Created: `IncidentSeverityEngine`, `SeverityConfig`, `TRIGGER_SEVERITY_MAP`, `DEFAULT_SEVERITY`, `generate_incident_title`. Canonical home for severity policy logic. | PIN-507 Law 1 |

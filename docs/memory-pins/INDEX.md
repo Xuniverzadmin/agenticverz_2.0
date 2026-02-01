@@ -490,6 +490,8 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-502](PIN-502-overview-domain-canonical-consolidation.md) | **Overview Domain Canonical Consolidation** | Architecture | **✅ COMPLETE** | 2026-01-31 |
 | [PIN-503](PIN-503-cleansing-cycle-all-domains.md) | **Cleansing Cycle: All 10 Customer Domains** | Architecture | **✅ COMPLETE** | 2026-01-31 |
 | [PIN-504](PIN-504-cross-domain-violation-resolution.md) | **Cross-Domain Violation Resolution (Loop Model)** | Architecture | **✅ COMPLETE** | 2026-01-31 |
+| [PIN-506](PIN-506-first-principles-system-physics.md) | **First-Principles System Physics (9 Laws)** | Architecture / Governing Laws | **RATIFIED** | 2026-01-31 |
+| [PIN-507](PIN-507-first-principles-audit-findings.md) | **First-Principles Audit Findings** | Architecture / Audit | **ACTIVE** | 2026-01-31 |
 
 ---
 
@@ -1259,7 +1261,9 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
-| 2026-01-31 | **PIN-504 Cross-Domain Violation Resolution (Loop Model)** — Resolved 14 cross-domain import violations using C4 Coordinator pattern. Created 3 coordinators (audit, signal, logs), extracted shared types to spine schemas + L5_schemas, dependency injection for audit atomicity. 6 new files, 12 modified. Zero remaining cross-domain L5→L5/L6 violations. |
+| 2026-01-31 | **PIN-507 First-Principles Audit Findings** — Audited HOC system against 9 laws (PIN-506). Grade: A on sovereignty/orchestration/enforcement, D on context leaking (3 session pass-throughs in coordinators) and predictability (31+ getattr() in handlers). P0 remediation queue defined. |
+| 2026-01-31 | **PIN-506 First-Principles System Physics** — Ratified 9 governing laws: single authority, domain sovereignty, orchestration rarity, context containment, predictability, types-as-contracts, filesystem ownership, troubleshooting collapse, structural enforcement. Prime objective: exactly one place to blame. |
+| 2026-01-31 | **PIN-504 Cross-Domain Violation Resolution (Loop Model)** — Resolved 14+14 cross-domain import violations (Phases 1-6). Created 4 coordinators (audit, signal, lessons, domain_bridge), extracted types to L5_schemas, dependency injection, L4 routing. 13 new files, ~30 modified. Zero remaining violations (excluding recovery, PIN-505). |
 | 2026-01-31 | **PIN-503 Cleansing Cycle: All 10 Customer Domains** — Post-consolidation cleansing: 2 dead imports repointed, 2 legacy imports disconnected, 9 docstring references fixed, 31 cleansing checks added to tally scripts, 10 literature files updated. All 10 domains ALL PASS. |
 | 2026-01-31 | **PIN-493 through PIN-502 — All 10 Customer Domain Canonical Consolidations** — incidents, activity, policies, logs, analytics, integrations, controls, account, api_keys, overview. Naming violations fixed, headers corrected, import paths updated, tally scripts created, literature generated. |
 | 2026-01-30 | **PIN-492 HOC Domain Literature Generator + CSV Matrix** - Created via memory_trail. |
@@ -2028,3 +2032,4 @@ When resuming work on this project:
 | 2026-01-21 | **PIN-461 CUS Integration Routes Verification** - All 10 Customer Integration API endpoints verified working. Fixed UUID vs VARCHAR comparison, enum serialization, and field name mismatches. Full lifecycle tested: create → enable → test → disable → delete. |
 | 2026-01-21 | **PIN-462 DB_ROLE Migration Governance Model** - Fixed migration governance by introducing `DB_ROLE` semantic. Local staging migrations now allowed (`DB_ROLE=staging`). Production requires confirmation (`CONFIRM_PROD_MIGRATIONS=true`). Updated `env.py`, `ENVIRONMENT_CONTRACT.md`, `DB_AUTHORITY.md`. |
 | 2026-01-22 | **PIN-463 L4 Facade Architecture Pattern** - Comprehensive reference documentation for creating L4 domain facades. Covers file naming (`aos_{domain}.py`, `{domain}_facade.py`), singleton pattern, result dataclasses, tenant isolation, response wrapping, error handling, router registration, and architecture documentation standards. |
+| 2026-02-01 | **PIN-507 Law 5 Remediation Complete** - Replaced 31+ `getattr()` reflection calls across all 9 L4 handler files (18 handler classes) with explicit dispatch maps. Eliminated all `asyncio.iscoroutinefunction()` calls via explicit sync/async split. Replaced 13 `__import__("sqlalchemy").text()` calls in `cost_snapshots_engine.py` with proper `from sqlalchemy import text`. Law 5 grade upgraded D→A. |

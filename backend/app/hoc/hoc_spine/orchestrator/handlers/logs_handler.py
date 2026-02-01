@@ -52,22 +52,42 @@ class LogsQueryHandler:
             )
 
         facade = get_logs_facade()
-        method = getattr(facade, method_name, None)
-        if method is None:
-            return OperationResult.fail(
-                f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
-            )
+        async_dispatch = {
+            "list_llm_run_records": facade.list_llm_run_records,
+            "get_llm_run_envelope": facade.get_llm_run_envelope,
+            "get_llm_run_trace": facade.get_llm_run_trace,
+            "get_llm_run_governance": facade.get_llm_run_governance,
+            "get_llm_run_replay": facade.get_llm_run_replay,
+            "get_llm_run_export": facade.get_llm_run_export,
+            "list_system_records": facade.list_system_records,
+            "get_system_snapshot": facade.get_system_snapshot,
+            "get_system_events": facade.get_system_events,
+            "get_system_replay": facade.get_system_replay,
+            "get_system_audit": facade.get_system_audit,
+            "list_audit_entries": facade.list_audit_entries,
+            "get_audit_entry": facade.get_audit_entry,
+            "get_audit_identity": facade.get_audit_identity,
+            "get_audit_authorization": facade.get_audit_authorization,
+            "get_audit_access": facade.get_audit_access,
+            "get_audit_exports": facade.get_audit_exports,
+        }
+        sync_dispatch = {
+            "get_system_telemetry": facade.get_system_telemetry,
+            "get_audit_integrity": facade.get_audit_integrity,
+        }
 
         kwargs = dict(ctx.params)
         kwargs.pop("method", None)
 
-        # Some LogsFacade methods are sync (get_system_telemetry, get_audit_integrity)
-        import asyncio
-
-        if asyncio.iscoroutinefunction(method):
+        method = async_dispatch.get(method_name)
+        if method:
             data = await method(session=ctx.session, tenant_id=ctx.tenant_id, **kwargs)
+        elif method_name in sync_dispatch:
+            data = sync_dispatch[method_name](tenant_id=ctx.tenant_id, **kwargs)
         else:
-            data = method(tenant_id=ctx.tenant_id, **kwargs)
+            return OperationResult.fail(
+                f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
+            )
         return OperationResult.ok(data)
 
 
@@ -89,7 +109,17 @@ class LogsEvidenceHandler:
             )
 
         facade = get_evidence_facade()
-        method = getattr(facade, method_name, None)
+        dispatch = {
+            "list_chains": facade.list_chains,
+            "get_chain": facade.get_chain,
+            "create_chain": facade.create_chain,
+            "add_evidence": facade.add_evidence,
+            "verify_chain": facade.verify_chain,
+            "create_export": facade.create_export,
+            "get_export": facade.get_export,
+            "list_exports": facade.list_exports,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
@@ -119,7 +149,13 @@ class LogsCertificateHandler:
             )
 
         service = CertificateService()
-        method = getattr(service, method_name, None)
+        dispatch = {
+            "create_replay_certificate": service.create_replay_certificate,
+            "create_policy_audit_certificate": service.create_policy_audit_certificate,
+            "verify_certificate": service.verify_certificate,
+            "export_certificate": service.export_certificate,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown method: {method_name}", "UNKNOWN_METHOD"
@@ -213,7 +249,12 @@ class LogsPdfHandler:
             )
 
         renderer = get_pdf_renderer()
-        method = getattr(renderer, method_name, None)
+        dispatch = {
+            "render_evidence_pdf": renderer.render_evidence_pdf,
+            "render_soc2_pdf": renderer.render_soc2_pdf,
+            "render_executive_debrief_pdf": renderer.render_executive_debrief_pdf,
+        }
+        method = dispatch.get(method_name)
         if method is None:
             return OperationResult.fail(
                 f"Unknown renderer method: {method_name}", "UNKNOWN_METHOD"

@@ -266,3 +266,23 @@ No L4 handler import updates required — handler imports facade files which wer
 ### Tally
 
 39/39 checks PASS (36 consolidation + 3 cleansing).
+
+---
+
+## PIN-507 Law 5 Remediation (2026-02-01)
+
+**L4 Handler Update:** All `getattr()`-based reflection dispatch in this domain's L4 handler replaced with explicit `dispatch = {}` maps. All `asyncio.iscoroutinefunction()` eliminated via explicit sync/async split. Zero `__import__()` calls remain. See PIN-507 for full audit trail.
+
+## PIN-507 Law 0 Remediation (2026-02-01)
+
+**Test import rewires (L3 abolished per PIN-485):**
+- `tests/test_m25_integration_loop.py`: `app.integrations.L3_adapters` → `app.integrations.bridges` (for `IncidentToCatalogBridge`, `PatternToRecoveryBridge`, `RecoveryToPolicyBridge`)
+- `tests/test_m25_policy_overreach.py`: `app.integrations.L3_adapters` → `app.integrations.events` (for `ConfidenceCalculator`)
+
+All four classes are implemented and active in legacy `app/integrations/` paths. The HOC equivalents exist in `app.hoc.cus.integrations.L5_engines.bridges_engine` and `app.hoc.cus.integrations.L5_schemas.loop_events` respectively. Tests use legacy paths as they predate HOC migration.
+
+**Stale `__init__` re-exports cleaned:**
+- `L5_engines/__init__.py`: Removed `learning_proof_engine` block (16 symbols) — module moved to `policies/L5_engines/` during PIN-498
+- `L5_schemas/__init__.py`: Removed `cost_snapshot_schemas` block (8 symbols) — module lives in `analytics/L5_schemas/`
+- `L5_engines/cost_bridges_engine.py`: Fixed `..schemas.loop_events` → `app.hoc.cus.integrations.L5_schemas.loop_events`
+- `L5_engines/credentials/__init__.py`: Stale relative import `.types` → absolute `app.hoc.cus.integrations.L5_engines.types` (`Credential` lives in parent package, not `credentials/types.py`). Detected by `check_init_hygiene.py`

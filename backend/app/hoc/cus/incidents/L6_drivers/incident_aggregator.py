@@ -57,7 +57,8 @@ from typing import Any, Callable, Dict, Optional, Tuple, cast
 
 from sqlmodel import Session, and_, select
 
-from app.hoc.cus.incidents.L5_engines.incident_severity_engine import (
+# Import from L5_schemas (PIN-507 Law 1: L6 must not import L5_engines)
+from app.hoc.cus.incidents.L5_schemas.severity_policy import (
     IncidentSeverityEngine,
     SeverityConfig,
     generate_incident_title,

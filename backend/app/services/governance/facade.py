@@ -549,7 +549,7 @@ class GovernanceFacade:
 
             # Check optional components
             try:
-                from app.services.policy.facade import get_policy_facade
+                from app.services.policy import get_policy_facade
                 policy_facade = get_policy_facade()
                 components["policy_facade"] = {
                     "status": "healthy",

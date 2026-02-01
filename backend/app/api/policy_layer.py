@@ -35,7 +35,7 @@ from app.policy import (
     PolicyViolation,
     ViolationType,
 )
-from app.services.policy.facade import get_policy_facade
+from app.services.policy import get_policy_facade
 
 router = APIRouter(prefix="/policy-layer", tags=["policy-layer"])
 
