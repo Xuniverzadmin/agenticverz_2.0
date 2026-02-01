@@ -27,14 +27,13 @@ Design Rules:
 - SQL-based analytics only
 """
 
-# NEW: Driver for internal use (workers, governance)
+# Driver for internal use (workers, governance) — legacy app/services/ copy
 from app.services.incidents.incident_driver import (
     IncidentDriver,
     get_incident_driver,
 )
 
-# DEPRECATED: Backward compatibility aliases (will be removed)
-# Use get_incident_driver() instead
+# DEPRECATED: Backward compatibility aliases (will be removed with app/services/)
 from app.services.incidents.incident_driver import (
     IncidentFacade,  # Alias for IncidentDriver
     get_incident_facade,  # Alias for get_incident_driver

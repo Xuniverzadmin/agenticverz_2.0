@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL: API-001 - Domain Facade Required
+# artifact_class: CODE
 """
 GUARDRAIL: API-001 - Domain Facade Required
 Rule: External code must use domain facades, not direct service imports.

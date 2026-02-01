@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Change Record Helper - Create and manage code change records.
+# artifact_class: CODE
 """
 Change Record Helper - Create and manage code change records.
 

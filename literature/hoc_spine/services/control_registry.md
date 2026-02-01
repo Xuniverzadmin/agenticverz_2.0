@@ -1,6 +1,6 @@
 # control_registry.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/control_registry.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/control_registry.py`  
 **Layer:** L4 — HOC Spine (Service)  
 **Component:** Services
 

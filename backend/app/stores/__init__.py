@@ -231,7 +231,7 @@ async def get_idempotency_store():
     Environment:
         REDIS_URL: Redis connection string (auto-detects to Redis if set)
     """
-    from app.traces.idempotency import get_idempotency_store as _get_idempotency_store
+    from app.hoc.cus.logs.L6_drivers.idempotency_driver import get_idempotency_store as _get_idempotency_store
 
     return await _get_idempotency_store()
 

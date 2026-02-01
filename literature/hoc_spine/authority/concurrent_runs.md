@@ -1,6 +1,6 @@
 # concurrent_runs.py
 
-**Path:** `backend/app/hoc/hoc_spine/authority/concurrent_runs.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/authority/concurrent_runs.py`  
 **Layer:** L4 — HOC Spine (Authority)  
 **Component:** Authority
 

@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL: AUDIT-002 - Audit Entry Completeness
+# artifact_class: CODE
 """
 GUARDRAIL: AUDIT-002 - Audit Entry Completeness
 Rule: Every audit entry MUST have required fields.

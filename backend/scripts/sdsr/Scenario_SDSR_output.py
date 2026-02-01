@@ -1,3 +1,11 @@
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Scenario_SDSR_output.py
+# artifact_class: CODE
 """
 Scenario_SDSR_output.py
 

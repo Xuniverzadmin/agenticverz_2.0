@@ -41,7 +41,7 @@ from app.schemas.limits.policy_limits import (
     ResetPeriodEnum,
     UpdatePolicyLimitRequest,
 )
-from app.hoc.hoc_spine.orchestrator.operation_registry import (
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
 )

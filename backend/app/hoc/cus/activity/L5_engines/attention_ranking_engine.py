@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Optional
 
-from app.hoc.hoc_spine.services.time import utc_now
+from app.hoc.cus.hoc_spine.services.time import utc_now
 
 
 @dataclass

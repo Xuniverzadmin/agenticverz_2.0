@@ -1,6 +1,6 @@
 # retrieval_facade.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/retrieval_facade.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/retrieval_facade.py`  
 **Layer:** L4 — HOC Spine (Service)  
 **Component:** Services
 
@@ -13,7 +13,7 @@ File:            retrieval_facade.py
 Lives in:        services/
 Role:            Services
 Inbound:         L2 retrieval.py API, SDK
-Outbound:        app.hoc.hoc_spine.services.retrieval_mediator
+Outbound:        app.hoc.cus.hoc_spine.services.retrieval_mediator
 Transaction:     Forbidden
 Cross-domain:    none
 Purpose:         Retrieval Facade (L4 Domain Logic)
@@ -62,7 +62,7 @@ Usage:
 ## Import Analysis
 
 **Spine-internal:**
-- `app.hoc.hoc_spine.services.retrieval_mediator`
+- `app.hoc.cus.hoc_spine.services.retrieval_mediator`
 
 ## Transaction Boundary
 
@@ -182,7 +182,7 @@ boundary:
     - "hoc.cus.*"
     - "hoc.api.*"
   actual_imports:
-    spine_internal: ['app.hoc.hoc_spine.services.retrieval_mediator']
+    spine_internal: ['app.hoc.cus.hoc_spine.services.retrieval_mediator']
     l7_model: []
     external: []
   violations: []

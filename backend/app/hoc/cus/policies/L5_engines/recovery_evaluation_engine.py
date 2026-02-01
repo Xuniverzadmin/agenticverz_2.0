@@ -54,7 +54,7 @@ from app.contracts.decisions import emit_recovery_decision
 # L6/L5 imports (migrated to HOC per SWEEP-09)
 from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
 # PIN-507 Law 6: Import pure decision functions from utilities (not schemas)
-from app.hoc.hoc_spine.utilities.recovery_decisions import (
+from app.hoc.cus.hoc_spine.utilities.recovery_decisions import (
     combine_confidences,
     should_auto_execute,
     should_select_action,

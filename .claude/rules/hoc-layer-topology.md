@@ -17,7 +17,7 @@ paths:
 | L1 | Frontend | website/app-shell/ | UI (DEFERRED) |
 | L2.1 | API Facade | hoc/api/facades/cus/{domain}.py | Route grouping |
 | L2 | APIs | hoc/api/cus/{domain}/*.py | HTTP handlers (thin) |
-| L4 | hoc_spine | hoc/hoc_spine/ | **SINGLE ORCHESTRATOR** — cross-domain, lifecycle |
+| L4 | hoc_spine | hoc/cus/hoc_spine/ | **SINGLE ORCHESTRATOR** — cross-domain, lifecycle |
 | L5 | Engines | hoc/cus/{domain}/L5_engines/ | Domain business logic |
 | L6 | Drivers | hoc/cus/{domain}/L6_drivers/ | Domain DB operations |
 | L7 | Models | app/models/ | ORM tables |
@@ -68,7 +68,7 @@ L2.1 → L2 → L4 → L5 → L6 → L7
 ## hoc_spine Structure
 
 ```
-hoc/hoc_spine/
+hoc/cus/hoc_spine/
 ├── orchestrator/     ← Entry point (executor.py, registry.py)
 ├── authority/        ← Permission decisions
 ├── consequences/     ← Post-execution reactions
@@ -76,6 +76,17 @@ hoc/hoc_spine/
 ├── schemas/          ← Shared types
 └── drivers/          ← Cross-domain DB coordination
 ```
+
+## HOC Ops Scripts (PIN-509)
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `scripts/ops/new_l5_engine.py` | Scaffold L5 engine with headers + Protocol injection | `python3 scripts/ops/new_l5_engine.py <domain> <engine_name>` |
+| `scripts/ops/new_l6_driver.py` | Scaffold L6 driver with headers + session pattern | `python3 scripts/ops/new_l6_driver.py <domain> <driver_name>` |
+| `scripts/ops/collapse_tombstones.py` | Auto-detect and remove zero-dependent tombstones | `python3 scripts/ops/collapse_tombstones.py [--apply]` |
+| `scripts/ci/check_init_hygiene.py` | 18 CI checks (PIN-507 + PIN-508 + PIN-509) | `PYTHONPATH=. python3 scripts/ci/check_init_hygiene.py --ci` |
+
+**When creating new L5/L6 files:** Use the scaffolding scripts above. They generate correct layer headers, audience classification, import constraints, and Protocol injection patterns.
 
 ## API-002 Counter-Rules (PIN-437)
 

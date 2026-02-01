@@ -63,7 +63,7 @@ from datetime import timedelta
 from typing import Optional
 from uuid import UUID
 
-from app.hoc.hoc_spine.services.time import utc_now
+from app.hoc.cus.hoc_spine.services.time import utc_now
 from app.db import get_async_session
 
 logger = logging.getLogger("nova.services.prediction")

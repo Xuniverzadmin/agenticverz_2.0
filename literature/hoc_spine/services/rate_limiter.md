@@ -1,6 +1,6 @@
 # rate_limiter.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/rate_limiter.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/rate_limiter.py`  
 **Layer:** L4 — HOC Spine (Service)  
 **Component:** Services
 

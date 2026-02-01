@@ -52,7 +52,7 @@ Policy Limits Service (PIN-LIM-01)
 | L6 Driver | `app.hoc.cus.controls.L6_drivers.policy_limits_driver`, `app.hoc.cus.logs.L6_drivers.audit_ledger_service_async` |
 | L7 Model | `app.models.audit_ledger`, `app.models.policy_control_plane` |
 | Cross-Domain | `app.hoc.cus.controls.L6_drivers.policy_limits_driver`, `app.hoc.cus.logs.L6_drivers.audit_ledger_service_async` |
-| External | `app.hoc.hoc_spine.drivers.cross_domain`, `app.hoc.hoc_spine.services.time`, `sqlalchemy.ext.asyncio` |
+| External | `app.hoc.cus.hoc_spine.drivers.cross_domain`, `app.hoc.cus.hoc_spine.services.time`, `sqlalchemy.ext.asyncio` |
 
 ## Callers
 

@@ -26,8 +26,8 @@ from app.services.incident_write_driver import (
     IncidentWriteDriver,
     get_incident_write_driver,
 )
-# TRANSITIONAL: services→hoc (migrate incident_write_engine to HOC L5 per PIN-507)
-from app.hoc.cus.logs.L5_engines.audit_ledger_engine import AuditLedgerService
+# PIN-513: services→HOC dependency severed. No-op shim replaces HOC audit import.
+from app.services._audit_shim import AuditLedgerShim as AuditLedgerService
 
 if TYPE_CHECKING:
     from sqlmodel import Session

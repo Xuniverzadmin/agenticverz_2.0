@@ -467,7 +467,7 @@
 | **Delete Targets** | Inline `utc_now()` from: `general/L5_controls/drivers/guard_write_driver.py:64`, `analytics/L6_drivers/cost_write_driver.py:52`, `incidents/L6_drivers/guard_write_driver.py:66` |
 | **Callers** | All inline copies are private module-level helpers — zero external importers. Used only within same file. |
 | **Domain Criteria** | Pure datetime utility = General system invariant. Canonical already correct and widely adopted. |
-| **Analysis** | Three CSV candidates collapse into one mechanical operation. Canonical exists. Nothing to extract. Delete 3 inline definitions, replace with `from app.hoc.hoc_spine.services.time import utc_now`. L6 drivers importing L5 utils is a legal downward import. |
+| **Analysis** | Three CSV candidates collapse into one mechanical operation. Canonical exists. Nothing to extract. Delete 3 inline definitions, replace with `from app.hoc.cus.hoc_spine.services.time import utc_now`. L6 drivers importing L5 utils is a legal downward import. |
 | **Decision** | `APPROVED` |
 | **Executed** | NO |
 

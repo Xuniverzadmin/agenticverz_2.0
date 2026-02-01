@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Cost Snapshot Job Runner
+# artifact_class: CODE
 """Cost Snapshot Job Runner
 
 Runs hourly or daily cost snapshot jobs for all active tenants.

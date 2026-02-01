@@ -1,6 +1,6 @@
 # Drivers — Folder Summary
 
-**Path:** `backend/app/hoc/hoc_spine/drivers/`  
+**Path:** `backend/app/hoc/cus/hoc_spine/drivers/`  
 **Layer:** L6  
 **Scripts:** 13
 

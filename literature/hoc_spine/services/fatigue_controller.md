@@ -1,6 +1,6 @@
 # fatigue_controller.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/fatigue_controller.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/fatigue_controller.py`  
 **Layer:** L4 — HOC Spine (Service)  
 **Component:** Services
 

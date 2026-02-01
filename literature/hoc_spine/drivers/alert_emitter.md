@@ -1,6 +1,6 @@
 # alert_emitter.py
 
-**Path:** `backend/app/hoc/hoc_spine/drivers/alert_emitter.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/drivers/alert_emitter.py`  
 **Layer:** L4 — HOC Spine (Driver)  
 **Component:** Drivers
 

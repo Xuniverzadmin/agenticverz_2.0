@@ -47,7 +47,7 @@ Cost Write Driver (L6)
 
 | Category | Imports |
 |----------|---------|
-| External | `app.db`, `app.hoc.hoc_spine.services.time`, `sqlmodel` |
+| External | `app.db`, `app.hoc.cus.hoc_spine.services.time`, `sqlmodel` |
 
 ## Callers
 

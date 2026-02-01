@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL: CROSS-001 - Mandatory Cross-Domain Propagation
+# artifact_class: CODE
 """
 GUARDRAIL: CROSS-001 - Mandatory Cross-Domain Propagation
 Rule: Certain events MUST propagate to other domains.

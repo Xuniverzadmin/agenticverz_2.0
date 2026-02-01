@@ -21,7 +21,7 @@
 ## GROUP A — Inline Utility Deletions (15 unique files)
 
 > Delete inline `utc_now()` and/or `generate_uuid()` functions. Add import from canonical.
-> Canonical utc_now: `from app.hoc.hoc_spine.services.time import utc_now`
+> Canonical utc_now: `from app.hoc.cus.hoc_spine.services.time import utc_now`
 > Canonical generate_uuid: `from app.hoc.cus.general.L6_drivers.cross_domain import generate_uuid`
 
 | # | File | Delete Functions | Candidate IDs | Status |

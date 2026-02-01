@@ -1,6 +1,6 @@
 # Authority — Folder Summary
 
-**Path:** `backend/app/hoc/hoc_spine/authority/`  
+**Path:** `backend/app/hoc/cus/hoc_spine/authority/`  
 **Layer:** L4  
 **Scripts:** 8
 

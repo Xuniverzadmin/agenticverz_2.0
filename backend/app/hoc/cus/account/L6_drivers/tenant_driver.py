@@ -51,7 +51,7 @@ from typing import Any, List, Optional, cast
 
 from sqlmodel import Session, func, select
 
-from app.hoc.hoc_spine.services.time import utc_now
+from app.hoc.cus.hoc_spine.services.time import utc_now
 from app.models.tenant import (
     APIKey,
     AuditLog,

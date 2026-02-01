@@ -41,7 +41,7 @@ from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
 # L5 engine imports (V2.0.0 - hoc_spine)
-from app.hoc.hoc_spine.services.monitors_facade import (
+from app.hoc.cus.hoc_spine.services.monitors_facade import (
     MonitorsFacade,
     get_monitors_facade,
 )

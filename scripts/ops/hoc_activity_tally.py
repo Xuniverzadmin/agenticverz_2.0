@@ -463,7 +463,7 @@ def main() -> int:
         l6_init_source = l6_init_path.read_text()
 
         # PIN-504: cross-domain controls import removed; now imports from hoc_spine
-        ok = check_import_exists(l6_init_source, "app.hoc.hoc_spine.schemas.threshold_types")
+        ok = check_import_exists(l6_init_source, "app.hoc.cus.hoc_spine.schemas.threshold_types")
         msg = "Imports LimitSnapshot from hoc_spine (PIN-504)"
         checks.append(("L6 __init__ spine import", ok, msg))
         if not ok:

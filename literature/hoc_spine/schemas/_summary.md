@@ -1,6 +1,6 @@
 # Schemas — Folder Summary
 
-**Path:** `backend/app/hoc/hoc_spine/schemas/`  
+**Path:** `backend/app/hoc/cus/hoc_spine/schemas/`  
 **Layer:** L5  
 **Scripts:** 8
 

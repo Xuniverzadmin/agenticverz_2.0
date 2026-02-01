@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Cleanup Duplicate Files from HOC Migration
+# artifact_class: CODE
 """
 Cleanup Duplicate Files from HOC Migration
 

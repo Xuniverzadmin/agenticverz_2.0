@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: C4 Synthetic Stability Execution Script
+# artifact_class: CODE
 """
 C4 Synthetic Stability Execution Script
 

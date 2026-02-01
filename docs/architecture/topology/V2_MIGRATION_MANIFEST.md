@@ -13,7 +13,7 @@
 All file moves, import updates, header updates, and cleanup are done.
 
 ### Phase 1: Create hoc_spine Structure ✅ DONE
-- Created `hoc/hoc_spine/` with subdirectories
+- Created `hoc/cus/hoc_spine/` with subdirectories
 - Created `__init__.py` files
 
 ### Phase 2: Move L4_runtime → hoc_spine/orchestrator/ ✅ DONE
@@ -36,7 +36,7 @@ All file moves, import updates, header updates, and cleanup are done.
 - 28 files parked in _deprecated_L3/ (now absorbed — see Phase 9)
 
 ### Phase 7: Update Imports ✅ DONE
-- 70+ files updated from `app.hoc.cus.general.*` → `app.hoc.hoc_spine.*`
+- 70+ files updated from `app.hoc.cus.general.*` → `app.hoc.cus.hoc_spine.*`
 - Zero imports to `cus.general` remain in active code
 - All hoc_spine headers updated: `L4 — HOC Spine ({sublayer})`
 - Scope headers updated: `domain (general)` → `hoc_spine`

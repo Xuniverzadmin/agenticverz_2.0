@@ -292,11 +292,13 @@ class DetectionFacade:
             )
 
         try:
-            from app.services.cost_anomaly_detector import (
-                run_anomaly_detection_with_governance,
+            # TRANSITIONAL (PIN-513): services→HOC dependency. Sever when detection migrates to HOC.
+            from app.hoc.cus.hoc_spine.orchestrator.coordinators.anomaly_incident_coordinator import (
+                get_anomaly_incident_coordinator,
             )
 
-            result = await run_anomaly_detection_with_governance(session, tenant_id)
+            coordinator = get_anomaly_incident_coordinator()
+            result = await coordinator.detect_and_ingest(session, tenant_id)
 
             detected = result.get("detected", [])
             incidents = result.get("incidents_created", [])

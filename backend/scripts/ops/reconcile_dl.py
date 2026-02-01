@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Dead-Letter Reconciliation Script
+# artifact_class: CODE
 """
 Dead-Letter Reconciliation Script
 

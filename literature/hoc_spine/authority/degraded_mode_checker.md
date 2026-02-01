@@ -1,6 +1,6 @@
 # degraded_mode_checker.py
 
-**Path:** `backend/app/hoc/hoc_spine/authority/degraded_mode_checker.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/authority/degraded_mode_checker.py`  
 **Layer:** L4 — HOC Spine (Authority)  
 **Component:** Authority
 

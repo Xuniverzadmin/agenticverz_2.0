@@ -1,6 +1,6 @@
 # export_bundle_adapter.py
 
-**Path:** `backend/app/hoc/hoc_spine/consequences/adapters/export_bundle_adapter.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/consequences/adapters/export_bundle_adapter.py`  
 **Layer:** L4 — HOC Spine (Adapter)  
 **Component:** Consequences
 

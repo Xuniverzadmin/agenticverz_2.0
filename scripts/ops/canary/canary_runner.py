@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: AOS Canary Runner - Feature flag toggle, smoke test, Prometheus monitoring, rollback.
+# artifact_class: CODE
 """
 AOS Canary Runner - Feature flag toggle, smoke test, Prometheus monitoring, rollback.
 

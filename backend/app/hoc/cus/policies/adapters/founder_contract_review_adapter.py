@@ -38,7 +38,7 @@ from typing import Any, List, Optional
 # DEAD IMPORT REPOINTED (2026-01-31) — Cleansing Cycle
 # Was: from app.hoc.cus.general.L5_workflow.contracts.engines.contract_engine import ContractState
 # Reason: cus/general/ abolished per PIN-485. ContractState migrated to hoc_spine.
-from app.hoc.hoc_spine.authority.contracts.contract_engine import ContractState
+from app.hoc.cus.hoc_spine.authority.contracts.contract_engine import ContractState
 
 # =============================================================================
 # VIEW DTOs (Founder-facing, not domain models)

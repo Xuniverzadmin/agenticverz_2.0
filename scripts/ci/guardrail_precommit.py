@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL PRE-COMMIT - Runs guardrails only on staged files.
+# artifact_class: CODE
 """
 GUARDRAIL PRE-COMMIT - Runs guardrails only on staged files.
 

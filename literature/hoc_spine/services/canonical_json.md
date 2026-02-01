@@ -1,6 +1,6 @@
 # canonical_json.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/canonical_json.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/canonical_json.py`  
 **Layer:** L4 — HOC Spine (Service)  
 **Component:** Services
 

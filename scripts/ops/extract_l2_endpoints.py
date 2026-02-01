@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Extract L2 (Product API) endpoints from the AOS/AgenticVerz backend.
+# artifact_class: CODE
 """
 Extract L2 (Product API) endpoints from the AOS/AgenticVerz backend.
 

@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL: DOMAIN-001 - Domain Ownership Enforcement
+# artifact_class: CODE
 """
 GUARDRAIL: DOMAIN-001 - Domain Ownership Enforcement
 Rule: Each table belongs to exactly ONE domain. No cross-domain writes.

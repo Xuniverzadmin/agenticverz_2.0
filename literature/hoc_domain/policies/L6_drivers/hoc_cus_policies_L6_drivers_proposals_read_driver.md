@@ -48,7 +48,7 @@ Proposals Read Driver (L6)
 | Category | Imports |
 |----------|---------|
 | L7 Model | `app.models.policy` |
-| External | `app.hoc.hoc_spine.services.time`, `sqlalchemy`, `sqlalchemy.ext.asyncio` |
+| External | `app.hoc.cus.hoc_spine.services.time`, `sqlalchemy`, `sqlalchemy.ext.asyncio` |
 
 ## Callers
 

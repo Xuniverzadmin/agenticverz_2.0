@@ -1,6 +1,6 @@
 # lifecycle_facade.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/lifecycle_facade.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/lifecycle_facade.py`  
 **Layer:** L4 — HOC Spine (Facade)  
 **Component:** Services
 
@@ -50,7 +50,7 @@ L2 API Routes (GAP-131 to GAP-136):
 
 Usage:
     # L5 engine import (V2.0.0 - hoc_spine)
-    from app.hoc.hoc_spine.services.lifecycle_facade import get_lifecycle_facade
+    from app.hoc.cus.hoc_spine.services.lifecycle_facade import get_lifecycle_facade
 
     facade = get_lifecycle_facade()
 

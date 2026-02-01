@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Add New Lint Pattern - Helper for Prevention System Updates
+# artifact_class: CODE
 """Add New Lint Pattern - Helper for Prevention System Updates
 
 Interactive tool to add new unsafe patterns to the SQLModel linter.

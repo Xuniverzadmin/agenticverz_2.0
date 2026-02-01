@@ -106,3 +106,13 @@ _10 thin delegation functions._
 | Script | Change | Reference |
 |--------|--------|-----------|
 | L4 `api_keys_handler.py` | `ApiKeysQueryHandler`: Replaced `getattr()` dispatch with explicit map (2 methods). Zero reflection in dispatch paths. | PIN-507 Law 5 |
+
+## PIN-509 Tooling Hardening (2026-02-01)
+
+- CI checks 16–18 added to `scripts/ci/check_init_hygiene.py`:
+  - Check 16: Frozen import ban (no imports from `_frozen/` paths)
+  - Check 17: L5 Session symbol import ban (type erasure enforcement)
+  - Check 18: Protocol surface baseline (capability creep prevention, max 12 methods)
+- New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
+- `app/services/__init__.py` now emits DeprecationWarning
+- Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`

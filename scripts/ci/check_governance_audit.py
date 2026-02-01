@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL: AUDIT-001 - Governance Actions Must Emit Audit
+# artifact_class: CODE
 """
 GUARDRAIL: AUDIT-001 - Governance Actions Must Emit Audit
 Rule: Every governance action MUST create an audit entry.

@@ -2,7 +2,7 @@
 
 **Status:** DELETED (files redistributed)
 **Date:** 2026-01-30
-**Previous path:** `backend/app/hoc/hoc_spine/adapters/`
+**Previous path:** `backend/app/hoc/cus/hoc_spine/adapters/`
 
 ---
 

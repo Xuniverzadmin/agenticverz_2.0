@@ -55,12 +55,12 @@ from app.db import CostBudget, get_async_session
 
 # Evidence Architecture v1.0: ExecutionContext and taxonomy evidence
 from app.core.execution_context import ExecutionContext, EvidenceSource
-from app.evidence.capture import capture_environment_evidence
+from app.hoc.cus.logs.L6_drivers.capture_driver import capture_environment_evidence
 from app.models.tenant import WorkerRun
 from app.policy.engine import PolicyEngine
 from app.schemas.response import wrap_dict
 # V2.0.0 - hoc_spine drivers
-from app.hoc.hoc_spine.drivers.worker_write_service_async import WorkerWriteServiceAsync
+from app.hoc.cus.hoc_spine.drivers.worker_write_service_async import WorkerWriteServiceAsync
 
 logger = logging.getLogger("nova.api.workers")
 

@@ -21,7 +21,7 @@ Each script's unique contribution and canonical function.
 | cost_anomaly_detector | L5 | `CostAnomalyDetector.detect_sustained_drift` | CANONICAL | 3 | ?:cost_intelligence | ?:facade | L5:detection_facade | L2:cost_intelligence | ?:anomaly_severity | ?:test_m26_prevention | ?:test_category4_cost_intelligence, coordinator, detection_facade +1 | YES |
 | cost_model_engine | L5 | `estimate_step_cost` | CANONICAL | 12 | ?:v2_adapter | L3:v2_adapter | YES |
 | cost_snapshot_schemas | L5 | `CostSnapshot.create` | LEAF | 0 | L5:cost_snapshots | L5s:__init__, canary, cost_snapshots +3 | YES |
-| cost_snapshots | L5 | `SnapshotAnomalyDetector.evaluate_snapshot` | CANONICAL | 6 | coordinator, envelope | YES |
+| cost_snapshots_engine | L5 | `SnapshotAnomalyDetector.evaluate_snapshot` | CANONICAL | 6 | coordinator, envelope | YES *(updated PIN-508)* |
 | cost_write_engine | L5 | `CostWriteService.__init__` | WRAPPER | 0 | coordinator, envelope | INTERFACE |
 | costsim_models | L5 | `V2SimulationResult.compute_output_hash` | LEAF | 0 | canary, datasets, provenance +1 | YES |
 | datasets | L5 | `DatasetValidator.validate_dataset` | CANONICAL | 7 | ?:costsim | L2:costsim, canary, coordinator +3 | YES |
@@ -37,6 +37,7 @@ Each script's unique contribution and canonical function.
 | analytics_read_driver | L6 | `AnalyticsReadDriver.fetch_cost_by_feature` | LEAF | 0 | L5:analytics_facade, analytics_facade, coordinator +1 | YES |
 | audit_persistence | L6 | `persist_audit_record` | LEAF | 1 | ?:coordinator | L5:coordinator | ?:check_priority4_intent, coordinator | YES |
 | cost_anomaly_driver | L6 | `CostAnomalyDriver.fetch_baseline_avg` | LEAF | 0 | L6:__init__ | L5:cost_anomaly_detector, coordinator, cost_anomaly_detector +1 | YES |
+| cost_snapshots_driver | L6 | `CostSnapshotsDriver.fetch_snapshot_data` | LEAF | 0 | L5:cost_snapshots_engine | L5:cost_snapshots_engine | YES *(NEW PIN-508)* |
 | cost_write_driver | L6 | `CostWriteDriver.create_feature_tag` | LEAF | 0 | L5:cost_write_engine, coordinator, cost_write_engine +1 | YES |
 | leader | L6 | `LeaderContext.__aenter__` | ENTRY | 1 | ?:leader | ?:alert_worker | ?:__init__ | ?:canary | L5:canary | ?:test_integration_real_db | ?:test_leader, canary, coordinator +1 | **OVERLAP** |
 | pattern_detection_driver | L6 | `PatternDetectionDriver.fetch_completed_runs_with_costs` | LEAF | 1 | L5:pattern_detection, coordinator, envelope +2 | YES |
@@ -46,7 +47,7 @@ Each script's unique contribution and canonical function.
 ## Uncalled Functions
 
 Functions with no internal or external callers detected.
-May be: dead code, missing wiring, or entry points not yet traced.
+May be: unused code, missing wiring, or entry points not yet traced.
 
 - `cost_snapshots.run_daily_snapshot_and_baseline_job`
 - `cost_snapshots.run_hourly_snapshot_job`
@@ -284,3 +285,163 @@ _78 thin delegation functions._
 |--------|--------|-----------|
 | L4 `analytics_handler.py` | `AnalyticsQueryHandler`: Replaced `getattr()` dispatch with explicit map (3 methods). `AnalyticsDetectionHandler`: Replaced `getattr()` dispatch with explicit map (6 methods). Zero reflection in dispatch paths. | PIN-507 Law 5 |
 | `cost_snapshots_engine.py` | Added `from sqlalchemy import text` at top. Replaced 13 `__import__("sqlalchemy").text(...)` → `text(...)`. Updated header: `Forbidden Imports: sqlalchemy ORM (session, query); sqlalchemy.text is permitted (PIN-507 Law 5)`. | PIN-507 Law 5 |
+
+## PIN-508 Phase 1A — Cost Snapshots Hybrid Refactor (2026-02-01)
+
+**Objective:** Eliminate L5/L6 hybrid layer violation in cost_snapshots_engine.py by extracting database operations.
+
+| Component | Change | Detail |
+|-----------|--------|--------|
+| `cost_snapshots_engine.py` | Layer reassignment | Changed from "L5/L6 — HYBRID" to "L5 — Domain Engine" (pure business logic) |
+| `cost_snapshots_engine.py` | Database extraction | All `session.execute()` calls extracted to new L6 driver `cost_snapshots_driver.py` |
+| `cost_snapshots_engine.py` | Constructor injection | Now accepts `CostSnapshotsDriverProtocol` for all DB operations (dependency inversion) |
+| `cost_snapshot_schemas.py` | Protocol addition | `CostSnapshotsDriverProtocol` added to L5_schemas for engine-driver contract |
+| `cost_snapshots_driver.py` | NEW (L6 driver) | Implements `CostSnapshotsDriverProtocol`; contains all session.execute() calls extracted from engine |
+
+**Result:** cost_snapshots_engine.py now pure L5 domain logic; cost_snapshots_driver.py pure L6 data access (per HOC V2.0.0 architecture).
+
+## PIN-510 Phase 1C — Analytics→Incidents L4 Coordinator (2026-02-01)
+
+- `CostAnomalyFact` moved from `incidents/L5_engines/anomaly_bridge.py` to `hoc/cus/hoc_spine/schemas/anomaly_types.py` (schema admission compliant: consumers = analytics, incidents)
+- New L4 coordinator: `hoc/cus/hoc_spine/orchestrator/coordinators/anomaly_incident_coordinator.py`
+- Stale `L3_adapters` import paths in `cost_anomaly_detector_engine.py` fixed to canonical paths
+- Backward-compat re-export left in `anomaly_bridge.py`
+- Reference: `docs/memory-pins/PIN-510-domain-remediation-queue.md`
+
+## PIN-509 Tooling Hardening (2026-02-01)
+
+- CI checks 16–18 added to `scripts/ci/check_init_hygiene.py`:
+  - Check 16: Frozen import ban (no imports from `_frozen/` paths)
+  - Check 17: L5 Session symbol import ban (type erasure enforcement)
+  - Check 18: Protocol surface baseline (capability creep prevention, max 12 methods)
+- New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
+- `app/services/__init__.py` now emits DeprecationWarning
+- Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+## PIN-513 Topology Completion & Hygiene (2026-02-01)
+
+### Phase 1A — Stale L3_adapters Comment Fix
+
+| File | Change | Reference |
+|------|--------|-----------|
+| `cost_anomaly_detector_engine.py:53` | Comment fixed: `# See: app/hoc/cus/incidents/L3_adapters/anomaly_bridge.py` → `# See: app/hoc/cus/incidents/L5_engines/anomaly_bridge.py` | PIN-513 Phase 1A |
+
+### Phase 1D — Dead Adapter Deletion
+
+| File | Change | Reference |
+|------|--------|-----------|
+| `adapters/v2_adapter.py` | **DELETED** — 431 LOC, zero active HOC callers. `cost_model_engine.py` callers column updated (was sole caller via legacy L3 path). | PIN-513 Phase 1D |
+
+### Phase 4 — Unused Code Audit
+
+- `UNUSED_CODE_AUDIT.csv` generated (renamed from DEAD_CODE_AUDIT.csv, Phase 7): analytics domain entries sub-typed as UNWIRED_FACTORY, UNWIRED_CORE_LOGIC, etc.
+- CI check 26 (`check_no_l3_adapters_references`) added to `check_init_hygiene.py`
+
+## PIN-513 Phase 7 — Reverse Boundary Severing (HOC→services) (2026-02-01)
+
+| File | Change | Reference |
+|------|--------|-----------|
+| `api/cus/logs/cost_intelligence.py:43` | Import swapped: `app.services.cost_write_service.CostWriteService` → `app.hoc.cus.analytics.L5_engines.cost_write_engine.CostWriteService` | PIN-513 Phase 7, Step 1 |
+| `api/cus/logs/cost_intelligence.py:1240` | Import swapped: `app.services.cost_anomaly_detector.run_anomaly_detection` → `app.hoc.cus.analytics.L5_engines.cost_anomaly_detector_engine.run_anomaly_detection` | PIN-513 Phase 7, Step 2 |
+
+**Impact:** 2 HOC→services imports fully severed. Analytics L5 engines (`cost_write_engine`, `cost_anomaly_detector_engine`) confirmed as 100% API-compatible replacements. Debt tracker: `app/hoc/hoc_debt_missing_caller.yaml`.
+
+## PIN-513 Phase C — Costsim Legacy Cutover (2026-02-01)
+
+**Objective:** Rewire analytics domain engines from legacy `app.costsim.*` imports to HOC-internal canonical paths.
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| `divergence_engine.py` | Rewired 3 imports: `config`→`config_engine`, `models`→`costsim_models_engine`, `provenance`→`provenance_engine` | PIN-513 Phase C |
+| `sandbox_engine.py` | Rewired 3 imports: `circuit_breaker_async`→`circuit_breaker_async_driver`, `config`→`config_engine`, `models`→`costsim_models_engine`. 1 TRANSITIONAL: `v2_adapter` | PIN-513 Phase C |
+| `metrics_engine.py` | Rewired 1 import: `config`→`config_engine` | PIN-513 Phase C |
+| `provenance_engine.py` | Rewired 1 import: `config`→`config_engine` | PIN-513 Phase C |
+| `canary_engine.py` | Rewired 5 imports: `circuit_breaker_async`, `config`, `leader`, `models`, `provenance`. 2 TRANSITIONAL: `circuit_breaker`, `v2_adapter` | PIN-513 Phase C |
+| `datasets_engine.py` | Rewired 1 import: `models`→`costsim_models_engine`. 1 TRANSITIONAL: `v2_adapter` | PIN-513 Phase C |
+| `leader_driver.py` (L6) | No code change (docstring reference only) | PIN-513 Phase C |
+| `provenance_driver.py` (L6) | No code change (docstring reference only) | PIN-513 Phase C |
+
+**TRANSITIONAL imports remaining:**
+- `app.costsim.v2_adapter` (3 files: `sandbox_engine`, `canary_engine`, `datasets_engine`)
+- `app.costsim.circuit_breaker.get_circuit_breaker` (1 file: `canary_engine`)
+
+**Key Dependency:** `costsim_models_engine.py` now serves as HOC replacement for legacy `app/costsim/models.py`, providing canonical model classes (`V2SimulationResult`, `CanaryReport`, etc.) within HOC domain structure.
+
+### PIN-513 TRANSITIONAL Resolution — v2_adapter_engine + circuit_breaker (2026-02-01)
+
+**New file:** `analytics/L5_engines/v2_adapter_engine.py`
+- HOC version of `app/costsim/v2_adapter.py` (375 lines)
+- All imports rewired to HOC paths (config_engine, costsim_models_engine, provenance_engine)
+- Delegates cost model logic to L4 via lazy imports from `app.services.cost_model_engine` (separate cutover scope)
+- Callers: sandbox_engine, datasets_engine, canary_engine
+
+**TRANSITIONAL imports severed:**
+
+| Import | Files | Resolution |
+|--------|-------|------------|
+| `from app.costsim.v2_adapter import CostSimV2Adapter` | sandbox_engine, datasets_engine, canary_engine | → `from app.hoc.cus.analytics.L5_engines.v2_adapter_engine import CostSimV2Adapter` |
+| `from app.costsim.circuit_breaker import get_circuit_breaker` | api/costsim, hoc/api/cus/analytics/costsim, canary_engine | → `from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import get_circuit_breaker` |
+
+**Alias added:** `circuit_breaker_async_driver.get_circuit_breaker = get_async_circuit_breaker` (drop-in singleton replacement for legacy no-arg factory).
+
+**Result:** Zero `from app.costsim` imports remain in HOC callers or API layer. Costsim legacy tree is now fully decoupled from HOC.
+
+### PIN-513 Step 9 — cost_model_engine Severing (2026-02-01)
+
+Rewired 3 lazy imports in `v2_adapter_engine.py` from `app.services.cost_model_engine` to `app.hoc.cus.analytics.L5_engines.cost_model_engine` (HOC copy already existed with identical code body). Zero `from app.services` code imports remain in analytics domain.
+
+### PIN-513 Phase 8 — Zero-Caller Wiring (2026-02-01)
+
+| Component | L4 Owner | Action |
+|-----------|----------|--------|
+| `cost_snapshots_engine` | **NEW** `hoc_spine/orchestrator/handlers/analytics_snapshot_handler.py` | L4 handler dispatches `run_hourly`, `run_daily`, `evaluate_anomalies` to SnapshotComputer/BaselineComputer/SnapshotAnomalyDetector via driver protocol injection |
+| `prediction_engine` | **NEW** `hoc_spine/orchestrator/handlers/analytics_prediction_handler.py` | L4 handler dispatches `predict_failure`, `predict_cost_overrun`, `run_cycle`, `get_summary` |
+| `s1_retry_backoff_engine` | Moved to `hoc_spine/utilities/s1_retry_backoff.py` | Reclassified L4 Spine Utility / SHARED. Original deleted from analytics/L5_engines. |
+| `coordination_audit_driver` | `anomaly_incident_coordinator.py` | Added `persist_coordination_audit()` method — lazy import of `persist_audit_record` from L6 driver |
+
+**Signature audit fix (2026-02-01):** `analytics_snapshot_handler.py` — removed spurious `tenant_id` from `evaluate_snapshot` call. `analytics_prediction_handler.py` — added `get_prediction_driver(session)` for `predict_failure`/`predict_cost_overrun`; removed `session` from `run_cycle`/`get_summary`. All 12 call sites re-verified clean.
+
+---
+
+### PIN-513 Phase 9 Batch 3A Amendment (2026-02-01)
+
+**Scope:** 46 analytics symbols reclassified.
+
+| Category | Count | Details |
+|----------|-------|---------|
+| PHANTOM_NO_HOC_COPY | 5 | envelope_engine (5) — source deleted, only .pyc remains |
+| CSV stale (already wired) | 6 | cost_snapshots_engine (2), prediction_engine (4), s1_retry_backoff_engine (1), coordination_audit_driver (1) |
+| WIRED via parent | 3 | prediction_engine sub-functions called by run_prediction_cycle |
+| PURE_INFRA_UTILITY | 3 | provenance_engine — imported directly by coordinators |
+| WIRED (new) | 29 | canary (1), config (4), datasets+divergence (4), metrics (2), sandbox (2), leader_driver (8), provenance_driver (8) |
+
+**Files created:**
+- `hoc_spine/orchestrator/coordinators/canary_coordinator.py` — L4: scheduled canary runs
+- `hoc_spine/orchestrator/handlers/analytics_config_handler.py` — L4: CostSim config visibility
+- `hoc_spine/orchestrator/handlers/analytics_validation_handler.py` — L4: dataset validation + divergence
+- `hoc_spine/orchestrator/handlers/analytics_metrics_handler.py` — L4: metrics + alert rules
+- `hoc_spine/orchestrator/handlers/analytics_sandbox_handler.py` — L4: sandbox experimentation
+- `hoc_spine/orchestrator/coordinators/leadership_coordinator.py` — L4: distributed locking
+- `hoc_spine/orchestrator/coordinators/provenance_coordinator.py` — L4: provenance DB ops
+
+---
+
+### PIN-513 Phase 9 Batch 4 Amendment (2026-02-01)
+
+**Deletions:**
+- `cost_write_engine.py` — DELETED (zero-logic passthrough, zero callers)
+
+**Files created:**
+- `hoc_spine/orchestrator/coordinators/snapshot_scheduler.py` — L4: multi-tenant snapshot batch scheduler
+
+**Final status:** Zero UNWIRED analytics symbols remain.
+
+### PIN-513 Phase 9 Batch 5 Amendment (2026-02-01)
+
+**CI invariant hardening — analytics domain impact:**
+
+- `costsim.py` frozen in check 27 allowlist (L2→L5/L6 bypass — imports config_engine, canary_engine, sandbox_engine, divergence_engine, datasets_engine, circuit_breaker_async_driver)
+- `cost_intelligence.py` frozen in check 27 allowlist (L2→L5/L6 bypass — imports cost_write_engine, cost_anomaly_detector_engine)
+- `cost_anomaly_detector_engine.py` frozen in check 28 allowlist (L5→L5 cross-domain — imports incidents/anomaly_bridge)
+
+**No new files may introduce these patterns.** Existing violations are frozen; removal requires routing through L4 spine handlers.

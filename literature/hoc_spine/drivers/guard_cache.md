@@ -1,6 +1,6 @@
 # guard_cache.py
 
-**Path:** `backend/app/hoc/hoc_spine/drivers/guard_cache.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/drivers/guard_cache.py`  
 **Layer:** L4 — HOC Spine (Driver)  
 **Component:** Drivers
 

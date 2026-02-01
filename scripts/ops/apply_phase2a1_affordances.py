@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Apply Phase-2A.1 Affordance Controls to UI Projection Lock
+# artifact_class: CODE
 """
 Apply Phase-2A.1 Affordance Controls to UI Projection Lock
 

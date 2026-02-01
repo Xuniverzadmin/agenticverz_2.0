@@ -105,7 +105,7 @@ def enforce_before_step_completion(
     # Check governance state first (GAP-069)
     try:
         # V2.0.0 - hoc_spine authority
-        from app.hoc.hoc_spine.authority.runtime_switch import is_governance_active, is_degraded_mode
+        from app.hoc.cus.hoc_spine.authority.runtime_switch import is_governance_active, is_degraded_mode
 
         if not is_governance_active():
             logger.warning("step_enforcement.governance_disabled", extra={

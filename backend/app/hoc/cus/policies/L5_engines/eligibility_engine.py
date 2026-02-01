@@ -72,7 +72,7 @@ from typing import Any, Optional, Protocol
 from uuid import UUID
 
 # V2.0.0 - hoc_spine orchestrator
-from app.hoc.hoc_spine.orchestrator import (
+from app.hoc.cus.hoc_spine.orchestrator import (
     IssueType,
     RecommendedAction,
     Severity,

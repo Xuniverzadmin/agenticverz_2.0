@@ -1,4 +1,5 @@
 # Layer: L5 — Domain Engine
+# STUB_ENGINE: True
 # AUDIENCE: CUSTOMER
 # Role: Customer telemetry engine - LLM usage ingestion and reporting
 # NOTE: Renamed cus_telemetry_service.py → cus_telemetry_engine.py (2026-01-31)

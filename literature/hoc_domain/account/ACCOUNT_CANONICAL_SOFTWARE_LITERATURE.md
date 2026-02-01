@@ -170,3 +170,13 @@ Domain has zero `app.services` imports (active or docstring) and zero `cus.gener
 ## PIN-507 Law 5 Remediation (2026-02-01)
 
 **L4 Handler Update:** All `getattr()`-based reflection dispatch in this domain's L4 handler replaced with explicit `dispatch = {}` maps. All `asyncio.iscoroutinefunction()` eliminated via explicit sync/async split. Zero `__import__()` calls remain. See PIN-507 for full audit trail.
+
+## PIN-509 Tooling Hardening (2026-02-01)
+
+- CI checks 16–18 added to `scripts/ci/check_init_hygiene.py`:
+  - Check 16: Frozen import ban (no imports from `_frozen/` paths)
+  - Check 17: L5 Session symbol import ban (type erasure enforcement)
+  - Check 18: Protocol surface baseline (capability creep prevention, max 12 methods)
+- New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
+- `app/services/__init__.py` now emits DeprecationWarning
+- Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`

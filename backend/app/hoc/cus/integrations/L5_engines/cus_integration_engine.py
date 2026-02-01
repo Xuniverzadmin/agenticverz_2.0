@@ -1,4 +1,5 @@
 # Layer: L5 — Domain Engine
+# STUB_ENGINE: True
 # NOTE: Renamed cus_integration_service.py → cus_integration_engine.py (2026-01-31) per BANNED_NAMING rule
 # AUDIENCE: CUSTOMER
 # Role: Customer integration service - LLM BYOK, SDK, RAG management

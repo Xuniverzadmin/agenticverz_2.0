@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Batch SDSR Runner - Execute all scenarios systematically by domain order.
+# artifact_class: CODE
 """
 Batch SDSR Runner - Execute all scenarios systematically by domain order.
 

@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: cron
+#   Execution: sync
+# Role: Activity Domain CI Contract
+# artifact_class: CODE
 """
 Activity Domain CI Contract
 

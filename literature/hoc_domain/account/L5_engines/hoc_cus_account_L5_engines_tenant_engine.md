@@ -57,7 +57,7 @@ Tenant Engine (L5)
 |----------|---------|
 | L6 Driver | `app.hoc.cus.account.L6_drivers.tenant_driver` |
 | L7 Model | `app.models.tenant` |
-| External | `__future__`, `app.hoc.hoc_spine.services.time`, `sqlmodel` |
+| External | `__future__`, `app.hoc.cus.hoc_spine.services.time`, `sqlmodel` |
 
 ## Callers
 

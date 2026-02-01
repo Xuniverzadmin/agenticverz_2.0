@@ -90,7 +90,7 @@ Each script's unique contribution and canonical function.
 ## Uncalled Functions
 
 Functions with no internal or external callers detected.
-May be: dead code, missing wiring, or entry points not yet traced.
+May be: unused code, missing wiring, or entry points not yet traced.
 
 - `claim_decision_engine.determine_claim_status`
 - `claim_decision_engine.get_result_confidence`
@@ -2118,4 +2118,91 @@ _442 thin delegation functions._
 
 | Script | Change | Reference |
 |--------|--------|-----------|
-| `recovery_evaluation_engine` | Pure decision function imports changed from `hoc_spine.schemas.recovery_decisions` → `hoc_spine.utilities.recovery_decisions`. `evaluate_rules` imported directly from `incidents/L5_engines/recovery_rule_engine` (no longer via schemas proxy). | PIN-507 Law 6 |
+| `recovery_evaluation_engine` | Pure decision function imports changed from `hoc.cus.hoc_spine.schemas.recovery_decisions` → `hoc.cus.hoc_spine.utilities.recovery_decisions`. `evaluate_rules` imported directly from `incidents/L5_engines/recovery_rule_engine` (no longer via schemas proxy). | PIN-507 Law 6 |
+
+## PIN-508 DomainBridge Capabilities Integration (2026-02-01)
+
+### Phase 2: Cross-Domain Capability Protocols
+
+**New File Added:**
+- `domain_bridge_capabilities.py` (L5 Schemas) — Capability protocol definitions for cross-domain access via DomainBridge. Contains: `LessonsQueryCapability`, `LimitsQueryCapability`, `PolicyLimitsCapability`.
+
+### Phases 2A, 2B, 2C: Factory and Constructor Parameter Updates
+
+| Script | Layer | Change | Reference |
+|--------|-------|--------|-----------|
+| `lessons_engine.py` | L5 | Factory now accepts `driver` parameter for DomainBridge capability injection. Enables cross-domain lessons learned queries. | PIN-508 Phase 2A |
+| `policies_limits_query_engine.py` | L5 | Factory now accepts `driver` parameter for DomainBridge capability injection. | PIN-508 Phase 2B |
+| `policy_limits_engine.py` | L5 | Constructor now accepts `driver` parameter for DomainBridge capability injection. | PIN-508 Phase 2C |
+
+### Phase 5: Stub Engine Markings
+
+| Script | Layer | Change | Reference |
+|--------|-------|--------|-----------|
+| `cus_enforcement_engine.py` | L5 | STUB_ENGINE marker added. Methods now raise `NotImplementedError`. Pending HOC-native implementation. | PIN-508 Phase 5 |
+| `limits_simulation_engine.py` | L5 | STUB_ENGINE marker added. Methods raise `NotImplementedError`. Pending HOC-native implementation. | PIN-508 Phase 5 |
+| `policies_facade.py` | L5 | STUB_ENGINE marker added. 13 methods raise `NotImplementedError`. Pending HOC-native implementation. | PIN-508 Phase 5 |
+
+**Intent:** PIN-508 integrates cross-domain capability protocols via DomainBridge, enabling safe cross-domain queries and operations. Stub engines maintain backward compatibility while signaling incomplete implementation status.
+
+## PIN-509 Tooling Hardening (2026-02-01)
+
+- CI checks 16–18 added to `scripts/ci/check_init_hygiene.py`:
+  - Check 16: Frozen import ban (no imports from `_frozen/` paths)
+  - Check 17: L5 Session symbol import ban (type erasure enforcement)
+  - Check 18: Protocol surface baseline (capability creep prevention, max 12 methods)
+- New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
+- `app/services/__init__.py` now emits DeprecationWarning
+- Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+## PIN-510 Phase 1B — Lazy Fallback Assertion Guards (2026-02-01)
+
+Two policies L5 engines now have assertion-guarded legacy fallbacks:
+
+| Engine | Factory/Constructor | Guard |
+|--------|-------------------|-------|
+| `policies_limits_query_engine.py` | `get_limits_query_engine()` | `HOC_REQUIRE_L4_INJECTION` env flag |
+| `policy_limits_engine.py` | `PolicyLimitsEngine.__init__()` | `HOC_REQUIRE_L4_INJECTION` env flag |
+
+**Behavior:**
+- `HOC_REQUIRE_L4_INJECTION` unset: fallback works, logs warning
+- `HOC_REQUIRE_L4_INJECTION=1`: raises RuntimeError (enforced in CI/prod)
+- After all callers migrate: remove fallback code entirely
+
+Reference: `docs/memory-pins/PIN-510-domain-remediation-queue.md`
+
+## PIN-513 Phase A — Policies Domain Changes (2026-02-01)
+
+- claim_decision_engine.py (L5): DELETED — Phase R-4 moved logic inline into recovery_claim_worker.py
+
+---
+
+### PIN-513 Phase 9 Batch 2B Amendment (2026-02-01)
+
+**Scope:** 26 policies symbols reclassified.
+
+| Category | Count | Details |
+|----------|-------|---------|
+| PHANTOM_NO_HOC_COPY | 3 | claim_decision_engine — file does not exist in HOC |
+| WIRED via policies_handler | 3 | limits/proposals/rules query engines → PoliciesLimitsQueryHandler, PoliciesProposalsQueryHandler, PoliciesRulesQueryHandler |
+| WIRED pure import | 6 | dsl_parser (2), conflict_resolver (4) — pure functions, callers import directly |
+| WIRED PolicyGovernanceHandler | 13 | proposal_engine (7), snapshot_engine (6) |
+| WIRED middleware import | 2 | protection_provider — middleware calls directly |
+
+**Files created:**
+- `hoc_spine/orchestrator/handlers/policy_governance_handler.py` — L4 handler for policy proposal lifecycle + snapshot governance
+
+**Files modified:**
+- `hoc_spine/orchestrator/handlers/policies_handler.py` — Added 3 query handler classes (PoliciesLimitsQueryHandler, PoliciesProposalsQueryHandler, PoliciesRulesQueryHandler)
+
+### PIN-513 Phase 9 Batch 5 Amendment (2026-02-01)
+
+**CI invariant hardening — policies domain impact:**
+
+- `recovery.py` frozen in check 27 allowlist (L2→L5/L6 bypass — imports recovery_matcher, recovery_write_driver, recovery_rule_engine, scoped_execution)
+- `recovery_ingest.py` frozen in check 27 allowlist (L2→L5/L6 bypass — imports recovery_write_driver)
+- `billing_dependencies.py` frozen in check 27 allowlist (L2→L5/L6 bypass — imports billing_provider_engine)
+- `workers.py` frozen in check 27 allowlist (L2→L5/L6 bypass — imports capture_driver, recovery_evaluation_engine)
+- `recovery_evaluation_engine.py` frozen in check 28 allowlist (L5→L5 cross-domain — imports incidents/recovery_rule_engine)
+
+**No new files may introduce these patterns.**

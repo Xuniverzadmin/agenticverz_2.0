@@ -76,7 +76,7 @@ Lessons Learned Engine (L4 Domain Logic)
 |----------|---------|
 | L6 Driver | `app.hoc.cus.incidents.L6_drivers.lessons_driver` |
 | Cross-Domain | `app.hoc.cus.incidents.L6_drivers.lessons_driver` |
-| External | `app.hoc.hoc_spine.services.time`, `prometheus_client`, `sqlalchemy`, `sqlalchemy.orm`, `sqlmodel` |
+| External | `app.hoc.cus.hoc_spine.services.time`, `prometheus_client`, `sqlalchemy`, `sqlalchemy.orm`, `sqlmodel` |
 
 ## Callers
 

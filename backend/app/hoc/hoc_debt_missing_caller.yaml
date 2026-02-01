@@ -1,0 +1,26 @@
+# HOC Debt: Missing Callers (PIN-513 Phase 7)
+# Each entry represents a TRANSITIONAL import in app/hoc/ that cannot be severed
+# until the listed HOC caller (engine/driver/schema) is created.
+# Generated: 2026-02-01
+# Updated: 2026-02-01 — ALL 6 SEVERED. Zero open debt.
+
+# --- SEVERED (audit trail) ---
+
+# - app/hoc/fdr/ops/facades/ops_facade.py:63
+#   app.services.ops.error_store → app.hoc.fdr.ops.drivers.error_store
+
+# - app/hoc/fdr/ops/facades/ops_facade.py:71
+#   app.services.ops_incident_service → app.hoc.fdr.ops.engines.ops_incident_service
+
+# - app/hoc/api/fdr/incidents/ops.py:1482
+#   app.services.ops → app.hoc.fdr.ops.facades.ops_facade
+
+# - app/hoc/api/fdr/ops/founder_actions.py:45
+#   app.services.founder_action_write_service → app.hoc.fdr.ops.engines.founder_action_write_service
+
+# - app/hoc/int/logs/drivers/reactor_initializer.py:59
+#   app.services.governance.profile → app.hoc.cus.hoc_spine.authority.profile_policy_mode
+
+# - app/hoc/int/platform/facades/platform_eligibility_adapter.py:36
+#   app.services.platform.platform_health_service → app.hoc.int.platform.engines.platform_health_engine
+#   NEW FILES CREATED: platform_health_engine.py (L5), platform_health_driver.py (L6)

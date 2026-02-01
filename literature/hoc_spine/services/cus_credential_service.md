@@ -1,6 +1,6 @@
 # cus_credential_service.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/cus_credential_service.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/cus_credential_service.py`  
 **Layer:** L4 — HOC Spine (Service)  
 **Component:** Services
 

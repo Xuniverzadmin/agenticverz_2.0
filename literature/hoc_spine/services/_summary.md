@@ -1,6 +1,6 @@
 # Services — Folder Summary
 
-**Path:** `backend/app/hoc/hoc_spine/services/`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/`  
 **Layer:** L5  
 **Scripts:** 24
 

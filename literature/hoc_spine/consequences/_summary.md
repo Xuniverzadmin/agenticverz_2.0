@@ -1,6 +1,6 @@
 # Consequences — Folder Summary
 
-**Path:** `backend/app/hoc/hoc_spine/consequences/`  
+**Path:** `backend/app/hoc/cus/hoc_spine/consequences/`  
 **Layer:** L5  
 **Scripts:** 1
 

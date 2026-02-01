@@ -3,7 +3,7 @@
 **Total scripts:** 65  
 **Clean:** 63  
 **With violations:** 2  
-**Source:** `backend/app/hoc/hoc_spine/`  
+**Source:** `backend/app/hoc/cus/hoc_spine/`  
 **Validator:** `scripts/ops/hoc_spine_study_validator.py`
 
 ---

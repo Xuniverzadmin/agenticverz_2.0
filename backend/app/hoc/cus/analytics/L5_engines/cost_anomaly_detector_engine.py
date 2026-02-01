@@ -44,16 +44,13 @@ from datetime import date, datetime, timedelta
 from enum import Enum
 from typing import List, Optional
 
-from sqlmodel import Session, select
-
 from app.db import (
     CostAnomaly,
-    CostBudget,
     utc_now,
 )
 # R1 Resolution: Cross-domain incident write REMOVED.
 # Analytics emits CostAnomalyFact; incidents domain decides incident creation.
-# See: app/hoc/cus/incidents/L3_adapters/anomaly_bridge.py
+# See: app/hoc/cus/incidents/L5_engines/anomaly_bridge.py
 
 logger = logging.getLogger("nova.cost_anomaly_detector")
 
@@ -186,14 +183,18 @@ class CostAnomalyDetector:
     4. BUDGET_EXCEEDED: spend >= 100% of budget
     """
 
-    def __init__(self, session: Session):
-        self.session = session
+    def __init__(self, session):
         self.today = date.today()
         # Phase-2.5A: Initialize driver for DB operations
         from app.hoc.cus.analytics.L6_drivers.cost_anomaly_driver import (
             get_cost_anomaly_driver,
         )
         self._driver = get_cost_anomaly_driver(session)
+        # PIN-511 Phase 1.2: Read driver for budget/dedup queries (Protocol-injected)
+        from app.hoc.cus.analytics.L6_drivers.cost_anomaly_read_driver import (
+            get_cost_anomaly_read_driver,
+        )
+        self._read_driver = get_cost_anomaly_read_driver(session)
 
     async def detect_all(self, tenant_id: str) -> List[DetectedAnomaly]:
         """Run all anomaly detection checks for a tenant."""
@@ -518,13 +519,8 @@ class CostAnomalyDetector:
         today_start = datetime.combine(self.today, datetime.min.time())
         month_start = self.today.replace(day=1)
 
-        # TRANSITIONAL_READ_OK: Simple ORM entity query, scheduled for driver migration
-        budgets = self.session.exec(
-            select(CostBudget).where(
-                CostBudget.tenant_id == tenant_id,
-                CostBudget.is_active == True,
-            )
-        ).all()
+        # PIN-511: Delegated to read driver (was TRANSITIONAL_READ_OK)
+        budgets = self._read_driver.fetch_active_budgets(tenant_id)
 
         for budget in budgets:
             # Check daily budget
@@ -875,17 +871,14 @@ class CostAnomalyDetector:
         for anomaly in anomalies:
             today_start = datetime.combine(self.today, datetime.min.time())
 
-            # TRANSITIONAL_READ_OK: ORM deduplication query, scheduled for driver migration
-            existing = self.session.exec(
-                select(CostAnomaly).where(
-                    CostAnomaly.tenant_id == tenant_id,
-                    CostAnomaly.anomaly_type == anomaly.anomaly_type.value,
-                    CostAnomaly.entity_type == anomaly.entity_type,
-                    CostAnomaly.entity_id == anomaly.entity_id,
-                    CostAnomaly.detected_at >= today_start,
-                    CostAnomaly.resolved == False,
-                )
-            ).first()
+            # PIN-511: Delegated to read driver (was TRANSITIONAL_READ_OK)
+            existing = self._read_driver.find_existing_anomaly(
+                tenant_id=tenant_id,
+                anomaly_type=anomaly.anomaly_type.value,
+                entity_type=anomaly.entity_type,
+                entity_id=anomaly.entity_id,
+                since=today_start,
+            )
 
             if existing:
                 # Update existing
@@ -896,7 +889,7 @@ class CostAnomalyDetector:
                 existing.breach_count = anomaly.breach_count
                 existing.derived_cause = anomaly.derived_cause.value
                 existing.metadata_json = anomaly.metadata
-                self.session.add(existing)
+                self._read_driver.persist_anomaly(existing)
                 created.append(existing)
             else:
                 # Create new
@@ -917,13 +910,11 @@ class CostAnomalyDetector:
                     derived_cause=anomaly.derived_cause.value,
                     metadata_json=anomaly.metadata,
                 )
-                self.session.add(cost_anomaly)
+                self._read_driver.persist_anomaly(cost_anomaly)
                 created.append(cost_anomaly)
 
-        self.session.flush()  # Get generated IDs, NO COMMIT — L4 owns transaction
-
-        for ca in created:
-            self.session.refresh(ca)
+        # PIN-511: Flush/refresh delegated to read driver
+        self._read_driver.flush_and_refresh(created)
 
         logger.info(f"Persisted {len(created)} anomalies for tenant {tenant_id}")
         return created
@@ -934,7 +925,7 @@ class CostAnomalyDetector:
 # =============================================================================
 
 
-async def run_anomaly_detection(session: Session, tenant_id: str) -> List[CostAnomaly]:
+async def run_anomaly_detection(session, tenant_id: str) -> List[CostAnomaly]:
     """Run anomaly detection and persist results."""
     detector = CostAnomalyDetector(session)
 
@@ -950,8 +941,8 @@ async def run_anomaly_detection(session: Session, tenant_id: str) -> List[CostAn
     return persisted
 
 
-async def run_anomaly_detection_with_facts(
-    session: Session,
+async def _run_anomaly_detection_with_facts(
+    session,
     tenant_id: str,
 ) -> dict:
     """
@@ -973,13 +964,14 @@ async def run_anomaly_detection_with_facts(
 
     Note:
         Callers that need incident creation should use:
-        from app.hoc.cus.incidents.L3_adapters import AnomalyIncidentBridge
+        # PIN-510: Deprecated — use AnomalyIncidentCoordinator instead
+        from app.hoc.cus.incidents.L5_engines.anomaly_bridge import AnomalyIncidentBridge
         bridge = AnomalyIncidentBridge(session)
         for fact in result["facts"]:
             incident_id = bridge.ingest(fact)
     """
     # Import locally to avoid circular dependency during file loading
-    from app.hoc.cus.incidents.L3_adapters.anomaly_bridge import CostAnomalyFact
+    from app.hoc.cus.hoc_spine.schemas.anomaly_types import CostAnomalyFact
 
     persisted = await run_anomaly_detection(session, tenant_id)
 
@@ -1019,55 +1011,3 @@ async def run_anomaly_detection_with_facts(
     }
 
 
-# =============================================================================
-# LEGACY COMPATIBILITY (DEPRECATED - use run_anomaly_detection_with_facts)
-# =============================================================================
-
-
-async def run_anomaly_detection_with_governance(
-    session: Session,
-    tenant_id: str,
-) -> dict:
-    """
-    DEPRECATED: Use run_anomaly_detection_with_facts + AnomalyIncidentBridge.
-
-    This function now emits facts and uses the bridge for incident creation.
-    Kept for backward compatibility during transition.
-
-    Authority model:
-    - Analytics: Detect anomalies, emit facts
-    - Incidents: Decide incident creation via bridge
-
-    Returns:
-        {
-            "detected": [CostAnomaly, ...],
-            "incidents_created": [{"anomaly_id": str, "incident_id": str}, ...],
-        }
-    """
-    # Import bridge for incident creation
-    from app.hoc.cus.incidents.L3_adapters.anomaly_bridge import (
-        AnomalyIncidentBridge,
-    )
-
-    # Get facts from analytics
-    result = await run_anomaly_detection_with_facts(session, tenant_id)
-
-    if not result["facts"]:
-        return {"detected": result["detected"], "incidents_created": []}
-
-    # Use incidents bridge to create incidents (incidents domain owns this decision)
-    bridge = AnomalyIncidentBridge(session)
-    incidents_created = []
-
-    for fact in result["facts"]:
-        incident_id = bridge.ingest(fact)
-        if incident_id:
-            incidents_created.append({
-                "anomaly_id": fact.anomaly_id,
-                "incident_id": incident_id,
-            })
-
-    return {
-        "detected": result["detected"],
-        "incidents_created": incidents_created,
-    }

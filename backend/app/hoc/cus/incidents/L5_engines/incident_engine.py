@@ -72,7 +72,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 # L6 driver import (allowed)
-from app.hoc.hoc_spine.services.time import utc_now
+from app.hoc.cus.hoc_spine.services.time import utc_now
 from app.hoc.cus.incidents.L6_drivers.incident_write_driver import (
     IncidentWriteDriver,
     get_incident_write_driver,
@@ -903,7 +903,7 @@ def get_incident_engine() -> IncidentEngine:
     global _incident_engine
     if _incident_engine is None:
         # PIN-504: Inject lessons coordinator as evidence recorder
-        from app.hoc.hoc_spine.orchestrator.coordinators.lessons_coordinator import (
+        from app.hoc.cus.hoc_spine.orchestrator.coordinators.lessons_coordinator import (
             get_lessons_coordinator,
         )
         _incident_engine = IncidentEngine(evidence_recorder=get_lessons_coordinator())

@@ -1,6 +1,6 @@
 # artifact.py
 
-**Path:** `backend/app/hoc/hoc_spine/schemas/artifact.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/schemas/artifact.py`  
 **Layer:** L4 — HOC Spine (Schema)  
 **Component:** Schemas
 

@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: SQLModel Pattern Linter v2.4 - Detect Unsafe Query Patterns
+# artifact_class: CODE
 """SQLModel Pattern Linter v2.4 - Detect Unsafe Query Patterns
 
 Enhanced with PIN-120 Test Suite Stabilization Prevention Mechanisms.

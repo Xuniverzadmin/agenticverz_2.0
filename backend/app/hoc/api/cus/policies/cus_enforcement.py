@@ -37,7 +37,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from app.schemas.response import wrap_dict, wrap_list
-from app.hoc.hoc_spine.orchestrator.operation_registry import (
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
 )

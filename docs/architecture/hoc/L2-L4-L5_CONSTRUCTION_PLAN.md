@@ -121,7 +121,7 @@ result = await facade.list_rules(session=session, tenant_id=tenant_id)
 **After (compliant):**
 ```python
 # L2: hoc/api/cus/policies/policies.py
-from app.hoc.hoc_spine.orchestrator.operation_registry import get_operation_registry
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import get_operation_registry
 
 registry = get_operation_registry()
 result = await registry.execute("policies.list_rules", OperationContext(

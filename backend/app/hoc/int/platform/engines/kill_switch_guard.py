@@ -34,7 +34,7 @@ import time
 from typing import Optional, Callable, Awaitable
 
 # V2.0.0 - hoc_spine authority
-from app.hoc.hoc_spine.authority.runtime_switch import (
+from app.hoc.cus.hoc_spine.authority.runtime_switch import (
     is_governance_active,
     is_degraded_mode,
     get_governance_state,

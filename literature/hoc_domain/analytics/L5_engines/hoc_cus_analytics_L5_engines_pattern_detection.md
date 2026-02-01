@@ -72,7 +72,7 @@ Pattern Detection Service (PB-S3)
 |----------|---------|
 | L6 Driver | `app.hoc.cus.analytics.L6_drivers.pattern_detection_driver` |
 | L7 Model | `app.models.feedback` |
-| External | `app.db`, `app.hoc.hoc_spine.services.time` |
+| External | `app.db`, `app.hoc.cus.hoc_spine.services.time` |
 
 ## Callers
 

@@ -1,6 +1,6 @@
 # phase_status_invariants.py
 
-**Path:** `backend/app/hoc/hoc_spine/orchestrator/phase_status_invariants.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/orchestrator/phase_status_invariants.py`  
 **Layer:** L4 — HOC Spine (Orchestrator)  
 **Component:** Orchestrator
 

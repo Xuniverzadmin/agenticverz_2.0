@@ -43,7 +43,7 @@ from app.schemas.cus_schemas import (
     CusUsageSummary,
 )
 from app.schemas.response import wrap_dict, wrap_error, wrap_list
-from app.hoc.hoc_spine.orchestrator.operation_registry import (
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
 )

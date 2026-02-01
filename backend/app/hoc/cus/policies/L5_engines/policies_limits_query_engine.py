@@ -299,11 +299,30 @@ class LimitsQueryEngine:
 # =============================================================================
 
 
-def get_limits_query_engine(session: "AsyncSession") -> LimitsQueryEngine:
+def get_limits_query_engine(session: "AsyncSession" = None, *, driver: Any = None) -> LimitsQueryEngine:
     """Get a LimitsQueryEngine instance.
 
-    PIN-504: Uses lazy import to avoid cross-domain module-level import.
+    PIN-508 Phase 2B: Prefer passing driver (LimitsQueryCapability) from DomainBridge.
+    Falls back to lazy cross-domain import if no driver provided (legacy path).
     """
+    if driver is not None:
+        return LimitsQueryEngine(driver=driver)
+
+    # PIN-510 Phase 1B: Legacy fallback — assertion guards, env flag enforces
+    import logging as _logging
+    import os as _os
+
+    if _os.environ.get("HOC_REQUIRE_L4_INJECTION"):
+        raise RuntimeError(
+            "get_limits_query_engine() called without driver injection. "
+            "All callers must use L4 handler path (PIN-510 Phase 1B)."
+        )
+    _logging.getLogger(__name__).warning(
+        "PIN-510: get_limits_query_engine() legacy fallback used — "
+        "caller should inject driver via DomainBridge"
+    )
+
+    # Legacy path: lazy import (PIN-504) — to be removed after all callers migrate
     from app.hoc.cus.controls.L6_drivers.limits_read_driver import get_limits_read_driver
 
     return LimitsQueryEngine(

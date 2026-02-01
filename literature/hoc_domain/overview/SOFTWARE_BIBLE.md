@@ -80,3 +80,33 @@ _10 thin delegation functions._
 | Script | Change | Reference |
 |--------|--------|-----------|
 | L4 `overview_handler.py` | `OverviewQueryHandler`: Replaced `getattr()` dispatch with explicit map (5 methods). Zero reflection in dispatch paths. | PIN-507 Law 5 |
+
+## PIN-509 Tooling Hardening (2026-02-01)
+
+- CI checks 16–18 added to `scripts/ci/check_init_hygiene.py`:
+  - Check 16: Frozen import ban (no imports from `_frozen/` paths)
+  - Check 17: L5 Session symbol import ban (type erasure enforcement)
+  - Check 18: Protocol surface baseline (capability creep prevention, max 12 methods)
+- New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
+- `app/services/__init__.py` now emits DeprecationWarning
+- Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+## PIN-513 Topology Completion & Hygiene (2026-02-01)
+
+Cross-cutting changes spanning multiple domains. Per-domain details in each domain's SOFTWARE_BIBLE.md.
+
+### Phase 4 — Unused Code Audit Tooling
+
+| Artifact | Purpose | Reference |
+|----------|---------|-----------|
+| `literature/hoc_domain/UNUSED_CODE_AUDIT.csv` | 202 entries across hoc/cus/* (scope: Phase 7). Sub-typed: UNWIRED_FACTORY, UNWIRED_SCHEDULED, UNWIRED_CORE_LOGIC, UNWIRED_TEST_UTIL, RESOLVED, FALSE_POSITIVE. Renamed from DEAD_CODE_AUDIT.csv (Phase 7). | PIN-513 Phase 4+7 |
+| CI check 26: `check_no_l3_adapters_references` | Scans `hoc/cus/` Python files for non-comment references to `L3_adapters` → CI fail. Added to `check_init_hygiene.py`. | PIN-513 Phase 4 |
+
+### Phase 5 — Scripts Metadata Standardization
+
+| Artifact | Purpose | Reference |
+|----------|---------|-----------|
+| **NEW** `scripts/ops/add_metadata_headers.py` | Bulk script to add standard `# Layer: L8` metadata headers to scripts. Applied to 129 scripts achieving 100% coverage. | PIN-513 Phase 5A |
+| **NEW** `scripts/ci/intent_check_common.py` | Shared `IntentRegression` dataclass and `extract_intent_values()` AST function. Extracted from `check_priority4_intent.py` / `check_priority5_intent.py`. | PIN-513 Phase 5B |
+| **NEW** `scripts/lib/ci_guard_base.py` | `GuardViolation`, `GuardResult`, `create_guard_parser()`, `report_result()`. Shared CI guard infrastructure for `--ci`, `--json`, `--summary` flag handling and exit code conventions. | PIN-513 Phase 5C |
+| **NEW** `scripts/lib/__init__.py` | Package marker for shared CI/ops script libraries. | PIN-513 Phase 5C |

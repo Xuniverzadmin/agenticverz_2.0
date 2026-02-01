@@ -53,8 +53,8 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Optional
 
 # L6 driver import (allowed)
-from app.hoc.hoc_spine.services.time import utc_now
-from app.hoc.hoc_spine.drivers.cross_domain import generate_uuid
+from app.hoc.cus.hoc_spine.services.time import utc_now
+from app.hoc.cus.hoc_spine.drivers.cross_domain import generate_uuid
 # PIN-504: Driver factory lazy-imported in constructor (no cross-domain module-level import)
 
 if TYPE_CHECKING:
@@ -104,19 +104,39 @@ class PolicyLimitsService:
     - Deletions are soft (status = DISABLED)
     """
 
-    def __init__(self, session: "AsyncSession", audit: Any = None):
+    def __init__(self, session: "AsyncSession", audit: Any = None, driver: Any = None):
         """
         Args:
             session: Async SQLAlchemy Session
             audit: Audit service instance (injected by L4 handler, PIN-504).
                    Must have limit_created, limit_updated async methods.
+            driver: PolicyLimitsCapability instance (PIN-508 Phase 2C).
+                    When provided, skips lazy cross-domain import.
         """
-        # PIN-504: Lazy import to avoid cross-domain module-level import
-        from app.hoc.cus.controls.L6_drivers.policy_limits_driver import get_policy_limits_driver
-
         self._session = session
-        self._driver = get_policy_limits_driver(session)
         self._audit = audit
+
+        if driver is not None:
+            # PIN-508 Phase 2C: capability injected by L4 handler via DomainBridge
+            self._driver = driver
+        else:
+            # PIN-510 Phase 1B: Legacy fallback — assertion guards, env flag enforces
+            import logging as _logging
+            import os as _os
+
+            if _os.environ.get("HOC_REQUIRE_L4_INJECTION"):
+                raise RuntimeError(
+                    "PolicyLimitsEngine() created without driver injection. "
+                    "All callers must use L4 handler path (PIN-510 Phase 1B)."
+                )
+            _logging.getLogger(__name__).warning(
+                "PIN-510: PolicyLimitsEngine legacy fallback used — "
+                "caller should inject driver via DomainBridge"
+            )
+
+            # Legacy path: lazy import (PIN-504) — to be removed after all callers migrate
+            from app.hoc.cus.controls.L6_drivers.policy_limits_driver import get_policy_limits_driver
+            self._driver = get_policy_limits_driver(session)
 
     async def create(
         self,

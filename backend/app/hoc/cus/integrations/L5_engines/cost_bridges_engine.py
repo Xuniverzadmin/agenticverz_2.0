@@ -49,7 +49,7 @@ from app.hoc.cus.integrations.L5_schemas.loop_events import (
 )
 
 # V2.0.0 - hoc_spine orchestrator
-from app.hoc.hoc_spine.orchestrator import create_incident_from_cost_anomaly_sync
+from app.hoc.cus.hoc_spine.orchestrator import create_incident_from_cost_anomaly_sync
 
 logger = logging.getLogger("nova.integrations.cost")
 

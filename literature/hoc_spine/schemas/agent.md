@@ -1,6 +1,6 @@
 # agent.py
 
-**Path:** `backend/app/hoc/hoc_spine/schemas/agent.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/schemas/agent.py`  
 **Layer:** L4 — HOC Spine (Schema)  
 **Component:** Schemas
 

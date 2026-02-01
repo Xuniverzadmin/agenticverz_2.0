@@ -2,7 +2,7 @@
 
 **Status:** RELOCATED
 **Date:** 2026-01-29
-**Previous path:** `backend/app/hoc/hoc_spine/mcp/`
+**Previous path:** `backend/app/hoc/cus/hoc_spine/mcp/`
 **New path:** `backend/app/hoc/cus/integrations/adapters/mcp_server_registry.py`
 
 ---

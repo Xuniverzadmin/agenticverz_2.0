@@ -60,7 +60,7 @@ from uuid import UUID, uuid4
 
 from prometheus_client import Counter
 
-from app.hoc.hoc_spine.services.time import utc_now
+from app.hoc.cus.hoc_spine.services.time import utc_now
 
 # PIN-504: LessonsDriver injected by L4 handler via DomainBridge.
 # No cross-domain import at module level.
@@ -1074,8 +1074,15 @@ class LessonsLearnedEngine:
 _lessons_engine: Optional[LessonsLearnedEngine] = None
 
 
-def get_lessons_learned_engine() -> LessonsLearnedEngine:
-    """Get the singleton LessonsLearnedEngine instance."""
+def get_lessons_learned_engine(driver: Any = None) -> LessonsLearnedEngine:
+    """Get a LessonsLearnedEngine instance.
+
+    PIN-508 Phase 2A: When driver (LessonsQueryCapability) is provided,
+    returns a new engine with that capability injected.
+    When no driver, returns singleton with lazy initialization.
+    """
+    if driver is not None:
+        return LessonsLearnedEngine(driver=driver)
     global _lessons_engine
     if _lessons_engine is None:
         _lessons_engine = LessonsLearnedEngine()

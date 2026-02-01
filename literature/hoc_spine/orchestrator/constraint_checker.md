@@ -1,6 +1,6 @@
 # constraint_checker.py
 
-**Path:** `backend/app/hoc/hoc_spine/orchestrator/constraint_checker.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/orchestrator/constraint_checker.py`  
 **Layer:** L4 — HOC Spine (Orchestrator)  
 **Component:** Orchestrator
 

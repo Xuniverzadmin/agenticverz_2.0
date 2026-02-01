@@ -1,6 +1,6 @@
 # time.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/time.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/time.py`  
 **Layer:** L4 — HOC Spine (Service)  
 **Component:** Services
 

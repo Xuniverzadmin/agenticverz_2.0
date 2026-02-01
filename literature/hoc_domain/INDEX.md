@@ -1,7 +1,7 @@
 # HOC Domain Literature — Master Index
 
-**Total files:** 292  
-**Domains:** 12  
+**Total files:** 292 (+88 draft)
+**Domains:** 14
 **Generator:** `scripts/ops/hoc_domain_literature_generator.py`
 
 ---
@@ -20,7 +20,9 @@
 | [incidents](incidents/_summary.md) | 17 | 11 | 0 | 28 |
 | [integrations](integrations/_summary.md) | 44 | 3 | 0 | 47 |
 | [logs](logs/_summary.md) | 18 | 12 | 0 | 30 |
+| [ops](ops/SOFTWARE_BIBLE.md) *(DRAFT)* | 3 | 4 | 0 | 16 |
 | [overview](overview/_summary.md) | 1 | 1 | 0 | 2 |
+| [platform](platform/SOFTWARE_BIBLE.md) *(DRAFT)* | 20 | 42 | 0 | 72 |
 | [policies](policies/_summary.md) | 62 | 14 | 0 | 76 |
 
 ## Models (L7)
@@ -355,6 +357,33 @@
 - [replay.py](logs/L6_drivers/hoc_cus_logs_L6_drivers_replay.md) — Trace replay execution
 - [traces_store.py](logs/L6_drivers/hoc_cus_logs_L6_drivers_traces_store.md) — Trace store abstraction
 
+## Ops *(DRAFT)*
+
+[Software Bible](ops/SOFTWARE_BIBLE.md) | [Canonical Literature](ops/OPS_CANONICAL_SOFTWARE_LITERATURE.md)
+
+### L5 Engines (fdr/ops/engines/)
+
+- `founder_action_write_service.py` — Write engine for founder ops actions
+- `founder_review.py` — Contract review queue engine
+- `ops_incident_service.py` — Incident aggregation and classification
+
+### L5 Schemas (fdr/ops/schemas/)
+
+- `ops.py` — DTOs for ops domain (25+ DTOs)
+- `ops_domain_models.py` — Core domain models (OpsIncident, OpsSeverity, etc.)
+
+### L6 Drivers (fdr/ops/drivers/)
+
+- `error_store.py` — Error persistence and query
+- `event_emitter.py` — Domain event emission
+- `founder_action_write_driver.py` — Founder action DB operations
+- `ops_write_service.py` — Ops data write operations
+
+### L2.1 Facades (fdr/ops/facades/)
+
+- `ops_facade.py` — Unified ops access facade
+- `founder_review_adapter.py` — Review queue view adapter
+
 ## Overview
 
 [Domain Summary](overview/_summary.md)
@@ -366,6 +395,45 @@
 ### L6_drivers
 
 - [overview_facade_driver.py](overview/L6_drivers/hoc_cus_overview_L6_drivers_overview_facade_driver.md) — Overview Facade Driver - Pure data access for overview aggregation
+
+## Platform *(DRAFT)*
+
+[Software Bible](platform/SOFTWARE_BIBLE.md) | [Canonical Literature](platform/PLATFORM_CANONICAL_SOFTWARE_LITERATURE.md)
+
+### L5 Engines (int/platform/engines/) — 20 files
+
+- `engine.py` — Core workflow execution
+- `platform_health_engine.py` — Platform health authority (NEW, PIN-513)
+- `evaluator.py` — Limits evaluation
+- `sandbox_service.py` — Sandbox policy enforcement
+- `state_resolver.py` — Tenant state resolution
+- `pool_manager.py` — Connection pool management
+- `replay.py` — Execution replay engine
+- `kill_switch_guard.py` — Kill switch enforcement
+- `external_guard.py` — External call blocking
+- `errors.py` — Error classification
+- _...and 10 more_
+
+### L6 Drivers (int/platform/drivers/) — 42 files
+
+- `platform_health_driver.py` — Health data access (NEW, PIN-513)
+- `care.py` — Fairness/rate limiting (1530 LOC)
+- `checkpoint.py` — Workflow checkpoints
+- `cost_tracker.py` — Cost enforcement
+- `governor.py` — Execution governance
+- _...and 37 more_
+
+### L2.1 Facades (int/platform/facades/)
+
+- `platform_eligibility_adapter.py` — Health → API view translation
+- `anthropic_adapter.py` — Anthropic planner adapter
+- `stub_adapter.py` — Stub planner adapter
+
+### Subdomains
+
+- `governance/drivers/` — GovernanceSignalService
+- `iam/engines/` — IAMService, Identity, AccessDecision
+- `policy/engines/` — PolicyDriver
 
 ## Policies
 

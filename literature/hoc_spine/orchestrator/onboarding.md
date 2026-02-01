@@ -1,6 +1,6 @@
 # onboarding.py
 
-**Path:** `backend/app/hoc/hoc_spine/orchestrator/lifecycle/engines/onboarding.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/orchestrator/lifecycle/engines/onboarding.py`  
 **Layer:** L4 — HOC Spine (Orchestrator)  
 **Component:** Orchestrator
 
@@ -13,7 +13,7 @@ File:            onboarding.py
 Lives in:        orchestrator/
 Role:            Orchestrator
 Inbound:         KnowledgeLifecycleManager via StageRegistry
-Outbound:        app.hoc.hoc_spine.orchestrator.lifecycle.drivers.execution, app.hoc.hoc_spine.orchestrator.lifecycle.drivers.execution, app.hoc.hoc_spine.orchestrator.lifecycle.drivers.execution
+Outbound:        app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.execution, app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.execution, app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.execution
 Transaction:     Forbidden
 Cross-domain:    none
 Purpose:         Onboarding Stage Handlers
@@ -42,9 +42,9 @@ The KnowledgeLifecycleManager orchestrates everything else.
 ## Import Analysis
 
 **Spine-internal:**
-- `app.hoc.hoc_spine.orchestrator.lifecycle.drivers.execution`
-- `app.hoc.hoc_spine.orchestrator.lifecycle.drivers.execution`
-- `app.hoc.hoc_spine.orchestrator.lifecycle.drivers.execution`
+- `app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.execution`
+- `app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.execution`
+- `app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.execution`
 
 **L7 Models:**
 - `app.models.knowledge_lifecycle`
@@ -305,7 +305,7 @@ boundary:
     - "hoc_spine.adapters.*"
   forbidden_inbound:
   actual_imports:
-    spine_internal: ['app.hoc.hoc_spine.orchestrator.lifecycle.drivers.execution', 'app.hoc.hoc_spine.orchestrator.lifecycle.drivers.execution', 'app.hoc.hoc_spine.orchestrator.lifecycle.drivers.execution']
+    spine_internal: ['app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.execution', 'app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.execution', 'app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.execution']
     l7_model: ['app.models.knowledge_lifecycle']
     external: ['base']
   violations: []

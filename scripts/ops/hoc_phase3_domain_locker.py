@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: HOC Phase 3 — Domain Locker
+# artifact_class: CODE
 """
 HOC Phase 3 — Domain Locker
 

@@ -1,6 +1,6 @@
 # Orchestrator — Folder Summary
 
-**Path:** `backend/app/hoc/hoc_spine/orchestrator/`
+**Path:** `backend/app/hoc/cus/hoc_spine/orchestrator/`
 **Layer:** L4
 **Scripts:** 12 + 3 coordinators
 

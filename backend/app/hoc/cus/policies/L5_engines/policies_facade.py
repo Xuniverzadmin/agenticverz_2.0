@@ -1,4 +1,5 @@
 # Layer: L5 — Domain Engine (Facade)
+# STUB_ENGINE: True
 # AUDIENCE: CUSTOMER
 # Role: Policies facade - unified entry point for policy management
 # NOTE: Legacy import disconnected (2026-01-31) — was re-exporting from
@@ -203,43 +204,43 @@ class PoliciesFacade:
     """
 
     async def list_policy_rules(self, **kwargs: Any) -> PolicyRulesListResult:
-        return PolicyRulesListResult()
+        raise NotImplementedError("PoliciesFacade.list_policy_rules is not yet implemented (PIN-508)")
 
     async def get_policy_rule_detail(self, **kwargs: Any) -> Optional[PolicyRuleDetailResult]:
-        return None
+        raise NotImplementedError("PoliciesFacade.get_policy_rule_detail is not yet implemented (PIN-508)")
 
     async def list_limits(self, **kwargs: Any) -> LimitsListResult:
-        return LimitsListResult()
+        raise NotImplementedError("PoliciesFacade.list_limits is not yet implemented (PIN-508)")
 
     async def get_limit_detail(self, **kwargs: Any) -> Optional[LimitDetailResult]:
-        return None
+        raise NotImplementedError("PoliciesFacade.get_limit_detail is not yet implemented (PIN-508)")
 
     async def get_policy_state(self, **kwargs: Any) -> PolicyStateResult:
-        return PolicyStateResult()
+        raise NotImplementedError("PoliciesFacade.get_policy_state is not yet implemented (PIN-508)")
 
     async def get_policy_metrics(self, **kwargs: Any) -> PolicyMetricsResult:
-        return PolicyMetricsResult()
+        raise NotImplementedError("PoliciesFacade.get_policy_metrics is not yet implemented (PIN-508)")
 
     async def list_conflicts(self, **kwargs: Any) -> ConflictsListResult:
-        return ConflictsListResult()
+        raise NotImplementedError("PoliciesFacade.list_conflicts is not yet implemented (PIN-508)")
 
     async def get_dependency_graph(self, **kwargs: Any) -> DependencyGraphResult:
-        return DependencyGraphResult()
+        raise NotImplementedError("PoliciesFacade.get_dependency_graph is not yet implemented (PIN-508)")
 
     async def list_violations(self, **kwargs: Any) -> ViolationsListResult:
-        return ViolationsListResult()
+        raise NotImplementedError("PoliciesFacade.list_violations is not yet implemented (PIN-508)")
 
     async def list_budgets(self, **kwargs: Any) -> BudgetsListResult:
-        return BudgetsListResult()
+        raise NotImplementedError("PoliciesFacade.list_budgets is not yet implemented (PIN-508)")
 
     async def list_requests(self, **kwargs: Any) -> PolicyRequestsListResult:
-        return PolicyRequestsListResult()
+        raise NotImplementedError("PoliciesFacade.list_requests is not yet implemented (PIN-508)")
 
     async def list_lessons(self, **kwargs: Any) -> LessonsListResult:
-        return LessonsListResult()
+        raise NotImplementedError("PoliciesFacade.list_lessons is not yet implemented (PIN-508)")
 
     async def get_lesson_stats(self, **kwargs: Any) -> LessonStatsResult:
-        return LessonStatsResult()
+        raise NotImplementedError("PoliciesFacade.get_lesson_stats is not yet implemented (PIN-508)")
 
 
 _facade_instance: Optional[PoliciesFacade] = None

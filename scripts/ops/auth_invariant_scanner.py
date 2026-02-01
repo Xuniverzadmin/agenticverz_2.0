@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Auth Invariant Scanner — Mechanical Enforcement of AUTH_DESIGN.md
+# artifact_class: CODE
 """
 Auth Invariant Scanner — Mechanical Enforcement of AUTH_DESIGN.md
 

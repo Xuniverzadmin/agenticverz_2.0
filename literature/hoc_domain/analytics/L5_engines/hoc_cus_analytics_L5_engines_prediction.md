@@ -66,7 +66,7 @@ Prediction Service (PB-S5)
 |----------|---------|
 | L6 Driver | `app.hoc.cus.analytics.L6_drivers.prediction_driver` |
 | L7 Model | `app.models.prediction` |
-| External | `app.db`, `app.hoc.hoc_spine.services.time` |
+| External | `app.db`, `app.hoc.cus.hoc_spine.services.time` |
 
 ## Callers
 

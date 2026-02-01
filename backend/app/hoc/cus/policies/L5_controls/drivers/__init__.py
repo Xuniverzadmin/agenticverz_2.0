@@ -10,7 +10,8 @@ L6 drivers for killswitch and control data access operations.
 All drivers are pure data access - no business logic.
 """
 
-from app.hoc.cus.policies.controls.drivers.killswitch_read_driver import (
+# PIN-510 Phase 1D: Canonical path is controls/L6_drivers/ (was policies/controls/drivers/)
+from app.hoc.cus.controls.L6_drivers.killswitch_read_driver import (
     KillswitchReadDriver,
     get_killswitch_read_driver,
     KillswitchStateDTO,

@@ -78,7 +78,7 @@ M27 Cost Loop Integration Bridges
 
 | Category | Imports |
 |----------|---------|
-| External | `__future__`, `app.hoc.hoc_spine.orchestrator`, `schemas.loop_events` |
+| External | `__future__`, `app.hoc.cus.hoc_spine.orchestrator`, `schemas.loop_events` |
 
 ## Callers
 

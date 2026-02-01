@@ -2,7 +2,7 @@
 
 **Status:** RELOCATED
 **Date:** 2026-01-30
-**Previous path:** `backend/app/hoc/hoc_spine/frontend/`
+**Previous path:** `backend/app/hoc/cus/hoc_spine/frontend/`
 **New path:** `frontend/app/projections/`
 
 ---

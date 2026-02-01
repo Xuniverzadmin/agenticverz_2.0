@@ -47,7 +47,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from app.costsim.config import get_commit_sha, get_config
+from app.hoc.cus.analytics.L5_engines.config_engine import get_commit_sha, get_config
 
 logger = logging.getLogger("nova.costsim.provenance")
 

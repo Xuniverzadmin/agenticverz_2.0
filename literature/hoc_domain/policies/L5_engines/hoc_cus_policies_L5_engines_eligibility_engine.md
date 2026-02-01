@@ -103,7 +103,7 @@ Part-2 Eligibility Engine (L4)
 
 | Category | Imports |
 |----------|---------|
-| External | `app.hoc.hoc_spine.orchestrator` |
+| External | `app.hoc.cus.hoc_spine.orchestrator` |
 
 ## Callers
 

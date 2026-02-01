@@ -526,6 +526,74 @@ class IncidentWriteDriver:
             })
         return incidents
 
+    # =========================================================================
+    # ANOMALY-SOURCED INCIDENT CREATION (PIN-508 Phase 1B)
+    # =========================================================================
+
+    def insert_incident_from_anomaly(
+        self,
+        incident_id: str,
+        tenant_id: str,
+        title: str,
+        severity: str,
+        trigger_type: str,
+        category: str,
+        description: str,
+        impact_scope: str,
+        affected_agent_id: Optional[str],
+        cost_delta_cents: Any,
+        now: datetime,
+    ) -> bool:
+        """
+        Insert incident from cost anomaly (no source_run_id).
+
+        PIN-508 Phase 1B: Extracted from anomaly_bridge._create_incident().
+        Anomaly-sourced incidents have source_type='cost_anomaly' and no run.
+
+        Returns:
+            True if inserted, False if conflict
+        """
+        result = self._session.execute(
+            text("""
+                INSERT INTO incidents (
+                    id, tenant_id, title, severity, status,
+                    trigger_type, started_at, created_at, updated_at,
+                    source_type, source_run_id, category, description,
+                    impact_scope, affected_agent_id, affected_count,
+                    trigger_value, cost_delta_cents, cost_impact,
+                    cause_type, lifecycle_state,
+                    is_synthetic, synthetic_scenario_id
+                ) VALUES (
+                    :id, :tenant_id, :title, :severity, 'open',
+                    :trigger_type, :now, :now, :now,
+                    'cost_anomaly', NULL, :category, :description,
+                    :impact_scope, :affected_agent_id, 1,
+                    :trigger_value, :cost_delta_cents, :cost_impact,
+                    'SYSTEM', 'ACTIVE',
+                    false, NULL
+                )
+                ON CONFLICT (id) DO NOTHING
+                RETURNING id
+            """),
+            {
+                "id": incident_id,
+                "tenant_id": tenant_id,
+                "title": title,
+                "severity": severity,
+                "trigger_type": trigger_type,
+                "now": now,
+                "category": category,
+                "description": description,
+                "impact_scope": impact_scope,
+                "affected_agent_id": affected_agent_id,
+                "trigger_value": str(cost_delta_cents),
+                "cost_delta_cents": cost_delta_cents,
+                "cost_impact": cost_delta_cents / 100 if cost_delta_cents else 0,
+            },
+        )
+        row = result.fetchone()
+        return row is not None
+
     # REMOVED: commit() helper — L6 DOES NOT COMMIT (L4 coordinator owns transaction boundary)
 
 

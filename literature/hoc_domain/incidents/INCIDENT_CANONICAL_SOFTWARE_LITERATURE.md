@@ -91,13 +91,13 @@
 
 | # | File | Class | Role | LOC | Decisions | Methods | DB Access |
 |---|------|-------|------|-----|-----------|---------|-----------|
-| 1 | `anomaly_bridge.py` | AnomalyIncidentBridge | PATTERN_ANALYSIS | ~352 | 3 | ingest, _meets_severity_threshold, _is_suppressed, _check_existing_incident, _create_incident, _build_incident_insert_sql | Direct SQL (NOT EXTRACTED — see V-E1) |
+| 1 | `anomaly_bridge.py` | AnomalyIncidentBridge | PATTERN_ANALYSIS | ~280 | 3 | ingest, _meets_severity_threshold, _is_suppressed, _check_existing_incident | Delegates to incident_write_driver (PIN-508 Phase 1B) |
 | 2 | `hallucination_detector.py` | HallucinationDetector | DETECTION | ~468 | 6 | detect, _detect_suspicious_urls, _detect_suspicious_citations, _detect_contradictions, _detect_temporal_issues, _hash_content | None (pure logic) |
 | 3 | `incident_driver.py` | IncidentDriver | ORCHESTRATION | ~280 | 1 | create_incident_for_run, check_and_create_incident, get_incidents_for_run, _emit_ack | Delegates to incident_engine |
 | 4 | `incident_engine.py` | IncidentEngine | DECISION_ENGINE | ~906 | 6 | create_incident_for_run, create_incident_for_failed_run, check_and_create_incident, create_incident_for_all_runs, _check_policy_suppression, _write_prevention_record, _maybe_create_policy_proposal, _generate_title, _extract_error_code, get_incidents_for_run | Delegates to incident_write_driver |
 | 5 | `incident_pattern_engine.py` | IncidentPatternService | PATTERN_ANALYSIS | ~280 | 0 | detect_patterns, _detect_category_clusters, _detect_severity_spikes, _detect_cascade_failures | Delegates to incident_pattern_driver |
 | 6 | `incident_read_engine.py` | IncidentReadService | READ_SERVICE | ~154 | 0 | list_incidents, get_incident, get_incident_events, count_incidents_since, get_last_incident | Delegates to incident_read_driver |
-| 7 | `incident_severity_engine.py` | IncidentSeverityEngine | DECISION_ENGINE | ~219 | 2 | get_initial_severity, calculate_severity_for_calls, should_escalate | None (pure logic) |
+| 7 | `incident_severity_engine.py` | — (TOMBSTONE) | DELETED | — | — | — | DELETED per PIN-508 Phase 4B (logic moved to L5_schemas/severity_policy.py, zero dependents) |
 | 8 | `incident_write_engine.py` | IncidentWriteService | WRITE_SERVICE | ~304 | 2 | acknowledge_incident, resolve_incident, manual_close_incident | Delegates to incident_write_driver + audit_ledger |
 | 9 | `incidents_facade.py` | IncidentsFacade | FACADE | ~984 | 6 | list_active_incidents, list_resolved_incidents, list_historical_incidents, get_incident_detail, get_incidents_for_run, get_metrics, analyze_cost_impact, detect_patterns, analyze_recurrence, get_incident_learnings, _snapshot_to_summary | Delegates to incidents_facade_driver + sub-engines |
 | 10 | `incidents_types.py` | — (type aliases) | SUPPORT | ~45 | 0 | — | None |
@@ -114,7 +114,7 @@
 | # | File | Class | Tables | LOC | Methods |
 |---|------|-------|--------|-----|---------|
 | 18 | `incident_read_driver.py` | IncidentReadDriver | Incident, IncidentEvent (READ) | ~180 | list_incidents, get_incident, get_incident_events, count_incidents_since, get_last_incident |
-| 19 | `incident_write_driver.py` | IncidentWriteDriver | Incident, IncidentEvent, runs*, aos_traces*, prevention_records*, policy_proposals*, policy_rules* (READ+WRITE) | ~450 | insert_incident, update_incident_acknowledged, update_incident_resolved, create_incident_event, refresh_incident, update_run_incident_count, update_trace_incident_id, insert_prevention_record, insert_policy_proposal, fetch_suppressing_policy, fetch_incidents_by_run_id |
+| 19 | `incident_write_driver.py` | IncidentWriteDriver | Incident, IncidentEvent, runs*, aos_traces*, prevention_records*, policy_proposals*, policy_rules* (READ+WRITE) | ~480 | insert_incident, insert_incident_from_anomaly, update_incident_acknowledged, update_incident_resolved, create_incident_event, refresh_incident, update_run_incident_count, update_trace_incident_id, insert_prevention_record, insert_policy_proposal, fetch_suppressing_policy, fetch_incidents_by_run_id |
 | 20 | `incidents_facade_driver.py` | IncidentsFacadeDriver | Incident (READ) | ~400 | fetch_active_incidents, fetch_resolved_incidents, fetch_historical_incidents, fetch_incident_by_id, fetch_incidents_by_run, fetch_metrics_aggregates, fetch_cost_impact_data, _to_snapshot |
 | 21 | `incident_aggregator.py` | IncidentAggregator | Incident, IncidentEvent (READ+WRITE) | ~380 | get_or_create_incident, resolve_stale_incidents, get_incident_stats, _find_open_incident, _can_create_incident, _get_rate_limit_incident, _create_incident, _add_call_to_incident, _add_incident_event |
 | 22 | `incident_pattern_driver.py` | IncidentPatternDriver | incidents (READ) | ~200 | fetch_incidents_count, fetch_category_clusters, fetch_severity_spikes, fetch_cascade_failures |
@@ -148,7 +148,7 @@ Each script's identity-defining function — the one that makes this script uniq
 | 4 | incident_engine | `IncidentEngine.create_incident_for_run` | CANONICAL (authority) |
 | 5 | incident_pattern_engine | `IncidentPatternService.detect_patterns` | CANONICAL |
 | 6 | incident_read_engine | `IncidentReadService.list_incidents` | INTERFACE |
-| 7 | incident_severity_engine | `IncidentSeverityEngine.should_escalate` | CANONICAL |
+| 7 | incident_severity_engine | — (DELETED) | TOMBSTONE (PIN-508 Phase 4B) |
 | 8 | incident_write_engine | `IncidentWriteService.resolve_incident` | CANONICAL |
 | 9 | incidents_facade | `IncidentsFacade.list_active_incidents` | CANONICAL |
 | 10 | incidents_types | — (type aliases) | SUPPORT |
@@ -160,7 +160,7 @@ Each script's identity-defining function — the one that makes this script uniq
 | 16 | recurrence_analysis_engine | `RecurrenceAnalysisService.analyze_recurrence` | CANONICAL |
 | 17 | semantic_failures | `get_failure_info` | SUPPORT |
 | 18 | incident_read_driver | `IncidentReadDriver.list_incidents` | CANONICAL |
-| 19 | incident_write_driver | `IncidentWriteDriver.insert_incident` | CANONICAL |
+| 19 | incident_write_driver | `IncidentWriteDriver.insert_incident` | CANONICAL; `insert_incident_from_anomaly` added (PIN-508 Phase 1B) |
 | 20 | incidents_facade_driver | `IncidentsFacadeDriver.fetch_active_incidents` | CANONICAL |
 | 21 | incident_aggregator | `IncidentAggregator.get_or_create_incident` | CANONICAL |
 | 22 | incident_pattern_driver | `IncidentPatternDriver.fetch_cascade_failures` | CANONICAL |
@@ -269,12 +269,11 @@ from app.hoc.cus.incidents          from app.hoc.cus.incidents
 **Callers updated:** `hoc/api/cus/incidents/incidents.py` now uses `get_export_bundle_driver()`
 **Verified by:** `scripts/ops/hoc_incidents_tally.py` — ALL PASS
 
-### E1: Incomplete DB extraction
+### E1: DB extraction completed (PIN-508 Phase 1B)
 
 **Location:** `L5_engines/anomaly_bridge.py` → `_create_incident()` method
-**Issue:** Still uses `session.execute()` for direct SQL INSERT
-**Should be:** Delegated to `incident_write_driver.insert_incident()`
-**Status:** DEFERRED — wiring exercise.
+**Refactor:** Removed `_build_incident_insert_sql()` method. SQL construction moved entirely to `incident_write_driver.insert_incident_from_anomaly()`.
+**Status:** RESOLVED — anomaly_bridge now passes normalized incident dict to driver. Constructor now accepts IncidentWriteDriver instance. Factory `get_anomaly_incident_bridge(session)` creates both driver and bridge.
 
 ---
 
@@ -448,3 +447,67 @@ Domain has zero `app.services` imports (active or docstring) and zero `cus.gener
 **Legacy `app/worker/runner.py`:** Import of `get_incident_facade` rewired from non-existent `..services.incidents.facade` submodule → `..services.incidents` (package-level `__init__` export). Unblocks `test_phase5a_governance.py`.
 
 **`hoc/cus/incidents/L6_drivers/export_bundle_driver.py` (line 45):** L6→L7 boundary fix. `Incident` model import moved from `app.db` → `app.models.killswitch`. L6 drivers must not import L7 models via `app.db` per HOC Topology V2.0.0. Detected by `scripts/ci/check_init_hygiene.py` L6_L7_BOUNDARY check.
+
+## PIN-508 Refactoring (2026-02-01)
+
+### Phase 1B: anomaly_bridge → incident_write_driver Extraction
+
+**Files Modified:**
+- `L5_engines/anomaly_bridge.py`
+- `L6_drivers/incident_write_driver.py`
+
+**Changes:**
+
+1. **anomaly_bridge.py:**
+   - `__init__` now accepts `IncidentWriteDriver` instance via constructor instead of `SQLAlchemy session`
+   - Removed `_build_incident_insert_sql()` method — SQL construction moved to driver
+   - Removed `_create_incident()` method — delegated to driver's new `insert_incident_from_anomaly()` method
+   - Factory function `get_anomaly_incident_bridge(session)` creates driver internally
+
+2. **incident_write_driver.py:**
+   - Added `insert_incident_from_anomaly(incident_dict: Dict)` method (Phase 1B)
+   - Accepts normalized incident data (severity, category, title, etc.) from anomaly_bridge
+   - Handles full SQL INSERT + IncidentEvent creation + audit logging
+   - Eliminates direct SQL in L5 engines
+
+**Impact:**
+- Zero L5→L6 method signature changes (wrapper interface preserved)
+- Pure extraction (no business logic moved, no behavior change)
+- incident_aggregator and other L5 callers unaffected
+
+### Phase 4B: incident_severity_engine Deletion
+
+**Files Deleted:**
+- `L5_engines/incident_severity_engine.py` (TOMBSTONE)
+
+**Rationale:**
+- Logic previously in `IncidentSeverityEngine` extracted to `L5_schemas/severity_policy.py` (see PIN-507 Law 1)
+- Zero current dependents (incident_aggregator rewired to import from `L5_schemas`)
+- Tombstone placeholder left for historical reference; not imported by any file
+
+**Impact:**
+- No breakage (precursor moved by PIN-507)
+- Cleanup only; severity policy now canonical at schema layer
+
+## PIN-510 Phase 1C — CostAnomalyFact Extraction (2026-02-01)
+
+- `CostAnomalyFact` dataclass extracted from `anomaly_bridge.py` to `hoc_spine/schemas/anomaly_types.py`
+- Backward-compat re-export remains in `anomaly_bridge.py` (TOMBSTONE)
+- New L4 coordinator `anomaly_incident_coordinator.py` owns analytics→incidents sequencing
+- Reference: `docs/memory-pins/PIN-510-domain-remediation-queue.md`
+
+## PIN-509 Tooling Hardening (2026-02-01)
+
+- CI checks 16–18 added to `scripts/ci/check_init_hygiene.py`:
+  - Check 16: Frozen import ban (no imports from `_frozen/` paths)
+  - Check 17: L5 Session symbol import ban (type erasure enforcement)
+  - Check 18: Protocol surface baseline (capability creep prevention, max 12 methods)
+- New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
+- `app/services/__init__.py` now emits DeprecationWarning
+- Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+## PIN-513 Phase 7 — Reverse Boundary Severing (HOC→services) (2026-02-01)
+
+**`fdr/incidents/engines/ops_incident_service.py`:** Import swapped from `app.services.ops_domain_models` → `app.hoc.fdr.ops.schemas.ops_domain_models`. HOC schemas copy has identical `OpsIncident`, `OpsIncidentCategory`, `OpsSeverity` dataclasses.
+
+**`api/fdr/incidents/ops.py:1482`:** Import swapped from `app.services.ops.get_ops_facade` → `app.hoc.fdr.ops.facades.ops_facade.get_ops_facade`. HOC ops facade now self-contained (its own legacy imports were severed in the same phase). Fully severed.

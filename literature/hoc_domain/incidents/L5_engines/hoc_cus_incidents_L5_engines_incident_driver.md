@@ -52,7 +52,7 @@ Incident Domain Driver (INTERNAL)
 | Category | Imports |
 |----------|---------|
 | L5 Engine | `app.hoc.cus.incidents.L5_engines.incident_engine` |
-| External | `app.hoc.hoc_spine.schemas.rac_models`, `app.hoc.hoc_spine.services.audit_store` |
+| External | `app.hoc.cus.hoc_spine.schemas.rac_models`, `app.hoc.cus.hoc_spine.services.audit_store` |
 
 ## Callers
 

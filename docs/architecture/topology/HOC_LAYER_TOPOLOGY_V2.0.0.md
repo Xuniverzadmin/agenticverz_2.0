@@ -127,7 +127,7 @@ routers = [
 **What L2 Does (Translation):**
 ```python
 # hoc/api/cus/policies/rules.py
-from hoc.hoc_spine.orchestrator import execute
+from hoc.cus.hoc_spine.orchestrator import execute
 
 @router.post("/rules")
 async def create_rule(
@@ -153,7 +153,7 @@ async def create_rule(
 
 ### L4 — HOC_SPINE / ORCHESTRATOR (Single Execution Authority)
 
-**Location:** `hoc/hoc_spine/`
+**Location:** `hoc/cus/hoc_spine/`
 
 **Responsibility:** The SINGLE OWNER of all execution. Coordinates domains, handles cross-domain logic, owns lifecycle.
 
@@ -169,7 +169,7 @@ async def create_rule(
 
 **Structure:**
 ```
-hoc/hoc_spine/                          (79 files)
+hoc/cus/hoc_spine/                          (79 files)
 ├── orchestrator/                       ← Entry point for ALL execution
 │   ├── __init__.py                     ← Central re-export hub
 │   ├── governance_orchestrator.py      ← Main orchestration
@@ -218,10 +218,10 @@ hoc/hoc_spine/                          (79 files)
 
 **L4 → L5 Binding Mechanism (AUTHORITATIVE):**
 
-L4 resolves operations via a **static operation registry** defined in `hoc/hoc_spine/orchestrator/registry.py`. Each operation is a declared entry mapping `operation_name → (domain, engine_class, method, context_schema)`. The registry is populated at application startup and is immutable at runtime. Dynamic dispatch and string-based if/else chains are FORBIDDEN. All operations must be explicitly registered; unregistered operations fail immediately.
+L4 resolves operations via a **static operation registry** defined in `hoc/cus/hoc_spine/orchestrator/registry.py`. Each operation is a declared entry mapping `operation_name → (domain, engine_class, method, context_schema)`. The registry is populated at application startup and is immutable at runtime. Dynamic dispatch and string-based if/else chains are FORBIDDEN. All operations must be explicitly registered; unregistered operations fail immediately.
 
 ```python
-# hoc/hoc_spine/orchestrator/registry.py
+# hoc/cus/hoc_spine/orchestrator/registry.py
 
 OPERATION_REGISTRY: dict[str, OperationBinding] = {
     "policies.create_rule": OperationBinding(
@@ -242,7 +242,7 @@ OPERATION_REGISTRY: dict[str, OperationBinding] = {
 ```
 
 ```python
-# hoc/hoc_spine/orchestrator/executor.py
+# hoc/cus/hoc_spine/orchestrator/executor.py
 
 async def execute(operation: str, tenant_id: str, params: dict, session: AsyncSession):
     binding = OPERATION_REGISTRY.get(operation)

@@ -1,6 +1,6 @@
 # alert_delivery.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/alert_delivery.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/alert_delivery.py`  
 **Layer:** L5 — HOC Spine (Services)  
 **Component:** Services
 

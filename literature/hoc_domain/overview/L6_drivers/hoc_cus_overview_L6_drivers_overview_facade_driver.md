@@ -90,7 +90,7 @@ Overview Facade Driver (L6 Data Access)
 | Category | Imports |
 |----------|---------|
 | L7 Model | `app.models.audit_ledger`, `app.models.killswitch`, `app.models.policy`, `app.models.policy_control_plane`, `app.models.tenant` |
-| External | `app.hoc.hoc_spine.services.time`, `sqlalchemy`, `sqlalchemy.ext.asyncio` |
+| External | `app.hoc.cus.hoc_spine.services.time`, `sqlalchemy`, `sqlalchemy.ext.asyncio` |
 
 ## Callers
 

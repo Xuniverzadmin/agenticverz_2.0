@@ -64,7 +64,7 @@ logger = logging.getLogger(__name__)
 
 
 # Re-export from spine schemas for backward compatibility (PIN-504)
-from app.hoc.hoc_spine.schemas.threshold_types import LimitSnapshot  # noqa: F401
+from app.hoc.cus.hoc_spine.schemas.threshold_types import LimitSnapshot  # noqa: F401
 
 
 # =============================================================================
@@ -309,5 +309,5 @@ def emit_threshold_signal_sync(
 
 
 # TOMBSTONE: emit_and_persist_threshold_signal deleted (PIN-507 Law 4, 2026-02-01).
-# Moved to L4: app.hoc.hoc_spine.orchestrator.coordinators.signal_coordinator
+# Moved to L4: app.hoc.cus.hoc_spine.orchestrator.coordinators.signal_coordinator
 # Cross-domain orchestration belongs at L4, not L6.

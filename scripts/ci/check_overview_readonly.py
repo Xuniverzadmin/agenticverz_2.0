@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL: DOMAIN-003 - Overview is Read-Only Projection
+# artifact_class: CODE
 """
 GUARDRAIL: DOMAIN-003 - Overview is Read-Only Projection
 Rule: Overview domain owns NO tables. All data derived via queries. No mutations.

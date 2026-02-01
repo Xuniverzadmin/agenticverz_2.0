@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Test Cost Snapshot Service
+# artifact_class: CODE
 """Test Cost Snapshot Service
 
 Tests the M27.1 Cost Snapshot Barrier with real Neon DB data.

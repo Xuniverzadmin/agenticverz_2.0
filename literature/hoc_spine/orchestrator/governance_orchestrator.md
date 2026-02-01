@@ -1,6 +1,6 @@
 # governance_orchestrator.py
 
-**Path:** `backend/app/hoc/hoc_spine/orchestrator/governance_orchestrator.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/orchestrator/governance_orchestrator.py`  
 **Layer:** L4 — HOC Spine (Orchestrator)  
 **Component:** Orchestrator
 
@@ -13,7 +13,7 @@ File:            governance_orchestrator.py
 Lives in:        orchestrator/
 Role:            Orchestrator
 Inbound:         L3 (adapters), L2 (governance APIs)
-Outbound:        app.hoc.hoc_spine.authority.contracts.contract_engine
+Outbound:        app.hoc.cus.hoc_spine.authority.contracts.contract_engine
 Transaction:     Forbidden
 Cross-domain:    none
 Purpose:         Part-2 Governance Orchestrator (L4)
@@ -45,7 +45,7 @@ Reference: PART2_CRM_WORKFLOW_CHARTER.md, PIN-292, part2-design-v1
 ## Import Analysis
 
 **Spine-internal:**
-- `app.hoc.hoc_spine.authority.contracts.contract_engine`
+- `app.hoc.cus.hoc_spine.authority.contracts.contract_engine`
 
 **L7 Models:**
 - `app.models.contract`
@@ -277,7 +277,7 @@ boundary:
     - "hoc_spine.adapters.*"
   forbidden_inbound:
   actual_imports:
-    spine_internal: ['app.hoc.hoc_spine.authority.contracts.contract_engine']
+    spine_internal: ['app.hoc.cus.hoc_spine.authority.contracts.contract_engine']
     l7_model: ['app.models.contract', 'app.models.governance_job']
     external: []
   violations: []

@@ -107,7 +107,8 @@ All in `adapters/` (L3-declared boundary adapters):
 
 ### bridges_engine.py *(renamed from bridges.py)*
 - **Role:** Integration bridges — M25_FROZEN, L5/L6 HYBRID
-- **Status:** FROZEN (2025-12-23)
+- **Status:** FROZEN (2025-12-23), QUARANTINED (PIN-508 Phase 7)
+- **Location:** `_frozen/bridges_engine.py`
 
 ### connectors_facade.py
 - **Role:** Connector management facade
@@ -121,6 +122,7 @@ All in `adapters/` (L3-declared boundary adapters):
 
 ### cus_integration_engine.py *(renamed from cus_integration_service.py)*
 - **Role:** Customer integration BYOK management
+- **Status:** STUB_ENGINE (PIN-508 Phase 5)
 - **Legacy:** DISCONNECTED — stubbed with TODO
 - **Callers:** integrations_facade.py
 
@@ -130,7 +132,8 @@ All in `adapters/` (L3-declared boundary adapters):
 
 ### dispatcher_engine.py *(renamed from dispatcher.py)*
 - **Role:** Integration dispatcher — M25_FROZEN, L5/L6 HYBRID
-- **Status:** FROZEN (2025-12-23)
+- **Status:** FROZEN (2025-12-23), QUARANTINED (PIN-508 Phase 7)
+- **Location:** `_frozen/dispatcher_engine.py`
 
 ### graduation_engine.py
 - **Role:** Integration graduation logic
@@ -226,7 +229,7 @@ customer_activity_adapter.py, customer_incidents_adapter.py, customer_keys_adapt
 
 ## L4 Handler
 
-**File:** `hoc/hoc_spine/orchestrator/handlers/integrations_handler.py`
+**File:** `hoc/cus/hoc_spine/orchestrator/handlers/integrations_handler.py`
 **Operations:** 3
 
 | Operation | Target |
@@ -286,3 +289,88 @@ All four classes are implemented and active in legacy `app/integrations/` paths.
 - `L5_schemas/__init__.py`: Removed `cost_snapshot_schemas` block (8 symbols) — module lives in `analytics/L5_schemas/`
 - `L5_engines/cost_bridges_engine.py`: Fixed `..schemas.loop_events` → `app.hoc.cus.integrations.L5_schemas.loop_events`
 - `L5_engines/credentials/__init__.py`: Stale relative import `.types` → absolute `app.hoc.cus.integrations.L5_engines.types` (`Credential` lives in parent package, not `credentials/types.py`). Detected by `check_init_hygiene.py`
+
+## PIN-508 Quarantine Actions (2026-02-01)
+
+### M25_FROZEN Quarantine (Phase 7)
+
+Hybrid engines moved to `_frozen/` subdirectory (no longer active in production wiring):
+
+| # | File | Status | Reason |
+|---|------|--------|--------|
+| 1 | `L5_engines/_frozen/bridges_engine.py` | QUARANTINED | M25_FROZEN, L5/L6 HYBRID — audit trail and policy bridges mixed with DB ops |
+| 2 | `L5_engines/_frozen/dispatcher_engine.py` | QUARANTINED | M25_FROZEN, L5/L6 HYBRID — dispatch logic mixed with DB operations |
+
+**Quarantine Marker:** `L5_engines/_frozen/__init__.py` created (empty, marker file)
+
+**Impact:** L4 integrations_handler no longer routes to these engines. Backward compat aliases removed from L5 exports.
+
+### STUB_ENGINE Markers Added (Phase 5)
+
+Production engines marked with STUB_ENGINE classification:
+
+| # | File | Marker | Purpose |
+|---|------|--------|---------|
+| 1 | `L5_engines/cus_integration_engine.py` | STUB_ENGINE | Customer integration BYOK (legacy stub disconnected during PIN-498, now explicitly marked) |
+
+### New Quarantine Marker File
+
+| File | Purpose |
+|------|---------|
+| `L5_engines/_frozen/__init__.py` | M25_FROZEN quarantine marker — no exports, no active wiring |
+
+## PIN-509 Tooling Hardening (2026-02-01)
+
+- CI checks 16–18 added to `scripts/ci/check_init_hygiene.py`:
+  - Check 16: Frozen import ban (no imports from `_frozen/` paths)
+  - Check 17: L5 Session symbol import ban (type erasure enforcement)
+  - Check 18: Protocol surface baseline (capability creep prevention, max 12 methods)
+- New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
+- `app/services/__init__.py` now emits DeprecationWarning
+- Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+## PIN-510 Phase 0 — L4 Spine Bridge Infrastructure (2026-02-01)
+
+### Bridges Registration
+
+Per-domain bridges established at L4 hoc_spine layer to eliminate monolithic DomainBridge.
+
+**Location:** `app/hoc/cus/hoc_spine/orchestrator/coordinators/bridges/`
+
+**Bridge Inventory:**
+
+| Bridge | Target Domain | Methods | Status | Phase |
+|--------|---------------|---------|--------|-------|
+| IncidentsBridge | incidents | 3 (read, write, lessons) | ACTIVE | 0A |
+| ControlsBridge | controls | 3 (limits_query, policy_limits, killswitch) | ACTIVE | 0A |
+| ActivityBridge | activity | 1 (query) | ACTIVE | 0A |
+| PoliciesBridge | policies | 1 (customer_policy_read) | ACTIVE | 0A |
+| ApiKeysBridge | api_keys | 2 (keys_read, keys_write) | ACTIVE | 0A |
+| LogsBridge | logs | 1 (read_service) | ACTIVE | 0A |
+
+**Consumers:** Phase 1A adapter rewiring (integrations boundary adapters will call bridges for cross-domain L5 access)
+
+### CI Checks Extended (Check 19–20)
+
+New CI checks added to `scripts/ci/check_init_hygiene.py`:
+
+| Check | ID | Rule | Enforcement |
+|-------|----|----|--------------|
+| 19 | `check_bridge_method_count` | Per-domain bridge max 5 capabilities | BLOCKING |
+| 20 | `check_schema_admission` | hoc_spine/schemas/ files must have Consumers header | BLOCKING |
+
+**Run CI checks:** `PYTHONPATH=. python3 scripts/ci/check_init_hygiene.py --ci` (18 total checks)
+
+### Architecture Rules
+
+**L4 Spine Bridges (Binding Constraints):**
+- Max 5 capability methods per bridge (CI enforced)
+- Never accept session in constructor
+- Return session-bound capability objects
+- Lazy imports only (no circular dependencies at module load)
+- Reserved for L4 handlers and coordinators only
+
+**Phase Timeline:**
+- **Phase 0A (COMPLETE):** Bridge infrastructure + CI checks (2026-02-01)
+- **Phase 1A (PENDING):** Adapter rewiring — integrations adapters call bridges for cross-domain L5 access
+- **Phase 1B (PENDING):** Handler stabilization — L4 handlers use bridges exclusively

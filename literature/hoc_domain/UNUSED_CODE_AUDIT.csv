@@ -1,0 +1,201 @@
+domain,file,symbol,layer,classification,evidence,action
+# ============================================================
+# UNUSED CODE AUDIT — hoc/cus/ scope only
+# Renamed from DEAD_CODE_AUDIT.csv (PIN-513 Phase 7, 2026-02-01)
+# Terminology: "dead code" → "unused code". These are unwired, not dead.
+# Scope: hoc/cus/* only. hoc/int/, hoc/fdr/, hoc/duplicate/ excluded.
+# hoc/duplicate/ is DEPRECATED (see DEPRECATED.md).
+# ============================================================
+# CATEGORY 1: REDUNDANT — Logic superseded by canonical equivalent
+# Action: Delete superseded version, rewire callers
+# ============================================================
+controls,controls/L5_engines/customer_killswitch_read_engine.py,CustomerKillswitchReadService,L5,REDUNDANT,Every method delegates to killswitch_read_driver (L6). L6 driver marked CANONICAL in bible. Zero business logic in L5 wrapper.,DELETE + rewire adapter
+controls,controls/adapters/customer_killswitch_adapter.py,_get_read_service,adapters,REDUNDANT_CALLER,Imports superseded CustomerKillswitchReadService. Should import KillswitchReadDriver directly.,REWIRE to L6 driver
+analytics,analytics/L5_engines/cost_write_engine.py,CostWriteEngine,L5,DELETED,Zero-logic passthrough — no decision boundary. Deleted Batch 4 Phase 5.,DELETED 2026-02-01
+# ============================================================
+# CATEGORY 2: RESOLVED — Previously LEGACY_ORPHAN, now built in HOC
+# Reference: PIN-513 Phase 7 (2026-02-01)
+# ============================================================
+services,app/services/founder_action_write_service.py,FounderActionWriteService,legacy,RESOLVED,HOC equivalent built: hoc/fdr/ops/engines/founder_action_write_service.py. Import severed.,PIN-513 Phase 7 Step 7
+services,app/services/platform/platform_health_service.py,PlatformHealthService,legacy,RESOLVED,HOC equivalent built: hoc/int/platform/engines/platform_health_engine.py + L6 driver. Import severed.,PIN-513 Phase 7 Step 4
+services,app/services/ops_incident_service.py,OpsIncidentService,legacy,RESOLVED,HOC equivalent exists: hoc/fdr/ops/engines/ops_incident_service.py. Import severed.,PIN-513 Phase 7 Step 5b
+services,app/services/ops_domain_models.py,ops_domain_models,legacy,RESOLVED,HOC equivalent exists: hoc/fdr/ops/schemas/ops_domain_models.py. Import severed.,PIN-513 Phase 7 Step 3
+# ============================================================
+# CATEGORY 3: BOUNDARY_VIOLATION — services→HOC imports (reverse direction)
+# These are in app/services/ not hoc/cus/. Tracked here for completeness.
+# Action: Migrate service to HOC or create shim
+# ============================================================
+services,app/services/limits/policy_limits_service.py,AuditLedgerServiceAsync import,legacy,BOUNDARY_VIOLATION,Legacy imports from hoc/cus/logs/L6_drivers/audit_ledger_driver. Forward dependency.,MIGRATE service to HOC or create shim
+services,app/services/limits/policy_rules_service.py,AuditLedgerServiceAsync import,legacy,BOUNDARY_VIOLATION,Legacy imports from hoc/cus/logs/L6_drivers/audit_ledger_driver. Forward dependency.,MIGRATE service to HOC or create shim
+services,app/services/incident_write_engine.py,AuditLedgerService import,legacy,BOUNDARY_VIOLATION,Legacy imports from hoc/cus/logs/L5_engines/audit_ledger_engine. Forward dependency.,MIGRATE service to HOC
+services,app/services/policy_proposal.py,AuditLedgerServiceAsync import,legacy,BOUNDARY_VIOLATION,Legacy imports from hoc/cus/logs/L6_drivers/audit_ledger_driver. Forward dependency.,MIGRATE service to HOC or create shim
+services,app/services/policy/lessons_engine.py,get_lessons_learned_engine import,legacy,BOUNDARY_VIOLATION,Legacy imports from hoc/cus/policies/L5_engines/lessons_engine. Duplicate — HOC is canonical.,DELETE legacy file
+services,app/services/detection/facade.py,get_anomaly_incident_coordinator import,legacy,BOUNDARY_VIOLATION,Legacy imports FROM hoc_spine coordinator. Circular: services→HOC. Most dangerous violation.,EXTRACT coordinator call to shim or migrate facade
+# ============================================================
+# CATEGORY 4: INVERTED_STUB — HOC facade delegates backward to app/services
+# AST verified: these are docstring usage examples, not real imports.
+# Status: FALSE POSITIVE — no actual code boundary violation.
+# ============================================================
+hoc_spine,hoc_spine/services/retrieval_facade.py,get_retrieval_facade,L4,INVERTED_STUB_FALSE_POSITIVE,AST verified 2026-02-01: import is inside docstring Usage: block not a real Python import.,NO ACTION — docstring only
+hoc_spine,hoc_spine/services/monitors_facade.py,get_monitors_facade,L4,INVERTED_STUB_FALSE_POSITIVE,AST verified 2026-02-01: import is inside docstring Usage: block not a real Python import.,NO ACTION — docstring only
+hoc_spine,hoc_spine/services/alerts_facade.py,get_alerts_facade,L4,INVERTED_STUB_FALSE_POSITIVE,AST verified 2026-02-01: import is inside docstring Usage: block not a real Python import.,NO ACTION — docstring only
+hoc_spine,hoc_spine/services/compliance_facade.py,get_compliance_facade,L4,INVERTED_STUB_FALSE_POSITIVE,AST verified 2026-02-01: import is inside docstring Usage: block not a real Python import.,NO ACTION — docstring only
+# ============================================================
+# CATEGORY 5: UNWIRED — Zero callers but logic is valid and needed
+# Scope: hoc/cus/* only. Action: Wire during cutover. Do NOT delete.
+# Sub-types: FACTORY (get_*), SCHEDULED (run_*), CORE_LOGIC, TEST_UTIL
+# ============================================================
+account,billing_provider_engine,get_billing_provider,L5,WIRED,Already wired: BillingGate middleware + API dependencies. CSV was stale.,RECLASSIFIED (PIN-513 Batch 1C)
+account,identity_resolver_engine,create_default_identity_chain,L5,TOPOLOGY_DEAD,Authority-level logic. Canonical: hoc_spine/authority/. Tombstoned.,DO NOT WIRE — delete after cutover
+account,profile_engine,get_governance_config,L5,TOPOLOGY_DEAD,Authority-level logic. Canonical: hoc_spine/authority/profile_policy_mode.py. Tombstoned.,DO NOT WIRE — delete after cutover
+account,profile_engine,get_governance_profile,L5,TOPOLOGY_DEAD,Authority-level logic. Canonical: hoc_spine/authority/profile_policy_mode.py. Tombstoned.,DO NOT WIRE — delete after cutover
+account,profile_engine,load_governance_config,L5,TOPOLOGY_DEAD,Authority-level logic. Canonical: hoc_spine/authority/profile_policy_mode.py. Tombstoned.,DO NOT WIRE — delete after cutover
+account,profile_engine,reset_governance_config,L5,TOPOLOGY_DEAD,Authority-level logic. Canonical: hoc_spine/authority/profile_policy_mode.py. Tombstoned.,DO NOT WIRE — delete after cutover
+account,profile_engine,validate_governance_at_startup,L5,TOPOLOGY_DEAD,Authority-level logic. Canonical: hoc_spine/authority/profile_policy_mode.py. Tombstoned.,DO NOT WIRE — delete after cutover
+account,profile_engine,validate_governance_config,L5,TOPOLOGY_DEAD,Authority-level logic. Canonical: hoc_spine/authority/profile_policy_mode.py. Tombstoned.,DO NOT WIRE — delete after cutover
+account,billing_provider_engine,set_billing_provider,L5,WIRED,Already wired: tests + DI. CSV was stale.,RECLASSIFIED (PIN-513 Batch 1C)
+activity,orphan_recovery_driver,detect_orphaned_runs,L6,WIRED,L6 primitive called by OrphanRecoveryHandler (L4). PIN-513 Batch 1A.,WIRED (PIN-513 Batch 1A)
+activity,orphan_recovery_driver,get_crash_recovery_summary,L6,WIRED,Moved to L4: OrphanRecoveryHandler.get_summary(). PIN-513 Batch 1A.,WIRED (PIN-513 Batch 1A)
+activity,orphan_recovery_driver,mark_run_as_crashed,L6,WIRED,L6 primitive called by OrphanRecoveryHandler (L4). PIN-513 Batch 1A.,WIRED (PIN-513 Batch 1A)
+activity,orphan_recovery_driver,recover_orphaned_runs,L6,REMOVED,Orchestration extracted to L4: OrphanRecoveryHandler.execute(). Removed from L6.,REMOVED (PIN-513 Batch 1A)
+analytics,canary_engine,run_canary,L5,WIRED,CanaryCoordinator (Batch 3A1),canary_coordinator.py
+analytics,config_engine,get_commit_sha,L5,WIRED,AnalyticsConfigHandler (Batch 3A2),analytics_config_handler.py
+analytics,config_engine,get_config,L5,WIRED,AnalyticsConfigHandler (Batch 3A2),analytics_config_handler.py
+analytics,config_engine,is_v2_disabled_by_drift,L5,WIRED,AnalyticsConfigHandler (Batch 3A2),analytics_config_handler.py
+analytics,config_engine,is_v2_sandbox_enabled,L5,WIRED,AnalyticsConfigHandler (Batch 3A2),analytics_config_handler.py
+analytics,cost_snapshots_engine,run_daily_snapshot_and_baseline_job,L5,WIRED,SnapshotScheduler (Batch 4),snapshot_scheduler.py
+analytics,cost_snapshots_engine,run_hourly_snapshot_job,L5,WIRED,SnapshotScheduler (Batch 4),snapshot_scheduler.py
+analytics,datasets_engine,get_dataset_validator,L5,WIRED,AnalyticsValidationHandler (Batch 3A3),analytics_validation_handler.py
+analytics,datasets_engine,validate_all_datasets,L5,WIRED,AnalyticsValidationHandler (Batch 3A3),analytics_validation_handler.py
+analytics,datasets_engine,validate_dataset,L5,WIRED,AnalyticsValidationHandler (Batch 3A3),analytics_validation_handler.py
+analytics,divergence_engine,generate_divergence_report,L5,WIRED,AnalyticsValidationHandler (Batch 3A3),analytics_validation_handler.py
+analytics,envelope_engine,calculate_bounded_value,L5,PHANTOM_NO_HOC_COPY,Source deleted — only .pyc remains,NO ACTION
+analytics,envelope_engine,create_audit_record,L5,PHANTOM_NO_HOC_COPY,Source deleted — only .pyc remains,NO ACTION
+analytics,envelope_engine,get_envelope_priority,L5,PHANTOM_NO_HOC_COPY,Source deleted — only .pyc remains,NO ACTION
+analytics,envelope_engine,has_higher_priority,L5,PHANTOM_NO_HOC_COPY,Source deleted — only .pyc remains,NO ACTION
+analytics,envelope_engine,validate_envelope,L5,PHANTOM_NO_HOC_COPY,Source deleted — only .pyc remains,NO ACTION
+analytics,metrics_engine,get_alert_rules,L5,WIRED,AnalyticsMetricsHandler (Batch 3A4),analytics_metrics_handler.py
+analytics,metrics_engine,get_metrics,L5,WIRED,AnalyticsMetricsHandler (Batch 3A4),analytics_metrics_handler.py
+analytics,prediction_engine,emit_prediction,L5,WIRED,WIRED_VIA_PARENT — called by run_prediction_cycle,analytics_prediction_handler.py
+analytics,prediction_engine,get_prediction_summary,L5,WIRED,AnalyticsPredictionHandler (Phase 8 — CSV stale),analytics_prediction_handler.py
+analytics,prediction_engine,predict_cost_overrun,L5,WIRED,WIRED_VIA_PARENT — called by run_prediction_cycle,analytics_prediction_handler.py
+analytics,prediction_engine,predict_failure_likelihood,L5,WIRED,WIRED_VIA_PARENT — called by run_prediction_cycle,analytics_prediction_handler.py
+analytics,prediction_engine,run_prediction_cycle,L5,WIRED,AnalyticsPredictionHandler (Phase 8 — CSV stale),analytics_prediction_handler.py
+analytics,provenance_engine,compress_json,L5,WIRED,PURE_INFRA_UTILITY — imported directly by coordinators,L4 via direct import
+analytics,provenance_engine,compute_hash,L5,WIRED,PURE_INFRA_UTILITY — imported directly by coordinators,L4 via direct import
+analytics,provenance_engine,get_provenance_logger,L5,WIRED,PURE_INFRA_UTILITY — imported directly by coordinators,L4 via direct import
+analytics,s1_retry_backoff_engine,create_s1_envelope,L5,WIRED,Moved to hoc_spine/utilities/ (Phase 8 — CSV stale),hoc_spine/utilities/
+analytics,sandbox_engine,get_sandbox,L5,WIRED,AnalyticsSandboxHandler (Batch 3A5),analytics_sandbox_handler.py
+analytics,sandbox_engine,simulate_with_sandbox,L5,WIRED,AnalyticsSandboxHandler (Batch 3A5),analytics_sandbox_handler.py
+analytics,coordination_audit_driver,persist_audit_record,L6,WIRED,AnomalyIncidentCoordinator (Phase 8 — CSV stale),anomaly_incident_coordinator.py
+analytics,leader_driver,is_lock_held,L6,WIRED,LeadershipCoordinator (Batch 3A6),leadership_coordinator.py
+analytics,leader_driver,leader_election,L6,WIRED,LeadershipCoordinator (Batch 3A6) — via with_leader_lock,leadership_coordinator.py
+analytics,leader_driver,release_leader_lock,L6,WIRED,LeadershipCoordinator (Batch 3A6),leadership_coordinator.py
+analytics,leader_driver,try_acquire_leader_lock,L6,WIRED,LeadershipCoordinator (Batch 3A6),leadership_coordinator.py
+analytics,leader_driver,with_alert_worker_lock,L6,WIRED,LeadershipCoordinator (Batch 3A6),leadership_coordinator.py
+analytics,leader_driver,with_archiver_lock,L6,WIRED,LeadershipCoordinator (Batch 3A6),leadership_coordinator.py
+analytics,leader_driver,with_canary_lock,L6,WIRED,LeadershipCoordinator (Batch 3A6),leadership_coordinator.py
+analytics,leader_driver,with_leader_lock,L6,WIRED,LeadershipCoordinator (Batch 3A6),leadership_coordinator.py
+analytics,provenance_driver,backfill_v1_baseline,L6,WIRED,ProvenanceCoordinator (Batch 3A5),provenance_coordinator.py
+analytics,provenance_driver,check_duplicate,L6,WIRED,ProvenanceCoordinator (Batch 3A5),provenance_coordinator.py
+analytics,provenance_driver,compute_input_hash,L6,WIRED,ProvenanceCoordinator (Batch 3A5),provenance_coordinator.py
+analytics,provenance_driver,count_provenance,L6,WIRED,ProvenanceCoordinator (Batch 3A5),provenance_coordinator.py
+analytics,provenance_driver,get_drift_stats,L6,WIRED,ProvenanceCoordinator (Batch 3A5),provenance_coordinator.py
+analytics,provenance_driver,query_provenance,L6,WIRED,ProvenanceCoordinator (Batch 3A5),provenance_coordinator.py
+analytics,provenance_driver,write_provenance,L6,WIRED,ProvenanceCoordinator (Batch 3A5),provenance_coordinator.py
+analytics,provenance_driver,write_provenance_batch,L6,WIRED,ProvenanceCoordinator (Batch 3A5),provenance_coordinator.py
+controls,alert_fatigue_engine,get_alert_fatigue_controller,L5,TOPOLOGY_DEAD,Superseded by hoc_spine/services/fatigue_controller.py. MARKED_FOR_DELETION.,DO NOT WIRE (PIN-513 Batch 2A)
+controls,alert_fatigue_engine,reset_alert_fatigue_controller,L5,TOPOLOGY_DEAD,Superseded by hoc_spine/services/fatigue_controller.py. MARKED_FOR_DELETION.,DO NOT WIRE (PIN-513 Batch 2A)
+controls,cb_sync_wrapper_engine,get_state_sync,L5,WIRED,Wired via CircuitBreakerHandler.get_state_sync(). PIN-513 Batch 2A.,WIRED (PIN-513 Batch 2A)
+controls,cb_sync_wrapper_engine,is_v2_disabled_sync,L5,WIRED,Wired via CircuitBreakerHandler.is_v2_disabled_sync(). PIN-513 Batch 2A.,WIRED (PIN-513 Batch 2A)
+controls,cb_sync_wrapper_engine,shutdown_executor,L5,WIRED,Wired via CircuitBreakerHandler.shutdown(). PIN-513 Batch 2A.,WIRED (PIN-513 Batch 2A)
+controls,cost_safety_rails_engine,get_safety_rails,legacy,PHANTOM_NO_HOC_COPY,Lives in legacy app/integrations/cost_safety_rails.py. No HOC copy exists.,PHANTOM (PIN-513 Batch 2A)
+controls,decisions_engine,allow,L5,TOPOLOGY_DEAD,Duplicate of app/protection/decisions.py. MARKED_FOR_DELETION.,DO NOT WIRE (PIN-513 Batch 2A)
+controls,decisions_engine,reject_cost_limit,L5,TOPOLOGY_DEAD,Duplicate of app/protection/decisions.py. MARKED_FOR_DELETION.,DO NOT WIRE (PIN-513 Batch 2A)
+controls,decisions_engine,reject_rate_limit,L5,TOPOLOGY_DEAD,Duplicate of app/protection/decisions.py. MARKED_FOR_DELETION.,DO NOT WIRE (PIN-513 Batch 2A)
+controls,decisions_engine,throttle,L5,TOPOLOGY_DEAD,Duplicate of app/protection/decisions.py. MARKED_FOR_DELETION.,DO NOT WIRE (PIN-513 Batch 2A)
+controls,decisions_engine,warn,L5,TOPOLOGY_DEAD,Duplicate of app/protection/decisions.py. MARKED_FOR_DELETION.,DO NOT WIRE (PIN-513 Batch 2A)
+controls,killswitch_engine,get_killswitch,legacy,PHANTOM_NO_HOC_COPY,Lives in legacy app/optimization/killswitch.py. No HOC copy exists.,PHANTOM (PIN-513 Batch 2A)
+controls,killswitch_engine,reset_killswitch_for_testing,legacy,PHANTOM_NO_HOC_COPY,Lives in legacy app/optimization/killswitch.py. No HOC copy exists.,PHANTOM (PIN-513 Batch 2A)
+controls,s2_cost_smoothing_engine,calculate_s2_bounded_value,legacy,PHANTOM_NO_HOC_COPY,Lives in legacy app/optimization/envelopes/s2_cost_smoothing.py. No HOC copy.,PHANTOM (PIN-513 Batch 2A)
+controls,s2_cost_smoothing_engine,create_s2_envelope,legacy,PHANTOM_NO_HOC_COPY,Lives in legacy app/optimization/envelopes/s2_cost_smoothing.py. No HOC copy.,PHANTOM (PIN-513 Batch 2A)
+controls,s2_cost_smoothing_engine,validate_s2_envelope,legacy,PHANTOM_NO_HOC_COPY,Lives in legacy app/optimization/envelopes/s2_cost_smoothing.py. No HOC copy.,PHANTOM (PIN-513 Batch 2A)
+controls,circuit_breaker_async_driver,disable_v2,L6,WIRED,Wired via CircuitBreakerHandler.disable_v2(). PIN-513 Batch 2A.,WIRED (PIN-513 Batch 2A)
+controls,circuit_breaker_async_driver,enable_v2,L6,WIRED,Wired via CircuitBreakerHandler.enable_v2(). PIN-513 Batch 2A.,WIRED (PIN-513 Batch 2A)
+controls,circuit_breaker_async_driver,get_async_circuit_breaker,L6,WIRED,Wired via CircuitBreakerHandler.get_singleton(). PIN-513 Batch 2A.,WIRED (PIN-513 Batch 2A)
+controls,circuit_breaker_async_driver,get_incidents,L6,WIRED,Wired via CircuitBreakerHandler.get_incidents(). PIN-513 Batch 2A.,WIRED (PIN-513 Batch 2A)
+controls,circuit_breaker_async_driver,get_state,L6,WIRED,Wired via CircuitBreakerHandler.get_state(). PIN-513 Batch 2A.,WIRED (PIN-513 Batch 2A)
+controls,circuit_breaker_async_driver,is_v2_disabled,L6,WIRED,Wired via CircuitBreakerHandler.is_v2_disabled(). PIN-513 Batch 2A.,WIRED (PIN-513 Batch 2A)
+controls,circuit_breaker_async_driver,report_drift,L6,WIRED,Wired via CircuitBreakerHandler.report_drift(). PIN-513 Batch 2A.,WIRED (PIN-513 Batch 2A)
+controls,circuit_breaker_async_driver,report_schema_error,L6,WIRED,Wired via CircuitBreakerHandler.report_schema_error(). PIN-513 Batch 2A.,WIRED (PIN-513 Batch 2A)
+controls,circuit_breaker_driver,create_circuit_breaker,L6,WIRED,Wired via CircuitBreakerHandler.create_breaker(). PIN-513 Batch 2A.,WIRED (PIN-513 Batch 2A)
+controls,circuit_breaker_driver,disable_v2,L6,WIRED,Wired via CircuitBreakerHandler.disable_v2_sync(). PIN-513 Batch 2A.,WIRED (PIN-513 Batch 2A)
+controls,circuit_breaker_driver,enable_v2,L6,WIRED,Wired via CircuitBreakerHandler.enable_v2_sync(). PIN-513 Batch 2A.,WIRED (PIN-513 Batch 2A)
+controls,circuit_breaker_driver,is_v2_disabled,L6,WIRED,Wired via CircuitBreakerHandler.is_v2_disabled_with_session(). PIN-513 Batch 2A.,WIRED (PIN-513 Batch 2A)
+controls,scoped_execution_driver,create_recovery_scope,L6,WIRED,Already wired via execution_coordinator.py (Phase 8).,WIRED (PIN-513 Phase 8)
+controls,scoped_execution_driver,execute_with_scope,L6,WIRED,Already wired via execution_coordinator.py (Phase 8).,WIRED (PIN-513 Phase 8)
+controls,scoped_execution_driver,get_scope_store,L6,WIRED,Already wired via execution_coordinator.py (Phase 8).,WIRED (PIN-513 Phase 8)
+controls,scoped_execution_driver,requires_scoped_execution,L6,WIRED,Pure decorator — import wiring only. Used by recovery handlers.,WIRED (PIN-513 Batch 2A)
+controls,scoped_execution_driver,test_recovery_scope,L6,WIRED,Already wired via execution_coordinator.py (Phase 8).,WIRED (PIN-513 Phase 8)
+controls,scoped_execution_driver,validate_scope_required,L6,WIRED,Already wired via execution_coordinator.py (Phase 8).,WIRED (PIN-513 Phase 8)
+incidents,policy_violation_engine,create_policy_evaluation_record,L5,WIRED,Wired via RunGovernanceHandler.create_evaluation(). PIN-513 Batch 1B.,WIRED (PIN-513 Batch 1B)
+incidents,policy_violation_engine,create_policy_evaluation_sync,L5,WIRED,Already wired via RunGovernanceFacade → worker runner. CSV was stale.,RECLASSIFIED (PIN-513 Batch 1B)
+incidents,policy_violation_engine,handle_policy_evaluation_for_run,L5,WIRED,Wired via RunGovernanceHandler.evaluate_run(). PIN-513 Batch 1B.,WIRED (PIN-513 Batch 1B)
+incidents,policy_violation_engine,handle_policy_violation,L5,WIRED,Wired via RunGovernanceHandler.report_violation(). PIN-513 Batch 1B.,WIRED (PIN-513 Batch 1B)
+integrations,bridges_engine,create_bridges,legacy,OUT_OF_SCOPE,Lives in legacy app/integrations/bridges.py not HOC. Requires migration (separate PIN).,OUT_OF_SCOPE — legacy file
+integrations,bridges_engine,register_all_bridges,legacy,OUT_OF_SCOPE,Lives in legacy app/integrations/bridges.py not HOC. Requires migration (separate PIN).,OUT_OF_SCOPE — legacy file
+integrations,channel_engine,check_channel_health,L5,WIRED,Wired via IntegrationBootstrapHandler.check_health(). PIN-513 Batch 1D.,WIRED (PIN-513 Batch 1D)
+integrations,channel_engine,get_channel_config,L5,WIRED,Wired via IntegrationBootstrapHandler.get_channel_config(). PIN-513 Batch 1D.,WIRED (PIN-513 Batch 1D)
+integrations,channel_engine,get_notify_service,L5,WIRED,Wired via IntegrationBootstrapHandler.initialize(). PIN-513 Batch 1D.,WIRED (PIN-513 Batch 1D)
+integrations,channel_engine,send_notification,L5,WIRED,Wired via IntegrationBootstrapHandler.send_notification(). PIN-513 Batch 1D.,WIRED (PIN-513 Batch 1D)
+integrations,external_response_driver,get_interpreted_response,L6,OUT_OF_SCOPE,Lives in hoc/int/ (INTERNAL) not hoc/cus/. Out of CSV scope.,OUT_OF_SCOPE — hoc/int/ file
+integrations,external_response_driver,interpret_response,L6,OUT_OF_SCOPE,Lives in hoc/int/ (INTERNAL) not hoc/cus/. Out of CSV scope.,OUT_OF_SCOPE — hoc/int/ file
+integrations,external_response_driver,record_external_response,L6,OUT_OF_SCOPE,Lives in hoc/int/ (INTERNAL) not hoc/cus/. Out of CSV scope.,OUT_OF_SCOPE — hoc/int/ file
+integrations,worker_registry_driver,get_worker_registry_service,L6,WIRED,Wired via IntegrationsWorkersHandler (PIN-513 Phase 8).,WIRED (PIN-513 Phase 8)
+logs,traces_models,compare_traces,L5,WIRED,PURE_DOMAIN_UTILITY — imported directly,L4 via direct import
+logs,capture_driver,capture_activity_evidence,L6,WIRED,EvidenceCoordinator (Batch 3B1),evidence_coordinator.py
+logs,capture_driver,capture_environment_evidence,L6,WIRED,EvidenceCoordinator (Batch 3B1),evidence_coordinator.py
+logs,capture_driver,capture_integrity_evidence,L6,WIRED,EvidenceCoordinator (Batch 3B1),evidence_coordinator.py
+logs,capture_driver,capture_policy_decision_evidence,L6,WIRED,EvidenceCoordinator (Batch 3B1),evidence_coordinator.py
+logs,capture_driver,capture_provider_evidence,L6,WIRED,EvidenceCoordinator (Batch 3B1),evidence_coordinator.py
+logs,capture_driver,compute_integrity,L6,WIRED,EvidenceCoordinator (Batch 3B1),evidence_coordinator.py
+logs,capture_driver,hash_prompt,L6,WIRED,EvidenceCoordinator (Batch 3B1),evidence_coordinator.py
+logs,idempotency_driver,canonical_json,L6,WIRED,IdempotencyHandler (Batch 3B3),idempotency_handler.py
+logs,idempotency_driver,get_idempotency_store,L6,WIRED,IdempotencyHandler (Batch 3B3),idempotency_handler.py
+logs,idempotency_driver,hash_request,L6,WIRED,IdempotencyHandler (Batch 3B3),idempotency_handler.py
+logs,integrity_driver,compute_integrity_v2,L6,WIRED,IntegrityHandler (Batch 3B1),integrity_handler.py
+logs,job_execution_driver,get_job_audit_emitter,L6,WIRED,ExecutionCoordinator (Phase 8 — CSV stale),execution_coordinator.py
+logs,job_execution_driver,get_job_progress_tracker,L6,WIRED,ExecutionCoordinator (Phase 8 — CSV stale),execution_coordinator.py
+logs,job_execution_driver,get_job_retry_manager,L6,WIRED,ExecutionCoordinator (Phase 8 — CSV stale),execution_coordinator.py
+logs,job_execution_driver,reset_job_execution_services,L6,WIRED,ExecutionCoordinator (Phase 8 — CSV stale),execution_coordinator.py
+logs,replay_driver,get_replay_enforcer,L6,WIRED,ReplayCoordinator (Phase 8 — CSV stale),replay_coordinator.py
+logs,replay_driver,hash_output,L6,WIRED,PURE_INFRA_UTILITY — imported directly,L4 via direct import
+logs,traces_store,generate_correlation_id,L6,WIRED,PURE_INFRA_UTILITY — imported directly,L4 via direct import
+logs,traces_store,generate_run_id,L6,WIRED,PURE_INFRA_UTILITY — imported directly,L4 via direct import
+policies,claim_decision_engine,determine_claim_status,L5,PHANTOM_NO_HOC_COPY,File does not exist in HOC — legacy only,NO ACTION
+policies,claim_decision_engine,get_result_confidence,L5,PHANTOM_NO_HOC_COPY,File does not exist in HOC — legacy only,NO ACTION
+policies,claim_decision_engine,is_candidate_claimable,L5,PHANTOM_NO_HOC_COPY,File does not exist in HOC — legacy only,NO ACTION
+policies,dsl_parser,parse,L5,WIRED,Pure import — callers import directly,L4 via direct import
+policies,dsl_parser,parse_condition,L5,WIRED,Pure import — callers import directly,L4 via direct import
+policies,policies_limits_query_engine,get_limits_query_engine,L5,WIRED,PoliciesLimitsQueryHandler (Batch 2B),policies_handler.py
+policies,policies_proposals_query_engine,get_proposals_query_engine,L5,WIRED,PoliciesProposalsQueryHandler (Batch 2B),policies_handler.py
+policies,policies_rules_query_engine,get_policy_rules_query_engine,L5,WIRED,PoliciesRulesQueryHandler (Batch 2B),policies_handler.py
+policies,policy_conflict_resolver,create_conflict_log,L5,WIRED,Pure import — callers import directly,L4 via direct import
+policies,policy_conflict_resolver,get_action_severity,L5,WIRED,Pure import — callers import directly,L4 via direct import
+policies,policy_conflict_resolver,is_more_restrictive,L5,WIRED,Pure import — callers import directly,L4 via direct import
+policies,policy_conflict_resolver,resolve_policy_conflict,L5,WIRED,Pure import — callers import directly,L4 via direct import
+policies,policy_proposal_engine,check_proposal_eligibility,L5,WIRED,PolicyGovernanceHandler (Batch 2B),policy_governance_handler.py
+policies,policy_proposal_engine,create_policy_proposal,L5,WIRED,PolicyGovernanceHandler (Batch 2B),policy_governance_handler.py
+policies,policy_proposal_engine,delete_policy_rule,L5,WIRED,PolicyGovernanceHandler (Batch 2B),policy_governance_handler.py
+policies,policy_proposal_engine,generate_default_rule,L5,WIRED,PolicyGovernanceHandler (Batch 2B),policy_governance_handler.py
+policies,policy_proposal_engine,get_policy_proposal_engine,L5,WIRED,Internal factory used by PolicyGovernanceHandler,policy_governance_handler.py
+policies,policy_proposal_engine,get_proposal_summary,L5,WIRED,PolicyGovernanceHandler (Batch 2B),policy_governance_handler.py
+policies,policy_proposal_engine,review_policy_proposal,L5,WIRED,PolicyGovernanceHandler (Batch 2B),policy_governance_handler.py
+policies,protection_provider,get_protection_provider,L5,WIRED,Middleware import — protection middleware calls directly,L2 middleware import
+policies,protection_provider,set_protection_provider,L5,WIRED,DI setter — test/bootstrap callers import directly,L2 middleware import
+policies,snapshot_engine,create_policy_snapshot,L5,WIRED,PolicyGovernanceHandler (Batch 2B),policy_governance_handler.py
+policies,snapshot_engine,get_active_snapshot,L5,WIRED,PolicyGovernanceHandler (Batch 2B),policy_governance_handler.py
+policies,snapshot_engine,get_policy_snapshot,L5,WIRED,PolicyGovernanceHandler (Batch 2B),policy_governance_handler.py
+policies,snapshot_engine,get_snapshot_history,L5,WIRED,PolicyGovernanceHandler (Batch 2B),policy_governance_handler.py
+policies,snapshot_engine,get_snapshot_registry,L5,WIRED,PolicyGovernanceHandler (Batch 2B),policy_governance_handler.py
+policies,snapshot_engine,verify_snapshot,L5,WIRED,PolicyGovernanceHandler (Batch 2B),policy_governance_handler.py

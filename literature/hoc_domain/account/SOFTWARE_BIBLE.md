@@ -30,7 +30,7 @@ Each script's unique contribution and canonical function.
 ## Uncalled Functions
 
 Functions with no internal or external callers detected.
-May be: dead code, missing wiring, or entry points not yet traced.
+May be: unused code, missing wiring, or entry points not yet traced.
 
 - `billing_provider.BillingProvider.get_billing_state`
 - `billing_provider.BillingProvider.is_limit_exceeded`
@@ -159,3 +159,49 @@ _58 thin delegation functions._
 | Script | Change | Reference |
 |--------|--------|-----------|
 | L4 `account_handler.py` | `AccountQueryHandler`: Replaced `getattr()` dispatch with explicit map (6 methods). `AccountNotificationsHandler`: Replaced `getattr()` dispatch with explicit map (4 methods). Zero reflection in dispatch paths. | PIN-507 Law 5 |
+
+## PIN-509 Tooling Hardening (2026-02-01)
+
+- CI checks 16–18 added to `scripts/ci/check_init_hygiene.py`:
+  - Check 16: Frozen import ban (no imports from `_frozen/` paths)
+  - Check 17: L5 Session symbol import ban (type erasure enforcement)
+  - Check 18: Protocol surface baseline (capability creep prevention, max 12 methods)
+- New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
+- `app/services/__init__.py` now emits DeprecationWarning
+- Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+## PIN-513 Topology Completion & Hygiene (2026-02-01)
+
+### Phase 2 — Account Bridge Creation
+
+Account was the only domain without a bridge in `hoc_spine/orchestrator/coordinators/bridges/`. Bridge created to complete the "every domain has a bridge" invariant.
+
+| File | Change | Reference |
+|------|--------|-----------|
+| **NEW** `hoc_spine/orchestrator/coordinators/bridges/account_bridge.py` | `AccountBridge` with 3 capabilities: `account_query_capability(session)` → `AccountsFacade`, `notifications_capability(session)` → `NotificationsFacade`, `tenant_capability(session)` → `TenantEngine(session)`. Singleton pattern + `get_account_bridge()` factory. | PIN-513 Phase 2 |
+| `bridges/__init__.py` | Added `AccountBridge`, `get_account_bridge` to exports and `__all__` | PIN-513 Phase 2 |
+
+## PIN-513 Phase C — Account Domain Changes (2026-02-01)
+
+- billing_provider_engine.py: Now canonical source for `get_billing_provider`. 4 callers rewired from `app.billing.provider` to HOC path.
+- profile_engine.py: Confirmed 100% duplicate of hoc_spine/authority/profile_policy_mode.py. hoc_spine version is canonical (governance is cross-domain). profile_engine.py should be MARKED_FOR_DELETION during cutover.
+- Governance config callers rewired: events/reactor_initializer.py, startup/boot_guard.py (×2), policy/failure_mode_handler.py → hoc_spine/authority/profile_policy_mode.py
+
+## PIN-513 Phase 9 — Batch 1C Wiring (2026-02-01)
+
+**First-principles decision:** Identity resolution and governance profile are authority-level, not domain-level.
+
+- Tombstoned `identity_resolver_engine.py` as TOPOLOGY_DEAD — canonical: hoc_spine/authority/
+- Tombstoned `profile_engine.py` (6 symbols) as TOPOLOGY_DEAD — canonical: hoc_spine/authority/profile_policy_mode.py
+- Reclassified `billing_provider_engine.py` (2 symbols) as already WIRED — called by BillingGate middleware + tests
+- All 9 CSV entries resolved: 2 WIRED (stale), 7 TOPOLOGY_DEAD
+
+---
+
+### PIN-513 Phase 9 Batch 4 Amendment (2026-02-01)
+
+**Deletions:**
+- `account/L5_engines/identity_resolver_engine.py` — DELETED (was TOPOLOGY_DEAD, canonical: hoc_spine/authority/)
+- `account/L5_engines/profile_engine.py` — DELETED (was TOPOLOGY_DEAD, canonical: hoc_spine/authority/profile_policy_mode.py)
+
+**Final status:** Zero UNWIRED account symbols remain. Zero TOPOLOGY_DEAD files remain.

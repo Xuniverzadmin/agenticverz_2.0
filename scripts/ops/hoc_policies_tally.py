@@ -30,7 +30,7 @@ from typing import List, Tuple
 BASE_DIR = Path("/root/agenticverz2.0/backend")
 L5_PATH = BASE_DIR / "app/hoc/cus/policies/L5_engines"
 L6_PATH = BASE_DIR / "app/hoc/cus/policies/L6_drivers"
-L4_HANDLER = BASE_DIR / "app/hoc/hoc_spine/orchestrator/handlers/policies_handler.py"
+L4_HANDLER = BASE_DIR / "app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py"
 LEGACY_LESSONS = BASE_DIR / "app/services/policy/lessons_engine.py"
 
 # ANSI color codes for output

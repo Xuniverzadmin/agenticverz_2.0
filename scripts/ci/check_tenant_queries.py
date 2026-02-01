@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL: DATA-002 - Tenant Isolation Invariant
+# artifact_class: CODE
 """
 GUARDRAIL: DATA-002 - Tenant Isolation Invariant
 Rule: Every customer-facing query MUST include tenant_id filter.

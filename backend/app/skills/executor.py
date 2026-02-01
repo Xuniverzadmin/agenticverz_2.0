@@ -322,7 +322,7 @@ class SkillExecutor:
         prompt_token_estimate = 0
         if execution_context and skill_name == "llm_invoke":
             try:
-                from ..evidence.capture import capture_activity_evidence
+                from app.hoc.cus.logs.L6_drivers.capture_driver import capture_activity_evidence
 
                 # Compute prompt fingerprint for LLM calls
                 prompt_text = str(validated_params.get("prompt", ""))
@@ -397,7 +397,7 @@ class SkillExecutor:
         # Context is read-only from cursor.context - we use it, we don't mutate it
         if execution_context and skill_name == "llm_invoke":
             try:
-                from ..evidence.capture import capture_provider_evidence
+                from app.hoc.cus.logs.L6_drivers.capture_driver import capture_provider_evidence
 
                 # Extract provider info from result
                 input_tokens = result.get("input_tokens", 0)

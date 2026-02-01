@@ -581,7 +581,7 @@ async def lifespan(app: FastAPI):
     # Detect and mark runs that were orphaned due to previous system crash.
     # This MUST run before accepting new requests to ensure truth-grade state.
     try:
-        from .services.orphan_recovery import recover_orphaned_runs
+        from app.hoc.cus.activity.L6_drivers.orphan_recovery_driver import recover_orphaned_runs
 
         recovery_result = await recover_orphaned_runs()
         if recovery_result.get("detected", 0) > 0:
@@ -1655,7 +1655,7 @@ async def post_goal(
         # Reference: PIN-257 Phase R-2 (L5→L4 Violation Fix)
         try:
             # L4 runtime engine import (V2.0.0 - hoc_spine)
-            from app.hoc.hoc_spine.orchestrator.plan_generation_engine import generate_plan_for_run
+            from app.hoc.cus.hoc_spine.orchestrator.plan_generation_engine import generate_plan_for_run
 
             plan_result = generate_plan_for_run(
                 agent_id=agent_id,

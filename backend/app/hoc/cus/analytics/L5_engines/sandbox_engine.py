@@ -35,17 +35,17 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 # Use async circuit breaker for non-blocking DB operations
-from app.costsim.circuit_breaker_async import (
+from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import (
     is_v2_disabled,
     report_drift,
 )
-from app.costsim.config import is_v2_sandbox_enabled
-from app.costsim.models import (
+from app.hoc.cus.analytics.L5_engines.config_engine import is_v2_sandbox_enabled
+from app.hoc.cus.analytics.L5_engines.costsim_models_engine import (
     ComparisonResult,
     ComparisonVerdict,
     V2SimulationResult,
 )
-from app.costsim.v2_adapter import CostSimV2Adapter
+from app.hoc.cus.analytics.L5_engines.v2_adapter_engine import CostSimV2Adapter
 from app.worker.simulate import CostSimulator, SimulationResult
 
 logger = logging.getLogger("nova.costsim.sandbox")

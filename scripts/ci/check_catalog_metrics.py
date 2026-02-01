@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: Verify failure catalog metric labels match expected Prometheus format.
+# artifact_class: CODE
 """
 Verify failure catalog metric labels match expected Prometheus format.
 

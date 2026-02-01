@@ -50,23 +50,23 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from app.costsim.circuit_breaker import get_circuit_breaker
-from app.costsim.circuit_breaker_async import (
+from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import get_circuit_breaker
+from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import (
     report_drift as report_drift_async,
 )
-from app.costsim.config import get_config
-from app.costsim.leader import (
+from app.hoc.cus.analytics.L5_engines.config_engine import get_config
+from app.hoc.cus.analytics.L6_drivers.leader_driver import (
     LOCK_CANARY_RUNNER,
     leader_election,
 )
-from app.costsim.models import (
+from app.hoc.cus.analytics.L5_engines.costsim_models_engine import (
     CanaryReport,
     ComparisonResult,
     ComparisonVerdict,
     DiffResult,
 )
-from app.costsim.provenance import get_provenance_logger
-from app.costsim.v2_adapter import CostSimV2Adapter
+from app.hoc.cus.analytics.L5_engines.provenance_engine import get_provenance_logger
+from app.hoc.cus.analytics.L5_engines.v2_adapter_engine import CostSimV2Adapter
 from app.worker.simulate import CostSimulator
 
 logger = logging.getLogger("nova.costsim.canary")

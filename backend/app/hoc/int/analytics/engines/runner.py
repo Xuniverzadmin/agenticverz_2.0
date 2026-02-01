@@ -74,7 +74,7 @@ from ..worker.enforcement.step_enforcement import (
 
 # Evidence Architecture v1.1: ExecutionCursor structural authority
 from ..core.execution_context import ExecutionCursor, ExecutionPhase, EvidenceSource
-from ..evidence.capture import capture_integrity_evidence
+from app.hoc.cus.logs.L6_drivers.capture_driver import capture_integrity_evidence
 
 # Phase-2.3: Feature Intent Declaration
 # This worker executes runs with state checkpoints and must resume on crash
@@ -567,7 +567,7 @@ class RunRunner:
             from app.hoc.cus.controls.L6_drivers.threshold_driver import (
                 ThresholdDriverSync,
             )
-            from app.hoc.hoc_spine.orchestrator.coordinators.signal_coordinator import (
+            from app.hoc.cus.hoc_spine.orchestrator.coordinators.signal_coordinator import (
                 emit_and_persist_threshold_signal,
             )
 

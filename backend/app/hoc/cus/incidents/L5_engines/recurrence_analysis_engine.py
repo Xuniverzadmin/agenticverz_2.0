@@ -42,7 +42,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from app.hoc.hoc_spine.services.time import utc_now
+from app.hoc.cus.hoc_spine.services.time import utc_now
 from app.hoc.cus.incidents.L6_drivers.recurrence_analysis_driver import (
     RecurrenceAnalysisDriver,
     RecurrenceGroupSnapshot,

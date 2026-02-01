@@ -1,4 +1,5 @@
 # Layer: L5 — Domain Engine
+# STUB_ENGINE: True
 # AUDIENCE: CUSTOMER
 # Role: Limits simulation engine - pre-execution limit checks
 # NOTE: Renamed limits_simulation_service.py → limits_simulation_engine.py (2026-01-31)
@@ -67,7 +68,7 @@ class LimitsSimulationEngine:
 
     async def simulate(self, **kwargs: Any) -> dict[str, Any]:
         """Simulate limit check — stub."""
-        return {"feasible": True, "warnings": [], "stub": True}
+        raise NotImplementedError("LimitsSimulationEngine.simulate is not yet implemented (PIN-508)")
 
 
 # Backward-compatible alias

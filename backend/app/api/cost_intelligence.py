@@ -1226,15 +1226,17 @@ async def trigger_anomaly_detection(
     - Processed through the M25 loop (Pattern → Recovery → Policy → Routing)
     - Resulting in automated policies to prevent future cost anomalies
     """
-    from app.services.cost_anomaly_detector import (
-        run_anomaly_detection,
-        run_anomaly_detection_with_governance,
+    from app.services.cost_anomaly_detector import run_anomaly_detection
+    from app.hoc.cus.hoc_spine.orchestrator.coordinators.anomaly_incident_coordinator import (
+        get_anomaly_incident_coordinator,
     )
 
     if request.escalate_to_m25:
         # MANDATORY GOVERNANCE: HIGH anomalies create incidents or crash
         # No optional dispatcher. Governance is not negotiable.
-        result = await run_anomaly_detection_with_governance(session, tenant_id)
+        # PIN-511: Use L4 coordinator instead of deprecated direct call
+        coordinator = get_anomaly_incident_coordinator()
+        result = await coordinator.detect_and_ingest(session, tenant_id)
         detected = result["detected"]
         escalated = result["incidents_created"]
     else:

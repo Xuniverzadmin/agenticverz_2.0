@@ -32,8 +32,8 @@ Post-consolidation cleansing of all 10 HOC customer domains. Eliminates dead imp
 
 | # | Domain | File | Old Import | New Import |
 |---|--------|------|-----------|------------|
-| A1 | controls | `adapters/customer_killswitch_adapter.py` | `app.hoc.cus.general.L5_controls.engines.guard_write_engine.GuardWriteService` | `app.hoc.hoc_spine.authority.guard_write_engine.GuardWriteService` |
-| A2 | policies | `adapters/founder_contract_review_adapter.py` | `app.hoc.cus.general.L5_workflow.contracts.engines.contract_engine.ContractState` | `app.hoc.hoc_spine.authority.contracts.contract_engine.ContractState` |
+| A1 | controls | `adapters/customer_killswitch_adapter.py` | `app.hoc.cus.general.L5_controls.engines.guard_write_engine.GuardWriteService` | `app.hoc.cus.hoc_spine.authority.guard_write_engine.GuardWriteService` |
+| A2 | policies | `adapters/founder_contract_review_adapter.py` | `app.hoc.cus.general.L5_workflow.contracts.engines.contract_engine.ContractState` | `app.hoc.cus.hoc_spine.authority.contracts.contract_engine.ContractState` |
 
 ---
 
@@ -41,7 +41,7 @@ Post-consolidation cleansing of all 10 HOC customer domains. Eliminates dead imp
 
 | # | Domain | File | Old Import | New State |
 |---|--------|------|-----------|-----------|
-| B1 | logs | `L5_engines/trace_facade.py` line 239 | `from app.services.audit.models import AuditAction, AuditDomain, DomainAck` | Repointed to `app.hoc.hoc_spine.schemas.rac_models` (100% match per Phase 5 D738/D747) |
+| B1 | logs | `L5_engines/trace_facade.py` line 239 | `from app.services.audit.models import AuditAction, AuditDomain, DomainAck` | Repointed to `app.hoc.cus.hoc_spine.schemas.rac_models` (100% match per Phase 5 D738/D747) |
 | B2 | activity | `L5_engines/cus_telemetry_engine.py` line 44 | `from app.services.cus_telemetry_engine import BatchIngestResult, CusTelemetryEngine, IngestResult, get_cus_telemetry_engine` | Disconnected — stub classes with `NotImplementedError`, TODO rewire |
 
 ---
@@ -52,7 +52,7 @@ Post-consolidation cleansing of all 10 HOC customer domains. Eliminates dead imp
 |---|--------|------|--------------|---------------|
 | 1 | controls | `L5_engines/alert_fatigue_engine.py` | `from app.services.alert_fatigue import ...` | `from app.hoc.cus.controls.L5_engines.alert_fatigue_engine import ...` |
 | 2 | controls | `L5_engines/controls_facade.py` | `from app.services.controls.facade import ...` | `from app.hoc.cus.controls.L5_engines.controls_facade import ...` |
-| 3 | policies | `L5_engines/failure_mode_handler.py` | `app.services.governance.profile` | `app.hoc.hoc_spine.authority.profile_policy_mode` |
+| 3 | policies | `L5_engines/failure_mode_handler.py` | `app.services.governance.profile` | `app.hoc.cus.hoc_spine.authority.profile_policy_mode` |
 | 4 | logs | `L5_engines/trace_facade.py` | `from app.services.observability.trace_facade import ...` | `from app.hoc.cus.logs.L5_engines.trace_facade import ...` |
 | 5 | logs | `L5_engines/evidence_facade.py` | `from app.services.evidence.facade import ...` | `from app.hoc.cus.logs.L5_engines.evidence_facade import ...` |
 | 6 | logs | `L5_engines/certificate.py` | `from app.services.certificate import ...` | `from app.hoc.cus.logs.L5_engines.certificate import ...` |

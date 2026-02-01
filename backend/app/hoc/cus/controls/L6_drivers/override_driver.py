@@ -44,8 +44,8 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.policy_control_plane import Limit
-from app.hoc.hoc_spine.services.time import utc_now
-from app.hoc.hoc_spine.drivers.cross_domain import generate_uuid
+from app.hoc.cus.hoc_spine.services.time import utc_now
+from app.hoc.cus.hoc_spine.drivers.cross_domain import generate_uuid
 from app.hoc.cus.controls.L5_schemas.overrides import (
     LimitOverrideRequest,
     LimitOverrideResponse,

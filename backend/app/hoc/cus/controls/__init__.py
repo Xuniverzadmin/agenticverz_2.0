@@ -12,7 +12,7 @@ This domain handles all customer-facing control configurations:
 - RAG access auditing (LLM verification before inference)
 
 Layer Structure:
-- L3_adapters/  : Cross-domain adapters (policies, analytics integration)
+- adapters/     : Cross-domain adapters (policies, analytics integration)
 - L5_engines/   : Business logic for control evaluation and enforcement
 - L5_schemas/   : Pydantic models for control configurations
 - L6_drivers/   : Database operations for control persistence

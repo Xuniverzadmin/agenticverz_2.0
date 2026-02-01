@@ -1,6 +1,6 @@
 # pool_manager.py
 
-**Path:** `backend/app/hoc/hoc_spine/orchestrator/lifecycle/engines/pool_manager.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/orchestrator/lifecycle/engines/pool_manager.py`  
 **Layer:** L4 — HOC Spine (Orchestrator)  
 **Component:** Orchestrator
 

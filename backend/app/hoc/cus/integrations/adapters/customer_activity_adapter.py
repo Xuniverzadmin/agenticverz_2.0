@@ -46,14 +46,14 @@ from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import BaseModel, Field
 
-# L5 imports (migrated to HOC per SWEEP-03)
+# PIN-510 Phase 1A: Route through per-domain bridge (was: direct L5 import)
+# DTOs still imported directly (they are result types, not engine constructors)
 from app.hoc.cus.activity.L5_engines.activity_facade import (
-    ActivityFacade,
     RunDetailResult,
     RunListResult,
     RunSummaryResult,
-    get_activity_facade,
 )
+from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.activity_bridge import get_activity_bridge
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -123,13 +123,17 @@ class CustomerActivityAdapter:
     """
 
     def __init__(self):
-        """Initialize adapter with lazy L5 facade loading."""
-        self._facade: Optional[ActivityFacade] = None
+        """Initialize adapter with lazy bridge loading.
 
-    def _get_facade(self) -> ActivityFacade:
-        """Get the L5 ActivityFacade (lazy loaded)."""
+        PIN-510 Phase 1A: Uses ActivityBridge instead of direct L5 factory.
+        """
+        self._facade = None
+
+    def _get_facade(self):
+        """Get the L5 ActivityFacade via ActivityBridge (lazy loaded)."""
         if self._facade is None:
-            self._facade = get_activity_facade()
+            _bridge = get_activity_bridge()
+            self._facade = _bridge.activity_query_capability(None)
         return self._facade
 
     async def list_activities(

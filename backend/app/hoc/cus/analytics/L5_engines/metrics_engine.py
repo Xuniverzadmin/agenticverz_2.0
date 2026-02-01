@@ -46,7 +46,7 @@ try:
 except ImportError:
     PROMETHEUS_AVAILABLE = False
 
-from app.costsim.config import get_config
+from app.hoc.cus.analytics.L5_engines.config_engine import get_config
 
 logger = logging.getLogger("nova.costsim.metrics")
 

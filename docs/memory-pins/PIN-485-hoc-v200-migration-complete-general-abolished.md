@@ -14,7 +14,7 @@ All 8 phases of the V2.0.0 migration are done.
 
 ### What Happened
 - Phase 1-6: Created hoc_spine/, moved 79 files from cus/general/ into hoc_spine/ subdirectories (orchestrator, authority, services, schemas, drivers, frontend/projections, mcp)
-- Phase 7: Updated 70+ import statements across the entire codebase from app.hoc.cus.general.* to app.hoc.hoc_spine.*
+- Phase 7: Updated 70+ import statements across the entire codebase from app.hoc.cus.general.* to app.hoc.cus.hoc_spine.*
 - Phase 8: Deleted cus/general/ (83 files — all duplicates). Zero references remain.
 
 ### hoc_spine Final Structure (79 files)

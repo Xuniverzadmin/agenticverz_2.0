@@ -73,8 +73,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.costsim.config import get_config
-from app.costsim.metrics import get_metrics
+from app.hoc.cus.analytics.L5_engines.config_engine import get_config
+from app.hoc.cus.analytics.L5_engines.metrics_engine import get_metrics
 from app.db_async import AsyncSessionLocal, async_session_context
 from app.models.costsim_cb import (
     CostSimAlertQueueModel,
@@ -908,7 +908,7 @@ class AsyncCircuitBreaker:
         Uses thread-safe wrapper to run async function from any context.
         Returns False (enabled) on error to avoid false-positive disables.
         """
-        from app.costsim.cb_sync_wrapper import is_v2_disabled_sync
+        from app.hoc.cus.controls.L5_engines.cb_sync_wrapper_engine import is_v2_disabled_sync
 
         return is_v2_disabled_sync()
 
@@ -998,3 +998,7 @@ def get_async_circuit_breaker() -> AsyncCircuitBreaker:
     if _async_circuit_breaker is None:
         _async_circuit_breaker = AsyncCircuitBreaker()
     return _async_circuit_breaker
+
+
+# Alias for drop-in replacement of legacy app.costsim.circuit_breaker.get_circuit_breaker()
+get_circuit_breaker = get_async_circuit_breaker

@@ -1,6 +1,6 @@
 # rollout_projection.py — RELOCATED
 
-**Previous path:** `backend/app/hoc/hoc_spine/frontend/projections/rollout_projection.py`
+**Previous path:** `backend/app/hoc/cus/hoc_spine/frontend/projections/rollout_projection.py`
 **New path:** `frontend/app/projections/rollout_projection.py`
 **Date:** 2026-01-30
 

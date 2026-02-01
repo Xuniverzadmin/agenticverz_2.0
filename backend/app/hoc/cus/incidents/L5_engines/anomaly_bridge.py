@@ -40,7 +40,6 @@ This bridge ensures analytics never writes to incidents directly.
 
 import logging
 import uuid
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
@@ -60,29 +59,9 @@ logger = logging.getLogger("nova.incidents.adapters.anomaly_bridge")
 # =============================================================================
 
 
-@dataclass
-class CostAnomalyFact:
-    """
-    Pure fact emitted by analytics when a cost anomaly is detected.
-
-    This dataclass contains NO database references, NO session objects,
-    and NO imports from analytics. It is a pure data transfer object.
-
-    Analytics engines emit this; the bridge decides what to do with it.
-    """
-
-    tenant_id: str
-    anomaly_id: str
-    anomaly_type: str  # BUDGET_EXCEEDED, ABSOLUTE_SPIKE, SUSTAINED_DRIFT, etc.
-    severity: str  # LOW, MEDIUM, HIGH
-    current_value_cents: int
-    expected_value_cents: int
-    entity_type: Optional[str] = None  # user, feature, tenant
-    entity_id: Optional[str] = None
-    deviation_pct: float = 0.0
-    confidence: float = 1.0
-    observed_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    metadata: dict = field(default_factory=dict)
+# PIN-510 Phase 1C: CostAnomalyFact moved to hoc_spine/schemas/anomaly_types.py
+# Backward-compat re-export (TOMBSTONE — remove when zero dependents confirmed)
+from app.hoc.cus.hoc_spine.schemas.anomaly_types import CostAnomalyFact  # noqa: F401
 
 
 # =============================================================================
@@ -133,15 +112,17 @@ class AnomalyIncidentBridge:
         incident_id = bridge.ingest(fact)  # Returns None if not created
     """
 
-    def __init__(self, session):
+    def __init__(self, driver: IncidentWriteDriver):
         """
-        Initialize bridge with database session.
+        Initialize bridge with incident write driver.
+
+        PIN-508 Phase 1B: Accepts driver, not session.
+        L5 must not receive session at all (Gap 2).
 
         Args:
-            session: SQLModel Session for incident persistence
+            driver: IncidentWriteDriver instance for incident persistence
         """
-        self._session = session
-        self._driver = get_incident_write_driver(session)
+        self._driver = driver
 
     def ingest(self, fact: CostAnomalyFact) -> Optional[str]:
         """
@@ -257,37 +238,19 @@ class AnomalyIncidentBridge:
             if fact.entity_type and fact.entity_id:
                 description += f" Entity: {fact.entity_type}/{fact.entity_id}"
 
-            # Use driver to insert incident
-            # Note: insert_incident expects source_run_id, we use anomaly_id
-            # The driver's insert_incident is designed for run failures,
-            # so we need to adapt slightly - using anomaly_id as source
-            self._session.execute(
-                self._build_incident_insert_sql(),
-                {
-                    "id": incident_id,
-                    "tenant_id": fact.tenant_id,
-                    "title": title,
-                    "severity": incident_severity,
-                    "status": "open",
-                    "trigger_type": trigger_type,
-                    "started_at": now,
-                    "created_at": now,
-                    "updated_at": now,
-                    "source_type": "cost_anomaly",
-                    "source_run_id": None,  # Cost anomalies don't come from runs
-                    "category": "COST_ANOMALY",
-                    "description": description,
-                    "impact_scope": fact.entity_type or "tenant",
-                    "affected_agent_id": fact.entity_id if fact.entity_type == "agent" else None,
-                    "affected_count": 1,
-                    "trigger_value": str(overage_cents),
-                    "cost_delta_cents": Decimal(overage_cents),
-                    "cost_impact": Decimal(overage_cents) / 100,
-                    "cause_type": "SYSTEM",
-                    "lifecycle_state": "ACTIVE",
-                    "is_synthetic": False,
-                    "synthetic_scenario_id": None,
-                },
+            # PIN-508 Phase 1B: Use driver method, not session.execute()
+            self._driver.insert_incident_from_anomaly(
+                incident_id=incident_id,
+                tenant_id=fact.tenant_id,
+                title=title,
+                severity=incident_severity,
+                trigger_type=trigger_type,
+                category="COST_ANOMALY",
+                description=description,
+                impact_scope=fact.entity_type or "tenant",
+                affected_agent_id=fact.entity_id if fact.entity_type == "agent" else None,
+                cost_delta_cents=Decimal(overage_cents),
+                now=now,
             )
             # NO COMMIT — L4 coordinator owns transaction boundary
 
@@ -312,35 +275,18 @@ class AnomalyIncidentBridge:
                 entity_id=fact.anomaly_id,
             ) from e
 
-    def _build_incident_insert_sql(self):
-        """Build SQL for incident insert."""
-        from sqlalchemy import text
-        return text("""
-            INSERT INTO incidents (
-                id, tenant_id, title, severity, status,
-                trigger_type, started_at, created_at, updated_at,
-                source_type, source_run_id, category, description,
-                impact_scope, affected_agent_id, affected_count,
-                trigger_value, cost_delta_cents, cost_impact,
-                cause_type, lifecycle_state,
-                is_synthetic, synthetic_scenario_id
-            ) VALUES (
-                :id, :tenant_id, :title, :severity, :status,
-                :trigger_type, :started_at, :created_at, :updated_at,
-                :source_type, :source_run_id, :category, :description,
-                :impact_scope, :affected_agent_id, :affected_count,
-                :trigger_value, :cost_delta_cents, :cost_impact,
-                :cause_type, :lifecycle_state,
-                :is_synthetic, :synthetic_scenario_id
-            )
-            ON CONFLICT (id) DO NOTHING
-            RETURNING id
-        """)
+    # _build_incident_insert_sql removed — PIN-508 Phase 1B:
+    # SQL moved to IncidentWriteDriver.insert_incident_from_anomaly()
 
 
 def get_anomaly_incident_bridge(session) -> AnomalyIncidentBridge:
-    """Factory function to get AnomalyIncidentBridge instance."""
-    return AnomalyIncidentBridge(session)
+    """Factory function to get AnomalyIncidentBridge instance.
+
+    PIN-508 Phase 1B: Creates driver from session, passes driver to bridge.
+    Bridge no longer receives session directly.
+    """
+    driver = get_incident_write_driver(session)
+    return AnomalyIncidentBridge(driver)
 
 
 __all__ = [

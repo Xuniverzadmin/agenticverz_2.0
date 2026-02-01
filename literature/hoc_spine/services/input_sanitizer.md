@@ -1,6 +1,6 @@
 # input_sanitizer.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/input_sanitizer.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/input_sanitizer.py`  
 **Layer:** L4 — HOC Spine (Service)  
 **Component:** Services
 

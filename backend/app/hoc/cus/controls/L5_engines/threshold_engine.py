@@ -146,12 +146,13 @@ class ThresholdParamsUpdate(BaseModel):
 
 # =============================================================================
 # Signal Types — canonical home: controls/L5_schemas/threshold_signals.py
-# TOMBSTONE (PIN-507 Law 1): Re-exported here for legacy callers only.
+# TOMBSTONE REMOVED (PIN-508 Phase 4A, 2026-02-01):
+# Re-exports deleted — zero external callers.
 # Canonical import: app.hoc.cus.controls.L5_schemas.threshold_signals
-# Remove re-export after cleansing cycle.
+# Internal usage remains (this engine uses these types).
 # =============================================================================
 
-from app.hoc.cus.controls.L5_schemas.threshold_signals import (  # noqa: F401
+from app.hoc.cus.controls.L5_schemas.threshold_signals import (
     ThresholdEvaluationResult,
     ThresholdSignal,
 )

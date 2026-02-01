@@ -36,15 +36,11 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from app.costsim import (
-    get_circuit_breaker,
-    is_v2_disabled_by_drift,
-    is_v2_sandbox_enabled,
-    run_canary,
-    simulate_with_sandbox,
-)
-from app.costsim.config import get_config
-from app.costsim.divergence import generate_divergence_report
+from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import get_circuit_breaker
+from app.hoc.cus.analytics.L5_engines.config_engine import is_v2_disabled_by_drift, is_v2_sandbox_enabled, get_config
+from app.hoc.cus.analytics.L5_engines.canary_engine import run_canary
+from app.hoc.cus.analytics.L5_engines.sandbox_engine import simulate_with_sandbox
+from app.hoc.cus.analytics.L5_engines.divergence_engine import generate_divergence_report
 from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.costsim")
@@ -780,8 +776,8 @@ async def get_canary_reports(
 
 # ============== Dataset Validation Endpoints ==============
 
-from app.costsim.datasets import get_dataset_validator, validate_all_datasets
-from app.costsim.datasets import validate_dataset as validate_ds
+from app.hoc.cus.analytics.L5_engines.datasets_engine import get_dataset_validator, validate_all_datasets
+from app.hoc.cus.analytics.L5_engines.datasets_engine import validate_dataset as validate_ds
 
 
 class DatasetInfo(BaseModel):

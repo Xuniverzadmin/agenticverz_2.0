@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: C1 Telemetry Plane - SQL/API Verification Probes
+# artifact_class: CODE
 """C1 Telemetry Plane - SQL/API Verification Probes
 
 PIN-210 Reference: This script verifies the C1 Telemetry Plane invariants:

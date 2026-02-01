@@ -18,14 +18,14 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-from app.traces.models import (
+from app.hoc.cus.logs.L5_engines.traces_models import (
     ParityResult,
     TraceRecord,
     TraceStatus,
     TraceStep,
     compare_traces,
 )
-from app.traces.store import (
+from app.hoc.cus.logs.L6_drivers.traces_store import (
     SQLiteTraceStore,
     TraceStore,
     generate_correlation_id,
@@ -36,7 +36,7 @@ from app.traces.store import (
 USE_POSTGRES = os.getenv("USE_POSTGRES_TRACES", "false").lower() == "true"
 
 if USE_POSTGRES:
-    from app.traces.pg_store import get_postgres_trace_store
+    from app.hoc.cus.logs.L6_drivers.pg_store import get_postgres_trace_store
 
 
 def get_trace_store() -> TraceStore:

@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: preflight.py - Pre-Implementation Evaluation System v2.0
+# artifact_class: CODE
 """
 preflight.py - Pre-Implementation Evaluation System v2.0
 

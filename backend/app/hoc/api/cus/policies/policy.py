@@ -61,7 +61,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import TenantTier, requires_feature, requires_tier
 from app.db_async import get_async_session
-from app.hoc.hoc_spine.orchestrator.operation_registry import (
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
 )

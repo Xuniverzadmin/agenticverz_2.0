@@ -86,7 +86,7 @@ def get_failure_mode() -> FailureMode:
         FailureMode from governance config, defaulting to FAIL_CLOSED
     """
     try:
-        from app.services.governance.profile import get_governance_config
+        from app.hoc.cus.hoc_spine.authority.profile_policy_mode import get_governance_config
 
         config = get_governance_config()
 

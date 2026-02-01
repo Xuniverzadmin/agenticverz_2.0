@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL WATCHER - Event-driven pre-diagnosis system.
+# artifact_class: CODE
 """
 GUARDRAIL WATCHER - Event-driven pre-diagnosis system.
 

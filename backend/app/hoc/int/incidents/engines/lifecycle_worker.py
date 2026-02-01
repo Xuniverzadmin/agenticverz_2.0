@@ -883,7 +883,7 @@ class LifecycleWorker:
 
             # Build execution context
             # L5 engine import (V2.0.0 - hoc_spine)
-            from app.hoc.hoc_spine.services.lifecycle_stages_base import StageContext
+            from app.hoc.cus.hoc_spine.services.lifecycle_stages_base import StageContext
             from app.models.knowledge_lifecycle import KnowledgePlaneLifecycleState
 
             context = StageContext(
@@ -1027,7 +1027,7 @@ class LifecycleWorker:
         """Get the stage handler registry."""
         try:
             # V2.0.0 - hoc_spine orchestrator lifecycle
-            from app.hoc.hoc_spine.orchestrator.lifecycle.engines.onboarding import (
+            from app.hoc.cus.hoc_spine.orchestrator.lifecycle.engines.onboarding import (
                 RegisterHandler,
                 VerifyHandler,
                 IngestHandler,
@@ -1036,7 +1036,7 @@ class LifecycleWorker:
                 ActivateHandler,
                 GovernHandler,
             )
-            from app.hoc.hoc_spine.orchestrator.lifecycle.engines.offboarding import (
+            from app.hoc.cus.hoc_spine.orchestrator.lifecycle.engines.offboarding import (
                 DeregisterHandler,
                 VerifyDeactivateHandler,
                 DeactivateHandler,

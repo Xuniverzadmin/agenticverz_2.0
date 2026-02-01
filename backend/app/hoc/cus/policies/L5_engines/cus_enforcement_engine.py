@@ -1,4 +1,5 @@
 # Layer: L5 — Domain Engine
+# STUB_ENGINE: True
 # AUDIENCE: CUSTOMER
 # Role: Customer enforcement engine - LLM integration policy enforcement
 # NOTE: Renamed cus_enforcement_service.py → cus_enforcement_engine.py (2026-01-31)
@@ -80,15 +81,15 @@ class CusEnforcementEngine:
 
     async def evaluate(self, **kwargs: Any) -> EnforcementDecision:
         """Evaluate enforcement policy — stub."""
-        return EnforcementDecision()
+        raise NotImplementedError("CusEnforcementEngine.evaluate is not yet implemented (PIN-508)")
 
     async def get_enforcement_status(self, **kwargs: Any) -> dict[str, Any]:
         """Get enforcement status — stub."""
-        return {"status": "not_configured"}
+        raise NotImplementedError("CusEnforcementEngine.get_enforcement_status is not yet implemented (PIN-508)")
 
     async def evaluate_batch(self, **kwargs: Any) -> list[EnforcementDecision]:
         """Evaluate enforcement for batch — stub."""
-        return []
+        raise NotImplementedError("CusEnforcementEngine.evaluate_batch is not yet implemented (PIN-508)")
 
 
 # Backward-compatible alias

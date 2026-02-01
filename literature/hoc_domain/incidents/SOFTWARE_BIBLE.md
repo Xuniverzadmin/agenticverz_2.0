@@ -285,3 +285,92 @@ _85 thin delegation functions._
 | `incident_severity_engine` | All severity logic moved to `incidents/L5_schemas/severity_policy.py`. File is now a tombstone with re-exports for backward compat. | PIN-507 Law 1 |
 | `incident_aggregator` | Import changed from `L5_engines.incident_severity_engine` → `L5_schemas.severity_policy`. L6→L5 engine reach eliminated. | PIN-507 Law 1 |
 | **NEW** `L5_schemas/severity_policy.py` | Created: `IncidentSeverityEngine`, `SeverityConfig`, `TRIGGER_SEVERITY_MAP`, `DEFAULT_SEVERITY`, `generate_incident_title`. Canonical home for severity policy logic. | PIN-507 Law 1 |
+
+## PIN-508 Refactoring (2026-02-01)
+
+### Phase 1B: anomaly_bridge Driver Extraction
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| `anomaly_bridge.py` | Constructor now accepts `IncidentWriteDriver` instance instead of session. Methods `_build_incident_insert_sql()` and `_create_incident()` removed — SQL moved to driver. Factory `get_anomaly_incident_bridge(session)` creates driver internally. | PIN-508 Phase 1B |
+| `incident_write_driver.py` | New method `insert_incident_from_anomaly(incident_dict: Dict)` added. Handles full SQL INSERT + IncidentEvent creation for anomaly bridge. | PIN-508 Phase 1B |
+
+### Phase 4B: incident_severity_engine Deletion
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| `incident_severity_engine.py` | **DELETED** (TOMBSTONE only). Logic extracted by PIN-507 Law 1 to `L5_schemas/severity_policy.py`. Zero current dependents. | PIN-508 Phase 4B |
+
+## PIN-510 Phase 1C — CostAnomalyFact Extraction (2026-02-01)
+
+- `CostAnomalyFact` dataclass extracted from `anomaly_bridge.py` to `hoc/cus/hoc_spine/schemas/anomaly_types.py`
+- Backward-compat re-export remains in `anomaly_bridge.py` (TOMBSTONE)
+- New L4 coordinator `anomaly_incident_coordinator.py` owns analytics→incidents sequencing
+- Reference: `docs/memory-pins/PIN-510-domain-remediation-queue.md`
+
+## PIN-509 Tooling Hardening (2026-02-01)
+
+- CI checks 16–18 added to `scripts/ci/check_init_hygiene.py`:
+  - Check 16: Frozen import ban (no imports from `_frozen/` paths)
+  - Check 17: L5 Session symbol import ban (type erasure enforcement)
+  - Check 18: Protocol surface baseline (capability creep prevention, max 12 methods)
+- New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
+- `app/services/__init__.py` now emits DeprecationWarning
+- Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+## PIN-513 Topology Completion & Hygiene (2026-02-01)
+
+### Phase 3 — L1 Protocol Re-wiring (hoc_spine)
+
+Protocol-based dependency injection replacing `NotImplementedError("pending L1 re-wiring")` stubs in L4 spine code. Production paths via `app/services/` remain unchanged; these enable future HOC-only cutover.
+
+**New shared artifact:**
+
+| File | Purpose | Reference |
+|------|---------|-----------|
+| **NEW** `hoc_spine/schemas/protocols.py` | 6 Protocol interfaces: `LessonsEnginePort`, `PolicyEvaluationPort`, `TraceFacadePort`, `ConnectorLookupPort`, `ValidatorVerdictPort`, `EligibilityVerdictPort` | PIN-513 Phase 3 |
+
+**L4 spine files modified:**
+
+| File | Change | Reference |
+|------|--------|-----------|
+| `hoc_spine/orchestrator/run_governance_facade.py` | Added `lessons_engine: LessonsEnginePort` and `policy_evaluator: PolicyEvaluationPort` constructor injection. Replaced 2 `NotImplementedError` stubs with delegation. | PIN-513 Phase 3A/3B |
+| `hoc_spine/drivers/transaction_coordinator.py` | Added `incident_driver` and `trace_facade: TraceFacadePort` constructor injection. Replaced 2 stubs with delegation. | PIN-513 Phase 3C/3D |
+| `hoc_spine/orchestrator/lifecycle/drivers/execution.py` | Added `connector_lookup: ConnectorLookupPort` to `DataIngestionExecutor` and `IndexingExecutor`. Replaced 2 connector stubs. | PIN-513 Phase 3E |
+| `hoc_spine/authority/contracts/contract_engine.py` | Replaced broken cross-domain L5 imports (`ValidatorVerdict`, `EligibilityVerdict`) with Protocol aliases. Created local proxy classes for `.value` attribute compatibility. | PIN-513 Phase 3F |
+| `hoc_spine/consequences/adapters/export_bundle_adapter.py` | Fixed broken `ExportBundleStore` import — now requires store injection via constructor. | PIN-513 Phase 3 |
+| `hoc_spine/orchestrator/__init__.py` | Replaced all `BROKEN INTENTIONALLY` and `TODO(L1)` comments with PIN-513 references. Updated `__all__` comments. | PIN-513 Phase 3 |
+
+## PIN-513 Phase 7 — Reverse Boundary Severing (HOC→services) (2026-02-01)
+
+| File | Change | Reference |
+|------|--------|-----------|
+| `fdr/incidents/engines/ops_incident_service.py:40` | Import swapped: `app.services.ops_domain_models` → `app.hoc.fdr.ops.schemas.ops_domain_models` (OpsIncident, OpsIncidentCategory, OpsSeverity) | PIN-513 Phase 7, Step 3a |
+| `api/fdr/incidents/ops.py:1482` | Import swapped: `app.services.ops` → `app.hoc.fdr.ops.facades.ops_facade` | PIN-513 Phase 7, Step 6 |
+
+**Impact:** 2 imports fully severed. Zero TRANSITIONAL tags remain in incidents domain.
+
+## PIN-513 Phase 8 — Zero-Caller Wiring (2026-02-01)
+
+| Component | L4 Owner | Action |
+|-----------|----------|--------|
+| `integrity_driver` (logs L6) | `incidents/L5_engines/export_engine.py` | Added `export_with_integrity()` method — generates export bundle then attaches integrity evaluation via `compute_integrity_v2(run_id)` from logs L6 driver |
+
+## PIN-513 Phase 9 — Batch 1B Wiring (2026-02-01)
+
+- Created `hoc_spine/orchestrator/handlers/run_governance_handler.py` (L4 handler)
+- Wired 3 previously orphaned L5 symbols from `policy_violation_engine.py`:
+  - `handle_policy_evaluation_for_run` → `RunGovernanceHandler.evaluate_run()`
+  - `handle_policy_violation` → `RunGovernanceHandler.report_violation()`
+  - `create_policy_evaluation_record` → `RunGovernanceHandler.create_evaluation()`
+- Reclassified `create_policy_evaluation_sync` as already WIRED (via RunGovernanceFacade → worker runner)
+- All 4 CSV entries resolved: 3 WIRED, 1 RECLASSIFIED
+
+### PIN-513 Phase 9 Batch 5 Amendment (2026-02-01)
+
+**CI invariant hardening — incidents domain impact:**
+
+- Check 29 freezes 3 `int/` driver files: `hallucination_hook.py`, `failure_classification_engine.py`, `tenant_config.py` (import incidents L5_engines)
+- No incidents-owned files appear in allowlists — incidents is a *target* of frozen cross-domain imports, not a *source*
+
+**Total CI checks:** 30 system-wide.

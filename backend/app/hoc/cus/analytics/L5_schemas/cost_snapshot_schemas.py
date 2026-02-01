@@ -21,7 +21,7 @@ import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 
 # =============================================================================
@@ -241,3 +241,62 @@ class AnomalyEvaluation:
     anomaly_id: str | None = None
     evaluation_reason: str | None = None
     evaluated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+# =============================================================================
+# Driver Protocol (PIN-508 Phase 1A — typed boundary contract)
+# =============================================================================
+
+
+@runtime_checkable
+class CostSnapshotsDriverProtocol(Protocol):
+    """Typed boundary contract for cost snapshot database operations.
+
+    PIN-508 Gap 1: L5↔L6 boundary enforced by Protocol, not convention.
+    L5 engines accept this Protocol — they never see a session.
+    """
+
+    async def insert_snapshot(self, snapshot: CostSnapshot) -> None: ...
+    async def update_snapshot(self, snapshot: CostSnapshot) -> None: ...
+    async def insert_aggregate(self, aggregate: SnapshotAggregate) -> None: ...
+    async def get_current_baseline(
+        self,
+        tenant_id: str,
+        entity_type: EntityType,
+        entity_id: str | None,
+        window_days: int,
+    ) -> SnapshotBaseline | None: ...
+    async def aggregate_cost_records(
+        self,
+        tenant_id: str,
+        snapshot_id: str,
+        period_start: datetime,
+        period_end: datetime,
+    ) -> list[SnapshotAggregate]: ...
+    async def insert_baseline(self, baseline: SnapshotBaseline) -> None: ...
+    async def get_snapshot(self, snapshot_id: str) -> CostSnapshot | None: ...
+    async def get_aggregates_with_baseline(
+        self, snapshot_id: str,
+    ) -> list[dict[str, Any]]: ...
+    async def insert_evaluation(self, evaluation: AnomalyEvaluation) -> None: ...
+    async def insert_anomaly(
+        self,
+        anomaly_id: str,
+        tenant_id: str,
+        anomaly_type: str,
+        severity: str | None,
+        entity_type: str,
+        entity_id: str | None,
+        current_value_cents: float,
+        expected_value_cents: float,
+        deviation_pct: float,
+        threshold_pct: float,
+        message: str,
+        snapshot_id: str,
+        detected_at: datetime,
+    ) -> None: ...
+    async def compute_baselines(
+        self,
+        tenant_id: str,
+        window_days: int,
+    ) -> list[dict[str, Any]]: ...

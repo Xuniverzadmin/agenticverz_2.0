@@ -1,6 +1,6 @@
 # runtime.py
 
-**Path:** `backend/app/hoc/hoc_spine/authority/runtime.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/authority/runtime.py`  
 **Layer:** L4 — HOC Spine (Authority)  
 **Component:** Authority
 

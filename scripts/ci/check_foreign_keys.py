@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL: DATA-001 - Foreign Key Enforcement
+# artifact_class: CODE
 """
 GUARDRAIL: DATA-001 - Foreign Key Enforcement
 Rule: All cross-domain references MUST use foreign keys.

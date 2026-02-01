@@ -1,6 +1,6 @@
 # common.py
 
-**Path:** `backend/app/hoc/hoc_spine/schemas/common.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/schemas/common.py`  
 **Layer:** L4 — HOC Spine (Schema)  
 **Component:** Schemas
 

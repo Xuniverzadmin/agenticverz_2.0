@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Scenario Test Matrix - External Services & MOAT Validation
+# artifact_class: CODE
 """
 Scenario Test Matrix - External Services & MOAT Validation
 TR-004: Comprehensive Integration Test Suite

@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Complete Codebase Inventory vs Layered Inventory
+# artifact_class: CODE
 """
 Complete Codebase Inventory vs Layered Inventory
 Produces full mapping of repository structure to layer model

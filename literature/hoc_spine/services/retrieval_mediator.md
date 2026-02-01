@@ -1,6 +1,6 @@
 # retrieval_mediator.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/retrieval_mediator.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/retrieval_mediator.py`  
 **Layer:** L4 — HOC Spine (Service)  
 **Component:** Services
 

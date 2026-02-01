@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: cron
+#   Execution: sync
+# Role: SR-1 Migration Consistency Check (Canonical Implementation)
+# artifact_class: CODE
 """
 SR-1 Migration Consistency Check (Canonical Implementation)
 

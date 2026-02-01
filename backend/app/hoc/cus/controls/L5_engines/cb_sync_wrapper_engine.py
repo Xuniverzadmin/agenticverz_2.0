@@ -114,7 +114,7 @@ def is_v2_disabled_sync(timeout: float = 5.0) -> bool:
     """
     try:
         # Import here to avoid circular imports
-        from app.costsim.circuit_breaker_async import is_v2_disabled
+        from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import is_v2_disabled
 
         # Check if we're in an event loop
         try:
@@ -146,7 +146,7 @@ def get_state_sync(timeout: float = 5.0):
         CircuitBreakerState or None on error
     """
     try:
-        from app.costsim.circuit_breaker_async import get_state
+        from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import get_state
 
         try:
             loop = asyncio.get_running_loop()

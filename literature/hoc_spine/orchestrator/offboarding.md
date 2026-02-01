@@ -1,6 +1,6 @@
 # offboarding.py
 
-**Path:** `backend/app/hoc/hoc_spine/orchestrator/lifecycle/engines/offboarding.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/orchestrator/lifecycle/engines/offboarding.py`  
 **Layer:** L4 — HOC Spine (Orchestrator)  
 **Component:** Orchestrator
 

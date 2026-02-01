@@ -75,7 +75,7 @@ Purpose: Handles failure modes when policy evaluation fails or is uncertain.
 
 | Category | Imports |
 |----------|---------|
-| External | `app.hoc.hoc_spine.authority.profile_policy_mode` |
+| External | `app.hoc.cus.hoc_spine.authority.profile_policy_mode` |
 
 ## Callers
 

@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL: LIMITS-002 - Pre-Execution Check Required
+# artifact_class: CODE
 """
 GUARDRAIL: LIMITS-002 - Pre-Execution Check Required
 Rule: Every run creation MUST check limits BEFORE execution.

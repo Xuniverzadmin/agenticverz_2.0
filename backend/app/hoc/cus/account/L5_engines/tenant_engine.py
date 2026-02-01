@@ -47,7 +47,7 @@ import logging
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
-from app.hoc.hoc_spine.services.time import utc_now
+from app.hoc.cus.hoc_spine.services.time import utc_now
 from app.hoc.cus.account.L6_drivers.tenant_driver import TenantDriver, get_tenant_driver
 from app.models.tenant import PLAN_QUOTAS, APIKey, Tenant, TenantMembership, WorkerRun
 

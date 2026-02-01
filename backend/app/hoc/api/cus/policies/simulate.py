@@ -38,7 +38,7 @@ from app.hoc.cus.controls.L5_schemas.simulation import (
     LimitSimulationResponse,
     SimulationDecision,
 )
-from app.hoc.hoc_spine.orchestrator.operation_registry import (
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
 )

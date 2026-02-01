@@ -36,8 +36,8 @@ from app.models.policy import (
     PolicyProposalCreate,
     PolicyVersion,
 )
-# TRANSITIONAL: services→hoc (migrate policy_proposal to HOC L5 per PIN-507)
-from app.hoc.cus.logs.L6_drivers.audit_ledger_driver import AuditLedgerServiceAsync
+# PIN-513: services→HOC dependency severed. No-op shim replaces HOC audit import.
+from app.services._audit_shim import AuditLedgerShim as AuditLedgerServiceAsync
 from app.services.policy_graph_engine import (
     ConflictSeverity,
     get_conflict_engine,

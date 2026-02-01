@@ -54,8 +54,8 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Optional  # Any used for audit injection (PIN-504)
 
 # L6 driver import (allowed)
-from app.hoc.hoc_spine.services.time import utc_now
-from app.hoc.hoc_spine.drivers.cross_domain import generate_uuid
+from app.hoc.cus.hoc_spine.services.time import utc_now
+from app.hoc.cus.hoc_spine.drivers.cross_domain import generate_uuid
 from app.hoc.cus.policies.L6_drivers.policy_rules_driver import (
     PolicyRulesDriver,
     get_policy_rules_driver,

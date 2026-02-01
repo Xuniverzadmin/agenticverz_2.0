@@ -134,7 +134,7 @@ _77 thin delegation functions._
 
 | Script | Change | Reference |
 |--------|--------|-----------|
-| `threshold_driver` | `LimitSnapshot` re-exported from `hoc_spine.schemas.threshold_types`. ~~`emit_and_persist_threshold_signal` delegates to `SignalCoordinator` (L4).~~ **Function deleted** (PIN-507 Law 4) — moved to L4 `signal_coordinator.py`. Cross-domain activity import removed. | PIN-504 Phases 1, 3; PIN-507 Law 4 |
+| `threshold_driver` | `LimitSnapshot` re-exported from `hoc.cus.hoc_spine.schemas.threshold_types`. ~~`emit_and_persist_threshold_signal` delegates to `SignalCoordinator` (L4).~~ **Function deleted** (PIN-507 Law 4) — moved to L4 `signal_coordinator.py`. Cross-domain activity import removed. | PIN-504 Phases 1, 3; PIN-507 Law 4 |
 
 ## PIN-507 Law 5 Remediation (2026-02-01)
 
@@ -155,3 +155,102 @@ _77 thin delegation functions._
 | `threshold_engine` | `ThresholdSignal` + `ThresholdEvaluationResult` extracted to `controls/L5_schemas/threshold_signals.py`. Tombstone re-exports retained for backward compat. Unused `Enum` import removed. | PIN-507 Law 1 |
 | `threshold_driver` | `ThresholdSignal` import changed from `L5_engines.threshold_engine` (lazy) → `L5_schemas.threshold_signals` (module-level). L6→L5 engine reach eliminated. | PIN-507 Law 1 |
 | **NEW** `L5_schemas/threshold_signals.py` | Created: `ThresholdSignal(str, Enum)`, `ThresholdEvaluationResult(dataclass)`. Canonical home for threshold signal types. | PIN-507 Law 1 |
+
+## PIN-508 Tombstone Cleanup (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| `threshold_engine` | Tombstone re-exports of `ThresholdSignal` and `ThresholdEvaluationResult` **DELETED** (Phase 4A). Canonical home in `controls/L5_schemas/threshold_signals.py` — no callers imported via tombstone. | PIN-508 Phase 4A |
+
+## PIN-510 Phase 1D — Killswitch Driver Import Fix (2026-02-01)
+
+- `customer_killswitch_read_engine.py` import fixed from stale `policies.controls.drivers` path to canonical `controls.L6_drivers.killswitch_read_driver`
+- `policies/L5_controls/drivers/__init__.py` re-export also fixed to canonical path
+- Driver already resided at `controls/L6_drivers/killswitch_read_driver.py` — no file move needed
+- Reference: `docs/memory-pins/PIN-510-domain-remediation-queue.md`
+
+## PIN-509 Tooling Hardening (2026-02-01)
+
+- CI checks 16–18 added to `scripts/ci/check_init_hygiene.py`:
+  - Check 16: Frozen import ban (no imports from `_frozen/` paths)
+  - Check 17: L5 Session symbol import ban (type erasure enforcement)
+  - Check 18: Protocol surface baseline (capability creep prevention, max 12 methods)
+- New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
+- `app/services/__init__.py` now emits DeprecationWarning
+- Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+## PIN-513 Topology Completion & Hygiene (2026-02-01)
+
+### Phase 1B — Stale L3_adapters Docstring Fix
+
+| File | Change | Reference |
+|------|--------|-----------|
+| `controls/__init__.py:15` | Layer structure docstring fixed: `L3_adapters/` → `adapters/` (L3 abolished per PIN-485) | PIN-513 Phase 1B |
+
+### PIN-513 Phase A & C — Controls Domain Changes (2026-02-01)
+
+**Phase A: Dead Code Marking**
+
+- `alert_fatigue_engine.py`: MARKED_FOR_DELETION — superseded by `hoc_spine/services/fatigue_controller.py`
+- `decisions_engine.py`: MARKED_FOR_DELETION — duplicate of `app/protection/decisions.py`
+
+**Phase C: Costsim Cutover (Import Rewiring)**
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| `circuit_breaker_driver` (L6) | Rewired 1 import: `config` → `config_engine` | PIN-513 Phase C |
+| `circuit_breaker_async_driver` (L6) | Rewired 3 imports: `config` → `config_engine`, `metrics` → `metrics_engine`, `cb_sync_wrapper` → `cb_sync_wrapper_engine` | PIN-513 Phase C |
+| `cb_sync_wrapper_engine` (L5) | Rewired 2 imports: `circuit_breaker_async` → `circuit_breaker_async_driver` (×2 inline) | PIN-513 Phase C |
+
+### PIN-513 TRANSITIONAL Resolution — get_circuit_breaker alias (2026-02-01)
+
+Added `get_circuit_breaker = get_async_circuit_breaker` alias to `circuit_breaker_async_driver.py` — drop-in replacement for legacy `app.costsim.circuit_breaker.get_circuit_breaker()`. Enables 3 callers (api/costsim ×2, canary_engine) to sever their TRANSITIONAL `app.costsim` imports.
+
+### PIN-513 Phase 8 — Zero-Caller Wiring (2026-02-01)
+
+| Component | L4 Owner | Action |
+|-----------|----------|--------|
+| `scoped_execution_driver` (L6) | **NEW** `hoc_spine/orchestrator/coordinators/execution_coordinator.py` | L4 coordinator: `create_scope()` and `execute_with_scope()` delegate to `create_recovery_scope()` and `execute_with_scope()` from scoped_execution_driver |
+
+**Signature audit fix:** `execution_coordinator.py` — changed `allowed_actions: List[str]` → `action: str`; `action_id` → `action`; `params` → `parameters`. All call sites verified.
+
+---
+
+### PIN-513 Phase 9 Batch 2A Amendment (2026-02-01)
+
+**Scope:** 33 controls symbols reclassified.
+
+| Category | Count | Details |
+|----------|-------|---------|
+| PHANTOM_NO_HOC_COPY | 13 | cost_safety_rails_engine (4), killswitch_engine (4), s2_cost_smoothing_engine (5) — files exist only in legacy |
+| TOPOLOGY_DEAD | 7 | alert_fatigue_engine (4), decisions_engine (3) — superseded by canonical locations |
+| WIRED (new) | 11 | circuit_breaker_handler.py owns cb_sync (3), cb_async (8) symbols |
+| Already wired | 2 | scoped_execution_driver (Phase 8) |
+
+**Files created:**
+- `hoc_spine/orchestrator/handlers/circuit_breaker_handler.py` — L4 single authority for all circuit breaker ops (15 symbols: async 8, sync 4, session-bound 3+1)
+
+**Files tombstoned:**
+- `controls/L5_engines/alert_fatigue_engine.py` — TOPOLOGY_DEAD (canonical: app/protection/alert_fatigue.py)
+- `controls/L5_engines/decisions_engine.py` — TOPOLOGY_DEAD (canonical: app/protection/decisions.py)
+
+---
+
+### PIN-513 Phase 9 Batch 4 Amendment (2026-02-01)
+
+**Deletions:**
+- `controls/L5_engines/alert_fatigue_engine.py` — DELETED (was TOPOLOGY_DEAD, canonical: hoc_spine/services/fatigue_controller.py)
+- `controls/L5_engines/decisions_engine.py` — DELETED (was TOPOLOGY_DEAD, canonical: app/protection/decisions.py)
+- `controls/L5_engines/customer_killswitch_read_engine.py` — DELETED (zero-logic passthrough, zero callers)
+- `controls/adapters/customer_killswitch_adapter.py` — DELETED (zero callers, HOC copy unused)
+
+**Final status:** Zero UNWIRED controls symbols remain. Zero TOPOLOGY_DEAD files remain.
+
+### PIN-513 Phase 9 Batch 5 Amendment (2026-02-01)
+
+**CI invariant hardening — controls domain impact:**
+
+- `circuit_breaker_async_driver.py` and `circuit_breaker_driver.py` already caught by existing check 5 (L6→L5 engine ban) — no new allowlist entry needed
+- Check 29 extends L6→L5 enforcement to `int/` and `fdr/` driver trees (controls is `cus/`, already covered by check 5)
+
+**Total CI checks enforcing controls invariants:** checks 4, 5, 27, 29 (30 total system-wide).

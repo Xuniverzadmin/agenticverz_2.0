@@ -14,7 +14,7 @@ Exports:
 """
 
 # Type imports from spine schemas (PIN-504: no cross-domain L6 dependency)
-from app.hoc.hoc_spine.schemas.threshold_types import LimitSnapshot  # noqa: F401
+from app.hoc.cus.hoc_spine.schemas.threshold_types import LimitSnapshot  # noqa: F401
 
 __all__ = [
     "LimitSnapshot",

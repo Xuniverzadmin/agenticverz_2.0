@@ -54,7 +54,7 @@ from app.models.export_bundles import (
     SOC2Bundle,
     TraceStepEvidence,
 )
-from app.traces.store import TraceStore
+from app.hoc.cus.logs.L6_drivers.traces_store import TraceStore
 
 logger = logging.getLogger("nova.services.export_bundle")
 

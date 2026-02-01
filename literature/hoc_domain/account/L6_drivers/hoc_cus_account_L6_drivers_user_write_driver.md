@@ -48,7 +48,7 @@ User Write Driver (L6)
 | Category | Imports |
 |----------|---------|
 | L7 Model | `app.models.tenant` |
-| External | `app.hoc.hoc_spine.services.time`, `sqlmodel` |
+| External | `app.hoc.cus.hoc_spine.services.time`, `sqlmodel` |
 
 ## Callers
 

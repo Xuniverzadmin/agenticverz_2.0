@@ -1,6 +1,6 @@
 # run_governance_facade.py
 
-**Path:** `backend/app/hoc/hoc_spine/orchestrator/run_governance_facade.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/orchestrator/run_governance_facade.py`  
 **Layer:** L4 — HOC Spine (Orchestrator)  
 **Component:** Orchestrator
 
@@ -13,7 +13,7 @@ File:            run_governance_facade.py
 Lives in:        orchestrator/
 Role:            Orchestrator
 Inbound:         L5 runner (worker runtime)
-Outbound:        app.hoc.hoc_spine.schemas.rac_models, app.hoc.hoc_spine.services.audit_store
+Outbound:        app.hoc.cus.hoc_spine.schemas.rac_models, app.hoc.cus.hoc_spine.services.audit_store
 Transaction:     Forbidden
 Cross-domain:    none
 Purpose:         Run Governance Facade (L4 Domain Logic)
@@ -44,7 +44,7 @@ RAC Integration (PIN-454):
 - Action: EVALUATE_POLICY
 
 Usage:
-    from app.hoc.hoc_spine.orchestrator.run_governance_facade import get_run_governance_facade
+    from app.hoc.cus.hoc_spine.orchestrator.run_governance_facade import get_run_governance_facade
 
     facade = get_run_governance_facade()
 
@@ -66,8 +66,8 @@ Usage:
 ## Import Analysis
 
 **Spine-internal:**
-- `app.hoc.hoc_spine.schemas.rac_models`
-- `app.hoc.hoc_spine.services.audit_store`
+- `app.hoc.cus.hoc_spine.schemas.rac_models`
+- `app.hoc.cus.hoc_spine.services.audit_store`
 
 ## Transaction Boundary
 
@@ -139,7 +139,7 @@ boundary:
     - "hoc_spine.adapters.*"
   forbidden_inbound:
   actual_imports:
-    spine_internal: ['app.hoc.hoc_spine.schemas.rac_models', 'app.hoc.hoc_spine.services.audit_store']
+    spine_internal: ['app.hoc.cus.hoc_spine.schemas.rac_models', 'app.hoc.cus.hoc_spine.services.audit_store']
     l7_model: []
     external: []
   violations: []

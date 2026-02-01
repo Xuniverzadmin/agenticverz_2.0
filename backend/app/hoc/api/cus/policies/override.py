@@ -39,7 +39,7 @@ from app.schemas.limits.overrides import (
     LimitOverrideResponse,
     OverrideStatus,
 )
-from app.hoc.hoc_spine.orchestrator.operation_registry import (
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
 )

@@ -1,6 +1,6 @@
 # dag_sorter.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/dag_sorter.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/dag_sorter.py`  
 **Layer:** L4 — HOC Spine (Service)  
 **Component:** Services
 

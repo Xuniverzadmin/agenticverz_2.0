@@ -62,7 +62,7 @@ from app.hoc.cus.incidents.L6_drivers.incident_pattern_driver import (
     IncidentPatternDriver,
     get_incident_pattern_driver,
 )
-from app.hoc.hoc_spine.services.time import utc_now
+from app.hoc.cus.hoc_spine.services.time import utc_now
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

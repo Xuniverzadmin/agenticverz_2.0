@@ -1,6 +1,6 @@
 # lifecycle_stages_base.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/lifecycle_stages_base.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/lifecycle_stages_base.py`  
 **Layer:** L4 — HOC Spine (Service)  
 **Component:** Services
 

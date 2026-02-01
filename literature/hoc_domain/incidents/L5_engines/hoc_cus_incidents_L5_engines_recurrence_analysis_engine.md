@@ -45,7 +45,7 @@ Recurrence Analysis Service (L4 Engine)
 | Category | Imports |
 |----------|---------|
 | L6 Driver | `app.hoc.cus.incidents.L6_drivers.recurrence_analysis_driver` |
-| External | `app.hoc.hoc_spine.services.time`, `sqlalchemy.ext.asyncio` |
+| External | `app.hoc.cus.hoc_spine.services.time`, `sqlalchemy.ext.asyncio` |
 
 ## Callers
 

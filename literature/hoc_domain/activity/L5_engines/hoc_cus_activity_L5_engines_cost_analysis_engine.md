@@ -44,7 +44,7 @@ Cost analysis engine for detecting cost anomalies.
 
 | Category | Imports |
 |----------|---------|
-| External | `app.hoc.hoc_spine.services.time` |
+| External | `app.hoc.cus.hoc_spine.services.time` |
 
 ## Callers
 

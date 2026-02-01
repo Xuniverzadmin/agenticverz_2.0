@@ -21,7 +21,7 @@
 # Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L4, L5
 # Reference: PIN-470, GAP-141, HOC_integrations_analysis_v1.md, HOC_LAYER_TOPOLOGY_V2.0.0.md
-# Relocated: 2026-01-29 from backend/app/hoc/hoc_spine/mcp/server_registry.py
+# Relocated: 2026-01-29 from backend/app/hoc/cus/hoc_spine/mcp/server_registry.py
 
 """
 Module: server_registry

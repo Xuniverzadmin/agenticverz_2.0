@@ -65,7 +65,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from app.hoc.hoc_spine.services.time import utc_now
+from app.hoc.cus.hoc_spine.services.time import utc_now
 from app.hoc.cus.overview.L6_drivers.overview_facade_driver import (
     OverviewFacadeDriver,
 )

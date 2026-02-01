@@ -1123,61 +1123,6 @@ async def run_anomaly_detection(session: Session, tenant_id: str) -> List[CostAn
     return persisted
 
 
-async def run_anomaly_detection_with_governance(
-    session: Session,
-    tenant_id: str,
-) -> dict:
-    """
-    Run anomaly detection AND create incidents for HIGH anomalies.
-
-    MANDATORY GOVERNANCE: Every HIGH+ anomaly creates an incident or crashes.
-    There is no optional dispatcher. Governance is not negotiable.
-
-    Returns:
-        {
-            "detected": [CostAnomaly, ...],
-            "incidents_created": [{"anomaly_id": str, "incident_id": str}, ...],
-        }
-
-    Raises:
-        GovernanceError: If incident creation fails (mandatory)
-    """
-    persisted = await run_anomaly_detection(session, tenant_id)
-
-    if not persisted:
-        return {"detected": [], "incidents_created": []}
-
-    incidents_created = []
-
-    # Only HIGH severity anomalies create incidents (no CRITICAL - severity bands changed)
-    high_anomalies = [a for a in persisted if a.severity == "HIGH"]
-
-    # MANDATORY: Every HIGH anomaly creates an incident or raises GovernanceError
-    for cost_anomaly in high_anomalies:
-        incident_id = create_incident_from_cost_anomaly_sync(
-            session=session,
-            tenant_id=tenant_id,
-            anomaly_id=cost_anomaly.id,
-            anomaly_type=cost_anomaly.anomaly_type,
-            severity=cost_anomaly.severity,
-            current_value_cents=int(cost_anomaly.current_value_cents),
-            expected_value_cents=int(cost_anomaly.expected_value_cents),
-            entity_type=cost_anomaly.entity_type,
-            entity_id=cost_anomaly.entity_id,
-        )
-
-        incidents_created.append(
-            {
-                "anomaly_id": cost_anomaly.id,
-                "incident_id": incident_id,
-            }
-        )
-
-        logger.info(
-            f"[GOVERNANCE] Created incident {incident_id} from cost anomaly {cost_anomaly.id}"
-        )
-
-    return {
-        "detected": persisted,
-        "incidents_created": incidents_created,
-    }
+# run_anomaly_detection_with_governance DELETED (PIN-511 Phase 1.1)
+# All callers migrated to AnomalyIncidentCoordinator.detect_and_ingest()
+# at app.hoc.cus.hoc_spine.orchestrator.coordinators.anomaly_incident_coordinator

@@ -4,7 +4,7 @@
 **Date:** 2026-01-30
 **PIN:** PIN-490 (this document) · PIN-488 (literature study) · PIN-489 (P0/P1 enforcement)
 **Scripts:** 65 (across 6 folders)
-**Source:** `backend/app/hoc/hoc_spine/`
+**Source:** `backend/app/hoc/cus/hoc_spine/`
 **Validator:** `scripts/ops/hoc_spine_study_validator.py`
 
 ---
@@ -12,7 +12,7 @@
 ## Preamble
 
 This document is the **authoritative guide** for evaluating every file, function, and class
-inside `hoc_spine/`. It defines what each component exists for, what problems it solves,
+inside `hoc/cus/hoc_spine/`. It defines what each component exists for, what problems it solves,
 how it may be accessed, and what it must never become.
 
 Domains must understand these definitions **without knowing internal mechanics**.
@@ -26,7 +26,7 @@ Any file that contradicts this literature is either:
 
 ## Part 1 — Root Definition
 
-### `hoc_spine/`
+### `hoc/cus/hoc_spine/`
 
 **Status:** VALID (Required)
 
@@ -588,7 +588,7 @@ python scripts/ops/hoc_spine_study_validator.py --generate
 python scripts/ops/hoc_spine_study_validator.py --generate --folder authority
 
 # Detect drift between literature and source
-python scripts/ops/hoc_spine_study_validator.py --validate literature/hoc_spine/
+python scripts/ops/hoc_spine_study_validator.py --validate literature/hoc/cus/hoc_spine/
 
 # Regenerate INDEX.md only
 python scripts/ops/hoc_spine_study_validator.py --index --output-dir literature/

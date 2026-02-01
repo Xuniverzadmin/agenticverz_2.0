@@ -1,6 +1,6 @@
 # cross_domain.py
 
-**Path:** `backend/app/hoc/hoc_spine/drivers/cross_domain.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/drivers/cross_domain.py`  
 **Layer:** L4 — HOC Spine (Driver)  
 **Component:** Drivers
 

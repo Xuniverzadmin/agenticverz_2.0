@@ -245,7 +245,7 @@ class UncalledClassification:
     """Classification for an uncalled function."""
     symbol: str
     file: str
-    classification: str  # INTERNAL, PENDING, DEAD_CODE, MISSING_WIRING, TEST_ONLY
+    classification: str  # INTERNAL, PENDING, UNUSED, MISSING_WIRING, TEST_ONLY
     reason: str = ""
     pin_ref: str = ""  # e.g. PIN-195 for design-ahead
 
@@ -353,13 +353,13 @@ def classify_uncalled_functions(
     file_stem: str,
     domain_source_root: Path,
 ) -> list[UncalledClassification]:
-    """Classify uncalled functions as INTERNAL, PENDING, DEAD_CODE, etc.
+    """Classify uncalled functions as INTERNAL, PENDING, UNUSED, etc.
 
     Checks:
     1. If a function is a method called via self.method() by another method in same class → INTERNAL
     2. If referenced in test files → TEST_ONLY
     3. If the file has a PIN reference for design-ahead → PENDING-{PIN}
-    4. Otherwise → DEAD_CODE
+    4. Otherwise → UNUSED
     """
     classifications: list[UncalledClassification] = []
 
@@ -410,10 +410,10 @@ def classify_uncalled_functions(
             ))
             continue
 
-        # Default: DEAD_CODE
+        # Default: UNUSED
         classifications.append(UncalledClassification(
             symbol=fn_sym, file=file_stem,
-            classification="DEAD_CODE",
+            classification="UNUSED",
             reason="No internal or external callers detected",
         ))
 

@@ -60,7 +60,7 @@ class OpsFacade:
     def _store(self):
         """Lazy-load error store."""
         if self._error_store is None:
-            from app.services.ops.error_store import DatabaseErrorStore
+            from app.hoc.fdr.ops.drivers.error_store import DatabaseErrorStore
             self._error_store = DatabaseErrorStore(db_url=self._db_url)
         return self._error_store
 
@@ -68,7 +68,7 @@ class OpsFacade:
     def _incident_service(self):
         """Lazy-load ops incident service with proper error store."""
         if self._ops_incident_service is None:
-            from app.services.ops_incident_service import OpsIncidentService
+            from app.hoc.fdr.ops.engines.ops_incident_service import OpsIncidentService
             self._ops_incident_service = OpsIncidentService(error_store=self._store)
         return self._ops_incident_service
 

@@ -30,7 +30,7 @@ from app.hoc.cus.activity.L5_engines.activity_facade import (
     ActivityFacade,
     get_activity_facade,
 )
-from app.hoc.hoc_spine.orchestrator.run_governance_facade import (
+from app.hoc.cus.hoc_spine.orchestrator.run_governance_facade import (
     RunGovernanceFacade,
     get_run_governance_facade,
 )

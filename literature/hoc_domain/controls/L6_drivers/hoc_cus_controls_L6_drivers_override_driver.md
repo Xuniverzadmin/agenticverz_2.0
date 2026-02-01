@@ -57,7 +57,7 @@ Limit Override Service (PIN-LIM-05)
 |----------|---------|
 | L5 Schema | `app.hoc.cus.controls.L5_schemas.overrides` |
 | L7 Model | `app.models.policy_control_plane` |
-| External | `app.hoc.hoc_spine.drivers.cross_domain`, `app.hoc.hoc_spine.services.time`, `sqlalchemy`, `sqlalchemy.ext.asyncio` |
+| External | `app.hoc.cus.hoc_spine.drivers.cross_domain`, `app.hoc.cus.hoc_spine.services.time`, `sqlalchemy`, `sqlalchemy.ext.asyncio` |
 
 ## Callers
 

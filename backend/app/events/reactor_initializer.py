@@ -56,7 +56,7 @@ def initialize_event_reactor():
     """
     global _reactor, _initialized
 
-    from app.services.governance.profile import get_governance_config
+    from app.hoc.cus.hoc_spine.authority.profile_policy_mode import get_governance_config
 
     config = get_governance_config()
 

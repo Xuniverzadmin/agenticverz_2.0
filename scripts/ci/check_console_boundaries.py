@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL: CAP-002 - Console Capability Boundaries
+# artifact_class: CODE
 """
 GUARDRAIL: CAP-002 - Console Capability Boundaries
 Rule: Capabilities must bind to correct console type.

@@ -45,7 +45,7 @@ Incident Pattern Engine - L4 Domain Logic
 | Category | Imports |
 |----------|---------|
 | L6 Driver | `app.hoc.cus.incidents.L6_drivers.incident_pattern_driver` |
-| External | `app.hoc.hoc_spine.services.time`, `sqlalchemy.ext.asyncio` |
+| External | `app.hoc.cus.hoc_spine.services.time`, `sqlalchemy.ext.asyncio` |
 
 ## Callers
 

@@ -1,6 +1,6 @@
 # plan_generation_engine.py
 
-**Path:** `backend/app/hoc/hoc_spine/orchestrator/plan_generation_engine.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/orchestrator/plan_generation_engine.py`  
 **Layer:** L4 — HOC Spine (Orchestrator)  
 **Component:** Orchestrator
 

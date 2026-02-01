@@ -1,6 +1,6 @@
 # response.py
 
-**Path:** `backend/app/hoc/hoc_spine/schemas/response.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/schemas/response.py`  
 **Layer:** L4 — HOC Spine (Schema)  
 **Component:** Schemas
 

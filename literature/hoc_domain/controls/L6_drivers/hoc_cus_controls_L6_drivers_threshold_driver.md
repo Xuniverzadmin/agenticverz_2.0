@@ -32,7 +32,7 @@ Threshold Driver (L6)
 - **Calls:** EventEmitter, OpsEvent, UUID, emit, get, info, isinstance
 
 ### ~~`emit_and_persist_threshold_signal`~~ — DELETED (PIN-507 Law 4, 2026-02-01)
-- **Moved to:** `app.hoc.hoc_spine.orchestrator.coordinators.signal_coordinator`
+- **Moved to:** `app.hoc.cus.hoc_spine.orchestrator.coordinators.signal_coordinator`
 - **Reason:** Cross-domain orchestration (controls→activity) belongs at L4, not L6
 
 ## Classes
@@ -88,7 +88,7 @@ exports:
 
 ## PIN-507 Law 4 Amendment (2026-02-01)
 
-`emit_and_persist_threshold_signal` deleted from this L6 driver. It orchestrated two domains (controls→activity) which belongs at L4. Moved to `app.hoc.hoc_spine.orchestrator.coordinators.signal_coordinator`. Cross-domain activity import (`run_signal_driver`) removed from this file. `emit_threshold_signal_sync` remains (pure L6 DB write, single domain).
+`emit_and_persist_threshold_signal` deleted from this L6 driver. It orchestrated two domains (controls→activity) which belongs at L4. Moved to `app.hoc.cus.hoc_spine.orchestrator.coordinators.signal_coordinator`. Cross-domain activity import (`run_signal_driver`) removed from this file. `emit_threshold_signal_sync` remains (pure L6 DB write, single domain).
 
 ## PIN-507 Law 1 Amendment (2026-02-01)
 

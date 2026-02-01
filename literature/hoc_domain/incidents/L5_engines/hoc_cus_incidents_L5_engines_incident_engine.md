@@ -63,7 +63,7 @@ Incident Engine (L4 Domain Logic)
 | L5 Engine | `app.hoc.cus.policies.L5_engines.lessons_engine` |
 | L6 Driver | `app.hoc.cus.incidents.L6_drivers.incident_write_driver` |
 | Cross-Domain | `app.hoc.cus.policies.L5_engines.lessons_engine` |
-| External | `app.hoc.hoc_spine.services.time`, `sqlalchemy`, `sqlalchemy.orm`, `sqlmodel` |
+| External | `app.hoc.cus.hoc_spine.services.time`, `sqlalchemy`, `sqlalchemy.orm`, `sqlmodel` |
 
 ## Callers
 

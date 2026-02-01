@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL: DOMAIN-002 - No Domain Data in Account Section
+# artifact_class: CODE
 """
 GUARDRAIL: DOMAIN-002 - No Domain Data in Account Section
 Rule: Account pages must NOT display Activity, Incidents, Policies, or Logs data.

@@ -1,3 +1,11 @@
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: SDSR_output_emit_AURORA_L2.py
+# artifact_class: CODE
 """
 SDSR_output_emit_AURORA_L2.py
 

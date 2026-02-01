@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Extract panel information from the INTENT_LEDGER.md file.
+# artifact_class: CODE
 """
 Extract panel information from the INTENT_LEDGER.md file.
 

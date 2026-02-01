@@ -37,7 +37,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
 
-from app.hoc.hoc_spine.services.time import utc_now
+from app.hoc.cus.hoc_spine.services.time import utc_now
 from app.hoc.cus.policies.L6_drivers.policy_proposal_read_driver import (
     PolicyProposalReadDriver,
     get_policy_proposal_read_driver,

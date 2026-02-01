@@ -411,7 +411,7 @@ def update_literature(reports: list[DomainReport]) -> int:
     spine_to_l5: dict[str, list[L5Reference]] = {}
     for ref in l4_refs:
         # Extract spine script name from source_file path
-        # e.g., "backend/app/hoc/hoc_spine/orchestrator/run_governance_facade.py" -> "run_governance_facade"
+        # e.g., "backend/app/hoc/cus/hoc_spine/orchestrator/run_governance_facade.py" -> "run_governance_facade"
         spine_script = Path(ref.source_file).stem
         spine_to_l5.setdefault(spine_script, []).append(ref)
 

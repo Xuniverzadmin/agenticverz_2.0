@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Domain Classifier V1 - Header-Based Classification
+# artifact_class: CODE
 """
 Domain Classifier V1 - Header-Based Classification
 

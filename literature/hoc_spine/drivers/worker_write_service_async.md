@@ -1,6 +1,6 @@
 # worker_write_service_async.py
 
-**Path:** `backend/app/hoc/hoc_spine/drivers/worker_write_service_async.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/drivers/worker_write_service_async.py`  
 **Layer:** L4 — HOC Spine (Driver)  
 **Component:** Drivers
 

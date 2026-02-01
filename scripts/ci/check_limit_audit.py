@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL: LIMITS-003 - Audit on Limit Change
+# artifact_class: CODE
 """
 GUARDRAIL: LIMITS-003 - Audit on Limit Change
 Rule: Every limit change MUST emit an audit entry.

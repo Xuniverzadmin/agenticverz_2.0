@@ -161,9 +161,12 @@ class TestLoopContract:
     @pytest.mark.asyncio
     async def test_anomaly_detection_returns_structure(self, session):
         """Anomaly detection must return proper structure for governance escalation."""
-        from app.services.cost_anomaly_detector import run_anomaly_detection_with_governance
+        from app.hoc.cus.hoc_spine.orchestrator.coordinators.anomaly_incident_coordinator import (
+            get_anomaly_incident_coordinator,
+        )
 
-        result = await run_anomaly_detection_with_governance(
+        coordinator = get_anomaly_incident_coordinator()
+        result = await coordinator.detect_and_ingest(
             session=session,
             tenant_id="test_tenant",
         )

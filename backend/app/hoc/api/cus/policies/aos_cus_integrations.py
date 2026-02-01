@@ -66,7 +66,7 @@ from app.schemas.cus_schemas import (
 )
 from app.schemas.response import wrap_dict, wrap_list
 # L4 operation registry import
-from app.hoc.hoc_spine.orchestrator.operation_registry import (
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
 )

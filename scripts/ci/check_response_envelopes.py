@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL: API-002 - Consistent Response Envelope
+# artifact_class: CODE
 """
 GUARDRAIL: API-002 - Consistent Response Envelope
 Rule: All API responses must use standard envelope format.

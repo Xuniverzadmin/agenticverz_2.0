@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL: CROSS-002 - Bidirectional Query Requirement
+# artifact_class: CODE
 """
 GUARDRAIL: CROSS-002 - Bidirectional Query Requirement
 Rule: If domain A links to domain B, both directions must be queryable.

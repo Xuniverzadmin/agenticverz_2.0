@@ -80,10 +80,10 @@ from app.models.tenant import Tenant
 
 # Phase 2B: Write service for DB operations
 # V2.0.0 - hoc_spine drivers
-from app.hoc.hoc_spine.drivers.guard_write_driver import GuardWriteDriver as GuardWriteService
+from app.hoc.cus.hoc_spine.drivers.guard_write_driver import GuardWriteDriver as GuardWriteService
 
 # M23: L4 operation registry for certificate and replay operations
-from app.hoc.hoc_spine.orchestrator.operation_registry import (
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
 )

@@ -1,6 +1,6 @@
 # audit_store.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/audit_store.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/audit_store.py`  
 **Layer:** L4 — HOC Spine (Service)  
 **Component:** Services
 
@@ -13,7 +13,7 @@ File:            audit_store.py
 Lives in:        services/
 Role:            Services
 Inbound:         ROK (L5), Facades (L4), AuditReconciler
-Outbound:        app.hoc.hoc_spine.schemas.rac_models
+Outbound:        app.hoc.cus.hoc_spine.schemas.rac_models
 Transaction:     Forbidden
 Cross-domain:    none
 Purpose:         Audit Store
@@ -47,7 +47,7 @@ Redis keys:
 ## Import Analysis
 
 **Spine-internal:**
-- `app.hoc.hoc_spine.schemas.rac_models`
+- `app.hoc.cus.hoc_spine.schemas.rac_models`
 
 ## Transaction Boundary
 
@@ -178,7 +178,7 @@ boundary:
     - "hoc.cus.*"
     - "hoc.api.*"
   actual_imports:
-    spine_internal: ['app.hoc.hoc_spine.schemas.rac_models']
+    spine_internal: ['app.hoc.cus.hoc_spine.schemas.rac_models']
     l7_model: []
     external: []
   violations: []

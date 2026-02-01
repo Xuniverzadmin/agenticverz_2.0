@@ -68,7 +68,7 @@ Tenant Driver (L6)
 | Category | Imports |
 |----------|---------|
 | L7 Model | `app.models.tenant` |
-| External | `__future__`, `app.hoc.hoc_spine.services.time`, `sqlmodel` |
+| External | `__future__`, `app.hoc.cus.hoc_spine.services.time`, `sqlmodel` |
 
 ## Callers
 

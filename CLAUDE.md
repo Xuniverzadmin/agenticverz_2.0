@@ -124,6 +124,17 @@ python scripts/ops/artifact_lookup.py --id <ID>
 
 # Change record
 python scripts/ops/change_record.py create --purpose "..." --type bugfix --artifacts <ID>
+
+# HOC scaffolding (PIN-509)
+python3 scripts/ops/new_l5_engine.py <domain> <engine_name>    # Scaffold L5 engine
+python3 scripts/ops/new_l6_driver.py <domain> <driver_name>    # Scaffold L6 driver
+
+# Tombstone auto-collapse (PIN-509)
+python3 scripts/ops/collapse_tombstones.py            # Dry run
+python3 scripts/ops/collapse_tombstones.py --apply    # Delete zero-dependent tombstones
+
+# HOC CI checks (PIN-507 + PIN-508 + PIN-509, 18 checks)
+PYTHONPATH=. python3 scripts/ci/check_init_hygiene.py --ci
 ```
 
 ---
@@ -222,7 +233,7 @@ L2.1 Facade → L2 API → L4 hoc_spine → L5 Engine → L6 Driver → L7 Model
 |-------|----------|----------------|
 | L2.1 | `hoc/api/facades/cus/` | Groups routers by domain |
 | L2 | `hoc/api/cus/{domain}/` | HTTP boundary (thin) |
-| L4 | `hoc/hoc_spine/` | Single orchestrator, cross-domain owner |
+| L4 | `hoc/cus/hoc_spine/` | Single orchestrator, cross-domain owner |
 | L5 | `hoc/cus/{domain}/L5_engines/` | Domain business logic |
 | L6 | `hoc/cus/{domain}/L6_drivers/` | Domain DB operations |
 | L7 | `app/models/` | ORM tables |

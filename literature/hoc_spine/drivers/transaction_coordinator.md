@@ -1,6 +1,6 @@
 # transaction_coordinator.py
 
-**Path:** `backend/app/hoc/hoc_spine/drivers/transaction_coordinator.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/drivers/transaction_coordinator.py`  
 **Layer:** L4 — HOC Spine (Driver)  
 **Component:** Drivers
 
@@ -13,7 +13,7 @@ File:            transaction_coordinator.py
 Lives in:        drivers/
 Role:            Drivers
 Inbound:         ROK (L5), RunRunner (L5)
-Outbound:        app.hoc.hoc_spine.schemas.rac_models, app.hoc.hoc_spine.services.audit_store, app.hoc.hoc_spine.orchestrator.run_governance_facade
+Outbound:        app.hoc.cus.hoc_spine.schemas.rac_models, app.hoc.cus.hoc_spine.services.audit_store, app.hoc.cus.hoc_spine.orchestrator.run_governance_facade
 Transaction:     OWNS COMMIT
 Cross-domain:    none
 Purpose:         Transaction Coordinator for Cross-Domain Writes
@@ -63,7 +63,7 @@ Architecture:
 
 Usage:
 
-    from app.hoc.hoc_spine.drivers.transaction_coordinator import (
+    from app.hoc.cus.hoc_spine.drivers.transaction_coordinator import (
         RunCompletionTransaction,
         get_transaction_coordinator,
     )
@@ -79,9 +79,9 @@ Usage:
 ## Import Analysis
 
 **Spine-internal:**
-- `app.hoc.hoc_spine.schemas.rac_models`
-- `app.hoc.hoc_spine.services.audit_store`
-- `app.hoc.hoc_spine.orchestrator.run_governance_facade`
+- `app.hoc.cus.hoc_spine.schemas.rac_models`
+- `app.hoc.cus.hoc_spine.services.audit_store`
+- `app.hoc.cus.hoc_spine.orchestrator.run_governance_facade`
 
 **External:**
 - `sqlmodel`
@@ -227,7 +227,7 @@ boundary:
     - "hoc.cus.*"
     - "hoc.api.*"
   actual_imports:
-    spine_internal: ['app.hoc.hoc_spine.schemas.rac_models', 'app.hoc.hoc_spine.services.audit_store', 'app.hoc.hoc_spine.orchestrator.run_governance_facade']
+    spine_internal: ['app.hoc.cus.hoc_spine.schemas.rac_models', 'app.hoc.cus.hoc_spine.services.audit_store', 'app.hoc.cus.hoc_spine.orchestrator.run_governance_facade']
     l7_model: []
     external: ['sqlmodel', 'app.db', 'app.events']
   violations: []

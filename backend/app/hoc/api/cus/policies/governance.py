@@ -36,7 +36,7 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-from app.hoc.hoc_spine.orchestrator.operation_registry import (
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
 )

@@ -37,11 +37,8 @@ from typing import List, Optional
 from pydantic import BaseModel
 from sqlmodel import Session
 
-# L5 engine imports (migrated to HOC per SWEEP-03)
-from app.hoc.cus.api_keys.L5_engines.keys_engine import (
-    get_keys_read_engine as get_keys_read_service,
-    get_keys_write_engine as get_keys_write_service,
-)
+# PIN-510 Phase 1A: Route through per-domain bridge (was: direct L5 import)
+from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.api_keys_bridge import get_api_keys_bridge
 
 # =============================================================================
 # Customer-Safe DTOs (No Full Key Value)
@@ -96,10 +93,14 @@ class CustomerKeysAdapter:
     """
 
     def __init__(self, session: Session):
-        """Initialize adapter with database session."""
+        """Initialize adapter with database session.
+
+        PIN-510 Phase 1A: Capabilities resolved via ApiKeysBridge (not direct L5 import).
+        """
         self._session = session
-        self._read_service = get_keys_read_service(session)
-        self._write_service = get_keys_write_service(session)
+        _bridge = get_api_keys_bridge()
+        self._read_service = _bridge.keys_read_capability(session)
+        self._write_service = _bridge.keys_write_capability(session)
 
     def list_keys(
         self,

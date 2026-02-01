@@ -300,11 +300,12 @@ class DetectionFacade:
             )
 
         try:
-            from app.hoc.cus.analytics.L5_engines.cost_anomaly_detector_engine import (
-                run_anomaly_detection_with_governance,
+            from app.hoc.cus.hoc_spine.orchestrator.coordinators.anomaly_incident_coordinator import (
+                get_anomaly_incident_coordinator,
             )
 
-            result = await run_anomaly_detection_with_governance(session, tenant_id)
+            coordinator = get_anomaly_incident_coordinator()
+            result = await coordinator.detect_and_ingest(session, tenant_id)
 
             detected = result.get("detected", [])
             incidents = result.get("incidents_created", [])

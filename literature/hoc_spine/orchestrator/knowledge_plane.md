@@ -1,6 +1,6 @@
 # knowledge_plane.py
 
-**Path:** `backend/app/hoc/hoc_spine/orchestrator/lifecycle/drivers/knowledge_plane.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/orchestrator/lifecycle/drivers/knowledge_plane.py`  
 **Layer:** L4 — HOC Spine (Orchestrator)  
 **Component:** Orchestrator
 

@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Find files with layer=UNKNOWN (handles both Python and TS)
+# artifact_class: CODE
 """Find files with layer=UNKNOWN (handles both Python and TS)"""
 
 import os

@@ -41,7 +41,7 @@ Customer Health Engine
 | Category | Imports |
 |----------|---------|
 | L7 Model | `app.models.cus_models` |
-| External | `app.db`, `app.hoc.hoc_spine.services.cus_credential_service`, `httpx`, `sqlmodel` |
+| External | `app.db`, `app.hoc.cus.hoc_spine.services.cus_credential_service`, `httpx`, `sqlmodel` |
 
 ## Callers
 

@@ -36,7 +36,7 @@ Extracted cross-domain data types to neutral locations so multiple domains can i
 | File | Contents |
 |------|----------|
 | `hoc/cus/account/L5_schemas/result_types.py` | `AccountsErrorResult` dataclass |
-| `hoc/hoc_spine/schemas/threshold_types.py` | `LimitSnapshot` frozen dataclass |
+| `hoc/cus/hoc_spine/schemas/threshold_types.py` | `LimitSnapshot` frozen dataclass |
 
 ### Files Modified
 
@@ -150,11 +150,11 @@ L2 API → L4 Handler → L5 Engine (with injected dependencies)
 ### Files Created (6 total)
 
 1. `backend/app/hoc/cus/account/L5_schemas/result_types.py`
-2. `backend/app/hoc/hoc_spine/schemas/threshold_types.py`
-3. `backend/app/hoc/hoc_spine/orchestrator/coordinators/__init__.py`
-4. `backend/app/hoc/hoc_spine/orchestrator/coordinators/audit_coordinator.py`
-5. `backend/app/hoc/hoc_spine/orchestrator/coordinators/signal_coordinator.py`
-6. `backend/app/hoc/hoc_spine/orchestrator/coordinators/logs_coordinator.py`
+2. `backend/app/hoc/cus/hoc_spine/schemas/threshold_types.py`
+3. `backend/app/hoc/cus/hoc_spine/orchestrator/coordinators/__init__.py`
+4. `backend/app/hoc/cus/hoc_spine/orchestrator/coordinators/audit_coordinator.py`
+5. `backend/app/hoc/cus/hoc_spine/orchestrator/coordinators/signal_coordinator.py`
+6. `backend/app/hoc/cus/hoc_spine/orchestrator/coordinators/logs_coordinator.py`
 
 ### Files Modified (12 total)
 

@@ -14,7 +14,7 @@ to detect drift (new/removed functions).
 
 Usage:
     # Extract metadata for a single file (YAML to stdout)
-    python scripts/ops/hoc_spine_study_validator.py backend/app/hoc/hoc_spine/authority/concurrent_runs.py
+    python scripts/ops/hoc_spine_study_validator.py backend/app/hoc/cus/hoc_spine/authority/concurrent_runs.py
 
     # Extract all files to an output directory
     python scripts/ops/hoc_spine_study_validator.py --all --output-dir /tmp/spine_yaml
@@ -618,7 +618,7 @@ def generate_markdown(meta: dict[str, Any]) -> str:
 
     layer = meta["header"].get("layer", FOLDER_LAYER.get(folder, "L4"))
     component = FOLDER_COMPONENT.get(folder, folder.title())
-    full_path = f"backend/app/hoc/hoc_spine/{filepath}"
+    full_path = f"backend/app/hoc/cus/hoc_spine/{filepath}"
     callers = meta["header"].get("callers", "_unknown_")
 
     imports = meta.get("imports", {})
@@ -873,7 +873,7 @@ def generate_folder_overview(folder: str, metas: list[dict[str, Any]]) -> str:
     lines = [
         f"# {component} — Folder Summary",
         "",
-        f"**Path:** `backend/app/hoc/hoc_spine/{folder}/`  ",
+        f"**Path:** `backend/app/hoc/cus/hoc_spine/{folder}/`  ",
         f"**Layer:** {layer}  ",
         f"**Scripts:** {len(metas)}",
         "",
@@ -1008,7 +1008,7 @@ def generate_index(file_metas: list[dict[str, Any]]) -> str:
         f"**Total scripts:** {total_files}  ",
         f"**Clean:** {total_files - violation_files}  ",
         f"**With violations:** {violation_files}  ",
-        f"**Source:** `backend/app/hoc/hoc_spine/`  ",
+        f"**Source:** `backend/app/hoc/cus/hoc_spine/`  ",
         "**Validator:** `scripts/ops/hoc_spine_study_validator.py`",
         "",
         "---",

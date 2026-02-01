@@ -1,5 +1,19 @@
 # app/services/__init__.py
-"""Service layer for business logic."""
+# FROZEN: PIN-508 Gap 5 — no new files or imports permitted
+# DEPRECATED: PIN-509 Gap 4 — migrate to app.hoc.cus.{domain}.L5_engines
+"""Service layer for business logic.
+
+WARNING: This namespace is FROZEN (PIN-508) and DEPRECATED (PIN-509).
+No new files may be added. No new imports from this package are permitted.
+All new business logic belongs in app.hoc.cus.{domain}.L5_engines/.
+"""
+import warnings as _warnings
+
+_warnings.warn(
+    "app.services is deprecated (PIN-509). Use app.hoc.cus.{domain}.L5_engines instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 from .event_emitter import (
     EntityType,

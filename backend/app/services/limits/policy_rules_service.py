@@ -41,8 +41,8 @@ from app.schemas.limits.policy_rules import (
     UpdatePolicyRuleRequest,
     PolicyRuleResponse,
 )
-# TRANSITIONAL: services→hoc (migrate policy_rules_service to HOC L5 per PIN-507)
-from app.hoc.cus.logs.L6_drivers.audit_ledger_driver import AuditLedgerServiceAsync
+# PIN-513: services→HOC dependency severed. No-op shim replaces HOC audit import.
+from app.services._audit_shim import AuditLedgerShim as AuditLedgerServiceAsync
 
 
 def utc_now() -> datetime:

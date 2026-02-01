@@ -63,7 +63,7 @@ Each script's unique contribution and canonical function.
 ## Uncalled Functions
 
 Functions with no internal or external callers detected.
-May be: dead code, missing wiring, or entry points not yet traced.
+May be: unused code, missing wiring, or entry points not yet traced.
 
 - `channel_engine.NotifyChannelService.configure_channel`
 - `channel_engine.NotifyChannelService.disable_channel`
@@ -326,7 +326,7 @@ _251 thin delegation functions._
 
 | Script | Change | Reference |
 |--------|--------|-----------|
-| `customer_logs_adapter` | Routes through `LogsCoordinator` (`hoc_spine.orchestrator.coordinators.logs_coordinator`) instead of direct logs L5 import. | PIN-504 Phase 4 |
+| `customer_logs_adapter` | Routes through `LogsCoordinator` (`hoc.cus.hoc_spine.orchestrator.coordinators.logs_coordinator`) instead of direct logs L5 import. | PIN-504 Phase 4 |
 
 ## PIN-507 Law 5 Remediation (2026-02-01)
 
@@ -344,3 +344,100 @@ _251 thin delegation functions._
 | `L5_schemas/__init__.py` | Removed stale re-export of `cost_snapshot_schemas` (8 symbols). Module lives in `analytics/L5_schemas/`, wrong domain. | PIN-507 Law 0 |
 | `L5_engines/cost_bridges_engine.py` | Fixed relative import `..schemas.loop_events` → absolute `app.hoc.cus.integrations.L5_schemas.loop_events`. | PIN-507 Law 0 |
 | `L5_engines/credentials/__init__.py` | Stale relative import `.types` → absolute `app.hoc.cus.integrations.L5_engines.types`. `Credential` class lives in parent package `L5_engines/types.py`, not `credentials/types.py`. Detected by `check_init_hygiene.py` STALE_REEXPORT check. | PIN-507 Law 0 |
+
+## PIN-508 Quarantine & Stub Actions (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| `L5_engines/_frozen/bridges_engine.py` | MOVED to `_frozen/` subdirectory from `L5_engines/` — M25_FROZEN quarantine (Phase 7). L5/L6 HYBRID removed from active production wiring. No exports from L5_engines __init__. | PIN-508 Phase 7 |
+| `L5_engines/_frozen/dispatcher_engine.py` | MOVED to `_frozen/` subdirectory from `L5_engines/` — M25_FROZEN quarantine (Phase 7). L5/L6 HYBRID removed from active production wiring. No exports from L5_engines __init__. | PIN-508 Phase 7 |
+| `L5_engines/_frozen/__init__.py` | NEW MARKER FILE — quarantine directory marker, no exports. Indicates M25_FROZEN hybrid engines removed from active wiring. | PIN-508 Phase 7 |
+| `cus_integration_engine.py` | STUB_ENGINE marker added to indicate legacy stub (disconnected during PIN-498, now explicitly classified). | PIN-508 Phase 5 |
+
+## PIN-509 Tooling Hardening (2026-02-01)
+
+- CI checks 16–18 added to `scripts/ci/check_init_hygiene.py`:
+  - Check 16: Frozen import ban (no imports from `_frozen/` paths)
+  - Check 17: L5 Session symbol import ban (type erasure enforcement)
+  - Check 18: Protocol surface baseline (capability creep prevention, max 12 methods)
+- New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
+- `app/services/__init__.py` now emits DeprecationWarning
+- Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+## PIN-513 Topology Completion & Hygiene (2026-02-01)
+
+### Phase 1C — Cross-Domain Duplicate Adapter Deletion
+
+Three adapter files in `integrations/adapters/` were duplicates of files already living in their home domains. Zero HOC callers confirmed via grep before deletion.
+
+| File | Change | Reference |
+|------|--------|-----------|
+| `adapters/customer_incidents_adapter.py` | **DELETED** — duplicate of `incidents/adapters/`. Zero HOC callers. | PIN-513 Phase 1C |
+| `adapters/customer_logs_adapter.py` | **DELETED** — duplicate of `logs/adapters/`. Zero HOC callers. | PIN-513 Phase 1C |
+| `adapters/customer_policies_adapter.py` | **DELETED** — duplicate of `policies/adapters/`. Zero HOC callers. | PIN-513 Phase 1C |
+
+**Note:** The canonical adapters at `integrations/L5_engines/customer_*_adapter.py` remain intact — those are the active production copies. The deleted files were in the `adapters/` subdirectory (stale L3 remnants).
+
+## PIN-510 Phase 0 — Per-Domain Bridges (2026-02-01)
+
+### L4 hoc_spine Bridge Infrastructure (NEW)
+
+**Location:** `hoc/cus/hoc_spine/orchestrator/coordinators/bridges/`
+
+Phase 0A establishes per-domain bridge layer to eliminate monolithic DomainBridge god object. All adapters in integrations domain will rewire to these bridges during Phase 1A.
+
+**Files Created:**
+
+| File | Purpose | Capabilities | Reference |
+|------|---------|--------------|-----------|
+| `__init__.py` | Per-domain bridge package exports | — | PIN-510 Phase 0A |
+| `incidents_bridge.py` | IncidentsBridge — incidents L5 capabilities | 3 (read, write, lessons) | PIN-510 Phase 0A |
+| `controls_bridge.py` | ControlsBridge — controls L5 capabilities | 3 (limits_query, policy_limits, killswitch) | PIN-510 Phase 0A |
+| `activity_bridge.py` | ActivityBridge — activity L5 capabilities | 1 (query) | PIN-510 Phase 0A |
+| `policies_bridge.py` | PoliciesBridge — policies L5 capabilities | 1 (customer_policy_read) | PIN-510 Phase 0A |
+| `api_keys_bridge.py` | ApiKeysBridge — api_keys L5 capabilities | 2 (keys_read, keys_write) | PIN-510 Phase 0A |
+| `logs_bridge.py` | LogsBridge — logs L5 capabilities | 1 (read_service) | PIN-510 Phase 0A |
+
+**Domain Coordinator Integration:** `domain_bridge.py` (L4 spine) modified to delegate per-domain bridge resolution.
+
+**CI Hardening (2 new checks added to `scripts/ci/check_init_hygiene.py`):**
+
+- Check 19: `check_bridge_method_count` — per-domain bridge max 5 capabilities
+- Check 20: `check_schema_admission` — hoc/cus/hoc_spine/schemas/ files must have Consumers header
+
+**Architecture Rules (L4 Spine Bridges):**
+
+- Max 5 capability methods per bridge (enforced by CI check 19)
+- Bridge never accepts session in constructor — returns session-bound capability
+- Lazy imports only (no circular dependencies)
+- Only L4 handlers and coordinators may use bridges
+- All bridges serve ALL domains (spine layer, not domain-specific)
+
+**Adoption Path (Phase 1A):**
+
+Integrations adapters will rewire cross-domain L5 reads through these bridges:
+- `customer_incidents_adapter` → incidents_bridge.incident_read_capability()
+- `customer_logs_adapter` → logs_bridge.read_service_capability()
+- `customer_policies_adapter` → policies_bridge.customer_policy_read_capability()
+- `customer_activity_adapter` → activity_bridge.query_capability()
+- `customer_keys_adapter` → api_keys_bridge.keys_read_capability() / keys_write_capability()
+
+## PIN-513 Phase A — Integrations Domain Changes (2026-02-01)
+
+- external_response_driver.py (L6): DELETED — zero callers, canonical replacement exists at app/services/external_response_service.py and app/hoc/int/platform/drivers/external_response_service.py
+- bridges_engine.py (_frozen/L5): DELETED — helper functions unused, bridge classes wired elsewhere via app/integrations/bridges.py
+
+## PIN-513 Phase 8 — Zero-Caller Wiring (2026-02-01)
+
+| Component | L4 Owner | Action |
+|-----------|----------|--------|
+| `worker_registry_driver` (L6) | `hoc_spine/orchestrator/handlers/integrations_handler.py` | Added `IntegrationsWorkersHandler` class — dispatches 7 methods (`list_workers`, `get_worker`, `get_workers_for_tenant`, `is_available`, `get_effective_config`, `register_worker`, `update_status`) via `WorkerRegistryService(session)`. Registered as `integrations.workers` operation. |
+
+## PIN-513 Phase 9 — Batch 1D Wiring (2026-02-01)
+
+- Created `hoc_spine/orchestrator/handlers/integration_bootstrap_handler.py` (L4 handler)
+- Wired 4 channel_engine symbols: `get_notify_service`, `send_notification`, `check_channel_health`, `get_channel_config`
+- Reclassified `worker_registry_driver` as already WIRED via Phase 8 `IntegrationsWorkersHandler`
+- Reclassified `bridges_engine` (2 symbols) as OUT_OF_SCOPE — lives in legacy `app/integrations/bridges.py`, not HOC
+- Reclassified `external_response_driver` (3 symbols) as OUT_OF_SCOPE — lives in `hoc/int/`, not `hoc/cus/`
+- All 10 CSV entries resolved: 5 WIRED, 2 OUT_OF_SCOPE (legacy), 3 OUT_OF_SCOPE (hoc/int/)

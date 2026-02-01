@@ -15,22 +15,22 @@ The **policies** domain is the largest and most complex domain in the HOC archit
 
 | Metric | Value |
 |--------|-------|
-| **Total Files** | 77 |
-| **L5 Engines** | 62 (61 active .py + 1 `__init__.py`) |
+| **Total Files** | 78 |
+| **L5 Engines** | 63 (62 active .py + 1 `__init__.py`) |
 | **L6 Drivers** | 15 (14 active .py + 1 `__init__.py`) |
 | **L4 Operations** | 9 (via `policies_handler.py`) |
 | **DSL Compiler Chain** | 11 files (PLang v2.0) |
 | **Execution Kernel** | 7 files (mandatory choke point) |
-| **Policy CRUD** | 8 files (rules, limits, proposals) |
+| **Policy CRUD** | 9 files (rules, limits, proposals, capabilities) |
 | **Enforcement Engines** | 6 files (prevention, protection, binding) |
 
 ---
 
 ## Layer Topology
 
-### L5 Engines (62 files)
+### L5 Engines (63 files)
 
-The policies L5 layer contains **61 active Python scripts** organized into 11 functional groups:
+The policies L5 layer contains **62 active Python scripts** organized into 11 functional groups:
 
 #### 1. DSL Compiler Chain (11 files)
 
@@ -68,22 +68,25 @@ The execution kernel is the **mandatory single choke point** for all policy exec
 
 **Architecture:** All policy execution MUST flow through `kernel.py`. The `decorator.py` provides an ergonomic wrapper, but it delegates to the kernel. The `engine.py` performs the actual rule evaluation within the kernel's control.
 
-#### 3. Policy CRUD (8 files)
+#### 3. Policy CRUD (9 files)
 
 Policy CRUD engines handle create, read, update, delete, and query operations for policies, rules, limits, and proposals.
 
 | File | Responsibility | Operations |
 |------|---------------|-----------|
-| `policy_rules_engine.py` | Rules CRUD engine | Create, update, delete rules |
-| `policy_limits_engine.py` | Limits CRUD engine | Create, update, delete limits |
+| `policy_rules_engine.py` | Rules CRUD engine; factory now accepts driver param for capability injection via DomainBridge (PIN-508 Phase 2B) | Create, update, delete rules |
+| `policy_limits_engine.py` | Limits CRUD engine; constructor now accepts driver param for capability injection via DomainBridge (PIN-508 Phase 2C) | Create, update, delete limits |
 | `policy_proposal_engine.py` | Proposal lifecycle engine | Proposal CRUD workflow |
 | `policies_rules_query_engine.py` | Rules read-only queries | Rules listing, filtering |
-| `policies_limits_query_engine.py` | Limits read-only queries | Limits listing, filtering |
+| `policies_limits_query_engine.py` | Limits read-only queries; factory now accepts driver param for capability injection via DomainBridge (PIN-508 Phase 2B) | Limits listing, filtering |
 | `policies_proposals_query_engine.py` | Proposals read-only queries | Proposals listing, filtering |
 | `customer_policy_read_engine.py` | Customer policy reads | Business logic for reads |
 | `policy_models.py` | Domain models and types | PolicyRule, Limit, Proposal |
+| `domain_bridge_capabilities.py` (NEW) | Capability Protocols for cross-domain access via DomainBridge | LessonsQueryCapability, LimitsQueryCapability, PolicyLimitsCapability |
 
 **Pattern:** Separation of concerns — write engines (CRUD) vs. read engines (queries) with dedicated query engines for each entity type.
+
+**PIN-508 Phase 2 Capabilities:** New `domain_bridge_capabilities.py` (L5 Schemas) defines capability protocols for cross-domain access. See PIN-508 for full integration details.
 
 #### 4. Facades (3 files)
 
@@ -91,11 +94,11 @@ Facades provide unified, high-level interfaces to complex subsystems.
 
 | File | Responsibility | Subsystem |
 |------|---------------|-----------|
-| `policies_facade.py` | HOC policies facade | Legacy disconnected (stubbed 2026-01-31) |
+| `policies_facade.py` (STUB_ENGINE) | HOC policies facade; 13 methods raise NotImplementedError (PIN-508 Phase 5) | Legacy disconnected (stubbed 2026-01-31) |
 | `governance_facade.py` | Governance control facade | Kill switch, degraded mode, conflicts |
 | `limits_facade.py` | Rate limits and quotas facade | Limits management |
 
-**Note:** `policies_facade.py` was previously a re-export from legacy `app.services.policies_facade`. As of 2026-01-31, legacy imports were disconnected and the file is now stubbed pending HOC-native implementation.
+**Note:** `policies_facade.py` was previously a re-export from legacy `app.services.policies_facade`. As of 2026-01-31, legacy imports were disconnected and the file is now stubbed pending HOC-native implementation. PIN-508 Phase 5 adds STUB_ENGINE marker.
 
 #### 5. Enforcement & Prevention (6 files)
 
@@ -103,14 +106,14 @@ Enforcement engines handle runtime policy enforcement, prevention hooks, abuse p
 
 | File | Responsibility | Enforcement Type |
 |------|---------------|-----------------|
-| `cus_enforcement_engine.py` | Customer enforcement engine | Legacy disconnected (stubbed 2026-01-31) |
+| `cus_enforcement_engine.py` (STUB_ENGINE) | Customer enforcement engine; methods now raise NotImplementedError (PIN-508 Phase 5) | Legacy disconnected (stubbed 2026-01-31) |
 | `prevention_engine.py` | Runtime enforcement | Real-time prevention |
 | `prevention_hook.py` | Prevention hook | Content accuracy checks |
 | `protection_provider.py` | Phase-7 abuse protection | Abuse detection/mitigation |
 | `binding_moment_enforcer.py` | Binding moment evaluation | When policies apply |
 | `phase_status_invariants.py` | Phase-status invariant enforcement | Invariant checking |
 
-**Note:** `cus_enforcement_engine.py` was renamed from `cus_enforcement_service.py` (N1 naming violation) and stubbed after legacy disconnection (2026-01-31).
+**Note:** `cus_enforcement_engine.py` was renamed from `cus_enforcement_service.py` (N1 naming violation) and stubbed after legacy disconnection (2026-01-31). PIN-508 Phase 5 adds STUB_ENGINE marker and NotImplementedError methods.
 
 #### 6. Decision & Authority (5 files)
 
@@ -145,10 +148,12 @@ Recovery and learning engines handle recovery decisions, lessons learned, and le
 | File | Responsibility | Learning Phase |
 |------|---------------|---------------|
 | `recovery_evaluation_engine.py` | Recovery decision-making | Failure recovery |
-| `lessons_engine.py` | Lessons learned creation/management | Knowledge capture |
+| `lessons_engine.py` | Lessons learned creation/management; factory now accepts driver param for capability injection via DomainBridge (PIN-508 Phase 2A) | Knowledge capture |
 | `learning_proof_engine.py` | Learning proof generation | Graduation gates |
 
 **Legacy Disconnection (2026-01-31):** `lessons_engine.py` previously imported from HOC by legacy `app/services/policy/lessons_engine.py`. Legacy file has been emptied and disconnected.
+
+**PIN-508 Phase 2A:** `lessons_engine.py` factory now accepts driver param for capability injection via DomainBridge.
 
 #### 9. Simulation & Sandbox (2 files)
 
@@ -156,10 +161,10 @@ Simulation and sandbox engines provide pre-execution limit simulation and high-l
 
 | File | Responsibility | Simulation Type |
 |------|---------------|----------------|
-| `limits_simulation_engine.py` | Pre-execution limit simulation | Dry-run limit checks |
+| `limits_simulation_engine.py` (STUB_ENGINE) | Pre-execution limit simulation; methods raise NotImplementedError (PIN-508 Phase 5) | Dry-run limit checks |
 | `sandbox_engine.py` | High-level sandbox with policy enforcement | Isolated execution |
 
-**Note:** `limits_simulation_engine.py` was renamed from `limits_simulation_service.py` (N2 naming violation) and stubbed after legacy disconnection (2026-01-31).
+**Note:** `limits_simulation_engine.py` was renamed from `limits_simulation_service.py` (N2 naming violation) and stubbed after legacy disconnection (2026-01-31). PIN-508 Phase 5 adds STUB_ENGINE marker and NotImplementedError methods.
 
 #### 10. Runtime & Commands (3 files)
 
@@ -367,25 +372,25 @@ All apparent overlaps have been classified as **intentional architectural patter
 
 | Layer | Total Files | Active Scripts | Init Files |
 |-------|-------------|----------------|------------|
-| L5 Engines | 62 | 61 | 1 |
+| L5 Engines | 63 | 62 | 1 |
 | L6 Drivers | 15 | 14 | 1 |
-| **Total** | **77** | **75** | **2** |
+| **Total** | **78** | **76** | **2** |
 
 ### Functional Group Distribution (L5)
 
 | Group | Files | Percentage |
 |-------|-------|-----------|
-| DSL Compiler Chain | 11 | 18.0% |
-| Policy CRUD | 8 | 13.1% |
-| Execution Kernel | 7 | 11.5% |
-| Enforcement & Prevention | 6 | 9.8% |
-| Other Engines | 6 | 9.8% |
-| Decision & Authority | 5 | 8.2% |
-| Facades | 3 | 4.9% |
-| Conflict & Graph | 3 | 4.9% |
-| Recovery & Learning | 3 | 4.9% |
-| Runtime & Commands | 3 | 4.9% |
-| Simulation & Sandbox | 2 | 3.3% |
+| DSL Compiler Chain | 11 | 17.7% |
+| Policy CRUD | 9 | 14.5% |
+| Execution Kernel | 7 | 11.3% |
+| Enforcement & Prevention | 6 | 9.7% |
+| Other Engines | 6 | 9.7% |
+| Decision & Authority | 5 | 8.1% |
+| Facades | 3 | 4.8% |
+| Conflict & Graph | 3 | 4.8% |
+| Recovery & Learning | 3 | 4.8% |
+| Runtime & Commands | 3 | 4.8% |
+| Simulation & Sandbox | 2 | 3.2% |
 
 ### Data Access Distribution (L6)
 
@@ -765,7 +770,7 @@ The policies domain is the **largest and most complex** domain in HOC, serving a
 17. `visitors.py`
 18. `folds.py`
 
-**Policy CRUD (8):**
+**Policy CRUD (9):**
 19. `policy_rules_engine.py`
 20. `policy_limits_engine.py`
 21. `policy_proposal_engine.py`
@@ -774,56 +779,57 @@ The policies domain is the **largest and most complex** domain in HOC, serving a
 24. `policies_proposals_query_engine.py`
 25. `customer_policy_read_engine.py`
 26. `policy_models.py`
+27. `domain_bridge_capabilities.py` (NEW — PIN-508 Phase 2)
 
 **Facades (3):**
-27. `policies_facade.py`
-28. `governance_facade.py`
-29. `limits_facade.py`
+28. `policies_facade.py`
+29. `governance_facade.py`
+30. `limits_facade.py`
 
 **Enforcement & Prevention (6):**
-30. `cus_enforcement_engine.py`
-31. `prevention_engine.py`
-32. `prevention_hook.py`
-33. `protection_provider.py`
-34. `binding_moment_enforcer.py`
-35. `phase_status_invariants.py`
+31. `cus_enforcement_engine.py`
+32. `prevention_engine.py`
+33. `prevention_hook.py`
+34. `protection_provider.py`
+35. `binding_moment_enforcer.py`
+36. `phase_status_invariants.py`
 
 **Decision & Authority (5):**
-36. `policy_command.py`
-37. `worker_execution_command.py`
-38. `claim_decision_engine.py`
-39. `authority_checker.py`
-40. `eligibility_engine.py`
+37. `policy_command.py`
+38. `worker_execution_command.py`
+39. `claim_decision_engine.py`
+40. `authority_checker.py`
+41. `eligibility_engine.py`
 
 **Conflict & Graph (3):**
-41. `policy_conflict_resolver.py`
-42. `policy_graph_engine.py`
-43. `policy_mapper.py`
+42. `policy_conflict_resolver.py`
+43. `policy_graph_engine.py`
+44. `policy_mapper.py`
 
 **Recovery & Learning (3):**
-44. `recovery_evaluation_engine.py`
-45. `lessons_engine.py`
-46. `learning_proof_engine.py`
+45. `recovery_evaluation_engine.py`
+46. `lessons_engine.py`
+47. `learning_proof_engine.py`
 
 **Simulation & Sandbox (2):**
-47. `limits_simulation_engine.py`
-48. `sandbox_engine.py`
+48. `limits_simulation_engine.py`
+49. `sandbox_engine.py`
 
 **Runtime & Commands (2):**
-49. `runtime_command.py`
-50. `policy_driver.py`
+50. `runtime_command.py`
+51. `policy_driver.py`
 
 **Other Engines (10):**
-51. `deterministic_engine.py`
-52. `degraded_mode.py`
-53. `failure_mode_handler.py`
-54. `kill_switch.py`
-55. `keys_shim.py`
-56. `plan.py`
-57. `plan_generation_engine.py`
-58. `limits.py`
-59. `intent.py`
-60. `snapshot_engine.py`
+52. `deterministic_engine.py`
+53. `degraded_mode.py`
+54. `failure_mode_handler.py`
+55. `kill_switch.py`
+56. `keys_shim.py`
+57. `plan.py`
+58. `plan_generation_engine.py`
+59. `limits.py`
+60. `intent.py`
+61. `snapshot_engine.py`
 
 **Plus:** `__init__.py` (1)
 
@@ -863,7 +869,7 @@ The policies domain is the **largest and most complex** domain in HOC, serving a
 
 | File | Old Import | New Import |
 |------|-----------|------------|
-| `adapters/founder_contract_review_adapter.py` | `app.hoc.cus.general.L5_workflow.contracts.engines.contract_engine.ContractState` | `app.hoc.hoc_spine.authority.contracts.contract_engine.ContractState` |
+| `adapters/founder_contract_review_adapter.py` | `app.hoc.cus.general.L5_workflow.contracts.engines.contract_engine.ContractState` | `app.hoc.cus.hoc_spine.authority.contracts.contract_engine.ContractState` |
 
 `cus/general/` was abolished per PIN-485. `ContractState` migrated to `hoc_spine/authority/contracts/` (confirmed 100% match per Phase 5 D690).
 
@@ -871,7 +877,7 @@ The policies domain is the **largest and most complex** domain in HOC, serving a
 
 | File | Old Docstring Reference | New Docstring Reference |
 |------|------------------------|------------------------|
-| `failure_mode_handler.py` | `app.services.governance.profile: get_governance_config` | `app.hoc.hoc_spine.authority.profile_policy_mode: get_governance_config` |
+| `failure_mode_handler.py` | `app.services.governance.profile: get_governance_config` | `app.hoc.cus.hoc_spine.authority.profile_policy_mode: get_governance_config` |
 
 Active import (line 97) was already correct. Only the docstring Imports section was stale.
 
@@ -917,3 +923,66 @@ Active import (line 97) was already correct. Only the docstring Imports section 
 **Legacy `app/services/limits/` (3 files):** `policy_limits_service.py`, `policy_rules_service.py`, and `app/services/policy_proposal.py` — import of `AuditLedgerServiceAsync` rewired from abolished `app.services.logs.audit_ledger_service_async` → `app.hoc.cus.logs.L6_drivers.audit_ledger_driver`. Transitional `services→hoc` dependencies with comments at import sites.
 
 **Legacy `app/api/policy_layer.py` and `app/services/governance/facade.py`:** Import of `get_policy_facade` rewired from non-existent `app.services.policy.facade` → `app.services.policy` (package-level `__init__` re-export). The file was renamed to `policy_driver.py` during consolidation.
+
+## PIN-508 DomainBridge Capabilities Integration (2026-02-01)
+
+### Phase 2: Cross-Domain Capability Protocols
+
+**New File (L5 Schemas):**
+- `domain_bridge_capabilities.py` — Defines capability protocols for cross-domain access via DomainBridge:
+  - `LessonsQueryCapability` — Capability for querying lessons from incidents domain
+  - `LimitsQueryCapability` — Capability for querying limits information
+  - `PolicyLimitsCapability` — Capability for policy limit operations
+
+### Phase 2A: Factory Pattern Enhancements
+
+**Modified File — `lessons_engine.py` (L5 Engines):**
+- Factory now accepts `driver` parameter for capability injection via DomainBridge
+- Enables cross-domain lessons learned queries from incidents domain
+
+### Phase 2B: Query Engine Capability Injection
+
+**Modified Files:**
+- `policies_limits_query_engine.py` — Factory now accepts `driver` parameter for capability injection
+- Enables cross-domain limits query operations via DomainBridge
+
+### Phase 2C: Constructor Parameter Updates
+
+**Modified File — `policy_limits_engine.py` (L5 Engines):**
+- Constructor now accepts `driver` parameter for capability injection
+- Supports DomainBridge-driven policy limit operations
+
+### Phase 5: Stub Engine Markings
+
+**Files marked as STUB_ENGINE (methods raise NotImplementedError):**
+- `cus_enforcement_engine.py` — Customer enforcement engine (PIN-508 Phase 5)
+- `limits_simulation_engine.py` — Pre-execution limit simulation (PIN-508 Phase 5)
+- `policies_facade.py` — HOC policies facade; 13 methods raise NotImplementedError (PIN-508 Phase 5)
+
+These files maintain backward compatibility while explicitly signaling incomplete implementation. Full HOC-native implementations pending DomainBridge integration completion.
+
+## PIN-509 Tooling Hardening (2026-02-01)
+
+- CI checks 16–18 added to `scripts/ci/check_init_hygiene.py`:
+  - Check 16: Frozen import ban (no imports from `_frozen/` paths)
+  - Check 17: L5 Session symbol import ban (type erasure enforcement)
+  - Check 18: Protocol surface baseline (capability creep prevention, max 12 methods)
+- New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
+- `app/services/__init__.py` now emits DeprecationWarning
+- Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+## PIN-510 Phase 1B — Lazy Fallback Assertion Guards (2026-02-01)
+
+Two policies L5 engines now have assertion-guarded legacy fallbacks:
+
+| Engine | Factory/Constructor | Guard |
+|--------|-------------------|-------|
+| `policies_limits_query_engine.py` | `get_limits_query_engine()` | `HOC_REQUIRE_L4_INJECTION` env flag |
+| `policy_limits_engine.py` | `PolicyLimitsEngine.__init__()` | `HOC_REQUIRE_L4_INJECTION` env flag |
+
+**Behavior:**
+- `HOC_REQUIRE_L4_INJECTION` unset: fallback works, logs warning
+- `HOC_REQUIRE_L4_INJECTION=1`: raises RuntimeError (enforced in CI/prod)
+- After all callers migrate: remove fallback code entirely
+
+Reference: `docs/memory-pins/PIN-510-domain-remediation-queue.md`

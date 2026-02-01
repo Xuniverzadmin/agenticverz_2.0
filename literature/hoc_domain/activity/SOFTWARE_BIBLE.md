@@ -188,10 +188,41 @@ _30 thin delegation functions._
 
 | Script | Change | Reference |
 |--------|--------|-----------|
-| `L6_drivers/__init__.py` | Removed all controls domain re-exports (`ThresholdDriver`, `ThresholdDriverSync`, signal functions). Only exports `LimitSnapshot` from `hoc_spine.schemas.threshold_types`. | PIN-504 Phases 1, 3 |
+| `L6_drivers/__init__.py` | Removed all controls domain re-exports (`ThresholdDriver`, `ThresholdDriverSync`, signal functions). Only exports `LimitSnapshot` from `hoc.cus.hoc_spine.schemas.threshold_types`. | PIN-504 Phases 1, 3 |
 
 ## PIN-507 Law 5 Remediation (2026-02-01)
 
 | Script | Change | Reference |
 |--------|--------|-----------|
 | L4 `activity_handler.py` | `ActivityQueryHandler`: Replaced `getattr()` dispatch with explicit map (16 methods). `ActivityTelemetryHandler`: Replaced `getattr()` dispatch with explicit map (4 methods). Zero reflection in dispatch paths. | PIN-507 Law 5 |
+
+## PIN-508 Stub Classification (2026-02-01)
+
+| Script | Change | Reference |
+|--------|--------|-----------|
+| `cus_telemetry_engine` | STUB_ENGINE marker added (Phase 5). Legacy bridge to app.services implementation with stub dataclasses (`IngestResult`, `BatchIngestResult`) returning `NotImplementedError`. Scheduled for ideal contractor analysis. | PIN-508 Phase 5 |
+
+## PIN-509 Tooling Hardening (2026-02-01)
+
+- CI checks 16–18 added to `scripts/ci/check_init_hygiene.py`:
+  - Check 16: Frozen import ban (no imports from `_frozen/` paths)
+  - Check 17: L5 Session symbol import ban (type erasure enforcement)
+  - Check 18: Protocol surface baseline (capability creep prevention, max 12 methods)
+- New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
+- `app/services/__init__.py` now emits DeprecationWarning
+- Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+## PIN-513 Phase C — Activity Domain Changes (2026-02-01)
+
+- orphan_recovery_driver.py (L6): Now canonical source for `recover_orphaned_runs`. 2 callers rewired from `app.services.orphan_recovery` to HOC path (app/main.py, hoc/api/int/agent/main.py).
+
+## PIN-513 Phase 9 — Batch 1A Wiring (2026-02-01)
+
+**Root cause:** L6 driver violated "no implicit execution" — created own sessions, scheduled itself.
+
+- Created `hoc_spine/orchestrator/handlers/orphan_recovery_handler.py` (L4 handler)
+- Stripped `recover_orphaned_runs()` and `get_crash_recovery_summary()` from L6 driver (moved to L4)
+- L6 now contains only pure data primitives: `detect_orphaned_runs(session, threshold)`, `mark_run_as_crashed(session, run, reason)`
+- Rewired `main.py:584` from direct L6 import to `OrphanRecoveryHandler().execute()`
+- L4 owns session lifecycle, commit boundary, and scheduling authority
+- All 4 CSV entries reclassified: 3 WIRED, 1 REMOVED

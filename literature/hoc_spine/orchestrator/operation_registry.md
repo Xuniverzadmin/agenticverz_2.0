@@ -1,6 +1,6 @@
 # operation_registry.py
 
-**Path:** `backend/app/hoc/hoc_spine/orchestrator/operation_registry.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/orchestrator/operation_registry.py`  
 **Layer:** L4 — HOC Spine (Orchestrator)  
 **Component:** Orchestrator
 
@@ -13,7 +13,7 @@ File:            operation_registry.py
 Lives in:        orchestrator/
 Role:            Orchestrator
 Inbound:         L2 APIs (hoc/api/cus/{domain}/*.py)
-Outbound:        app.hoc.hoc_spine.services.time, app.hoc.hoc_spine.authority.runtime_switch
+Outbound:        app.hoc.cus.hoc_spine.services.time, app.hoc.cus.hoc_spine.authority.runtime_switch
 Transaction:     OWNS COMMIT
 Cross-domain:    none
 Purpose:         Operation Registry (L4 Orchestrator)
@@ -43,7 +43,7 @@ What the registry does NOT do:
 
 Usage:
     # L2 API file (e.g., hoc/api/cus/overview/overview.py)
-    from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
         get_operation_registry,
         OperationContext,
     )
@@ -60,7 +60,7 @@ Usage:
 
 Handler registration:
     # In hoc_spine/orchestrator/handlers/{domain}_handler.py
-    from app.hoc.hoc_spine.orchestrator.operation_registry import (
+    from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
         OperationHandler,
         OperationContext,
         OperationResult,
@@ -80,8 +80,8 @@ Handler registration:
 ## Import Analysis
 
 **Spine-internal:**
-- `app.hoc.hoc_spine.services.time`
-- `app.hoc.hoc_spine.authority.runtime_switch`
+- `app.hoc.cus.hoc_spine.services.time`
+- `app.hoc.cus.hoc_spine.authority.runtime_switch`
 
 **External:**
 - `sqlalchemy.ext.asyncio`
@@ -232,7 +232,7 @@ boundary:
     - "hoc_spine.adapters.*"
   forbidden_inbound:
   actual_imports:
-    spine_internal: ['app.hoc.hoc_spine.services.time', 'app.hoc.hoc_spine.authority.runtime_switch']
+    spine_internal: ['app.hoc.cus.hoc_spine.services.time', 'app.hoc.cus.hoc_spine.authority.runtime_switch']
     l7_model: []
     external: ['sqlalchemy.ext.asyncio']
   violations: []

@@ -36,7 +36,7 @@ from app.policy import (
     ViolationType,
 )
 # L4 operation registry dispatch (migrated from L5 per HOC Topology V2.0.0)
-from app.hoc.hoc_spine.orchestrator.operation_registry import (
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
 )

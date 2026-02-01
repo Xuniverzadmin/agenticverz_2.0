@@ -81,7 +81,7 @@ def validate_spine_components() -> SpineValidationResult:
     # Check 1: EventReactor (GAP-046)
     try:
         from app.events.reactor_initializer import get_reactor_status
-        from app.services.governance.profile import get_governance_config
+        from app.hoc.cus.hoc_spine.authority.profile_policy_mode import get_governance_config
 
         config = get_governance_config()
 
@@ -94,7 +94,7 @@ def validate_spine_components() -> SpineValidationResult:
 
     # Check 2: Governance config valid
     try:
-        from app.services.governance.profile import validate_governance_config, get_governance_config
+        from app.hoc.cus.hoc_spine.authority.profile_policy_mode import validate_governance_config, get_governance_config
 
         config = get_governance_config()
         config_warnings = validate_governance_config(config)

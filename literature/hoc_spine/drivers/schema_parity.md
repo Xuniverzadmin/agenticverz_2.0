@@ -1,6 +1,6 @@
 # schema_parity.py
 
-**Path:** `backend/app/hoc/hoc_spine/drivers/schema_parity.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/drivers/schema_parity.py`  
 **Layer:** L4 — HOC Spine (Driver)  
 **Component:** Drivers
 

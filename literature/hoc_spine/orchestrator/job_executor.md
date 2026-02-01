@@ -1,6 +1,6 @@
 # job_executor.py
 
-**Path:** `backend/app/hoc/hoc_spine/orchestrator/execution/job_executor.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/orchestrator/execution/job_executor.py`  
 **Layer:** L4 — HOC Spine (Orchestrator)  
 **Component:** Orchestrator
 

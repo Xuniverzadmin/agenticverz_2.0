@@ -133,7 +133,11 @@ None identified.
 - **Factory:** `get_skill_coefficients()`
 
 ### cost_snapshots_engine.py *(renamed from cost_snapshots.py)*
-- **Role:** Cost snapshots — **HYBRID L5/L6 (pending refactor)**
+- **Layer:** L5 — Domain Engine
+- **Role:** Cost snapshot business logic (database operations extracted to L6)
+- **Classes:** `SnapshotAnomalyDetector`, `SnapshotComputer`, `BaselineComputer`
+- **Dependencies:** Accepts `CostSnapshotsDriverProtocol` via constructor injection
+- **Reference:** PIN-508 Phase 1A
 
 ### cost_write_engine.py
 - **Role:** Cost write operations (L5 facade over L6 driver)
@@ -200,6 +204,12 @@ None identified.
 - **Role:** Cost anomaly detection DB operations
 - **Classes:** `CostAnomalyDriver`
 
+### cost_snapshots_driver.py *(NEW — PIN-508 Phase 1A)*
+- **Layer:** L6 — Domain Driver
+- **Role:** Database operations for cost snapshots (extracted from cost_snapshots_engine.py)
+- **Classes:** `CostSnapshotsDriver`
+- **Reference:** PIN-508 Phase 1A
+
 ### cost_write_driver.py
 - **Role:** Cost write DB operations
 - **Classes:** `CostWriteDriver`
@@ -243,7 +253,7 @@ None identified.
 
 ## L4 Handler
 
-**File:** `hoc/hoc_spine/orchestrator/handlers/analytics_handler.py`
+**File:** `hoc/cus/hoc_spine/orchestrator/handlers/analytics_handler.py`
 **Operations:** 2
 
 | Operation | Handler Class | Target |
@@ -284,3 +294,27 @@ No L4 handler import updates required — handler imports `analytics_facade` and
 ## PIN-507 Law 5 Remediation (2026-02-01)
 
 **L4 Handler Update:** All `getattr()`-based reflection dispatch in this domain's L4 handler replaced with explicit `dispatch = {}` maps. All `asyncio.iscoroutinefunction()` eliminated via explicit sync/async split. Zero `__import__()` calls remain. See PIN-507 for full audit trail.
+
+## PIN-510 Phase 1C — Analytics→Incidents L4 Coordinator (2026-02-01)
+
+- `CostAnomalyFact` moved from `incidents/L5_engines/anomaly_bridge.py` to `hoc_spine/schemas/anomaly_types.py` (schema admission compliant: consumers = analytics, incidents)
+- New L4 coordinator: `hoc_spine/orchestrator/coordinators/anomaly_incident_coordinator.py`
+- Stale `L3_adapters` import paths in `cost_anomaly_detector_engine.py` fixed to canonical paths
+- Backward-compat re-export left in `anomaly_bridge.py`
+- Reference: `docs/memory-pins/PIN-510-domain-remediation-queue.md`
+
+## PIN-509 Tooling Hardening (2026-02-01)
+
+- CI checks 16–18 added to `scripts/ci/check_init_hygiene.py`:
+  - Check 16: Frozen import ban (no imports from `_frozen/` paths)
+  - Check 17: L5 Session symbol import ban (type erasure enforcement)
+  - Check 18: Protocol surface baseline (capability creep prevention, max 12 methods)
+- New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
+- `app/services/__init__.py` now emits DeprecationWarning
+- Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+## PIN-513 Phase 7 — Reverse Boundary Severing (HOC→services) (2026-02-01)
+
+**`cost_write_engine.py` (L5):** Now the canonical import source for `CostWriteService` in `api/cus/logs/cost_intelligence.py`. Previous legacy path `app.services.cost_write_service` severed. Alias `CostWriteService = CostWriteEngine` provides backward compat.
+
+**`cost_anomaly_detector_engine.py` (L5):** Now the canonical import source for `run_anomaly_detection` in `api/cus/logs/cost_intelligence.py`. Previous legacy path `app.services.cost_anomaly_detector` severed. Identical `run_anomaly_detection(session, tenant_id)` signature.

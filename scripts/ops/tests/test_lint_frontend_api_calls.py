@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: manual
+#   Execution: sync
+# Role: Regression tests for lint_frontend_api_calls.py
+# artifact_class: CODE
 """
 Regression tests for lint_frontend_api_calls.py
 

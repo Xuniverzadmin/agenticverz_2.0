@@ -131,6 +131,7 @@ Controls domain handles customer-facing control configurations:
 
 ### threshold_engine.py
 - **Role:** Threshold evaluation and signal emission
+- **Status:** Tombstone re-exports removed (PIN-508 Phase 4A)
 - **Callers:** L4 controls_handler (controls.thresholds)
 
 ---
@@ -200,7 +201,7 @@ Controls domain handles customer-facing control configurations:
 
 ## L4 Handler
 
-**File:** `hoc/hoc_spine/orchestrator/handlers/controls_handler.py`
+**File:** `hoc/cus/hoc_spine/orchestrator/handlers/controls_handler.py`
 **Operations:** 2
 
 | Operation | Handler Class | Target |
@@ -218,7 +219,7 @@ No L4 handler import updates required — handler imports `controls_facade` and 
 
 | File | Old Import | New Import |
 |------|-----------|------------|
-| `adapters/customer_killswitch_adapter.py` | `app.hoc.cus.general.L5_controls.engines.guard_write_engine.GuardWriteService` | `app.hoc.hoc_spine.authority.guard_write_engine.GuardWriteService` |
+| `adapters/customer_killswitch_adapter.py` | `app.hoc.cus.general.L5_controls.engines.guard_write_engine.GuardWriteService` | `app.hoc.cus.hoc_spine.authority.guard_write_engine.GuardWriteService` |
 
 `cus/general/` was abolished per PIN-485. `GuardWriteService` migrated to `hoc_spine/authority/`.
 
@@ -268,3 +269,30 @@ Other domains importing from controls:
 ## PIN-507 Law 4 Remediation (2026-02-01)
 
 `emit_and_persist_threshold_signal` deleted from `threshold_driver.py` — cross-domain orchestration (controls→activity) moved to L4 `signal_coordinator.py`. Activity domain import (`run_signal_driver`) removed from this L6 driver. `emit_threshold_signal_sync` retained (pure L6 single-domain DB write). CI guard added to `check_init_hygiene.py` to prevent future L6 cross-domain imports.
+
+## PIN-508 Tombstone Cleanup (2026-02-01)
+
+### Tombstone Re-exports Removed (Phase 4A)
+
+| File | Symbols Removed | Reason |
+|------|-----------------|--------|
+| `L5_engines/threshold_engine.py` | `ThresholdSignal` (tombstone re-export), `ThresholdEvaluationResult` (tombstone re-export) | Canonical home moved to `controls/L5_schemas/threshold_signals.py` (PIN-507 Law 1). Tombstone re-exports deleted — L6 drivers now import directly from schemas layer. No external callers remain. |
+
+**Verification:** Grep `threshold_engine` in all controls files — no active imports of tombstones remain. All `threshold_driver.py` imports changed to `threshold_signals.py` during PIN-507 remediation.
+
+## PIN-510 Phase 1D — Killswitch Driver Import Fix (2026-02-01)
+
+- `customer_killswitch_read_engine.py` import fixed from stale `policies.controls.drivers` path to canonical `controls.L6_drivers.killswitch_read_driver`
+- `policies/L5_controls/drivers/__init__.py` re-export also fixed to canonical path
+- Driver already resided at `controls/L6_drivers/killswitch_read_driver.py` — no file move needed
+- Reference: `docs/memory-pins/PIN-510-domain-remediation-queue.md`
+
+## PIN-509 Tooling Hardening (2026-02-01)
+
+- CI checks 16–18 added to `scripts/ci/check_init_hygiene.py`:
+  - Check 16: Frozen import ban (no imports from `_frozen/` paths)
+  - Check 17: L5 Session symbol import ban (type erasure enforcement)
+  - Check 18: Protocol surface baseline (capability creep prevention, max 12 methods)
+- New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
+- `app/services/__init__.py` now emits DeprecationWarning
+- Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`

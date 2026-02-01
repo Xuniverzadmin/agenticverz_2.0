@@ -1,6 +1,6 @@
 # guard_write_driver.py
 
-**Path:** `backend/app/hoc/hoc_spine/drivers/guard_write_driver.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/drivers/guard_write_driver.py`  
 **Layer:** L4 — HOC Spine (Driver)  
 **Component:** Drivers
 
@@ -13,7 +13,7 @@ File:            guard_write_driver.py
 Lives in:        drivers/
 Role:            Drivers
 Inbound:         guard engines (L5)
-Outbound:        app.hoc.hoc_spine.services.time
+Outbound:        app.hoc.cus.hoc_spine.services.time
 Transaction:     Forbidden
 Cross-domain:    none
 Purpose:         Guard Write Driver (L6)
@@ -40,7 +40,7 @@ Reference: PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
 ## Import Analysis
 
 **Spine-internal:**
-- `app.hoc.hoc_spine.services.time`
+- `app.hoc.cus.hoc_spine.services.time`
 
 **L7 Models:**
 - `app.models.killswitch`
@@ -115,7 +115,7 @@ boundary:
     - "hoc.cus.*"
     - "hoc.api.*"
   actual_imports:
-    spine_internal: ['app.hoc.hoc_spine.services.time']
+    spine_internal: ['app.hoc.cus.hoc_spine.services.time']
     l7_model: ['app.models.killswitch']
     external: ['sqlalchemy', 'sqlmodel']
   violations: []

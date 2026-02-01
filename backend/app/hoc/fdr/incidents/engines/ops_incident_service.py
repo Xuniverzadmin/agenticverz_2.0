@@ -37,7 +37,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Protocol
 
-from app.services.ops_domain_models import (
+from app.hoc.fdr.ops.schemas.ops_domain_models import (
     OpsIncident,
     OpsIncidentCategory,
     OpsSeverity,

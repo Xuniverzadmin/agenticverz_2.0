@@ -55,7 +55,7 @@ from app.db import CostBudget, get_async_session
 
 # Evidence Architecture v1.0: ExecutionContext and taxonomy evidence
 from app.core.execution_context import ExecutionContext, EvidenceSource
-from app.evidence.capture import capture_environment_evidence
+from app.hoc.cus.logs.L6_drivers.capture_driver import capture_environment_evidence
 from app.models.tenant import WorkerRun
 from app.policy.engine import PolicyEngine
 from app.schemas.response import wrap_dict

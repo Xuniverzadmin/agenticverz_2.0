@@ -1,6 +1,6 @@
 # alerts_facade.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/alerts_facade.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/alerts_facade.py`  
 **Layer:** L4 — HOC Spine (Facade)  
 **Component:** Services
 

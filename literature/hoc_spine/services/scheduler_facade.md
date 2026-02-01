@@ -1,6 +1,6 @@
 # scheduler_facade.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/scheduler_facade.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/scheduler_facade.py`  
 **Layer:** L4 — HOC Spine (Facade)  
 **Component:** Services
 
@@ -47,7 +47,7 @@ L2 API Routes (GAP-112):
 
 Usage:
     # L5 engine import (V2.0.0 - hoc_spine)
-    from app.hoc.hoc_spine.services.scheduler_facade import get_scheduler_facade
+    from app.hoc.cus.hoc_spine.services.scheduler_facade import get_scheduler_facade
 
     facade = get_scheduler_facade()
 

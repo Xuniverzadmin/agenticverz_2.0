@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Layer: L8 — Operational Script
+# AUDIENCE: INTERNAL
+# Product: system-wide
+# Temporal:
+#   Trigger: CI
+#   Execution: sync
+# Role: GUARDRAIL: CAP-001 - Capability Must Match Endpoint
+# artifact_class: CODE
 """
 GUARDRAIL: CAP-001 - Capability Must Match Endpoint
 Rule: Every declared capability MUST have an implemented endpoint.

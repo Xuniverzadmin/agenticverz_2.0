@@ -1,6 +1,6 @@
 # runtime_switch.py
 
-**Path:** `backend/app/hoc/hoc_spine/authority/runtime_switch.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/authority/runtime_switch.py`  
 **Layer:** L4 — HOC Spine (Authority)  
 **Component:** Authority
 
@@ -13,7 +13,7 @@ File:            runtime_switch.py
 Lives in:        authority/
 Role:            Authority
 Inbound:         ops_api.py, failure_mode_handler.py, health.py
-Outbound:        app.hoc.hoc_spine.services.time
+Outbound:        app.hoc.cus.hoc_spine.services.time
 Transaction:     Forbidden
 Cross-domain:    none
 Purpose:         Module: runtime_switch
@@ -58,7 +58,7 @@ Acceptance Criteria:
 ## Import Analysis
 
 **Spine-internal:**
-- `app.hoc.hoc_spine.services.time`
+- `app.hoc.cus.hoc_spine.services.time`
 
 **External:**
 - `app.events.subscribers`
@@ -207,7 +207,7 @@ boundary:
     - "hoc.cus.*"
     - "hoc.api.*"
   actual_imports:
-    spine_internal: ['app.hoc.hoc_spine.services.time']
+    spine_internal: ['app.hoc.cus.hoc_spine.services.time']
     l7_model: []
     external: ['app.events.subscribers']
   violations: []

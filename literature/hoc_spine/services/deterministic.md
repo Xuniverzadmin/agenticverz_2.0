@@ -1,6 +1,6 @@
 # deterministic.py
 
-**Path:** `backend/app/hoc/hoc_spine/services/deterministic.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/services/deterministic.py`  
 **Layer:** L4 — HOC Spine (Service)  
 **Component:** Services
 

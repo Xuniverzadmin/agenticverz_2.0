@@ -1,6 +1,6 @@
 # profile_policy_mode.py
 
-**Path:** `backend/app/hoc/hoc_spine/authority/profile_policy_mode.py`  
+**Path:** `backend/app/hoc/cus/hoc_spine/authority/profile_policy_mode.py`  
 **Layer:** L4 — HOC Spine (Authority)  
 **Component:** Authority
 
@@ -32,7 +32,7 @@ well-defined governance profiles:
 - OBSERVE_ONLY: Audit and observe without enforcement (safe rollout)
 
 Usage:
-    from app.hoc.hoc_spine.authority.profile_policy_mode import (
+    from app.hoc.cus.hoc_spine.authority.profile_policy_mode import (
         get_governance_profile,
         validate_governance_config,
         GovernanceProfile,

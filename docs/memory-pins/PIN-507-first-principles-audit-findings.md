@@ -365,7 +365,7 @@ Known Law 0 risk: eager domain-wide imports mask downstream failures. Deferred r
 
 ### Known Remaining Issue (Out of Scope)
 
-`app/hoc/hoc_spine/authority/contracts/contract_engine.py:352` — `ValidatorVerdict` undefined at class-definition time. Pre-existing bug with TODO comment. Detected by sentinel test (xfailed). Requires injecting `ValidatorVerdict` from CRM validator engine via orchestrator context.
+`app/hoc/cus/hoc_spine/authority/contracts/contract_engine.py:352` — `ValidatorVerdict` undefined at class-definition time. Pre-existing bug with TODO comment. Detected by sentinel test (xfailed). Requires injecting `ValidatorVerdict` from CRM validator engine via orchestrator context.
 
 ---
 
@@ -426,7 +426,7 @@ This rule is enforced mechanically by `check_init_hygiene.py`'s `ABOLISHED_PATHS
 
 `audit_coordinator.py` was unused — all L4 handlers already create audit services directly (`AuditLedgerService(ctx.session)` in `incidents_handler.py:129`, `AuditLedgerServiceAsync(ctx.session)` in `policies_handler.py:278`). Grep confirmed zero handler imports of `audit_coordinator`, `get_audit_coordinator`, or `AuditCoordinator`.
 
-- **Deleted:** `app/hoc/hoc_spine/orchestrator/coordinators/audit_coordinator.py`
+- **Deleted:** `app/hoc/cus/hoc_spine/orchestrator/coordinators/audit_coordinator.py`
 - **Tombstone:** Added to `coordinators/__init__.py` — prevents silent re-introduction
 
 ### Part 2 — Refactor `signal_coordinator.py` to context-free callables
@@ -496,7 +496,7 @@ New architectural category for cross-domain pure decision functions. Boundary co
 - MUST NOT import from L5_engines, L6_drivers, or app.db
 - MAY import from hoc_spine/schemas, L5_schemas, stdlib
 
-**Created:** `app/hoc/hoc_spine/utilities/__init__.py`
+**Created:** `app/hoc/cus/hoc_spine/utilities/__init__.py`
 
 ### Part 2 — Extract ThresholdSignal to L5_schemas (Law 1)
 

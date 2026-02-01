@@ -72,7 +72,7 @@ Governance Facade (L4 Domain Logic)
 | Category | Imports |
 |----------|---------|
 | L5 Engine | `app.hoc.cus.policies.L5_engines.policy_driver` |
-| External | `app.hoc.hoc_spine.authority.runtime_switch` |
+| External | `app.hoc.cus.hoc_spine.authority.runtime_switch` |
 
 ## Callers
 
