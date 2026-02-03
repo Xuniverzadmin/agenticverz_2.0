@@ -47,7 +47,20 @@ Policy Graph Driver (L6 Data Access)
 
 ## Callers
 
-policy_graph_engine.py (L5 engine)
+| Caller | Pattern |
+|--------|---------|
+| `policies_facade.py` (L5) | Creates driver, passes to engine |
+| `policy_graph_engine.py` (L5) | Receives driver as parameter |
+
+## Wiring Pattern
+
+```python
+# In facade (L5):
+from app.hoc.cus.policies.L6_drivers.policy_graph_driver import get_policy_graph_driver
+
+driver = get_policy_graph_driver(session)
+result = await engine.detect_conflicts(driver=driver, ...)
+```
 
 ## Export Contract
 

@@ -795,3 +795,30 @@ def get_conflict_engine(tenant_id: str) -> PolicyConflictEngine:
 def get_dependency_engine(tenant_id: str) -> PolicyDependencyEngine:
     """Get a PolicyDependencyEngine instance for a tenant."""
     return PolicyDependencyEngine(tenant_id)
+
+
+# =============================================================================
+# Public API
+# =============================================================================
+
+__all__ = [
+    # Enums
+    "ConflictType",
+    "ConflictSeverity",
+    "DependencyType",
+    # Data Classes
+    "PolicyConflict",
+    "PolicyDependency",
+    "PolicyNode",
+    "DependencyGraphResult",
+    "ConflictDetectionResult",
+    # Engines
+    "PolicyConflictEngine",
+    "PolicyDependencyEngine",
+    # Factory Functions
+    "get_conflict_engine",
+    "get_dependency_engine",
+    # Re-exported from L6 for convenience
+    "PolicyGraphDriver",
+    "get_policy_graph_driver",
+]

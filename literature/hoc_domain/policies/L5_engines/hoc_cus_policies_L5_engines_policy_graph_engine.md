@@ -93,9 +93,27 @@ Policy Graph Engine — Conflict Detection & Dependency Analysis
 | L6 Driver | `app.hoc.cus.policies.L6_drivers.policy_graph_driver` |
 | External | `__future__` |
 
+## Driver Dependency Pattern
+
+This engine uses **dependency injection** for L6 driver access:
+
+```python
+# Engine receives driver as parameter (not session)
+async def detect_conflicts(self, driver: PolicyGraphDriver, ...) -> ConflictDetectionResult
+async def compute_dependency_graph(self, driver: PolicyGraphDriver, ...) -> DependencyGraphResult
+```
+
+**Callers must:**
+1. Import `get_policy_graph_driver` from L6
+2. Create driver: `driver = get_policy_graph_driver(session)`
+3. Pass driver to engine methods
+
+**L5 Engine Contract:** Engines never import or create sessions. They receive drivers from callers.
+
 ## Callers
 
-policies.py, policy_layer.py
+- `policies_facade.py` (L5) — creates driver, passes to engine
+- `policy_layer.py` (deprecated)
 
 ## Export Contract
 

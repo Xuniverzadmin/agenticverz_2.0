@@ -914,8 +914,12 @@ class PoliciesFacade:
             ConflictSeverity,
             get_conflict_engine,
         )
+        from app.hoc.cus.policies.L6_drivers.policy_graph_driver import (
+            get_policy_graph_driver,
+        )
 
         engine = get_conflict_engine(tenant_id)
+        driver = get_policy_graph_driver(session)
 
         severity_filter = None
         if severity:
@@ -925,7 +929,7 @@ class PoliciesFacade:
                 pass
 
         result = await engine.detect_conflicts(
-            session=session,
+            driver=driver,
             policy_id=policy_id,
             severity_filter=severity_filter,
             include_resolved=include_resolved,
@@ -966,9 +970,13 @@ class PoliciesFacade:
     ) -> DependencyGraphResult:
         """Get policy dependency graph."""
         from app.hoc.cus.policies.L5_engines.policy_graph_engine import get_dependency_engine
+        from app.hoc.cus.policies.L6_drivers.policy_graph_driver import (
+            get_policy_graph_driver,
+        )
 
         engine = get_dependency_engine(tenant_id)
-        result = await engine.compute_dependency_graph(session, policy_id=policy_id)
+        driver = get_policy_graph_driver(session)
+        result = await engine.compute_dependency_graph(driver, policy_id=policy_id)
 
         nodes = [
             PolicyNodeResult(
