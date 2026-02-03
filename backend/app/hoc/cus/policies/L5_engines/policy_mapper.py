@@ -415,9 +415,9 @@ class MCPPolicyMapper:
 
     async def _check_rate_limit(
         self,
-        tenant_id: str,  # noqa: ARG002
-        tool_key: str,  # noqa: ARG002
-        max_per_minute: int,  # noqa: ARG002
+        tenant_id: str,
+        tool_key: str,
+        max_per_minute: int,
     ) -> bool:
         """Check if rate limit exceeded."""
         # TODO: Implement rate limiting with Redis

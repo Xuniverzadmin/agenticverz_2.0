@@ -42,6 +42,8 @@ from typing import Any, Dict, Union
 
 from .semantic_types import (
     FailureCode,
+    IntentFailureCode,
+    SemanticFailureCode,
     SemanticSeverity,
     ViolationClass,
 )
