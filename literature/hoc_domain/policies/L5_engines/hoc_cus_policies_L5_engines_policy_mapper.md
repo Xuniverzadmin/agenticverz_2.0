@@ -103,6 +103,13 @@ exports:
       methods: [check_tool_invocation, register_tool_policy]
 ```
 
+## PIN-520 Dead Code Rewiring Updates
+
+- **Change Date:** 2026-02-03
+- **Change Type:** Documentation — Dead Code Rewiring
+- **Details:** Wired `tool_key` and `max_per_minute` parameters during PIN-520 phase 3 dead code rewiring
+- **Impact:** No code changes; enhanced documentation of existing parameters
+
 ## Evaluation Notes
 
 - **Disposition:** KEEP / MODIFY / QUARANTINE / DEPRECATED

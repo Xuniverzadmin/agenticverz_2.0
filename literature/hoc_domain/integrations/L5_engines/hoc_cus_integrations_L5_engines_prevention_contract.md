@@ -94,6 +94,13 @@ exports:
       methods: []
 ```
 
+## PIN-520 Dead Code Rewiring Updates
+
+- **Change Date:** 2026-02-03
+- **Change Type:** Documentation — Dead Code Rewiring
+- **Details:** Wired `existing_record` parameter during PIN-520 phase 3 dead code rewiring
+- **Impact:** No code changes; enhanced documentation of existing parameter
+
 ## Evaluation Notes
 
 - **Disposition:** KEEP / MODIFY / QUARANTINE / DEPRECATED

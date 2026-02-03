@@ -64,6 +64,13 @@ exports:
       methods: [get_attention_queue, compute_attention_score]
 ```
 
+## PIN-520 Dead Code Rewiring Updates
+
+- **Change Date:** 2026-02-03
+- **Change Type:** Documentation — Dead Code Rewiring
+- **Details:** Documented `min_score` parameter wiring during PIN-520 phase 3 dead code rewiring
+- **Impact:** No code changes; enhanced documentation of existing parameter
+
 ## Evaluation Notes
 
 - **Disposition:** KEEP / MODIFY / QUARANTINE / DEPRECATED
