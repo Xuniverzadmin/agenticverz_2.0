@@ -38,7 +38,7 @@ from .panel_response_assembler import PanelResponseAssembler, create_response_as
 from .panel_signal_collector import PanelSignalCollector, create_signal_collector
 from .panel_slot_evaluator import PanelSlotEvaluator
 from .panel_spec_loader import PanelSpecLoader, get_panel_spec_loader
-from .panel_types import PanelSlotResult, SlotState, VerificationSignals
+from .panel_types import PanelSlotResult, SlotState
 from .panel_verification_engine import PanelVerificationEngine
 
 logger = logging.getLogger("nova.panel_adapter.engine")

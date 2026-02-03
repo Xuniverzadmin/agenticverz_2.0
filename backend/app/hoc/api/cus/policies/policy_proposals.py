@@ -355,7 +355,7 @@ class ApprovalResponse(BaseModel):
 
 @router.post("/{proposal_id}/approve", response_model=ApprovalResponse)
 async def approve_proposal(
-    http_request: Request,
+    _http_request: Request,
     proposal_id: str,
     request: ApproveRejectRequest,
     role: TenantRole = Depends(require_role(TenantRole.MEMBER, TenantRole.ADMIN, TenantRole.OWNER)),
@@ -410,7 +410,7 @@ async def approve_proposal(
 
 @router.post("/{proposal_id}/reject", response_model=ApprovalResponse)
 async def reject_proposal(
-    http_request: Request,
+    _http_request: Request,
     proposal_id: str,
     request: ApproveRejectRequest,
     role: TenantRole = Depends(require_role(TenantRole.MEMBER, TenantRole.ADMIN, TenantRole.OWNER)),
