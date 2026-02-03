@@ -24,8 +24,23 @@ L6 Driver exports for the integrations domain.
 """
 
 from .bridges_driver import record_policy_activation
+from .mcp_driver import (
+    McpDriver,
+    McpInvocationRow,
+    McpServerRow,
+    McpToolRow,
+    compute_input_hash,
+    compute_output_hash,
+)
 
 __all__ = [
     # bridges_driver
     "record_policy_activation",
+    # mcp_driver (PIN-516)
+    "McpDriver",
+    "McpServerRow",
+    "McpToolRow",
+    "McpInvocationRow",
+    "compute_input_hash",
+    "compute_output_hash",
 ]

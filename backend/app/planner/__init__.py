@@ -31,7 +31,7 @@ def get_stub_planner():
     """Get StubPlanner class (lazy import)."""
     global _StubPlanner
     if _StubPlanner is None:
-        from .stub_planner import StubPlanner
+        from app.hoc.int.platform.drivers.stub_planner import StubPlanner
 
         _StubPlanner = StubPlanner
     return _StubPlanner
@@ -41,7 +41,7 @@ def get_legacy_stub_planner():
     """Get LegacyStubPlanner class (lazy import)."""
     global _LegacyStubPlanner
     if _LegacyStubPlanner is None:
-        from .stub_planner import LegacyStubPlanner
+        from app.hoc.int.platform.drivers.stub_planner import LegacyStubPlanner
 
         _LegacyStubPlanner = LegacyStubPlanner
     return _LegacyStubPlanner

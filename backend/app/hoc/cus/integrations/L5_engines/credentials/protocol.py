@@ -33,7 +33,7 @@ History:
 
 from typing import Protocol, runtime_checkable
 
-from .types import Credential
+from app.hoc.cus.integrations.L5_engines.types import Credential
 
 
 @runtime_checkable

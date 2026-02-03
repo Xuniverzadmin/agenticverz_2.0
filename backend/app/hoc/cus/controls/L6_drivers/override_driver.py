@@ -18,32 +18,27 @@
 # Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
 # Reference: PIN-470, PIN-LIM-05
-# NOTE: Moved override_service.py → drivers/override_driver.py (2026-01-24)
-#       Reclassified L4→L6 - has runtime AsyncSession import - BANNED_NAMING fix
 
 """
-Limit Override Service (PIN-LIM-05)
+Limit Override Driver (PIN-LIM-05)
 
-Lifecycle of temporary limit overrides.
+L6 driver for limit_overrides table. All persistence logic
+for temporary limit overrides lives here.
 
-Responsibilities:
-- Create override requests
-- Handle approval workflow
-- Expiry handling
-- Attach justification & requester
-- Emit signals to runtime evaluator
-- Audit events
+L6 contract:
+- Receives AsyncSession from caller (L5 or L4 coordinator)
+- NEVER commits — caller owns transaction
+- Returns domain objects (LimitOverrideResponse) or raises typed errors
 """
 
-import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.policy_control_plane import Limit
+from app.models.policy_control_plane import Limit, LimitOverride
 from app.hoc.cus.hoc_spine.services.time import utc_now
 from app.hoc.cus.hoc_spine.drivers.cross_domain import generate_uuid
 from app.hoc.cus.controls.L5_schemas.overrides import (
@@ -51,7 +46,6 @@ from app.hoc.cus.controls.L5_schemas.overrides import (
     LimitOverrideResponse,
     OverrideStatus,
 )
-
 
 # Re-export error types from L5_schemas for backward compatibility (PIN-504)
 from app.hoc.cus.controls.L5_schemas.override_types import (
@@ -63,20 +57,20 @@ from app.hoc.cus.controls.L5_schemas.override_types import (
 )
 
 
-# Temporary in-memory storage until migration is created
-# TODO: Replace with database table after migration
-_OVERRIDE_STORE: dict[str, dict] = {}
-
-
 class LimitOverrideService:
     """
-    Service for limit override lifecycle.
+    Driver for limit override lifecycle.
 
     INVARIANTS:
     - One override per limit (no stacking)
     - Override cannot exceed plan quota cap
     - Max 5 active overrides per tenant
     - All overrides require justification
+
+    Transaction contract:
+    - All methods receive an AsyncSession
+    - No method calls session.commit()
+    - Caller (L4 coordinator) owns commit authority
     """
 
     MAX_ACTIVE_PER_TENANT = 5
@@ -110,24 +104,32 @@ class LimitOverrideService:
         # Validate limit exists
         limit = await self._get_limit(tenant_id, request.limit_id)
 
-        # Check stacking abuse
-        active_count = sum(
-            1 for o in _OVERRIDE_STORE.values()
-            if o["tenant_id"] == tenant_id and o["status"] == "ACTIVE"
+        # Check stacking abuse — count ACTIVE overrides for tenant
+        active_count_stmt = select(func.count()).select_from(LimitOverride).where(
+            and_(
+                LimitOverride.tenant_id == tenant_id,
+                LimitOverride.status == OverrideStatus.ACTIVE.value,
+            )
         )
+        active_count = (await self.session.execute(active_count_stmt)).scalar_one()
         if active_count >= self.MAX_ACTIVE_PER_TENANT:
             raise StackingAbuseError(
                 f"Maximum {self.MAX_ACTIVE_PER_TENANT} active overrides allowed per tenant"
             )
 
-        # Check for existing override on this limit
-        existing = next(
-            (o for o in _OVERRIDE_STORE.values()
-             if o["limit_id"] == request.limit_id
-             and o["tenant_id"] == tenant_id
-             and o["status"] in ("PENDING", "APPROVED", "ACTIVE")),
-            None
-        )
+        # Check for existing override on this limit (no stacking)
+        existing_stmt = select(LimitOverride.id).where(
+            and_(
+                LimitOverride.limit_id == request.limit_id,
+                LimitOverride.tenant_id == tenant_id,
+                LimitOverride.status.in_([
+                    OverrideStatus.PENDING.value,
+                    OverrideStatus.APPROVED.value,
+                    OverrideStatus.ACTIVE.value,
+                ]),
+            )
+        ).limit(1)
+        existing = (await self.session.execute(existing_stmt)).scalar_one_or_none()
         if existing:
             raise OverrideValidationError(
                 f"Override already exists for limit {request.limit_id}"
@@ -144,29 +146,29 @@ class LimitOverrideService:
         starts_at = now if request.start_immediately else request.scheduled_start
         expires_at = starts_at + timedelta(hours=request.duration_hours) if starts_at else None
 
-        # Create override record
-        override_id = generate_uuid()
-        override_data = {
-            "override_id": override_id,
-            "limit_id": request.limit_id,
-            "limit_name": limit.name,
-            "tenant_id": tenant_id,
-            "original_value": float(limit.max_value),
-            "override_value": float(request.override_value),
-            "effective_value": float(request.override_value),
-            "status": OverrideStatus.ACTIVE.value if request.start_immediately else OverrideStatus.PENDING.value,
-            "requested_at": now.isoformat(),
-            "approved_at": now.isoformat() if request.start_immediately else None,
-            "starts_at": starts_at.isoformat() if starts_at else None,
-            "expires_at": expires_at.isoformat() if expires_at else None,
-            "requested_by": requested_by,
-            "approved_by": requested_by if request.start_immediately else None,
-            "reason": request.reason,
-            "rejection_reason": None,
-        }
-        _OVERRIDE_STORE[override_id] = override_data
+        # Determine initial status
+        status = OverrideStatus.ACTIVE.value if request.start_immediately else OverrideStatus.PENDING.value
 
-        return self._to_response(override_data)
+        # Create override record
+        override = LimitOverride(
+            id=generate_uuid(),
+            tenant_id=tenant_id,
+            limit_id=request.limit_id,
+            original_value=limit.max_value,
+            override_value=request.override_value,
+            status=status,
+            requested_at=now,
+            approved_at=now if request.start_immediately else None,
+            starts_at=starts_at,
+            expires_at=expires_at,
+            requested_by=requested_by,
+            approved_by=requested_by if request.start_immediately else None,
+            reason=request.reason,
+        )
+        self.session.add(override)
+        await self.session.flush()
+
+        return self._to_response(override, limit.name)
 
     async def get_override(
         self,
@@ -174,10 +176,21 @@ class LimitOverrideService:
         override_id: str,
     ) -> LimitOverrideResponse:
         """Get an override by ID."""
-        override_data = _OVERRIDE_STORE.get(override_id)
-        if not override_data or override_data["tenant_id"] != tenant_id:
+        stmt = (
+            select(LimitOverride, Limit.name)
+            .join(Limit, LimitOverride.limit_id == Limit.id)
+            .where(
+                and_(
+                    LimitOverride.id == override_id,
+                    LimitOverride.tenant_id == tenant_id,
+                )
+            )
+        )
+        row = (await self.session.execute(stmt)).one_or_none()
+        if not row:
             raise OverrideNotFoundError(f"Override {override_id} not found")
-        return self._to_response(override_data)
+        override, limit_name = row
+        return self._to_response(override, limit_name)
 
     async def list_overrides(
         self,
@@ -187,13 +200,25 @@ class LimitOverrideService:
         offset: int = 0,
     ) -> tuple[list[LimitOverrideResponse], int]:
         """List overrides for a tenant."""
-        overrides = [
-            o for o in _OVERRIDE_STORE.values()
-            if o["tenant_id"] == tenant_id
-            and (status is None or o["status"] == status)
-        ]
-        total = len(overrides)
-        items = [self._to_response(o) for o in overrides[offset:offset + limit]]
+        base_where = [LimitOverride.tenant_id == tenant_id]
+        if status is not None:
+            base_where.append(LimitOverride.status == status)
+
+        # Total count
+        count_stmt = select(func.count()).select_from(LimitOverride).where(and_(*base_where))
+        total = (await self.session.execute(count_stmt)).scalar_one()
+
+        # Fetch page with limit name
+        items_stmt = (
+            select(LimitOverride, Limit.name)
+            .join(Limit, LimitOverride.limit_id == Limit.id)
+            .where(and_(*base_where))
+            .order_by(LimitOverride.requested_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        rows = (await self.session.execute(items_stmt)).all()
+        items = [self._to_response(ov, ln) for ov, ln in rows]
         return items, total
 
     async def cancel_override(
@@ -203,15 +228,35 @@ class LimitOverrideService:
         cancelled_by: str,
     ) -> LimitOverrideResponse:
         """Cancel a pending or active override."""
-        override_data = _OVERRIDE_STORE.get(override_id)
-        if not override_data or override_data["tenant_id"] != tenant_id:
+        stmt = (
+            select(LimitOverride, Limit.name)
+            .join(Limit, LimitOverride.limit_id == Limit.id)
+            .where(
+                and_(
+                    LimitOverride.id == override_id,
+                    LimitOverride.tenant_id == tenant_id,
+                )
+            )
+        )
+        row = (await self.session.execute(stmt)).one_or_none()
+        if not row:
             raise OverrideNotFoundError(f"Override {override_id} not found")
 
-        if override_data["status"] not in ("PENDING", "APPROVED", "ACTIVE"):
+        override, limit_name = row
+
+        if override.status not in (
+            OverrideStatus.PENDING.value,
+            OverrideStatus.APPROVED.value,
+            OverrideStatus.ACTIVE.value,
+        ):
             raise OverrideValidationError("Only pending/active overrides can be cancelled")
 
-        override_data["status"] = OverrideStatus.CANCELLED.value
-        return self._to_response(override_data)
+        override.status = OverrideStatus.CANCELLED.value
+        override.cancelled_at = utc_now()
+        override.cancelled_by = cancelled_by
+        await self.session.flush()
+
+        return self._to_response(override, limit_name)
 
     async def _get_limit(self, tenant_id: str, limit_id: str) -> Limit:
         """Get limit by ID with tenant check."""
@@ -229,23 +274,23 @@ class LimitOverrideService:
 
         return limit
 
-    def _to_response(self, data: dict) -> LimitOverrideResponse:
-        """Convert stored data to response."""
+    def _to_response(self, override: LimitOverride, limit_name: str) -> LimitOverrideResponse:
+        """Convert DB model to response."""
         return LimitOverrideResponse(
-            override_id=data["override_id"],
-            limit_id=data["limit_id"],
-            limit_name=data["limit_name"],
-            tenant_id=data["tenant_id"],
-            original_value=Decimal(str(data["original_value"])),
-            override_value=Decimal(str(data["override_value"])),
-            effective_value=Decimal(str(data["effective_value"])),
-            status=OverrideStatus(data["status"]),
-            requested_at=datetime.fromisoformat(data["requested_at"]),
-            approved_at=datetime.fromisoformat(data["approved_at"]) if data["approved_at"] else None,
-            starts_at=datetime.fromisoformat(data["starts_at"]) if data["starts_at"] else None,
-            expires_at=datetime.fromisoformat(data["expires_at"]) if data["expires_at"] else None,
-            requested_by=data["requested_by"],
-            approved_by=data["approved_by"],
-            reason=data["reason"],
-            rejection_reason=data["rejection_reason"],
+            override_id=override.id,
+            limit_id=override.limit_id,
+            limit_name=limit_name,
+            tenant_id=override.tenant_id,
+            original_value=override.original_value,
+            override_value=override.override_value,
+            effective_value=override.override_value if override.status == OverrideStatus.ACTIVE.value else override.original_value,
+            status=OverrideStatus(override.status),
+            requested_at=override.requested_at,
+            approved_at=override.approved_at,
+            starts_at=override.starts_at,
+            expires_at=override.expires_at,
+            requested_by=override.requested_by,
+            approved_by=override.approved_by,
+            reason=override.reason,
+            rejection_reason=override.rejection_reason,
         )

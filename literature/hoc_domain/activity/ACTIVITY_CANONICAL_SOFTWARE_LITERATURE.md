@@ -89,7 +89,7 @@
 | 3 | `activity_facade.py` | ActivityFacade (singleton) | FACADE | ~850 | 15+ async methods: get_runs, get_run_detail, get_run_evidence, get_run_proof, get_status_summary, get_live_runs, get_completed_runs, get_signals, get_metrics, get_threshold_signals, get_risk_signals, get_patterns, get_cost_analysis, get_attention_queue, acknowledge_signal, suppress_signal | ActivityReadDriver (L6), PatternDetectionService, CostAnalysisService, AttentionRankingService, SignalFeedbackService, signal_identity |
 | 4 | `attention_ranking_engine.py` | AttentionRankingService | STUB_ENGINE | ~80 | get_attention_queue (stub), compute_attention_score (formula: severity*0.4 + recency*0.3 + frequency*0.3) | None (pure logic) |
 | 5 | `cost_analysis_engine.py` | CostAnalysisService | STUB_ENGINE | ~95 | analyze_costs (stub), get_cost_breakdown (stub) | None (pure logic) |
-| 6 | `cus_telemetry_engine.py` | Re-exports: CusTelemetryEngine, IngestResult, BatchIngestResult, get_cus_telemetry_engine → HOC aliases: CusTelemetryService, get_cus_telemetry_service | STUB_ENGINE (PIN-508 Phase 5) | ~40 | — | LEGACY: app.services.cus_telemetry_engine |
+| 6 | `cus_telemetry_engine.py` | CusTelemetryEngine: telemetry ingestion, queries, aggregation (384 lines). Rewired from legacy 2026-02-02 (PIN-512 Cat-B). | CANONICAL | ~384 | ingest, batch_ingest, query_telemetry, aggregate, get_summary | CusTelemetryDriver (L6) |
 | 7 | `pattern_detection_engine.py` | PatternDetectionService | STUB_ENGINE | ~110 | detect_patterns (stub), get_pattern_detail (stub) | None (pure logic) |
 | 8 | `signal_feedback_engine.py` | SignalFeedbackService | STUB_ENGINE | ~130 | acknowledge_signal, suppress_signal, get_signal_feedback_status, get_bulk_signal_feedback (all stubs) | None (pure logic) |
 | 9 | `signal_identity.py` | compute_signal_fingerprint_from_row, compute_signal_fingerprint | PURE_COMPUTATION | ~45 | sha256[:32] fingerprinting | None (hashlib only) |
@@ -121,7 +121,7 @@ Each script's identity-defining function — the one that makes this script uniq
 | 2 | activity_facade | `ActivityFacade.get_runs` | CANONICAL (main facade) |
 | 3 | attention_ranking_engine | `AttentionRankingService.compute_attention_score` | STUB (needs ideal contractor) |
 | 4 | cost_analysis_engine | `CostAnalysisService.analyze_costs` | STUB (needs ideal contractor) |
-| 5 | cus_telemetry_engine | Re-export of `CusTelemetryEngine` | STUB_ENGINE (PIN-508 Phase 5, legacy bridge) |
+| 5 | cus_telemetry_engine | `CusTelemetryEngine.ingest` | CANONICAL (rewired from legacy, PIN-512 Cat-B) |
 | 6 | pattern_detection_engine | `PatternDetectionService.detect_patterns` | STUB (needs ideal contractor) |
 | 7 | signal_feedback_engine | `SignalFeedbackService.acknowledge_signal` | STUB (needs ideal contractor) |
 | 8 | signal_identity | `compute_signal_fingerprint` | CANONICAL (pure computation) |

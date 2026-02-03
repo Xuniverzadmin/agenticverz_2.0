@@ -16,18 +16,18 @@ PURPOSE:
     Post-step usage recording for cost, token, and latency metrics.
     Called by limit_hook.py after step execution.
 
+WIRING:
+    - Persists to usage_records table via UsageRecordDriver (L6)
+    - Records 3 meters per step: cost_cents, tokens_used, step_latency_ms
+
 IMPLEMENTATION NOTES:
-    - This is a minimal implementation satisfying the contract
     - record_usage is fire-and-forget (does NOT raise)
     - No limit checking (that's LimitEnforcer)
     - No time/UUID generation
-
-    Future enhancement: Wire to actual usage storage via L6 driver.
-    Current: Logs usage metrics only.
 """
 
 import logging
-from typing import Optional
+from typing import Callable, Optional
 
 from app.hoc.int.policies.L5_engines.usage_monitor_contract import (
     UsageMonitorProtocol,
@@ -38,19 +38,21 @@ logger = logging.getLogger("nova.hoc.policies.usage_monitor")
 
 class UsageMonitor:
     """
-    UsageMonitor implementation.
+    UsageMonitor implementation wired to UsageRecordDriver.
 
-    This is a minimal implementation that satisfies the UsageMonitorProtocol.
-    It currently logs usage metrics without persisting to storage.
-
-    Future versions will wire to actual usage storage via L6 driver to:
-    - Persist usage records for billing
-    - Track cumulative usage per tenant
-    - Enable usage analytics
+    Persists cost, token, and latency usage records per step execution.
 
     Layer: L5 (Domain Engine)
     Contract: UsageMonitorProtocol
     """
+
+    def __init__(self, session_factory: Optional[Callable] = None):
+        """
+        Args:
+            session_factory: Async callable returning AsyncSession.
+                             If None, falls back to log-only.
+        """
+        self._session_factory = session_factory
 
     async def record_usage(
         self,
@@ -63,20 +65,50 @@ class UsageMonitor:
     ) -> None:
         """Record usage metrics for a step execution.
 
-        Args:
-            tenant_id: Tenant identifier
-            run_id: Run identifier
-            step_index: Step index in the plan
-            cost: Actual cost in cents
-            tokens: Actual token usage
-            latency_ms: Step execution latency in milliseconds
-
-        Note:
-            This method is fire-and-forget. Does NOT raise exceptions.
+        Persists 3 usage records: cost_cents, tokens_used, step_latency_ms.
+        Fire-and-forget: never raises.
         """
         try:
-            # TODO: Wire to L6 driver to persist usage records
-            # For now, just log the usage metrics
+            if self._session_factory is not None:
+                session = await self._session_factory()
+                from app.hoc.int.policies.drivers.usage_record_driver import UsageRecordDriver
+                driver = UsageRecordDriver(session)
+
+                metadata = {"run_id": run_id, "step_index": step_index}
+
+                # Record cost
+                if cost > 0:
+                    await driver.insert_usage(
+                        tenant_id=tenant_id,
+                        meter_name="cost_cents",
+                        amount=cost,
+                        unit="cents",
+                        worker_id=run_id,
+                        metadata=metadata,
+                    )
+
+                # Record tokens
+                if tokens > 0:
+                    await driver.insert_usage(
+                        tenant_id=tenant_id,
+                        meter_name="tokens_used",
+                        amount=tokens,
+                        unit="tokens",
+                        worker_id=run_id,
+                        metadata=metadata,
+                    )
+
+                # Record latency
+                if latency_ms > 0:
+                    await driver.insert_usage(
+                        tenant_id=tenant_id,
+                        meter_name="step_latency_ms",
+                        amount=int(latency_ms),
+                        unit="milliseconds",
+                        worker_id=run_id,
+                        metadata=metadata,
+                    )
+
             logger.debug(
                 "usage_monitor.record_usage",
                 extra={
@@ -86,6 +118,7 @@ class UsageMonitor:
                     "cost_cents": cost,
                     "tokens_used": tokens,
                     "latency_ms": latency_ms,
+                    "persisted": self._session_factory is not None,
                 },
             )
         except Exception as e:
@@ -117,10 +150,13 @@ def _verify_protocol() -> None:
 _usage_monitor_instance: Optional[UsageMonitor] = None
 
 
-def get_usage_monitor_impl() -> UsageMonitor:
+def get_usage_monitor_impl(
+    session_factory: Optional[Callable] = None,
+) -> UsageMonitor:
     """Get the UsageMonitor instance.
 
-    This is called by the contract's get_usage_monitor() function.
+    Args:
+        session_factory: Optional async callable returning AsyncSession.
 
     Returns:
         UsageMonitor implementation instance
@@ -128,8 +164,8 @@ def get_usage_monitor_impl() -> UsageMonitor:
     global _usage_monitor_instance
 
     if _usage_monitor_instance is None:
-        _usage_monitor_instance = UsageMonitor()
-        logger.info("usage_monitor.created")
+        _usage_monitor_instance = UsageMonitor(session_factory=session_factory)
+        logger.info("usage_monitor.created", extra={"wired": session_factory is not None})
 
     return _usage_monitor_instance
 

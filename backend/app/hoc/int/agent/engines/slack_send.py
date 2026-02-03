@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: Configuration schema for slack_send skill.
 # Slack Send Skill (M11)
 # Send messages to Slack via webhook with idempotency support
 

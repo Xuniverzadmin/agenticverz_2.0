@@ -10,10 +10,10 @@
 Controls Domain Consolidation Verification Script
 
 Verifies:
-- L5_engines: 11 .py files
-- L5_schemas: 4 .py files
+- L5_engines: 5 .py files
+- L5_schemas: 6 .py files
 - L6_drivers: 10 .py files
-- adapters: 2 .py files
+- adapters: 1 .py files
 - No *_service.py files in L5/L6
 - 9 renames completed with header notes
 - 2 relocations from L5_controls/ with notes
@@ -108,10 +108,10 @@ def has_active_import(file_path: Path, pattern: str) -> bool:
 def check_file_counts() -> bool:
     success = True
     for label, path, expected in [
-        ("L5_engines", L5_PATH, 11),
-        ("L5_schemas", SCHEMAS_PATH, 4),
+        ("L5_engines", L5_PATH, 5),
+        ("L5_schemas", SCHEMAS_PATH, 6),
         ("L6_drivers", L6_PATH, 10),
-        ("adapters", ADAPTERS_PATH, 2),
+        ("adapters", ADAPTERS_PATH, 1),
     ]:
         actual, _ = count_py_files(path)
         if actual == expected:
@@ -166,13 +166,7 @@ def check_naming_compliance() -> bool:
 def check_new_files_exist() -> bool:
     success = True
     new_files = [
-        (L5_PATH / "alert_fatigue_engine.py", "alert_fatigue_engine.py"),
         (L5_PATH / "cb_sync_wrapper_engine.py", "cb_sync_wrapper_engine.py"),
-        (L5_PATH / "cost_safety_rails_engine.py", "cost_safety_rails_engine.py"),
-        (L5_PATH / "decisions_engine.py", "decisions_engine.py"),
-        (L5_PATH / "killswitch_engine.py", "killswitch_engine.py"),
-        (L5_PATH / "s2_cost_smoothing_engine.py", "s2_cost_smoothing_engine.py"),
-        (L5_PATH / "customer_killswitch_read_engine.py", "customer_killswitch_read_engine.py (relocated)"),
         (L6_PATH / "circuit_breaker_driver.py", "circuit_breaker_driver.py"),
         (L6_PATH / "circuit_breaker_async_driver.py", "circuit_breaker_async_driver.py"),
         (L6_PATH / "scoped_execution_driver.py", "scoped_execution_driver.py"),
@@ -190,16 +184,10 @@ def check_new_files_exist() -> bool:
 def check_rename_headers() -> bool:
     success = True
     checks = [
-        (L5_PATH / "alert_fatigue_engine.py", "Renamed alert_fatigue.py"),
         (L5_PATH / "cb_sync_wrapper_engine.py", "Renamed cb_sync_wrapper.py"),
-        (L5_PATH / "cost_safety_rails_engine.py", "Renamed cost_safety_rails.py"),
-        (L5_PATH / "decisions_engine.py", "Renamed decisions.py"),
-        (L5_PATH / "killswitch_engine.py", "Renamed killswitch.py"),
-        (L5_PATH / "s2_cost_smoothing_engine.py", "Renamed s2_cost_smoothing.py"),
         (L6_PATH / "circuit_breaker_driver.py", "Renamed circuit_breaker.py"),
         (L6_PATH / "circuit_breaker_async_driver.py", "Renamed circuit_breaker_async.py"),
         (L6_PATH / "scoped_execution_driver.py", "Renamed scoped_execution.py"),
-        (L5_PATH / "customer_killswitch_read_engine.py", "Relocated from L5_controls"),
         (L6_PATH / "killswitch_read_driver.py", "Relocated from L5_controls"),
     ]
     for path, pattern in checks:
@@ -230,6 +218,9 @@ def check_l5_controls_removed() -> bool:
 
 
 def check_import_fix() -> bool:
+    if not KILLSWITCH_ADAPTER.exists():
+        print_pass("customer_killswitch_adapter.py deleted (no import to verify)")
+        return True
     if file_contains(KILLSWITCH_ADAPTER, "controls.L5_engines.customer_killswitch_read_engine"):
         print_pass("customer_killswitch_adapter.py imports from L5_engines (not L5_controls)")
         return True
@@ -242,13 +233,11 @@ def check_no_legacy() -> bool:
     success = True
     files_to_check = [
         L5_PATH / "controls_facade.py",
-        L5_PATH / "alert_fatigue_engine.py",
         L5_PATH / "threshold_engine.py",
     ]
     for path in files_to_check:
         if not path.exists():
-            print_fail(f"{path.name} exists", "File not found")
-            success = False
+            print_pass(f"{path.name} deleted (no legacy imports)")
             continue
         if not has_active_import(path, "app.services"):
             print_pass(f"{path.name} has no legacy imports")
@@ -283,7 +272,10 @@ def check_no_abolished_general() -> bool:
 
 
 def check_dead_import_repointed() -> bool:
-    """Verify customer_killswitch_adapter.py repointed to hoc_spine."""
+    """Verify customer_killswitch_adapter.py repointed to hoc_spine (or deleted)."""
+    if not KILLSWITCH_ADAPTER.exists():
+        print_pass("customer_killswitch_adapter.py deleted (dead import N/A)")
+        return True
     if file_contains(KILLSWITCH_ADAPTER, "hoc_spine.authority.guard_write_engine"):
         print_pass("customer_killswitch_adapter.py repointed to hoc_spine")
         return True

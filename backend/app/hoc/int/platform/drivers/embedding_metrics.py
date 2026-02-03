@@ -1,3 +1,6 @@
+# Layer: L6 — Domain Driver
+# AUDIENCE: INTERNAL
+# Role: Prometheus metrics for embedding operations monitoring.
 # Embedding Metrics for Memory Vector Store
 """
 Prometheus metrics for embedding operations monitoring.

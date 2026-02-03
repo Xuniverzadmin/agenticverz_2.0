@@ -2,8 +2,9 @@
 
 **Domain:** integrations
 **Generated:** 2026-01-31
-**Reference:** PIN-498
-**Total Files:** 52 (16 L5_engines, 2 L5_engines/credentials, 5 L6_drivers, 23 adapters, 5 L5_schemas, 1 __init__.py)
+**Updated:** 2026-02-03 (PIN-517 cus_vault Authority Refactor)
+**Reference:** PIN-498, PIN-516, PIN-517
+**Total Files:** 59 (18 L5_engines, 2 L5_engines/credentials, 2 L5_vault/engines, 1 L5_vault/drivers, 6 L6_drivers, 23 adapters, 5 L5_schemas, 1 hoc_spine/services, 1 __init__.py)
 
 ---
 
@@ -121,9 +122,9 @@ All in `adapters/` (L3-declared boundary adapters):
 - **Role:** Customer integration health checks
 
 ### cus_integration_engine.py *(renamed from cus_integration_service.py)*
-- **Role:** Customer integration BYOK management
-- **Status:** STUB_ENGINE (PIN-508 Phase 5)
-- **Legacy:** DISCONNECTED — stubbed with TODO
+- **Role:** Customer integration BYOK management — full CRUD, lifecycle, health checks (472 lines)
+- **Status:** CANONICAL (rewired from legacy 2026-02-02, PIN-512 Cat-B)
+- **Driver:** CusIntegrationDriver (L6) — `integrations/L6_drivers/cus_integration_driver.py`
 - **Callers:** integrations_facade.py
 
 ### datasources_facade.py
@@ -149,7 +150,15 @@ All in `adapters/` (L3-declared boundary adapters):
 - **Callers:** L4 integrations_handler (integrations.query)
 
 ### mcp_connector_engine.py *(renamed from mcp_connector.py)*
-- **Role:** MCP protocol connector
+- **Role:** MCP tool invocation with governance (rate limiting, schema validation)
+- **Classes:** McpConnectorService, McpConnectorConfig, McpToolDefinition
+
+### mcp_server_engine.py *(new — PIN-516 Phase 2)*
+- **Role:** MCP server lifecycle orchestration (registration, discovery, health)
+- **Status:** ACTIVE (2026-02-03)
+- **Classes:** McpServerEngine, McpServerStatus, McpRegistrationResult, McpDiscoveryResult, McpHealthResult
+- **Protocol Methods:** _mcp_initialize, _mcp_list_tools, _mcp_ping
+- **Driver Dependency:** McpDriver (L6)
 
 ### prevention_contract.py
 - **Role:** Prevention contract definitions
@@ -172,10 +181,10 @@ All in `adapters/` (L3-declared boundary adapters):
 
 ---
 
-## L6_drivers (5 files)
+## L6_drivers (6 files)
 
 ### __init__.py
-- **Role:** Package init, exports record_policy_activation
+- **Role:** Package init, exports record_policy_activation, McpDriver
 
 ### bridges_driver.py *(restored from Phase 3 backup)*
 - **Role:** Bridge audit trail persistence
@@ -185,8 +194,19 @@ All in `adapters/` (L3-declared boundary adapters):
 - **Role:** Connector registry DB operations
 - **Classes:** ConnectorRegistry
 
+### cus_integration_driver.py
+- **Role:** Customer integration persistence (CRUD for cus_integrations table)
+- **Status:** ACTIVE (PIN-512 Cat-B rewire)
+
 ### external_response_driver.py
 - **Role:** External response persistence
+
+### mcp_driver.py *(new — PIN-516 Phase 1)*
+- **Role:** MCP server and tool persistence (pure CRUD)
+- **Status:** ACTIVE (2026-02-03)
+- **Classes:** McpDriver, McpServerRow, McpToolRow, McpInvocationRow
+- **Functions:** compute_input_hash, compute_output_hash
+- **Tables:** mcp_servers, mcp_tools, mcp_tool_invocations (migration 119_w2_mcp_servers)
 
 ### worker_registry_driver.py
 - **Role:** Worker registry DB operations
@@ -374,3 +394,242 @@ New CI checks added to `scripts/ci/check_init_hygiene.py`:
 - **Phase 0A (COMPLETE):** Bridge infrastructure + CI checks (2026-02-01)
 - **Phase 1A (PENDING):** Adapter rewiring — integrations adapters call bridges for cross-domain L5 access
 - **Phase 1B (PENDING):** Handler stabilization — L4 handlers use bridges exclusively
+
+## PIN-516 MCP Customer Integration (2026-02-03)
+
+### Phase 1: Persistence Layer (COMPLETE)
+
+MCP (Model Context Protocol) server integration for customers, enabling AI runs to invoke external tools through governed, auditable channels.
+
+**Deliverables:**
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| L7 | `app/models/mcp_models.py` | SQLModel ORM classes (McpServer, McpTool, McpToolInvocation) |
+| L6 | `app/hoc/cus/integrations/L6_drivers/mcp_driver.py` | Pure CRUD driver (no protocol logic) |
+| TEST | `tests/mcp/test_mcp_phase1.py` | Survivability tests |
+| PIN | `docs/memory-pins/PIN-516-mcp-customer-integration.md` | Design specification |
+
+**L7 Models (app/models/mcp_models.py):**
+
+| Model | Table | Purpose |
+|-------|-------|---------|
+| McpServer | mcp_servers | Registered external MCP servers |
+| McpTool | mcp_tools | Tools exposed by MCP servers |
+| McpToolInvocation | mcp_tool_invocations | Immutable audit trail (DB trigger enforced) |
+
+**L6 Driver Methods (McpDriver):**
+
+| Category | Methods |
+|----------|---------|
+| Server | create_server, get_server, get_server_by_url, list_servers, update_server, soft_delete_server |
+| Tool | upsert_tools, get_tools, get_tool, update_tool |
+| Invocation | record_invocation, get_invocations, get_invocation, get_invocations_by_tenant |
+
+**Phase-1 Invariants Satisfied:**
+
+| Invariant | Status | Evidence |
+|-----------|--------|----------|
+| INV-1: Lifecycle fields | ✓ | status, protocol_version, discovered_at, last_health_check_at |
+| INV-2: L6 is pure CRUD | ✓ | No HTTP, no MCP protocol, no JSON-RPC in driver |
+| INV-3: Credentials by reference | ✓ | credential_id field stores vault reference only |
+| INV-4: Survivability tests | ✓ | Persistence, tenant isolation, soft delete, idempotency tests |
+
+**Database Schema (migration 119_w2_mcp_servers):**
+
+Tables exist with proper constraints, indexes, and immutability trigger on mcp_tool_invocations.
+
+### Phase 2: Business Logic + Protocol (COMPLETE)
+
+**Deliverables:**
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| L5 | `app/hoc/cus/integrations/L5_engines/mcp_server_engine.py` | Server lifecycle orchestration |
+
+**McpServerEngine Methods:**
+
+| Category | Methods |
+|----------|---------|
+| Registration | register_server |
+| Discovery | discover_tools |
+| Health | health_check |
+| Server Mgmt | get_server, list_servers, update_server, disable_server |
+| Tool Mgmt | get_tools, enable_tool, disable_tool, set_tool_risk_level |
+
+**MCP Protocol Implementation:**
+
+| Method | Purpose |
+|--------|---------|
+| _mcp_initialize | Discover capabilities and protocol version |
+| _mcp_list_tools | Discover available tools with schemas |
+| _mcp_ping | Health check (falls back to initialize) |
+
+**Risk Assessment:**
+- Automatic tool risk classification based on name keywords
+- Critical: delete, remove, drop, destroy, kill
+- High: write, execute, run, shell, eval, create
+- Medium: update, modify, set, put, post
+- Low: read, get, list, search, query, fetch
+
+### Phase 3: HTTP Orchestration (COMPLETE)
+
+**Deliverables:**
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| L4 | `app/hoc/cus/hoc_spine/orchestrator/handlers/mcp_handler.py` | Handler for integrations.mcp_servers operation |
+| L2 | `app/hoc/api/cus/integrations/mcp_servers.py` | Customer-facing API routes |
+
+**L4 Handler Methods (McpServersHandler):**
+
+| Method | Description |
+|--------|-------------|
+| register_server | Register a new MCP server |
+| get_server | Get server details by ID |
+| list_servers | List all servers for tenant |
+| discover_tools | Discover tools from MCP server |
+| health_check | Check MCP server health |
+| delete_server | Soft-delete a server |
+| list_tools | List tools for a server |
+| get_invocations | List tool invocations |
+
+**L2 API Endpoints:**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/integrations/mcp-servers` | Register a new MCP server |
+| GET | `/api/v1/integrations/mcp-servers` | List MCP servers for tenant |
+| GET | `/api/v1/integrations/mcp-servers/{server_id}` | Get server details |
+| POST | `/api/v1/integrations/mcp-servers/{server_id}/discover` | Discover tools |
+| GET | `/api/v1/integrations/mcp-servers/{server_id}/health` | Health check |
+| DELETE | `/api/v1/integrations/mcp-servers/{server_id}` | Soft-delete server |
+| GET | `/api/v1/integrations/mcp-servers/{server_id}/tools` | List server tools |
+| GET | `/api/v1/integrations/mcp-servers/{server_id}/invocations` | List invocations |
+
+**Registration:**
+- Handler registered in `handlers/__init__.py` under `register_all_handlers()`
+- Router registered in `main.py` via `app.include_router(mcp_servers_router)`
+
+### Phase 4: Monitoring Integration (COMPLETE)
+
+**Deliverables:**
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| L5 | `app/hoc/cus/integrations/L5_engines/mcp_tool_invocation_engine.py` | Governed tool invocation engine |
+
+**McpToolInvocationEngine** orchestrates governed tool invocations with:
+
+| Feature | Implementation |
+|---------|---------------|
+| Policy Validation | `McpPolicyChecker` protocol (injectable, default permissive) |
+| Audit Trail | `MCPAuditEmitter` from logs domain |
+| Tool Execution | JSON-RPC `tools/call` method |
+| Incident Creation | Optional `IncidentEngine` integration |
+| Invocation Recording | Via `McpDriver.record_invocation()` |
+
+**L4 Handler Method Added:** `invoke_tool`
+
+**L2 API Endpoint Added:** `POST /api/v1/integrations/mcp-servers/{server_id}/tools/{tool_id}/invoke`
+
+**Monitoring Integration Points:**
+
+- **Policy:** `McpPolicyChecker` protocol for injectable policy validation
+- **Audit:** `MCPAuditEmitter` for compliance-grade event chain
+- **Incidents:** Optional `IncidentEngine` for failure → incident creation
+- **Activity:** Invocation records in `mcp_tool_invocations` table
+
+---
+
+## PIN-517 cus_vault Authority Refactor (2026-02-03)
+
+### Overview
+
+Establishes trust zone architecture for credential management. Resolves authority confusion between vault selection, resolution, and execution. Enables rule-based access control for customer credentials.
+
+### L5_vault/engines (2 files)
+
+#### vault_rule_check.py *(new — PIN-517 FIX 4.1)*
+- **Role:** Credential access rule checker protocol
+- **Status:** ACTIVE (2026-02-03)
+- **Classes:**
+  - `CredentialAccessResult` — Frozen dataclass for rule decision result
+  - `CredentialAccessRuleChecker` — Protocol for async rule validation at L4
+  - `DefaultCredentialAccessRuleChecker` — Permissive default (system scope)
+  - `DenyAllRuleChecker` — Fail-closed default for customer scope (GAP-4)
+- **Callers:** `hoc_spine/services/cus_credential_engine.py` (L4)
+- **Delegates:** None (leaf module)
+
+#### service.py *(new — PIN-517 FIX 4.2)*
+- **Role:** Credential service with audit logging
+- **Status:** ACTIVE (2026-02-03)
+- **Classes:**
+  - `CredentialAccessRecord` — Audit record with policy fields
+  - `CredentialService` — SYNC operations with audit trail
+- **Key Methods:**
+  - `get_credential_sync(tenant_id, credential_id, accessor_id, accessor_type, ...)` — GAP-3 compliant
+  - `store_credential_sync(...)` — With audit
+  - `list_credentials_sync(...)` — With audit
+  - `update_credential_sync(...)` — With audit
+  - `delete_credential_sync(...)` — With audit
+  - `rotate_credential_sync(...)` — With audit
+- **Callers:** `hoc_spine/services/cus_credential_engine.py` (L4)
+- **Delegates:** `L5_vault/drivers/vault.py` (CredentialVault implementations)
+
+### L5_vault/drivers (1 file)
+
+#### vault.py *(new — PIN-517 FIX 2+3)*
+- **Role:** Credential vault implementations (Env, HashiCorp, AWS)
+- **Status:** ACTIVE (2026-02-03)
+- **Classes:**
+  - `CredentialType` — Enum (api_key, oauth2, basic_auth, certificate, custom)
+  - `CredentialMetadata` — Dataclass for credential metadata
+  - `CredentialData` — Dataclass with metadata + secret_data
+  - `CredentialVault` — Abstract base class for vault implementations
+  - `EnvCredentialVault` — Environment variable vault (system scope only)
+  - `HashiCorpVault` — HashiCorp Vault implementation (SYNC)
+  - `AwsSecretsManagerVault` — AWS Secrets Manager implementation (SYNC, GAP-5 namespace)
+- **Functions:**
+  - `create_credential_vault(scope, provider)` — Factory with authority split (GAP-2)
+- **Callers:** `L5_vault/engines/service.py`, `hoc_spine/services/cus_credential_engine.py`
+- **Delegates:** boto3 (AWS), urllib (HashiCorp)
+
+### hoc_spine/services (1 file)
+
+#### cus_credential_engine.py *(modified — PIN-517 FIX 1+4.3)*
+- **Role:** Customer Credential Service (L4 Spine)
+- **Status:** ACTIVE (2026-02-03)
+- **Classes:**
+  - `CusCredentialService` — Resolves encrypted://, cus-vault://, env:// references
+- **Key Methods:**
+  - `resolve_credential(tenant_id, credential_ref)` — Sync dispatch (raises for cus-vault://)
+  - `resolve_cus_vault_credential(credential_ref, accessor_id, accessor_type, access_reason)` — Async vault lookup with rule check
+  - `_decrypt_credential(credential_ref)` — AES-256-GCM decryption
+  - `_resolve_env_credential(credential_ref)` — Environment variable lookup
+  - `encrypt_credential(tenant_id, plaintext)` — Returns encrypted:// reference
+  - `validate_credential_format(value)` — Returns (is_valid, error_msg) tuple
+- **Callers:** L4 handlers (integrations, MCP)
+- **Delegates:** `L5_vault/engines/vault_rule_check.py`, `L5_vault/engines/service.py`, `L5_vault/drivers/vault.py`
+
+### Credential Reference Scheme
+
+| Format | Scope | Resolution | Rule Check Required |
+|--------|-------|------------|---------------------|
+| `cus-vault://<tenant_id>/<credential_id>` | Customer | Async via CredentialService | YES |
+| `encrypted://<base64>` | Both | Sync AES-256-GCM | NO |
+| `env://<VAR_NAME>` | System only | Sync os.environ | NO |
+| `vault://...` (legacy) | REJECTED | N/A | N/A |
+
+### Testing
+
+**SDK Contract Tests:** `tests/test_cus_vault_sdk_contract.py` (10 tests)
+
+| Test Class | Tests | Purpose |
+|------------|-------|---------|
+| `TestCusCredentialServiceContract` | 3 | cus-vault:// async requirement, legacy vault:// rejection, plaintext rejection |
+| `TestVaultFactoryContract` | 3 | Customer scope env vault rejection, VAULT_TOKEN requirement, system scope env vault allowed |
+| `TestCredentialAccessRuleContract` | 2 | Default rule checker allows, DenyAll rule checker blocks |
+| `TestCredentialReferenceFormat` | 2 | cus-vault:// format parsing, encrypted:// roundtrip |
+
+**Run:** `PYTHONPATH=. python3 -m pytest tests/test_cus_vault_sdk_contract.py -v`

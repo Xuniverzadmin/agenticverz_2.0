@@ -22,7 +22,7 @@ Why Facades Matter:
 - Interface stability for external callers
 
 Usage:
-    from app.services.ops import get_ops_facade
+    from app.hoc.fdr.ops.facades.ops_facade import get_ops_facade
 
     facade = get_ops_facade()
     incidents = facade.get_active_incidents(since, until)
@@ -68,7 +68,7 @@ class OpsFacade:
     def _incident_service(self):
         """Lazy-load ops incident service with proper error store."""
         if self._ops_incident_service is None:
-            from app.hoc.fdr.ops.engines.ops_incident_service import OpsIncidentService
+            from app.hoc.fdr.ops.engines.ops_incident_engine import OpsIncidentService
             self._ops_incident_service = OpsIncidentService(error_store=self._store)
         return self._ops_incident_service
 

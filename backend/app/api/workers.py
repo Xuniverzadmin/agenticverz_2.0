@@ -59,7 +59,7 @@ from app.hoc.cus.logs.L6_drivers.capture_driver import capture_environment_evide
 from app.models.tenant import WorkerRun
 from app.policy.engine import PolicyEngine
 from app.schemas.response import wrap_dict
-from app.services.worker_write_service_async import WorkerWriteServiceAsync
+from app.hoc.cus.hoc_spine.drivers.worker_write_driver_async import WorkerWriteServiceAsync
 
 logger = logging.getLogger("nova.api.workers")
 
@@ -1264,9 +1264,9 @@ async def worker_health():
     except ImportError:
         moat_status["m17_care"] = "unavailable"
 
-    # Check M20 Policy
+    # Check M20 Policy (canonical: L5_engines per PIN-514)
     try:
-        from app.policy.runtime.dag_executor import DAGExecutor
+        from app.hoc.cus.policies.L5_engines.dag_executor import DAGExecutor
 
         DAGExecutor()
         moat_status["m20_policy"] = "available"

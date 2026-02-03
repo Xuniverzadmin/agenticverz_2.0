@@ -896,6 +896,7 @@ from .api.analytics import router as analytics_router  # ANALYTICS Domain: Unifi
 from .api.agents import router as agents_router  # M12 Multi-Agent System
 from .api.authz_status import router as authz_status_router  # T5: Internal authz status
 from .api.aos_cus_integrations import router as aos_cus_integrations_router  # CONNECTIVITY: Customer LLM Integrations BYOK (/api/v1/integrations/*)
+from .hoc.api.cus.integrations.mcp_servers import router as mcp_servers_router  # PIN-516: MCP Servers (/api/v1/integrations/mcp-servers/*)
 from .api.aos_api_key import router as aos_api_key_router  # CONNECTIVITY: API Keys facade (/api/v1/api-keys/*)
 from .api.cus_telemetry import router as cus_telemetry_router  # Customer LLM telemetry ingestion
 from .api.cus_enforcement import router as cus_enforcement_router  # Customer LLM enforcement checks
@@ -1043,6 +1044,7 @@ app.include_router(limits_override_router, prefix="/api/v1")  # PIN-LIM-05: Limi
 
 app.include_router(logs_router)  # LOGS Domain: /api/v1/logs/* (unified facade)
 app.include_router(aos_cus_integrations_router)  # CONNECTIVITY: /api/v1/integrations/* (Customer LLM BYOK)
+app.include_router(mcp_servers_router)  # PIN-516: /api/v1/integrations/mcp-servers/* (MCP Server Management)
 app.include_router(aos_api_key_router)  # CONNECTIVITY: /api/v1/api-keys/* (API keys facade)
 app.include_router(cus_telemetry_router, prefix="/api/v1")  # Customer LLM telemetry ingestion
 app.include_router(cus_enforcement_router, prefix="/api/v1")  # Customer LLM enforcement checks

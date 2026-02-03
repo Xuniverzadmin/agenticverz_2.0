@@ -838,6 +838,64 @@ Provide a JSON response with:
             for row in rows
         ]
 
+    def count_candidates(self, status: str = "pending") -> int:
+        """
+        Count total candidates by status.
+
+        Efficient COUNT query for pagination — avoids fetching full rows.
+
+        Args:
+            status: Filter by decision status (pending, approved, rejected, all)
+
+        Returns:
+            Total count matching the status filter
+        """
+        from sqlalchemy import text
+
+        session = self._session
+
+        if status == "all":
+            result = session.execute(
+                text("SELECT COUNT(*) FROM recovery_candidates")
+            )
+        else:
+            result = session.execute(
+                text("SELECT COUNT(*) FROM recovery_candidates WHERE decision = :status"),
+                {"status": status},
+            )
+
+        return result.scalar() or 0
+
+    def count_by_status(self) -> Dict[str, int]:
+        """
+        Count candidates grouped by decision status.
+
+        Single query with GROUP BY — replaces 3 separate get_candidates(limit=1) calls.
+
+        Returns:
+            Dict with counts per status: {"pending": N, "approved": N, "rejected": N}
+        """
+        from sqlalchemy import text
+
+        session = self._session
+
+        result = session.execute(
+            text("""
+                SELECT decision, COUNT(*) as count
+                FROM recovery_candidates
+                GROUP BY decision
+            """)
+        )
+
+        counts: Dict[str, int] = {"pending": 0, "approved": 0, "rejected": 0}
+        for row in result.fetchall():
+            decision = row[0]
+            count = row[1]
+            if decision in counts:
+                counts[decision] = count
+
+        return counts
+
     def approve_candidate(
         self, candidate_id: int, approved_by: str, decision: str = "approved", note: str = ""
     ) -> Dict[str, Any]:

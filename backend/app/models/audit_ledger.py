@@ -89,6 +89,7 @@ class AuditEventType(str, Enum):
     # Signal Feedback
     SIGNAL_ACKNOWLEDGED = "SignalAcknowledged"
     SIGNAL_SUPPRESSED = "SignalSuppressed"
+    SIGNAL_ESCALATED = "SignalEscalated"
 
 
 # =============================================================================

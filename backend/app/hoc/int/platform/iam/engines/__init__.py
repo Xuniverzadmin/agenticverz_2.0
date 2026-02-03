@@ -9,7 +9,7 @@ internal/platform/iam/engines
 IAM engines for internal orchestration.
 """
 
-from .iam_service import (
+from .iam_engine import (
     IAMService,
     Identity,
     AccessDecision,

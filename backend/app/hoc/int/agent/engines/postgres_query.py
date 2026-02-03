@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: Input schema for postgres_query skill.
 # PostgreSQL Query Skill
 # Safe, parameterized SQL queries with read-only by default
 

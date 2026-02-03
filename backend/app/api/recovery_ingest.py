@@ -34,7 +34,7 @@ from app.metrics import (
     recovery_ingest_total,
 )
 from app.middleware.rate_limit import rate_limit_dependency
-from app.services.recovery_write_service import RecoveryWriteService
+from app.hoc.int.recovery.drivers.recovery_write_driver import RecoveryWriteService
 
 logger = logging.getLogger("nova.api.recovery_ingest")
 

@@ -19,6 +19,18 @@ class LogsBridge:
         from app.hoc.cus.logs.L5_engines.logs_read_engine import get_logs_read_service
         return get_logs_read_service()
 
+    def traces_store_capability(self):
+        """Return TraceStore for run-scoped trace queries (PIN-519)."""
+        from app.hoc.cus.logs.L6_drivers.traces_store import SQLiteTraceStore
+        return SQLiteTraceStore()
+
+    def audit_ledger_read_capability(self, session):
+        """Return audit ledger read driver for signal feedback queries (PIN-519)."""
+        from app.hoc.cus.logs.L6_drivers.audit_ledger_read_driver import (
+            get_audit_ledger_read_driver,
+        )
+        return get_audit_ledger_read_driver(session)
+
 
 # Singleton
 _instance = None

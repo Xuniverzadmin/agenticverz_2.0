@@ -52,9 +52,9 @@ class TestWorkerDeathRecovery:
         """Test that items from stale workers are reclaimed."""
         from sqlalchemy import create_engine, text
 
-        from app.agents.services.job_service import JobConfig, JobService
-        from app.agents.services.registry_service import RegistryService
-        from app.agents.services.worker_service import WorkerService
+        from app.hoc.int.agent.engines.job_engine import JobConfig, JobService
+        from app.hoc.int.agent.engines.registry_engine import RegistryService
+        from app.hoc.int.agent.engines.worker_engine import WorkerService
 
         job_service = JobService()
         worker_service = WorkerService()
@@ -124,7 +124,7 @@ class TestWorkerDeathRecovery:
 
     def test_heartbeat_keeps_worker_alive(self):
         """Test that heartbeating prevents staleness."""
-        from app.agents.services.registry_service import RegistryService
+        from app.hoc.int.agent.engines.registry_engine import RegistryService
 
         registry_service = RegistryService()
 
@@ -152,7 +152,7 @@ class TestLockContention:
 
     def test_high_contention_lock(self):
         """Test lock under high contention from many workers."""
-        from app.agents.services.blackboard_service import BlackboardService
+        from app.hoc.int.agent.engines.blackboard_engine import BlackboardService
 
         blackboard = BlackboardService()
 
@@ -205,7 +205,7 @@ class TestLockContention:
 
     def test_lock_expiry_allows_recovery(self):
         """Test that expired locks allow other workers to proceed."""
-        from app.agents.services.blackboard_service import BlackboardService
+        from app.hoc.int.agent.engines.blackboard_engine import BlackboardService
 
         blackboard = BlackboardService()
 
@@ -231,8 +231,8 @@ class TestConcurrentJobOperations:
 
     def test_concurrent_job_updates(self):
         """Test that concurrent item completions don't corrupt counters."""
-        from app.agents.services.job_service import JobConfig, JobService
-        from app.agents.services.worker_service import WorkerService
+        from app.hoc.int.agent.engines.job_engine import JobConfig, JobService
+        from app.hoc.int.agent.engines.worker_engine import WorkerService
 
         job_service = JobService()
 
@@ -302,7 +302,7 @@ class TestMessageOrderingUnderLoad:
 
     def test_message_ordering_preserved(self):
         """Test that message ordering is preserved within a conversation."""
-        from app.agents.services.message_service import MessageService
+        from app.hoc.int.agent.engines.message_engine import MessageService
 
         message_service = MessageService()
 
@@ -335,7 +335,7 @@ class TestBlackboardConsistency:
 
     def test_increment_consistency_under_load(self):
         """Test that increment is consistent under heavy load."""
-        from app.agents.services.blackboard_service import BlackboardService
+        from app.hoc.int.agent.engines.blackboard_engine import BlackboardService
 
         blackboard = BlackboardService()
 

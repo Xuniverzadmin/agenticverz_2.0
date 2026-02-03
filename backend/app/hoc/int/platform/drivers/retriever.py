@@ -1,3 +1,6 @@
+# Layer: L6 — Domain Driver
+# AUDIENCE: INTERNAL
+# Role: Retrieves memories and builds context for planners.
 # Memory Retriever
 # Retrieves and formats memories for planner context
 

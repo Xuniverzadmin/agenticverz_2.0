@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: Outbox Processor Worker
 """
 Outbox Processor Worker
 

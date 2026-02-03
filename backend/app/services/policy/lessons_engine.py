@@ -18,6 +18,5 @@ Lessons Engine - DISCONNECTED LEGACY SHIM
 This file previously re-exported from the HOC policies domain.
 The legacy↔HOC connection has been severed (2026-01-31).
 
-All callers should use the canonical HOC path:
-    from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
+All callers should use the canonical HOC path directly.
 """

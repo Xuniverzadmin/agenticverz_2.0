@@ -46,6 +46,11 @@ class IncidentsBridge:
         driver = get_export_bundle_driver()
         return ExportEngine(driver)
 
+    def incidents_for_run_capability(self, session):
+        """Return IncidentReadService for run-scoped queries (PIN-519)."""
+        from app.hoc.cus.incidents.L5_engines.incident_read_engine import IncidentReadService
+        return IncidentReadService(session)
+
 
 # Singleton
 _instance = None

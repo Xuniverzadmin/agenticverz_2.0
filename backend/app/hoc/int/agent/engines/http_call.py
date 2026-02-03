@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: Configuration schema for http_call skill.
 # HTTP Call Skill
 # Pluggable HTTP skill with retry logic and external call control
 

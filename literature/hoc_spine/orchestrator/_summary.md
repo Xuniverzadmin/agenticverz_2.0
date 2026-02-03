@@ -50,6 +50,9 @@ Cross-domain mediators created by PIN-504 (Loop Model C4 pattern).
 | `coordinators/audit_coordinator.py` | Cross-domain audit dispatch (incidents/policies → logs) | yes | PIN-504 |
 | `coordinators/signal_coordinator.py` | Dual threshold signal emission (controls + activity) | yes | PIN-504 |
 | `coordinators/logs_coordinator.py` | Spine passthrough for logs read service access | yes | PIN-504 |
+| `coordinators/run_evidence_coordinator.py` | Cross-domain evidence aggregation for runs (incidents + policies + controls) | yes | PIN-519 |
+| `coordinators/run_proof_coordinator.py` | Integrity verification via traces (HASH_CHAIN model) | yes | PIN-519 |
+| `coordinators/signal_feedback_coordinator.py` | Signal feedback queries from audit ledger | yes | PIN-519 |
 
 ## 5. Assessment
 
@@ -86,3 +89,26 @@ Cross-domain mediators created by PIN-504 (Loop Model C4 pattern).
 **Handlers updated:** All 9 handler files (18 handler classes) in `hoc_spine/orchestrator/handlers/` now use explicit dispatch maps instead of `getattr()` reflection. Zero `asyncio.iscoroutinefunction()` calls remain. Mixed sync/async handlers use split `async_dispatch` / `sync_dispatch` dictionaries. Dispatch maps are local per-call (built after lazy facade import inside `execute()`). Error semantics (codes, messages, exception mapping) preserved exactly.
 
 **Files:** `controls_handler.py`, `api_keys_handler.py`, `overview_handler.py`, `account_handler.py`, `analytics_handler.py`, `activity_handler.py`, `incidents_handler.py`, `integrations_handler.py`, `logs_handler.py`, `policies_handler.py`
+
+---
+
+## PIN-519 System Run Introspection (2026-02-03)
+
+**New coordinators added:**
+
+| Coordinator | Purpose | Cross-domain Sources | Reference |
+|-------------|---------|----------------------|-----------|
+| `run_evidence_coordinator.py` | Composes cross-domain impact for a run | incidents, policies, controls | PIN-519 |
+| `run_proof_coordinator.py` | Verifies run integrity via trace HASH_CHAIN | logs (traces_store) | PIN-519 |
+| `signal_feedback_coordinator.py` | Queries signal feedback from audit ledger | logs (audit_ledger_read_driver) | PIN-519 |
+
+**Bridge extensions:**
+
+| Bridge | New Capability | Reference |
+|--------|----------------|-----------|
+| `incidents_bridge.py` | `incidents_for_run_capability()` | PIN-519 |
+| `policies_bridge.py` | `policy_evaluations_capability()` | PIN-519 |
+| `controls_bridge.py` | `limit_breaches_capability()` | PIN-519 |
+| `logs_bridge.py` | `traces_store_capability()`, `audit_ledger_read_capability()` | PIN-519 |
+
+**Consumers:** `ActivityFacade.get_run_evidence()`, `ActivityFacade.get_run_proof()`, `ActivityFacade.get_signals()` (feedback)

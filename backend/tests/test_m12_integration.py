@@ -51,7 +51,7 @@ class TestDOD1_100ItemJob:
 
     def test_100_item_job_creation(self):
         """Test creating a 100-item job."""
-        from app.agents.services.job_service import JobConfig, JobService
+        from app.hoc.int.agent.engines.job_engine import JobConfig, JobService
 
         service = JobService()
 
@@ -77,8 +77,8 @@ class TestDOD1_100ItemJob:
 
     def test_parallel_claiming_produces_unique_items(self):
         """Test that parallel claiming produces unique items (no duplicates)."""
-        from app.agents.services.job_service import JobConfig, JobService
-        from app.agents.services.worker_service import WorkerService
+        from app.hoc.int.agent.engines.job_engine import JobConfig, JobService
+        from app.hoc.int.agent.engines.worker_engine import WorkerService
 
         job_service = JobService()
         worker_service = WorkerService()
@@ -137,9 +137,9 @@ class TestDOD1_100ItemJob:
 
     def test_job_completion_deterministic(self):
         """Test that job completes deterministically with correct aggregate."""
-        from app.agents.services.blackboard_service import BlackboardService
-        from app.agents.services.job_service import JobConfig, JobService
-        from app.agents.services.worker_service import WorkerService
+        from app.hoc.int.agent.engines.blackboard_engine import BlackboardService
+        from app.hoc.int.agent.engines.job_engine import JobConfig, JobService
+        from app.hoc.int.agent.engines.worker_engine import WorkerService
 
         job_service = JobService()
         worker_service = WorkerService()
@@ -200,8 +200,8 @@ class TestDOD2_NoDuplicateClaims:
 
     def test_20_concurrent_workers_no_duplicates(self):
         """Test 20 concurrent workers claiming items without duplicates."""
-        from app.agents.services.job_service import JobConfig, JobService
-        from app.agents.services.worker_service import WorkerService
+        from app.hoc.int.agent.engines.job_engine import JobConfig, JobService
+        from app.hoc.int.agent.engines.worker_engine import WorkerService
 
         job_service = JobService()
 
@@ -260,7 +260,7 @@ class TestDOD3_AgentInvokeCorrelation:
 
     def test_invoke_with_correlation_id(self):
         """Test that invoke correctly correlates request and response."""
-        from app.agents.services.message_service import MessageService
+        from app.hoc.int.agent.engines.message_engine import MessageService
 
         message_service = MessageService()
 
@@ -316,7 +316,7 @@ class TestDOD4_BlackboardAggregate:
 
     def test_atomic_increment_aggregate(self):
         """Test atomic increment produces correct aggregate."""
-        from app.agents.services.blackboard_service import BlackboardService
+        from app.hoc.int.agent.engines.blackboard_engine import BlackboardService
 
         blackboard = BlackboardService()
 
@@ -351,7 +351,7 @@ class TestDOD4_BlackboardAggregate:
 
     def test_distributed_lock_serializes_access(self):
         """Test distributed lock serializes aggregate updates."""
-        from app.agents.services.blackboard_service import BlackboardService
+        from app.hoc.int.agent.engines.blackboard_engine import BlackboardService
 
         blackboard = BlackboardService()
 
@@ -396,7 +396,7 @@ class TestDOD4_BlackboardAggregate:
 
     def test_scan_pattern_collects_all_results(self):
         """Test pattern scan collects all worker results."""
-        from app.agents.services.blackboard_service import BlackboardService
+        from app.hoc.int.agent.engines.blackboard_engine import BlackboardService
 
         blackboard = BlackboardService()
 
@@ -426,8 +426,8 @@ class TestDOD5_CreditsAccuracy:
 
     def test_credit_reservation_on_job_create(self):
         """Test credits are reserved when job is created."""
-        from app.agents.services.credit_service import CREDIT_COSTS
-        from app.agents.services.job_service import JobConfig, JobService
+        from app.hoc.int.agent.engines.credit_engine import CREDIT_COSTS
+        from app.hoc.int.agent.engines.job_engine import JobConfig, JobService
 
         job_service = JobService()
 
@@ -453,8 +453,8 @@ class TestDOD5_CreditsAccuracy:
 
     def test_credit_spend_on_item_completion(self):
         """Test credits are spent when items complete."""
-        from app.agents.services.job_service import JobConfig, JobService
-        from app.agents.services.worker_service import WorkerService
+        from app.hoc.int.agent.engines.job_engine import JobConfig, JobService
+        from app.hoc.int.agent.engines.worker_engine import WorkerService
 
         job_service = JobService()
         worker_service = WorkerService()
@@ -486,8 +486,8 @@ class TestDOD5_CreditsAccuracy:
 
     def test_credit_refund_on_item_failure(self):
         """Test credits are refunded when items fail."""
-        from app.agents.services.job_service import JobConfig, JobService
-        from app.agents.services.worker_service import WorkerService
+        from app.hoc.int.agent.engines.job_engine import JobConfig, JobService
+        from app.hoc.int.agent.engines.worker_engine import WorkerService
 
         job_service = JobService()
         worker_service = WorkerService()
@@ -551,7 +551,7 @@ class TestDOD7_P2PMessages:
 
     def test_message_delivery_latency(self):
         """Test P2P message delivery latency."""
-        from app.agents.services.message_service import MessageService
+        from app.hoc.int.agent.engines.message_engine import MessageService
 
         message_service = MessageService()
 

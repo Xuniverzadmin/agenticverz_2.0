@@ -79,6 +79,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -2210,7 +2211,7 @@ class PolicyEngine:
             decision_reason=decision_reason,
             policies_evaluated=basic_result.policies_evaluated,
             temporal_policies_evaluated=len(temporal_policies),
-            dependencies_checked=0,  # TODO: implement dependency checking
+            dependencies_checked=await self._safe_dependency_count(db),
             rules_matched=basic_result.rules_matched,
             evaluation_ms=evaluation_ms,
             violations=violations,
@@ -2218,9 +2219,31 @@ class PolicyEngine:
             temporal_utilization=temporal_utilization,
             temporal_warnings=temporal_warnings,
             policy_version=self._policy_version,
-            policy_hash=None,  # TODO: compute hash
+            policy_hash=self._compute_policy_hash(),
             updated_context=updated_context,
         )
+
+    async def _safe_dependency_count(self, db=None) -> int:
+        """Return dependency edge count, or 0 on failure."""
+        try:
+            dep_graph = await self.get_dependency_graph(db)
+            return len(dep_graph.edges) if dep_graph else 0
+        except Exception:
+            return 0
+
+    def _compute_policy_hash(self) -> str:
+        """Compute SHA-256 hash of sorted policy set identity."""
+        import json as _json
+
+        identity = sorted(
+            [
+                {"id": str(p.id), "name": p.name, "version": getattr(p, "version", "1")}
+                for p in self._policies
+            ],
+            key=lambda x: x["id"],
+        )
+        raw = _json.dumps(identity, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(raw.encode()).hexdigest()
 
     def _classify_severity(self, violation) -> "ViolationSeverity":
         """Classify violation severity (GAP 5)."""

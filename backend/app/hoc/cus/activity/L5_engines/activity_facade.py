@@ -18,6 +18,26 @@
 # Reference: PIN-470, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md
 #
 # L4 is reserved for general/L4_runtime/ only per HOC Layer Topology.
+#
+# ============================================================================
+# ARCHITECTURAL LOCK (PIN-519)
+# ============================================================================
+# This is the ONLY Activity Facade in the HOC tree.
+#
+# RED-LINE CONSTRAINTS:
+#   - Cross-domain access is FORBIDDEN here
+#   - All aggregation must go through L4 coordinators
+#   - No persistence (read-only via L6 drivers)
+#   - No policy evaluation (delegated to L4)
+#   - No integrity computation (delegated to L4)
+#
+# ENFORCEMENT:
+#   - CI check 31: check_single_activity_facade()
+#   - Test: test_single_activity_facade_exists()
+#
+# Any duplicate ActivityFacade in app/hoc/ is a CI-blocking violation.
+# The legacy app/services/activity_facade.py is scheduled for deletion (PIN-511).
+# ============================================================================
 
 """
 Activity Facade (L5)
@@ -618,6 +638,8 @@ class ActivityFacade:
         """
         Get run evidence context (O4).
 
+        Delegates to L4 RunEvidenceCoordinator for cross-domain queries (PIN-519).
+
         Args:
             session: Database session
             tenant_id: Tenant ID for isolation
@@ -626,10 +648,33 @@ class ActivityFacade:
         Returns:
             RunEvidenceResult with cross-domain impact
         """
-        # TODO: Implement actual cross-domain queries
-        _ = session
-        _ = tenant_id
-        return RunEvidenceResult(run_id=run_id)
+        from app.hoc.cus.hoc_spine.orchestrator.coordinators.run_evidence_coordinator import (
+            get_run_evidence_coordinator,
+        )
+
+        coordinator = get_run_evidence_coordinator()
+        result = await coordinator.get_run_evidence(session, tenant_id, run_id)
+
+        # Convert L4 result to L5 result type (they should be compatible)
+        return RunEvidenceResult(
+            run_id=result.run_id,
+            incidents_caused=[
+                {"incident_id": i.incident_id, "severity": i.severity, "title": i.title}
+                for i in result.incidents_caused
+            ],
+            policies_triggered=[
+                {"policy_id": p.policy_id, "policy_name": p.policy_name, "outcome": p.outcome}
+                for p in result.policies_evaluated
+            ],
+            decisions_made=[
+                {"decision_id": d.decision_id, "decision_type": d.decision_type, "outcome": d.outcome}
+                for d in result.decisions_made
+            ],
+            traces_linked=[
+                {"limit_id": lh.limit_id, "limit_name": lh.limit_name}
+                for lh in result.limits_hit
+            ],
+        )
 
     async def get_run_proof(
         self,
@@ -641,6 +686,8 @@ class ActivityFacade:
         """
         Get run integrity proof (O5).
 
+        Delegates to L4 RunProofCoordinator for trace/proof queries (PIN-519).
+
         Args:
             session: Database session
             tenant_id: Tenant ID for isolation
@@ -650,17 +697,32 @@ class ActivityFacade:
         Returns:
             RunProofResult with integrity proof
         """
-        # TODO: Implement actual trace/proof queries
-        _ = session
-        _ = tenant_id
-        _ = include_payloads
+        from app.hoc.cus.hoc_spine.orchestrator.coordinators.run_proof_coordinator import (
+            get_run_proof_coordinator,
+        )
+
+        coordinator = get_run_proof_coordinator()
+        result = await coordinator.get_run_proof(session, tenant_id, run_id, include_payloads)
+
+        # Convert L4 result to L5 result type
         return RunProofResult(
-            run_id=run_id,
+            run_id=result.run_id,
             integrity={
-                "root_hash": None,
-                "verification_status": "UNKNOWN",
-                "chain_length": 0,
+                "model": result.integrity.model,
+                "root_hash": result.integrity.root_hash,
+                "verification_status": result.integrity.verification_status,
+                "chain_length": result.integrity.chain_length,
+                "failure_reason": result.integrity.failure_reason,
             },
+            aos_traces=[
+                {"trace_id": t.trace_id, "status": t.status, "step_count": t.step_count}
+                for t in result.aos_traces
+            ],
+            aos_trace_steps=[
+                {"step_index": s.step_index, "skill_name": s.skill_name, "status": s.status}
+                for s in result.aos_trace_steps
+            ],
+            raw_logs=[{"log": log} for log in (result.raw_logs or [])],
         )
 
     async def get_status_summary(
@@ -972,6 +1034,9 @@ class ActivityFacade:
             # Compute fingerprint
             fingerprint = compute_signal_fingerprint_from_row(row)
 
+            # Fetch feedback from audit ledger via L4 coordinator (PIN-519)
+            feedback = await self._get_signal_feedback(session, tenant_id, fingerprint)
+
             signals.append(
                 SignalProjectionResult(
                     signal_id=f"sig-{row['run_id'][:8]}",
@@ -982,11 +1047,51 @@ class ActivityFacade:
                     summary=self._compute_signal_summary(row, signal_type),
                     policy_context=policy_context,
                     created_at=row["started_at"] or datetime.now(timezone.utc),
-                    feedback=None,  # TODO: Fetch from audit_ledger
+                    feedback=feedback,
                 )
             )
 
         return SignalsResult(signals=signals, total=total)
+
+    async def _get_signal_feedback(
+        self,
+        session: AsyncSession,
+        tenant_id: str,
+        fingerprint: str,
+    ) -> SignalFeedbackStatus | None:
+        """
+        Get signal feedback from audit ledger via L4 coordinator (PIN-519).
+
+        Args:
+            session: Database session
+            tenant_id: Tenant ID for isolation
+            fingerprint: Signal fingerprint
+
+        Returns:
+            SignalFeedbackStatus if feedback exists, None otherwise
+        """
+        from app.hoc.cus.hoc_spine.orchestrator.coordinators.signal_feedback_coordinator import (
+            get_signal_feedback_coordinator,
+        )
+
+        try:
+            coordinator = get_signal_feedback_coordinator()
+            result = await coordinator.get_signal_feedback(session, tenant_id, fingerprint)
+
+            if result is None:
+                return None
+
+            # Convert L4 result to L5 SignalFeedbackStatus
+            return SignalFeedbackStatus(
+                acknowledged=result.acknowledged,
+                acknowledged_by=result.acknowledged_by,
+                acknowledged_at=result.acknowledged_at,
+                suppressed=result.suppressed,
+                suppressed_until=result.suppressed_until,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to fetch signal feedback for {fingerprint}: {e}")
+            return None
 
     def _compute_signal_type(self, row: dict[str, Any]) -> str:
         """

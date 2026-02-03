@@ -38,8 +38,8 @@ from app.schemas.limits.simulation import (
     LimitSimulationResponse,
     SimulationDecision,
 )
-from app.services.limits.simulation_service import (
-    LimitsSimulationService,
+from app.hoc.cus.policies.L5_engines.limits_simulation_engine import (
+    LimitsSimulationEngine,
     LimitsSimulationServiceError,
     TenantNotFoundError,
 )
@@ -108,7 +108,7 @@ async def simulate_execution(
     auth_context = get_auth_context(request)
     tenant_id = auth_context.tenant_id
 
-    service = LimitsSimulationService(session)
+    service = LimitsSimulationEngine(session)
 
     try:
         # Build simulation request

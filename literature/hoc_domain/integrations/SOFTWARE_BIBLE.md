@@ -20,7 +20,7 @@ Each script's unique contribution and canonical function.
 | connectors_facade | L5 | `ConnectorsFacade.update_connector` | CANONICAL | 5 | L4:integrations_handler, bridges, channel_engine +8 | YES |
 | cost_bridges_engine | L5 | `CostLoopOrchestrator.process_anomaly` | CANONICAL | 3 | L5:__init__, bridges, channel_engine +7 | YES |
 | cus_health_engine | L5 | `CusHealthService._perform_health_check` | SUPERSET | 14 | ?:cus_health_service, channel_engine, connector_registry +4 | YES |
-| cus_integration_service | L5 | `get_cus_integration_service` | WRAPPER | 0 | ?:cus_integration_service | L5:integrations_facade | ?:shim_guard | YES |
+| cus_integration_engine | L5 | `CusIntegrationEngine.create_integration` | CANONICAL | 8 | ?:cus_integration_service | L5:integrations_facade | ?:shim_guard | YES |
 | cus_schemas | L5 | `CusIntegrationCreate.validate_not_raw_key` | LEAF | 1 | ?:cus_telemetry | ?:aos_cus_integrations | ?:cus_telemetry_engine | ?:cus_integration_engine | L2:aos_cus_integrations | L2:cus_telemetry | YES |
 | customer_activity_adapter | L5 | `CustomerActivityAdapter.get_activity` | CANONICAL | 3 | ?:test_l2_l3_contracts, channel_engine, connector_registry +4 | YES |
 | customer_incidents_adapter | L5 | `CustomerIncidentsAdapter.get_incident` | CANONICAL | 1 | ?:guard | L3:__init__ | L2:guard | ?:test_l2_l3_contracts, channel_engine, connector_registry +4 | YES |
@@ -441,3 +441,85 @@ Integrations adapters will rewire cross-domain L5 reads through these bridges:
 - Reclassified `bridges_engine` (2 symbols) as OUT_OF_SCOPE — lives in legacy `app/integrations/bridges.py`, not HOC
 - Reclassified `external_response_driver` (3 symbols) as OUT_OF_SCOPE — lives in `hoc/int/`, not `hoc/cus/`
 - All 10 CSV entries resolved: 5 WIRED, 2 OUT_OF_SCOPE (legacy), 3 OUT_OF_SCOPE (hoc/int/)
+
+## PIN-517 cus_vault Authority Refactor (2026-02-03)
+
+Establishes trust zone architecture for credential management with rule-based access control.
+
+### Trust Zones
+
+| Zone | Scope | Provider Source | env:// | Default Rule |
+|------|-------|-----------------|--------|--------------|
+| System | `scope="system"` | From env var | Allowed | Permissive |
+| Customer | `scope="customer"` | Explicit in ref | **FORBIDDEN** | Fail-closed |
+
+### Credential Reference Scheme (LOCKED)
+
+```
+cus-vault://<tenant_id>/<credential_id>
+```
+
+Valid providers (via env): `hashicorp`, `aws_secrets`
+
+### Gap Fixes Applied
+
+| Gap | Issue | Fix |
+|-----|-------|-----|
+| GAP-1 | Async boundary violation | Vault resolution async; rule check at L4 |
+| GAP-2 | Ambiguous credential refs | Provider from env, tenant/cred explicit in ref |
+| GAP-3 | Mutable accessor state | Accessor per-call, no instance state |
+| GAP-4 | Permissive default | Fail-closed for customer scope |
+| GAP-5 | AWS namespace collision | Include `{env}` in secret path |
+| GAP-6 | No SDK contract test | SDK contract tests lock invariants |
+
+### L5_vault Subsystem Files
+
+| Layer | File | Canonical Function | Role |
+|-------|------|-------------------|------|
+| L5 | `L5_vault/engines/vault_rule_check.py` | `CredentialAccessRuleChecker.check_credential_access` | CANONICAL |
+| L5 | `L5_vault/engines/service.py` | `CredentialService.get_credential` | CANONICAL |
+| L6 | `L5_vault/drivers/vault.py` | `create_credential_vault` | CANONICAL |
+
+### Security Invariants (Binding)
+
+1. Customer scope NEVER falls back to env vault — explicit provider required
+2. Rule check ALWAYS before vault access — at L4 orchestrator
+3. Accessor context ALWAYS per-call — no mutable state
+4. AWS secrets ALWAYS namespaced by environment — no staging/prod collision
+5. Missing rule checker = access denied — fail-closed default
+
+### CI Hardening
+
+SDK contract tests: `tests/test_cus_vault_sdk_contract.py` (10 tests)
+
+| Test Class | Coverage |
+|------------|----------|
+| `TestCusCredentialServiceContract` | SDK-level behavior |
+| `TestVaultFactoryContract` | Factory behavior |
+| `TestCredentialAccessRuleContract` | Rule enforcement |
+| `TestCredentialReferenceFormat` | Format validation |
+
+## PIN-518 Analytics Storage Follow-ups (2026-02-03)
+
+Analytics storage wiring for canary reports and provenance logging.
+
+### Completed
+
+| Fix | Description | Files |
+|-----|-------------|-------|
+| Gap 1 | L2→L4 routing for `/canary/reports` | `analytics_handler.py`, `costsim.py` |
+| Gap 2 | Split provenance/canary L6 drivers | `canary_report_driver.py` (NEW) |
+| Gap 3 | Artifact-before-DB invariant | `canary_engine.py` |
+
+### New Files
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| L6 | `analytics/L6_drivers/canary_report_driver.py` | Canary report persistence |
+| L4 | `analytics_handler.py:CanaryReportHandler` | Route canary report queries |
+| DB | `alembic/versions/121_add_costsim_canary_reports.py` | Migration for canary reports table |
+
+### Deferred
+
+- Index performance audit (low priority)
+- Golden comparison implementation (needs design decision)

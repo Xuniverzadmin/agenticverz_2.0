@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional
 
 _app_path = str(Path(__file__).parent.parent.parent)
-if _app_path not in sys.path:
+
     sys.path.insert(0, _app_path)
 
 # Import registry_v2 directly to avoid triggering skills/__init__.py with pydantic
@@ -259,7 +259,7 @@ def create_integrated_runtime(
 
     if register_stubs:
         # Register default stubs
-        from skills.stubs import (
+        from app.hoc.int.agent.engines import (
             HTTP_CALL_STUB_DESCRIPTOR,
             JSON_TRANSFORM_STUB_DESCRIPTOR,
             LLM_INVOKE_STUB_DESCRIPTOR,

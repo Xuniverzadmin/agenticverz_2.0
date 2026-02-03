@@ -370,6 +370,59 @@ class LimitBreach(SQLModel, table=True):
 
 
 # =============================================================================
+# Limit Overrides (PIN-LIM-05, Migration 094)
+# =============================================================================
+
+
+class LimitOverride(SQLModel, table=True):
+    """
+    Temporary limit override record (PIN-LIM-05).
+
+    Lifecycle: PENDING → APPROVED → ACTIVE → EXPIRED
+               PENDING → REJECTED
+               PENDING/APPROVED/ACTIVE → CANCELLED
+
+    Invariants:
+    - One active/pending override per limit (no stacking)
+    - Max 5 active overrides per tenant (enforced by service)
+    - Max duration: 168 hours (1 week)
+    - All overrides require justification
+    """
+
+    __tablename__ = "limit_overrides"
+
+    id: str = Field(primary_key=True, max_length=64)
+    tenant_id: str = Field(foreign_key="tenants.id", max_length=64, index=True)
+    limit_id: str = Field(foreign_key="limits.id", max_length=64, index=True)
+
+    # Override values
+    original_value: Decimal = Field(sa_column=Column(Numeric(20, 4), nullable=False))
+    override_value: Decimal = Field(sa_column=Column(Numeric(20, 4), nullable=False))
+
+    # Status: PENDING, APPROVED, ACTIVE, EXPIRED, REJECTED, CANCELLED
+    status: str = Field(max_length=20, default="PENDING")
+
+    # Lifecycle timestamps
+    requested_at: datetime = Field(default_factory=utc_now)
+    approved_at: Optional[datetime] = None
+    starts_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    cancelled_at: Optional[datetime] = None
+
+    # Actors
+    requested_by: str = Field(max_length=128)
+    approved_by: Optional[str] = Field(default=None, max_length=128)
+    cancelled_by: Optional[str] = Field(default=None, max_length=128)
+
+    # Justification
+    reason: str  # Text, required
+    rejection_reason: Optional[str] = None  # Text, optional
+
+    # Audit trail
+    audit_trail: Optional[dict] = Field(default=None, sa_column=Column(JSONB, nullable=True))
+
+
+# =============================================================================
 # Policy Rule Integrity (PIN-412)
 # =============================================================================
 

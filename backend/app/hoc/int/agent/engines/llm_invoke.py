@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: A cached LLM response with metadata.
 # LLM Invoke Skill
 # Provides LLM inference as a skill step for agent plans
 # Includes prompt caching for cost reduction (M13+)

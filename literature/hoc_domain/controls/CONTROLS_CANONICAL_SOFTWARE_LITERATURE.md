@@ -173,7 +173,8 @@ Controls domain handles customer-facing control configurations:
 - **Role:** Limits read DB operations
 
 ### override_driver.py
-- **Role:** Override persistence
+- **Role:** Limit override lifecycle persistence (PIN-LIM-05)
+- **Status:** DB-backed (PIN-512 Cat-C P0). Was in-memory `_OVERRIDE_STORE` dict, now queries `LimitOverride` SQLModel (migration 094). Uses `session.flush()` — L6 never commits. 297 LOC.
 
 ### policy_limits_driver.py
 - **Role:** Policy limits DB operations
@@ -296,3 +297,16 @@ Other domains importing from controls:
 - New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
 - `app/services/__init__.py` now emits DeprecationWarning
 - Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+## PIN-512 Category C — Unwired L6 Driver Wiring (2026-02-02)
+
+### override_driver.py — DB Persistence Rewrite (P0)
+
+| Aspect | Before | After |
+|--------|--------|-------|
+| Storage | `_OVERRIDE_STORE: dict[str, dict] = {}` (global, volatile) | `LimitOverride` SQLModel (migration 094, PostgreSQL) |
+| Model | None | `app/models/policy_control_plane.py:LimitOverride` (16 columns) |
+| Commit | N/A (in-memory) | `session.flush()` only — L6 never commits |
+| LOC | 252 | 297 |
+
+New model `LimitOverride` added to `app/models/__init__.py` exports.

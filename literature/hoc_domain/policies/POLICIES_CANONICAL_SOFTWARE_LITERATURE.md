@@ -94,11 +94,11 @@ Facades provide unified, high-level interfaces to complex subsystems.
 
 | File | Responsibility | Subsystem |
 |------|---------------|-----------|
-| `policies_facade.py` (STUB_ENGINE) | HOC policies facade; 13 methods raise NotImplementedError (PIN-508 Phase 5) | Legacy disconnected (stubbed 2026-01-31) |
+| `policies_facade.py` | HOC policies facade; 14 methods (6 via L6 driver, 5 L5 delegation, 3 mixed), 20 result types (1185 LOC). Rewired 2026-02-02 (PIN-512 Cat-B Phase 2). | PoliciesFacadeDriver (L6), lessons_engine, engine, policy_graph_engine (L5) |
 | `governance_facade.py` | Governance control facade | Kill switch, degraded mode, conflicts |
 | `limits_facade.py` | Rate limits and quotas facade | Limits management |
 
-**Note:** `policies_facade.py` was previously a re-export from legacy `app.services.policies_facade`. As of 2026-01-31, legacy imports were disconnected and the file is now stubbed pending HOC-native implementation. PIN-508 Phase 5 adds STUB_ENGINE marker.
+**Note:** `policies_facade.py` was previously a re-export from legacy `app.services.policies_facade`. Stubbed 2026-01-31, rewired 2026-02-02 (PIN-512 Cat-B Phase 2). SQL queries extracted to PoliciesFacadeDriver (L6, 478 LOC). Delegation methods rewired from legacy `app.services.*` to HOC `app.hoc.cus.policies.L5_engines.*`.
 
 #### 5. Enforcement & Prevention (6 files)
 
@@ -106,14 +106,14 @@ Enforcement engines handle runtime policy enforcement, prevention hooks, abuse p
 
 | File | Responsibility | Enforcement Type |
 |------|---------------|-----------------|
-| `cus_enforcement_engine.py` (STUB_ENGINE) | Customer enforcement engine; methods now raise NotImplementedError (PIN-508 Phase 5) | Legacy disconnected (stubbed 2026-01-31) |
+| `cus_enforcement_engine.py` | Customer enforcement engine; 9-decision enforcement logic with L6 driver injection (559 lines). Rewired from legacy 2026-02-02 (PIN-512 Cat-B). | CusEnforcementDriver (L6) |
 | `prevention_engine.py` | Runtime enforcement | Real-time prevention |
 | `prevention_hook.py` | Prevention hook | Content accuracy checks |
 | `protection_provider.py` | Phase-7 abuse protection | Abuse detection/mitigation |
 | `binding_moment_enforcer.py` | Binding moment evaluation | When policies apply |
 | `phase_status_invariants.py` | Phase-status invariant enforcement | Invariant checking |
 
-**Note:** `cus_enforcement_engine.py` was renamed from `cus_enforcement_service.py` (N1 naming violation) and stubbed after legacy disconnection (2026-01-31). PIN-508 Phase 5 adds STUB_ENGINE marker and NotImplementedError methods.
+**Note:** `cus_enforcement_engine.py` was renamed from `cus_enforcement_service.py` (N1 naming violation), stubbed (2026-01-31), then rewired with real legacy implementation (2026-02-02, PIN-512 Cat-B). Now uses CusEnforcementDriver (L6) for all DB access. New L6 driver: `policies/L6_drivers/cus_enforcement_driver.py` (269 lines).
 
 #### 6. Decision & Authority (5 files)
 
@@ -161,10 +161,10 @@ Simulation and sandbox engines provide pre-execution limit simulation and high-l
 
 | File | Responsibility | Simulation Type |
 |------|---------------|----------------|
-| `limits_simulation_engine.py` (STUB_ENGINE) | Pre-execution limit simulation; methods raise NotImplementedError (PIN-508 Phase 5) | Dry-run limit checks |
+| `limits_simulation_engine.py` | Pre-execution limit simulation; context building + evaluation logic (275 lines). Rewired from legacy 2026-02-02 (PIN-512 Cat-B). | LimitsSimulationDriver (L6) |
 | `sandbox_engine.py` | High-level sandbox with policy enforcement | Isolated execution |
 
-**Note:** `limits_simulation_engine.py` was renamed from `limits_simulation_service.py` (N2 naming violation) and stubbed after legacy disconnection (2026-01-31). PIN-508 Phase 5 adds STUB_ENGINE marker and NotImplementedError methods.
+**Note:** `limits_simulation_engine.py` was renamed from `limits_simulation_service.py` (N2 naming violation), stubbed (2026-01-31), then rewired with real legacy implementation (2026-02-02, PIN-512 Cat-B). Now uses LimitsSimulationDriver (L6) for all DB access. New L6 driver: `policies/L6_drivers/limits_simulation_driver.py`.
 
 #### 10. Runtime & Commands (3 files)
 
@@ -196,9 +196,9 @@ Additional engines providing deterministic execution, degraded mode, failure han
 
 ---
 
-### L6 Drivers (15 files)
+### L6 Drivers (17 files)
 
-The policies L6 layer contains **14 active Python scripts** providing data access and persistence for policies, proposals, graphs, conflicts, and recovery.
+The policies L6 layer contains **16 active Python scripts** providing data access and persistence for policies, proposals, graphs, conflicts, enforcement, simulation, and recovery.
 
 #### 1. Policy Data Access (4 files)
 
@@ -238,7 +238,15 @@ The policies L6 layer contains **14 active Python scripts** providing data acces
 | `recovery_matcher.py` | Failure pattern matching | Pattern recognition |
 | `recovery_write_driver.py` | Recovery persistence | Recovery data writes |
 
-#### 5. Other Drivers (2 files)
+#### 5. Facade & Enforcement Drivers (3 files — PIN-512 Category B)
+
+| File | Responsibility | Data Operations |
+|------|---------------|----------------|
+| `policies_facade_driver.py` | Policies facade SQL queries — rules, limits, budgets, requests, drafts count (478 LOC). Extracted from legacy 2026-02-02 (PIN-512 Cat-B Phase 2). | SELECT with JOINs, subqueries, pagination |
+| `cus_enforcement_driver.py` | Customer enforcement data access — IntegrationRow/UsageSnapshot DTOs, 5 fetch methods (259 LOC). Copied from legacy 2026-02-02 (PIN-512 Cat-B Phase 1). | SELECT enforcement data |
+| `limits_simulation_driver.py` | Simulation data access — tenant quotas, policy limits (192 LOC). Copied from legacy 2026-02-02 (PIN-512 Cat-B Phase 1). | SELECT simulation context |
+
+#### 6. Other Drivers (2 files)
 
 | File | Responsibility | Function |
 |------|---------------|----------|
@@ -746,7 +754,7 @@ The policies domain is the **largest and most complex** domain in HOC, serving a
 
 ## Appendix: Complete File Listing
 
-### L5 Engines (61 active scripts)
+### L5 Engines (62 active scripts)
 
 **DSL Compiler Chain (11):**
 1. `ast.py`
@@ -819,17 +827,20 @@ The policies domain is the **largest and most complex** domain in HOC, serving a
 50. `runtime_command.py`
 51. `policy_driver.py`
 
-**Other Engines (10):**
-52. `deterministic_engine.py`
-53. `degraded_mode.py`
-54. `failure_mode_handler.py`
-55. `kill_switch.py`
-56. `keys_shim.py`
-57. `plan.py`
-58. `plan_generation_engine.py`
-59. `limits.py`
-60. `intent.py`
-61. `snapshot_engine.py`
+**M20 Policy Runtime (3):** — PIN-514 canonical location
+52. `intent.py` — IntentEmitter, Intent, IntentPayload, IntentType
+53. `deterministic_engine.py` — DeterministicEngine, ExecutionContext, ExecutionResult
+54. `dag_executor.py` — DAGExecutor, StageResult, ExecutionTrace (NEW — PIN-514)
+
+**Other Engines (8):**
+55. `degraded_mode.py`
+56. `failure_mode_handler.py`
+57. `kill_switch.py`
+58. `keys_shim.py`
+59. `plan.py`
+60. `plan_generation_engine.py`
+61. `limits.py`
+62. `snapshot_engine.py`
 
 **Plus:** `__init__.py` (1)
 
@@ -986,3 +997,78 @@ Two policies L5 engines now have assertion-guarded legacy fallbacks:
 - After all callers migrate: remove fallback code entirely
 
 Reference: `docs/memory-pins/PIN-510-domain-remediation-queue.md`
+
+## PIN-512 Category C — Unwired L6 Driver Wiring (2026-02-02)
+
+### int/policies: limit_enforcer.py — Real Enforcement (P1)
+
+- Rewired from allow-all stub to real enforcement via LimitsReadDriver (L6) + RateLimiter (Redis token bucket)
+- Cost checks: queries BUDGET limits, blocks if exceeded
+- Token checks: queries RATE/TOKENS_* limits, blocks if exceeded
+- Rate checks: uses Redis token bucket via `rate_limiter.allow()`
+- Fail-closed: if session unavailable or driver errors → DENY. 174→286 LOC.
+
+### int/policies: usage_monitor.py — DB Persistence (P2)
+
+- Rewired from log-only to DB persistence via new `usage_record_driver.py` (L6)
+- Records 3 meters per step: cost_cents, tokens_used, step_latency_ms
+- Fire-and-forget: all in try/except, logs warnings on failure. 141→177 LOC.
+
+### int/policies: usage_record_driver.py — NEW L6 Driver (P2)
+
+- **Path:** `app/hoc/int/policies/drivers/usage_record_driver.py`
+- **Role:** Persists usage records to `usage_records` table via `UsageRecord` model
+- **Methods:** `insert_usage()` — session.flush() (L6 never commits). 88 LOC.
+
+## PIN-514 Runtime Convergence (2026-02-03)
+
+**M20 Policy Runtime consolidated to canonical L5_engines location per HOC Topology V2.0.0.**
+
+### New L5 Engine: dag_executor.py
+
+- **Path:** `app/hoc/cus/policies/L5_engines/dag_executor.py`
+- **Role:** DAG-based parallel policy executor for M20 runtime
+- **Exports:** `DAGExecutor`, `StageResult`, `ExecutionTrace`
+- **Key methods:**
+  - `execute()` — Execute policies in topological order
+  - `_execute_stage()` — Parallel execution within stages
+  - `get_execution_plan()` — Get execution plan for a module
+  - `visualize_plan()` — ASCII visualization of DAG
+- **Callers:** L4 dag_executor, workers, test_m20_runtime
+- **LOC:** 316
+
+### Existing L5 Engines Relocated
+
+| Engine | Exports | Role |
+|--------|---------|------|
+| `intent.py` | IntentEmitter, Intent, IntentPayload, IntentType | M18/M19 intent emission with fail-closed validation |
+| `deterministic_engine.py` | DeterministicEngine, ExecutionContext, ExecutionResult | Policy IR execution with governance validation |
+
+### Deleted: app/policy/runtime/
+
+Non-canonical location removed. All imports updated to use `app.hoc.cus.policies.L5_engines.*`.
+
+### Import Path Migration
+
+| File | Description |
+|------|-------------|
+| `hoc/int/integrations/engines/worker.py` | M20 runtime import updated |
+| `workers/business_builder/worker.py` | M20 runtime import updated |
+| `api/workers.py` | Moat status check updated |
+| `hoc/api/cus/policies/workers.py` | Moat status check updated |
+| `hoc/cus/hoc_spine/drivers/dag_executor.py` | L4 driver import updated |
+| `tests/test_m20_runtime.py` | Test imports updated |
+
+### Wiring Contract
+
+New contract created: `docs/contracts/POLICY_RUNTIME_WIRING_CONTRACT.md`
+
+Documents:
+- 3 injection points (intent_validator, emission_sink, policy_validator)
+- Intent type classification (enforcement vs observability)
+- Fail-closed semantics for enforcement intents
+- Environment wiring matrix (tests → staging → production)
+
+**Canonical import:** `from app.hoc.cus.policies.L5_engines.intent import IntentEmitter`
+
+Reference: `docs/memory-pins/PIN-514-runtime-convergence.md`, `docs/memory-pins/PIN-515-production-wiring-contract.md`

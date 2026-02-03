@@ -28,7 +28,7 @@ import pytest
 
 # Path setup
 _backend_path = str(Path(__file__).parent.parent.parent)
-if _backend_path not in sys.path:
+
     sys.path.insert(0, _backend_path)
 
 

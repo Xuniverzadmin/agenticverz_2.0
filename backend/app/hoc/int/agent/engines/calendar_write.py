@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: Calendar write skill for creating calendar events.
 # Calendar Write Skill
 # Mock calendar skill for creating calendar events
 

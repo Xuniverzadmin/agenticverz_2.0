@@ -19,7 +19,7 @@ Each script's unique contribution and canonical function.
 | claim_decision_engine | L5 | `is_candidate_claimable` | LEAF | 1 | — | INTERFACE |
 | compiler_parser | L5 | `Parser.parse_value` | CANONICAL | 9 | dsl_parser, engine, interpreter +6 | YES |
 | content_accuracy | L5 | `ContentAccuracyValidator.validate` | CANONICAL | 7 | ?:__init__ | ?:prevention_hook | L5:prevention_hook, ast, compiler_parser +15 | YES |
-| cus_enforcement_service | L5 | `get_cus_enforcement_service` | WRAPPER | 0 | ?:cus_enforcement | L4:policies_handler | ?:shim_guard | YES |
+| cus_enforcement_engine | L5 | `CusEnforcementEngine.enforce` | CANONICAL | 9 | ?:cus_enforcement | L4:policies_handler | ?:shim_guard | YES |
 | customer_policy_read_engine | L5 | `CustomerPolicyReadService.get_guardrail_detail` | CANONICAL | 3 | L3:customer_policies_adapter | L5:customer_policies_adapter, compiler_parser, dsl_parser +7 | YES |
 | decorator | L5 | `governed` | CANONICAL | 1 | ?:__init__ | YES |
 | degraded_mode | L5 | `exit_degraded_mode` | CANONICAL | 1 | ?:test_degraded_mode, governance_facade | YES |
@@ -43,7 +43,7 @@ Each script's unique contribution and canonical function.
 | lessons_engine | L5 | `LessonsLearnedEngine.detect_lesson_from_near_threshold` | CANONICAL | 2 | ?:policy_layer | ?:policy | ?:policies_facade | ?:__init__ | ?:lessons_engine | ?:run_governance_facade | ?:incident_engine | ?:main | L5:incident_engine | L4:run_governance_facade, compiler_parser, dsl_parser +7 | YES |
 | limits | L5 | `Limits.is_unlimited` | WRAPPER | 0 | ?:rate_limits | ?:policy_rules_crud | ?:policies | ?:aos_cus_integrations | ?:billing_gate | ?:billing_dependencies | ?:simulate | ?:__init__ | ?:override | ?:policy_limits_crud | INTERFACE |
 | limits_facade | L5 | `LimitsFacade.update_limit` | CANONICAL | 5 | L4:policies_handler, ast, compiler_parser +12 | YES |
-| limits_simulation_service | L5 | `get_limits_simulation_service` | WRAPPER | 0 | L4:policies_handler | YES |
+| limits_simulation_engine | L5 | `LimitsSimulationEngine.simulate` | CANONICAL | 3 | L4:policies_handler | YES |
 | llm_policy_engine | L5 | `check_safety_limits` | CANONICAL | 4 | L3:openai_adapter | L3:tenant_config | ?:tenant_config | ?:openai_adapter, compiler_parser, dsl_parser +7 | YES |
 | nodes | L5 | `GovernanceMetadata.merge_with` | LEAF | 1 | ?:parser | ?:dag_sorter | ?:ir_builder | ?:visitors | ?:__init__ | ?:knowledge_plane | ?:policy_graph_engine | L5:visitors | L5:compiler_parser | L5:ir_builder, dsl_parser, ir_builder +1 | INTERFACE |
 | phase_status_invariants | L5 | `PhaseStatusInvariantChecker.check` | CANONICAL | 3 | ?:__init__, ast, authority_checker +13 | **OVERLAP** |
@@ -86,6 +86,9 @@ Each script's unique contribution and canonical function.
 | recovery_write_driver | L6 | `RecoveryWriteService.get_candidate_by_idempotency_key` | ENTRY | 0 | L2:recovery | L2:recovery_ingest, compiler_parser, dsl_parser +7 | YES |
 | scope_resolver | L6 | `ScopeResolver.resolve_applicable_policies` | CANONICAL | 6 | L7:policy_scope | ?:test_export_scope_resolution | ?:test_scope_selector, compiler_parser, dsl_parser +7 | YES |
 | symbol_table | L6 | `SymbolTable.lookup_rule` | CANONICAL | 5 | ?:ir_builder | ?:__init__ | L5:ir_builder | ?:test_m20_ir, compiler_parser, dsl_parser +8 | YES |
+| policies_facade_driver | L6 | `PoliciesFacadeDriver.fetch_policy_rules` | CANONICAL | 7 | L5:policies_facade | YES |
+| cus_enforcement_driver | L6 | `CusEnforcementDriver.fetch_integrations` | CANONICAL | 5 | L5:cus_enforcement_engine | YES |
+| limits_simulation_driver | L6 | `LimitsSimulationDriver.fetch_tenant_quotas` | CANONICAL | 3 | L5:limits_simulation_engine | YES |
 
 ## Uncalled Functions
 
@@ -2206,3 +2209,90 @@ Reference: `docs/memory-pins/PIN-510-domain-remediation-queue.md`
 - `recovery_evaluation_engine.py` frozen in check 28 allowlist (L5→L5 cross-domain — imports incidents/recovery_rule_engine)
 
 **No new files may introduce these patterns.**
+
+## PIN-514 Runtime Convergence (2026-02-03)
+
+**M20 Policy Runtime consolidated to canonical L5_engines location.**
+
+| Action | File | Description |
+|--------|------|-------------|
+| CREATE | `L5_engines/intent.py` | IntentEmitter, Intent, IntentPayload, IntentType — fail-closed M19 validator injection |
+| CREATE | `L5_engines/deterministic_engine.py` | DeterministicEngine, ExecutionContext, ExecutionResult — policy IR execution |
+| CREATE | `L5_engines/dag_executor.py` | DAGExecutor, StageResult, ExecutionTrace — parallel policy DAG execution |
+| UPDATE | `L5_engines/__init__.py` | Exports all M20 runtime components |
+| DELETE | `app/policy/runtime/` | Non-canonical location removed |
+
+**Import path changes (6 files):**
+
+| File | Old Import | New Import |
+|------|------------|------------|
+| `hoc/int/integrations/engines/worker.py` | `app.policy.runtime.*` | `app.hoc.cus.policies.L5_engines.*` |
+| `workers/business_builder/worker.py` | `app.policy.runtime.*` | `app.hoc.cus.policies.L5_engines.*` |
+| `api/workers.py` | `app.policy.runtime.*` | `app.hoc.cus.policies.L5_engines.*` |
+| `hoc/api/cus/policies/workers.py` | `app.policy.runtime.*` | `app.hoc.cus.policies.L5_engines.*` |
+| `hoc/cus/hoc_spine/drivers/dag_executor.py` | `app.policy.runtime.*` | `app.hoc.cus.policies.L5_engines.*` |
+| `tests/test_m20_runtime.py` | `app.policy.runtime.*` | `app.hoc.cus.policies.L5_engines.*` |
+
+**Script Registry additions:**
+
+| Script | Layer | Canonical Function | Role | Callers |
+|--------|-------|--------------------|------|---------|
+| dag_executor | L5 | `DAGExecutor.execute` | CANONICAL | L4:dag_executor, workers, test_m20_runtime |
+
+**Canonical import path:** `from app.hoc.cus.policies.L5_engines.intent import IntentEmitter`
+
+Reference: `docs/memory-pins/PIN-514-runtime-convergence.md`, `docs/contracts/POLICY_RUNTIME_WIRING_CONTRACT.md`
+
+## PIN-519 System Run Introspection (2026-02-03)
+
+**New L6 driver for policy evaluation queries.**
+
+| Action | File | Description |
+|--------|------|-------------|
+| CREATE | `L6_drivers/policy_enforcement_driver.py` | Read-only policy evaluation queries for runs |
+
+**New capabilities:**
+
+| Method | Purpose |
+|--------|---------|
+| `PolicyEnforcementReadDriver.fetch_policy_evaluations_for_run(tenant_id, run_id)` | Query policy evaluations scoped to a run |
+
+**Bridge extension:**
+
+| Bridge | Method Added |
+|--------|--------------|
+| `policies_bridge.py` | `policy_evaluations_capability(session)` — returns `PolicyEnforcementReadDriver` |
+
+**Consumer:** `RunEvidenceCoordinator` (L4) via `PoliciesBridge`
+
+Reference: `docs/memory-pins/PIN-519-system-run-introspection.md`
+
+## Recovery Count Query Fix (2026-02-03)
+
+**Fixed inefficient count queries in recovery module.**
+
+| Action | File | Description |
+|--------|------|-------------|
+| ADD | `L6_drivers/recovery_matcher.py` | `count_candidates(status)` method — efficient COUNT query for pagination |
+| ADD | `L6_drivers/recovery_matcher.py` | `count_by_status()` method — single GROUP BY query for stats |
+| FIX | `hoc/api/cus/recovery/recovery.py:269` | Use `count_candidates()` for pagination total instead of `len(candidates)` |
+| FIX | `hoc/api/cus/recovery/recovery.py:362` | Use `count_by_status()` instead of 3x `get_candidates(limit=1)` |
+
+**Problem solved:**
+
+| Issue | Before | After |
+|-------|--------|-------|
+| Pagination total | `len(candidates)` = page size (broken UI) | `COUNT(*)` = actual total |
+| Stats counts | 3 queries returning 0 or 1 each | 1 query with `GROUP BY decision` |
+
+**New methods in `RecoveryMatcher`:**
+
+```python
+def count_candidates(self, status: str = "pending") -> int:
+    """COUNT query for pagination — O(index scan)."""
+
+def count_by_status(self) -> Dict[str, int]:
+    """GROUP BY query for stats — single query."""
+```
+
+**No transaction boundary changes** — L6 driver, caller owns commit.

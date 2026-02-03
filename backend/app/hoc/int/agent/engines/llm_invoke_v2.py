@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: LLM Invoke Skill v2 (M3)
 # llm_invoke_v2.py
 """
 LLM Invoke Skill v2 (M3)

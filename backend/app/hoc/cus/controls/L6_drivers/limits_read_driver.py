@@ -269,6 +269,48 @@ class LimitsReadDriver:
             for lim in limits
         ]
 
+    async def fetch_limit_breaches_for_run(
+        self,
+        tenant_id: str,
+        run_id: str,
+        max_results: int = 100,
+    ) -> list[dict]:
+        """
+        Fetch all limit breaches associated with a run (PIN-519).
+
+        Args:
+            tenant_id: Tenant owning the run
+            run_id: Run ID to query breaches for
+            max_results: Maximum breaches to return
+
+        Returns:
+            List of breach records with limit details
+        """
+        stmt = (
+            select(
+                LimitBreach.id.label("breach_id"),
+                LimitBreach.limit_id,
+                LimitBreach.value_at_breach,
+                LimitBreach.limit_value,
+                LimitBreach.breached_at,
+                Limit.name.label("limit_name"),
+                Limit.max_value.label("threshold_value"),
+                Limit.limit_type,
+            )
+            .join(Limit, Limit.id == LimitBreach.limit_id)
+            .where(
+                and_(
+                    LimitBreach.tenant_id == tenant_id,
+                    LimitBreach.run_id == run_id,
+                )
+            )
+            .order_by(LimitBreach.breached_at.desc())
+            .limit(max_results)
+        )
+
+        result = await self._session.execute(stmt)
+        return [dict(row._mapping) for row in result.all()]
+
 
 def get_limits_read_driver(session: AsyncSession) -> LimitsReadDriver:
     """Factory function for LimitsReadDriver."""

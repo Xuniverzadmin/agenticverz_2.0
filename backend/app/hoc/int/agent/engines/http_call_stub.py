@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: HTTP Call Stub (M2)
 # skills/stubs/http_call_stub.py
 """
 HTTP Call Stub (M2)
@@ -22,7 +25,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 _runtime_path = str(Path(__file__).parent.parent.parent / "worker" / "runtime")
-if _runtime_path not in sys.path:
+
     sys.path.insert(0, _runtime_path)
 
 from core import SkillDescriptor

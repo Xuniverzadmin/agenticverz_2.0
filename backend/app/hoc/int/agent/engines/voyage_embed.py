@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: Configuration schema for voyage_embed skill.
 # Voyage Embed Skill (M11)
 # Generate embeddings using Voyage AI API
 

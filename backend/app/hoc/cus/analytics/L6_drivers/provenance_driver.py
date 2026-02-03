@@ -462,3 +462,15 @@ async def backfill_v1_baseline(
     )
 
     return stats
+
+
+# =============================================================================
+# CANARY REPORT FUNCTIONS - MOVED TO canary_report_driver.py (PIN-518)
+# =============================================================================
+# The following functions have been moved to a dedicated driver:
+#   - write_canary_report()
+#   - query_canary_reports()
+#   - get_canary_report_by_run_id()
+#
+# Import from: app.hoc.cus.analytics.L6_drivers.canary_report_driver
+# =============================================================================

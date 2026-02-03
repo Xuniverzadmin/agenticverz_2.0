@@ -27,6 +27,11 @@ from app.hoc.cus.analytics.L6_drivers.prediction_driver import (
     PredictionDriver,
     get_prediction_driver,
 )
+from app.hoc.cus.analytics.L6_drivers.canary_report_driver import (
+    write_canary_report,
+    query_canary_reports,
+    get_canary_report_by_run_id,
+)
 
 __all__ = [
     "AlertDriver",
@@ -35,4 +40,8 @@ __all__ = [
     "get_cost_anomaly_driver",
     "PredictionDriver",
     "get_prediction_driver",
+    # Canary Report Driver (PIN-518)
+    "write_canary_report",
+    "query_canary_reports",
+    "get_canary_report_by_run_id",
 ]

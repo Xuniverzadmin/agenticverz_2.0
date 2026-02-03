@@ -31,7 +31,7 @@ from typing import (
 )
 
 _runtime_path = str(Path(__file__).parent.parent / "worker" / "runtime")
-if _runtime_path not in sys.path:
+
     sys.path.insert(0, _runtime_path)
 
 from core import SkillDescriptor

@@ -37,7 +37,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from app.schemas.response import wrap_dict, wrap_list
-from app.services.cus_enforcement_service import CusEnforcementService
+from app.hoc.cus.policies.L5_engines.cus_enforcement_engine import CusEnforcementEngine
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +74,9 @@ class EnforcementBatchRequest(BaseModel):
 # =============================================================================
 
 
-def get_enforcement_service() -> CusEnforcementService:
+def get_enforcement_service() -> CusEnforcementEngine:
     """Dependency to get enforcement service instance."""
-    return CusEnforcementService()
+    return CusEnforcementEngine()
 
 
 def get_tenant_id(request: Request) -> str:
@@ -104,7 +104,7 @@ def get_tenant_id(request: Request) -> str:
 async def check_enforcement(
     payload: EnforcementCheckRequest,
     request: Request,
-    service: CusEnforcementService = Depends(get_enforcement_service),
+    service: CusEnforcementEngine = Depends(get_enforcement_service),
 ):
     """Check enforcement policy before making an LLM call.
 
@@ -154,7 +154,7 @@ async def check_enforcement(
 async def get_enforcement_status(
     request: Request,
     integration_id: str = Query(..., description="Integration ID"),
-    service: CusEnforcementService = Depends(get_enforcement_service),
+    service: CusEnforcementEngine = Depends(get_enforcement_service),
 ):
     """Get current enforcement status for an integration.
 
@@ -187,7 +187,7 @@ async def get_enforcement_status(
 async def batch_enforcement_check(
     payload: EnforcementBatchRequest,
     request: Request,
-    service: CusEnforcementService = Depends(get_enforcement_service),
+    service: CusEnforcementEngine = Depends(get_enforcement_service),
 ):
     """Check enforcement for multiple requests at once.
 

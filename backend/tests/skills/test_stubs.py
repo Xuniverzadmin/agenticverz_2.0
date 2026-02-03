@@ -14,8 +14,8 @@ from pathlib import Path
 import pytest
 
 # Direct path to stubs to avoid pydantic-dependent imports through skills/__init__.py
-_stubs_path = str(Path(__file__).parent.parent.parent / "app" / "skills" / "stubs")
-if _stubs_path not in sys.path:
+
+
     sys.path.insert(0, _stubs_path)
 
 from http_call_stub import (

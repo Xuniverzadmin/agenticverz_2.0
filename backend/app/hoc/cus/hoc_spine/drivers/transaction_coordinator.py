@@ -138,6 +138,11 @@ class TransactionFailed(Exception):
         self.cause = cause
 
 
+class RollbackNotSupportedError(Exception):
+    """Raised when rollback is attempted but the target model does not support it."""
+    pass
+
+
 @dataclass
 class DomainResult:
     """Result from a single domain operation."""
@@ -761,37 +766,26 @@ class RunCompletionTransaction:
             )
 
     def _rollback_incident(self, incident_id: str) -> None:
-        """Rollback incident creation (soft-delete or mark as rolled_back)."""
-        try:
-            # For now, just log - actual rollback depends on incident model
-            logger.info(
-                "transaction_coordinator.incident_rollback",
-                extra={"incident_id": incident_id},
-            )
-            # TODO: Implement actual rollback when incident model supports it
-            # This could be:
-            # - Soft delete (set deleted_at)
-            # - Mark as rolled_back status
-            # - Actually delete (if within grace period)
-        except Exception as e:
-            logger.error(
-                "transaction_coordinator.incident_rollback_failed",
-                extra={"incident_id": incident_id, "error": str(e)},
-            )
+        """Rollback incident creation — not supported until model supports soft-delete."""
+        logger.warning(
+            "transaction_coordinator.incident_rollback_not_supported",
+            extra={"incident_id": incident_id},
+        )
+        raise RollbackNotSupportedError(
+            f"Incident rollback not supported: {incident_id}. "
+            "Incident model does not yet support soft-delete or rolled_back status."
+        )
 
     def _rollback_policy(self, policy_id: str) -> None:
-        """Rollback policy evaluation (soft-delete or mark as rolled_back)."""
-        try:
-            logger.info(
-                "transaction_coordinator.policy_rollback",
-                extra={"policy_id": policy_id},
-            )
-            # TODO: Implement actual rollback when policy model supports it
-        except Exception as e:
-            logger.error(
-                "transaction_coordinator.policy_rollback_failed",
-                extra={"policy_id": policy_id, "error": str(e)},
-            )
+        """Rollback policy evaluation — not supported until model supports soft-delete."""
+        logger.warning(
+            "transaction_coordinator.policy_rollback_not_supported",
+            extra={"policy_id": policy_id},
+        )
+        raise RollbackNotSupportedError(
+            f"Policy rollback not supported: {policy_id}. "
+            "Policy model does not yet support soft-delete or rolled_back status."
+        )
 
 
 # =============================================================================

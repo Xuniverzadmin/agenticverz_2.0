@@ -104,7 +104,53 @@ class AnalyticsDetectionHandler:
         return OperationResult.ok(data)
 
 
+class CanaryReportHandler:
+    """
+    Handler for analytics.canary_reports operations.
+
+    Routes canary report queries through L4 to L6.
+    Ensures policy/audit hooks can be added later.
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.analytics.L6_drivers.canary_report_driver import (
+            query_canary_reports,
+            get_canary_report_by_run_id,
+        )
+
+        method_name = ctx.params.get("method", "list")
+
+        if method_name == "list":
+            reports = await query_canary_reports(
+                status=ctx.params.get("status"),
+                passed=ctx.params.get("passed"),
+                limit=ctx.params.get("limit", 10),
+                offset=ctx.params.get("offset", 0),
+            )
+            return OperationResult.ok({
+                "reports": reports,
+                "total": len(reports),
+            })
+
+        elif method_name == "get":
+            run_id = ctx.params.get("run_id")
+            if not run_id:
+                return OperationResult.fail("Missing 'run_id'", "MISSING_RUN_ID")
+            report = await get_canary_report_by_run_id(run_id)
+            if report is None:
+                return OperationResult.fail(
+                    f"Canary report not found: {run_id}", "NOT_FOUND"
+                )
+            return OperationResult.ok(report)
+
+        else:
+            return OperationResult.fail(
+                f"Unknown canary method: {method_name}", "UNKNOWN_METHOD"
+            )
+
+
 def register(registry: OperationRegistry) -> None:
     """Register analytics operations with the registry."""
     registry.register("analytics.query", AnalyticsQueryHandler())
     registry.register("analytics.detection", AnalyticsDetectionHandler())
+    registry.register("analytics.canary_reports", CanaryReportHandler())

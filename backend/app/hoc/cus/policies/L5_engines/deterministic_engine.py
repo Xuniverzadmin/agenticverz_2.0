@@ -14,7 +14,7 @@
 # Callers: policy evaluators, workers
 # Allowed Imports: L5, L6
 # Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
-# Reference: PIN-470, Policy System
+# Reference: PIN-514, PIN-515, Policy System
 
 # M20 Policy Runtime - Deterministic Engine
 # MN-OS Layer 0: No randomness, reproducible execution
@@ -34,9 +34,36 @@ Integration points:
 """
 
 import hashlib
+import re
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Optional
+
+from app.hoc.cus.policies.L5_schemas.policy_check import PolicyCheckValidator
+
+# Safe regex constants
+MAX_PATTERN_LEN = 128
+MAX_INPUT_LEN = 1024
+_REDOS_PATTERN = re.compile(r"(.+[+*])\1|\\[0-9]")
+
+
+def safe_regex_match(input_str: str, pattern: str) -> bool:
+    """
+    Safe regex match with length limits and ReDoS guards.
+
+    Returns False on any failure (fail-closed).
+    """
+    if not isinstance(input_str, str) or not isinstance(pattern, str):
+        return False
+    if len(pattern) > MAX_PATTERN_LEN or len(input_str) > MAX_INPUT_LEN:
+        return False
+    # Reject patterns with nested quantifiers or backreferences
+    if _REDOS_PATTERN.search(pattern):
+        return False
+    try:
+        return bool(re.search(pattern, input_str))
+    except re.error:
+        return False
 
 from app.policy.compiler.grammar import ActionType, PolicyCategory
 from app.policy.ir.ir_nodes import (
@@ -57,7 +84,7 @@ from app.policy.ir.ir_nodes import (
     IRStoreVar,
     IRUnaryOp,
 )
-from app.policy.runtime.intent import Intent, IntentEmitter, IntentPayload, IntentType
+from app.hoc.cus.policies.L5_engines.intent import Intent, IntentEmitter, IntentPayload, IntentType
 
 
 class ExecutionStatus(Enum):
@@ -195,8 +222,17 @@ class DeterministicEngine:
     - Full audit trail
     """
 
-    def __init__(self):
-        self.intent_emitter = IntentEmitter()
+    def __init__(
+        self,
+        policy_validator: Optional[PolicyCheckValidator] = None,
+        intent_validator=None,
+        emission_sink=None,
+    ):
+        self.intent_emitter = IntentEmitter(
+            intent_validator=intent_validator,
+            emission_sink=emission_sink,
+        )
+        self._policy_validator = policy_validator
         self._builtin_functions: Dict[str, Callable[..., Any]] = self._register_builtins()
 
     def _register_builtins(self) -> Dict[str, Callable[..., Any]]:
@@ -208,7 +244,7 @@ class DeterministicEngine:
             "len": lambda x: len(x) if x else 0,
             "lower": lambda s: s.lower() if s else "",
             "upper": lambda s: s.upper() if s else "",
-            "matches": lambda s, pattern: False,  # TODO: regex
+            "matches": lambda s, pattern: safe_regex_match(s, pattern),
             "in_list": lambda item, lst: item in lst if lst else False,
             "is_empty": lambda x: not x,
             "__getattr__": lambda obj, attr: obj.get(attr) if isinstance(obj, dict) else getattr(obj, attr, None),
@@ -434,8 +470,19 @@ class DeterministicEngine:
             return instr.action
 
         elif isinstance(instr, IRCheckPolicy):
-            # TODO: Call M19 policy engine
-            registers[instr.id] = True
+            if self._policy_validator is not None:
+                try:
+                    check_result = await self._policy_validator.validate_policy(
+                        policy_id=getattr(instr, "policy_name", str(instr.id)),
+                        context=context.variables,
+                    )
+                    registers[instr.id] = check_result["allowed"]
+                except Exception:
+                    # Fail-closed: validation error → deny
+                    registers[instr.id] = False
+            else:
+                # Fail-closed: no validator → deny
+                registers[instr.id] = False
             return None
 
         elif isinstance(instr, IREmitIntent):

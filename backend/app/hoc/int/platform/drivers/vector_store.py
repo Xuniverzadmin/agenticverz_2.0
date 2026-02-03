@@ -1,3 +1,6 @@
+# Layer: L6 — Domain Driver
+# AUDIENCE: INTERNAL
+# Role: pgvector-backed memory store for semantic search.
 # Vector Memory Store with pgvector
 """
 pgvector-backed memory store for semantic search.

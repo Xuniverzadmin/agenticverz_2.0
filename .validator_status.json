@@ -1,6 +1,6 @@
 {
   "status": "VIOLATIONS",
-  "last_check": "2026-02-01T20:30:02.586430",
+  "last_check": "2026-02-03T08:30:02.268351",
   "violations": [
     {
       "file": "/root/agenticverz2.0/backend/alembic/versions/001_create_workflow_checkpoints.py",
@@ -794,6 +794,13 @@
       "code": ""
     },
     {
+      "file": "/root/agenticverz2.0/backend/alembic/versions/121_add_costsim_canary_reports.py",
+      "line": 1,
+      "rule": "MIG-001",
+      "message": "Missing MIGRATION_CONTRACT header",
+      "code": ""
+    },
+    {
       "file": "/root/agenticverz2.0/backend/alembic/versions/c8213cda2be4_add_uuid_constraint_to_tenant_id.py",
       "line": 1,
       "rule": "MIG-001",
@@ -872,973 +879,980 @@
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 899,
+      "line": 900,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.aos_api_key import router as aos_api_key_router  #"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 900,
+      "line": 901,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.cus_telemetry import router as cus_telemetry_route"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 901,
+      "line": 902,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.cus_enforcement import router as cus_enforcement_r"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 902,
+      "line": 903,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.cost_guard import router as cost_guard_router  # /"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 905,
+      "line": 906,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.cost_intelligence import router as cost_intelligen"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 908,
+      "line": 909,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.cost_ops import router as cost_ops_router  # /ops/"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 909,
+      "line": 910,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.costsim import router as costsim_router"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 910,
+      "line": 911,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.customer_visibility import router as customer_visi"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 911,
+      "line": 912,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.embedding import router as embedding_router  # PIN"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 914,
+      "line": 915,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.founder_actions import router as founder_actions_r"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 917,
+      "line": 918,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.founder_contract_review import ("
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 920,
+      "line": 921,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.founder_explorer import router as explorer_router "
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 923,
+      "line": 924,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.founder_onboarding import router as founder_onboar"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 926,
+      "line": 927,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.founder_review import router as founder_review_rou"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 927,
+      "line": 928,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.founder_timeline import router as founder_timeline"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 930,
+      "line": 931,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.guard import router as guard_router  # Customer Co"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 931,
+      "line": 932,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.guard_logs import router as guard_logs_router  # P"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 932,
+      "line": 933,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.guard_policies import router as guard_policies_rou"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 933,
+      "line": 934,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.health import router as health_router"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 934,
+      "line": 935,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.incidents import router as incidents_router  # INC"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 937,
+      "line": 938,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.M25_integrations import router as m25_integration_"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 940,
+      "line": 941,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.legacy_routes import router as legacy_routes_route"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 941,
+      "line": 942,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.logs import router as logs_router  # LOGS Domain: "
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 942,
+      "line": 943,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.memory_pins import router as memory_pins_router"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 943,
+      "line": 944,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.onboarding import router as onboarding_router  # M"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 946,
+      "line": 947,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.ops import router as ops_router  # M24 Ops Console"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 947,
+      "line": 948,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.overview import router as overview_router  # OVERV"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 948,
+      "line": 949,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.platform import router as platform_router  # PIN-2"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 949,
+      "line": 950,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.policies import router as policies_router  # POLIC"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 950,
+      "line": 951,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.policy import router as policy_router"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 951,
+      "line": 952,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.policy_layer import router as policy_layer_router "
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 954,
+      "line": 955,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.policy_limits_crud import router as policy_limits_"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 955,
+      "line": 956,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.policy_rules_crud import router as policy_rules_cr"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 956,
+      "line": 957,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.limits.simulate import router as limits_simulate_r"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 957,
+      "line": 958,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.limits.override import router as limits_override_r"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 958,
+      "line": 959,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.rbac_api import router as rbac_router"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 959,
+      "line": 960,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.recovery import router as recovery_router"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 960,
+      "line": 961,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.recovery_ingest import router as recovery_ingest_r"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 961,
+      "line": 962,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.replay import router as replay_router  # H1 Replay"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 962,
+      "line": 963,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.runtime import router as runtime_router"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 963,
+      "line": 964,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.scenarios import router as scenarios_router  # H2 "
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 966,
+      "line": 967,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.sdk import router as sdk_router"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 969,
+      "line": 970,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.session_context import router as session_context_r"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 972,
+      "line": 973,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.debug_auth import router as debug_auth_router"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 973,
+      "line": 974,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.status_history import router as status_history_rou"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 974,
+      "line": 975,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.tenants import router as tenants_router  # M21 - R"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 975,
+      "line": 976,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.traces import router as traces_router"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 976,
+      "line": 977,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.v1_killswitch import router as v1_killswitch_route"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 979,
+      "line": 980,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.v1_proxy import router as v1_proxy_router  # Drop-"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 980,
+      "line": 981,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.workers import router as workers_router  # Busines"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 984,
+      "line": 985,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.retrieval import router as retrieval_router  # RET"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 985,
+      "line": 986,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.detection import router as detection_router  # DET"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 986,
+      "line": 987,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.compliance import router as compliance_router  # C"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 987,
+      "line": 988,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.evidence import router as evidence_router  # EVIDE"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 988,
+      "line": 989,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.notifications import router as notifications_route"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 989,
+      "line": 990,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.alerts import router as alerts_router  # ALERTS: /"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 990,
+      "line": 991,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.scheduler import router as scheduler_router  # SCH"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 991,
+      "line": 992,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.datasources import router as datasources_router  #"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 992,
+      "line": 993,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.monitors import router as monitors_router  # MONIT"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 993,
+      "line": 994,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.rate_limits import router as rate_limits_router  #"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 994,
+      "line": 995,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.controls import router as controls_router  # CONTR"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 995,
+      "line": 996,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.lifecycle import router as lifecycle_router  # LIF"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1001,
+      "line": 1002,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(health_router)"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1002,
+      "line": 1003,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(policy_router)"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1003,
+      "line": 1004,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(runtime_router)"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1004,
+      "line": 1005,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(status_history_router)"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1005,
+      "line": 1006,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(costsim_router)"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1006,
+      "line": 1007,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(memory_pins_router)"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1007,
+      "line": 1008,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(rbac_router)"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1008,
+      "line": 1009,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(traces_router, prefix=\"/api/v1\")"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1009,
+      "line": 1010,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(replay_router, prefix=\"/api/v1\")  # H1 Re"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1010,
+      "line": 1011,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(scenarios_router, prefix=\"/api/v1\")  # H2"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1011,
+      "line": 1012,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(explorer_router, prefix=\"/api/v1\")  # H3 "
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1013,
+      "line": 1014,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(recovery_router)  # M10 Recovery Suggesti"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1014,
+      "line": 1015,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(recovery_ingest_router)  # M10 Recovery I"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1015,
+      "line": 1016,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(agents_router)  # M12 Multi-Agent System"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1016,
+      "line": 1017,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(policy_layer_router, prefix=\"/api/v1\")  #"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1017,
+      "line": 1018,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(embedding_router, prefix=\"/api/v1\")  # PI"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1018,
+      "line": 1019,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(workers_router)  # Business Builder Worke"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1019,
+      "line": 1020,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(tenants_router)  # M21 - RE-ENABLED: PIN-"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1020,
+      "line": 1021,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(sdk_router)  # PIN-399: SDK handshake and"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1021,
+      "line": 1022,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(session_context_router)  # PIN-409: Sessi"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1022,
+      "line": 1023,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(debug_auth_router)  # Debug: Auth context"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1025,
+      "line": 1026,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(v1_proxy_router)  # /v1/chat/completions,"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1026,
+      "line": 1027,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(v1_killswitch_router)  # /v1/killswitch/*"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1029,
+      "line": 1030,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(guard_router)  # /guard/* - Customer Cons"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1030,
+      "line": 1031,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(guard_logs_router)  # PIN-281: /guard/log"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1031,
+      "line": 1032,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(guard_policies_router)  # PIN-281: /guard"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1032,
+      "line": 1033,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(activity_router)  # ACTIVITY Domain: /api"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1033,
+      "line": 1034,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(incidents_router)  # INCIDENTS Domain: /a"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1034,
+      "line": 1035,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(overview_router)  # OVERVIEW Domain: /api"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1035,
+      "line": 1036,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(policies_router)  # POLICIES Domain: /api"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1036,
+      "line": 1037,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(analytics_router, prefix=\"/api/v1\")  # AN"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1039,
+      "line": 1040,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(policy_limits_crud_router, prefix=\"/api/v"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1040,
+      "line": 1041,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(policy_rules_crud_router, prefix=\"/api/v1"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1041,
+      "line": 1042,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(limits_simulate_router, prefix=\"/api/v1\")"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1042,
+      "line": 1043,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(limits_override_router, prefix=\"/api/v1\")"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1044,
+      "line": 1045,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(logs_router)  # LOGS Domain: /api/v1/logs"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1045,
+      "line": 1046,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(aos_cus_integrations_router)  # CONNECTIV"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1046,
-      "rule": "RW-002",
-      "message": "include_router in main.py (use registry.py)",
-      "code": "app.include_router(aos_api_key_router)  # CONNECTIVITY: /api"
-    },
-    {
-      "file": "/root/agenticverz2.0/backend/app/main.py",
       "line": 1047,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
-      "code": "app.include_router(cus_telemetry_router, prefix=\"/api/v1\")  "
+      "code": "app.include_router(mcp_servers_router)  # PIN-516: /api/v1/i"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
       "line": 1048,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
-      "code": "app.include_router(cus_enforcement_router, prefix=\"/api/v1\")"
+      "code": "app.include_router(aos_api_key_router)  # CONNECTIVITY: /api"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
       "line": 1049,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
-      "code": "app.include_router(accounts_router)  # ACCOUNTS: /api/v1/acc"
+      "code": "app.include_router(cus_telemetry_router, prefix=\"/api/v1\")  "
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/app/main.py",
+      "line": 1050,
+      "rule": "RW-002",
+      "message": "include_router in main.py (use registry.py)",
+      "code": "app.include_router(cus_enforcement_router, prefix=\"/api/v1\")"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
       "line": 1051,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
-      "code": "app.include_router(ops_router)  # /ops/* - M24 Founder Intel"
-    },
-    {
-      "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1052,
-      "rule": "RW-002",
-      "message": "include_router in main.py (use registry.py)",
-      "code": "app.include_router(platform_router)  # /platform/* - PIN-284"
+      "code": "app.include_router(accounts_router)  # ACCOUNTS: /api/v1/acc"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
       "line": 1053,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
-      "code": "app.include_router(founder_timeline_router)  # Phase 4C-1 Fo"
+      "code": "app.include_router(ops_router)  # /ops/* - M24 Founder Intel"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
       "line": 1054,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
-      "code": "app.include_router(founder_review_router)  # PIN-333: /fdr/r"
+      "code": "app.include_router(platform_router)  # /platform/* - PIN-284"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
       "line": 1055,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
+      "code": "app.include_router(founder_timeline_router)  # Phase 4C-1 Fo"
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/app/main.py",
+      "line": 1056,
+      "rule": "RW-002",
+      "message": "include_router in main.py (use registry.py)",
+      "code": "app.include_router(founder_review_router)  # PIN-333: /fdr/r"
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/app/main.py",
+      "line": 1057,
+      "rule": "RW-002",
+      "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router("
-    },
-    {
-      "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1058,
-      "rule": "RW-002",
-      "message": "include_router in main.py (use registry.py)",
-      "code": "app.include_router(founder_onboarding_router)  # PIN-399 Pha"
-    },
-    {
-      "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1059,
-      "rule": "RW-002",
-      "message": "include_router in main.py (use registry.py)",
-      "code": "app.include_router(customer_visibility_router)  # Phase 4C-2"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
       "line": 1060,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
-      "code": "app.include_router(onboarding_router)  # /api/v1/auth/* - M2"
+      "code": "app.include_router(founder_onboarding_router)  # PIN-399 Pha"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
       "line": 1061,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
-      "code": "app.include_router(m25_integration_router)  # /integration/*"
+      "code": "app.include_router(customer_visibility_router)  # Phase 4C-2"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
       "line": 1062,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
+      "code": "app.include_router(onboarding_router)  # /api/v1/auth/* - M2"
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/app/main.py",
+      "line": 1063,
+      "rule": "RW-002",
+      "message": "include_router in main.py (use registry.py)",
+      "code": "app.include_router(m25_integration_router)  # /integration/*"
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/app/main.py",
+      "line": 1064,
+      "rule": "RW-002",
+      "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(cost_intelligence_router)  # /cost/* - M2"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1065,
+      "line": 1067,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(cost_ops_router)  # /ops/cost/* - Founder"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1066,
+      "line": 1068,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(cost_guard_router)  # /guard/costs/* - Cu"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1069,
+      "line": 1071,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(authz_status_router)  # /int/authz/* - M2"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1072,
+      "line": 1074,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(c2_predictions_router)  # /api/v1/c2/pred"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1074,
+      "line": 1076,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(founder_actions_router)  # /ops/actions/*"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1076,
+      "line": 1078,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(legacy_routes_router)  # /dashboard, /ope"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1079,
+      "line": 1081,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.feedback import router as feedback_router  # PB-S3"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1080,
+      "line": 1082,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.policy_proposals import router as policy_proposals"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1081,
+      "line": 1083,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.predictions import router as predictions_router  #"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1083,
+      "line": 1085,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(feedback_router)  # /api/v1/feedback - Pa"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1084,
+      "line": 1086,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(policy_proposals_router)  # /api/v1/polic"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1085,
+      "line": 1087,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(predictions_router)  # /api/v1/prediction"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1088,
+      "line": 1090,
       "rule": "RW-001",
       "message": "Router import in main.py (use registry.py)",
       "code": "from .api.discovery import router as discovery_router"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1090,
+      "line": 1092,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(discovery_router)  # /api/v1/discovery - "
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1093,
+      "line": 1095,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(retrieval_router, prefix=\"/api/v1\")  # RE"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1094,
+      "line": 1096,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(detection_router, prefix=\"/api/v1\")  # DE"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1095,
+      "line": 1097,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(compliance_router, prefix=\"/api/v1\")  # C"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1096,
+      "line": 1098,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(evidence_router, prefix=\"/api/v1\")  # EVI"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1097,
+      "line": 1099,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(notifications_router, prefix=\"/api/v1\")  "
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1098,
+      "line": 1100,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(alerts_router, prefix=\"/api/v1\")  # ALERT"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1099,
+      "line": 1101,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(scheduler_router, prefix=\"/api/v1\")  # SC"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1100,
+      "line": 1102,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(datasources_router, prefix=\"/api/v1\")  # "
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1101,
+      "line": 1103,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(monitors_router, prefix=\"/api/v1\")  # MON"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1102,
+      "line": 1104,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(rate_limits_router, prefix=\"/api/v1\")  # "
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1103,
+      "line": 1105,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(controls_router, prefix=\"/api/v1\")  # CON"
     },
     {
       "file": "/root/agenticverz2.0/backend/app/main.py",
-      "line": 1104,
+      "line": 1106,
       "rule": "RW-002",
       "message": "include_router in main.py (use registry.py)",
       "code": "app.include_router(lifecycle_router, prefix=\"/api/v1\")  # LI"
@@ -1851,7 +1865,7 @@
       "code": "ttl_remaining: Optional[int] = Field(default=None, descripti"
     }
   ],
-  "files_scanned": 253,
-  "checks_run": 253,
+  "files_scanned": 255,
+  "checks_run": 255,
   "scanner": "agen_internal_system_scan"
 }

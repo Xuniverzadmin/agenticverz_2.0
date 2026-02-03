@@ -26,10 +26,10 @@ from typing import Any, Dict
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.agents.services.blackboard_service import BlackboardService
-from app.agents.services.job_service import JobConfig, JobService
-from app.agents.services.registry_service import RegistryService
-from app.agents.services.worker_service import WorkerService
+from app.hoc.int.agent.engines.blackboard_engine import BlackboardService
+from app.hoc.int.agent.engines.job_engine import JobConfig, JobService
+from app.hoc.int.agent.engines.registry_engine import RegistryService
+from app.hoc.int.agent.engines.worker_engine import WorkerService
 
 
 def simulate_url_scrape(url: str) -> Dict[str, Any]:

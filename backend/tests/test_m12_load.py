@@ -57,10 +57,10 @@ pytestmark = pytest.mark.skipif(
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from app.agents.services.blackboard_service import get_blackboard_service
-from app.agents.services.credit_service import CreditService, get_credit_service
-from app.agents.services.job_service import JobConfig, JobService, get_job_service
-from app.agents.services.worker_service import WorkerService, get_worker_service
+from app.hoc.int.agent.engines.blackboard_engine import get_blackboard_service
+from app.hoc.int.agent.engines.credit_engine import CreditService, get_credit_service
+from app.hoc.int.agent.engines.job_engine import JobConfig, JobService, get_job_service
+from app.hoc.int.agent.engines.worker_engine import WorkerService, get_worker_service
 
 # Test configuration
 LOAD_TEST_ITEMS = int(os.environ.get("LOAD_TEST_ITEMS", "1000"))

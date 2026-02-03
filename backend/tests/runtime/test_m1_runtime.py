@@ -15,7 +15,7 @@ import pytest
 
 # Direct path to runtime module (avoid triggering pydantic-dependent imports)
 _runtime_path = str(Path(__file__).parent.parent.parent / "app" / "worker" / "runtime")
-if _runtime_path not in sys.path:
+
     sys.path.insert(0, _runtime_path)
 
 from contracts import BudgetTracker, ContractMetadata, CostModel

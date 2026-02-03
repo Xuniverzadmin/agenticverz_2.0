@@ -31,7 +31,7 @@ from app.auth.console_auth import verify_fops_token
 from app.middleware.rate_limit import rate_limit_dependency
 from app.schemas.response import wrap_dict
 from app.services.recovery_matcher import RecoveryMatcher
-from app.services.recovery_write_service import RecoveryWriteService
+from app.hoc.int.recovery.drivers.recovery_write_driver import RecoveryWriteService
 
 logger = logging.getLogger("nova.api.recovery")
 

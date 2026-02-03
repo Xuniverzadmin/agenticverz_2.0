@@ -17,14 +17,14 @@ Policies Handler (L4 Orchestrator)
 Routes policies domain operations to L5 engines.
 Registers twelve operations:
   - policies.query → PoliciesFacade (15+ async methods)
-  - policies.enforcement → CusEnforcementService (3 methods)
+  - policies.enforcement → CusEnforcementEngine (3 methods)
   - policies.governance → GovernanceFacade (7+ sync methods)
   - policies.lessons → LessonsLearnedEngine (async methods)
   - policies.policy_facade → PolicyDriver (37+ async methods)
   - policies.limits → PolicyLimitsService (create, update, delete)
   - policies.rules → PolicyRulesService (create, update)
   - policies.rate_limits → LimitsFacade (6 async methods)
-  - policies.simulate → LimitsSimulationService (simulate)
+  - policies.simulate → LimitsSimulationEngine (simulate)
 """
 
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
@@ -79,20 +79,20 @@ class PoliciesEnforcementHandler:
     """
     Handler for policies.enforcement operations.
 
-    Dispatches to CusEnforcementService methods (evaluate, get_enforcement_status,
+    Dispatches to CusEnforcementEngine methods (evaluate, get_enforcement_status,
     evaluate_batch).
     """
 
     async def execute(self, ctx: OperationContext) -> OperationResult:
         from app.hoc.cus.policies.L5_engines.cus_enforcement_engine import (
-            get_cus_enforcement_service,
+            get_cus_enforcement_engine,
         )
 
         method_name = ctx.params.get("method")
         if not method_name:
             return OperationResult.fail("Missing 'method' in params", "MISSING_METHOD")
 
-        service = get_cus_enforcement_service()
+        service = get_cus_enforcement_engine()
         dispatch = {
             "evaluate": service.evaluate,
             "get_enforcement_status": service.get_enforcement_status,
@@ -415,22 +415,22 @@ class PoliciesSimulateHandler:
     """
     Handler for policies.simulate operations.
 
-    Dispatches to LimitsSimulationService (simulate).
+    Dispatches to LimitsSimulationEngine (simulate).
     """
 
     async def execute(self, ctx: OperationContext) -> OperationResult:
         from app.hoc.cus.policies.L5_engines.limits_simulation_engine import (
-            LimitsSimulationService,
+            LimitsSimulationEngine,
             LimitsSimulationServiceError,
             TenantNotFoundError,
-            get_limits_simulation_service,
+            get_limits_simulation_engine,
         )
 
         method_name = ctx.params.get("method")
         if not method_name:
             return OperationResult.fail("Missing 'method' in params", "MISSING_METHOD")
 
-        service = get_limits_simulation_service(ctx.session)
+        service = get_limits_simulation_engine(ctx.session)
         dispatch = {
             "simulate": service.simulate,
         }

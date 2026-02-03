@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: Configuration schema for email_send skill.
 # Email Send Skill (Resend)
 # Pluggable email skill using Resend API with external call control
 

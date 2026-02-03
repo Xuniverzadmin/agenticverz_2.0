@@ -30,6 +30,11 @@ class ControlsBridge:
         from app.hoc.cus.controls.L6_drivers.killswitch_read_driver import get_killswitch_read_driver
         return get_killswitch_read_driver(session)
 
+    def limit_breaches_capability(self, session):
+        """Return limit breaches read capability for run queries (PIN-519)."""
+        from app.hoc.cus.controls.L6_drivers.limits_read_driver import LimitsReadDriver
+        return LimitsReadDriver(session)
+
 
 # Singleton
 _instance = None

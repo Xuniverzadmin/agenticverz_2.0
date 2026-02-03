@@ -16,19 +16,18 @@ PURPOSE:
     Pre-step limit checks for cost, token, and rate limits.
     Called by limit_hook.py before step execution.
 
-IMPLEMENTATION NOTES:
-    - This is a minimal implementation satisfying the contract
-    - All methods return LimitCheckResponse (never raise for limit violations)
-    - No state mutation (read-only checks)
-    - No time/UUID generation
-    - No calls to UsageMonitor (that's Module 2)
+WIRING:
+    - Cost/token checks: LimitsReadDriver (L6) via injected session factory
+    - Rate checks: RateLimiter (Redis token bucket, L4 hoc_spine)
 
-    Future enhancement: Wire to actual limit/policy storage via L6 driver.
-    Current: Returns allow() for all checks (no limits configured = unlimited).
+ENFORCEMENT POLICY:
+    - DENY on failure (fail-closed for enforcement)
+    - If session unavailable or driver errors → block (not allow)
+    - Rate limiter Redis failure → fail_open=False
 """
 
 import logging
-from typing import Optional
+from typing import Callable, Optional
 
 from app.hoc.int.policies.L5_engines.limit_enforcer_contract import (
     LimitCheckResponse,
@@ -40,19 +39,65 @@ logger = logging.getLogger("nova.hoc.policies.limit_enforcer")
 
 class LimitEnforcer:
     """
-    LimitEnforcer implementation.
+    LimitEnforcer implementation wired to real infrastructure.
 
-    This is a minimal implementation that satisfies the LimitEnforcerProtocol.
-    It currently returns allow() for all checks (no limits enforced).
-
-    Future versions will wire to actual limit storage via L6 driver to:
-    - Look up tenant-specific cost/budget limits
-    - Look up tenant-specific token limits
-    - Track rate limit windows
+    Cost/token checks query tenant limits via LimitsReadDriver.
+    Rate checks use Redis token bucket via RateLimiter.
 
     Layer: L5 (Domain Engine)
     Contract: LimitEnforcerProtocol
     """
+
+    def __init__(
+        self,
+        session_factory: Optional[Callable] = None,
+        rate_limiter=None,
+    ):
+        """
+        Args:
+            session_factory: Async callable returning AsyncSession for DB access.
+                             If None, all cost/token checks DENY (fail-closed).
+            rate_limiter: RateLimiter instance. If None, lazily loaded from singleton.
+        """
+        self._session_factory = session_factory
+        self._rate_limiter = rate_limiter
+
+    def _get_rate_limiter(self):
+        """Lazy-load rate limiter singleton."""
+        if self._rate_limiter is None:
+            from app.hoc.cus.hoc_spine.services.rate_limiter import get_rate_limiter
+            self._rate_limiter = get_rate_limiter()
+        return self._rate_limiter
+
+    async def _fetch_limits_for_tenant(
+        self, tenant_id: str, category: str, limit_type: Optional[str] = None
+    ) -> list[dict]:
+        """Fetch active limits for tenant via L6 driver.
+
+        Returns empty list on error (caller handles as DENY).
+        """
+        if self._session_factory is None:
+            return []
+
+        try:
+            session = await self._session_factory()
+            from app.hoc.cus.controls.L6_drivers.limits_read_driver import LimitsReadDriver
+            driver = LimitsReadDriver(session)
+            items, _ = await driver.fetch_limits(
+                tenant_id,
+                category=category,
+                status="ACTIVE",
+                limit_type=limit_type,
+                limit=100,
+                offset=0,
+            )
+            return items
+        except Exception as e:
+            logger.error(
+                "limit_enforcer.fetch_limits_failed",
+                extra={"tenant_id": tenant_id, "category": category, "error": str(e)},
+            )
+            return []
 
     async def check_cost_limit(
         self,
@@ -61,23 +106,43 @@ class LimitEnforcer:
     ) -> LimitCheckResponse:
         """Check if estimated cost exceeds tenant's cost/budget limit.
 
-        Args:
-            tenant_id: Tenant identifier
-            estimated_cost: Estimated cost in cents for the operation
-
-        Returns:
-            LimitCheckResponse with exceeded=True if over budget
+        Queries BUDGET limits for the tenant. If any ACTIVE budget limit
+        is exceeded by estimated_cost, returns block().
+        If no limits found or no session → DENY (fail-closed).
         """
         logger.debug(
             "limit_enforcer.check_cost_limit",
-            extra={
-                "tenant_id": tenant_id,
-                "estimated_cost": estimated_cost,
-            },
+            extra={"tenant_id": tenant_id, "estimated_cost": estimated_cost},
         )
 
-        # TODO: Wire to L6 driver to fetch tenant limits
-        # For now, no limits configured = allow all
+        limits = await self._fetch_limits_for_tenant(tenant_id, "BUDGET")
+
+        if not limits:
+            # No limits configured = allow (legitimate no-limits state)
+            # But if session_factory is None, we can't tell → DENY
+            if self._session_factory is None:
+                return LimitCheckResponse.block(
+                    current_usage=estimated_cost,
+                    max_allowed=0.0,
+                    policy_id=None,
+                )
+            return LimitCheckResponse.allow()
+
+        for lim in limits:
+            max_val = float(lim.get("max_value", 0))
+            if max_val > 0 and estimated_cost > max_val:
+                return LimitCheckResponse.block(
+                    current_usage=estimated_cost,
+                    max_allowed=max_val,
+                    policy_id=lim.get("limit_id"),
+                )
+            # Warn at 80% threshold
+            if max_val > 0 and estimated_cost > max_val * 0.8:
+                return LimitCheckResponse.warn(
+                    current_usage=estimated_cost,
+                    max_allowed=max_val,
+                )
+
         return LimitCheckResponse.allow()
 
     async def check_token_limit(
@@ -87,23 +152,40 @@ class LimitEnforcer:
     ) -> LimitCheckResponse:
         """Check if estimated tokens exceed tenant's token limit.
 
-        Args:
-            tenant_id: Tenant identifier
-            estimated_tokens: Estimated token count for the operation
-
-        Returns:
-            LimitCheckResponse with exceeded=True if over limit
+        Queries RATE limits with TOKENS_* type for the tenant.
         """
         logger.debug(
             "limit_enforcer.check_token_limit",
-            extra={
-                "tenant_id": tenant_id,
-                "estimated_tokens": estimated_tokens,
-            },
+            extra={"tenant_id": tenant_id, "estimated_tokens": estimated_tokens},
         )
 
-        # TODO: Wire to L6 driver to fetch tenant limits
-        # For now, no limits configured = allow all
+        limits = await self._fetch_limits_for_tenant(
+            tenant_id, "RATE", limit_type="TOKENS_*"
+        )
+
+        if not limits:
+            if self._session_factory is None:
+                return LimitCheckResponse.block(
+                    current_usage=float(estimated_tokens),
+                    max_allowed=0.0,
+                    policy_id=None,
+                )
+            return LimitCheckResponse.allow()
+
+        for lim in limits:
+            max_val = float(lim.get("max_value", 0))
+            if max_val > 0 and estimated_tokens > max_val:
+                return LimitCheckResponse.block(
+                    current_usage=float(estimated_tokens),
+                    max_allowed=max_val,
+                    policy_id=lim.get("limit_id"),
+                )
+            if max_val > 0 and estimated_tokens > max_val * 0.8:
+                return LimitCheckResponse.warn(
+                    current_usage=float(estimated_tokens),
+                    max_allowed=max_val,
+                )
+
         return LimitCheckResponse.allow()
 
     async def check_rate_limit(
@@ -113,29 +195,53 @@ class LimitEnforcer:
     ) -> LimitCheckResponse:
         """Check if operation exceeds tenant's rate limit.
 
-        Args:
-            tenant_id: Tenant identifier
-            operation: Operation type (e.g., "step_execution")
-
-        Returns:
-            LimitCheckResponse with exceeded=True if rate limited
+        Uses Redis token bucket rate limiter.
+        Fail-closed: if Redis unavailable, DENY.
         """
         logger.debug(
             "limit_enforcer.check_rate_limit",
-            extra={
-                "tenant_id": tenant_id,
-                "operation": operation,
-            },
+            extra={"tenant_id": tenant_id, "operation": operation},
         )
 
-        # TODO: Wire to L6 driver + rate limit window tracking
-        # For now, no rate limits configured = allow all
+        # Look up rate limit configuration from DB
+        limits = await self._fetch_limits_for_tenant(tenant_id, "RATE", limit_type="REQUESTS_*")
+
+        # Find the applicable rate limit for this operation
+        rate_per_min = 0
+        policy_id = None
+        for lim in limits:
+            max_val = float(lim.get("max_value", 0))
+            window = lim.get("window_seconds", 60) or 60
+            if max_val > 0:
+                # Convert to per-minute rate
+                rate_per_min = int(max_val * (60 / window))
+                policy_id = lim.get("limit_id")
+                break
+
+        if rate_per_min <= 0:
+            # No rate limit configured
+            return LimitCheckResponse.allow()
+
+        # Check via Redis rate limiter
+        limiter = self._get_rate_limiter()
+        key = f"tenant:{tenant_id}:{operation}"
+        allowed = limiter.allow(key, rate_per_min)
+
+        if not allowed:
+            remaining = limiter.get_remaining(key, rate_per_min)
+            return LimitCheckResponse.block(
+                current_usage=float(rate_per_min - remaining),
+                max_allowed=float(rate_per_min),
+                policy_id=policy_id,
+            )
+
         return LimitCheckResponse.allow()
 
 
 # =============================================================================
 # Protocol Verification (compile-time type check)
 # =============================================================================
+
 
 # Verify that LimitEnforcer satisfies the protocol
 def _verify_protocol() -> None:
@@ -150,10 +256,16 @@ def _verify_protocol() -> None:
 _limit_enforcer_instance: Optional[LimitEnforcer] = None
 
 
-def get_limit_enforcer_impl() -> LimitEnforcer:
+def get_limit_enforcer_impl(
+    session_factory: Optional[Callable] = None,
+) -> LimitEnforcer:
     """Get the LimitEnforcer instance.
 
     This is called by the contract's get_limit_enforcer() function.
+
+    Args:
+        session_factory: Optional async callable returning AsyncSession.
+                         If provided on first call, wires to DB.
 
     Returns:
         LimitEnforcer implementation instance
@@ -161,8 +273,8 @@ def get_limit_enforcer_impl() -> LimitEnforcer:
     global _limit_enforcer_instance
 
     if _limit_enforcer_instance is None:
-        _limit_enforcer_instance = LimitEnforcer()
-        logger.info("limit_enforcer.created")
+        _limit_enforcer_instance = LimitEnforcer(session_factory=session_factory)
+        logger.info("limit_enforcer.created", extra={"wired": session_factory is not None})
 
     return _limit_enforcer_instance
 

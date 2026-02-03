@@ -34,6 +34,7 @@
 #  28. L5 no cross-domain L5 engine imports (PIN-513)
 #  29. L6/driver no L5 engine imports — extended to int/ and fdr/ trees (PIN-513)
 #  30. Zero-logic facade detection — advisory (PIN-513)
+#  31. Single Activity Facade — only one activity_facade.py allowed in HOC (PIN-519)
 #
 # Usage:
 #   python3 scripts/ci/check_init_hygiene.py [--ci]
@@ -597,27 +598,27 @@ LEGACY_SERVICES_ALLOWLIST: set[str] = {
     "alert_fatigue.py", "analytics_facade.py", "api_keys_facade.py",
     "budget_enforcement_engine.py", "certificate.py", "claim_decision_engine.py",
     "cost_anomaly_detector.py", "cost_model_engine.py", "cost_write_service.py",
-    "cus_credential_service.py", "cus_enforcement_driver.py", "cus_enforcement_engine.py",
+    "cus_credential_engine.py", "cus_enforcement_driver.py", "cus_enforcement_engine.py",
     "cus_enforcement_service.py", "cus_health_driver.py", "cus_health_engine.py",
     "cus_health_service.py", "cus_integration_driver.py", "cus_integration_engine.py",
     "cus_integration_service.py", "cus_telemetry_driver.py", "cus_telemetry_engine.py",
     "cus_telemetry_service.py", "email_verification.py", "event_emitter.py",
-    "evidence_report.py", "export_bundle_service.py", "external_response_service.py",
-    "founder_action_write_service.py", "governance_signal_service.py",
+    "evidence_report.py", "export_bundle_service.py", "external_response_driver.py",
+    "founder_action_write_engine.py", "governance_signal_driver.py",
     "guard_write_service.py", "incident_aggregator.py", "incident_read_service.py",
     "incident_write_driver.py", "incident_write_engine.py", "incident_write_service.py",
     "incidents_facade.py", "integrations_facade.py", "keys_driver.py",
     "knowledge_lifecycle_manager.py", "knowledge_sdk.py", "llm_failure_driver.py",
     "llm_failure_engine.py", "llm_failure_service.py", "llm_policy_engine.py",
     "llm_threshold_service.py", "logs_facade.py", "logs_read_service.py",
-    "ops_domain_models.py", "ops_incident_service.py", "ops_write_service.py",
+    "ops_domain_models.py", "ops_incident_engine.py", "ops_write_driver.py",
     "orphan_recovery.py", "overview_facade.py", "panel_invariant_monitor.py",
     "pattern_detection.py", "pdf_renderer.py", "plan_generation_engine.py",
     "policies_facade.py", "policy_graph_engine.py", "policy_proposal.py",
     "policy_violation_service.py", "prediction.py", "recovery_evaluation_engine.py",
-    "recovery_matcher.py", "recovery_rule_engine.py", "recovery_write_service.py",
+    "recovery_matcher.py", "recovery_rule_engine.py", "recovery_write_driver.py",
     "replay_determinism.py", "scoped_execution.py", "tenant_service.py",
-    "worker_registry_service.py", "worker_write_service_async.py",
+    "worker_registry_driver.py", "worker_write_driver_async.py",
     "policy_limits_service.py", "policy_rules_service.py",
 }
 
@@ -1451,6 +1452,36 @@ def check_no_l3_adapters_references(violations: list[Violation]) -> None:
                 ))
 
 
+def check_single_activity_facade(violations: list[Violation]) -> None:
+    """
+    Check 31: Single Activity Facade (PIN-519)
+
+    Only one activity_facade.py is allowed in the HOC tree:
+    app/hoc/cus/activity/L5_engines/activity_facade.py
+
+    The legacy app/services/activity_facade.py is tolerated (scheduled for deletion
+    per PIN-511) but no other duplicates are allowed in HOC.
+    """
+    canonical_path = "app/hoc/cus/activity/L5_engines/activity_facade.py"
+    hoc_root = HOC_ROOT
+
+    # Find all activity_facade.py files in HOC tree
+    for root, _dirs, files in os.walk(hoc_root):
+        for f in files:
+            if f == "activity_facade.py":
+                full_path = os.path.join(root, f)
+                rel_path = os.path.relpath(full_path, BACKEND_ROOT)
+
+                if rel_path != canonical_path:
+                    violations.append(Violation(
+                        full_path, 1,
+                        f"Duplicate activity_facade.py found. "
+                        f"Only {canonical_path} is allowed in HOC tree. "
+                        f"Delete this file or merge into canonical location.",
+                        "SINGLE_FACADE",
+                    ))
+
+
 def main():
     ci_mode = "--ci" in sys.argv
     violations: list[Violation] = []
@@ -1501,6 +1532,9 @@ def main():
     check_l5_no_cross_domain_l5_imports(violations)
     check_driver_no_l5_engine_imports_extended(violations)
     check_facade_logic_minimum(violations)
+
+    # PIN-519 checks (31)
+    check_single_activity_facade(violations)
 
     blocking = [v for v in violations if not v.is_known_exception]
     warnings = [v for v in violations if v.is_known_exception]

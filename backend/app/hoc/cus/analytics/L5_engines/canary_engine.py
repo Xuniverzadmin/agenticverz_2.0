@@ -295,6 +295,9 @@ class CanaryRunner:
             artifact_paths = await self._save_artifacts(report, comparisons, diffs)
             report.artifact_paths = artifact_paths
 
+        # Persist report to database
+        await self._persist_report_to_db(report)
+
         # Report to circuit breaker if failed
         if not passed:
             if self.config.use_async_circuit_breaker:
@@ -588,6 +591,50 @@ class CanaryRunner:
 
         passed = len(failure_reasons) == 0
         return passed, failure_reasons
+
+    async def _persist_report_to_db(self, report: CanaryReport) -> None:
+        """
+        Persist canary report to database for /canary/reports endpoint.
+
+        INVARIANT: A canary report must never exist in DB without artifacts.
+        If artifact_paths is empty and artifacts are configured, refuse the write.
+        """
+        # Artifact-before-DB invariant (Gap 3 fix)
+        if self.config.save_artifacts and not report.artifact_paths:
+            logger.error(
+                f"Refusing DB write: artifacts configured but not saved. "
+                f"run_id={report.run_id}"
+            )
+            raise RuntimeError(
+                "Canary artifacts missing; refusing DB write. "
+                "Artifacts must be saved before database persistence."
+            )
+
+        try:
+            from app.hoc.cus.analytics.L6_drivers.canary_report_driver import write_canary_report
+
+            await write_canary_report(
+                run_id=report.run_id,
+                timestamp=report.timestamp,
+                status=report.status,
+                total_samples=report.total_samples,
+                matching_samples=report.matching_samples,
+                minor_drift_samples=report.minor_drift_samples,
+                major_drift_samples=report.major_drift_samples,
+                median_cost_diff=report.median_cost_diff,
+                p90_cost_diff=report.p90_cost_diff,
+                kl_divergence=report.kl_divergence,
+                outlier_count=report.outlier_count,
+                passed=report.passed,
+                failure_reasons=report.failure_reasons,
+                artifact_paths=report.artifact_paths,
+                golden_comparison=report.golden_comparison,
+            )
+            logger.info(f"Persisted canary report to database: run_id={report.run_id}")
+
+        except Exception as e:
+            # Log but don't fail - file artifacts are already saved
+            logger.error(f"Failed to persist canary report to database: {e}")
 
     async def _save_artifacts(
         self,

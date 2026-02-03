@@ -726,24 +726,325 @@ class EnvCredentialVault(CredentialVault):
         )
 
 
-def create_credential_vault() -> CredentialVault:
-    """Factory function to create appropriate vault based on configuration."""
+class AwsSecretsManagerVault(CredentialVault):
+    """
+    AWS Secrets Manager implementation (PIN-517 FIX 3).
+
+    Uses boto3 for AWS Secrets Manager operations.
+    """
+
+    def __init__(self, region_name: Optional[str] = None, environment: str = "dev"):
+        self._region = region_name or os.getenv("AWS_REGION", "us-east-1")
+        self._environment = environment  # Namespace isolation
+        self._client = None  # Lazy init
+        self._metadata_cache: Dict[str, CredentialMetadata] = {}
+
+    def _get_client(self):
+        """Lazy-init boto3 client."""
+        if self._client is None:
+            import boto3
+            self._client = boto3.client("secretsmanager", region_name=self._region)
+        return self._client
+
+    def _secret_id(self, tenant_id: str, credential_id: str) -> str:
+        """Build AWS secret ID with environment isolation."""
+        return f"agenticverz/{self._environment}/{tenant_id}/{credential_id}"
+
+    async def store_credential(
+        self,
+        tenant_id: str,
+        name: str,
+        credential_type: CredentialType,
+        secret_data: Dict[str, str],
+        description: Optional[str] = None,
+        tags: Optional[list[str]] = None,
+        expires_at: Optional[datetime] = None,
+        is_rotatable: bool = False,
+        rotation_interval_days: Optional[int] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """Store credential in AWS Secrets Manager."""
+        import json
+        import uuid
+
+        credential_id = str(uuid.uuid4())
+        secret_id = self._secret_id(tenant_id, credential_id)
+        now = datetime.now(timezone.utc)
+
+        meta = CredentialMetadata(
+            credential_id=credential_id,
+            tenant_id=tenant_id,
+            name=name,
+            credential_type=credential_type,
+            description=description,
+            tags=tags or [],
+            created_at=now,
+            updated_at=now,
+            expires_at=expires_at,
+            is_rotatable=is_rotatable,
+            rotation_interval_days=rotation_interval_days,
+            metadata=metadata or {},
+        )
+
+        secret_value = {
+            "_metadata": {
+                "name": meta.name,
+                "type": meta.credential_type.value,
+                "description": meta.description,
+                "tags": meta.tags,
+                "created_at": meta.created_at.isoformat(),
+                "updated_at": meta.updated_at.isoformat(),
+                "expires_at": meta.expires_at.isoformat() if meta.expires_at else None,
+                "is_rotatable": meta.is_rotatable,
+                "rotation_interval_days": meta.rotation_interval_days,
+                "custom_metadata": meta.metadata,
+            },
+            **secret_data,
+        }
+
+        client = self._get_client()
+        client.create_secret(
+            Name=secret_id,
+            SecretString=json.dumps(secret_value),
+            Tags=[
+                {"Key": "tenant_id", "Value": tenant_id},
+                {"Key": "environment", "Value": self._environment},
+            ],
+        )
+
+        self._metadata_cache[f"{tenant_id}:{credential_id}"] = meta
+        logger.info(f"[AWS] Stored credential {credential_id} for tenant {tenant_id}")
+        return credential_id
+
+    async def get_credential(
+        self,
+        tenant_id: str,
+        credential_id: str,
+    ) -> Optional[CredentialData]:
+        """Get credential from AWS Secrets Manager."""
+        import json
+        from botocore.exceptions import ClientError
+
+        secret_id = self._secret_id(tenant_id, credential_id)
+        client = self._get_client()
+
+        try:
+            response = client.get_secret_value(SecretId=secret_id)
+            data = json.loads(response["SecretString"])
+
+            meta_data = data.pop("_metadata", {})
+            secret_data = data
+
+            meta = CredentialMetadata(
+                credential_id=credential_id,
+                tenant_id=tenant_id,
+                name=meta_data.get("name", ""),
+                credential_type=CredentialType(meta_data.get("type", "custom")),
+                description=meta_data.get("description"),
+                tags=meta_data.get("tags", []),
+                created_at=datetime.fromisoformat(meta_data["created_at"]) if meta_data.get("created_at") else datetime.now(timezone.utc),
+                updated_at=datetime.fromisoformat(meta_data["updated_at"]) if meta_data.get("updated_at") else datetime.now(timezone.utc),
+                expires_at=datetime.fromisoformat(meta_data["expires_at"]) if meta_data.get("expires_at") else None,
+                is_rotatable=meta_data.get("is_rotatable", False),
+                rotation_interval_days=meta_data.get("rotation_interval_days"),
+                metadata=meta_data.get("custom_metadata", {}),
+            )
+
+            meta.last_accessed_at = datetime.now(timezone.utc)
+            meta.access_count += 1
+
+            return CredentialData(metadata=meta, secret_data=secret_data)
+
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "ResourceNotFoundException":
+                return None
+            raise
+
+    async def get_metadata(
+        self,
+        tenant_id: str,
+        credential_id: str,
+    ) -> Optional[CredentialMetadata]:
+        """Get credential metadata without secrets."""
+        cache_key = f"{tenant_id}:{credential_id}"
+        if cache_key in self._metadata_cache:
+            return self._metadata_cache[cache_key]
+
+        cred = await self.get_credential(tenant_id, credential_id)
+        if cred:
+            self._metadata_cache[cache_key] = cred.metadata
+            return cred.metadata
+        return None
+
+    async def list_credentials(
+        self,
+        tenant_id: str,
+        credential_type: Optional[CredentialType] = None,
+        tags: Optional[list[str]] = None,
+    ) -> list[CredentialMetadata]:
+        """List credentials for tenant (limited - AWS doesn't support efficient listing)."""
+        # AWS Secrets Manager doesn't have efficient tenant-scoped listing
+        # In production, maintain a separate index or use resource tagging
+        logger.warning("[AWS] list_credentials requires external index for efficiency")
+        return []
+
+    async def update_credential(
+        self,
+        tenant_id: str,
+        credential_id: str,
+        secret_data: Optional[Dict[str, str]] = None,
+        description: Optional[str] = None,
+        tags: Optional[list[str]] = None,
+        expires_at: Optional[datetime] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """Update a credential in AWS Secrets Manager."""
+        import json
+
+        existing = await self.get_credential(tenant_id, credential_id)
+        if not existing:
+            return False
+
+        new_secret = secret_data if secret_data is not None else existing.secret_data
+        new_meta = existing.metadata
+        new_meta.updated_at = datetime.now(timezone.utc)
+
+        if description is not None:
+            new_meta.description = description
+        if tags is not None:
+            new_meta.tags = tags
+        if expires_at is not None:
+            new_meta.expires_at = expires_at
+        if metadata is not None:
+            new_meta.metadata = metadata
+
+        secret_value = {
+            "_metadata": {
+                "name": new_meta.name,
+                "type": new_meta.credential_type.value,
+                "description": new_meta.description,
+                "tags": new_meta.tags,
+                "created_at": new_meta.created_at.isoformat(),
+                "updated_at": new_meta.updated_at.isoformat(),
+                "expires_at": new_meta.expires_at.isoformat() if new_meta.expires_at else None,
+                "is_rotatable": new_meta.is_rotatable,
+                "rotation_interval_days": new_meta.rotation_interval_days,
+                "custom_metadata": new_meta.metadata,
+            },
+            **new_secret,
+        }
+
+        secret_id = self._secret_id(tenant_id, credential_id)
+        client = self._get_client()
+        client.put_secret_value(
+            SecretId=secret_id,
+            SecretString=json.dumps(secret_value),
+        )
+
+        self._metadata_cache[f"{tenant_id}:{credential_id}"] = new_meta
+        return True
+
+    async def delete_credential(
+        self,
+        tenant_id: str,
+        credential_id: str,
+    ) -> bool:
+        """Delete a credential from AWS Secrets Manager."""
+        from botocore.exceptions import ClientError
+
+        secret_id = self._secret_id(tenant_id, credential_id)
+        client = self._get_client()
+
+        try:
+            client.delete_secret(
+                SecretId=secret_id,
+                ForceDeleteWithoutRecovery=True,
+            )
+            self._metadata_cache.pop(f"{tenant_id}:{credential_id}", None)
+            return True
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "ResourceNotFoundException":
+                return False
+            raise
+
+    async def rotate_credential(
+        self,
+        tenant_id: str,
+        credential_id: str,
+        new_secret_data: Dict[str, str],
+    ) -> bool:
+        """Rotate credential secrets."""
+        return await self.update_credential(
+            tenant_id=tenant_id,
+            credential_id=credential_id,
+            secret_data=new_secret_data,
+        )
+
+
+# =============================================================================
+# FACTORY — AUTHORITY SPLIT (PIN-517 FIX 2)
+# =============================================================================
+
+from typing import Literal
+
+
+def create_credential_vault(
+    *,
+    scope: Literal["system", "customer"] = "system",
+) -> CredentialVault:
+    """
+    Factory function to create appropriate vault based on scope and configuration.
+
+    PIN-517: Authority split between system and customer scopes.
+
+    Args:
+        scope: Trust zone - "system" (dev/infra) or "customer" (SDK-visible)
+
+    Returns:
+        CredentialVault instance
+
+    Raises:
+        ValueError: If customer scope with env provider (forbidden)
+        ValueError: If required credentials missing for production vault
+    """
     provider = os.getenv("CREDENTIAL_VAULT_PROVIDER", "env")
 
+    # ---------------- CUSTOMER SCOPE (FAIL-CLOSED) ----------------
+    if scope == "customer":
+        if provider == "env":
+            raise ValueError(
+                "env vault forbidden for customer credentials. "
+                "Set CREDENTIAL_VAULT_PROVIDER to 'hashicorp' or 'aws_secrets'."
+            )
+
+        if provider == "hashicorp":
+            vault_url = os.getenv("VAULT_ADDR", "http://localhost:8200")
+            vault_token = os.getenv("VAULT_TOKEN")
+            if not vault_token:
+                raise ValueError(
+                    "VAULT_TOKEN required for customer credential vault. "
+                    "Cannot operate without production vault configuration."
+                )
+            return HashiCorpVault(vault_url=vault_url, token=vault_token)
+
+        if provider == "aws_secrets":
+            env = os.getenv("AOS_ENVIRONMENT", "dev")
+            return AwsSecretsManagerVault(environment=env)
+
+        raise ValueError(f"Unsupported customer vault provider: {provider}")
+
+    # ---------------- SYSTEM SCOPE (PERMISSIVE) ----------------
     if provider == "hashicorp":
         vault_url = os.getenv("VAULT_ADDR", "http://localhost:8200")
         vault_token = os.getenv("VAULT_TOKEN")
-        if not vault_token:
-            logger.warning("VAULT_TOKEN not set, falling back to env vault")
-            return EnvCredentialVault()
-        return HashiCorpVault(vault_url=vault_url, token=vault_token)
+        if vault_token:
+            return HashiCorpVault(vault_url=vault_url, token=vault_token)
+        logger.warning("VAULT_TOKEN not set, falling back to env vault (system scope)")
 
-    elif provider == "aws_secrets":
-        # TODO: Implement AWS Secrets Manager
-        logger.warning("AWS Secrets Manager not yet implemented, falling back to env vault")
-        return EnvCredentialVault()
+    if provider == "aws_secrets":
+        env = os.getenv("AOS_ENVIRONMENT", "dev")
+        return AwsSecretsManagerVault(environment=env)
 
-    else:
-        # Default: environment variable vault (development)
-        logger.info("Using environment variable credential vault")
-        return EnvCredentialVault()
+    # Default: environment variable vault (development only)
+    logger.info("Using environment variable credential vault (system scope)")
+    return EnvCredentialVault()

@@ -1,3 +1,6 @@
+# Layer: L2 — API Endpoint
+# AUDIENCE: FOUNDER
+# Role: Founder Actions API - M29 Category 6
 """Founder Actions API - M29 Category 6
 
 PIN-151: M29 Categories 4-6 - Founder Action Paths
@@ -42,7 +45,7 @@ from app.contracts.ops import (
     FounderReversalRequestDTO,
 )
 from app.db import get_session
-from app.hoc.fdr.ops.engines.founder_action_write_service import FounderActionWriteService
+from app.hoc.fdr.ops.engines.founder_action_write_engine import FounderActionWriteService
 
 logger = logging.getLogger(__name__)
 

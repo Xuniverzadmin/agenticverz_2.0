@@ -318,3 +318,70 @@ No L4 handler import updates required — handler imports `analytics_facade` and
 **`cost_write_engine.py` (L5):** Now the canonical import source for `CostWriteService` in `api/cus/logs/cost_intelligence.py`. Previous legacy path `app.services.cost_write_service` severed. Alias `CostWriteService = CostWriteEngine` provides backward compat.
 
 **`cost_anomaly_detector_engine.py` (L5):** Now the canonical import source for `run_anomaly_detection` in `api/cus/logs/cost_intelligence.py`. Previous legacy path `app.services.cost_anomaly_detector` severed. Identical `run_anomaly_detection(session, tenant_id)` signature.
+
+## PIN-518 Analytics Storage Follow-ups (2026-02-03)
+
+Audit of analytics storage wiring revealed 3 authority gaps. All fixed.
+
+### Gap 1: L2→L6 Bypass Fixed
+
+**Problem:** `api/cus/analytics/costsim.py` `/canary/reports` endpoint was calling `provenance_driver` directly (L2→L6 bypass, violates layer topology).
+
+**Fix:** Route through L4 handler via OperationRegistry.
+
+| Layer | File | Change |
+|-------|------|--------|
+| L2 | `api/cus/analytics/costsim.py` | Now calls `registry.execute("analytics.canary_reports", ctx)` |
+| L4 | `hoc_spine/orchestrator/handlers/analytics_handler.py` | Added `CanaryReportHandler` class |
+
+**L4 Handler Registration:**
+```python
+class CanaryReportHandler:
+    """L4 handler for canary report operations."""
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        # Routes list and get methods to canary_report_driver
+```
+
+### Gap 2: Provenance/Canary Authority Split
+
+**Problem:** `provenance_driver.py` handled both provenance and canary reports (authority blur — two distinct concerns in single driver).
+
+**Fix:** Split into separate drivers with single responsibility.
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| L6 | `L6_drivers/provenance_driver.py` | Provenance logging only |
+| L6 | `L6_drivers/canary_report_driver.py` *(NEW)* | Canary report persistence |
+
+**canary_report_driver.py Methods:**
+- `write_canary_report(session, report)` — Persist canary report
+- `query_canary_reports(session, tenant_id, filters)` — Query with filters
+- `get_canary_report_by_run_id(session, tenant_id, run_id)` — Get by run ID
+
+### Gap 3: Artifact-Before-DB Invariant Guard
+
+**Problem:** `canary_engine.py` could persist reports to DB without artifacts being written first (missing invariant guard).
+
+**Fix:** Added explicit invariant check in `_persist_report_to_db()`.
+
+| Layer | File | Change |
+|-------|------|--------|
+| L5 | `L5_engines/canary_engine.py` | Added artifact-before-DB guard |
+
+**Guard Implementation:**
+```python
+async def _persist_report_to_db(self, report: CanaryReport) -> None:
+    if self.config.save_artifacts and not report.artifact_paths:
+        raise RuntimeError(
+            "Canary artifacts missing; refusing DB write. "
+            "Write artifacts first via _write_artifacts()."
+        )
+```
+
+### Updated L4 Handler Operations
+
+| Operation | Handler Class | Target |
+|-----------|--------------|--------|
+| analytics.query | AnalyticsQueryHandler | AnalyticsFacade |
+| analytics.detection | AnalyticsDetectionHandler | DetectionFacade |
+| analytics.canary_reports | CanaryReportHandler | canary_report_driver *(NEW)* |

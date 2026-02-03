@@ -305,10 +305,37 @@ class ProvenanceLogger:
             logger.error(f"Failed to write provenance to file: {e}")
 
     async def _write_to_db(self, entries: List[ProvenanceLog]) -> None:
-        """Write entries to database."""
-        # TODO: Implement database storage
-        # For now, file storage is primary
-        pass
+        """Write entries to database using CostSimProvenanceModel."""
+        try:
+            from app.hoc.cus.analytics.L6_drivers.provenance_driver import write_provenance_batch
+
+            # Map ProvenanceLog to provenance_driver format
+            records = []
+            for entry in entries:
+                records.append({
+                    "run_id": entry.run_id,
+                    "tenant_id": entry.tenant_id,
+                    "variant_slug": "v2",  # Provenance engine logs V2 runs
+                    "source": "sandbox",
+                    "model_version": entry.model_version,
+                    "adapter_version": entry.adapter_version,
+                    "commit_sha": entry.commit_sha,
+                    "input_hash": entry.input_hash,
+                    "output_hash": entry.output_hash,
+                    "runtime_ms": entry.runtime_ms,
+                    "payload": {
+                        "input": entry.input_json if not entry.compressed else None,
+                        "output": entry.output_json if not entry.compressed else None,
+                        "compressed": entry.compressed,
+                        "status": entry.status,
+                    },
+                })
+
+            await write_provenance_batch(records)
+            logger.debug(f"Wrote {len(entries)} provenance records to database")
+
+        except Exception as e:
+            logger.error(f"Failed to write provenance to database: {e}")
 
     async def close(self) -> None:
         """Flush remaining entries and close."""

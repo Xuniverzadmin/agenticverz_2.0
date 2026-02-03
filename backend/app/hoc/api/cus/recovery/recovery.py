@@ -263,10 +263,11 @@ async def list_candidates(
             limit=limit,
             offset=offset,
         )
+        total = matcher.count_candidates(status=status)
 
         return CandidateListResponse(
             candidates=[CandidateResponse(**c) for c in candidates],
-            total=len(candidates),  # TODO: Add total count query
+            total=total,
             limit=limit,
             offset=offset,
         )
@@ -359,20 +360,21 @@ async def get_recovery_stats(
     Returns aggregate metrics for monitoring and dashboards.
     """
     try:
-        # Get counts by status
-        pending = matcher.get_candidates(status="pending", limit=1)
-        approved = matcher.get_candidates(status="approved", limit=1)
-        rejected = matcher.get_candidates(status="rejected", limit=1)
+        # Get counts by status using efficient GROUP BY query
+        counts = matcher.count_by_status()
 
-        # TODO: Add proper count queries
+        pending = counts["pending"]
+        approved = counts["approved"]
+        rejected = counts["rejected"]
+        total = pending + approved + rejected
 
         return wrap_dict({
-            "total_candidates": len(pending) + len(approved) + len(rejected),
-            "pending": len(pending),
-            "approved": len(approved),
-            "rejected": len(rejected),
+            "total_candidates": total,
+            "pending": pending,
+            "approved": approved,
+            "rejected": rejected,
             "approval_rate": (
-                len(approved) / (len(approved) + len(rejected)) if (len(approved) + len(rejected)) > 0 else 0
+                approved / (approved + rejected) if (approved + rejected) > 0 else 0
             ),
         })
 

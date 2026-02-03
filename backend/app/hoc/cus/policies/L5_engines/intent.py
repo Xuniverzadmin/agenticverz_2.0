@@ -14,7 +14,7 @@
 # Callers: policy engine, evaluators
 # Allowed Imports: L5, L6
 # Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
-# Reference: PIN-470, Policy System
+# Reference: PIN-514, PIN-515, Policy System
 
 # M20 Policy Runtime - Intent System
 # M18 intent emission for governance-aware execution
@@ -36,10 +36,25 @@ Intent types:
 
 import hashlib
 import json
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional
+
+from app.hoc.cus.policies.L5_schemas.intent_validation import (
+    PolicyIntentValidationResult,
+    PolicyIntentValidator,
+)
+
+logger = logging.getLogger(__name__)
+
+# Intent types that require M19 validation (enforcement-weight)
+_ENFORCEMENT_INTENT_TYPES = frozenset({
+    "EXECUTE",
+    "ROUTE",
+    "ESCALATE",
+})
 
 
 class IntentType(Enum):
@@ -207,10 +222,16 @@ class IntentEmitter:
     - Audit logging
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        intent_validator: Optional[PolicyIntentValidator] = None,
+        emission_sink: Optional[Callable[[dict], Awaitable[None]]] = None,
+    ):
         self.pending_intents: List[Intent] = []
         self.emitted_intents: List[Intent] = []
         self._intent_handlers: Dict[IntentType, List[callable]] = {t: [] for t in IntentType}
+        self._intent_validator = intent_validator
+        self._emission_sink = emission_sink
 
     def create_intent(
         self,
@@ -283,10 +304,23 @@ class IntentEmitter:
             if not intent.payload.reason:
                 errors.append("DENY intent requires reason")
 
-        # TODO: Call M19 policy engine for full validation
-        # result = await policy_engine.validate_intent(intent)
-        # if not result.allowed:
-        #     errors.extend(result.errors)
+        # M19 validation for enforcement-weight intents
+        if intent.intent_type.name in _ENFORCEMENT_INTENT_TYPES:
+            if self._intent_validator is not None:
+                try:
+                    result: PolicyIntentValidationResult = (
+                        await self._intent_validator.validate_intent(intent)
+                    )
+                    if not result["allowed"]:
+                        errors.extend(result["errors"])
+                except Exception as exc:
+                    # Fail-closed: validation failure blocks the intent
+                    errors.append(f"M19 validation error (fail-closed): {exc}")
+            else:
+                # Fail-closed: no validator for enforcement intents → block
+                errors.append(
+                    f"No M19 validator configured for enforcement intent {intent.intent_type.name}"
+                )
 
         intent.validation_errors = errors
         intent.validated = len(errors) == 0
@@ -323,8 +357,14 @@ class IntentEmitter:
         # Add to emitted
         self.emitted_intents.append(intent)
 
-        # TODO: Send to M18 via message queue or direct call
-        # await m18_client.emit_intent(intent.to_dict())
+        # M18 emission dispatch
+        if self._emission_sink is not None:
+            try:
+                await self._emission_sink(intent.to_dict())
+            except Exception as exc:
+                logger.warning("Emission sink failed for intent %s: %s", intent.id, exc)
+        else:
+            logger.info("intent.emitted", extra={"intent_id": intent.id, "intent_type": intent.intent_type.name})
 
         return True
 

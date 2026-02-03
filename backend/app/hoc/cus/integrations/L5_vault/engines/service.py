@@ -31,7 +31,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from .vault import (
+from ..drivers.vault import (
     CredentialData,
     CredentialMetadata,
     CredentialType,

@@ -292,47 +292,10 @@ class DetectionFacade:
             )
 
         try:
-            # TRANSITIONAL (PIN-513): services→HOC dependency. Sever when detection migrates to HOC.
-            from app.hoc.cus.hoc_spine.orchestrator.coordinators.anomaly_incident_coordinator import (
-                get_anomaly_incident_coordinator,
-            )
-
-            coordinator = get_anomaly_incident_coordinator()
-            result = await coordinator.detect_and_ingest(session, tenant_id)
-
-            detected = result.get("detected", [])
-            incidents = result.get("incidents_created", [])
-
-            # Convert to AnomalyInfo and store
-            for anomaly in detected:
-                info = AnomalyInfo(
-                    id=anomaly.id,
-                    tenant_id=tenant_id,
-                    detection_type="cost",
-                    anomaly_type=anomaly.anomaly_type,
-                    severity=anomaly.severity,
-                    status="open",
-                    entity_type=anomaly.entity_type,
-                    entity_id=anomaly.entity_id,
-                    current_value=anomaly.current_value_cents,
-                    expected_value=anomaly.expected_value_cents,
-                    deviation_pct=anomaly.deviation_pct,
-                    message=anomaly.message,
-                    derived_cause=anomaly.derived_cause,
-                    incident_id=None,
-                    detected_at=anomaly.detected_at.isoformat() if hasattr(anomaly, 'detected_at') else now.isoformat(),
-                    metadata=anomaly.metadata_json if hasattr(anomaly, 'metadata_json') else {},
-                )
-                self._anomalies[info.id] = info
-
-            return DetectionResult(
-                success=True,
-                detection_type="cost",
-                anomalies_detected=len(detected),
-                anomalies_created=len(detected),
-                incidents_created=len(incidents),
-                tenant_id=tenant_id,
-                run_at=now.isoformat(),
+            # SEVERED (PIN-514): services→HOC dependency removed. Detection must migrate to HOC.
+            raise NotImplementedError(
+                "Detection facade HOC bridge severed (PIN-514). "
+                "Migrate detection domain to HOC for anomaly detection."
             )
 
         except Exception as e:

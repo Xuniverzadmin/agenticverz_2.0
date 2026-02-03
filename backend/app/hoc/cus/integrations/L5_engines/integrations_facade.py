@@ -7,8 +7,8 @@
 #   Emits: none
 #   Subscribes: none
 # Data Access:
-#   Reads: (via CusIntegrationService)
-#   Writes: (via CusIntegrationService)
+#   Reads: (via CusIntegrationEngine)
+#   Writes: (via CusIntegrationEngine)
 # Role: Integrations domain facade - unified entry point for integration management
 # Product: ai-console
 # Callers: L2 integrations API (aos_cus_integrations.py)
@@ -28,7 +28,7 @@ Provides:
 - Health: get health status, test credentials
 - Limits: get usage vs limits
 
-This facade wraps the CusIntegrationService and provides dataclass result types
+This facade wraps the CusIntegrationEngine and provides dataclass result types
 for consistency with other domain facades.
 """
 
@@ -38,7 +38,7 @@ from typing import Any, Optional
 from uuid import UUID
 
 # L5 engine import (migrated to HOC per SWEEP-03 Batch 3)
-from app.hoc.cus.integrations.L5_engines.cus_integration_engine import CusIntegrationService
+from app.hoc.cus.integrations.L5_engines.cus_integration_engine import CusIntegrationEngine
 
 
 # =============================================================================
@@ -163,8 +163,8 @@ class IntegrationsFacade:
     """
 
     def __init__(self) -> None:
-        """Initialize with CusIntegrationService."""
-        self._service = CusIntegrationService()
+        """Initialize with CusIntegrationEngine."""
+        self._service = CusIntegrationEngine()
 
     # -------------------------------------------------------------------------
     # List / Read Operations

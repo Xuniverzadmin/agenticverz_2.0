@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: Configuration schema for webhook_send skill.
 # Webhook Send Skill (M11)
 # Generic webhook with HMAC-SHA256 signing
 

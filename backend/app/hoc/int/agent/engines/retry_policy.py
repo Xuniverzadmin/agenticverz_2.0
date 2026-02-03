@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: Reasons for stopping retry.
 # M15 Retry Policy for LLM Governance
 # Handles retry logic with parameter adjustment for blocked/failed LLM calls
 #

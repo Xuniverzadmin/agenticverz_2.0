@@ -38,7 +38,7 @@ def get_planner() -> PlannerProtocol:
         api_key = os.getenv("OPENAI_API_KEY")
         return OpenAIPlanner(api_key=api_key)
     else:
-        from .stub_adapter import StubPlanner
+        from app.hoc.int.platform.facades.stub_adapter import StubPlanner
 
         return StubPlanner()
 

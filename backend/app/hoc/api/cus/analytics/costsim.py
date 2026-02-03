@@ -33,8 +33,11 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db import get_async_session_dep
 
 from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import get_circuit_breaker
 from app.hoc.cus.analytics.L5_engines.config_engine import is_v2_disabled_by_drift, is_v2_sandbox_enabled, get_config
@@ -760,18 +763,40 @@ async def trigger_canary_run(
 @router.get("/canary/reports")
 async def get_canary_reports(
     limit: int = Query(10, ge=1, le=100, description="Max reports to return"),
+    status: Optional[str] = Query(None, description="Filter by status (pass, fail, error, skipped)"),
+    passed: Optional[bool] = Query(None, description="Filter by passed status"),
+    session: AsyncSession = Depends(get_async_session_dep),
 ):
     """
     Get recent canary run reports.
 
     Returns summaries of recent canary runs.
     Full artifacts are available at the artifact_paths.
+
+    Routes through L4 handler for policy/audit compliance.
     """
-    # TODO: Implement canary report storage and retrieval
-    return wrap_dict({
-        "reports": [],
-        "message": "Canary report retrieval not yet implemented",
-    })
+    from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+        OperationContext,
+        get_operation_registry,
+    )
+
+    registry = get_operation_registry()
+    ctx = OperationContext(
+        session=session,
+        tenant_id="system",  # System-wide canary reports
+        params={
+            "method": "list",
+            "status": status,
+            "passed": passed,
+            "limit": limit,
+        },
+    )
+
+    result = await registry.execute("analytics.canary_reports", ctx)
+    if not result.success:
+        raise HTTPException(status_code=400, detail=result.error)
+
+    return wrap_dict(result.data)
 
 
 # ============== Dataset Validation Endpoints ==============

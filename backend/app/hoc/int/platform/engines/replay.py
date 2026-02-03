@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: Replay API for AOS
 """
 Replay API for AOS
 M6 Deliverable: Re-execute stored plans and verify determinism

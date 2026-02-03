@@ -40,6 +40,7 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger("nova.contracts.decisions")
@@ -187,9 +188,16 @@ class DecisionRecordService:
     Evidence Architecture v1.0: Also bridges to governance.policy_decisions for taxonomy evidence.
     """
 
-    def __init__(self, db_url: Optional[str] = None):
+    def __init__(self, db_url: Optional[str] = None, engine: Optional[Engine] = None):
         self._db_url = db_url or os.environ.get("DATABASE_URL")
         self._enabled = self._db_url is not None
+        self._engine = engine
+
+    def _get_engine(self) -> Engine:
+        """Get or lazily create a shared engine."""
+        if self._engine is None:
+            self._engine = create_engine(self._db_url)
+        return self._engine
 
     def _bridge_to_taxonomy(self, record: DecisionRecord) -> None:
         """
@@ -212,8 +220,8 @@ class DecisionRecordService:
             return
 
         try:
-            engine = create_engine(self._db_url)
-            with engine.connect() as conn:
+            engine = self._get_engine()
+            with engine.begin() as conn:
                 # Map operational decision to taxonomy format
                 policy_type = record.decision_type.value
                 decision = "allowed" if record.decision_outcome in {
@@ -245,8 +253,6 @@ class DecisionRecordService:
                         "created_at": record.decided_at,
                     },
                 )
-                conn.commit()  # VIOLATION: TODO(L1) migrate to transaction_coordinator session
-            engine.dispose()
             logger.debug(
                 "decision_bridged_to_taxonomy",
                 extra={"decision_id": record.decision_id, "policy_type": policy_type},
@@ -270,8 +276,8 @@ class DecisionRecordService:
             return False
 
         try:
-            engine = create_engine(self._db_url)
-            with engine.connect() as conn:
+            engine = self._get_engine()
+            with engine.begin() as conn:
                 conn.execute(
                     text(
                         """
@@ -305,8 +311,6 @@ class DecisionRecordService:
                         "details": json.dumps(record.details),
                     },
                 )
-                conn.commit()  # VIOLATION: TODO(L1) migrate to transaction_coordinator session
-            engine.dispose()
 
             logger.debug(
                 "decision_record_emitted",
@@ -350,8 +354,8 @@ class DecisionRecordService:
             return False
 
         try:
-            engine = create_engine(self._db_url)
-            with engine.connect() as conn:
+            engine = self._get_engine()
+            with engine.begin() as conn:
                 conn.execute(
                     text(
                         """
@@ -385,8 +389,6 @@ class DecisionRecordService:
                         "details": json.dumps(record.details),
                     },
                 )
-                conn.commit()  # VIOLATION: TODO(L1) migrate to transaction_coordinator session
-            engine.dispose()
 
             # Evidence Architecture v1.0: Bridge to governance taxonomy
             self._bridge_to_taxonomy(record)
@@ -673,12 +675,12 @@ def _check_budget_enforcement_exists(run_id: str) -> bool:
 
     Idempotency guard: prevents double emission on retry/restart.
     """
-    db_url = os.environ.get("DATABASE_URL")
-    if not db_url:
+    svc = get_decision_service()
+    if not svc._enabled:
         return False  # Can't check, allow emission
 
     try:
-        engine = create_engine(db_url)
+        engine = svc._get_engine()
         with engine.connect() as conn:
             result = conn.execute(
                 text(
@@ -695,7 +697,6 @@ def _check_budget_enforcement_exists(run_id: str) -> bool:
                 },
             )
             exists = result.fetchone() is not None
-        engine.dispose()
         return exists
     except Exception as e:
         logger.warning(f"Failed to check budget_enforcement existence: {e}")
@@ -771,12 +772,12 @@ def _check_policy_precheck_exists(request_id: str, outcome: str) -> bool:
 
     Idempotency guard: prevents double emission on retry/restart.
     """
-    db_url = os.environ.get("DATABASE_URL")
-    if not db_url:
+    svc = get_decision_service()
+    if not svc._enabled:
         return False  # Can't check, allow emission
 
     try:
-        engine = create_engine(db_url)
+        engine = svc._get_engine()
         with engine.connect() as conn:
             result = conn.execute(
                 text(
@@ -795,7 +796,6 @@ def _check_policy_precheck_exists(request_id: str, outcome: str) -> bool:
                 },
             )
             exists = result.fetchone() is not None
-        engine.dispose()
         return exists
     except Exception as e:
         logger.warning(f"Failed to check policy_pre_check existence: {e}")
@@ -909,12 +909,12 @@ def _check_recovery_evaluation_exists(run_id: str, failure_type: str) -> bool:
 
     Idempotency guard: prevents double emission on retry/restart.
     """
-    db_url = os.environ.get("DATABASE_URL")
-    if not db_url:
+    svc = get_decision_service()
+    if not svc._enabled:
         return False  # Can't check, allow emission
 
     try:
-        engine = create_engine(db_url)
+        engine = svc._get_engine()
         with engine.connect() as conn:
             result = conn.execute(
                 text(
@@ -933,7 +933,6 @@ def _check_recovery_evaluation_exists(run_id: str, failure_type: str) -> bool:
                 },
             )
             exists = result.fetchone() is not None
-        engine.dispose()
         return exists
     except Exception as e:
         logger.warning(f"Failed to check recovery_evaluation existence: {e}")
@@ -1045,14 +1044,14 @@ def backfill_run_id_for_request(request_id: str, run_id: str) -> int:
     if not request_id or not run_id:
         return 0
 
-    db_url = os.environ.get("DATABASE_URL")
-    if not db_url:
+    svc = get_decision_service()
+    if not svc._enabled:
         logger.debug("backfill_run_id skipped: DATABASE_URL not set")
         return 0
 
     try:
-        engine = create_engine(db_url)
-        with engine.connect() as conn:
+        engine = svc._get_engine()
+        with engine.begin() as conn:
             result = conn.execute(
                 text(
                     """
@@ -1065,9 +1064,7 @@ def backfill_run_id_for_request(request_id: str, run_id: str) -> int:
                 ),
                 {"request_id": request_id, "run_id": run_id},
             )
-            conn.commit()
             updated = result.rowcount
-        engine.dispose()
 
         if updated > 0:
             logger.debug(
@@ -1195,12 +1192,12 @@ def _check_care_optimization_exists(request_id: str) -> bool:
 
     Idempotency guard: prevents double emission.
     """
-    db_url = os.environ.get("DATABASE_URL")
-    if not db_url:
+    svc = get_decision_service()
+    if not svc._enabled:
         return False
 
     try:
-        engine = create_engine(db_url)
+        engine = svc._get_engine()
         with engine.connect() as conn:
             result = conn.execute(
                 text(
@@ -1217,7 +1214,6 @@ def _check_care_optimization_exists(request_id: str) -> bool:
                 },
             )
             exists = result.fetchone() is not None
-        engine.dispose()
         return exists
     except Exception as e:
         logger.warning(f"Failed to check care_routing_optimized existence: {e}")

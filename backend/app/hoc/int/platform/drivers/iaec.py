@@ -1,3 +1,6 @@
+# Layer: L6 — Domain Driver
+# AUDIENCE: INTERNAL
+# Role: Deterministic embedding combiner with 4-slot architecture:
 # Instruction-Aware Embedding Composer (IAEC) v3.2
 """
 Deterministic embedding combiner with 4-slot architecture:

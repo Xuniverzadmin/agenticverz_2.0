@@ -1,3 +1,6 @@
+# Layer: L2.1 — Facade
+# AUDIENCE: INTERNAL
+# Role: Claude Adapter for LLM Invoke Skill (M3)
 # adapters/claude_adapter.py
 """
 Claude Adapter for LLM Invoke Skill (M3)

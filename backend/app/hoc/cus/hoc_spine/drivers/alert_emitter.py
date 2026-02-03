@@ -36,13 +36,11 @@ Alert flow:
 4. Record alert sent status
 """
 
-import json
 import logging
-from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.db import engine
 from app.models.alert_config import AlertChannel, AlertConfig
@@ -375,19 +373,78 @@ class AlertEmitter:
         is_breach: bool,
         action_taken: Optional[str],
     ) -> bool:
-        """Send email notification."""
+        """Send email notification via SMTPAdapter."""
         if not config.email_recipients:
             return False
 
-        # TODO: Integrate with email service
-        logger.info(
-            "email_notification_queued",
-            extra={
-                "recipients": config.email_recipients,
-                "signal_id": signal.signal_id,
-            },
-        )
-        return True
+        try:
+            from app.hoc.cus.integrations.adapters.smtp_adapter import SMTPAdapter
+            from app.hoc.cus.integrations.adapters.smtp_adapter import (
+                NotificationMessage,
+                NotificationRecipient,
+                NotificationStatus,
+            )
+        except ImportError:
+            logger.warning(
+                "smtp_adapter_unavailable",
+                extra={"signal_id": signal.signal_id},
+            )
+            return False
+
+        try:
+            status_label = "BREACH" if is_breach else "NEAR THRESHOLD"
+            subject = f"[AOS Alert] {status_label}: {signal.metric}"
+            body = (
+                f"Policy {status_label} Alert\n\n"
+                f"Signal ID: {signal.signal_id}\n"
+                f"Run ID: {signal.run_id}\n"
+                f"Policy ID: {signal.policy_id}\n"
+                f"Metric: {signal.metric}\n"
+                f"Current Value: {signal.current_value}\n"
+                f"Threshold: {signal.threshold_value}\n"
+                f"Percentage: {signal.percentage:.1f}%\n"
+            )
+            if action_taken:
+                body += f"Action Taken: {action_taken}\n"
+
+            recipients = [
+                NotificationRecipient(address=addr)
+                for addr in config.email_recipients
+            ]
+            message = NotificationMessage(
+                subject=subject,
+                body=body,
+                recipients=recipients,
+            )
+
+            adapter = SMTPAdapter()
+            result = await adapter.send(message)
+
+            if result.status == NotificationStatus.SENT:
+                logger.info(
+                    "email_notification_sent",
+                    extra={
+                        "recipients": config.email_recipients,
+                        "signal_id": signal.signal_id,
+                    },
+                )
+                return True
+
+            logger.warning(
+                "email_notification_failed",
+                extra={
+                    "signal_id": signal.signal_id,
+                    "error": result.error,
+                },
+            )
+            return False
+
+        except Exception as e:
+            logger.error(
+                "email_send_error",
+                extra={"error": str(e), "signal_id": signal.signal_id},
+            )
+            return False
 
     async def _persist_signal(self, signal: ThresholdSignal) -> None:
         """Persist signal changes to database."""

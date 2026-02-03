@@ -12,14 +12,14 @@ class TestStubPlanner:
 
     def test_stub_planner_initialization(self):
         """StubPlanner initializes without errors."""
-        from .stub_adapter import StubPlanner
+        from app.hoc.int.platform.facades.stub_adapter import StubPlanner
 
         planner = StubPlanner()
         assert planner is not None
 
     def test_stub_planner_generates_plan(self):
         """StubPlanner returns a valid plan structure."""
-        from .stub_adapter import StubPlanner
+        from app.hoc.int.platform.facades.stub_adapter import StubPlanner
 
         planner = StubPlanner()
 
@@ -33,7 +33,7 @@ class TestStubPlanner:
 
     def test_stub_planner_step_structure(self):
         """StubPlanner steps have required fields."""
-        from .stub_adapter import StubPlanner
+        from app.hoc.int.platform.facades.stub_adapter import StubPlanner
 
         planner = StubPlanner()
 
@@ -48,7 +48,7 @@ class TestStubPlanner:
 
     def test_stub_planner_with_tool_manifest(self):
         """StubPlanner uses first tool from manifest."""
-        from .stub_adapter import StubPlanner
+        from app.hoc.int.platform.facades.stub_adapter import StubPlanner
 
         planner = StubPlanner()
 
@@ -64,7 +64,7 @@ class TestStubPlanner:
 
     def test_stub_planner_metadata(self):
         """StubPlanner includes metadata."""
-        from .stub_adapter import StubPlanner
+        from app.hoc.int.platform.facades.stub_adapter import StubPlanner
 
         planner = StubPlanner()
 
@@ -152,7 +152,7 @@ class TestPlannerFactory:
         """get_planner returns StubPlanner by default."""
         with patch.dict(os.environ, {"PLANNER_BACKEND": "stub"}, clear=False):
             from . import get_planner
-            from .stub_adapter import StubPlanner
+            from app.hoc.int.platform.facades.stub_adapter import StubPlanner
 
             # get_planner reads env at call time
             planner = get_planner()
@@ -171,7 +171,7 @@ class TestPlannerFactory:
         """get_planner falls back to stub for unknown backends."""
         with patch.dict(os.environ, {"PLANNER_BACKEND": "unknown"}, clear=False):
             from . import get_planner
-            from .stub_adapter import StubPlanner
+            from app.hoc.int.platform.facades.stub_adapter import StubPlanner
 
             planner = get_planner()
             assert isinstance(planner, StubPlanner)

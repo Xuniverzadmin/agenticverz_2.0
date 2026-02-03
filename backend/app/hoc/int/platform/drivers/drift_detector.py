@@ -1,3 +1,6 @@
+# Layer: L6 — Domain Driver
+# AUDIENCE: INTERNAL
+# Role: Drift Detection Service - M7 Implementation
 """
 Drift Detection Service - M7 Implementation
 

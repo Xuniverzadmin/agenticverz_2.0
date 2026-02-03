@@ -19,7 +19,7 @@ Registers four operations:
   - activity.query → ActivityFacade (15+ async methods)
   - activity.signal_fingerprint → signal_identity (pure computation)
   - activity.signal_feedback → SignalFeedbackService (feedback operations)
-  - activity.telemetry → CusTelemetryService (telemetry ingestion/query)
+  - activity.telemetry → CusTelemetryEngine (telemetry ingestion/query)
 """
 
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
@@ -160,14 +160,14 @@ class ActivityTelemetryHandler:
     """
     Handler for activity.telemetry operations.
 
-    Wraps CusTelemetryService methods:
+    Wraps CusTelemetryEngine methods:
       - ingest_usage, ingest_batch, get_usage_summary,
         get_usage_history, get_daily_aggregates
     """
 
     async def execute(self, ctx: OperationContext) -> OperationResult:
         from app.hoc.cus.activity.L5_engines.cus_telemetry_engine import (
-            get_cus_telemetry_service,
+            get_cus_telemetry_engine,
         )
 
         method_name = ctx.params.get("method")
@@ -176,7 +176,7 @@ class ActivityTelemetryHandler:
                 "Missing 'method' in params", "MISSING_METHOD"
             )
 
-        service = get_cus_telemetry_service()
+        service = get_cus_telemetry_engine()
         dispatch = {
             "ingest_usage": service.ingest_usage,
             "ingest_batch": service.ingest_batch,

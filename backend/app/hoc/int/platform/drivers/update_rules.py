@@ -1,3 +1,6 @@
+# Layer: L6 — Domain Driver
+# AUDIENCE: INTERNAL
+# Role: Memory Update Rules Engine - M7 Implementation
 """
 Memory Update Rules Engine - M7 Implementation
 

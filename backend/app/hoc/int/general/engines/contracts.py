@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: Contract Dataclasses for Machine-Native Runtime
 # runtime/contracts.py
 """
 Contract Dataclasses for Machine-Native Runtime

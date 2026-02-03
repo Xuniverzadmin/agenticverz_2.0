@@ -45,6 +45,21 @@ from .cost_bridges_engine import (
     CostRecoveryGenerator,
     CostRoutingAdjuster,
 )
+# MCP Server Engine (PIN-516 Phase 2)
+from .mcp_server_engine import (
+    McpDiscoveryResult,
+    McpHealthResult,
+    McpRegistrationResult,
+    McpServerEngine,
+    McpServerStatus,
+)
+# MCP Tool Invocation Engine (PIN-516 Phase 4)
+from .mcp_tool_invocation_engine import (
+    McpInvocationResult,
+    McpPolicyChecker,
+    McpToolInvocationEngine,
+    PolicyCheckResult,
+)
 
 __all__ = [
     # prevention_contract
@@ -67,4 +82,15 @@ __all__ = [
     "CostPolicyGenerator",
     "CostRecoveryGenerator",
     "CostRoutingAdjuster",
+    # mcp_server_engine (PIN-516 Phase 2)
+    "McpServerEngine",
+    "McpServerStatus",
+    "McpRegistrationResult",
+    "McpDiscoveryResult",
+    "McpHealthResult",
+    # mcp_tool_invocation_engine (PIN-516 Phase 4)
+    "McpToolInvocationEngine",
+    "McpInvocationResult",
+    "McpPolicyChecker",
+    "PolicyCheckResult",
 ]

@@ -37,11 +37,11 @@ from typing import Any, Dict, List, Optional, Union
 
 # Add parent to path for imports
 _parent_path = str(Path(__file__).parent.parent)
-if _parent_path not in sys.path:
+
     sys.path.insert(0, _parent_path)
 
 # Direct import to avoid circular dependency through __init__.py
-from planner.interface import (
+from app.hoc.int.platform.drivers.interface import (
     DeterminismMode,
     PlanMetadata,
     PlannerError,

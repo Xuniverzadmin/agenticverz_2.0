@@ -72,3 +72,8 @@ def register_all_handlers(registry: "OperationRegistry") -> None:
     from app.hoc.cus.hoc_spine.orchestrator.handlers import policies_handler
 
     policies_handler.register(registry)  # policies.query, .enforcement, .governance, .lessons, .policy_facade, .limits, .rules, .rate_limits, .simulate
+
+    # PIN-516 Phase 3 — MCP Servers (1 operation: integrations.mcp_servers)
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import mcp_handler
+
+    mcp_handler.register(registry)  # integrations.mcp_servers

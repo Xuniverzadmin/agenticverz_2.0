@@ -154,10 +154,10 @@ class BusinessBuilderWorker:
         except ImportError:
             logger.warning("M17 CARE engine not available")
 
-        # M20 Policy Runtime
+        # M20 Policy Runtime (canonical: L5_engines per PIN-514)
         try:
-            from app.policy.runtime.dag_executor import DAGExecutor
-            from app.policy.runtime.deterministic_engine import DeterministicEngine
+            from app.hoc.cus.policies.L5_engines.dag_executor import DAGExecutor
+            from app.hoc.cus.policies.L5_engines.deterministic_engine import DeterministicEngine
 
             self._policy_engine = DAGExecutor()
         except ImportError:

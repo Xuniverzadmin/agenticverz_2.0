@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: A single transformation mapping.
 # JSON Transform Skill
 # Safe, deterministic JSON transformation using dot-path mapping
 

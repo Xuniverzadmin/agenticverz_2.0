@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: HTTP Call Skill v2 (M3)
 # http_call_v2.py
 """
 HTTP Call Skill v2 (M3)

@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: Lightweight circuit breaker for M11 external skills.
 # Skill Base Classes for M11
 # Provides common patterns for idempotent, deterministic skills
 

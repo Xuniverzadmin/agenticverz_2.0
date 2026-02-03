@@ -32,13 +32,13 @@
 # ----------------------------------- | -------------------------- | ------
 # fetch_pending_alerts                | Get alerts ready to send   | [DONE]
 # update_alert_sent                   | Mark alert as sent         | [DONE]
-# update_alert_retry                  | Schedule retry             | [TODO]
-# update_alert_failed                 | Mark alert as failed       | [TODO]
-# mark_incident_alert_sent            | Update incident flag       | [TODO]
-# fetch_queue_stats                   | Get queue statistics       | [TODO]
-# insert_alert                        | Enqueue new alert          | [TODO]
-# retry_failed_alerts                 | Reset failed to pending    | [TODO]
-# purge_old_alerts                    | Delete old alerts          | [TODO]
+# update_alert_retry                  | Schedule retry             | [DONE]
+# update_alert_failed                 | Mark alert as failed       | [DONE]
+# mark_incident_alert_sent            | Update incident flag       | [DONE]
+# fetch_queue_stats                   | Get queue statistics       | [DONE]
+# insert_alert                        | Enqueue new alert          | [DONE]
+# retry_failed_alerts                 | Reset failed to pending    | [DONE]
+# purge_old_alerts                    | Delete old alerts          | [DONE]
 # ============================================================================
 
 """

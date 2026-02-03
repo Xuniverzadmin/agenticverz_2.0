@@ -33,7 +33,7 @@ _project_root = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 )
 _budgetllm_path = os.path.join(_project_root, "budgetllm")
-if _budgetllm_path not in sys.path:
+
     sys.path.insert(0, _budgetllm_path)
 
 logger = logging.getLogger("nova.agents.skills.llm_invoke_governed")

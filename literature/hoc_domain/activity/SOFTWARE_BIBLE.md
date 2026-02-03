@@ -17,7 +17,7 @@ Each script's unique contribution and canonical function.
 | activity_facade | L5 | `ActivityFacade.get_runs` | CANONICAL | 15 | ?:activity | L3:customer_activity_adapter | L5:__init__ | L5:customer_activity_adapter | L4:activity_handler | YES |
 | attention_ranking_engine | L5 | `AttentionRankingService.compute_attention_score` | LEAF | 0 | L5:activity_facade, activity_facade | YES |
 | cost_analysis_engine | L5 | `CostAnalysisService.__init__` | WRAPPER | 0 | L5:activity_facade, activity_facade | **OVERLAP** |
-| cus_telemetry_service | L5 | `get_cus_telemetry_service` | WRAPPER | 0 | ?:cus_telemetry | ?:cus_telemetry_service | L4:activity_handler | ?:shim_guard | YES |
+| cus_telemetry_engine | L5 | `CusTelemetryEngine.ingest` | CANONICAL | 5 | ?:cus_telemetry | ?:cus_telemetry_service | L4:activity_handler | ?:shim_guard | YES |
 | pattern_detection_engine | L5 | `PatternDetectionService.__init__` | WRAPPER | 0 | L5:activity_facade, activity_facade | **OVERLAP** |
 | signal_feedback_engine | L5 | `SignalFeedbackService.suppress_signal` | LEAF | 0 | L5:activity_facade | L4:activity_handler, activity_facade | YES |
 | signal_identity | L5 | `compute_signal_fingerprint_from_row` | LEAF | 0 | ?:activity | ?:__init__ | ?:activity_facade | L5:activity_facade | L4:activity_handler | ?:test_signal_feedback, activity_facade | YES |
@@ -226,3 +226,37 @@ _30 thin delegation functions._
 - Rewired `main.py:584` from direct L6 import to `OrphanRecoveryHandler().execute()`
 - L4 owns session lifecycle, commit boundary, and scheduling authority
 - All 4 CSV entries reclassified: 3 WIRED, 1 REMOVED
+
+## PIN-519 System Run Introspection (2026-02-03)
+
+**Activity facade updated to delegate cross-domain queries to L4 coordinators.**
+
+| Method | Change | Delegates To |
+|--------|--------|--------------|
+| `get_run_evidence()` | Replaced empty shell with coordinator delegation | `RunEvidenceCoordinator` (L4) |
+| `get_run_proof()` | Replaced UNKNOWN integrity with coordinator delegation | `RunProofCoordinator` (L4) |
+| `get_signals()` | Now includes signal feedback via coordinator | `SignalFeedbackCoordinator` (L4) |
+
+**New private method:**
+
+| Method | Purpose |
+|--------|---------|
+| `_get_signal_feedback(session, tenant_id, fingerprint)` | Fetch signal feedback from L4 coordinator |
+
+**Red-line compliance:**
+
+- Activity L5 does not import other domains ✅
+- Activity L5 does not write data ✅
+- Activity L5 does not evaluate policy ✅
+- Activity L5 does not compute integrity (delegated to coordinator) ✅
+- Activity L5 does not trigger execution ✅
+
+**L4 coordinators consumed:**
+
+| Coordinator | Purpose | Bridges Used |
+|-------------|---------|--------------|
+| `RunEvidenceCoordinator` | Cross-domain evidence aggregation | incidents, policies, controls |
+| `RunProofCoordinator` | Integrity verification via traces | logs (traces_store) |
+| `SignalFeedbackCoordinator` | Signal feedback queries | logs (audit_ledger_read) |
+
+Reference: `docs/memory-pins/PIN-519-system-run-introspection.md`

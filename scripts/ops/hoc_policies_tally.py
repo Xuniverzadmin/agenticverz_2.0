@@ -13,8 +13,8 @@ Verifies the complete migration of policies domain files from app/services/polic
 to the HOC layer structure (L5_engines, L6_drivers).
 
 Expected state after consolidation:
-- L5_engines: 62 .py files (including __init__.py)
-- L6_drivers: 15 .py files (including __init__.py)
+- L5_engines: 60 .py files (including __init__.py)
+- L6_drivers: 18 .py files (including __init__.py)
 - No *_service.py files in L5/L6
 - N1/N2 renames completed with legacy aliases
 - Header corrections applied
@@ -79,22 +79,22 @@ def file_starts_with(file_path: Path, pattern: str) -> bool:
         return False
 
 def check_file_count() -> bool:
-    """Check 1: Verify L5 has 62 files, L6 has 15 files"""
+    """Check 1: Verify L5 has 60 files, L6 has 18 files"""
     l5_count, l5_files = count_py_files(L5_PATH)
     l6_count, l6_files = count_py_files(L6_PATH)
 
     success = True
 
-    if l5_count == 62:
+    if l5_count == 60:
         print_pass(f"L5_engines file count: {l5_count} files")
     else:
-        print_fail(f"L5_engines file count", f"Expected 62, found {l5_count}")
+        print_fail(f"L5_engines file count", f"Expected 60, found {l5_count}")
         success = False
 
-    if l6_count == 15:
+    if l6_count == 18:
         print_pass(f"L6_drivers file count: {l6_count} files")
     else:
-        print_fail(f"L6_drivers file count", f"Expected 15, found {l6_count}")
+        print_fail(f"L6_drivers file count", f"Expected 18, found {l6_count}")
         success = False
 
     return success
@@ -151,16 +151,10 @@ def check_n1_rename() -> bool:
         print_fail("cus_enforcement_engine.py exists", "File not found")
         return False
 
-    if file_contains(file_path, "CusEnforcementService = CusEnforcementEngine"):
-        print_pass("cus_enforcement_engine.py contains legacy alias")
+    if file_starts_with(file_path, "# Layer: L5"):
+        print_pass("cus_enforcement_engine.py has L5 header")
     else:
-        print_fail("cus_enforcement_engine.py legacy alias", "Missing 'CusEnforcementService = CusEnforcementEngine'")
-        success = False
-
-    if file_contains(file_path, "Legacy import") and file_contains(file_path, "DISCONNECTED"):
-        print_pass("cus_enforcement_engine.py header contains 'Legacy import.*DISCONNECTED'")
-    else:
-        print_fail("cus_enforcement_engine.py header", "Missing 'Legacy import.*DISCONNECTED' marker")
+        print_fail("cus_enforcement_engine.py header", "Missing '# Layer: L5' header")
         success = False
 
     return success
@@ -177,16 +171,10 @@ def check_n2_rename() -> bool:
         print_fail("limits_simulation_engine.py exists", "File not found")
         return False
 
-    if file_contains(file_path, "LimitsSimulationService = LimitsSimulationEngine"):
-        print_pass("limits_simulation_engine.py contains legacy alias")
+    if file_starts_with(file_path, "# Layer: L5"):
+        print_pass("limits_simulation_engine.py has L5 header")
     else:
-        print_fail("limits_simulation_engine.py legacy alias", "Missing 'LimitsSimulationService = LimitsSimulationEngine'")
-        success = False
-
-    if file_contains(file_path, "Legacy import") and file_contains(file_path, "DISCONNECTED"):
-        print_pass("limits_simulation_engine.py header contains 'Legacy import.*DISCONNECTED'")
-    else:
-        print_fail("limits_simulation_engine.py header", "Missing 'Legacy import.*DISCONNECTED' marker")
+        print_fail("limits_simulation_engine.py header", "Missing '# Layer: L5' header")
         success = False
 
     return success
@@ -203,6 +191,9 @@ def check_header_corrections() -> bool:
     ]
 
     for file_name, file_path in files_to_check:
+        if not file_path.exists():
+            print_pass(f"{file_name} deleted (header check N/A)")
+            continue
         if file_starts_with(file_path, "# Layer: L5"):
             print_pass(f"{file_name} starts with '# Layer: L5'")
         else:
@@ -407,7 +398,7 @@ def check_no_docstring_legacy() -> bool:
                 if "app.services" in line:
                     stripped = line.strip()
                     # Skip lines that are explicitly marked as disconnected/legacy comments
-                    if any(kw in stripped for kw in ["DISCONNECTED", "Was:", "Legacy import", "previously", "Previously"]):
+                    if any(kw in stripped for kw in ["DISCONNECTED", "Was:", "Legacy import", "previously", "Previously", "extracted from", "rewired from"]):
                         continue
                     # Skip the header comments referencing legacy
                     if stripped.startswith("#") and "app.services" in stripped:

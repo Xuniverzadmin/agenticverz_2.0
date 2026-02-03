@@ -28,12 +28,12 @@ for p in [_backend_path, _app_path]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from app.planner.interface import (
+from app.app.hoc.int.platform.drivers.interface import (
     DeterminismMode,
     PlannerOutput,
     PlannerRegistry,
 )
-from app.planner.stub_planner import StubPlanner
+from app.hoc.int.platform.drivers.stub_planner import StubPlanner
 
 
 class TestRepeatedIdenticalCalls:

@@ -19,6 +19,13 @@ class PoliciesBridge:
         from app.hoc.cus.policies.L5_engines.customer_policy_read_engine import CustomerPolicyReadService
         return CustomerPolicyReadService(session)
 
+    def policy_evaluations_capability(self, session):
+        """Return policy evaluations read capability for run queries (PIN-519)."""
+        from app.hoc.cus.policies.L6_drivers.policy_enforcement_driver import (
+            PolicyEnforcementReadDriver,
+        )
+        return PolicyEnforcementReadDriver(session)
+
 
 # Singleton
 _instance = None

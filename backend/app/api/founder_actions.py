@@ -42,7 +42,7 @@ from app.contracts.ops import (
     FounderReversalRequestDTO,
 )
 from app.db import get_session
-from app.services.founder_action_write_service import FounderActionWriteService
+from app.hoc.fdr.ops.engines.founder_action_write_engine import FounderActionWriteService
 
 logger = logging.getLogger(__name__)
 

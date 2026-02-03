@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: JSON Transform Skill v2 (M3)
 # json_transform_v2.py
 """
 JSON Transform Skill v2 (M3)

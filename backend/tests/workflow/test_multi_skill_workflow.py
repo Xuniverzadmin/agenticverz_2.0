@@ -22,7 +22,7 @@ import pytest
 # Add paths for imports
 _backend_path = str(Path(__file__).parent.parent.parent)
 _runtime_path = str(Path(__file__).parent.parent.parent / "app" / "worker" / "runtime")
-_skills_path = str(Path(__file__).parent.parent.parent / "app" / "skills")
+
 
 for p in [_backend_path, _runtime_path, _skills_path]:
     if p not in sys.path:

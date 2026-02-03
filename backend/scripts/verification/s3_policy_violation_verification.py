@@ -113,7 +113,7 @@ async def create_test_violation(result: S3VerificationResult) -> bool:
 
     try:
         # CANONICAL IMPORTS: Use service constructors, not manual creation
-        from app.services.policy_violation_service import (
+        from app.hoc.cus.incidents.L5_engines.policy_violation_service import (
             PolicyViolationService,
             ViolationFact,
         )
@@ -345,7 +345,7 @@ async def test_idempotency(result: S3VerificationResult) -> bool:
     print("=" * 60)
 
     try:
-        from app.services.policy_violation_service import (
+        from app.hoc.cus.incidents.L5_engines.policy_violation_service import (
             PolicyViolationService,
             ViolationFact,
         )

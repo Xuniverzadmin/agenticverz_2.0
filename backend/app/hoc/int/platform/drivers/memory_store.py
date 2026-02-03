@@ -1,3 +1,6 @@
+# Layer: L6 — Domain Driver
+# AUDIENCE: INTERNAL
+# Role: Protocol for memory storage backends.
 # Memory Store
 # Provides storage interface for agent memories
 

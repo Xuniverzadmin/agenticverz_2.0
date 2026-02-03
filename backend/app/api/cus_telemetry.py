@@ -43,7 +43,7 @@ from app.schemas.cus_schemas import (
     CusUsageSummary,
 )
 from app.schemas.response import wrap_dict, wrap_error, wrap_list
-from app.services.cus_telemetry_service import CusTelemetryService
+from app.hoc.cus.activity.L5_engines.cus_telemetry_engine import CusTelemetryEngine
 
 router = APIRouter(prefix="/telemetry", tags=["Customer Telemetry"])
 
@@ -53,9 +53,9 @@ router = APIRouter(prefix="/telemetry", tags=["Customer Telemetry"])
 # =============================================================================
 
 
-def get_telemetry_service() -> CusTelemetryService:
+def get_telemetry_service() -> CusTelemetryEngine:
     """Dependency to get telemetry service instance."""
-    return CusTelemetryService()
+    return CusTelemetryEngine()
 
 
 async def get_integration_context(
@@ -108,7 +108,7 @@ async def get_integration_context(
 async def ingest_llm_usage(
     payload: CusLLMUsageIngest,
     ctx: dict = Depends(get_integration_context),
-    service: CusTelemetryService = Depends(get_telemetry_service),
+    service: CusTelemetryEngine = Depends(get_telemetry_service),
 ):
     """Ingest a single LLM usage telemetry record.
 
@@ -160,7 +160,7 @@ async def ingest_llm_usage(
 async def ingest_llm_usage_batch(
     payload: CusLLMUsageBatchIngest,
     ctx: dict = Depends(get_integration_context),
-    service: CusTelemetryService = Depends(get_telemetry_service),
+    service: CusTelemetryEngine = Depends(get_telemetry_service),
 ):
     """Ingest a batch of LLM usage telemetry records.
 
@@ -206,7 +206,7 @@ async def get_usage_summary(
     start_date: Optional[date] = Query(None, description="Period start (default: 30 days ago)"),
     end_date: Optional[date] = Query(None, description="Period end (default: today)"),
     ctx: dict = Depends(get_integration_context),
-    service: CusTelemetryService = Depends(get_telemetry_service),
+    service: CusTelemetryEngine = Depends(get_telemetry_service),
 ):
     """Get aggregated usage summary for dashboard.
 
@@ -252,7 +252,7 @@ async def get_usage_history(
     limit: int = Query(50, ge=1, le=1000, description="Max records to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     ctx: dict = Depends(get_integration_context),
-    service: CusTelemetryService = Depends(get_telemetry_service),
+    service: CusTelemetryEngine = Depends(get_telemetry_service),
 ):
     """Get detailed usage history records.
 
@@ -297,7 +297,7 @@ async def get_daily_aggregates(
     start_date: Optional[date] = Query(None, description="Period start"),
     end_date: Optional[date] = Query(None, description="Period end"),
     ctx: dict = Depends(get_integration_context),
-    service: CusTelemetryService = Depends(get_telemetry_service),
+    service: CusTelemetryEngine = Depends(get_telemetry_service),
 ):
     """Get daily aggregated usage for charts.
 

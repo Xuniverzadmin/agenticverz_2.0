@@ -1,3 +1,6 @@
+# Layer: L6 — Domain Driver
+# AUDIENCE: INTERNAL
+# Role: Redis-based cache for embedding results.
 # Embedding Cache Layer
 """
 Redis-based cache for embedding results.

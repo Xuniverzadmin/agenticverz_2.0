@@ -1,3 +1,6 @@
+# Layer: L5 — Domain Engine
+# AUDIENCE: INTERNAL
+# Role: LLM Invoke Stub (M2)
 # skills/stubs/llm_invoke_stub.py
 """
 LLM Invoke Stub (M2)
@@ -21,7 +24,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 _runtime_path = str(Path(__file__).parent.parent.parent / "worker" / "runtime")
-if _runtime_path not in sys.path:
+
     sys.path.insert(0, _runtime_path)
 
 from core import SkillDescriptor

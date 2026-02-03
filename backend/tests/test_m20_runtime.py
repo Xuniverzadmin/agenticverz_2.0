@@ -13,18 +13,25 @@ import pytest
 from app.policy.compiler.grammar import ActionType
 from app.policy.compiler.parser import Parser
 from app.policy.ir.ir_builder import IRBuilder
-from app.policy.runtime.dag_executor import DAGExecutor
-from app.policy.runtime.deterministic_engine import (
+from app.hoc.cus.policies.L5_engines.dag_executor import DAGExecutor
+from app.hoc.cus.policies.L5_engines.deterministic_engine import (
     DeterministicEngine,
     ExecutionContext,
     ExecutionStatus,
 )
-from app.policy.runtime.intent import (
+from app.hoc.cus.policies.L5_engines.intent import (
     Intent,
     IntentEmitter,
     IntentPayload,
     IntentType,
 )
+
+
+class _PermissiveIntentValidator:
+    """Test-only validator that allows all intents."""
+
+    async def validate_intent(self, intent):
+        return {"allowed": True, "errors": []}
 
 
 class TestExecutionContext:
@@ -109,7 +116,7 @@ class TestIntentSystem:
     @pytest.mark.asyncio
     async def test_validate_intent_route(self):
         """Test validating ROUTE intent."""
-        emitter = IntentEmitter()
+        emitter = IntentEmitter(intent_validator=_PermissiveIntentValidator())
 
         # Valid route
         valid_intent = emitter.create_intent(
@@ -268,7 +275,7 @@ class TestDeterministicEngine:
         builder = IRBuilder()
         module = builder.build(ast)
 
-        engine = DeterministicEngine()
+        engine = DeterministicEngine(intent_validator=_PermissiveIntentValidator())
         ctx = ExecutionContext()
 
         result = await engine.execute(module, ctx)

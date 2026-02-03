@@ -38,7 +38,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 import httpx
 
 from app.models.cus_models import CusHealthState
-from app.services.cus_credential_service import CusCredentialService
+from app.services.cus_credential_engine import CusCredentialService
 from app.services.cus_health_driver import (
     CusHealthDriver,
     IntegrationHealthRow,

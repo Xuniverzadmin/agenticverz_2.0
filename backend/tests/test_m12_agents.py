@@ -45,12 +45,12 @@ requires_agents_schema = pytest.mark.skipif(
     reason="agents schema not present in database (see PIN-062 for schema definition)",
 )
 
-from app.agents.services.blackboard_service import get_blackboard_service
-from app.agents.services.credit_service import CREDIT_COSTS, get_credit_service
-from app.agents.services.job_service import JobConfig, get_job_service
-from app.agents.services.message_service import get_message_service
-from app.agents.services.registry_service import get_registry_service
-from app.agents.services.worker_service import get_worker_service
+from app.hoc.int.agent.engines.blackboard_engine import get_blackboard_service
+from app.hoc.int.agent.engines.credit_engine import CREDIT_COSTS, get_credit_service
+from app.hoc.int.agent.engines.job_engine import JobConfig, get_job_service
+from app.hoc.int.agent.engines.message_engine import get_message_service
+from app.hoc.int.agent.engines.registry_engine import get_registry_service
+from app.hoc.int.agent.engines.worker_engine import get_worker_service
 from app.agents.skills.agent_spawn import AgentSpawnInput, AgentSpawnSkill
 from app.agents.skills.blackboard_ops import (
     BlackboardLockInput,

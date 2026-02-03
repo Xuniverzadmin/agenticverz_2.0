@@ -18,11 +18,11 @@ import pytest
 
 # Direct paths to avoid pydantic-dependent imports through __init__.py
 _runtime_path = str(Path(__file__).parent.parent.parent / "app" / "worker" / "runtime")
-_skills_path = str(Path(__file__).parent.parent.parent / "app" / "skills")
-if _runtime_path not in sys.path:
+
+
     sys.path.insert(0, _runtime_path)
-if _skills_path not in sys.path:
-    sys.path.insert(0, _skills_path)
+
+
 
 from core import SkillDescriptor
 from registry_v2 import (
