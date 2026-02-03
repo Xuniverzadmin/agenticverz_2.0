@@ -22,7 +22,8 @@ This taxonomy ensures violations are actionable, not just noise.
 
 from typing import Any, Dict, Union
 
-from .semantic_types import (
+# Types imported from int/agent/drivers (wired via absolute import)
+from app.hoc.int.agent.drivers.semantic_types import (
     FailureCode,
     IntentFailureCode,
     SemanticFailureCode,

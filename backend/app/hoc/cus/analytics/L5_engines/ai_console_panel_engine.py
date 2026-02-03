@@ -31,15 +31,35 @@ import logging
 import time
 from typing import Any, Dict, List, Optional
 
-from .panel_consistency_checker import PanelConsistencyChecker, create_consistency_checker
-from .panel_dependency_resolver import PanelDependencyResolver
-from .panel_metrics_emitter import PanelMetricsEmitter, get_panel_metrics_emitter
-from .panel_response_assembler import PanelResponseAssembler, create_response_assembler
-from .panel_signal_collector import PanelSignalCollector, create_signal_collector
-from .panel_slot_evaluator import PanelSlotEvaluator
-from .panel_spec_loader import PanelSpecLoader, get_panel_spec_loader
-from .panel_types import PanelSlotResult, SlotState, VerificationSignals
-from .panel_verification_engine import PanelVerificationEngine
+# Panel modules in app/hoc/int/agent/ (wired via absolute imports)
+from app.hoc.int.agent.drivers.panel_consistency_checker import (
+    PanelConsistencyChecker,
+    create_consistency_checker,
+)
+from app.hoc.int.agent.drivers.panel_types import (
+    PanelSlotResult,
+    SlotState,
+    VerificationSignals,
+)
+from app.hoc.int.agent.engines.panel_dependency_resolver import PanelDependencyResolver
+from app.hoc.int.agent.engines.panel_metrics_emitter import (
+    PanelMetricsEmitter,
+    get_panel_metrics_emitter,
+)
+from app.hoc.int.agent.engines.panel_response_assembler import (
+    PanelResponseAssembler,
+    create_response_assembler,
+)
+from app.hoc.int.agent.engines.panel_signal_collector import (
+    PanelSignalCollector,
+    create_signal_collector,
+)
+from app.hoc.int.agent.engines.panel_slot_evaluator import PanelSlotEvaluator
+from app.hoc.int.agent.engines.panel_spec_loader import (
+    PanelSpecLoader,
+    get_panel_spec_loader,
+)
+from app.hoc.int.agent.engines.panel_verification_engine import PanelVerificationEngine
 
 logger = logging.getLogger("nova.panel_adapter.engine")
 
