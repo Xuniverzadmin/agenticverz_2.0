@@ -580,10 +580,21 @@ async def lifespan(app: FastAPI):
     # =========================================================================
     # Detect and mark runs that were orphaned due to previous system crash.
     # This MUST run before accepting new requests to ensure truth-grade state.
+    # PIN-520 Phase 1: Route through L4 registry instead of direct L6 import.
     try:
-        from app.hoc.cus.activity.L6_drivers.orphan_recovery_driver import recover_orphaned_runs
+        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+            OperationContext,
+            get_operation_registry,
+        )
 
-        recovery_result = await recover_orphaned_runs()
+        registry = get_operation_registry()
+        recovery_ctx = OperationContext(
+            session=None,
+            tenant_id="system",
+            params={"method": "recover"},
+        )
+        recovery_result_op = await registry.execute("activity.orphan_recovery", recovery_ctx)
+        recovery_result = recovery_result_op.data if recovery_result_op.success else {}
         if recovery_result.get("detected", 0) > 0:
             logger.warning(
                 "pb_s2_orphan_recovery_complete",

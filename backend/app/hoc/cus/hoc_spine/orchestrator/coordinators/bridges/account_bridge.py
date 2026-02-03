@@ -29,6 +29,21 @@ class AccountBridge:
         from app.hoc.cus.account.L5_engines.tenant_engine import TenantEngine
         return TenantEngine(session)
 
+    def billing_provider_capability(self):
+        """
+        Return billing provider for sync access (PIN-520 Phase 1).
+
+        Used by billing_dependencies.py and billing_gate.py which are sync
+        FastAPI dependencies that cannot use the async registry pattern.
+
+        Note: This capability does NOT take session as billing provider
+        is stateless and session-independent.
+        """
+        from app.hoc.cus.account.L5_engines.billing_provider_engine import (
+            get_billing_provider,
+        )
+        return get_billing_provider()
+
 
 # Singleton
 _instance = None

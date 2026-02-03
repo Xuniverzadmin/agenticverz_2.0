@@ -157,8 +157,54 @@ class IncidentsWriteHandler:
         return OperationResult.ok(data)
 
 
+class IncidentsRecoveryRuleHandler:
+    """
+    Handler for incidents.recovery_rules operations.
+
+    PIN-520 Phase 1: Routes recovery rule engine through L4 registry.
+    Dispatches to RecoveryRuleEngine methods.
+
+    Methods:
+      - evaluate: Evaluate recovery rules for a failure
+      - get_rules: List available recovery rules
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.incidents.L5_engines.recovery_rule_engine import (
+            RecoveryRuleEngine,
+        )
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail(
+                "Missing 'method' in params", "MISSING_METHOD"
+            )
+
+        engine = RecoveryRuleEngine()
+
+        if method_name == "evaluate":
+            failure_payload = ctx.params.get("failure_payload")
+            context = ctx.params.get("context", {})
+            if not failure_payload:
+                return OperationResult.fail(
+                    "Missing 'failure_payload'", "MISSING_PAYLOAD"
+                )
+            result = engine.evaluate(failure_payload, context)
+            return OperationResult.ok(result)
+
+        elif method_name == "get_rules":
+            rules = engine.get_rules()
+            return OperationResult.ok({"rules": rules})
+
+        return OperationResult.fail(
+            f"Unknown recovery rule method: {method_name}", "UNKNOWN_METHOD"
+        )
+
+
 def register(registry: OperationRegistry) -> None:
     """Register incidents operations with the registry."""
     registry.register("incidents.query", IncidentsQueryHandler())
     registry.register("incidents.export", IncidentsExportHandler())
     registry.register("incidents.write", IncidentsWriteHandler())
+    # PIN-520 Phase 1: Recovery rule engine
+    registry.register("incidents.recovery_rules", IncidentsRecoveryRuleHandler())

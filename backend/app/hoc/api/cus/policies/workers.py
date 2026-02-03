@@ -5,9 +5,9 @@
 #   Execution: async
 # Role: Business Builder Worker API endpoints
 # Callers: External clients via HTTP
-# Allowed Imports: L3, L4, L6
-# Forbidden Imports: L1, L5
-# Reference: PIN-258 Phase F-3 Workers Cluster
+# Allowed Imports: L3, L4 (via registry)
+# Forbidden Imports: L1, L5, L6 (must route through L4)
+# Reference: PIN-258 Phase F-3 Workers Cluster, PIN-520 Phase 1
 # Contract: PHASE_F_FIX_DESIGN (F-W-RULE-1 to F-W-RULE-5)
 #
 # GOVERNANCE NOTE (F-W-RULE-4):
@@ -53,9 +53,11 @@ from app.auth.authority import AuthorityResult, emit_authority_audit, require_re
 from app.contracts.decisions import emit_policy_precheck_decision
 from app.db import CostBudget, get_async_session
 
-# Evidence Architecture v1.0: ExecutionContext and taxonomy evidence
-from app.core.execution_context import ExecutionContext, EvidenceSource
-from app.hoc.cus.logs.L6_drivers.capture_driver import capture_environment_evidence
+# PIN-520 Phase 1: Route L5/L6 through L4 registry
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+)
 from app.models.tenant import WorkerRun
 from app.policy.engine import PolicyEngine
 from app.schemas.response import wrap_dict
@@ -965,22 +967,25 @@ async def run_worker(
         )
 
         # Evidence Architecture v1.0: Capture environment evidence at run creation (H)
-        # ExecutionContext is created once here and will be reconstructed in worker
+        # PIN-520 Phase 1: Route capture_driver through L4 registry
         trace_id = f"trace_{run_id}"  # Matches pg_store.start_trace() pattern
-        ctx = ExecutionContext.create(
-            run_id=run_id,
-            trace_id=trace_id,
-            source=EvidenceSource.SDK,
-            is_synthetic=False,  # Production runs
-            synthetic_scenario_id=None,
+        registry = get_operation_registry()
+        capture_ctx = OperationContext(
+            session=None,  # capture doesn't need session
+            tenant_id=tenant_id,
+            params={
+                "method": "capture_environment",
+                "run_id": run_id,
+                "trace_id": trace_id,
+                "source": "SDK",
+                "is_synthetic": False,
+                "sdk_mode": "api",
+                "execution_environment": os.getenv("ENV", "prod"),
+                "telemetry_delivery_status": "connected",
+                "capture_confidence_score": 1.0,
+            },
         )
-        capture_environment_evidence(
-            ctx,
-            sdk_mode="api",
-            execution_environment=os.getenv("ENV", "prod"),
-            telemetry_delivery_status="connected",
-            capture_confidence_score=1.0,
-        )
+        await registry.execute("logs.capture", capture_ctx)
 
         background_tasks.add_task(_execute_worker_async, run_id, request)
 
@@ -1253,10 +1258,11 @@ async def worker_health():
     Health check for Business Builder Worker.
 
     Returns status of all integrated moats.
+    PIN-520 Phase 1: Route L5 health checks through L4 registry.
     """
     moat_status = {}
 
-    # Check M17 CARE
+    # Check M17 CARE (not in HOC domain, keep direct import)
     try:
         from app.routing.care import get_care_engine
 
@@ -1265,31 +1271,25 @@ async def worker_health():
     except ImportError:
         moat_status["m17_care"] = "unavailable"
 
-    # Check M20 Policy (canonical: L5_engines per PIN-514)
+    # PIN-520 Phase 1: Route policies L5 health checks through L4 registry
+    # Check M20 Policy, M9 Failure Catalog, M10 Recovery via registry
     try:
-        from app.hoc.cus.policies.L5_engines.dag_executor import DAGExecutor
-
-        DAGExecutor()
-        moat_status["m20_policy"] = "available"
-    except ImportError:
+        registry = get_operation_registry()
+        health_ctx = OperationContext(
+            session=None,
+            tenant_id="default",
+            params={},
+        )
+        health_result = await registry.execute("policies.health", health_ctx)
+        if health_result.success:
+            moat_status.update(health_result.data)
+        else:
+            moat_status["m20_policy"] = "unavailable"
+            moat_status["m9_failure_catalog"] = "unavailable"
+            moat_status["m10_recovery"] = "unavailable"
+    except Exception:
         moat_status["m20_policy"] = "unavailable"
-
-    # Check M9 Failure Catalog (via RecoveryEvaluationEngine, PIN-504)
-    try:
-        from app.hoc.cus.policies.L5_engines.recovery_evaluation_engine import RecoveryEvaluationEngine
-
-        RecoveryEvaluationEngine()
-        moat_status["m9_failure_catalog"] = "available"
-    except ImportError:
         moat_status["m9_failure_catalog"] = "unavailable"
-
-    # Check M10 Recovery (via RecoveryEvaluationEngine, PIN-504)
-    try:
-        from app.hoc.cus.policies.L5_engines.recovery_evaluation_engine import RecoveryEvaluationEngine
-
-        RecoveryEvaluationEngine()
-        moat_status["m10_recovery"] = "available"
-    except ImportError:
         moat_status["m10_recovery"] = "unavailable"
 
     # Get count from DB

@@ -267,6 +267,36 @@ class ActivityDiscoveryHandler:
             )
 
 
+class ActivityOrphanRecoveryHandler:
+    """
+    Handler for activity.orphan_recovery operations.
+
+    PIN-520 Phase 1: Routes orphan recovery through L4 registry.
+    Dispatches to orphan_recovery_driver (recover_orphaned_runs).
+
+    Methods:
+      - recover: Detect and mark runs orphaned due to system crash
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.activity.L6_drivers.orphan_recovery_driver import (
+            recover_orphaned_runs,
+        )
+
+        method_name = ctx.params.get("method", "recover")
+
+        if method_name == "recover":
+            try:
+                result = await recover_orphaned_runs()
+                return OperationResult.ok(result)
+            except Exception as e:
+                return OperationResult.fail(str(e), "ORPHAN_RECOVERY_ERROR")
+
+        return OperationResult.fail(
+            f"Unknown orphan recovery method: {method_name}", "UNKNOWN_METHOD"
+        )
+
+
 def register(registry: OperationRegistry) -> None:
     """Register activity domain handlers."""
     registry.register("activity.query", ActivityQueryHandler())
@@ -274,3 +304,5 @@ def register(registry: OperationRegistry) -> None:
     registry.register("activity.signal_feedback", ActivitySignalFeedbackHandler())
     registry.register("activity.telemetry", ActivityTelemetryHandler())
     registry.register("activity.discovery", ActivityDiscoveryHandler())  # PIN-520: Discovery ledger
+    # PIN-520 Phase 1: Orphan recovery
+    registry.register("activity.orphan_recovery", ActivityOrphanRecoveryHandler())

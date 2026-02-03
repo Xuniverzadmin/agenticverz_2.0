@@ -6,9 +6,9 @@
 #   Execution: async
 # Role: CostSim V2 API (M6 + M7 Memory Integration)
 # Callers: Customer Console, Internal tools
-# Allowed Imports: L3, L4, L5, L6
-# Forbidden Imports: L1
-# Reference: M6, M7 Memory Integration
+# Allowed Imports: L4 (hoc_spine via registry)
+# Forbidden Imports: L1, L5, L6 (must route through L4)
+# Reference: M6, M7 Memory Integration, PIN-520 Phase 3
 """
 API endpoints for CostSim V2 sandbox.
 
@@ -39,11 +39,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_async_session_dep
 
-from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import get_circuit_breaker
-from app.hoc.cus.analytics.L5_engines.config_engine import is_v2_disabled_by_drift, is_v2_sandbox_enabled, get_config
-from app.hoc.cus.analytics.L5_engines.canary_engine import run_canary
-from app.hoc.cus.analytics.L5_engines.sandbox_engine import simulate_with_sandbox
-from app.hoc.cus.analytics.L5_engines.divergence_engine import generate_divergence_report
+# PIN-520 Phase 3: Route through L4 registry instead of direct L5/L6 imports
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+)
 from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.costsim")
@@ -427,7 +427,7 @@ async def detect_simulation_drift(
 
 # API Endpoints
 @router.get("/v2/status", response_model=SandboxStatusResponse)
-async def get_sandbox_status():
+async def get_sandbox_status(session: AsyncSession = Depends(get_async_session_dep)):
     """
     Get current V2 sandbox status.
 
@@ -436,25 +436,32 @@ async def get_sandbox_status():
     - Whether circuit breaker is open (auto-disabled due to drift)
     - Current model version
     - Drift thresholds
+
+    PIN-520 Phase 3: Routes through L4 registry.
     """
-    config = get_config()
-    circuit_breaker = get_circuit_breaker()
+    registry = get_operation_registry()
+    ctx = OperationContext(
+        session=session,
+        tenant_id="system",  # Status is system-wide
+        params={},
+    )
+    result = await registry.execute("analytics.costsim.status", ctx)
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
 
-    # Use async method since we're in an async endpoint
-    circuit_breaker_open = await circuit_breaker.is_disabled()
-
+    data = result.data
     return SandboxStatusResponse(
-        sandbox_enabled=is_v2_sandbox_enabled(),
-        circuit_breaker_open=circuit_breaker_open,
-        disabled_by_drift=is_v2_disabled_by_drift(),
-        model_version=config.model_version,
-        adapter_version=config.adapter_version,
-        drift_threshold=config.drift_threshold,
+        sandbox_enabled=data["sandbox_enabled"],
+        circuit_breaker_open=data["circuit_breaker_open"],
+        disabled_by_drift=data["disabled_by_drift"],
+        model_version=data["model_version"],
+        adapter_version=data["adapter_version"],
+        drift_threshold=data["drift_threshold"],
     )
 
 
 @router.post("/v2/simulate", response_model=SandboxSimulateResponse)
-async def simulate_v2(request: SimulateRequest):
+async def simulate_v2(request: SimulateRequest, session: AsyncSession = Depends(get_async_session_dep)):
     """
     Run simulation through V2 sandbox.
 
@@ -469,6 +476,8 @@ async def simulate_v2(request: SimulateRequest):
     - Memory context injection for simulations
     - Post-execution memory updates via rules engine
     - Drift detection between baseline and memory-enabled runs
+
+    PIN-520 Phase 3: Routes through L4 registry.
     """
     # Convert request to plan format (include iterations for cost calculation)
     plan = [{"skill": step.skill, "params": step.params, "iterations": step.iterations} for step in request.plan]
@@ -490,17 +499,23 @@ async def simulate_v2(request: SimulateRequest):
         memory_context_keys = list(memory_context.keys())
         logger.debug(f"Injecting memory context: {memory_context_keys}")
 
-    # Run through sandbox
-    # Note: Memory context could be passed to simulate_with_sandbox if the
-    # underlying engine supports it. For now, we track it in the response.
-    result = await simulate_with_sandbox(
-        plan=plan,
-        budget_cents=request.budget_cents,
-        tenant_id=request.tenant_id,
-        run_id=request.run_id,
+    # PIN-520 Phase 3: Run through L4 registry instead of direct L5 import
+    registry = get_operation_registry()
+    ctx = OperationContext(
+        session=session,
+        tenant_id=tenant_id,
+        params={
+            "plan": plan,
+            "budget_cents": request.budget_cents,
+            "run_id": request.run_id,
+        },
     )
+    sim_result = await registry.execute("analytics.costsim.simulate", ctx)
+    if not sim_result.success:
+        raise HTTPException(status_code=500, detail=sim_result.error)
+    result = sim_result.data
 
-    # Build response
+    # Build response - result is now a dict from registry handler
     # PIN-254 Phase C Fix: Include side-effect disclosure
     side_effects = SideEffectDisclosure(
         memory_write_occurred=False,  # Will be updated below if writes occur
@@ -509,12 +524,13 @@ async def simulate_v2(request: SimulateRequest):
         disclaimer="Simulation may update memory when MEMORY_POST_UPDATE=true.",
     )
 
+    v1_result = result["v1_result"]
     response = SandboxSimulateResponse(
-        v1_feasible=result.v1_result.feasible,
-        v1_cost_cents=result.v1_result.estimated_cost_cents,
-        v1_duration_ms=result.v1_result.estimated_duration_ms,
-        sandbox_enabled=result.sandbox_enabled,
-        v2_error=result.v2_error,
+        v1_feasible=v1_result["feasible"],
+        v1_cost_cents=v1_result["estimated_cost_cents"],
+        v1_duration_ms=v1_result["estimated_duration_ms"],
+        sandbox_enabled=result["sandbox_enabled"],
+        v2_error=result["v2_error"],
         # M7: Include memory context info
         memory_context_keys=memory_context_keys if memory_context_keys else None,
         # PIN-254 Phase C Fix: Side-effect transparency
@@ -522,15 +538,16 @@ async def simulate_v2(request: SimulateRequest):
     )
 
     # Add V2 result if available
-    if result.v2_result:
+    v2_result = result.get("v2_result")
+    if v2_result:
         response.v2_result = V2SimulationResponse(
-            feasible=result.v2_result.feasible,
-            status=result.v2_result.status.value,
-            estimated_cost_cents=result.v2_result.estimated_cost_cents,
-            estimated_duration_ms=result.v2_result.estimated_duration_ms,
-            budget_remaining_cents=result.v2_result.budget_remaining_cents,
-            confidence_score=result.v2_result.confidence_score,
-            model_version=result.v2_result.model_version,
+            feasible=v2_result["feasible"],
+            status=v2_result["status"] if isinstance(v2_result["status"], str) else v2_result["status"].value,
+            estimated_cost_cents=v2_result["estimated_cost_cents"],
+            estimated_duration_ms=v2_result["estimated_duration_ms"],
+            budget_remaining_cents=v2_result["budget_remaining_cents"],
+            confidence_score=v2_result["confidence_score"],
+            model_version=v2_result["model_version"],
             step_estimates=[
                 SimulationStepResult(
                     step_index=e["step_index"],
@@ -539,22 +556,20 @@ async def simulate_v2(request: SimulateRequest):
                     latency_ms=e["latency_ms"],
                     confidence=e["confidence"],
                 )
-                for e in result.v2_result.step_estimates
+                for e in v2_result["step_estimates"]
             ],
-            risks=result.v2_result.risks,
-            warnings=result.v2_result.warnings,
-            runtime_ms=result.v2_result.runtime_ms,
+            risks=v2_result["risks"],
+            warnings=v2_result["warnings"],
+            runtime_ms=v2_result["runtime_ms"],
         )
 
         # M7: Apply post-execution memory updates
         if MEMORY_POST_UPDATE and _memory_features_enabled:
             simulation_result = {
-                "estimated_cost_cents": result.v2_result.estimated_cost_cents,
-                "feasible": result.v2_result.feasible,
-                "step_estimates": result.v2_result.step_estimates,
-                "status": result.v2_result.status.value
-                if hasattr(result.v2_result.status, "value")
-                else str(result.v2_result.status),
+                "estimated_cost_cents": v2_result["estimated_cost_cents"],
+                "feasible": v2_result["feasible"],
+                "step_estimates": v2_result["step_estimates"],
+                "status": v2_result["status"] if isinstance(v2_result["status"], str) else str(v2_result["status"]),
             }
 
             # Use sync mode for tests - blocks until updates are applied
@@ -596,14 +611,14 @@ async def simulate_v2(request: SimulateRequest):
             # Compare V1 (baseline) vs V2 (potentially memory-enhanced)
             drift_detected, drift_score = await detect_simulation_drift(
                 baseline_result={
-                    "estimated_cost_cents": result.v1_result.estimated_cost_cents,
-                    "feasible": result.v1_result.feasible,
+                    "estimated_cost_cents": v1_result["estimated_cost_cents"],
+                    "feasible": v1_result["feasible"],
                     "step_estimates": [],
                 },
                 memory_result={
-                    "estimated_cost_cents": result.v2_result.estimated_cost_cents,
-                    "feasible": result.v2_result.feasible,
-                    "step_estimates": result.v2_result.step_estimates,
+                    "estimated_cost_cents": v2_result["estimated_cost_cents"],
+                    "feasible": v2_result["feasible"],
+                    "step_estimates": v2_result["step_estimates"],
                 },
                 workflow_id=request.workflow_id,
             )
@@ -611,15 +626,16 @@ async def simulate_v2(request: SimulateRequest):
             response.drift_score = drift_score
 
     # Add comparison if available
-    if result.comparison:
+    comparison = result.get("comparison")
+    if comparison:
         response.comparison = ComparisonResponse(
-            verdict=result.comparison.verdict.value,
-            v1_cost_cents=result.comparison.v1_cost_cents,
-            v2_cost_cents=result.comparison.v2_cost_cents,
-            cost_delta_cents=result.comparison.cost_delta_cents,
-            cost_delta_pct=result.comparison.cost_delta_pct,
-            drift_score=result.comparison.drift_score,
-            feasibility_match=result.comparison.feasibility_match,
+            verdict=comparison["verdict"] if isinstance(comparison["verdict"], str) else comparison["verdict"].value,
+            v1_cost_cents=comparison["v1_cost_cents"],
+            v2_cost_cents=comparison["v2_cost_cents"],
+            cost_delta_cents=comparison["cost_delta_cents"],
+            cost_delta_pct=comparison["cost_delta_pct"],
+            drift_score=comparison["drift_score"],
+            feasibility_match=comparison["feasibility_match"],
         )
 
     return wrap_dict(response.model_dump())
@@ -628,6 +644,7 @@ async def simulate_v2(request: SimulateRequest):
 @router.post("/v2/reset")
 async def reset_circuit_breaker(
     reason: Optional[str] = Query(None, description="Reason for reset"),
+    session: AsyncSession = Depends(get_async_session_dep),
 ):
     """
     Reset the V2 circuit breaker.
@@ -636,50 +653,54 @@ async def reset_circuit_breaker(
     Should only be called after investigating and fixing the drift cause.
 
     Returns success status and updated circuit breaker state.
+
+    PIN-520 Phase 3: Routes through L4 registry.
     """
-    circuit_breaker = get_circuit_breaker()
+    registry = get_operation_registry()
+    ctx = OperationContext(
+        session=session,
+        tenant_id="system",
+        params={
+            "method": "reset",
+            "reason": reason or "Manual reset via API",
+        },
+    )
+    result = await registry.execute("controls.circuit_breaker", ctx)
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
 
-    # Use async methods in async endpoint
-    is_disabled = await circuit_breaker.is_disabled()
-    if not is_disabled:
-        state = await circuit_breaker.get_state()
-        return wrap_dict({
-            "success": True,
-            "message": "Circuit breaker was already closed",
-            "state": state.to_dict(),
-        })
-
-    success = await circuit_breaker.reset_v2(reason=reason or "Manual reset via API")
-
-    state = await circuit_breaker.get_state()
-    return wrap_dict({
-        "success": success,
-        "message": "Circuit breaker reset" if success else "Failed to reset",
-        "state": state.to_dict(),
-    })
+    return wrap_dict(result.data)
 
 
 @router.get("/v2/incidents")
 async def get_incidents(
     include_resolved: bool = Query(False, description="Include resolved incidents"),
     limit: int = Query(10, ge=1, le=100, description="Max incidents to return"),
+    session: AsyncSession = Depends(get_async_session_dep),
 ):
     """
     Get circuit breaker incidents.
 
     Returns recent incidents that caused circuit breaker trips.
     Useful for investigating drift causes.
-    """
-    circuit_breaker = get_circuit_breaker()
-    incidents = circuit_breaker.get_incidents(
-        include_resolved=include_resolved,
-        limit=limit,
-    )
 
-    return wrap_dict({
-        "incidents": [i.to_dict() for i in incidents],
-        "total": len(incidents),
-    })
+    PIN-520 Phase 3: Routes through L4 registry.
+    """
+    registry = get_operation_registry()
+    ctx = OperationContext(
+        session=session,
+        tenant_id="system",
+        params={
+            "method": "get_incidents",
+            "include_resolved": include_resolved,
+            "limit": limit,
+        },
+    )
+    result = await registry.execute("controls.circuit_breaker", ctx)
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
+
+    return wrap_dict(result.data)
 
 
 @router.get("/divergence", response_model=DivergenceReportResponse)
@@ -688,6 +709,7 @@ async def get_divergence_report(
     end_date: Optional[datetime] = Query(None, description="End of analysis period"),
     tenant_id: Optional[str] = Query(None, description="Filter by tenant"),
     days: int = Query(7, ge=1, le=90, description="Days to analyze (if start_date not provided)"),
+    session: AsyncSession = Depends(get_async_session_dep),
 ):
     """
     Get cost divergence report between V1 and V2.
@@ -699,30 +721,36 @@ async def get_divergence_report(
     - outlier_count: Number of outlier samples
     - fail_ratio: Ratio of major drift samples
     - matching_rate: Ratio of matching samples
+
+    PIN-520 Phase 3: Routes through L4 registry.
     """
-    if end_date is None:
-        end_date = datetime.now(timezone.utc)
-    if start_date is None:
-        start_date = end_date - timedelta(days=days)
-
-    report = await generate_divergence_report(
-        start_date=start_date,
-        end_date=end_date,
-        tenant_id=tenant_id,
+    registry = get_operation_registry()
+    ctx = OperationContext(
+        session=session,
+        tenant_id=tenant_id or "system",
+        params={
+            "start_date": start_date,
+            "end_date": end_date,
+            "days": days,
+        },
     )
+    result = await registry.execute("analytics.costsim.divergence", ctx)
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
 
+    data = result.data
     return DivergenceReportResponse(
-        start_date=report.start_date,
-        end_date=report.end_date,
-        version=report.version,
-        sample_count=report.sample_count,
-        delta_p50=report.delta_p50,
-        delta_p90=report.delta_p90,
-        kl_divergence=report.kl_divergence,
-        outlier_count=report.outlier_count,
-        fail_ratio=report.fail_ratio,
-        matching_rate=report.matching_rate,
-        detailed_samples=report.detailed_samples,
+        start_date=datetime.fromisoformat(data["start_date"]),
+        end_date=datetime.fromisoformat(data["end_date"]),
+        version=data["version"],
+        sample_count=data["sample_count"],
+        delta_p50=data["delta_p50"],
+        delta_p90=data["delta_p90"],
+        kl_divergence=data["kl_divergence"],
+        outlier_count=data["outlier_count"],
+        fail_ratio=data["fail_ratio"],
+        matching_rate=data["matching_rate"],
+        detailed_samples=data["detailed_samples"],
     )
 
 
@@ -730,6 +758,7 @@ async def get_divergence_report(
 async def trigger_canary_run(
     sample_count: int = Query(100, ge=10, le=1000, description="Number of samples"),
     drift_threshold: float = Query(0.2, ge=0.0, le=1.0, description="Drift threshold"),
+    session: AsyncSession = Depends(get_async_session_dep),
 ):
     """
     Trigger a canary run on-demand.
@@ -742,21 +771,33 @@ async def trigger_canary_run(
 
     Note: Daily canary runs are automatic via systemd timer.
     This endpoint is for manual testing.
-    """
-    report = await run_canary(
-        sample_count=sample_count,
-        drift_threshold=drift_threshold,
-    )
 
+    PIN-520 Phase 3: Routes through L4 registry (analytics.canary).
+    """
+    registry = get_operation_registry()
+    ctx = OperationContext(
+        session=session,
+        tenant_id="system",
+        params={
+            "method": "run",
+            "sample_count": sample_count,
+            "drift_threshold": drift_threshold,
+        },
+    )
+    result = await registry.execute("analytics.canary", ctx)
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
+
+    report = result.data
     return CanaryRunResponse(
-        run_id=report.run_id,
-        status=report.status,
-        passed=report.passed,
-        total_samples=report.total_samples,
-        matching_samples=report.matching_samples,
-        kl_divergence=report.kl_divergence,
-        failure_reasons=report.failure_reasons,
-        artifact_paths=report.artifact_paths,
+        run_id=report["run_id"],
+        status=report["status"],
+        passed=report["passed"],
+        total_samples=report["total_samples"],
+        matching_samples=report["matching_samples"],
+        kl_divergence=report["kl_divergence"],
+        failure_reasons=report["failure_reasons"],
+        artifact_paths=report["artifact_paths"],
     )
 
 
@@ -800,9 +841,7 @@ async def get_canary_reports(
 
 
 # ============== Dataset Validation Endpoints ==============
-
-from app.hoc.cus.analytics.L5_engines.datasets_engine import get_dataset_validator, validate_all_datasets
-from app.hoc.cus.analytics.L5_engines.datasets_engine import validate_dataset as validate_ds
+# PIN-520 Phase 3: All dataset operations route through L4 registry
 
 
 class DatasetInfo(BaseModel):
@@ -832,7 +871,7 @@ class ValidationResultResponse(BaseModel):
 
 
 @router.get("/datasets", response_model=List[DatasetInfo])
-async def list_datasets():
+async def list_datasets(session: AsyncSession = Depends(get_async_session_dep)):
     """
     List all available reference datasets.
 
@@ -842,9 +881,20 @@ async def list_datasets():
     - mixed_city: Real-world mixed workloads
     - noise_injected: Edge cases and invalid inputs
     - historical: Real production patterns
+
+    PIN-520 Phase 3: Routes through L4 registry.
     """
-    validator = get_dataset_validator()
-    datasets = validator.list_datasets()
+    registry = get_operation_registry()
+    ctx = OperationContext(
+        session=session,
+        tenant_id="system",
+        params={"method": "list"},
+    )
+    result = await registry.execute("analytics.costsim.datasets", ctx)
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
+
+    datasets = result.data["datasets"]
     return [
         DatasetInfo(
             id=ds["id"],
@@ -858,26 +908,29 @@ async def list_datasets():
 
 
 @router.get("/datasets/{dataset_id}")
-async def get_dataset_info(dataset_id: str):
-    """Get information about a specific dataset."""
-    validator = get_dataset_validator()
-    dataset = validator.get_dataset(dataset_id)
+async def get_dataset_info(dataset_id: str, session: AsyncSession = Depends(get_async_session_dep)):
+    """
+    Get information about a specific dataset.
 
-    if not dataset:
-        raise HTTPException(status_code=404, detail=f"Dataset not found: {dataset_id}")
+    PIN-520 Phase 3: Routes through L4 registry.
+    """
+    registry = get_operation_registry()
+    ctx = OperationContext(
+        session=session,
+        tenant_id="system",
+        params={"method": "info", "dataset_id": dataset_id},
+    )
+    result = await registry.execute("analytics.costsim.datasets", ctx)
+    if not result.success:
+        if result.error_code == "NOT_FOUND":
+            raise HTTPException(status_code=404, detail=result.error)
+        raise HTTPException(status_code=500, detail=result.error)
 
-    return wrap_dict({
-        "id": dataset.id,
-        "name": dataset.name,
-        "description": dataset.description,
-        "sample_count": len(dataset.samples),
-        "thresholds": dataset.validation_thresholds,
-        "sample_tags": list(set(tag for sample in dataset.samples for tag in sample.tags)),
-    })
+    return wrap_dict(result.data)
 
 
 @router.post("/datasets/{dataset_id}/validate", response_model=ValidationResultResponse)
-async def validate_against_dataset(dataset_id: str):
+async def validate_against_dataset(dataset_id: str, session: AsyncSession = Depends(get_async_session_dep)):
     """
     Validate V2 against a specific reference dataset.
 
@@ -885,50 +938,60 @@ async def validate_against_dataset(dataset_id: str):
     against expected values. Returns metrics and verdict.
 
     Verdict is "acceptable" if all metrics are within thresholds.
-    """
-    try:
-        result = await validate_ds(dataset_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
 
+    PIN-520 Phase 3: Routes through L4 registry.
+    """
+    registry = get_operation_registry()
+    ctx = OperationContext(
+        session=session,
+        tenant_id="system",
+        params={"method": "validate", "dataset_id": dataset_id},
+    )
+    result = await registry.execute("analytics.costsim.datasets", ctx)
+    if not result.success:
+        if result.error_code == "NOT_FOUND":
+            raise HTTPException(status_code=404, detail=result.error)
+        raise HTTPException(status_code=500, detail=result.error)
+
+    data = result.data
     return ValidationResultResponse(
-        dataset_id=result.dataset_id,
-        dataset_name=result.dataset_name,
-        sample_count=result.sample_count,
-        mean_error=result.mean_error,
-        median_error=result.median_error,
-        std_deviation=result.std_deviation,
-        outlier_pct=result.outlier_pct,
-        drift_score=result.drift_score,
-        verdict=result.verdict,
-        details=result.details,
-        timestamp=result.timestamp,
+        dataset_id=data["dataset_id"],
+        dataset_name=data["dataset_name"],
+        sample_count=data["sample_count"],
+        mean_error=data["mean_error"],
+        median_error=data["median_error"],
+        std_deviation=data["std_deviation"],
+        outlier_pct=data["outlier_pct"],
+        drift_score=data["drift_score"],
+        verdict=data["verdict"],
+        details=data["details"],
+        timestamp=datetime.fromisoformat(data["timestamp"]),
     )
 
 
 @router.post("/datasets/validate-all")
-async def validate_all():
+async def validate_all(session: AsyncSession = Depends(get_async_session_dep)):
     """
     Validate V2 against ALL reference datasets.
 
     This is a comprehensive validation that runs all 5 datasets.
     Use for pre-release validation or debugging.
+
+    PIN-520 Phase 3: Routes through L4 registry.
     """
-    results = await validate_all_datasets()
+    registry = get_operation_registry()
+    ctx = OperationContext(
+        session=session,
+        tenant_id="system",
+        params={"method": "validate_all"},
+    )
+    result = await registry.execute("analytics.costsim.datasets", ctx)
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
 
-    all_passed = all(r.verdict == "acceptable" for r in results.values())
-
+    data = result.data
     return wrap_dict({
-        "all_passed": all_passed,
-        "results": {
-            dataset_id: {
-                "dataset_name": result.dataset_name,
-                "sample_count": result.sample_count,
-                "mean_error": result.mean_error,
-                "drift_score": result.drift_score,
-                "verdict": result.verdict,
-            }
-            for dataset_id, result in results.items()
-        },
+        "all_passed": data["all_passed"],
+        "results": data["results"],
         "timestamp": datetime.now(timezone.utc).isoformat(),
     })

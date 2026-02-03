@@ -103,7 +103,66 @@ class AccountNotificationsHandler:
         return OperationResult.ok(data)
 
 
+class AccountBillingProviderHandler:
+    """
+    Handler for account.billing.provider operations.
+
+    PIN-520 Phase 1: Routes billing provider access through L4 registry.
+    Dispatches to billing_provider_engine (get_billing_provider).
+
+    Methods:
+      - get_provider: Get billing provider for tenant
+      - get_state: Get billing state for tenant
+      - get_plan: Get current plan for tenant
+      - get_limits: Get limits for tenant
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.account.L5_engines.billing_provider_engine import (
+            get_billing_provider,
+        )
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail(
+                "Missing 'method' in params", "MISSING_METHOD"
+            )
+
+        try:
+            provider = get_billing_provider()
+
+            if method_name == "get_provider":
+                # Return provider instance indicator
+                return OperationResult.ok({"available": True})
+
+            elif method_name == "get_state":
+                state = provider.get_billing_state(ctx.tenant_id)
+                return OperationResult.ok({"state": state.value if hasattr(state, "value") else str(state)})
+
+            elif method_name == "get_plan":
+                plan = provider.get_plan(ctx.tenant_id)
+                return OperationResult.ok({"plan": plan.value if hasattr(plan, "value") else str(plan)})
+
+            elif method_name == "get_limits":
+                limits = provider.get_limits(ctx.tenant_id)
+                return OperationResult.ok({"limits": limits.__dict__ if hasattr(limits, "__dict__") else limits})
+
+            elif method_name == "allows_usage":
+                state = provider.get_billing_state(ctx.tenant_id)
+                allows = state.allows_usage() if hasattr(state, "allows_usage") else True
+                return OperationResult.ok({"allows_usage": allows})
+
+            else:
+                return OperationResult.fail(
+                    f"Unknown billing provider method: {method_name}", "UNKNOWN_METHOD"
+                )
+        except Exception as e:
+            return OperationResult.fail(str(e), "BILLING_ERROR")
+
+
 def register(registry: OperationRegistry) -> None:
     """Register account operations with the registry."""
     registry.register("account.query", AccountQueryHandler())
     registry.register("account.notifications", AccountNotificationsHandler())
+    # PIN-520 Phase 1: Billing provider access
+    registry.register("account.billing.provider", AccountBillingProviderHandler())

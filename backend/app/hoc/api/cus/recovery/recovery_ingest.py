@@ -6,9 +6,9 @@
 #   Execution: async
 # Role: Recovery ingest endpoint (idempotent failure ingestion)
 # Callers: Machine clients (recovery:write scope)
-# Allowed Imports: L3, L4, L5, L6
-# Forbidden Imports: L1
-# Reference: CAP-018
+# Allowed Imports: L4 (bridges)
+# Forbidden Imports: L1, L5, L6 (must route through L4)
+# Reference: CAP-018, PIN-520 Phase 1
 
 # app/api/recovery_ingest.py
 # capability_id: CAP-018
@@ -25,6 +25,8 @@ Features:
 - Worker enqueue: Optionally pushes to evaluation queue
 
 Authentication: Machine token with recovery:write scope.
+
+PIN-520 Phase 1: Routes recovery write operations through L4 policies bridge.
 """
 
 import json
@@ -46,8 +48,16 @@ from app.metrics import (
     recovery_ingest_total,
 )
 from app.middleware.rate_limit import rate_limit_dependency
-# L6 driver import (migrated to HOC per SWEEP-09)
-from app.hoc.cus.policies.L6_drivers.recovery_write_driver import RecoveryWriteService
+# PIN-520 Phase 1: Route through L4 bridge instead of direct L6 import
+from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.policies_bridge import (
+    get_policies_bridge,
+)
+
+
+def _get_recovery_write_service(session):
+    """Get recovery write service via L4 bridge (PIN-520 compliance)."""
+    bridge = get_policies_bridge()
+    return bridge.recovery_write_capability(session)
 
 logger = logging.getLogger("nova.api.recovery_ingest")
 
@@ -173,7 +183,7 @@ async def ingest_failure(
         # This eliminates all race conditions between SELECT+INSERT
         # =================================================================
         # Phase 2B: Use write service for DB operations
-        write_service = RecoveryWriteService(session)
+        write_service = _get_recovery_write_service(session)
 
         try:
             explain_json = json.dumps(
@@ -193,7 +203,7 @@ async def ingest_failure(
                 source=request.source,
                 idempotency_key=idempotency_key,
             )
-            write_service.commit()
+            session.commit()
 
             if not is_insert:
                 # This was an update (duplicate)
@@ -209,7 +219,7 @@ async def ingest_failure(
                 )
 
         except IntegrityError as ie:
-            write_service.rollback()
+            session.rollback()
 
             # Handle edge case: idempotency_key conflict (different failure_match_id)
             msg = str(ie.orig).lower() if ie.orig else ""
@@ -362,9 +372,9 @@ async def _enqueue_evaluation_async(
 
         try:
             # Phase 2B: Use write service for DB operations
-            write_service = RecoveryWriteService(session)
+            write_service = _get_recovery_write_service(session)
             write_service.enqueue_evaluation_db_fallback(candidate_id, idempotency_key)
-            write_service.commit()
+            session.commit()
             enqueue_method = "db_fallback"
             logger.info(f"Evaluation enqueued to DB fallback: candidate_id={candidate_id}")
             return True

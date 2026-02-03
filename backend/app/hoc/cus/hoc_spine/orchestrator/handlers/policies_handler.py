@@ -548,6 +548,185 @@ class PoliciesRulesQueryHandler:
         return OperationResult.ok(data)
 
 
+class PoliciesHealthHandler:
+    """
+    Handler for policies.health operations (PIN-520 Phase 1).
+
+    Reports availability of policy-related L5 engines.
+    Used by workers.py health endpoint to check moat status.
+
+    This handler absorbs the L5 import checks that were previously
+    done directly in workers.py, routing them through L4.
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        moat_status = {}
+
+        # Check M20 Policy (DAGExecutor)
+        try:
+            from app.hoc.cus.policies.L5_engines.dag_executor import DAGExecutor
+            DAGExecutor()
+            moat_status["m20_policy"] = "available"
+        except ImportError:
+            moat_status["m20_policy"] = "unavailable"
+
+        # Check M9 Failure Catalog and M10 Recovery (RecoveryEvaluationEngine)
+        try:
+            from app.hoc.cus.policies.L5_engines.recovery_evaluation_engine import (
+                RecoveryEvaluationEngine,
+            )
+            RecoveryEvaluationEngine()
+            moat_status["m9_failure_catalog"] = "available"
+            moat_status["m10_recovery"] = "available"
+        except ImportError:
+            moat_status["m9_failure_catalog"] = "unavailable"
+            moat_status["m10_recovery"] = "unavailable"
+
+        return OperationResult.ok(moat_status)
+
+
+class PoliciesRecoveryMatchHandler:
+    """
+    Handler for policies.recovery.match operations.
+
+    PIN-520 Phase 1: Routes RecoveryMatcher through L4 registry.
+    Dispatches to RecoveryMatcher methods.
+
+    Methods:
+      - suggest: Synchronous pattern matching and suggestion generation
+      - suggest_hybrid: Async hybrid (embedding + LLM) suggestion
+      - get_candidates: List recovery candidates
+      - count_candidates: Count candidates by status
+      - count_by_status: Get candidate counts grouped by status
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail(
+                "Missing 'method' in params", "MISSING_METHOD"
+            )
+
+        # RecoveryMatcher requires a session
+        if ctx.session is None:
+            return OperationResult.fail(
+                "Session required for recovery match operations", "SESSION_REQUIRED"
+            )
+
+        matcher = RecoveryMatcher(ctx.session)
+
+        kwargs = dict(ctx.params)
+        kwargs.pop("method", None)
+
+        try:
+            if method_name == "suggest":
+                request = kwargs.get("request")
+                if not request:
+                    return OperationResult.fail("Missing 'request'", "MISSING_REQUEST")
+                result = matcher.suggest(request)
+                return OperationResult.ok(result.__dict__ if hasattr(result, "__dict__") else result)
+
+            elif method_name == "suggest_hybrid":
+                request = kwargs.get("request")
+                if not request:
+                    return OperationResult.fail("Missing 'request'", "MISSING_REQUEST")
+                result = await matcher.suggest_hybrid(request)
+                return OperationResult.ok(result.__dict__ if hasattr(result, "__dict__") else result)
+
+            elif method_name == "get_candidates":
+                status = kwargs.get("status", "pending")
+                limit = kwargs.get("limit", 50)
+                offset = kwargs.get("offset", 0)
+                result = matcher.get_candidates(status=status, limit=limit, offset=offset)
+                return OperationResult.ok({"candidates": result})
+
+            elif method_name == "count_candidates":
+                status = kwargs.get("status", "pending")
+                count = matcher.count_candidates(status=status)
+                return OperationResult.ok({"count": count})
+
+            elif method_name == "count_by_status":
+                counts = matcher.count_by_status()
+                return OperationResult.ok(counts)
+
+            return OperationResult.fail(
+                f"Unknown recovery match method: {method_name}", "UNKNOWN_METHOD"
+            )
+        except Exception as e:
+            return OperationResult.fail(str(e), "RECOVERY_MATCH_ERROR")
+
+
+class PoliciesRecoveryWriteHandler:
+    """
+    Handler for policies.recovery.write operations.
+
+    PIN-520 Phase 1: Routes RecoveryWriteService through L4 registry.
+    Dispatches to RecoveryWriteService methods for candidate management.
+
+    Methods:
+      - upsert_candidate: Atomic upsert of recovery candidate
+      - get_by_idempotency_key: Get candidate by idempotency key
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.policies.L6_drivers.recovery_write_driver import (
+            RecoveryWriteService,
+        )
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail(
+                "Missing 'method' in params", "MISSING_METHOD"
+            )
+
+        # RecoveryWriteService needs a session
+        if ctx.session is None:
+            return OperationResult.fail(
+                "Session required for recovery write operations", "SESSION_REQUIRED"
+            )
+
+        service = RecoveryWriteService(ctx.session)
+
+        kwargs = dict(ctx.params)
+        kwargs.pop("method", None)
+
+        try:
+            if method_name == "upsert_candidate":
+                # Required params for upsert
+                result = service.upsert_recovery_candidate(
+                    failure_match_id=kwargs.get("failure_match_id"),
+                    suggestion=kwargs.get("suggestion"),
+                    confidence=kwargs.get("confidence"),
+                    explain_json=kwargs.get("explain_json"),
+                    error_code=kwargs.get("error_code"),
+                    error_signature=kwargs.get("error_signature"),
+                    source=kwargs.get("source"),
+                    idempotency_key=kwargs.get("idempotency_key"),
+                )
+                return OperationResult.ok({
+                    "candidate_id": result[0],
+                    "is_insert": result[1],
+                    "occurrence_count": result[2],
+                })
+
+            elif method_name == "get_by_idempotency_key":
+                idempotency_key = kwargs.get("idempotency_key")
+                if not idempotency_key:
+                    return OperationResult.fail("Missing 'idempotency_key'", "MISSING_KEY")
+                result = service.get_candidate_by_idempotency_key(idempotency_key)
+                if result:
+                    return OperationResult.ok({"candidate_id": result[0], "status": result[1]})
+                return OperationResult.ok(None)
+
+            return OperationResult.fail(
+                f"Unknown recovery write method: {method_name}", "UNKNOWN_METHOD"
+            )
+        except Exception as e:
+            return OperationResult.fail(str(e), "RECOVERY_WRITE_ERROR")
+
+
 def register(registry: OperationRegistry) -> None:
     """Register policies domain handlers."""
     registry.register("policies.query", PoliciesQueryHandler())
@@ -563,3 +742,8 @@ def register(registry: OperationRegistry) -> None:
     registry.register("policies.limits_query", PoliciesLimitsQueryHandler())
     registry.register("policies.proposals_query", PoliciesProposalsQueryHandler())
     registry.register("policies.rules_query", PoliciesRulesQueryHandler())
+    # PIN-520 Phase 1: Health handler for workers.py migration
+    registry.register("policies.health", PoliciesHealthHandler())
+    # PIN-520 Phase 1: Recovery handlers for recovery.py and recovery_ingest.py migration
+    registry.register("policies.recovery.match", PoliciesRecoveryMatchHandler())
+    registry.register("policies.recovery.write", PoliciesRecoveryWriteHandler())

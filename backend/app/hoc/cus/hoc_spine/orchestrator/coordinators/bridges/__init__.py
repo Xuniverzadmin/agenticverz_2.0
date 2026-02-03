@@ -17,20 +17,26 @@ Rules:
 - Only L4 handlers and coordinators may use bridges
 """
 
-from .incidents_bridge import IncidentsBridge, get_incidents_bridge
-from .controls_bridge import ControlsBridge, get_controls_bridge
-from .activity_bridge import ActivityBridge, get_activity_bridge
-from .policies_bridge import PoliciesBridge, get_policies_bridge
-from .api_keys_bridge import ApiKeysBridge, get_api_keys_bridge
-from .logs_bridge import LogsBridge, get_logs_bridge
 from .account_bridge import AccountBridge, get_account_bridge
+from .activity_bridge import ActivityBridge, get_activity_bridge
+from .analytics_bridge import AnalyticsBridge, get_analytics_bridge
+from .api_keys_bridge import ApiKeysBridge, get_api_keys_bridge
+from .controls_bridge import ControlsBridge, get_controls_bridge
+from .incidents_bridge import IncidentsBridge, get_incidents_bridge
+from .integrations_bridge import IntegrationsBridge, get_integrations_bridge
+from .logs_bridge import LogsBridge, get_logs_bridge
+from .overview_bridge import OverviewBridge, get_overview_bridge
+from .policies_bridge import PoliciesBridge, get_policies_bridge
 
 __all__ = [
-    "IncidentsBridge", "get_incidents_bridge",
-    "ControlsBridge", "get_controls_bridge",
-    "ActivityBridge", "get_activity_bridge",
-    "PoliciesBridge", "get_policies_bridge",
-    "ApiKeysBridge", "get_api_keys_bridge",
-    "LogsBridge", "get_logs_bridge",
     "AccountBridge", "get_account_bridge",
+    "ActivityBridge", "get_activity_bridge",
+    "AnalyticsBridge", "get_analytics_bridge",
+    "ApiKeysBridge", "get_api_keys_bridge",
+    "ControlsBridge", "get_controls_bridge",
+    "IncidentsBridge", "get_incidents_bridge",
+    "IntegrationsBridge", "get_integrations_bridge",
+    "LogsBridge", "get_logs_bridge",
+    "OverviewBridge", "get_overview_bridge",
+    "PoliciesBridge", "get_policies_bridge",
 ]

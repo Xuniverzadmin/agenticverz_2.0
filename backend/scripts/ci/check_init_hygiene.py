@@ -1229,15 +1229,16 @@ def check_l5_no_db_module_imports(violations: list[Violation]):
 # =========================================================================
 
 # Pre-existing L2→L5/L6 bypass violations. Frozen — no new files may be added.
+# PIN-520 Phase 1: Migrated files removed after migration to L4 bridge/registry
 _L2_BYPASS_ALLOWLIST: frozenset[str] = frozenset({
-    "recovery.py",
-    "recovery_ingest.py",
-    "billing_dependencies.py",
-    "workers.py",
-    "costsim.py",
-    "cost_intelligence.py",
-    "billing_gate.py",
-    "main.py",
+    "recovery.py",  # Has scoped_execution imports - complex migration
+    # "recovery_ingest.py",  # PIN-520: Migrated to L4 bridge (policies_bridge.recovery_write_capability)
+    # "billing_dependencies.py",  # PIN-520: Migrated to L4 bridge
+    # "workers.py",  # PIN-520: Migrated to L4 registry (logs.capture, policies.health)
+    # "costsim.py",  # PIN-520: Migrated to L4 registry
+    # "cost_intelligence.py",  # PIN-520: Fixed import path via L5 wrapper
+    # "billing_gate.py",  # PIN-520: Migrated to L4 bridge
+    # "main.py",  # PIN-520: Migrated to L4 registry (activity.orphan_recovery)
 })
 
 

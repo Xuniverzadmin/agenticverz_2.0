@@ -6,9 +6,9 @@
 #   Trigger: request
 #   Execution: sync
 # Callers: API endpoints needing billing context
-# Allowed Imports: L4 (billing, auth.onboarding_state)
-# Forbidden Imports: L1, L5, L6
-# Reference: PIN-399 Phase-6 (Billing, Plans & Limits)
+# Allowed Imports: L4 (bridges, auth.onboarding_state)
+# Forbidden Imports: L1, L5, L6 (must route through L4)
+# Reference: PIN-399 Phase-6 (Billing, Plans & Limits), PIN-520 Phase 1
 
 
 """
@@ -23,6 +23,8 @@ APPLICABILITY GATE:
 DESIGN INVARIANTS:
 - BILLING-001: Billing never blocks onboarding
 - BILLING-003: Billing state does not affect roles
+
+PIN-520 Phase 1: Routes billing provider access through L4 account bridge.
 """
 
 from dataclasses import dataclass
@@ -32,9 +34,18 @@ from fastapi import Request, HTTPException
 from app.billing.state import BillingState
 from app.billing.plan import Plan, DEFAULT_PLAN
 from app.billing.limits import Limits, DEFAULT_LIMITS
-from app.hoc.cus.account.L5_engines.billing_provider_engine import get_billing_provider
+# PIN-520 Phase 1: Route through L4 bridge instead of direct L5 import
+from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.account_bridge import (
+    get_account_bridge,
+)
 from app.auth.onboarding_state import OnboardingState
 from app.schemas.response import wrap_dict
+
+
+def _get_billing_provider():
+    """Get billing provider via L4 bridge (PIN-520 compliance)."""
+    bridge = get_account_bridge()
+    return bridge.billing_provider_capability()
 
 
 @dataclass
@@ -103,8 +114,8 @@ def get_billing_context(request: Request) -> BillingContext:
             is_applicable=False,
         )
 
-    # Get real billing context
-    provider = get_billing_provider()
+    # Get real billing context via L4 bridge (PIN-520)
+    provider = _get_billing_provider()
     billing_state = provider.get_billing_state(tenant_id)
     plan = provider.get_plan(tenant_id)
     limits = provider.get_limits(plan)

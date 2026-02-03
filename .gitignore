@@ -30,7 +30,7 @@ ENV/
 
 # Logs
 *.log
-logs/
+/logs/
 
 # Database
 *.db

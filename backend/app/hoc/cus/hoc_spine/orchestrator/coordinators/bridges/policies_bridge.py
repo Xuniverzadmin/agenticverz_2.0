@@ -26,6 +26,26 @@ class PoliciesBridge:
         )
         return PolicyEnforcementReadDriver(session)
 
+    def recovery_write_capability(self, session):
+        """
+        Return recovery write service for sync transaction control (PIN-520 Phase 1).
+
+        Used by recovery_ingest.py which needs explicit commit/rollback control.
+        """
+        from app.hoc.cus.policies.L6_drivers.recovery_write_driver import (
+            RecoveryWriteService,
+        )
+        return RecoveryWriteService(session)
+
+    def recovery_matcher_capability(self, session):
+        """
+        Return recovery matcher for pattern matching (PIN-520 Phase 1).
+
+        Used by recovery.py for failure pattern matching and suggestion generation.
+        """
+        from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
+        return RecoveryMatcher(session)
+
 
 # Singleton
 _instance = None

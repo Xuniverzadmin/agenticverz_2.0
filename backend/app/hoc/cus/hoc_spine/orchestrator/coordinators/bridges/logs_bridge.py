@@ -31,6 +31,16 @@ class LogsBridge:
         )
         return get_audit_ledger_read_driver(session)
 
+    def capture_driver_capability(self):
+        """
+        Return capture_driver module for evidence capture (PIN-520).
+
+        Provides:
+            - capture_environment_evidence(ctx, sdk_mode, ...)
+        """
+        from app.hoc.cus.logs.L6_drivers import capture_driver
+        return capture_driver
+
 
 # Singleton
 _instance = None

@@ -6,9 +6,9 @@
 #   Trigger: request
 #   Execution: sync
 # Callers: FastAPI middleware, route dependencies
-# Allowed Imports: L4 (billing provider, state, limits)
-# Forbidden Imports: L1, L5, L6
-# Reference: PIN-401 Track A (Production Wiring)
+# Allowed Imports: L4 (bridges, state, limits)
+# Forbidden Imports: L1, L5, L6 (must route through L4)
+# Reference: PIN-401 Track A (Production Wiring), PIN-520 Phase 1
 
 
 """
@@ -18,7 +18,7 @@ Enforces billing state and limits at request boundaries.
 
 DESIGN RULES:
 - Pure wiring - no new billing logic
-- Calls existing provider methods
+- Calls existing provider methods via L4 bridge
 - Respects BILLING-001 (never blocks onboarding)
 - Respects BILLING-003 (doesn't affect roles)
 
@@ -32,6 +32,8 @@ EXEMPT PATHS:
 - Founder endpoints
 - Onboarding endpoints (BILLING-001)
 - Docs
+
+PIN-520 Phase 1: Routes billing provider access through L4 account bridge.
 """
 
 from dataclasses import dataclass
@@ -42,10 +44,19 @@ import logging
 from app.billing.state import BillingState
 from app.billing.plan import Plan
 from app.billing.limits import Limits
-from app.hoc.cus.account.L5_engines.billing_provider_engine import get_billing_provider
+# PIN-520 Phase 1: Route through L4 bridge instead of direct L5 import
+from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.account_bridge import (
+    get_account_bridge,
+)
 from app.auth.onboarding_state import OnboardingState
 
 logger = logging.getLogger(__name__)
+
+
+def _get_billing_provider():
+    """Get billing provider via L4 bridge (PIN-520 compliance)."""
+    bridge = get_account_bridge()
+    return bridge.billing_provider_capability()
 
 
 # Paths exempt from billing enforcement
@@ -128,7 +139,7 @@ class BillingGate:
             return
 
         # Get billing state
-        provider = get_billing_provider()
+        provider = _get_billing_provider()
         billing_state = provider.get_billing_state(tenant_id)
 
         # Check if usage is allowed
@@ -230,7 +241,7 @@ def check_billing(request: Request) -> BillingContext:
         )
 
     # Get real billing context
-    provider = get_billing_provider()
+    provider = _get_billing_provider()
     billing_state = provider.get_billing_state(tenant_id)
     plan = provider.get_plan(tenant_id)
     limits = provider.get_limits(plan)
