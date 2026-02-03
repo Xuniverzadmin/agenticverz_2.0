@@ -1,4 +1,5 @@
 # Layer: L5 — Domain Engine (Command Facade)
+# AUDIENCE: CUSTOMER
 # NOTE: Header corrected L4→L5 (2026-01-31) — file is in L5_engines/
 # Product: system-wide
 # Temporal:

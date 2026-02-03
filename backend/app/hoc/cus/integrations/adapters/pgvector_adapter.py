@@ -1,4 +1,5 @@
 # Layer: L2 — Adapter
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: api

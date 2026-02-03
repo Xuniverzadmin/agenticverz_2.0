@@ -1,4 +1,5 @@
 # Layer: L4 — HOC Spine (Schema)
+# AUDIENCE: INTERNAL
 # Product: system-wide
 # Temporal:
 #   Trigger: import-time

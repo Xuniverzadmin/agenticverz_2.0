@@ -1,4 +1,5 @@
 # Layer: L3 — Boundary Adapter
+# AUDIENCE: CUSTOMER
 # Product: ai-console (Customer Console)
 # Temporal:
 #   Trigger: api

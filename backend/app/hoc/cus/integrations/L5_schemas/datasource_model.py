@@ -1,5 +1,7 @@
 # Layer: L5 — Domain Engines
+# AUDIENCE: INTERNAL
 # Product: system-wide
+# Role: Customer data source models and registry for database/file/API connections
 # Reference: GAP-055 (CustomerDataSource model)
 """
 CustomerDataSource - Customer data source models and registry.

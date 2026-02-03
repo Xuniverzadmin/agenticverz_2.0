@@ -1,4 +1,5 @@
 # Layer: L3 — Boundary Adapter
+# AUDIENCE: CUSTOMER
 # Product: system-wide (ops visibility)
 # Temporal:
 #   Trigger: api

@@ -816,7 +816,7 @@ async def create_incident_from_violation(
     # Use the PolicyViolationService for proper S3 truth handling
     try:
         from app.db_async import AsyncSessionLocal
-        from app.hoc.cus.incidents.L5_engines.policy_violation_service import (
+        from app.hoc.cus.incidents.L5_engines.policy_violation_engine import (
             PolicyViolationService,
             ViolationFact,
         )
@@ -845,7 +845,7 @@ async def _create_incident_with_service(
     evidence: dict,
 ) -> Optional[str]:
     """Helper to create incident using PolicyViolationService."""
-    from app.hoc.cus.incidents.L5_engines.policy_violation_service import (
+    from app.hoc.cus.incidents.L5_engines.policy_violation_engine import (
         PolicyViolationService,
         ViolationFact,
     )

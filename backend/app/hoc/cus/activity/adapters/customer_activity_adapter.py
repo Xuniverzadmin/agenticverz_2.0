@@ -1,4 +1,5 @@
 # Layer: L2 — Adapter
+# AUDIENCE: CUSTOMER
 # Product: ai-console (Customer Console)
 # Temporal:
 #   Trigger: api

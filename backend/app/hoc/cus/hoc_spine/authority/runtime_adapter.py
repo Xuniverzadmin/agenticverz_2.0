@@ -1,4 +1,5 @@
 # Layer: L4 — HOC Spine (Authority)
+# AUDIENCE: INTERNAL
 # Relocated: 2026-01-30 from hoc_spine/adapters/runtime_adapter.py
 # Product: system-wide
 # Temporal:

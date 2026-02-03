@@ -1,4 +1,5 @@
 # Layer: L5 — Domain Schema
+# AUDIENCE: INTERNAL
 # Product: system-wide
 # Temporal:
 #   Trigger: import-time

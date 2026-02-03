@@ -1,4 +1,5 @@
 # Layer: L4 — Domain Engine (System Truth)
+# AUDIENCE: CUSTOMER
 # Product: system-wide (NOT console-owned)
 # Temporal:
 #   Trigger: api (run creation)

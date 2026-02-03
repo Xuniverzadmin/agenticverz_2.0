@@ -1,4 +1,5 @@
 # Layer: L2 — Adapter
+# AUDIENCE: CUSTOMER
 # Product: system-wide (Part-2 CRM Workflow)
 # Temporal:
 #   Trigger: api

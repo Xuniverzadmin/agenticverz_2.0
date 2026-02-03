@@ -1,4 +1,5 @@
 # Layer: L4 — HOC Spine (Authority)
+# AUDIENCE: INTERNAL
 # Product: system-wide
 # Temporal:
 #   Trigger: api/worker
