@@ -391,6 +391,7 @@ async def approve_proposal(
                 extra={
                     "proposal_id": proposal_id,
                     "reviewed_by": request.reviewed_by,
+                    "client_host": http_request.client.host if http_request.client else None,
                 },
             )
 
@@ -448,6 +449,7 @@ async def reject_proposal(
                     "proposal_id": proposal_id,
                     "reviewed_by": request.reviewed_by,
                     "reason": request.review_notes,
+                    "client_host": http_request.client.host if http_request.client else None,
                 },
             )
 

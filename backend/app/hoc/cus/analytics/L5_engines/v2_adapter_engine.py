@@ -110,6 +110,7 @@ class CostSimV2Adapter:
         self.allowed_skills = set(allowed_skills) if allowed_skills else None
         # B02 FIX: model_coefficients parameter kept for API compatibility but ignored.
         # Coefficients are now managed by L4 CostModelEngine.
+        _ = model_coefficients  # Explicitly acknowledge unused (API compat)
         self.risk_threshold = risk_threshold
         self.enable_provenance = enable_provenance and config.provenance_enabled
         self.tenant_id = tenant_id

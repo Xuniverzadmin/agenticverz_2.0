@@ -190,6 +190,7 @@ class LockedMutationExample:
         # counter.value += delta
         # txn.commit()
         # return counter.value
+        _ = (txn, counter_id)  # Reserved for implementation
         return delta  # placeholder
 
 

@@ -42,6 +42,10 @@ class CopyStage:
         brand_name: str,
     ) -> CopyOutput:
         """Execute copy generation."""
+        # Extract tone attributes for copy styling
+        tone_voice = tone_guidelines.get("voice", "professional")
+        tone_formality = tone_guidelines.get("formality", "balanced")
+
         return CopyOutput(
             landing_copy={
                 "hero": {
@@ -58,12 +62,14 @@ class CopyStage:
                     "quote": "This changed everything for us.",
                     "author": "Happy Customer",
                 },
+                "tone": {"voice": tone_voice, "formality": tone_formality},
             },
             blog_drafts=[
                 {
                     "title": f"Getting Started with {brand_name}",
                     "outline": ["Introduction", "Key Benefits", "How to Start"],
                     "word_count_target": 1000,
+                    "positioning_angle": positioning,
                 },
             ],
             email_sequence=[

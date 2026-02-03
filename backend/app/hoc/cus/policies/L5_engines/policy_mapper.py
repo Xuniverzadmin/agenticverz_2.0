@@ -421,6 +421,11 @@ class MCPPolicyMapper:
     ) -> bool:
         """Check if rate limit exceeded."""
         # TODO: Implement rate limiting with Redis
+        # Log rate limit check for debugging until implemented
+        logger.debug(
+            f"Rate limit check (stub): tenant={tenant_id}, tool={tool_key}, "
+            f"limit={max_per_minute}/min"
+        )
         return False
 
     def _get_policy_engine(self) -> Optional[Any]:

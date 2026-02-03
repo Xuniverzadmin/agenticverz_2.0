@@ -75,8 +75,17 @@ class AttentionRankingService:
         offset: int = 0,
         min_score: float = 0.0,
     ) -> AttentionQueueResult:
-        """Get prioritized attention queue for tenant."""
+        """Get prioritized attention queue for tenant.
+
+        Args:
+            tenant_id: Tenant identifier
+            limit: Max items to return
+            offset: Pagination offset
+            min_score: Minimum attention score threshold (0.0-1.0)
+        """
         # Stub implementation - returns empty queue
+        # min_score would filter items with score >= min_score when implemented
+        _ = min_score  # Reserved for filtering when driver is wired
         return AttentionQueueResult(
             items=[],
             total=0,

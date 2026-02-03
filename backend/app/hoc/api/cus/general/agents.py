@@ -2316,6 +2316,10 @@ class SystemStabilityResponse(BaseModel):
     rollbacks_this_hour: int
     oscillations_detected: int
     affected_agents: List[str]
+    # M18: Hysteresis and learning parameters
+    hysteresis_active: Optional[bool] = None
+    learning_rate: Optional[float] = None
+    exploration_factor: Optional[float] = None
 
 
 @router.post("/routing/explain/{request_id}", response_model=ExplainRoutingResponse)
@@ -2566,7 +2570,7 @@ async def get_system_stability():
     M18: Get system-wide stability metrics.
 
     Returns governor state, freeze status, adjustment counts,
-    and oscillation detection results.
+    oscillation detection results, hysteresis state, and learning parameters.
     """
     if not M18_AVAILABLE:
         raise HTTPException(status_code=501, detail="M18 module not available")
@@ -2574,6 +2578,10 @@ async def get_system_stability():
     try:
         governor = get_governor()
         metrics = await governor.get_stability_metrics()
+
+        # Get hysteresis and learning state
+        hysteresis_mgr = get_hysteresis_manager()
+        learning_params = get_learning_parameters()
 
         return SystemStabilityResponse(
             state=metrics.state.value,
@@ -2584,6 +2592,10 @@ async def get_system_stability():
             rollbacks_this_hour=metrics.rollbacks_this_hour,
             oscillations_detected=metrics.oscillations_detected,
             affected_agents=metrics.affected_agents,
+            # M18: Hysteresis and learning parameters
+            hysteresis_active=hysteresis_mgr.is_active() if hysteresis_mgr else None,
+            learning_rate=learning_params.rate if learning_params else None,
+            exploration_factor=learning_params.exploration if learning_params else None,
         )
 
     except Exception as e:

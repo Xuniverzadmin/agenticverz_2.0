@@ -160,6 +160,12 @@ class DefaultMcpPolicyChecker:
         # - Risk level is acceptable
         # - Input parameters are within bounds
         # - Rate limits are not exceeded
+        # Log high-risk invocations for audit
+        if tool_risk_level in ("high", "critical"):
+            logger.info(
+                f"High-risk tool invocation: {tool_name} (risk={tool_risk_level}) "
+                f"for tenant={tenant_id}, server={server_id}, run={run_id}"
+            )
         return PolicyCheckResult(allowed=True)
 
 
@@ -229,8 +235,11 @@ class McpToolInvocationEngine:
             self._owns_http_client = True
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, _exc_val, _exc_tb):
         """Async context manager exit."""
+        # exc_type checked for logging; _exc_val/_exc_tb reserved for exception propagation
+        if exc_type is not None:
+            logger.debug(f"MCP tool invocation engine exiting with exception: {exc_type.__name__}")
         if self._owns_http_client and self._http_client:
             await self._http_client.aclose()
             self._http_client = None

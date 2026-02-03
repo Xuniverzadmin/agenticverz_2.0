@@ -379,11 +379,17 @@ async def emit_authority_audit(
 
         from .gateway_audit import GatewayAuditEvent, _emit_event
 
+        # Merge additional_context into request path if provided
+        context_suffix = ""
+        if additional_context:
+            context_keys = ",".join(additional_context.keys())
+            context_suffix = f"?ctx={context_keys}"
+
         event = GatewayAuditEvent(
             event_type=f"authority.{capability}.{'allow' if auth.allowed else 'deny'}",
             timestamp=datetime.utcnow().isoformat(),
-            request_id=None,  # Can be added from request context
-            request_path=f"/{capability}/{subject_id}" if subject_id else f"/{capability}",
+            request_id=additional_context.get("request_id") if additional_context else None,
+            request_path=f"/{capability}/{subject_id}{context_suffix}" if subject_id else f"/{capability}{context_suffix}",
             request_method="CHECK",
             client_ip="internal",
             success=auth.allowed,

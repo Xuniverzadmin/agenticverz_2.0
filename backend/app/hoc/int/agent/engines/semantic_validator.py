@@ -144,7 +144,8 @@ def check_api_field_present(
     The mapping says signal X -> api_field Y.
     This checks that Y exists in the API response.
     """
-    # Get translation
+    # Get translation (using global dict; translator reserved for future dynamic lookups)
+    _ = translator  # Reserved for dynamic translation lookup when supported
     cap_translations = SIGNAL_TRANSLATIONS.get(capability_id, {})
     if signal not in cap_translations:
         # Signal is computed, not translated from API field

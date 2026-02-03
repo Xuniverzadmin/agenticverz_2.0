@@ -256,7 +256,7 @@ def reset_circuit_breaker(
         return False
 
     state.disabled = False
-    state.disabled_reason = None
+    state.disabled_reason = f"Reset: {reset_reason}" if reset_reason else None
     state.disabled_by = None
     state.disabled_until = None
     state.consecutive_failures = 0

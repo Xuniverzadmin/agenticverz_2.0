@@ -183,11 +183,13 @@ class PanelSpecLoader:
             ) if input_signals_data else None
 
             # Parse required inputs from V2 input_signals or derive from consumed_capabilities
+            # Note: raw signals conform to InputSignalSpec schema
             required: List[str] = []
-            if input_signals_spec and input_signals_spec.raw:
+            raw_signals: List[InputSignalSpec] = input_signals_spec.raw if input_signals_spec else []
+            if raw_signals:
                 required = [
                     sig.get("signal_id", "")
-                    for sig in input_signals_spec.raw
+                    for sig in raw_signals
                     if sig.get("required", False) and sig.get("signal_id")
                 ]
             elif consumed_capabilities:

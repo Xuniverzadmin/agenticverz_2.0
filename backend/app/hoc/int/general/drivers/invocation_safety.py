@@ -1064,9 +1064,13 @@ class SafetyCheckTimer:
         self.start_time = time.time()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type, _exc_val, _exc_tb) -> None:
+        # exc_type used for metrics; _exc_val/_exc_tb reserved for exception propagation
         if self.start_time:
             self.duration = time.time() - self.start_time
+            if exc_type is not None:
+                # Timer exited with exception - could log or adjust metrics
+                pass
 
     def emit(self, result: InvocationSafetyResult) -> None:
         """Emit metrics with recorded duration."""

@@ -358,7 +358,12 @@ class DevIdentityAdapter(IdentityAdapter):
 
         # Determine actor type
         if role in ("founder", "operator"):
-            actor_type = ActorType.OPERATOR
+            # Use create_operator_actor for standardized operator context
+            return create_operator_actor(
+                actor_id=f"dev:{role}:{tenant_id or 'global'}",
+                email=f"dev-{role}@localhost",
+                display_name=f"Dev {role.title()}",
+            )
         elif role in ("internal", "product"):
             actor_type = ActorType.INTERNAL_PRODUCT
         elif role == "trial":

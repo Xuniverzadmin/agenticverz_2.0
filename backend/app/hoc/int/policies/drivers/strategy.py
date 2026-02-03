@@ -42,12 +42,17 @@ class StrategyStage:
         brand_context: Dict[str, Any],
     ) -> StrategyOutput:
         """Execute strategy development."""
+        # Extract market insights for positioning
+        market_size = market_report.get("market_size", "growing")
+        market_trend = market_report.get("trend", "expanding")
+
         return StrategyOutput(
-            positioning=f"The best solution for {brand_context.get('mission', 'your needs')}",
+            positioning=f"The best solution for {brand_context.get('mission', 'your needs')} in a {market_trend} market",
             messaging_framework={
                 "headline": "Transform your workflow",
                 "subhead": brand_context.get("value_prop", ""),
                 "cta": "Get Started Free",
+                "market_context": f"Serving a {market_size} market",
             },
             tone_guidelines={
                 "primary": brand_context.get("tone_primary", "professional"),

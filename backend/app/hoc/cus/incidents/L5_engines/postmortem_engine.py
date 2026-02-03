@@ -419,6 +419,26 @@ class PostMortemService:
                     supporting_incident_ids=[],
                 ))
 
+        # Resolution time insight
+        if avg_resolution_time_ms is not None:
+            avg_hours = avg_resolution_time_ms / (1000 * 60 * 60)
+            if avg_hours > 24:
+                insights.append(LearningInsight(
+                    insight_type="response",
+                    description=f"Long average resolution time ({avg_hours:.1f}h) for '{category}' "
+                               f"suggests need for faster detection or response automation",
+                    confidence=min(0.6 + avg_hours / 100, 0.85),
+                    supporting_incident_ids=[],
+                ))
+            elif avg_hours < 1:
+                insights.append(LearningInsight(
+                    insight_type="response",
+                    description=f"Fast average resolution time ({avg_hours * 60:.0f}min) for '{category}' "
+                               f"indicates effective automated handling",
+                    confidence=0.75,
+                    supporting_incident_ids=[],
+                ))
+
         # Recurrence insight
         if recurrence_rate > 2:
             insights.append(LearningInsight(

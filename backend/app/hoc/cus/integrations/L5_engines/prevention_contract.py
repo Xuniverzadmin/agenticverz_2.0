@@ -146,6 +146,11 @@ def assert_prevention_immutable(record_id: str, existing_record: dict[str, Any])
     Prevention records are append-only and immutable.
     This should be called before any UPDATE attempt.
     """
+    # Log the existing record state for audit before raising
+    logger.warning(
+        f"Attempted modification of immutable prevention record: {record_id}, "
+        f"existing_state={existing_record.get('status', 'unknown')}"
+    )
     raise PreventionContractViolation(
         rule="IMMUTABLE", details=f"Prevention record {record_id} cannot be modified (append-only)"
     )

@@ -330,6 +330,9 @@ async def apply_post_execution_updates(
     if not memory_service:
         return 0
 
+    # Get update rules engine for transformation/validation
+    rules_engine = get_update_rules_engine()
+
     updates_applied = 0
 
     try:
@@ -340,6 +343,12 @@ async def apply_post_execution_updates(
             "last_feasible": simulation_result.get("feasible", False),
             "total_simulations": 1,  # Will be incremented by rule
         }
+
+        # Apply rules transformation if engine available
+        if rules_engine:
+            rule_result = await rules_engine.apply(tenant_id, "costsim:history", history_update)
+            if rule_result and rule_result.transformed:
+                history_update = rule_result.transformed
 
         result = await memory_service.set(
             tenant_id, "costsim:history", history_update, source="costsim_engine", agent_id=agent_id
@@ -354,6 +363,13 @@ async def apply_post_execution_updates(
                 "simulation_count": 1,  # Increment via rule
                 "last_feasibility": simulation_result.get("feasible", False),
             }
+
+            # Apply rules transformation if engine available
+            if rules_engine:
+                key = f"workflow:{workflow_id}:state"
+                rule_result = await rules_engine.apply(tenant_id, key, workflow_update)
+                if rule_result and rule_result.transformed:
+                    workflow_update = rule_result.transformed
 
             result = await memory_service.set(
                 tenant_id, f"workflow:{workflow_id}:state", workflow_update, source="costsim_engine", agent_id=agent_id

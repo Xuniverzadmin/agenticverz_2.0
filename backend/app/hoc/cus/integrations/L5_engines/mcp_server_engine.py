@@ -163,8 +163,11 @@ class McpServerEngine:
             self._owns_http_client = True
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, _exc_val, _exc_tb):
         """Async context manager exit."""
+        # exc_type checked for logging; _exc_val/_exc_tb reserved for exception propagation
+        if exc_type is not None:
+            logger.debug(f"MCP server engine exiting with exception: {exc_type.__name__}")
         if self._owns_http_client and self._http_client:
             await self._http_client.aclose()
             self._http_client = None
