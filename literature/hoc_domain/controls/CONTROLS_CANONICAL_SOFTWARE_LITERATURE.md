@@ -310,3 +310,64 @@ Other domains importing from controls:
 | LOC | 252 | 297 |
 
 New model `LimitOverride` added to `app/models/__init__.py` exports.
+
+## PIN-519 System Run Introspection (2026-02-03)
+
+### Updated L6 Driver: limits_read_driver.py
+
+**New Method:**
+
+| Method | Purpose |
+|--------|---------|
+| `fetch_limit_breaches_for_run(tenant_id, run_id, max_results)` | Fetch all limit breaches associated with a run |
+
+**Returns:** List of breach records with limit details (breach_id, limit_id, value_at_breach, limit_value, breached_at, limit_name, threshold_value, limit_type)
+
+### ControlsBridge Extension
+
+**New Capability:**
+
+| Capability | Purpose | Consumer |
+|------------|---------|----------|
+| `limit_breaches_capability(session)` | Returns LimitsReadDriver for run-scoped breach queries | RunEvidenceCoordinator |
+
+**Usage:**
+```python
+controls_bridge = get_controls_bridge()
+reader = controls_bridge.limit_breaches_capability(session)
+breaches = await reader.fetch_limit_breaches_for_run(tenant_id, run_id)
+```
+
+## PIN-521 Circuit Breaker Import Fixes (2026-02-03)
+
+### Updated: L6_drivers/circuit_breaker_async_driver.py
+
+**Problem:** Multiple CI violations:
+1. Import from `analytics/L5_engines/config_engine.py` (L6→L5_engines violation)
+2. Import from `analytics/L5_engines/metrics_engine.py` (L6→L5_engines + cross-domain violation)
+3. Import from `controls/L5_engines/cb_sync_wrapper_engine.py` (L6→L5_engines violation)
+
+**Solution:**
+1. Config import changed to `hoc_spine/services/costsim_config.py`
+2. Metrics import changed to `hoc_spine/services/costsim_metrics.py`
+3. Sync wrapper utility functions inlined directly in the driver
+
+**Code Change:**
+```python
+# OLD
+from app.hoc.cus.analytics.L5_engines.config_engine import get_config
+from app.hoc.cus.analytics.L5_engines.metrics_engine import get_metrics
+# ... later in is_open() method:
+from app.hoc.cus.controls.L5_engines.cb_sync_wrapper_engine import is_v2_disabled_sync
+
+# NEW
+from app.hoc.cus.hoc_spine.services.costsim_config import get_config
+from app.hoc.cus.hoc_spine.services.costsim_metrics import get_metrics
+# Sync wrapper utilities inlined as _is_v2_disabled_sync()
+```
+
+**Violations Fixed:** 5 (L6_L5_ENGINE x4, L6_CROSS_DOMAIN x1)
+
+### Updated: L6_drivers/circuit_breaker_driver.py
+
+Config import changed from `analytics/L5_engines/config_engine.py` to `hoc_spine/services/costsim_config.py`.

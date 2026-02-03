@@ -38,7 +38,7 @@ import hashlib
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlmodel import Session, select
 
@@ -54,7 +54,9 @@ from app.models.export_bundles import (
     SOC2Bundle,
     TraceStepEvidence,
 )
-from app.hoc.cus.logs.L6_drivers.traces_store import TraceStore
+
+# PIN-521: Use Protocol for cross-domain dependency injection (no direct L6→L6 import)
+from app.hoc.cus.hoc_spine.schemas.protocols import TraceStorePort
 
 logger = logging.getLogger("nova.services.export_bundle")
 
@@ -62,20 +64,19 @@ logger = logging.getLogger("nova.services.export_bundle")
 class ExportBundleDriver:
     """Generate structured export bundles from incidents/traces."""
 
-    def __init__(self, trace_store: Optional[TraceStore] = None):
+    def __init__(self, trace_store: Optional[TraceStorePort] = None):
         """
         Initialize export bundle service.
 
         Args:
-            trace_store: Optional TraceStore instance (for testing)
+            trace_store: TraceStore instance (injected by caller)
+                         PIN-521: Must be injected, no default instantiation.
         """
         self._trace_store = trace_store
 
     @property
-    def trace_store(self) -> TraceStore:
-        """Get or create TraceStore instance."""
-        if self._trace_store is None:
-            self._trace_store = TraceStore()
+    def trace_store(self) -> Optional[TraceStorePort]:
+        """Get TraceStore instance (must be injected via constructor)."""
         return self._trace_store
 
     async def create_evidence_bundle(
@@ -415,9 +416,6 @@ class ExportBundleDriver:
 # Singleton instance
 _export_bundle_driver: Optional[ExportBundleDriver] = None
 
-# Backward-compatible alias (deprecated, use get_export_bundle_driver)
-ExportBundleService = ExportBundleDriver
-
 
 def get_export_bundle_driver() -> ExportBundleDriver:
     """Get or create ExportBundleDriver singleton."""
@@ -425,7 +423,3 @@ def get_export_bundle_driver() -> ExportBundleDriver:
     if _export_bundle_driver is None:
         _export_bundle_driver = ExportBundleDriver()
     return _export_bundle_driver
-
-
-# Backward-compatible alias (deprecated, use get_export_bundle_driver)
-get_export_bundle_service = get_export_bundle_driver

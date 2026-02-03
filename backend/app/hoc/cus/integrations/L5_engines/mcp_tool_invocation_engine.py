@@ -58,10 +58,9 @@ from app.hoc.cus.integrations.L6_drivers.mcp_driver import (
     compute_input_hash,
     compute_output_hash,
 )
-from app.hoc.cus.logs.L5_engines.audit_evidence import (
-    MCPAuditEmitter,
-    get_mcp_audit_emitter,
-)
+
+# PIN-521: Use Protocol for cross-domain dependency injection (no direct L5→L5 import)
+from app.hoc.cus.hoc_spine.schemas.protocols import MCPAuditEmitterPort
 
 logger = logging.getLogger("nova.hoc.integrations.mcp_tool_invocation_engine")
 
@@ -190,7 +189,7 @@ class McpToolInvocationEngine:
     def __init__(
         self,
         driver: McpDriver,
-        audit_emitter: Optional[MCPAuditEmitter] = None,
+        audit_emitter: Optional[MCPAuditEmitterPort] = None,
         policy_checker: Optional[McpPolicyChecker] = None,
         credential_service: Optional[CredentialService] = None,
         http_client: Optional[httpx.AsyncClient] = None,
@@ -202,18 +201,26 @@ class McpToolInvocationEngine:
         Args:
             driver: L6 driver for persistence.
             audit_emitter: Optional audit emitter (defaults to singleton).
+                           PIN-521: Must be injected, lazy loads if None.
             policy_checker: Optional policy checker (defaults to permissive).
             credential_service: Optional credential service for vault access.
             http_client: Optional HTTP client for MCP calls.
             incident_creator: Optional incident creator for failures.
         """
         self._driver = driver
-        self._audit_emitter = audit_emitter or get_mcp_audit_emitter()
+        self._audit_emitter = audit_emitter or self._get_default_audit_emitter()
         self._policy_checker = policy_checker or DefaultMcpPolicyChecker()
         self._credential_service = credential_service
         self._http_client = http_client
         self._incident_creator = incident_creator
         self._owns_http_client = http_client is None
+
+    @staticmethod
+    def _get_default_audit_emitter() -> MCPAuditEmitterPort:
+        """Lazy-load default audit emitter (PIN-521: avoids top-level cross-domain import)."""
+        from app.hoc.cus.logs.L5_engines.audit_evidence import get_mcp_audit_emitter
+
+        return get_mcp_audit_emitter()
 
     async def __aenter__(self):
         """Async context manager entry."""

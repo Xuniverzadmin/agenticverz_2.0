@@ -48,7 +48,7 @@ def register_all_handlers(registry: "OperationRegistry") -> None:
 
     overview_handler.register(registry)      # overview.query
     account_handler.register(registry)       # account.query, account.notifications
-    analytics_handler.register(registry)     # analytics.query, analytics.detection
+    analytics_handler.register(registry)     # analytics.query, analytics.detection, analytics.canary_reports, analytics.canary
     api_keys_handler.register(registry)      # api_keys.query
     incidents_handler.register(registry)     # incidents.query
     integrations_handler.register(registry)  # integrations.query, .connectors, .datasources
@@ -66,7 +66,7 @@ def register_all_handlers(registry: "OperationRegistry") -> None:
     # Phase A.4 — Activity domain (4 operations: activity)
     from app.hoc.cus.hoc_spine.orchestrator.handlers import activity_handler
 
-    activity_handler.register(registry)  # activity.query, .signal_fingerprint, .signal_feedback, .telemetry
+    activity_handler.register(registry)  # activity.query, .signal_fingerprint, .signal_feedback, .telemetry, .discovery
 
     # Phase A.5 — Policies domain (9 operations: policies)
     from app.hoc.cus.hoc_spine.orchestrator.handlers import policies_handler
@@ -77,3 +77,10 @@ def register_all_handlers(registry: "OperationRegistry") -> None:
     from app.hoc.cus.hoc_spine.orchestrator.handlers import mcp_handler
 
     mcp_handler.register(registry)  # integrations.mcp_servers
+
+    # Phase A.6 — Analytics scheduled operations (PIN-520 Wiring Audit)
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import analytics_prediction_handler
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import analytics_snapshot_handler
+
+    analytics_prediction_handler.register(registry)  # analytics.prediction
+    analytics_snapshot_handler.register(registry)    # analytics.snapshot

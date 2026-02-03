@@ -190,5 +190,4 @@ class RunSignalDriver:
             return DEFAULT_RISK_LEVEL
 
 
-# Backward-compatible alias (deprecated, use RunSignalDriver)
-RunSignalService = RunSignalDriver
+# PIN-521: Backward-compat alias removed (zero HOC dependents confirmed 2026-02-03)

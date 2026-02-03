@@ -14,12 +14,12 @@
 """
 Logs Handler (L4 Orchestrator)
 
-Routes logs domain operations to L5 engines.
+Routes logs domain operations to L5 engines and L4 coordinators.
 Registers six operations:
   - logs.query → LogsFacade (27 async endpoints)
   - logs.evidence → EvidenceFacade (8 async endpoints)
-  - logs.certificate → CertificateService (1 sync endpoint)
-  - logs.replay → ReplayValidator + ReplayContextBuilder (1 sync endpoint)
+  - logs.certificate → CertificateService (4 sync endpoints)
+  - logs.replay → ReplayValidator + ReplayContextBuilder (2 sync) + ReplayCoordinator (2 async, PIN-520)
   - logs.evidence_report → generate_evidence_report (1 sync function)
   - logs.pdf → PDFRenderer (3 sync endpoints, cross-domain: incidents L2 → logs L5)
 """
@@ -171,20 +171,18 @@ class LogsReplayHandler:
     """
     Handler for logs.replay operations.
 
-    Dispatches to ReplayValidator and ReplayContextBuilder.
-    Sync — pure validation logic, no DB access.
+    Dispatches to ReplayValidator, ReplayContextBuilder, and ReplayCoordinator.
 
-    Methods:
+    Validation methods (sync, L5):
       - build_call_record → ReplayContextBuilder.build_call_record()
       - validate_replay → ReplayValidator.validate_replay()
+
+    Enforcement methods (async, L4 coordinator - PIN-520):
+      - enforce_step → ReplayCoordinator.enforce_step()
+      - enforce_trace → ReplayCoordinator.enforce_trace()
     """
 
     async def execute(self, ctx: OperationContext) -> OperationResult:
-        from app.hoc.cus.logs.L5_engines.replay_determinism import (
-            ReplayContextBuilder,
-            ReplayValidator,
-        )
-
         method_name = ctx.params.get("method")
         if not method_name:
             return OperationResult.fail(
@@ -194,18 +192,68 @@ class LogsReplayHandler:
         kwargs = dict(ctx.params)
         kwargs.pop("method", None)
 
+        # Validation methods (sync, L5)
         if method_name == "build_call_record":
+            from app.hoc.cus.logs.L5_engines.replay_determinism import (
+                ReplayContextBuilder,
+            )
             builder = ReplayContextBuilder()
             data = builder.build_call_record(**kwargs)
+            return OperationResult.ok(data)
+
         elif method_name == "validate_replay":
+            from app.hoc.cus.logs.L5_engines.replay_determinism import (
+                ReplayValidator,
+            )
             validator = ReplayValidator()
             data = validator.validate_replay(**kwargs)
+            return OperationResult.ok(data)
+
+        # Enforcement methods (async, L4 coordinator - PIN-520)
+        elif method_name == "enforce_step":
+            from app.hoc.cus.hoc_spine.orchestrator.coordinators import (
+                ReplayCoordinator,
+            )
+            coordinator = ReplayCoordinator()
+            # Extract required params
+            step = kwargs.get("step")
+            execute_fn = kwargs.get("execute_fn")
+            tenant_id = kwargs.get("tenant_id", ctx.tenant_id)
+            if not step:
+                return OperationResult.fail("Missing 'step' param", "MISSING_STEP")
+            if not execute_fn:
+                return OperationResult.fail("Missing 'execute_fn' param", "MISSING_EXECUTE_FN")
+            data = await coordinator.enforce_step(
+                step=step,
+                execute_fn=execute_fn,
+                tenant_id=tenant_id,
+            )
+            return OperationResult.ok(data)
+
+        elif method_name == "enforce_trace":
+            from app.hoc.cus.hoc_spine.orchestrator.coordinators import (
+                ReplayCoordinator,
+            )
+            coordinator = ReplayCoordinator()
+            # Extract required params
+            trace = kwargs.get("trace")
+            step_executor = kwargs.get("step_executor")
+            tenant_id = kwargs.get("tenant_id", ctx.tenant_id)
+            if not trace:
+                return OperationResult.fail("Missing 'trace' param", "MISSING_TRACE")
+            if not step_executor:
+                return OperationResult.fail("Missing 'step_executor' param", "MISSING_STEP_EXECUTOR")
+            data = await coordinator.enforce_trace(
+                trace=trace,
+                step_executor=step_executor,
+                tenant_id=tenant_id,
+            )
+            return OperationResult.ok(data)
+
         else:
             return OperationResult.fail(
                 f"Unknown replay method: {method_name}", "UNKNOWN_METHOD"
             )
-
-        return OperationResult.ok(data)
 
 
 class LogsEvidenceReportHandler:

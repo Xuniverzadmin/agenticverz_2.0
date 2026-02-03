@@ -3,7 +3,7 @@
 **Domain:** analytics
 **Generated:** 2026-01-31
 **Reference:** PIN-497
-**Total Files:** 46 (21 L5_engines, 9 L6_drivers, 2 L5_schemas, 2 adapters, __init__.py files)
+**Total Files:** 47 (22 L5_engines, 9 L6_drivers, 2 L5_schemas, 2 adapters, __init__.py files)
 
 ---
 
@@ -184,6 +184,23 @@ None identified.
 ### sandbox_engine.py *(renamed from sandbox.py)*
 - **Role:** Sandbox execution environment
 - **Factory:** `get_sandbox()`
+
+### alert_worker_engine.py *(NEW — PIN-520)*
+- **Layer:** L5 — Analytics (Engine)
+- **Role:** Alert worker engine - orchestrates alert delivery
+- **Classes:** `AlertWorkerEngine`
+- **Factory:** `get_alert_worker(alertmanager_url, max_backoff_seconds, timeout_seconds)`
+- **Wires:** `AlertDriver` (L6 via context manager), `AlertDeliveryAdapter` (hoc_spine service)
+- **PIN-512 Compliant:** No session parameters — driver manages own session via context manager
+- **Methods:**
+  - `process_batch(batch_size)` — Process pending alerts
+  - `get_queue_stats()` — Get queue statistics
+  - `retry_failed_alerts(max_retries)` — Reset failed alerts
+  - `purge_old_alerts(days, statuses)` — Delete old alerts
+- **Business Logic:**
+  - Exponential backoff calculation (2^attempts, capped at max_backoff)
+  - Retry decision logic (max attempts check)
+  - Dead letter handling (mark as failed after max attempts)
 
 ---
 
@@ -384,4 +401,82 @@ async def _persist_report_to_db(self, report: CanaryReport) -> None:
 |-----------|--------------|--------|
 | analytics.query | AnalyticsQueryHandler | AnalyticsFacade |
 | analytics.detection | AnalyticsDetectionHandler | DetectionFacade |
-| analytics.canary_reports | CanaryReportHandler | canary_report_driver *(NEW)* |
+| analytics.canary_reports | CanaryReportHandler | canary_report_driver |
+| analytics.canary | CanaryRunHandler | CanaryCoordinator *(PIN-520)* |
+| analytics.prediction | AnalyticsPredictionHandler | prediction_engine *(PIN-520)* |
+| analytics.snapshot | AnalyticsSnapshotHandler | cost_snapshots_engine *(PIN-520)* |
+
+---
+
+## PIN-520 Wiring Audit (2026-02-03)
+
+### Zero-Caller Components Wired
+
+**Problem:** 5 orphaned components with zero callers identified during wiring audit.
+
+**Solution:** All 5 components wired to proper export/import paths.
+
+| Component | Type | Wired To | Status |
+|-----------|------|----------|--------|
+| CanaryCoordinator | L4 Coordinator | `analytics.canary` operation via `CanaryRunHandler` | WIRED |
+| ExecutionCoordinator | L4 Coordinator | `CoordinatedJobExecutor` via `job_executor.py` | WIRED |
+| ReplayCoordinator | L4 Coordinator | `logs.replay` operation via `LogsReplayHandler` | WIRED |
+| AlertDeliveryAdapter | hoc_spine Service | `alert_worker_engine.py` via factory | WIRED |
+| DiscoveryLedger | hoc_spine Driver | `activity.discovery` operation via `ActivityDiscoveryHandler` | WIRED |
+
+### Alert Worker L5→L6→Service Wiring
+
+```
+AlertWorkerEngine (L5)
+    ├── AlertDriver (L6) — DB operations via context manager
+    │       ├── fetch_pending_alerts()
+    │       ├── update_alert_sent()
+    │       ├── update_alert_failed()
+    │       ├── update_alert_retry()
+    │       ├── mark_incident_alert_sent()
+    │       ├── fetch_queue_stats()
+    │       ├── retry_failed_alerts()
+    │       └── purge_old_alerts()
+    └── AlertDeliveryAdapter (Service) — HTTP delivery
+            └── send_alert(payload) → DeliveryResult
+```
+
+### Operation Registry Total
+
+**Total operations:** 44 (up from 42 pre-PIN-520)
+
+## PIN-521 Config/Metrics Extraction (2026-02-03)
+
+### Extracted to hoc_spine/services
+
+**Problem:** `controls/L6_drivers/circuit_breaker_async_driver.py` imported from `analytics/L5_engines/config_engine.py` and `metrics_engine.py`, violating L6→L5_engines ban and cross-domain rules.
+
+**Solution:** CostSimConfig and CostSimMetrics moved to `hoc_spine/services/` as domain-agnostic shared services.
+
+| Component | Old Location | New Location |
+|-----------|--------------|--------------|
+| `CostSimConfig` | `analytics/L5_engines/config_engine.py` | `hoc_spine/services/costsim_config.py` |
+| `get_config()` | `analytics/L5_engines/config_engine.py` | `hoc_spine/services/costsim_config.py` |
+| `CostSimMetrics` | `analytics/L5_engines/metrics_engine.py` | `hoc_spine/services/costsim_metrics.py` |
+| `get_metrics()` | `analytics/L5_engines/metrics_engine.py` | `hoc_spine/services/costsim_metrics.py` |
+
+**Migration:**
+```python
+# OLD (violates L6→L5_engines ban)
+from app.hoc.cus.analytics.L5_engines.config_engine import get_config
+from app.hoc.cus.analytics.L5_engines.metrics_engine import get_metrics
+
+# NEW (compliant)
+from app.hoc.cus.hoc_spine.services.costsim_config import get_config
+from app.hoc.cus.hoc_spine.services.costsim_metrics import get_metrics
+```
+
+**Backward Compatibility:** Original files in `analytics/L5_engines/` re-export from `hoc_spine/services/` for existing callers.
+
+### Updated: L5_engines/config_engine.py
+
+Now a backward-compatibility re-export file. Canonical home: `hoc_spine/services/costsim_config.py`.
+
+### Updated: L5_engines/metrics_engine.py
+
+Now a backward-compatibility re-export file. Canonical home: `hoc_spine/services/costsim_metrics.py`. Alert rules YAML kept in analytics for domain specificity.

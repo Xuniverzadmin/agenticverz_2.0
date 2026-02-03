@@ -39,13 +39,11 @@ from enum import Enum
 from typing import Any, Optional
 
 from app.hoc.cus.integrations.L5_schemas.loop_events import (
-    LoopEvent,
-    LoopStage,
+    # PIN-521: Removed unused imports (LoopEvent, LoopStage, ensure_json_serializable)
     PatternMatchResult,
     PolicyRule,
     RecoverySuggestion,
     RoutingAdjustment,
-    ensure_json_serializable,
 )
 
 # V2.0.0 - hoc_spine orchestrator

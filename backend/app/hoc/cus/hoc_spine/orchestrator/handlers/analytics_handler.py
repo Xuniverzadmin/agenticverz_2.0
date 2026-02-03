@@ -14,10 +14,12 @@
 """
 Analytics Handler (L4 Orchestrator)
 
-Routes analytics domain operations to L5 facades.
-Registers two operations:
+Routes analytics domain operations to L5 facades and coordinators.
+Registers four operations:
   - analytics.query → AnalyticsFacade
   - analytics.detection → DetectionFacade
+  - analytics.canary_reports → CanaryReportDriver (L6 queries)
+  - analytics.canary → CanaryCoordinator (scheduled validation runs)
 """
 
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
@@ -149,8 +151,41 @@ class CanaryReportHandler:
             )
 
 
+class CanaryRunHandler:
+    """
+    Handler for analytics.canary operations.
+
+    Dispatches to CanaryCoordinator for scheduled canary validation runs.
+    This is the L4 entry point for scheduler/cron invocations.
+
+    Methods:
+      - run: Execute canary validation (sample_count, drift_threshold)
+
+    Reference: PIN-520 Wiring Audit
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.hoc_spine.orchestrator.coordinators import CanaryCoordinator
+
+        method_name = ctx.params.get("method", "run")
+
+        if method_name == "run":
+            coordinator = CanaryCoordinator()
+            result = await coordinator.run(
+                sample_count=ctx.params.get("sample_count", 100),
+                drift_threshold=ctx.params.get("drift_threshold", 0.2),
+            )
+            return OperationResult.ok(result)
+
+        else:
+            return OperationResult.fail(
+                f"Unknown canary method: {method_name}", "UNKNOWN_METHOD"
+            )
+
+
 def register(registry: OperationRegistry) -> None:
     """Register analytics operations with the registry."""
     registry.register("analytics.query", AnalyticsQueryHandler())
     registry.register("analytics.detection", AnalyticsDetectionHandler())
     registry.register("analytics.canary_reports", CanaryReportHandler())
+    registry.register("analytics.canary", CanaryRunHandler())  # PIN-520: Scheduler integration

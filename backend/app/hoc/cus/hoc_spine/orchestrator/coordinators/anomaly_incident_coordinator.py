@@ -91,6 +91,26 @@ class AnomalyIncidentCoordinator:
             "incidents_created": incidents_created,
         }
 
+    async def detect_only(self, session: Any, tenant_id: str) -> list:
+        """Run analytics detection only (no incident escalation).
+
+        PIN-521: Exposes detection capability via L4 for L2 APIs that need
+        detection without automatic incident creation.
+
+        Args:
+            session: Database session
+            tenant_id: Tenant to detect anomalies for
+
+        Returns:
+            List of detected CostAnomaly objects
+        """
+        # Analytics detection only — no incident bridge call
+        from app.hoc.cus.analytics.L5_engines.cost_anomaly_detector_engine import (
+            run_anomaly_detection,
+        )
+
+        return await run_anomaly_detection(session, tenant_id)
+
     def persist_coordination_audit(
         self,
         session: Any,

@@ -80,7 +80,8 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 import httpx
 from sqlmodel import Session, select
 
-from app.hoc.cus.analytics.L5_engines.config_engine import get_config
+# PIN-521: Import config from hoc_spine (not L5_engines) per CI compliance
+from app.hoc.cus.hoc_spine.services.costsim_config import get_config
 from app.db import (
     CostSimCBIncident,
     CostSimCBState,

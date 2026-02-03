@@ -60,8 +60,8 @@ logger = logging.getLogger("nova.incidents.adapters.anomaly_bridge")
 
 
 # PIN-510 Phase 1C: CostAnomalyFact moved to hoc_spine/schemas/anomaly_types.py
-# Backward-compat re-export (TOMBSTONE — remove when zero dependents confirmed)
-from app.hoc.cus.hoc_spine.schemas.anomaly_types import CostAnomalyFact  # noqa: F401
+# PIN-521: Import for internal use (not re-exported — use canonical location)
+from app.hoc.cus.hoc_spine.schemas.anomaly_types import CostAnomalyFact
 
 
 # =============================================================================
@@ -290,7 +290,7 @@ def get_anomaly_incident_bridge(session) -> AnomalyIncidentBridge:
 
 
 __all__ = [
-    "CostAnomalyFact",
+    # PIN-521: CostAnomalyFact removed — use canonical location hoc_spine/schemas/anomaly_types.py
     "AnomalyIncidentBridge",
     "get_anomaly_incident_bridge",
     "INCIDENT_SEVERITY_THRESHOLD",

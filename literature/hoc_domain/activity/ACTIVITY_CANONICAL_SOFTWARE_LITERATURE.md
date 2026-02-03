@@ -37,7 +37,7 @@
                     ┌────────────▼─────────────┐
                     │  L4 hoc_spine             │
                     │  activity_handler.py      │
-                    │  4 operation types        │
+                    │  5 operation types        │
                     └────────────┬─────────────┘
                                  │
           ┌──────────────────────▼──────────────────────┐
@@ -72,7 +72,7 @@
 
 **Key Characteristics:**
 - **Main Entry Point:** `activity_facade.py` — 15+ async methods, 18 dataclasses
-- **4 L4 Operations:** activity.query, activity.signal_fingerprint, activity.signal_feedback, activity.telemetry
+- **5 L4 Operations:** activity.query, activity.signal_fingerprint, activity.signal_feedback, activity.telemetry, activity.discovery (PIN-520)
 - **Cross-Domain Pattern:** L6 control → L5 control → L4 runtime → L5 activity → L6 activity
 - **4 Stub Engines:** Attention ranking, cost analysis, pattern detection, signal feedback (all need ideal contractor)
 
@@ -245,14 +245,22 @@ activity/L6 run_signal_driver        controls/L5 threshold_engine
 
 ### L4 Handler: `hoc_spine/orchestrator/handlers/activity_handler.py`
 
-**4 Handler Classes:**
+**5 Handler Classes:**
 
-| # | Operation Name | Handler Class | L5 Target | Status |
-|---|----------------|---------------|-----------|--------|
-| 1 | `activity.query` | ActivityQueryHandler | ActivityFacade | WIRED |
-| 2 | `activity.signal_fingerprint` | ActivitySignalFingerprintHandler | signal_identity (functions) | WIRED |
-| 3 | `activity.signal_feedback` | ActivitySignalFeedbackHandler | SignalFeedbackService | WIRED (stub) |
-| 4 | `activity.telemetry` | ActivityTelemetryHandler | CusTelemetryService | WIRED (re-export) |
+| # | Operation Name | Handler Class | Target | Status |
+|---|----------------|---------------|--------|--------|
+| 1 | `activity.query` | ActivityQueryHandler | ActivityFacade (L5) | WIRED |
+| 2 | `activity.signal_fingerprint` | ActivitySignalFingerprintHandler | signal_identity (L5) | WIRED |
+| 3 | `activity.signal_feedback` | ActivitySignalFeedbackHandler | SignalFeedbackService (L5) | WIRED (stub) |
+| 4 | `activity.telemetry` | ActivityTelemetryHandler | CusTelemetryService (L5) | WIRED (re-export) |
+| 5 | `activity.discovery` | ActivityDiscoveryHandler | Discovery Ledger (hoc_spine driver) | WIRED (PIN-520) |
+
+### activity.discovery Methods (PIN-520)
+
+| Method | Purpose |
+|--------|---------|
+| `emit_signal` | Record a discovery signal (aggregates duplicates by artifact+field+signal_type) |
+| `get_signals` | Query discovery signals from the ledger |
 
 **Call Pattern:**
 ```
@@ -262,7 +270,7 @@ L2 API → L4 handler.handle(operation, args)
        → L7 model (ORM)
 ```
 
-**Verification Status:** All 4 operations registered and callable. L4→L5 delegation confirmed.
+**Verification Status:** All 5 operations registered and callable. L4→L5 delegation confirmed.
 
 ### External Callers
 
@@ -275,6 +283,29 @@ L2 API → L4 handler.handle(operation, args)
 **Legacy Path Issue:** `int/agent/main.py` imports from `.services.orphan_recovery` (legacy path). Should be updated to call through L4 spine: `hoc_spine.orchestrate("activity.orphan_recovery", args)`.
 
 **Status:** DEFERRED — wiring exercise post-all-domain.
+
+### L4 Coordinators: Run Introspection (PIN-519)
+
+**New L4 Coordinators:** 3 coordinators added for cross-domain run queries.
+
+| Coordinator | File | Purpose | Bridges Used |
+|-------------|------|---------|--------------|
+| RunEvidenceCoordinator | `run_evidence_coordinator.py` | Cross-domain impact (incidents, policies, limits) | IncidentsBridge, PoliciesBridge, ControlsBridge |
+| RunProofCoordinator | `run_proof_coordinator.py` | Integrity verification (HASH_CHAIN) | LogsBridge |
+| SignalFeedbackCoordinator | `signal_feedback_coordinator.py` | Audit ledger feedback queries | LogsBridge |
+
+**Activity Facade Delegation (PIN-519):**
+
+| Method | Coordinator | Status |
+|--------|-------------|--------|
+| `get_run_evidence()` | RunEvidenceCoordinator | WIRED |
+| `get_run_proof()` | RunProofCoordinator | WIRED |
+| `_get_signal_feedback()` | SignalFeedbackCoordinator | WIRED |
+
+**Red-Line Compliance:**
+- Activity L5 delegates cross-domain queries to L4 coordinators (no direct imports)
+- Integrity computation happens in L4, not L5
+- All verification states explicit (VERIFIED | FAILED | UNSUPPORTED)
 
 ---
 
@@ -429,3 +460,91 @@ No L2→L5 bypasses in activity domain.
 - New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
 - `app/services/__init__.py` now emits DeprecationWarning
 - Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+## PIN-520 Wiring Audit (2026-02-03)
+
+### Discovery Ledger Wiring
+
+**Problem:** Discovery Ledger in `hoc_spine/drivers/ledger.py` had zero callers.
+
+**Solution:** Wired to activity domain via `activity.discovery` operation.
+
+| Component | Layer | Wired To | Purpose |
+|-----------|-------|----------|---------|
+| `emit_signal` | hoc_spine Driver | `activity.discovery` (method=emit_signal) | Record curiosity signals |
+| `get_signals` | hoc_spine Driver | `activity.discovery` (method=get_signals) | Query discovery signals |
+
+**Call Pattern:**
+```
+L2 API → registry.execute("activity.discovery", ctx)
+       → ActivityDiscoveryHandler.execute(ctx)
+       → emit_signal() or get_signals() from hoc_spine/drivers
+       → DiscoverySignal model (ledger.py)
+```
+
+**Semantic Note:** Discovery Ledger records "curiosity, not decisions." Signals are aggregated: same (artifact, field, signal_type) updates `seen_count` instead of creating duplicates.
+
+**Export Path:** `from app.hoc.cus.hoc_spine.drivers import emit_signal, get_signals`
+
+## PIN-519 System Run Introspection (2026-02-03)
+
+### Problem Solved
+
+Three TODOs in `activity_facade.py` returned empty/stub data:
+1. `get_run_evidence()` — returned empty shell
+2. `get_run_proof()` — returned UNKNOWN integrity
+3. Signal feedback in `get_signals()` — `feedback=None`
+
+**Root Cause:** Activity L5 cannot answer cross-domain questions. These require L4 coordinators.
+
+### Solution: L4 Coordinator Delegation
+
+Activity facade now delegates to L4 coordinators for cross-domain queries:
+
+| Facade Method | L4 Coordinator | Cross-Domain Sources |
+|---------------|----------------|---------------------|
+| `get_run_evidence()` | `RunEvidenceCoordinator` | incidents, policies, controls |
+| `get_run_proof()` | `RunProofCoordinator` | logs (traces_store) |
+| `_get_signal_feedback()` | `SignalFeedbackCoordinator` | logs (audit_ledger) |
+
+### Call Pattern
+
+```
+ActivityFacade.get_run_evidence(session, tenant_id, run_id)
+    → get_run_evidence_coordinator()
+    → RunEvidenceCoordinator.get_run_evidence()
+        → IncidentsBridge.incidents_for_run_capability()
+        → PoliciesBridge.policy_evaluations_capability()
+        → ControlsBridge.limit_breaches_capability()
+    → RunEvidenceResult
+```
+
+### Result Types (from run_introspection_protocols.py)
+
+| Type | Fields |
+|------|--------|
+| `RunEvidenceResult` | run_id, incidents_caused, policies_evaluated, limits_hit, decisions_made, computed_at |
+| `RunProofResult` | run_id, integrity, aos_traces, aos_trace_steps, raw_logs, verified_at |
+| `SignalFeedbackResult` | acknowledged, acknowledged_by, acknowledged_at, suppressed, suppressed_until, escalated, escalated_at |
+| `IntegrityVerificationResult` | model, root_hash, chain_length, verification_status, failure_reason |
+
+### Integrity Model
+
+**Phase 1:** HASH_CHAIN — sequential SHA-256 hash of trace steps
+**Future:** MERKLE_TREE — Merkle tree of trace evidence
+
+```python
+INTEGRITY_CONFIG = {
+    "model": "HASH_CHAIN",
+    "trust_boundary": "SYSTEM",
+    "storage": "POSTGRES",
+}
+```
+
+### Red-Line Compliance
+
+- ✅ Activity L5 does not import other domains
+- ✅ Activity L5 does not write data
+- ✅ Activity L5 does not evaluate policy
+- ✅ Activity L5 does not compute integrity (delegated to coordinator)
+- ✅ All cross-domain queries go through L4 coordinators

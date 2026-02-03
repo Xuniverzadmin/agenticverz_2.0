@@ -2,8 +2,8 @@
 
 **Domain:** integrations
 **Generated:** 2026-01-31
-**Updated:** 2026-02-03 (PIN-517 cus_vault Authority Refactor)
-**Reference:** PIN-498, PIN-516, PIN-517
+**Updated:** 2026-02-03 (PIN-521 MCPAuditEmitterPort Protocol)
+**Reference:** PIN-498, PIN-516, PIN-517, PIN-521
 **Total Files:** 59 (18 L5_engines, 2 L5_engines/credentials, 2 L5_vault/engines, 1 L5_vault/drivers, 6 L6_drivers, 23 adapters, 5 L5_schemas, 1 hoc_spine/services, 1 __init__.py)
 
 ---
@@ -633,3 +633,58 @@ Establishes trust zone architecture for credential management. Resolves authorit
 | `TestCredentialReferenceFormat` | 2 | cus-vault:// format parsing, encrypted:// roundtrip |
 
 **Run:** `PYTHONPATH=. python3 -m pytest tests/test_cus_vault_sdk_contract.py -v`
+
+---
+
+## PIN-521 Phase 4: MCPAuditEmitterPort Protocol (2026-02-03)
+
+### mcp_tool_invocation_engine.py Changes
+
+**Purpose:** Enable L5→L5 cross-domain dependency injection for MCP audit events.
+
+**Change:** Replaced direct import of `MCPAuditEmitter` from logs domain with Protocol-based dependency injection.
+
+**Before:**
+```python
+from app.hoc.cus.logs.L5_engines.audit_evidence import (
+    MCPAuditEmitter,
+    get_mcp_audit_emitter,
+)
+
+class McpToolInvocationEngine:
+    def __init__(self, ..., audit_emitter: Optional[MCPAuditEmitter] = None):
+        self._audit_emitter = audit_emitter or get_mcp_audit_emitter()
+```
+
+**After:**
+```python
+from app.hoc.cus.hoc_spine.schemas.protocols import MCPAuditEmitterPort
+
+class McpToolInvocationEngine:
+    def __init__(self, ..., audit_emitter: Optional[MCPAuditEmitterPort] = None):
+        self._audit_emitter = audit_emitter or self._get_default_audit_emitter()
+
+    @staticmethod
+    def _get_default_audit_emitter() -> MCPAuditEmitterPort:
+        """Lazy-load default audit emitter."""
+        from app.hoc.cus.logs.L5_engines.audit_evidence import get_mcp_audit_emitter
+        return get_mcp_audit_emitter()
+```
+
+**Key Points:**
+- Type hint uses `MCPAuditEmitterPort` Protocol from hoc_spine
+- Lazy import avoids top-level cross-domain L5→L5 dependency
+- Production deployments can inject custom implementations via constructor
+- CI allowlist includes this file pending full L4 handler injection
+
+**Protocol Definition (hoc_spine/schemas/protocols.py):**
+```python
+@runtime_checkable
+class MCPAuditEmitterPort(Protocol):
+    async def emit_tool_requested(...) -> Any: ...
+    async def emit_tool_allowed(...) -> Any: ...
+    async def emit_tool_denied(...) -> Any: ...
+    async def emit_tool_started(...) -> Any: ...
+    async def emit_tool_completed(...) -> Any: ...
+    async def emit_tool_failed(...) -> Any: ...
+```

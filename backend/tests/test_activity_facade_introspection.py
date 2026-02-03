@@ -79,7 +79,7 @@ class TestActivityFacadeIntrospection:
         )
 
         with patch(
-            "app.hoc.cus.activity.L5_engines.activity_facade.get_run_evidence_coordinator"
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.run_evidence_coordinator.get_run_evidence_coordinator"
         ) as mock_get_coordinator:
             coordinator = AsyncMock()
             coordinator.get_run_evidence.return_value = mock_result
@@ -140,7 +140,7 @@ class TestActivityFacadeIntrospection:
         )
 
         with patch(
-            "app.hoc.cus.activity.L5_engines.activity_facade.get_run_proof_coordinator"
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.run_proof_coordinator.get_run_proof_coordinator"
         ) as mock_get_coordinator:
             coordinator = AsyncMock()
             coordinator.get_run_proof.return_value = mock_result
@@ -228,7 +228,7 @@ class TestActivityFacadeIntrospection:
         with patch.object(
             facade, "_get_driver", return_value=mock_driver
         ), patch(
-            "app.hoc.cus.activity.L5_engines.activity_facade.get_signal_feedback_coordinator"
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.signal_feedback_coordinator.get_signal_feedback_coordinator"
         ) as mock_get_coordinator:
             coordinator = AsyncMock()
             coordinator.get_signal_feedback.return_value = mock_feedback
@@ -306,7 +306,7 @@ class TestActivityFacadeNoCoordinatorFallback:
         with patch.object(
             facade, "_get_driver", return_value=mock_driver
         ), patch(
-            "app.hoc.cus.activity.L5_engines.activity_facade.get_signal_feedback_coordinator"
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.signal_feedback_coordinator.get_signal_feedback_coordinator"
         ) as mock_get_coordinator:
             # Coordinator raises exception
             coordinator = AsyncMock()

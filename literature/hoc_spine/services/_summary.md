@@ -91,3 +91,35 @@ No violations or missing primitives detected.
 | time.py | _none_ | 0 | 0 |
 | webhook_verify.py | _none_ | 0 | 0 |
 
+---
+
+## PIN-520 Wiring Audit (2026-02-03)
+
+**Services wired and exported from `services/__init__.py`:**
+
+| Service | Purpose | Import Path | Status |
+|---------|---------|-------------|--------|
+| `AlertDeliveryAdapter` | HTTP delivery to Alertmanager | `from app.hoc.cus.hoc_spine.services import AlertDeliveryAdapter` | EXPORTED |
+| `DeliveryResult` | Alert delivery result dataclass | `from app.hoc.cus.hoc_spine.services import DeliveryResult` | EXPORTED |
+| `get_alert_delivery_adapter` | Factory function | `from app.hoc.cus.hoc_spine.services import get_alert_delivery_adapter` | EXPORTED |
+
+**Usage:**
+
+```python
+from app.hoc.cus.hoc_spine.services import get_alert_delivery_adapter
+
+adapter = get_alert_delivery_adapter(alertmanager_url="http://alertmanager:9093", timeout_seconds=30)
+result = await adapter.send_alert(payload)
+await adapter.close()
+```
+
+**Wired Consumer:** `analytics.L5_engines.alert_worker_engine.AlertWorkerEngine`
+
+```python
+from app.hoc.cus.analytics.L5_engines.alert_worker_engine import get_alert_worker
+
+worker = get_alert_worker(alertmanager_url="http://alertmanager:9093")
+stats = await worker.process_batch(batch_size=10)  # PIN-512: No session param, driver manages own session
+# stats = {"processed": 5, "sent": 4, "failed": 0, "retried": 1}
+```
+

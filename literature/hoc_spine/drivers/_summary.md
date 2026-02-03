@@ -74,3 +74,53 @@ Cross-domain DB boundary. Reads/writes across domain tables. Participates in tra
 | transaction_coordinator.py | _none_ | 0 | 0 |
 | worker_write_service_async.py | _none_ | 0 | 0 |
 
+---
+
+## PIN-520 Wiring Audit (2026-02-03)
+
+**Drivers wired and exported from `drivers/__init__.py`:**
+
+| Driver | Purpose | Import Path | Status |
+|--------|---------|-------------|--------|
+| `DiscoverySignal` | Signal data model | `from app.hoc.cus.hoc_spine.drivers import DiscoverySignal` | EXPORTED |
+| `emit_signal` | Record discovery signal | `from app.hoc.cus.hoc_spine.drivers import emit_signal` | EXPORTED |
+| `get_signals` | Query discovery signals | `from app.hoc.cus.hoc_spine.drivers import get_signals` | EXPORTED |
+
+**Usage:**
+
+```python
+from app.hoc.cus.hoc_spine.drivers import emit_signal, get_signals
+
+# Emit a discovery signal
+signal_id = emit_signal(
+    artifact="prediction_events",
+    signal_type="high_operator_access",
+    evidence={"count_7d": 21, "distinct_sessions": 5},
+    detected_by="api_access_monitor",
+    confidence=0.8
+)
+
+# Query signals
+signals = get_signals(artifact="prediction_events", limit=100)
+```
+
+**Wired Consumer:** `activity_handler.ActivityDiscoveryHandler` → `activity.discovery` operation
+
+```python
+# Via operation registry
+result = await registry.execute(
+    operation="activity.discovery",
+    ctx=OperationContext(
+        session=session,
+        tenant_id=tenant_id,
+        params={
+            "method": "emit_signal",
+            "artifact": "prediction_events",
+            "signal_type": "high_operator_access",
+            "evidence": {"count_7d": 21},
+            "detected_by": "api_access_monitor",
+        }
+    )
+)
+```
+

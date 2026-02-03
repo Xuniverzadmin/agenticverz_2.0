@@ -53,7 +53,15 @@ Invariants:
 - EXEC-005: No eligibility or contract mutation
 - EXEC-006: No retry logic
 
-Reference: PIN-294, PIN-292, PART2_CRM_WORKFLOW_CHARTER.md, part2-design-v1
+Classes:
+- JobExecutor: Base executor (synchronous, no coordinator)
+- CoordinatedJobExecutor: Extended executor with ExecutionCoordinator integration
+  - execute_job_with_audit(): Job execution with audit trail
+  - execute_scoped_job(): Job execution within P2FC-4 scope
+  - get_retry_advice(): Advisory retry decisions (caller decides)
+  - track_job_progress(): Progress tracking during execution
+
+Reference: PIN-294, PIN-292, PIN-520, PART2_CRM_WORKFLOW_CHARTER.md
 """
 
 from dataclasses import dataclass
@@ -464,6 +472,314 @@ def create_default_executor() -> JobExecutor:
     Production handlers should be registered separately.
     """
     executor = JobExecutor()
+
+    # Register no-op handlers for common step types
+    noop = NoOpHandler()
+    executor.register_handler("capability_enable", noop)
+    executor.register_handler("capability_disable", noop)
+    executor.register_handler("capability_add", noop)
+    executor.register_handler("capability_remove", noop)
+    executor.register_handler("configuration_change", noop)
+    executor.register_handler("unknown", noop)
+
+    return executor
+
+
+# ==============================================================================
+# EXECUTION COORDINATOR INTEGRATION (PIN-520)
+# ==============================================================================
+
+
+class CoordinatedJobExecutor(JobExecutor):
+    """
+    JobExecutor with ExecutionCoordinator integration.
+
+    Adds optional coordinator capabilities:
+    - Scoped execution with P2FC-4 risk gates
+    - Progress tracking during execution
+    - Audit trail emission (created/completed/failed)
+
+    INVARIANT: Still respects EXEC-006 (no automatic retry).
+    Coordinator.should_retry() is advisory only - caller decides.
+
+    Usage:
+        executor = create_coordinated_executor()
+        result = await executor.execute_job_with_audit(
+            job_id=job_id,
+            tenant_id=tenant_id,
+            contract_id=contract_id,
+            steps=steps,
+            handler="recovery_worker",
+        )
+
+    Reference: PIN-520 Wiring Audit
+    """
+
+    def __init__(
+        self,
+        handlers: Optional[dict[str, StepHandler]] = None,
+        executor_version: str = EXECUTOR_VERSION,
+    ):
+        super().__init__(handlers, executor_version)
+        self._coordinator = None
+
+    def _get_coordinator(self):
+        """Lazy-load ExecutionCoordinator to avoid circular imports."""
+        if self._coordinator is None:
+            from app.hoc.cus.hoc_spine.orchestrator.coordinators import (
+                ExecutionCoordinator,
+            )
+            self._coordinator = ExecutionCoordinator()
+        return self._coordinator
+
+    async def execute_job_with_audit(
+        self,
+        job_id: UUID,
+        tenant_id: str,
+        contract_id: UUID,
+        steps: list[JobStep],
+        handler: str,
+        health_observer: Optional[HealthObserver] = None,
+        executed_by: str = "executor",
+        payload: Optional[dict[str, Any]] = None,
+    ) -> ExecutionResult:
+        """
+        Execute job with audit trail emission.
+
+        Emits audit events:
+        - JOB_CREATED at start
+        - JOB_COMPLETED or JOB_FAILED at end
+
+        Args:
+            job_id: The job being executed
+            tenant_id: Tenant for audit scoping
+            contract_id: The contract this job derives from
+            steps: Ordered list of steps to execute
+            handler: Handler name for audit
+            health_observer: For capturing health state
+            executed_by: Identifier for who/what is executing
+            payload: Optional job payload for audit
+
+        Returns:
+            ExecutionResult with final status and all evidence
+        """
+        coordinator = self._get_coordinator()
+        started_at = datetime.now(timezone.utc)
+
+        # Emit audit: job created
+        await coordinator.emit_audit_created(
+            job_id=str(job_id),
+            tenant_id=tenant_id,
+            handler=handler,
+            payload=payload,
+        )
+
+        # Execute job (synchronous - uses parent class)
+        result = self.execute_job(
+            job_id=job_id,
+            contract_id=contract_id,
+            steps=steps,
+            health_observer=health_observer,
+            executed_by=executed_by,
+        )
+
+        # Calculate duration
+        duration_ms = int((result.completed_at - started_at).total_seconds() * 1000)
+
+        # Emit audit: completed or failed
+        if result.final_status == JobStatus.COMPLETED:
+            await coordinator.emit_audit_completed(
+                job_id=str(job_id),
+                tenant_id=tenant_id,
+                duration_ms=duration_ms,
+                result=execution_result_to_evidence(result),
+            )
+        else:
+            await coordinator.emit_audit_failed(
+                job_id=str(job_id),
+                tenant_id=tenant_id,
+                error=result.final_reason,
+                duration_ms=duration_ms,
+                attempt_number=1,
+            )
+
+        return result
+
+    async def execute_scoped_job(
+        self,
+        job_id: UUID,
+        tenant_id: str,
+        incident_id: str,
+        action: str,
+        contract_id: UUID,
+        steps: list[JobStep],
+        intent: str = "",
+        max_cost_usd: float = 0.50,
+        health_observer: Optional[HealthObserver] = None,
+        executed_by: str = "executor",
+    ) -> tuple[ExecutionResult, dict[str, Any]]:
+        """
+        Execute job within a bound scope (P2FC-4 risk gates).
+
+        Creates a scope before execution and enforces:
+        - Scope exists and is not exhausted/expired
+        - Action matches scope declaration
+        - Incident matches scope binding
+
+        Args:
+            job_id: The job being executed
+            tenant_id: Tenant for scoping
+            incident_id: Incident this scope is tied to
+            action: Action ID permitted within scope
+            contract_id: The contract this job derives from
+            steps: Ordered list of steps to execute
+            intent: Human-readable intent description
+            max_cost_usd: Cost ceiling for scope
+            health_observer: For capturing health state
+            executed_by: Identifier for who/what is executing
+
+        Returns:
+            Tuple of (ExecutionResult, scope_info dict)
+        """
+        coordinator = self._get_coordinator()
+
+        # Create bound scope
+        scope = await coordinator.create_scope(
+            incident_id=incident_id,
+            action=action,
+            intent=intent,
+            max_cost_usd=max_cost_usd,
+            max_attempts=1,
+            ttl_seconds=300,
+            created_by=executed_by,
+        )
+
+        scope_id = scope.get("scope_id")
+        if not scope_id:
+            # Scope creation failed - return failed result
+            return (
+                ExecutionResult(
+                    job_id=job_id,
+                    final_status=JobStatus.FAILED,
+                    final_reason=f"Scope creation failed: {scope}",
+                    steps_executed=0,
+                    steps_succeeded=0,
+                    steps_failed=0,
+                    step_results=(),
+                    health_before=None,
+                    health_after=None,
+                    started_at=datetime.now(timezone.utc),
+                    completed_at=datetime.now(timezone.utc),
+                ),
+                scope,
+            )
+
+        # Execute within scope
+        scope_result = await coordinator.execute_with_scope(
+            scope_id=scope_id,
+            action=action,
+            incident_id=incident_id,
+            parameters={"job_id": str(job_id)},
+        )
+
+        if not scope_result.get("allowed", False):
+            # Scope gate rejected execution
+            return (
+                ExecutionResult(
+                    job_id=job_id,
+                    final_status=JobStatus.FAILED,
+                    final_reason=f"Scope gate rejected: {scope_result.get('reason', 'unknown')}",
+                    steps_executed=0,
+                    steps_succeeded=0,
+                    steps_failed=0,
+                    step_results=(),
+                    health_before=None,
+                    health_after=None,
+                    started_at=datetime.now(timezone.utc),
+                    completed_at=datetime.now(timezone.utc),
+                ),
+                scope_result,
+            )
+
+        # Scope gate passed - execute job
+        result = self.execute_job(
+            job_id=job_id,
+            contract_id=contract_id,
+            steps=steps,
+            health_observer=health_observer,
+            executed_by=executed_by,
+        )
+
+        return result, scope_result
+
+    def get_retry_advice(
+        self,
+        job_id: UUID,
+        error: str,
+        attempt_number: int,
+    ) -> dict[str, Any]:
+        """
+        Get retry advice from coordinator (advisory only).
+
+        EXEC-006 COMPLIANT: This method does NOT retry automatically.
+        It only provides advice - the caller decides whether to retry.
+
+        Args:
+            job_id: Job that failed
+            error: Error message from failure
+            attempt_number: Current attempt number (1-based)
+
+        Returns:
+            Dict with should_retry, delay_seconds, attempt
+        """
+        coordinator = self._get_coordinator()
+        return coordinator.should_retry(
+            job_id=str(job_id),
+            error=error,
+            attempt_number=attempt_number,
+        )
+
+    async def track_job_progress(
+        self,
+        job_id: UUID,
+        percentage: Optional[float] = None,
+        stage: Optional[str] = None,
+        message: Optional[str] = None,
+        current_step: Optional[int] = None,
+    ) -> None:
+        """
+        Update job progress tracking via coordinator.
+
+        Args:
+            job_id: Job being tracked
+            percentage: Completion percentage (0-100)
+            stage: Current stage name
+            message: Optional status message
+            current_step: Current step index
+        """
+        coordinator = self._get_coordinator()
+        await coordinator.track_progress(
+            job_id=str(job_id),
+            percentage=percentage,
+            stage=stage,
+            message=message,
+            current_step=current_step,
+        )
+
+
+def create_coordinated_executor() -> CoordinatedJobExecutor:
+    """
+    Create a CoordinatedJobExecutor with default handlers.
+
+    Includes ExecutionCoordinator integration for:
+    - Scoped execution
+    - Audit trail
+    - Progress tracking
+    - Retry advice
+
+    Reference: PIN-520 Wiring Audit
+    """
+    executor = CoordinatedJobExecutor()
 
     # Register no-op handlers for common step types
     noop = NoOpHandler()

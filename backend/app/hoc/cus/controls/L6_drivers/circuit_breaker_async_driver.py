@@ -63,6 +63,8 @@ Usage:
     await enable_v2(enabled_by="admin", reason="Maintenance complete")
 """
 
+import asyncio
+import concurrent.futures
 import json
 import logging
 import uuid
@@ -73,8 +75,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.hoc.cus.analytics.L5_engines.config_engine import get_config
-from app.hoc.cus.analytics.L5_engines.metrics_engine import get_metrics
+# PIN-521: Import config and metrics from hoc_spine (not L5_engines) per CI compliance
+from app.hoc.cus.hoc_spine.services.costsim_config import get_config
+from app.hoc.cus.hoc_spine.services.costsim_metrics import get_metrics
 from app.db_async import AsyncSessionLocal, async_session_context
 from app.models.costsim_cb import (
     CostSimAlertQueueModel,
@@ -83,6 +86,54 @@ from app.models.costsim_cb import (
 )
 
 logger = logging.getLogger("nova.costsim.circuit_breaker_async")
+
+# ========== Sync Wrapper Utilities (PIN-521) ==========
+# Inlined from cb_sync_wrapper_engine to avoid L6→L5 import violation
+
+_executor: Optional[concurrent.futures.ThreadPoolExecutor] = None
+
+
+def _get_executor() -> concurrent.futures.ThreadPoolExecutor:
+    """Get or create the shared thread pool executor for sync wrappers."""
+    global _executor
+    if _executor is None:
+        _executor = concurrent.futures.ThreadPoolExecutor(max_workers=2, thread_name_prefix="cb_sync_")
+    return _executor
+
+
+def _run_async_in_thread(coro, timeout: float = 5.0):
+    """Run an async coroutine in a separate thread with its own event loop."""
+    def run_in_new_loop():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(coro)
+        finally:
+            loop.close()
+
+    executor = _get_executor()
+    future = executor.submit(run_in_new_loop)
+    return future.result(timeout=timeout)
+
+
+def _is_v2_disabled_sync(timeout: float = 5.0) -> bool:
+    """
+    Sync wrapper for is_v2_disabled().
+
+    Safe to call from any context. Returns False on error to avoid false-positive disables.
+    """
+    try:
+        try:
+            loop = asyncio.get_running_loop()
+            return bool(_run_async_in_thread(is_v2_disabled(), timeout))
+        except RuntimeError:
+            return asyncio.run(is_v2_disabled())
+    except concurrent.futures.TimeoutError:
+        logger.error("_is_v2_disabled_sync timed out, returning False (enabled)")
+        return False
+    except Exception as e:
+        logger.error(f"_is_v2_disabled_sync error: {e}, returning False (enabled)")
+        return False
 
 # Circuit breaker name constant
 CB_NAME = "costsim_v2"
@@ -907,10 +958,9 @@ class AsyncCircuitBreaker:
 
         Uses thread-safe wrapper to run async function from any context.
         Returns False (enabled) on error to avoid false-positive disables.
+        PIN-521: Uses inlined sync wrapper instead of L5 import.
         """
-        from app.hoc.cus.controls.L5_engines.cb_sync_wrapper_engine import is_v2_disabled_sync
-
-        return is_v2_disabled_sync()
+        return _is_v2_disabled_sync()
 
     def is_closed(self) -> bool:
         """Check if circuit breaker is closed."""

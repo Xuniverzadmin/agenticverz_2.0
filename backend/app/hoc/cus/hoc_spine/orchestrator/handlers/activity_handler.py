@@ -14,12 +14,13 @@
 """
 Activity Handler (L4 Orchestrator)
 
-Routes activity domain operations to L5 engines.
-Registers four operations:
+Routes activity domain operations to L5 engines and hoc_spine drivers.
+Registers five operations:
   - activity.query → ActivityFacade (15+ async methods)
   - activity.signal_fingerprint → signal_identity (pure computation)
   - activity.signal_feedback → SignalFeedbackService (feedback operations)
   - activity.telemetry → CusTelemetryEngine (telemetry ingestion/query)
+  - activity.discovery → Discovery Ledger (emit_signal, get_signals) — PIN-520
 """
 
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
@@ -198,9 +199,78 @@ class ActivityTelemetryHandler:
         return OperationResult.ok(data)
 
 
+class ActivityDiscoveryHandler:
+    """
+    Handler for activity.discovery operations.
+
+    Wraps discovery ledger functions (PIN-520):
+      - emit_signal → Record a discovery signal (aggregating duplicates)
+      - get_signals → Query discovery signals from the ledger
+
+    Discovery Ledger records curiosity, not decisions. Signals are
+    aggregated: same (artifact, field, signal_type) updates seen_count.
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.hoc_spine.drivers import emit_signal, get_signals
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail(
+                "Missing 'method' in params", "MISSING_METHOD"
+            )
+
+        kwargs = dict(ctx.params)
+        kwargs.pop("method", None)
+
+        if method_name == "emit_signal":
+            # Required: artifact, signal_type, evidence, detected_by
+            artifact = kwargs.get("artifact")
+            signal_type = kwargs.get("signal_type")
+            evidence = kwargs.get("evidence")
+            detected_by = kwargs.get("detected_by")
+
+            if not artifact:
+                return OperationResult.fail("Missing 'artifact'", "MISSING_ARTIFACT")
+            if not signal_type:
+                return OperationResult.fail("Missing 'signal_type'", "MISSING_SIGNAL_TYPE")
+            if not evidence:
+                return OperationResult.fail("Missing 'evidence'", "MISSING_EVIDENCE")
+            if not detected_by:
+                return OperationResult.fail("Missing 'detected_by'", "MISSING_DETECTED_BY")
+
+            signal_id = emit_signal(
+                artifact=artifact,
+                signal_type=signal_type,
+                evidence=evidence,
+                detected_by=detected_by,
+                field=kwargs.get("field"),
+                confidence=kwargs.get("confidence"),
+                notes=kwargs.get("notes"),
+                phase=kwargs.get("phase"),
+                environment=kwargs.get("environment"),
+            )
+            return OperationResult.ok({"signal_id": str(signal_id) if signal_id else None})
+
+        elif method_name == "get_signals":
+            signals = get_signals(
+                artifact=kwargs.get("artifact"),
+                signal_type=kwargs.get("signal_type"),
+                status=kwargs.get("status"),
+                limit=kwargs.get("limit", 100),
+            )
+            return OperationResult.ok({"signals": signals, "count": len(signals)})
+
+        else:
+            return OperationResult.fail(
+                f"Unknown discovery method: {method_name}", "UNKNOWN_METHOD"
+            )
+
+
 def register(registry: OperationRegistry) -> None:
     """Register activity domain handlers."""
     registry.register("activity.query", ActivityQueryHandler())
     registry.register("activity.signal_fingerprint", ActivitySignalFingerprintHandler())
     registry.register("activity.signal_feedback", ActivitySignalFeedbackHandler())
     registry.register("activity.telemetry", ActivityTelemetryHandler())
+    registry.register("activity.discovery", ActivityDiscoveryHandler())  # PIN-520: Discovery ledger

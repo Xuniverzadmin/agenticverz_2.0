@@ -1072,3 +1072,33 @@ Documents:
 **Canonical import:** `from app.hoc.cus.policies.L5_engines.intent import IntentEmitter`
 
 Reference: `docs/memory-pins/PIN-514-runtime-convergence.md`, `docs/memory-pins/PIN-515-production-wiring-contract.md`
+
+## PIN-519 System Run Introspection (2026-02-03)
+
+### New L6 Driver: policy_enforcement_driver.py
+
+**Purpose:** Read-only async queries for policy enforcement records associated with runs.
+
+| Method | Purpose |
+|--------|---------|
+| `fetch_policy_evaluations_for_run(tenant_id, run_id, max_results)` | Fetch all policy evaluations for a run |
+| `fetch_enforcement_by_id(tenant_id, enforcement_id)` | Fetch single enforcement record |
+
+**Returns:** List of enforcement records with rule details (enforcement_id, rule_id, action_taken, triggered_at, details, rule_name, rule_type, severity)
+
+**Factory:** `get_policy_enforcement_read_driver(session)`
+
+### PoliciesBridge Extension
+
+**New Capability:**
+
+| Capability | Purpose | Consumer |
+|------------|---------|----------|
+| `policy_evaluations_capability(session)` | Returns PolicyEnforcementReadDriver for run-scoped queries | RunEvidenceCoordinator |
+
+**Usage:**
+```python
+policies_bridge = get_policies_bridge()
+reader = policies_bridge.policy_evaluations_capability(session)
+evaluations = await reader.fetch_policy_evaluations_for_run(tenant_id, run_id)
+```

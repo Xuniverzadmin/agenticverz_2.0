@@ -44,13 +44,13 @@ class TestRunEvidenceCoordinator:
         tenant_id = "tenant-123"
         run_id = "run-456"
 
-        # Mock bridge capabilities
+        # Mock bridge capabilities (patch at source, not lazy import site)
         with patch(
-            "app.hoc.cus.hoc_spine.orchestrator.coordinators.run_evidence_coordinator.get_incidents_bridge"
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.incidents_bridge.get_incidents_bridge"
         ) as mock_incidents, patch(
-            "app.hoc.cus.hoc_spine.orchestrator.coordinators.run_evidence_coordinator.get_policies_bridge"
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.policies_bridge.get_policies_bridge"
         ) as mock_policies, patch(
-            "app.hoc.cus.hoc_spine.orchestrator.coordinators.run_evidence_coordinator.get_controls_bridge"
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.controls_bridge.get_controls_bridge"
         ) as mock_controls:
             # Setup mock incident reader
             incident_reader = MagicMock()
@@ -102,11 +102,11 @@ class TestRunEvidenceCoordinator:
         session = AsyncMock()
 
         with patch(
-            "app.hoc.cus.hoc_spine.orchestrator.coordinators.run_evidence_coordinator.get_incidents_bridge"
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.incidents_bridge.get_incidents_bridge"
         ) as mock_incidents, patch(
-            "app.hoc.cus.hoc_spine.orchestrator.coordinators.run_evidence_coordinator.get_policies_bridge"
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.policies_bridge.get_policies_bridge"
         ) as mock_policies, patch(
-            "app.hoc.cus.hoc_spine.orchestrator.coordinators.run_evidence_coordinator.get_controls_bridge"
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.controls_bridge.get_controls_bridge"
         ) as mock_controls:
             # All bridges return empty
             incident_reader = MagicMock()
@@ -159,7 +159,7 @@ class TestRunProofCoordinator:
         mock_trace.steps = [mock_step]
 
         with patch(
-            "app.hoc.cus.hoc_spine.orchestrator.coordinators.run_proof_coordinator.get_logs_bridge"
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.logs_bridge.get_logs_bridge"
         ) as mock_bridge:
             trace_store = AsyncMock()
             trace_store.get_trace.return_value = mock_trace
@@ -184,7 +184,7 @@ class TestRunProofCoordinator:
         session = AsyncMock()
 
         with patch(
-            "app.hoc.cus.hoc_spine.orchestrator.coordinators.run_proof_coordinator.get_logs_bridge"
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.logs_bridge.get_logs_bridge"
         ) as mock_bridge:
             trace_store = AsyncMock()
             trace_store.get_trace.return_value = None
@@ -214,7 +214,7 @@ class TestRunProofCoordinator:
         mock_trace.steps = []
 
         with patch(
-            "app.hoc.cus.hoc_spine.orchestrator.coordinators.run_proof_coordinator.get_logs_bridge"
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.logs_bridge.get_logs_bridge"
         ) as mock_bridge:
             trace_store = AsyncMock()
             trace_store.get_trace.return_value = mock_trace
@@ -240,7 +240,7 @@ class TestSignalFeedbackCoordinator:
         session = AsyncMock()
 
         with patch(
-            "app.hoc.cus.hoc_spine.orchestrator.coordinators.signal_feedback_coordinator.get_logs_bridge"
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.logs_bridge.get_logs_bridge"
         ) as mock_bridge:
             reader = AsyncMock()
             reader.get_signal_feedback.return_value = {
@@ -274,7 +274,7 @@ class TestSignalFeedbackCoordinator:
         session = AsyncMock()
 
         with patch(
-            "app.hoc.cus.hoc_spine.orchestrator.coordinators.signal_feedback_coordinator.get_logs_bridge"
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.logs_bridge.get_logs_bridge"
         ) as mock_bridge:
             reader = AsyncMock()
             reader.get_signal_feedback.return_value = None
