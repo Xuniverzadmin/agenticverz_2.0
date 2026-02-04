@@ -496,6 +496,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-512](PIN-512-pin-514-boundary-severance-items-1-5-cleanup.md) | **PIN-514: Boundary Severance — Items 1-5 Cleanup** | Architecture | **✅ COMPLETE** | 2026-02-02 |
 | [PIN-522](PIN-522-pin-522-auth-subdomain-migration-complete.md) | **PIN-522: Auth Subdomain Migration Complete** | Architecture | **✅ COMPLETE** | 2026-02-04 |
 | [PIN-523](PIN-523-pin-523-phase-2-blocking-todo-wiring-complete.md) | **PIN-523 Phase 2 BLOCKING TODO Wiring Complete** | HOC Migration | **✅ COMPLETE** | 2026-02-04 |
+| [PIN-524](PIN-524-pin-524-phase-3-legacy-import-deprecation-complete.md) | **PIN-524 Phase 3 Legacy Import Deprecation Complete** | HOC Migration | **✅ COMPLETE** | 2026-02-04 |
 
 ---
 
@@ -1265,6 +1266,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-04 | **PIN-524 PIN-524 Phase 3 Legacy Import Deprecation Complete** - Created via memory_trail. |
 | 2026-02-04 | **PIN-523 PIN-523 Phase 2 BLOCKING TODO Wiring Complete** - Created via memory_trail. |
 | 2026-02-04 | **PIN-522 PIN-522: Auth Subdomain Migration Complete** - Created via memory_trail. |
 | 2026-02-02 | **PIN-512 PIN-514: Boundary Severance — Items 1-5 Cleanup** - Updated: Category B Stub Rewiring (Phase 1) |
