@@ -1843,3 +1843,93 @@ These are shared infrastructure similar to L7 models. HOC may continue importing
 ### Remaining Legacy Imports (Acceptable per Shared Infrastructure)
 
 HOC files still import from `app.policy.compiler.*`, `app.policy.ir.*`, `app.policy.ast.*`, `app.policy.models`, and `app.policy.optimizer.*`. These are shared infrastructure and acceptable per PIN-511 (similar to L7 imports).
+
+---
+
+## Phase 4: PolicyEnforcementWriteDriver (2026-02-04)
+
+### Overview
+
+The TODO audit (PIN-524) identified a mismatch where the original reference to "ledger.py `record_outcome()` TransactionCoordinator" actually pointed to a missing write path for policy enforcement outcomes. The `PolicyEnforcement` model existed, and `PolicyEnforcementReadDriver` existed, but nothing ever wrote to the `policy_enforcements` table.
+
+### Gap Analysis
+
+| Component | Status Before | Status After |
+|-----------|---------------|--------------|
+| `PolicyEnforcement` model | ✅ Exists (`policy_control_plane.py:244`) | ✅ Unchanged |
+| `PolicyEnforcementReadDriver` | ✅ Exists (`policy_enforcement_driver.py`) | ✅ Unchanged |
+| `PolicyEnforcementWriteDriver` | ❌ **Missing** | ✅ Created |
+| `trigger_count_30d` derivations | ❌ No data source | ✅ Data populated |
+| `last_triggered_at` derivations | ❌ Always empty | ✅ Data populated |
+
+### Files Created
+
+| File | Layer | Purpose |
+|------|-------|---------|
+| `policies/L6_drivers/policy_enforcement_write_driver.py` | L6 | Write driver for enforcement records |
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `policies/L6_drivers/__init__.py` | Export new driver |
+| `int/general/drivers/step_enforcement.py` | Wire recording into enforcement halt |
+
+### API
+
+```python
+# Class-based (within existing session, caller owns commit)
+driver = PolicyEnforcementWriteDriver(session)
+await driver.record_enforcement(
+    tenant_id="tenant_123",
+    rule_id="rule_456",
+    action_taken="BLOCKED",  # BLOCKED, WARNED, AUDITED, STOPPED, KILLED
+    run_id="run_789",
+    details={"reason": "Budget exceeded"}
+)
+
+# Standalone (fire-and-forget, creates own session)
+from app.hoc.cus.policies.L6_drivers import record_enforcement_standalone
+await record_enforcement_standalone(
+    tenant_id="tenant_123",
+    rule_id="rule_456",
+    action_taken="STOPPED",
+    run_id="run_789",
+)
+```
+
+### Wiring
+
+When `step_enforcement.py` triggers a STOP/KILL/ABORT/BLOCK action:
+
+```
+enforce_before_step_completion()
+    ↓ (if action in STOP/KILL/ABORT/BLOCK)
+_record_enforcement_outcome()
+    ↓
+record_enforcement_standalone()
+    ↓
+INSERT INTO policy_enforcements (tenant_id, rule_id, run_id, action_taken, details, triggered_at)
+```
+
+### Design Decisions
+
+1. **Fail-safe recording:** Recording failures are logged but never block enforcement. The system must halt runs even if DB write fails.
+
+2. **Async from sync context:** `_record_enforcement_outcome()` uses `asyncio.run()` or `loop.create_task()` depending on whether an event loop is already running.
+
+3. **Append-only:** Following PIN-412 invariant, the driver only supports INSERT operations. No UPDATE or DELETE.
+
+4. **Session ownership:** When using `PolicyEnforcementWriteDriver` directly, caller owns the transaction. `record_enforcement_standalone()` creates and commits its own session.
+
+### Commit
+
+```
+3f3d2f38 feat(hoc): add PolicyEnforcementWriteDriver for recording enforcement outcomes
+```
+
+### Reference
+
+- PIN-525: PolicyEnforcementWriteDriver Implementation
+- PIN-412: Policy Enforcement Append-Only History
+- GAP-016: Step Enforcement Single Choke Point
