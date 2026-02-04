@@ -71,7 +71,7 @@ class PolicyDriver:
     def _engine(self):
         """Lazy-load policy engine."""
         if self._policy_engine is None:
-            from app.policy.engine import PolicyEngine
+            from app.hoc.cus.policies.L5_engines.engine import PolicyEngine
             self._policy_engine = PolicyEngine(database_url=self._db_url)
         return self._policy_engine
 

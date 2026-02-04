@@ -482,15 +482,95 @@ def create_policy_snapshot_for_run(
         from app.db import engine
         from app.models.policy_snapshot import PolicySnapshot
 
-        # TODO: Load actual policies from policy engine
-        # For now, use default thresholds
+        # Load actual policies from PolicyDriver (GAP-001)
         policies: list[dict[str, Any]] = []
         thresholds = {
+            # Default thresholds (fallback if not loaded from driver)
             "max_tokens_per_run": 100000,  # 100K tokens per run
             "max_cost_cents_per_run": 1000,  # $10 per run
             "max_tokens_per_step": 10000,  # 10K tokens per step
             "max_cost_cents_per_step": 100,  # $1 per step
         }
+
+        try:
+            from app.hoc.cus.policies.L5_engines.policy_driver import get_policy_driver
+            import asyncio
+
+            driver = get_policy_driver()
+
+            async def _load_policies():
+                """Load policies and risk ceilings from driver."""
+                loaded_policies = []
+                loaded_thresholds = thresholds.copy()
+
+                # Load safety rules as policies
+                safety_rules = await driver.get_safety_rules(
+                    db=None,
+                    tenant_id=tenant_id,
+                    include_inactive=False,
+                )
+                if safety_rules:
+                    for rule in safety_rules:
+                        if hasattr(rule, 'to_dict'):
+                            loaded_policies.append(rule.to_dict())
+                        elif isinstance(rule, dict):
+                            loaded_policies.append(rule)
+                        else:
+                            loaded_policies.append({
+                                "id": getattr(rule, 'id', None),
+                                "name": getattr(rule, 'name', None),
+                                "type": getattr(rule, 'rule_type', 'safety'),
+                                "active": getattr(rule, 'is_active', True),
+                            })
+
+                # Load risk ceilings as thresholds
+                risk_ceilings = await driver.get_risk_ceilings(
+                    db=None,
+                    tenant_id=tenant_id,
+                    include_inactive=False,
+                )
+                if risk_ceilings:
+                    for ceiling in risk_ceilings:
+                        ceiling_name = getattr(ceiling, 'name', None) or ceiling.get('name', '') if isinstance(ceiling, dict) else ''
+                        ceiling_value = getattr(ceiling, 'max_value', None) or ceiling.get('max_value') if isinstance(ceiling, dict) else None
+
+                        if ceiling_name and ceiling_value is not None:
+                            # Map ceiling names to threshold keys
+                            if 'token' in ceiling_name.lower() and 'run' in ceiling_name.lower():
+                                loaded_thresholds["max_tokens_per_run"] = int(ceiling_value)
+                            elif 'cost' in ceiling_name.lower() and 'run' in ceiling_name.lower():
+                                loaded_thresholds["max_cost_cents_per_run"] = int(ceiling_value)
+                            elif 'token' in ceiling_name.lower() and 'step' in ceiling_name.lower():
+                                loaded_thresholds["max_tokens_per_step"] = int(ceiling_value)
+                            elif 'cost' in ceiling_name.lower() and 'step' in ceiling_name.lower():
+                                loaded_thresholds["max_cost_cents_per_step"] = int(ceiling_value)
+
+                return loaded_policies, loaded_thresholds
+
+            try:
+                # Try to get existing loop
+                asyncio.get_running_loop()
+                # Already in async context - can't use asyncio.run
+                # Use default thresholds
+                logger.debug("create_policy_snapshot called from async context - using defaults")
+            except RuntimeError:
+                # No running loop - safe to create one
+                policies, thresholds = asyncio.run(_load_policies())
+                logger.info(
+                    "policy_snapshot_policies_loaded",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "policy_count": len(policies),
+                        "thresholds": thresholds,
+                    },
+                )
+
+        except Exception as e:
+            logger.warning(
+                "policy_snapshot_load_from_driver_failed",
+                extra={"tenant_id": tenant_id, "error": str(e)},
+            )
+            # Use default thresholds on error
 
         snapshot = PolicySnapshot.create_snapshot(
             tenant_id=tenant_id,

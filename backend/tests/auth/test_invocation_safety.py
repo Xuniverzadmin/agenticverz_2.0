@@ -23,7 +23,7 @@ Coverage:
 - Metrics and audit emission
 """
 
-from app.auth.invocation_safety import (
+from app.hoc.cus.account.auth.L5_engines.invocation_safety import (
     CLISafetyHook,
     InvocationSafetyContext,
     InvocationSafetyResult,

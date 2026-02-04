@@ -409,9 +409,80 @@ class MCPPolicyMapper:
         server_id: str,
         tool_name: str,
     ) -> bool:
-        """Check if tenant has explicit allow for dangerous tool."""
-        # TODO: Implement explicit allow check against policy store
-        return False
+        """
+        Check if tenant has explicit allow for dangerous tool.
+
+        Wired to PolicyDriver to check safety rules for explicit allows.
+        GAP-087: Dangerous tools require explicit allow policy.
+        """
+        try:
+            from app.hoc.cus.policies.L5_engines.policy_driver import get_policy_driver
+
+            driver = get_policy_driver()
+
+            # Get safety rules for the tenant
+            # Note: db=None will use driver's internal session management
+            safety_rules = await driver.get_safety_rules(
+                db=None,
+                tenant_id=tenant_id,
+                include_inactive=False,
+            )
+
+            if not safety_rules:
+                logger.debug(
+                    "mcp_policy.no_safety_rules",
+                    extra={"tenant_id": tenant_id},
+                )
+                return False
+
+            # Check for explicit allow rule for this tool
+            tool_resource = f"mcp:{server_id}:{tool_name}"
+            for rule in safety_rules:
+                rule_name = getattr(rule, 'name', None) or rule.get('name', '') if isinstance(rule, dict) else ''
+                rule_resource = getattr(rule, 'resource', None) or rule.get('resource', '') if isinstance(rule, dict) else ''
+                rule_action = getattr(rule, 'action', None) or rule.get('action', '') if isinstance(rule, dict) else ''
+
+                # Check if rule explicitly allows this tool
+                if rule_resource == tool_resource and rule_action.upper() == 'ALLOW':
+                    logger.info(
+                        "mcp_policy.explicit_allow_found",
+                        extra={
+                            "tenant_id": tenant_id,
+                            "tool": tool_resource,
+                            "rule_name": rule_name,
+                        },
+                    )
+                    return True
+
+                # Also check for wildcard allows (e.g., mcp:server_id:*)
+                if rule_resource == f"mcp:{server_id}:*" and rule_action.upper() == 'ALLOW':
+                    logger.info(
+                        "mcp_policy.wildcard_allow_found",
+                        extra={
+                            "tenant_id": tenant_id,
+                            "tool": tool_resource,
+                            "rule_name": rule_name,
+                        },
+                    )
+                    return True
+
+            logger.debug(
+                "mcp_policy.no_explicit_allow",
+                extra={
+                    "tenant_id": tenant_id,
+                    "tool": tool_resource,
+                    "rules_checked": len(safety_rules),
+                },
+            )
+            return False
+
+        except Exception as e:
+            logger.warning(
+                "mcp_policy.explicit_allow_check_failed",
+                extra={"error": str(e), "tenant_id": tenant_id},
+            )
+            # Fail-closed: no explicit allow on error
+            return False
 
     async def _check_rate_limit(
         self,
@@ -419,14 +490,91 @@ class MCPPolicyMapper:
         tool_key: str,
         max_per_minute: int,
     ) -> bool:
-        """Check if rate limit exceeded."""
-        # TODO: Implement rate limiting with Redis
-        # Log rate limit check for debugging until implemented
-        logger.debug(
-            f"Rate limit check (stub): tenant={tenant_id}, tool={tool_key}, "
-            f"limit={max_per_minute}/min"
-        )
-        return False
+        """
+        Check if rate limit exceeded using Redis sliding window.
+
+        GAP-087: MCP tool invocations are rate limited per tenant.
+
+        Args:
+            tenant_id: Tenant ID
+            tool_key: Tool key (server_id:tool_name)
+            max_per_minute: Maximum calls per minute
+
+        Returns:
+            True if rate limit exceeded, False otherwise
+        """
+        import os
+        import time
+
+        redis_url = os.getenv("REDIS_URL")
+        if not redis_url:
+            # No Redis configured - fail open (allow)
+            logger.debug(
+                "mcp_policy.rate_limit_no_redis",
+                extra={"tenant_id": tenant_id, "tool_key": tool_key},
+            )
+            return False
+
+        try:
+            import redis
+
+            # Use a connection pool for efficiency
+            if not hasattr(self, '_redis_client') or self._redis_client is None:
+                self._redis_client = redis.from_url(redis_url, decode_responses=True)
+
+            # Sliding window rate limit key
+            rate_key = f"mcp:rate:{tenant_id}:{tool_key}"
+            current_time = time.time()
+            window_start = current_time - 60  # 1 minute window
+
+            # Use Redis sorted set for sliding window
+            pipe = self._redis_client.pipeline()
+
+            # Remove expired entries
+            pipe.zremrangebyscore(rate_key, 0, window_start)
+
+            # Count current window entries
+            pipe.zcard(rate_key)
+
+            # Add current request (will be executed atomically)
+            pipe.zadd(rate_key, {str(current_time): current_time})
+
+            # Set expiry on the key (2 minutes to account for clock skew)
+            pipe.expire(rate_key, 120)
+
+            results = pipe.execute()
+            current_count = results[1]  # zcard result
+
+            if current_count >= max_per_minute:
+                logger.warning(
+                    "mcp_policy.rate_limit_exceeded",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "tool_key": tool_key,
+                        "current_count": current_count,
+                        "limit": max_per_minute,
+                    },
+                )
+                return True
+
+            logger.debug(
+                "mcp_policy.rate_limit_ok",
+                extra={
+                    "tenant_id": tenant_id,
+                    "tool_key": tool_key,
+                    "current_count": current_count,
+                    "limit": max_per_minute,
+                },
+            )
+            return False
+
+        except Exception as e:
+            logger.warning(
+                "mcp_policy.rate_limit_check_failed",
+                extra={"error": str(e), "tenant_id": tenant_id},
+            )
+            # Fail-open: allow on Redis errors to prevent service disruption
+            return False
 
     def _get_policy_engine(self) -> Optional[Any]:
         """Get policy engine (lazy initialization)."""

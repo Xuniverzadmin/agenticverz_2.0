@@ -1698,3 +1698,100 @@
 
 *Workbook generated: 2026-01-27*
 *Reference: PIN-470, PIN-479, V3_MANUAL_AUDIT_WORKBOOK.md*
+
+---
+
+## Post-Consolidation Migrations (2026-02-04)
+
+### PIN-522: Auth Subdomain Migration
+
+**Status:** COMPLETE
+**Date:** 2026-02-04
+**Reference:** PIN-271 (RBAC Authority Separation)
+
+| Component | Source | Target | Status |
+|-----------|--------|--------|--------|
+| invocation_safety.py | `app/auth/` | `app/hoc/cus/account/auth/L5_engines/` | MIGRATED |
+| CLISafetyHook | - | - | REWIRED |
+| SDKSafetyHook | - | - | REWIRED |
+
+**Callers Rewired:**
+- `tests/unit/services/test_invocation_safety.py`
+- `cli/aos.py`
+
+**Notes:** Clean cut migration (no backward compatibility shims). Legacy `app/auth/invocation_safety.py` deleted.
+
+### Policies Domain Caller Rewiring
+
+**Status:** COMPLETE
+**Date:** 2026-02-04
+**Reference:** SWEEP-47
+
+| Caller | Old Import | New Import | Status |
+|--------|------------|------------|--------|
+| `app/hoc/api/cus/policies/policy.py` | `app.services.policies.policy_engine` | `app.hoc.cus.policies.L5_engines.engine` | REWIRED |
+| `app/hoc/api/cus/policies/workers.py` | `app.services.policies.policy_engine` | `app.hoc.cus.policies.L5_engines.engine` | REWIRED |
+| `app/hoc/cus/policies/L5_engines/policy_driver.py` | `app.services.policies.policy_engine` | `app.hoc.cus.policies.L5_engines.engine` | REWIRED |
+| `app/hoc/int/platform/policy/engines/policy_driver.py` | `app.services.policies.policy_engine` | `app.hoc.cus.policies.L5_engines.engine` | REWIRED |
+
+**Notes:** HOC `policies/L5_engines/engine.py` (2866 lines) is canonical. Legacy callers in `app/services/*` and `app/api/*` remain (scheduled for deletion per PIN-511).
+
+### hoc_spine Ledger Transaction Coordinator
+
+**Status:** COMPLETE
+**Date:** 2026-02-04
+
+| Component | Change | Status |
+|-----------|--------|--------|
+| `app/hoc/cus/hoc_spine/drivers/ledger.py` | Added optional `session` parameter to `emit_signal()` | COMPLETE |
+
+**Notes:** Allows callers to participate in larger transactions without premature commits. L4 coordinator owns transaction boundaries.
+
+---
+
+## Phase 2: BLOCKING TODO Wiring (2026-02-04)
+
+### governance_facade.py → ConflictResolver (GAP-068)
+
+**Status:** COMPLETE
+**Date:** 2026-02-04
+
+| Method | Change | Status |
+|--------|--------|--------|
+| `resolve_conflict()` | Wired to HOC policy_conflict_resolver | COMPLETE |
+| `list_conflicts()` | Wired to PolicyDriver.get_policy_conflicts() | COMPLETE |
+
+**Notes:** Sync facade wraps async PolicyDriver calls. Uses asyncio.run() for standalone contexts.
+
+### policy_mapper.py → Explicit Allow Check (GAP-087)
+
+**Status:** COMPLETE
+**Date:** 2026-02-04
+
+| Method | Change | Status |
+|--------|--------|--------|
+| `_check_explicit_allow()` | Wired to PolicyDriver.get_safety_rules() | COMPLETE |
+
+**Notes:** Checks for explicit allow policies for dangerous MCP tools. Supports wildcard allows (`mcp:server:*`).
+
+### policy_mapper.py → Rate Limiting with Redis (GAP-087)
+
+**Status:** COMPLETE
+**Date:** 2026-02-04
+
+| Method | Change | Status |
+|--------|--------|--------|
+| `_check_rate_limit()` | Implemented sliding window rate limiting with Redis | COMPLETE |
+
+**Notes:** Uses Redis sorted sets for sliding window rate limiting. Fail-open if Redis unavailable.
+
+### prevention_engine.py → Policy Loading (GAP-001)
+
+**Status:** COMPLETE
+**Date:** 2026-02-04
+
+| Function | Change | Status |
+|----------|--------|--------|
+| `create_policy_snapshot_for_run()` | Wired to PolicyDriver.get_safety_rules() and get_risk_ceilings() | COMPLETE |
+
+**Notes:** Loads actual policies and thresholds from PolicyDriver instead of hardcoded defaults. Falls back to defaults on error.

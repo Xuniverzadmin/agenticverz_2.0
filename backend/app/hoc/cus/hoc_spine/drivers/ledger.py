@@ -67,6 +67,8 @@ def emit_signal(
     notes: Optional[str] = None,
     phase: Optional[str] = None,
     environment: Optional[str] = None,
+    *,
+    session: Optional[Any] = None,
 ) -> Optional[UUID]:
     """
     Record a discovery signal to the ledger.
@@ -84,11 +86,18 @@ def emit_signal(
         notes: Optional notes
         phase: Current phase (defaults to env var or "C")
         environment: Environment (defaults to env var or "local")
+        session: Optional SQLModel session. If provided, caller owns commit.
+                 If None, creates standalone connection and commits.
 
     Returns:
         UUID of the signal record, or None if recording failed
 
+    Transaction Semantics:
+        - If session is provided: Uses session, does NOT commit (caller owns transaction)
+        - If session is None: Creates connection and commits (standalone operation)
+
     Example:
+        # Standalone (commits immediately)
         emit_signal(
             artifact="prediction_events",
             signal_type="high_operator_access",
@@ -96,6 +105,12 @@ def emit_signal(
             detected_by="api_access_monitor",
             confidence=0.8
         )
+
+        # Within transaction (caller commits)
+        with Session(engine) as session:
+            emit_signal(..., session=session)
+            # other operations
+            session.commit()  # Caller owns commit
     """
     # Get phase and environment from env if not provided
     if phase is None:
@@ -169,13 +184,24 @@ def emit_signal(
             "notes": notes,
         }
 
-        with engine.connect() as conn:
-            result = conn.execute(upsert_sql, params)
-            conn.commit()  # VIOLATION: TODO(L1) migrate to transaction_coordinator session
+        # If session provided, use it (caller owns commit)
+        # Otherwise, create connection and commit (standalone)
+        if session is not None:
+            result = session.execute(upsert_sql, params)
+            session.flush()  # Flush to get RETURNING value, but don't commit
             row = result.fetchone()
             if row:
                 return row[0]
             return None
+        else:
+            # Standalone operation - create connection and commit
+            with engine.connect() as conn:
+                result = conn.execute(upsert_sql, params)
+                conn.commit()
+                row = result.fetchone()
+                if row:
+                    return row[0]
+                return None
 
     except SQLAlchemyError as e:
         # Non-blocking: log and continue

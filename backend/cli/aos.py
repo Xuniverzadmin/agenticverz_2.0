@@ -46,8 +46,8 @@ DEFAULT_API_URL = "http://127.0.0.1:8000"
 # Mode: OBSERVE_WARN (v1) - logs warnings, only blocks on plan injection
 
 try:
-    # When running as installed module
-    from app.auth.invocation_safety import (
+    # Canonical import from HOC account/auth domain
+    from app.hoc.cus.account.auth.L5_engines.invocation_safety import (
         CLISafetyHook,
         InvocationSafetyContext,
         cli_safety_hook,
@@ -57,9 +57,9 @@ try:
     SAFETY_LAYER_AVAILABLE = True
 except ImportError:
     try:
-        # When running from source
+        # When running from source - add path and retry
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        from app.auth.invocation_safety import (
+        from app.hoc.cus.account.auth.L5_engines.invocation_safety import (
             CLISafetyHook,
             InvocationSafetyContext,
             cli_safety_hook,

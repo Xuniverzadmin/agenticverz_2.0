@@ -1,13 +1,13 @@
-# Layer: L4 — Domain Engines
+# Layer: L5 — Domain Engine
 # Product: system-wide
+# AUDIENCE: INTERNAL
 # Temporal:
 #   Trigger: api | cli | sdk
 #   Execution: sync
 # Role: Invocation Safety Layer for CAP-020 (CLI) and CAP-021 (SDK)
 # Callers: CLI dispatcher, SDK wrappers
-# Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2
-# Reference: PIN-332
+# Reference: PIN-332, PIN-522
+
 
 """
 Invocation Safety Layer - PIN-332 Invocation Safety Closure

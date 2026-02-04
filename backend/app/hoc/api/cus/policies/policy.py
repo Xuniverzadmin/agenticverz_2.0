@@ -1947,7 +1947,7 @@ async def get_policy_violations_v2(
     ctx: TenantContext = Depends(get_tenant_context),
 ) -> ViolationsResponse:
     """V2 Facade: What enforcement occurred?"""
-    from app.policy.engine import get_policy_engine
+    from app.hoc.cus.policies.L5_engines.engine import get_policy_engine
 
     try:
         engine = get_policy_engine()
@@ -2023,7 +2023,7 @@ async def get_policy_violation_detail(
     ctx: TenantContext = Depends(get_tenant_context),
 ) -> dict:
     """V2 Facade: Violation detail for cross-domain navigation."""
-    from app.policy.engine import get_policy_engine
+    from app.hoc.cus.policies.L5_engines.engine import get_policy_engine
 
     try:
         engine = get_policy_engine()
