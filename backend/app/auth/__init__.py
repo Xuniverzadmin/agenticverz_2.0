@@ -91,6 +91,16 @@ from .shadow_audit import (
     shadow_audit,
 )
 
+# =============================================================================
+# PIN-271 Auth Migration (2026-02-04)
+# =============================================================================
+# RBAC Engine and Identity Adapter moved to canonical location:
+#   from app.hoc.cus.account.auth import RBACEngine, ClerkAdapter, ...
+#
+# Old paths DELETED (no shims):
+#   - app.auth.rbac_engine (DELETED)
+#   - app.auth.identity_adapter (DELETED)
+
 # STUB AUTHENTICATION REMOVED
 # Reference: AUTH_DESIGN.md (AUTH-HUMAN-004)
 # Stub tokens are not valid in any environment.

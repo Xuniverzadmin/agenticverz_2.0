@@ -3,7 +3,7 @@
 **Domain:** account
 **Generated:** 2026-01-31
 **Reference:** PIN-500
-**Total Files:** 16 (10 L5_engines, 1 L5_schemas, 4 L6_drivers, 1 __init__.py)
+**Total Files:** 21 (13 L5_engines, 1 L5_schemas, 4 L6_drivers, 3 __init__.py)
 
 ---
 
@@ -180,3 +180,52 @@ Domain has zero `app.services` imports (active or docstring) and zero `cus.gener
 - New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
 - `app/services/__init__.py` now emits DeprecationWarning
 - Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+---
+
+## PIN-271 Auth Subdomain Migration (2026-02-04)
+
+### New Subdomain: `auth/`
+
+Created `hoc/cus/account/auth/` subdomain to consolidate authentication and authorization components per PIN-271 (RBAC Authority Separation).
+
+**Structure:**
+```
+account/auth/
+├── __init__.py              # Subdomain package, re-exports all auth components
+├── L5_engines/
+│   ├── __init__.py          # L5 engines package
+│   ├── rbac_engine.py       # RBAC authorization engine (M7 Legacy)
+│   └── identity_adapter.py  # Identity extraction adapters
+└── L6_drivers/
+    └── __init__.py          # Placeholder for future auth drivers
+```
+
+### L5_engines/rbac_engine.py
+- **Role:** RBAC authorization engine with policy evaluation (M7 Legacy)
+- **Classes:** `RBACEngine`, `PolicyObject`, `Decision`, `PolicyConfig`
+- **Functions:** `get_rbac_engine()`, `init_rbac_engine()`, `check_permission()`, `require_permission()`, `get_policy_for_path()`
+- **Role Mapping:** `map_external_role_to_aos()`, `map_external_roles_to_aos()`, `get_role_approval_level()`, `get_max_approval_level()`
+- **Note:** M7 LEGACY — new code should use M28 `authorization.py`
+
+### L5_engines/identity_adapter.py
+- **Role:** Extract identity from requests, produce ActorContext
+- **Classes:** `IdentityAdapter` (ABC), `ClerkAdapter`, `SystemIdentityAdapter`, `DevIdentityAdapter`
+- **Exception:** `AuthenticationError`
+- **Callers:** `IdentityChain`, API middleware
+
+### Import Path Migration (Clean Cut)
+
+Old paths **DELETED** (no shims, no backward compat):
+
+| Component | Canonical Path | Old Path (DELETED) |
+|-----------|----------------|-------------------|
+| RBAC Engine | `app.hoc.cus.account.auth` | ~~`app.auth.rbac_engine`~~ |
+| Identity Adapters | `app.hoc.cus.account.auth` | ~~`app.auth.identity_adapter`~~ |
+
+### Files Deleted (Orphans)
+- `hoc/int/policies/engines/rbac_engine.py` (orphan duplicate)
+- `hoc/int/general/facades/identity_adapter.py` (moved to auth subdomain)
+
+### Updated Total
+- **Total Files:** 21 (13 L5_engines, 1 L5_schemas, 4 L6_drivers, 3 __init__.py)

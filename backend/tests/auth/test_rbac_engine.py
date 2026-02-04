@@ -16,7 +16,7 @@ import pytest
 from fastapi import Request
 
 # Import RBAC engine components
-from app.auth.rbac_engine import (
+from app.hoc.cus.account.auth import (
     Decision,
     PolicyObject,
     RBACEngine,
@@ -130,7 +130,7 @@ class TestRBACEngineBasics:
     def test_check_allowed_admin(self, engine_without_policy_file, mock_request, monkeypatch):
         """Test admin role is allowed for all actions."""
         # Import and patch RBAC_ENFORCE
-        import app.auth.rbac_engine as rbac_mod
+        import app.hoc.cus.account.auth.L5_engines.rbac_engine as rbac_mod
 
         monkeypatch.setattr(rbac_mod, "RBAC_ENFORCE", True)
 
@@ -144,7 +144,7 @@ class TestRBACEngineBasics:
 
     def test_check_denied_readonly(self, engine_without_policy_file, mock_request, monkeypatch):
         """Test readonly role is denied for write actions."""
-        import app.auth.rbac_engine as rbac_mod
+        import app.hoc.cus.account.auth.L5_engines.rbac_engine as rbac_mod
 
         monkeypatch.setattr(rbac_mod, "RBAC_ENFORCE", True)
         monkeypatch.setattr(rbac_mod, "RBAC_FAIL_OPEN", False)
@@ -162,7 +162,7 @@ class TestRBACEngineBasics:
         # Reset singleton
         RBACEngine._instance = None
 
-        import app.auth.rbac_engine as rbac_mod
+        import app.hoc.cus.account.auth.L5_engines.rbac_engine as rbac_mod
 
         monkeypatch.setattr(rbac_mod, "RBAC_ENFORCE", False)
 
@@ -269,7 +269,7 @@ class TestMachineTokenAuth:
         monkeypatch.setenv("RBAC_ENFORCE", "true")
         monkeypatch.setenv("RBAC_AUDIT_ENABLED", "false")
 
-        import app.auth.rbac_engine as rbac_mod
+        import app.hoc.cus.account.auth.L5_engines.rbac_engine as rbac_mod
 
         monkeypatch.setattr(rbac_mod, "MACHINE_SECRET_TOKEN", "test-machine-secret")
         monkeypatch.setattr(rbac_mod, "RBAC_ENFORCE", True)
@@ -321,7 +321,7 @@ class TestJWTAuth:
         monkeypatch.setenv("RBAC_AUDIT_ENABLED", "false")
         monkeypatch.setenv("JWT_VERIFY_SIGNATURE", "false")
 
-        import app.auth.rbac_engine as rbac_mod
+        import app.hoc.cus.account.auth.L5_engines.rbac_engine as rbac_mod
 
         monkeypatch.setattr(rbac_mod, "RBAC_ENFORCE", True)
         monkeypatch.setattr(rbac_mod, "JWT_VERIFY_SIGNATURE", False)
@@ -450,7 +450,7 @@ class TestConvenienceFunctions:
         monkeypatch.setenv("RBAC_ENFORCE", "false")
         monkeypatch.setenv("RBAC_AUDIT_ENABLED", "false")
 
-        import app.auth.rbac_engine as rbac_mod
+        import app.hoc.cus.account.auth.L5_engines.rbac_engine as rbac_mod
 
         monkeypatch.setattr(rbac_mod, "RBAC_ENFORCE", False)
         rbac_mod._engine = None
@@ -498,7 +498,7 @@ class TestFailOpenMode:
         monkeypatch.setenv("RBAC_FAIL_OPEN", "true")
         monkeypatch.setenv("RBAC_AUDIT_ENABLED", "false")
 
-        import app.auth.rbac_engine as rbac_mod
+        import app.hoc.cus.account.auth.L5_engines.rbac_engine as rbac_mod
 
         monkeypatch.setattr(rbac_mod, "RBAC_ENFORCE", True)
         monkeypatch.setattr(rbac_mod, "RBAC_FAIL_OPEN", True)

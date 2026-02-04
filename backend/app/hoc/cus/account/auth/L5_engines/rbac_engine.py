@@ -1,13 +1,15 @@
-# Layer: L4 — Domain Engine
+# Layer: L5 — Domain Engine
 # Product: system-wide
+# AUDIENCE: INTERNAL
 # Temporal:
 #   Trigger: api|worker
 #   Execution: sync
 # Role: RBAC authorization engine with policy evaluation
 # Callers: API routes, middleware, services
-# Allowed Imports: L5, L6
-# Forbidden Imports: L1, L2, L3
-# Reference: Auth System
+# Allowed Imports: L6, L7
+# Forbidden Imports: L1, L2, L3, L4
+# Reference: PIN-271 (RBAC Authority Separation)
+# Note: M7 LEGACY - New code should use M28 authorization.py
 
 """
 Enhanced RBAC Engine - M7 Implementation
@@ -41,7 +43,7 @@ Provides PolicyObject-based authorization with:
 
 Usage:
     # DEPRECATED - Use M28 instead
-    from app.auth.rbac_engine import RBACEngine, PolicyObject
+    from app.hoc.cus.account.auth.L5_engines.rbac_engine import RBACEngine, PolicyObject
 
     engine = RBACEngine()
     decision = engine.check(PolicyObject("memory_pin", "write"), request)
@@ -61,7 +63,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import jwt
 from fastapi import Request
 
-from ..utils.metrics_helpers import get_or_create_counter, get_or_create_gauge, get_or_create_histogram
+from app.utils.metrics_helpers import get_or_create_counter, get_or_create_gauge, get_or_create_histogram
 
 logger = logging.getLogger("nova.auth.rbac_engine")
 
@@ -77,7 +79,7 @@ JWT_SECRET = os.getenv("JWT_SECRET", "")
 JWT_VERIFY_SIGNATURE = os.getenv("JWT_VERIFY_SIGNATURE", "false").lower() == "true"
 
 # Policy file path (can be reloaded at runtime)
-POLICY_FILE = os.getenv("RBAC_POLICY_FILE", str(Path(__file__).parent.parent / "config" / "rbac_policies.json"))
+POLICY_FILE = os.getenv("RBAC_POLICY_FILE", str(Path(__file__).parent.parent.parent.parent.parent.parent.parent / "config" / "rbac_policies.json"))
 
 
 # =============================================================================
@@ -102,12 +104,12 @@ RBAC_AUDIT_WRITES = get_or_create_counter("rbac_audit_writes_total", "Audit log 
 
 
 # =============================================================================
-# L4 Domain Authority: Role Mapping Rules
+# L5 Domain Authority: Role Mapping Rules
 # =============================================================================
 # B03/B04 FIX: Role-to-level and role classification logic moved from L3 adapters
 # Reference: PIN-254 Phase B Fix
 
-# Role-to-approval-level mapping (L4 domain authority)
+# Role-to-approval-level mapping (L5 domain authority)
 # Clerk adapter and other auth sources must delegate to this
 ROLE_APPROVAL_LEVELS: Dict[str, int] = {
     # Level 5 - Full administrative access
@@ -134,7 +136,7 @@ ROLE_APPROVAL_LEVELS: Dict[str, int] = {
     "viewer": 1,
 }
 
-# External provider role mappings (L4 domain authority)
+# External provider role mappings (L5 domain authority)
 # Keycloak/OIDC provider roles to AOS internal roles
 EXTERNAL_TO_AOS_ROLE_MAP: Dict[str, str] = {
     # Admin roles
@@ -162,7 +164,7 @@ EXTERNAL_TO_AOS_ROLE_MAP: Dict[str, str] = {
 
 def get_role_approval_level(role: str) -> int:
     """
-    Get approval level for a role (L4 domain decision).
+    Get approval level for a role (L5 domain decision).
 
     L3 adapters must NOT hardcode role-to-level mappings.
     This function is the authoritative source.
@@ -178,7 +180,7 @@ def get_role_approval_level(role: str) -> int:
 
 def get_max_approval_level(roles: List[str]) -> int:
     """
-    Get maximum approval level from a list of roles (L4 domain decision).
+    Get maximum approval level from a list of roles (L5 domain decision).
 
     Args:
         roles: List of role names
@@ -193,7 +195,7 @@ def get_max_approval_level(roles: List[str]) -> int:
 
 def map_external_role_to_aos(external_role: str) -> str:
     """
-    Map external provider role to AOS internal role (L4 domain decision).
+    Map external provider role to AOS internal role (L5 domain decision).
 
     L3 adapters (OIDC, Clerk) must NOT hardcode role mappings.
     This function is the authoritative source.
@@ -210,7 +212,7 @@ def map_external_role_to_aos(external_role: str) -> str:
 
 def map_external_roles_to_aos(external_roles: List[str]) -> List[str]:
     """
-    Map list of external roles to AOS internal roles (L4 domain decision).
+    Map list of external roles to AOS internal roles (L5 domain decision).
 
     Args:
         external_roles: List of roles from external provider

@@ -1,12 +1,11 @@
-# Layer: L3 — Boundary Adapter
+# Layer: L5 — Domain Engine
 # Product: system-wide
 # Temporal:
 #   Trigger: api
 #   Execution: async
+# AUDIENCE: INTERNAL
 # Role: Extract identity from requests, produce ActorContext
 # Callers: IdentityChain, API middleware
-# Allowed Imports: L4, L6
-# Forbidden Imports: L1, L2
 # Reference: PIN-271 (RBAC Authority Separation)
 
 """
@@ -71,7 +70,7 @@ class IdentityAdapter(ABC):
     - Modify roles based on context
     - Compute permissions (that's AuthorizationEngine's job)
 
-    Layer: L3 (Boundary Adapter)
+    Layer: L5 (Domain Engine)
     """
 
     @abstractmethod
@@ -106,7 +105,7 @@ class ClerkAdapter(IdentityAdapter):
     - CLERK_SECRET_KEY: Required for JWT verification
     - CLERK_JWKS_URL: JWKS endpoint for public keys
 
-    Layer: L3 (Boundary Adapter)
+    Layer: L5 (Domain Engine)
     """
 
     def __init__(self) -> None:
@@ -251,7 +250,7 @@ class SystemIdentityAdapter(IdentityAdapter):
     Configuration:
     - AOS_MACHINE_TOKEN: Shared secret for system actors
 
-    Layer: L3 (Boundary Adapter)
+    Layer: L5 (Domain Engine)
     """
 
     def __init__(self) -> None:
@@ -327,7 +326,7 @@ class DevIdentityAdapter(IdentityAdapter):
     - X-Dev-Actor: founder:
     - X-Dev-Actor: dev:my_org
 
-    Layer: L3 (Boundary Adapter)
+    Layer: L5 (Domain Engine)
     """
 
     def __init__(self) -> None:
@@ -358,7 +357,12 @@ class DevIdentityAdapter(IdentityAdapter):
 
         # Determine actor type
         if role in ("founder", "operator"):
-            actor_type = ActorType.OPERATOR
+            # Use create_operator_actor for standardized operator context
+            return create_operator_actor(
+                actor_id=f"dev:{role}:{tenant_id or 'global'}",
+                email=f"dev-{role}@localhost",
+                display_name=f"Dev {role.title()}",
+            )
         elif role in ("internal", "product"):
             actor_type = ActorType.INTERNAL_PRODUCT
         elif role == "trial":

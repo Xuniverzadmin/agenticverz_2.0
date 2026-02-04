@@ -205,3 +205,37 @@ Account was the only domain without a bridge in `hoc_spine/orchestrator/coordina
 - `account/L5_engines/profile_engine.py` — DELETED (was TOPOLOGY_DEAD, canonical: hoc_spine/authority/profile_policy_mode.py)
 
 **Final status:** Zero UNWIRED account symbols remain. Zero TOPOLOGY_DEAD files remain.
+
+---
+
+## PIN-271 Auth Subdomain Migration (2026-02-04)
+
+### New Subdomain: `account/auth/`
+
+Consolidated authentication and authorization components into dedicated `auth/` subdomain under account domain per PIN-271 (RBAC Authority Separation).
+
+| File | Layer | Role | Status |
+|------|-------|------|--------|
+| `auth/__init__.py` | L5 | Subdomain package, re-exports all auth components | NEW |
+| `auth/L5_engines/__init__.py` | L5 | L5 engines package | NEW |
+| `auth/L5_engines/rbac_engine.py` | L5 | RBAC authorization engine (M7 Legacy) | MIGRATED |
+| `auth/L5_engines/identity_adapter.py` | L5 | Identity extraction adapters | MIGRATED |
+| `auth/L6_drivers/__init__.py` | L6 | Placeholder for future auth drivers | NEW |
+
+### Script Registry Additions
+
+| Script | Layer | Canonical Function | Role | Callers |
+|--------|-------|--------------------|------|---------|
+| rbac_engine | L5 | `RBACEngine.check` | CANONICAL | API middleware, auth choke |
+| identity_adapter | L5 | `IdentityAdapter.extract_actor` | CANONICAL | IdentityChain |
+
+### Files Deleted (Clean Cut - No Shims)
+
+| Deleted File | Reason |
+|--------------|--------|
+| `hoc/int/policies/engines/rbac_engine.py` | Orphan duplicate |
+| `hoc/int/general/facades/identity_adapter.py` | Moved to auth subdomain |
+| `app/auth/rbac_engine.py` | Old path severed (no shim) |
+| `app/auth/identity_adapter.py` | Old path severed (no shim) |
+
+**Import path:** `from app.hoc.cus.account.auth import RBACEngine, ClerkAdapter, ...`

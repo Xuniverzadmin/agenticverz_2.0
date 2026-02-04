@@ -45,7 +45,7 @@ from fastapi import Request
 
 from app.auth.actor import ActorContext
 from app.auth.authorization import get_authorization_engine
-from app.auth.identity_adapter import (
+from app.hoc.cus.account.auth import (
     ClerkAdapter,
     DevIdentityAdapter,
     IdentityAdapter,
