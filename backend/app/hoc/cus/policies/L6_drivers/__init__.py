@@ -7,8 +7,8 @@
 #   Emits: none
 #   Subscribes: none
 # Data Access:
-#   Reads: policies, limits, rules
-#   Writes: policies, limits, rules
+#   Reads: policies, limits, rules, policy_enforcements
+#   Writes: policies, limits, rules, policy_enforcements
 # Database:
 #   Scope: domain (policies)
 #   Models: PolicyRule, Limit, PolicySnapshot
@@ -53,6 +53,11 @@ from app.hoc.cus.policies.L6_drivers.proposals_read_driver import (
     ProposalsReadDriver,
     get_proposals_read_driver,
 )
+from app.hoc.cus.policies.L6_drivers.policy_enforcement_write_driver import (
+    PolicyEnforcementWriteDriver,
+    get_policy_enforcement_write_driver,
+    record_enforcement_standalone,
+)
 
 __all__ = [
     # Existing
@@ -71,4 +76,8 @@ __all__ = [
     "get_policy_rules_read_driver",
     "ProposalsReadDriver",
     "get_proposals_read_driver",
+    # Policy Enforcement write driver (PIN-524)
+    "PolicyEnforcementWriteDriver",
+    "get_policy_enforcement_write_driver",
+    "record_enforcement_standalone",
 ]

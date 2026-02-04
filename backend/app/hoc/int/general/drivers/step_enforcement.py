@@ -7,15 +7,16 @@
 # Callers: runner.py step execution loop
 # Allowed Imports: L4, L6
 # Forbidden Imports: L1, L2, L3
-# Reference: GAP-016
+# Reference: GAP-016, PIN-524
 
 """
 Module: step_enforcement
 Purpose: Ensures STOP/KILL actions halt execution within the same step.
 
 Imports (Dependencies):
-    - app.services.governance.runtime_switch: is_governance_active
-    - app.policy.conflict_resolver: resolve_policy_conflict
+    - app.hoc.cus.hoc_spine.authority.runtime_switch: is_governance_active
+    - app.hoc.cus.policies.L5_engines.prevention_engine: get_prevention_engine
+    - app.hoc.cus.policies.L6_drivers.policy_enforcement_write_driver: record_enforcement_standalone
 
 Exports (Provides):
     - enforce_before_step_completion(ctx, step_result) -> EnforcementResult
@@ -24,6 +25,7 @@ Exports (Provides):
 Wiring Points:
     - Called from: runner.py BEFORE returning step result
     - Halts: Step execution if STOP/KILL triggered
+    - Records: Enforcement outcomes to policy_enforcements table (PIN-524)
 
 Critical Invariant:
     Enforcement check MUST happen BEFORE step result is returned.
@@ -40,13 +42,15 @@ Acceptance Criteria:
     - [x] AC-016-02: STOP/KILL actions halt within same step
     - [x] AC-016-03: Enforcement result logged
     - [x] AC-016-04: No orphan — wired to runner.py
+    - [x] AC-016-05: Enforcement outcomes recorded to DB (PIN-524)
 """
 
-from dataclasses import dataclass
-from enum import Enum
-from typing import Optional, Any, Dict
-from datetime import datetime, timezone
+import asyncio
 import logging
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger("nova.worker.enforcement.step_enforcement")
 
@@ -76,6 +80,84 @@ class StepEnforcementError(Exception):
     def __init__(self, result: EnforcementResult):
         self.result = result
         super().__init__(f"Enforcement halt: {result.halt_reason} - {result.message}")
+
+
+def _record_enforcement_outcome(
+    tenant_id: Optional[str],
+    rule_id: Optional[str],
+    run_id: Optional[str],
+    action_taken: str,
+    halt_reason: str,
+    details: Dict[str, Any],
+) -> None:
+    """
+    Record enforcement outcome to the policy_enforcements table.
+
+    This is a fire-and-forget operation. Recording failures are logged
+    but do not affect enforcement behavior.
+
+    PIN-524: Enforcement outcomes must be recorded for audit trail.
+    """
+    if not tenant_id or not rule_id:
+        logger.debug(
+            "step_enforcement.record_skipped",
+            extra={"reason": "missing tenant_id or rule_id"},
+        )
+        return
+
+    try:
+        from app.hoc.cus.policies.L6_drivers.policy_enforcement_write_driver import (
+            record_enforcement_standalone,
+        )
+
+        # Run async recording in a new event loop (sync context)
+        try:
+            loop = asyncio.get_running_loop()
+            # Already in async context - schedule as task
+            loop.create_task(
+                record_enforcement_standalone(
+                    tenant_id=tenant_id,
+                    rule_id=rule_id,
+                    action_taken=action_taken,
+                    run_id=run_id,
+                    details={
+                        "halt_reason": halt_reason,
+                        **details,
+                    },
+                )
+            )
+        except RuntimeError:
+            # No running loop - use asyncio.run
+            asyncio.run(
+                record_enforcement_standalone(
+                    tenant_id=tenant_id,
+                    rule_id=rule_id,
+                    action_taken=action_taken,
+                    run_id=run_id,
+                    details={
+                        "halt_reason": halt_reason,
+                        **details,
+                    },
+                )
+            )
+
+        logger.debug(
+            "step_enforcement.record_initiated",
+            extra={
+                "tenant_id": tenant_id,
+                "rule_id": rule_id,
+                "action_taken": action_taken,
+            },
+        )
+
+    except ImportError:
+        logger.warning("step_enforcement.write_driver_unavailable")
+    except Exception as e:
+        # Recording must never block enforcement
+        logger.error(
+            "step_enforcement.record_failed",
+            extra={"error": str(e)},
+        )
 
 
 def enforce_before_step_completion(
@@ -191,6 +273,19 @@ def enforce_before_step_completion(
                 "policy_id": policy_id,
                 "halt_reason": halt_reason.value,
             })
+
+            # PIN-524: Record enforcement outcome to DB
+            _record_enforcement_outcome(
+                tenant_id=getattr(run_context, 'tenant_id', None),
+                rule_id=policy_id,
+                run_id=getattr(run_context, 'run_id', None),
+                action_taken=action_upper,
+                halt_reason=halt_reason.value,
+                details={
+                    "step_index": getattr(run_context, 'step_index', 0),
+                    "checked_at": checked_at,
+                },
+            )
 
             # Raise error to halt step
             raise StepEnforcementError(result)
