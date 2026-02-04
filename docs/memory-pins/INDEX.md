@@ -494,6 +494,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-507](PIN-507-first-principles-audit-findings.md) | **First-Principles Audit Findings** | Architecture / Audit | **ACTIVE** | 2026-01-31 |
 | [PIN-511](PIN-511-pin-513-phase-9-complete-wiring-invariant-hardening.md) | **PIN-513 Phase 9 Complete — Wiring + Invariant Hardening** | Architecture | **✅ COMPLETE** | 2026-02-01 |
 | [PIN-512](PIN-512-pin-514-boundary-severance-items-1-5-cleanup.md) | **PIN-514: Boundary Severance — Items 1-5 Cleanup** | Architecture | **✅ COMPLETE** | 2026-02-02 |
+| [PIN-522](PIN-522-pin-522-auth-subdomain-migration-complete.md) | **PIN-522: Auth Subdomain Migration Complete** | Architecture | **✅ COMPLETE** | 2026-02-04 |
 
 ---
 
@@ -1263,6 +1264,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-04 | **PIN-522 PIN-522: Auth Subdomain Migration Complete** - Created via memory_trail. |
 | 2026-02-02 | **PIN-512 PIN-514: Boundary Severance — Items 1-5 Cleanup** - Updated: Category B Stub Rewiring (Phase 1) |
 | 2026-02-02 | **PIN-512 PIN-514: Boundary Severance — Items 1-5 Cleanup** - Updated: Stub Deduplication |
 | 2026-02-02 | **PIN-512 PIN-514: Boundary Severance — Items 1-5 Cleanup** - Updated: Item 7 Headers |
