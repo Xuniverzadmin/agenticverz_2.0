@@ -34,7 +34,7 @@ from enum import Enum
 from typing import Any, Dict, Optional
 from uuid import uuid4
 
-from app.policy.validators.content_accuracy import (
+from app.hoc.cus.policies.L5_engines.content_accuracy import (
     ContentAccuracyValidator,
     ValidationResult,
 )

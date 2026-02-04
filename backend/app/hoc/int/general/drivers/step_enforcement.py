@@ -132,7 +132,7 @@ def enforce_before_step_completion(
     # Get or create prevention engine
     if prevention_engine is None:
         try:
-            from app.policy.prevention_engine import get_prevention_engine
+            from app.hoc.cus.policies.L5_engines.prevention_engine import get_prevention_engine
             prevention_engine = get_prevention_engine()
         except ImportError:
             # Prevention engine not available - allow through

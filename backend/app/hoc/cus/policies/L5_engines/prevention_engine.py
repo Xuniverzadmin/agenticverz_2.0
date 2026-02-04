@@ -249,7 +249,7 @@ class PreventionEngine:
             return self._evaluate_step_inner(context)
         except Exception as e:
             # GAP-035: Fail-closed on evaluation error
-            from app.policy.failure_mode_handler import (
+            from app.hoc.cus.policies.L5_engines.failure_mode_handler import (
                 handle_evaluation_error,
                 FailureType,
             )
@@ -337,13 +337,13 @@ class PreventionEngine:
         # Check custom policies with conflict resolution (GAP-068) and binding moments (GAP-031)
         if self._policies:
             # GAP-031: Import binding moment enforcer
-            from app.policy.binding_moment_enforcer import (
+            from app.hoc.cus.policies.L5_engines.binding_moment_enforcer import (
                 should_evaluate_policy,
                 EvaluationPoint,
             )
 
             # GAP-068: Import conflict resolver
-            from app.policy.conflict_resolver import (
+            from app.hoc.cus.policies.L5_engines.policy_conflict_resolver import (
                 resolve_policy_conflict,
                 PolicyAction,
             )
@@ -599,3 +599,29 @@ def create_policy_snapshot_for_run(
             extra={"run_id": run_id, "tenant_id": tenant_id, "error": str(e)},
         )
         return None
+
+
+# =============================================================================
+# Singleton Management
+# =============================================================================
+
+_prevention_engine: Optional[PreventionEngine] = None
+
+
+def get_prevention_engine() -> PreventionEngine:
+    """
+    Get the global PreventionEngine singleton.
+
+    Returns:
+        PreventionEngine instance
+    """
+    global _prevention_engine
+    if _prevention_engine is None:
+        _prevention_engine = PreventionEngine()
+    return _prevention_engine
+
+
+def reset_prevention_engine() -> None:
+    """Reset the singleton (for testing)."""
+    global _prevention_engine
+    _prevention_engine = None

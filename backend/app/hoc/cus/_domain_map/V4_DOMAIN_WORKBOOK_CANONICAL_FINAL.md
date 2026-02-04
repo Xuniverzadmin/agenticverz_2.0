@@ -1795,3 +1795,51 @@
 | `create_policy_snapshot_for_run()` | Wired to PolicyDriver.get_safety_rules() and get_risk_ceilings() | COMPLETE |
 
 **Notes:** Loads actual policies and thresholds from PolicyDriver instead of hardcoded defaults. Falls back to defaults on error.
+
+---
+
+## Phase 3: Legacy Import Deprecation (2026-02-04)
+
+### Overview
+
+HOC files were importing from legacy `app.policy.*` modules. Phase 3 rewired these imports to use canonical HOC paths.
+
+### Classification
+
+**Shared Infrastructure (Acceptable):**
+- `app.policy.compiler.*` - Policy DSL compiler (grammar, tokenizer, parser)
+- `app.policy.ir.*` - Intermediate representation
+- `app.policy.ast.*` - Abstract syntax tree
+- `app.policy.models` - Policy data models
+- `app.policy.optimizer.*` - Policy optimizer
+
+These are shared infrastructure similar to L7 models. HOC may continue importing from them.
+
+**Runtime Modules (Must Use HOC):**
+- `app.policy.prevention_engine` → `app.hoc.cus.policies.L5_engines.prevention_engine`
+- `app.policy.failure_mode_handler` → `app.hoc.cus.policies.L5_engines.failure_mode_handler`
+- `app.policy.binding_moment_enforcer` → `app.hoc.cus.policies.L5_engines.binding_moment_enforcer`
+- `app.policy.conflict_resolver` → `app.hoc.cus.policies.L5_engines.policy_conflict_resolver`
+- `app.policy.validators.*` → `app.hoc.cus.policies.L5_engines.*`
+
+### Rewired Imports
+
+| File | Legacy Import | HOC Import |
+|------|---------------|------------|
+| `policies/L5_engines/prevention_engine.py` | `app.policy.failure_mode_handler` | `app.hoc.cus.policies.L5_engines.failure_mode_handler` |
+| `policies/L5_engines/prevention_engine.py` | `app.policy.binding_moment_enforcer` | `app.hoc.cus.policies.L5_engines.binding_moment_enforcer` |
+| `policies/L5_engines/prevention_engine.py` | `app.policy.conflict_resolver` | `app.hoc.cus.policies.L5_engines.policy_conflict_resolver` |
+| `policies/L5_engines/prevention_hook.py` | `app.policy.validators.content_accuracy` | `app.hoc.cus.policies.L5_engines.content_accuracy` |
+| `api/cus/policies/guard.py` | `app.policy.validators` | `app.hoc.cus.policies.L5_engines.prevention_hook` |
+| `int/general/drivers/step_enforcement.py` | `app.policy.prevention_engine` | `app.hoc.cus.policies.L5_engines.prevention_engine` |
+
+### New Functions Added
+
+| File | Function | Purpose |
+|------|----------|---------|
+| `policies/L5_engines/prevention_engine.py` | `get_prevention_engine()` | Singleton getter for PreventionEngine |
+| `policies/L5_engines/prevention_engine.py` | `reset_prevention_engine()` | Reset singleton (for testing) |
+
+### Remaining Legacy Imports (Acceptable per Shared Infrastructure)
+
+HOC files still import from `app.policy.compiler.*`, `app.policy.ir.*`, `app.policy.ast.*`, `app.policy.models`, and `app.policy.optimizer.*`. These are shared infrastructure and acceptable per PIN-511 (similar to L7 imports).

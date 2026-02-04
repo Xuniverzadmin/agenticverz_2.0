@@ -1986,7 +1986,7 @@ async def export_incident_evidence(
     prevention_result = None
     if include_prevention:
         try:
-            from app.policy.validators import evaluate_response
+            from app.hoc.cus.policies.L5_engines.prevention_hook import evaluate_response
 
             prevention = evaluate_response(
                 tenant_id=tenant_id,
