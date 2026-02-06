@@ -15,8 +15,8 @@ Purpose: Ensures STOP/KILL actions halt execution within the same step.
 
 Imports (Dependencies):
     - app.hoc.cus.hoc_spine.authority.runtime_switch: is_governance_active
-    - app.hoc.cus.policies.L5_engines.prevention_engine: get_prevention_engine
     - app.hoc.cus.policies.L6_drivers.policy_enforcement_write_driver: record_enforcement_standalone
+    - prevention_engine: INJECTED by caller (not imported — L6 must not reach L5)
 
 Exports (Provides):
     - enforce_before_step_completion(ctx, step_result) -> EnforcementResult
@@ -211,21 +211,17 @@ def enforce_before_step_completion(
         # Runtime switch not available - continue with enforcement
         pass
 
-    # Get or create prevention engine
+    # Prevention engine must be injected by caller (L4/worker layer).
+    # Drivers must not reach up to L5 — PIN-513 layer purity.
     if prevention_engine is None:
-        try:
-            from app.hoc.cus.policies.L5_engines.prevention_engine import get_prevention_engine
-            prevention_engine = get_prevention_engine()
-        except ImportError:
-            # Prevention engine not available - allow through
-            logger.warning("step_enforcement.prevention_engine_unavailable")
-            return EnforcementResult(
-                should_halt=False,
-                halt_reason=None,
-                policy_id=None,
-                message="Prevention engine unavailable",
-                checked_at=checked_at,
-            )
+        logger.warning("step_enforcement.prevention_engine_not_injected")
+        return EnforcementResult(
+            should_halt=False,
+            halt_reason=None,
+            policy_id=None,
+            message="Prevention engine not injected by caller",
+            checked_at=checked_at,
+        )
 
     # Evaluate policies
     try:

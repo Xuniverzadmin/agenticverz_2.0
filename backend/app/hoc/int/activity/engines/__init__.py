@@ -1,27 +1,16 @@
-# Tasks module
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: internal
+#   Execution: sync
+# Role: Activity engines package (internal audience)
+
 """
-Task definitions for background processing.
+Activity engines package.
 
-Phase 2A: Wired exports for modules that are imported directly.
+Stale re-exports removed — m10_metrics_collector, memory_update, and recovery_queue_stream
+live in other packages (app/tasks/, app/hoc/int/platform/engines/, etc.).
+No consumers import from app.hoc.int.activity.engines (verified 2026-02-06).
 """
 
-# Memory update tasks
-# M10 Metrics collection
-from .m10_metrics_collector import collect_m10_metrics, run_metrics_collector
-from .memory_update import apply_update_rules, apply_update_rules_sync
-
-# Recovery queue tasks
-from .recovery_queue_stream import enqueue_stream, get_dead_letter_count, get_stream_info
-
-__all__ = [
-    # memory_update
-    "apply_update_rules",
-    "apply_update_rules_sync",
-    # recovery_queue_stream
-    "enqueue_stream",
-    "get_dead_letter_count",
-    "get_stream_info",
-    # m10_metrics_collector
-    "collect_m10_metrics",
-    "run_metrics_collector",
-]
+__all__: list[str] = []

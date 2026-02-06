@@ -8,8 +8,10 @@
 # Allowed Imports: L4, L6
 # Forbidden Imports: L1, L2, L5
 
-"""API Dependencies Module."""
+"""API Dependencies Module.
 
-from .founder_auth import require_founder, verify_fops_token
+NOTE: founder_auth re-export removed — module lives at app/api/dependencies/founder_auth.py,
+not in this package. No consumers import from app.hoc.api.int.agent (verified 2026-02-06).
+"""
 
-__all__ = ["require_founder", "verify_fops_token"]
+__all__: list[str] = []

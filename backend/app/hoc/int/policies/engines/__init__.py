@@ -15,18 +15,11 @@ to the authoritative M28 (AuthorizationEngine).
 INVARIANT: This is a ONE-WAY mapping. No M28→M7 reverse mapping allowed.
 """
 
-from .m7_to_m28 import (
-    M7ToM28Mapping,
-    MappingResult,
-    get_all_mappings,
-    get_m28_equivalent,
-    is_mapping_ambiguous,
-)
+"""
+M7→M28 Authority Mapping Package
 
-__all__ = [
-    "M7ToM28Mapping",
-    "MappingResult",
-    "get_all_mappings",
-    "get_m28_equivalent",
-    "is_mapping_ambiguous",
-]
+Stale m7_to_m28 re-export removed — module lives at app/auth/mappings/m7_to_m28.py,
+not in this package. No consumers import from app.hoc.int.policies.engines (verified 2026-02-06).
+"""
+
+__all__: list[str] = []
