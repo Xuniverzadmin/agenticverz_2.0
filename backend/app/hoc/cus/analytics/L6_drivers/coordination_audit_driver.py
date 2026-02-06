@@ -162,9 +162,5 @@ def persist_audit_record(
                 "error": str(e),
             },
         )
-        # Rollback the failed transaction
-        try:
-            db.rollback()
-        except Exception:
-            pass
+        # L6 does NOT rollback — L4 coordinator owns transaction boundary
         return False

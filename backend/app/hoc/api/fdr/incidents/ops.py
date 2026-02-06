@@ -63,8 +63,6 @@ from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import text
-from sqlmodel import Session
 
 # Category 2 Auth: Domain-separated authentication for Founder Ops Console
 # Uses verify_fops_token which enforces:
@@ -86,11 +84,13 @@ from app.contracts.ops import (
     FounderRecurrenceRiskDTO,
     FounderRootCauseDTO,
 )
-from app.db import get_session
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    get_sync_session_dep,
+    sql_text,
+)
 from app.schemas.response import wrap_dict
 
-# Incident model for database queries
-from app.models.killswitch import Incident, IncidentEvent
+# Incident models no longer imported - raw SQL used instead (L2 DB import hygiene)
 
 # Redis caching for ops endpoints (optional - degrades gracefully)
 try:
@@ -564,7 +564,7 @@ def get_window(hours: int) -> datetime:
     return utc_now() - timedelta(hours=hours)
 
 
-def exec_sql(session: Session, stmt, params: dict = None):
+def exec_sql(session, stmt, params: dict = None):
     """Execute raw SQL with parameters using SQLAlchemy's execute method."""
     if params:
         return session.execute(stmt, params)
@@ -578,7 +578,7 @@ def exec_sql(session: Session, stmt, params: dict = None):
 
 @router.get("/pulse", response_model=SystemPulse)
 async def get_system_pulse(
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ):
     """
     System Pulse - "Is my business healthy right now?"
@@ -596,7 +596,7 @@ async def get_system_pulse(
     h48_ago = get_window(48)
 
     # Active tenants (current 24h vs previous 24h)
-    stmt = text(
+    stmt = sql_text(
         """
         WITH current_period AS (
             SELECT COUNT(DISTINCT tenant_id) as cnt
@@ -629,7 +629,7 @@ async def get_system_pulse(
     # Event counts by type
     def get_event_counts(event_type: str) -> tuple:
         try:
-            stmt = text(
+            stmt = sql_text(
                 """
                 WITH current_period AS (
                     SELECT COUNT(*) as cnt
@@ -661,7 +661,7 @@ async def get_system_pulse(
 
     # LLM health
     try:
-        stmt = text(
+        stmt = sql_text(
             """
             SELECT
                 COUNT(*) FILTER (WHERE event_type = 'LLM_CALL_MADE') as success,
@@ -683,7 +683,7 @@ async def get_system_pulse(
 
     # Total cost
     try:
-        stmt = text(
+        stmt = sql_text(
             """
             SELECT COALESCE(SUM(cost_usd), 0)
             FROM ops_events
@@ -745,7 +745,7 @@ async def get_system_pulse(
 async def get_customer_segments(
     risk_level: Optional[str] = Query(None, description="Filter by risk level"),
     limit: int = Query(50, ge=1, le=200),
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ):
     """
     Customer Intelligence - All tenant profiles with stickiness and risk.
@@ -759,7 +759,7 @@ async def get_customer_segments(
         return wrap_dict({"items": items, "total": len(items)})
 
     try:
-        stmt = text(
+        stmt = sql_text(
             """
             SELECT
                 tenant_id,
@@ -987,7 +987,7 @@ FRICTION_CAP_PER_DAY = 10
 @router.get("/customers/at-risk", response_model=List[CustomerAtRisk])
 async def get_customers_at_risk(
     limit: int = Query(20, ge=1, le=50),
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ):
     """
     Customers At Risk - Phase-2 Founder Intelligence.
@@ -1013,7 +1013,7 @@ async def get_customers_at_risk(
 
     try:
         # Get at-risk customers with detailed metrics
-        stmt = text(
+        stmt = sql_text(
             """
             WITH customer_stickiness AS (
                 SELECT
@@ -1200,11 +1200,11 @@ async def get_customers_at_risk(
 @router.get("/customers/{tenant_id}", response_model=CustomerSegment)
 async def get_customer_detail(
     tenant_id: str,
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ):
     """Get detailed customer profile for a specific tenant."""
     try:
-        stmt = text(
+        stmt = sql_text(
             """
             SELECT
                 tenant_id,
@@ -1358,7 +1358,7 @@ async def get_playbook_detail(playbook_id: str):
 
 @router.get("/incidents/patterns", response_model=List[IncidentPattern])
 async def get_incident_patterns(
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ):
     """
     Incident Intelligence - What's breaking and is it systemic?
@@ -1379,7 +1379,7 @@ async def get_incident_patterns(
 
     for event_type, pattern_name in pattern_types:
         try:
-            stmt = text(
+            stmt = sql_text(
                 """
                 WITH counts AS (
                     SELECT
@@ -1461,7 +1461,7 @@ async def get_incident_patterns(
 async def get_infra_incident_summary(
     hours: int = Query(default=24, ge=1, le=168, description="Lookback window in hours"),
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ) -> Dict[str, Any]:
     """
     GET /ops/incidents/infra-summary
@@ -1547,7 +1547,7 @@ async def get_infra_incident_summary(
 async def get_founder_incident_detail(
     incident_id: str,
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ) -> FounderIncidentDetailDTO:
     """
     GET /ops/incidents/{incident_id}
@@ -1566,22 +1566,45 @@ async def get_founder_incident_detail(
     Contains internal terminology, thresholds, and raw metrics.
     NEVER expose to Customer Console.
     """
-    from sqlmodel import select
+    # Get incident via raw SQL
+    inc_row = session.execute(
+        sql_text(
+            "SELECT id, tenant_id, severity, status, trigger_type, title, "
+            "started_at, created_at, updated_at, cost_delta_cents, calls_affected, "
+            "duration_seconds, auto_action, action_details_json, killswitch_id "
+            "FROM incidents WHERE id = :incident_id"
+        ),
+        {"incident_id": incident_id},
+    ).first()
 
-    # Get incident
-    stmt = select(Incident).where(Incident.id == incident_id)
-    result = session.exec(stmt).first()
-
-    if not result:
+    if not inc_row:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    incident = result[0] if isinstance(result, tuple) else result
+    # Build a simple namespace for attribute access
+    class _Inc:
+        pass
+    incident = _Inc()
+    incident.id = inc_row[0]
+    incident.tenant_id = inc_row[1]
+    incident.severity = inc_row[2]
+    incident.status = inc_row[3]
+    incident.trigger_type = inc_row[4]
+    incident.title = inc_row[5]
+    incident.started_at = inc_row[6]
+    incident.created_at = inc_row[7]
+    incident.updated_at = inc_row[8]
+    incident.cost_delta_cents = inc_row[9]
+    incident.calls_affected = inc_row[10]
+    incident.duration_seconds = inc_row[11]
+    incident.auto_action = inc_row[12]
+    incident.action_details_json = inc_row[13]
+    incident.killswitch_id = inc_row[14]
 
     # Get tenant name
     tenant_name = None
     try:
         tenant_result = session.execute(
-            text("SELECT name FROM tenants WHERE id = :tenant_id"), {"tenant_id": incident.tenant_id}
+            sql_text("SELECT name FROM tenants WHERE id = :tenant_id"), {"tenant_id": incident.tenant_id}
         ).first()
         if tenant_result:
             tenant_name = tenant_result[0]
@@ -1620,15 +1643,21 @@ async def get_founder_incident_detail(
         last_updated=incident.updated_at.isoformat(),
     )
 
-    # Get timeline events
-    event_stmt = (
-        select(IncidentEvent).where(IncidentEvent.incident_id == incident_id).order_by(IncidentEvent.created_at)
-    )
-    event_rows = session.exec(event_stmt).all()
+    # Get timeline events via raw SQL
+    event_rows = session.execute(
+        sql_text(
+            "SELECT event_type, description, created_at "
+            "FROM incident_events WHERE incident_id = :incident_id "
+            "ORDER BY created_at"
+        ),
+        {"incident_id": incident_id},
+    ).fetchall()
 
     timeline = []
-    for row in event_rows:
-        event = row[0] if isinstance(row, tuple) else row
+    for ev_row in event_rows:
+        ev_type = ev_row[0]
+        ev_desc = ev_row[1]
+        ev_created = ev_row[2]
         # Map event_type to founder timeline event type
         event_type_map = {
             "detection": "DETECTION_SIGNAL",
@@ -1638,14 +1667,14 @@ async def get_founder_incident_detail(
             "policy_evaluated": "POLICY_EVALUATION",
             "cost_anomaly": "COST_ANOMALY",
         }
-        mapped_type = event_type_map.get(event.event_type, "DETECTION_SIGNAL")
+        mapped_type = event_type_map.get(ev_type, "DETECTION_SIGNAL")
 
         timeline.append(
             FounderDecisionTimelineEventDTO(
-                timestamp=event.created_at.isoformat(),
+                timestamp=ev_created.isoformat(),
                 event_type=mapped_type,
-                description=event.description,
-                data=event.get_data() if hasattr(event, "get_data") else None,
+                description=ev_desc,
+                data=None,
             )
         )
 
@@ -1724,7 +1753,7 @@ async def get_founder_incident_detail(
 
     try:
         # Count similar incidents (same trigger_type)
-        stmt = text(
+        stmt = sql_text(
             """
             SELECT
                 COUNT(*) FILTER (WHERE created_at > :h7d_ago) as cnt_7d,
@@ -1777,8 +1806,8 @@ async def get_founder_incident_detail(
         suggested_prevention=suggested_prevention,
     )
 
-    # Get linked call IDs
-    linked_calls = incident.get_related_call_ids() if hasattr(incident, "get_related_call_ids") else []
+    # Get linked call IDs (raw SQL — no ORM method available on plain namespace)
+    linked_calls = []
 
     # Build recommended next steps
     next_steps = []
@@ -1812,7 +1841,7 @@ async def get_founder_incidents(
     severity: Optional[str] = Query(default=None),
     state: Optional[str] = Query(default=None),
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ) -> FounderIncidentListDTO:
     """
     GET /ops/incidents
@@ -1821,14 +1850,13 @@ async def get_founder_incidents(
 
     M29 Category 5: Incident Console Contrast
     """
-    from sqlalchemy import desc
-    from sqlmodel import select
-
-    # Build query
-    stmt = select(Incident).order_by(desc(Incident.created_at))
+    # Build raw SQL query with optional filters
+    where_clauses = []
+    params = {"limit": page_size, "offset": (page - 1) * page_size}
 
     if severity:
-        stmt = stmt.where(Incident.severity == severity)
+        where_clauses.append("severity = :severity")
+        params["severity"] = severity
     if state:
         status_map = {
             "DETECTED": "open",
@@ -1837,22 +1865,29 @@ async def get_founder_incidents(
             "MITIGATED": "auto_resolved",
         }
         if state in status_map:
-            stmt = stmt.where(Incident.status == status_map[state])
+            where_clauses.append("status = :status_filter")
+            params["status_filter"] = status_map[state]
 
-    # Pagination
-    stmt = stmt.offset((page - 1) * page_size).limit(page_size)
-    rows = session.exec(stmt).all()
+    where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
 
-    # Convert to response models
-    incidents_list = list(rows)
+    rows = session.execute(
+        sql_text(
+            f"SELECT id, tenant_id, severity, status, trigger_type, title, "
+            f"started_at, created_at, cost_delta_cents, calls_affected, duration_seconds "
+            f"FROM incidents WHERE {where_sql} "
+            f"ORDER BY created_at DESC "
+            f"LIMIT :limit OFFSET :offset"
+        ),
+        params,
+    ).fetchall()
 
-    # Count total (raw SQL for aggregation - uses execute() not exec())
-    count_stmt = text("SELECT COUNT(*) FROM incidents")
+    # Count total (raw SQL for aggregation)
+    count_stmt = sql_text("SELECT COUNT(*) FROM incidents")
     total_row = session.execute(count_stmt).first()
     total = total_row[0] if total_row else 0
 
     # Count active, critical, high
-    counts_stmt = text(
+    counts_stmt = sql_text(
         """
         SELECT
             COUNT(*) FILTER (WHERE status != 'resolved') as active,
@@ -1867,51 +1902,60 @@ async def get_founder_incidents(
     high_count = counts_row[2] if counts_row else 0
 
     # Map to DTOs
+    trigger_to_type = {
+        "cost_spike": "COST",
+        "budget_breach": "COST",
+        "rate_limit": "RATE_LIMIT",
+        "failure_spike": "RELIABILITY",
+        "policy_block": "POLICY",
+        "safety": "SAFETY",
+    }
+    status_to_state = {
+        "open": "DETECTED",
+        "acknowledged": "TRIAGED",
+        "resolved": "RESOLVED",
+        "auto_resolved": "MITIGATED",
+    }
+
     items = []
     for row in rows:
-        incident = row[0] if isinstance(row, tuple) else row
+        inc_id = row[0]
+        inc_tenant_id = row[1]
+        inc_severity = row[2]
+        inc_status = row[3]
+        inc_trigger_type = row[4]
+        inc_title = row[5]
+        inc_started_at = row[6]
+        inc_created_at = row[7]
+        inc_cost_delta_cents = row[8]
+        inc_calls_affected = row[9]
+        inc_duration_seconds = row[10]
 
         # Get tenant name
         tenant_name = None
         try:
             tenant_result = session.execute(
-                text("SELECT name FROM tenants WHERE id = :tenant_id"), {"tenant_id": incident.tenant_id}
+                sql_text("SELECT name FROM tenants WHERE id = :tenant_id"), {"tenant_id": inc_tenant_id}
             ).first()
             if tenant_result:
                 tenant_name = tenant_result[0]
         except Exception:
             pass
 
-        # Map types
-        trigger_to_type = {
-            "cost_spike": "COST",
-            "budget_breach": "COST",
-            "rate_limit": "RATE_LIMIT",
-            "failure_spike": "RELIABILITY",
-            "policy_block": "POLICY",
-            "safety": "SAFETY",
-        }
-        status_to_state = {
-            "open": "DETECTED",
-            "acknowledged": "TRIAGED",
-            "resolved": "RESOLVED",
-            "auto_resolved": "MITIGATED",
-        }
-
         items.append(
             FounderIncidentListItemDTO(
-                incident_id=incident.id,
-                incident_type=trigger_to_type.get(incident.trigger_type, "POLICY"),
-                severity=incident.severity,
-                current_state=status_to_state.get(incident.status, "DETECTED"),
-                tenant_id=incident.tenant_id,
+                incident_id=inc_id,
+                incident_type=trigger_to_type.get(inc_trigger_type, "POLICY"),
+                severity=inc_severity,
+                current_state=status_to_state.get(inc_status, "DETECTED"),
+                tenant_id=inc_tenant_id,
                 tenant_name=tenant_name,
-                title=incident.title,
+                title=inc_title,
                 root_cause=None,  # Would derive from action_details
-                requests_affected=incident.calls_affected or 0,
-                cost_impact_cents=int(incident.cost_delta_cents * 100) if incident.cost_delta_cents else 0,
-                first_detected=(incident.started_at or incident.created_at).isoformat(),
-                duration_seconds=incident.duration_seconds,
+                requests_affected=inc_calls_affected or 0,
+                cost_impact_cents=int(inc_cost_delta_cents * 100) if inc_cost_delta_cents else 0,
+                first_detected=(inc_started_at or inc_created_at).isoformat(),
+                duration_seconds=inc_duration_seconds,
                 is_recurring=False,  # Would need to check recurrence
             )
         )
@@ -1934,7 +1978,7 @@ async def get_founder_incidents(
 
 @router.get("/stickiness", response_model=List[StickinessByFeature])
 async def get_stickiness_by_feature(
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ):
     """
     Product Stickiness - Which feature actually keeps users?
@@ -1953,7 +1997,7 @@ async def get_stickiness_by_feature(
 
     try:
         # Get total active tenants for percentage calc
-        stmt = text(
+        stmt = sql_text(
             """
             SELECT COUNT(DISTINCT tenant_id)
             FROM ops_events
@@ -1967,7 +2011,7 @@ async def get_stickiness_by_feature(
 
     for feature_name, event_type in feature_events:
         try:
-            stmt = text(
+            stmt = sql_text(
                 """
                 SELECT
                     COUNT(*) as total_actions,
@@ -2013,7 +2057,7 @@ async def get_stickiness_by_feature(
 
 @router.get("/revenue", response_model=RevenueRisk)
 async def get_revenue_risk(
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ):
     """
     Revenue & Risk - Am I making money safely?
@@ -2022,7 +2066,7 @@ async def get_revenue_risk(
     """
     try:
         # At-risk tenants from customer segments
-        stmt = text(
+        stmt = sql_text(
             """
             SELECT
                 COUNT(*) FILTER (WHERE risk_level = 'critical') as critical,
@@ -2043,7 +2087,7 @@ async def get_revenue_risk(
     # Daily revenue from LLM costs (proxy for revenue)
     h24_ago = get_window(24)
     try:
-        stmt = text(
+        stmt = sql_text(
             """
             SELECT COALESCE(SUM(cost_usd), 0)
             FROM ops_events
@@ -2060,7 +2104,7 @@ async def get_revenue_risk(
 
     # MRR estimate (active tenants * $50 avg plan)
     try:
-        stmt = text(
+        stmt = sql_text(
             """
             SELECT COUNT(DISTINCT tenant_id)
             FROM ops_events
@@ -2102,7 +2146,7 @@ async def get_revenue_risk(
 
 @router.get("/infra", response_model=InfraLimits)
 async def get_infra_limits(
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ):
     """
     Infra & Limits - What breaks first if I grow?
@@ -2119,11 +2163,11 @@ async def get_infra_limits(
 
     # Database connection check
     try:
-        stmt = text("SELECT count(*) FROM pg_stat_activity WHERE state = 'active'")
+        stmt = sql_text("SELECT count(*) FROM pg_stat_activity WHERE state = 'active'")
         row = session.execute(stmt).first()
         db_connections = row[0] if row else 0
 
-        stmt = text("SHOW max_connections")
+        stmt = sql_text("SHOW max_connections")
         row = session.execute(stmt).first()
         db_max = int(row[0]) if row else 100
     except Exception:
@@ -2132,7 +2176,7 @@ async def get_infra_limits(
 
     # Database size
     try:
-        stmt = text("SELECT pg_database_size(current_database()) / 1024 / 1024 / 1024.0")
+        stmt = sql_text("SELECT pg_database_size(current_database()) / 1024 / 1024 / 1024.0")
         row = session.execute(stmt).first()
         db_size_gb = float(row[0]) if row else 0.0
     except Exception:
@@ -2143,7 +2187,7 @@ async def get_infra_limits(
     db_days_to_limit = None
     try:
         # Estimate growth from event volume (proxy for data growth)
-        stmt = text(
+        stmt = sql_text(
             """
             WITH daily_events AS (
                 SELECT
@@ -2183,7 +2227,7 @@ async def get_infra_limits(
     rpm_peak = 0.0
     api_growth_rate = 0.0
     try:
-        stmt = text(
+        stmt = sql_text(
             """
             SELECT COUNT(*) / 60.0
             FROM ops_events
@@ -2194,7 +2238,7 @@ async def get_infra_limits(
         row = exec_sql(session, stmt, {"h1_ago": h1_ago}).first()
         rpm_avg = float(row[0]) if row else 0.0
 
-        stmt = text(
+        stmt = sql_text(
             """
             SELECT MAX(cnt) FROM (
                 SELECT date_trunc('minute', timestamp) as minute, COUNT(*) as cnt
@@ -2209,7 +2253,7 @@ async def get_infra_limits(
         rpm_peak = float(row[0]) if row else 0.0
 
         # Phase-2: Calculate week-over-week API growth
-        stmt = text(
+        stmt = sql_text(
             """
             WITH weekly_requests AS (
                 SELECT
@@ -2306,7 +2350,7 @@ async def get_event_stream(
     event_type: Optional[str] = Query(None, description="Filter by event type"),
     hours: int = Query(24, ge=1, le=168, description="Hours to look back"),
     limit: int = Query(100, ge=1, le=1000),
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ) -> OpsEventListResponse:
     """
     Event Stream - Raw events for debugging and analysis.
@@ -2316,7 +2360,7 @@ async def get_event_stream(
     window = get_window(hours)
 
     try:
-        stmt = text(
+        stmt = sql_text(
             """
             SELECT
                 event_id,

@@ -2,11 +2,11 @@
 # Product: founder-console (fops.agenticverz.com)
 # Temporal:
 #   Trigger: api
-#   Execution: sync
+#   Execution: async
 # Role: Platform health and eligibility endpoints (Founder-only)
 # Callers: Founder Console (frontend)
-# Allowed Imports: L3, L4, L6
-# Forbidden Imports: L1, L5
+# Allowed Imports: L4
+# Forbidden Imports: L1, L5, L6
 # Reference: PIN-284 (Platform Monitoring System)
 
 """
@@ -24,16 +24,20 @@ Audience: FOUNDER ONLY (Ops Console)
 Security: Requires Founder authentication
 
 PIN-284 Rule: Governance > Observability > UI
+
+Refactored: DB execution moved to L6 driver (platform_driver.py)
 """
 
 from datetime import datetime, timezone
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session
+from fastapi import APIRouter, HTTPException
 
-# L6 imports (allowed)
-from app.db import get_session
+# L4-provided registry dispatch for platform health queries (no direct L6 imports in L2)
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    get_operation_registry,
+    OperationContext,
+)
 from app.schemas.response import wrap_dict
 
 router = APIRouter(prefix="/platform", tags=["platform"])
@@ -42,10 +46,11 @@ router = APIRouter(prefix="/platform", tags=["platform"])
 # =============================================================================
 # NOTE: Lightweight Implementation
 # =============================================================================
-# All endpoints use direct SQL queries for performance with remote databases.
-# The full PlatformHealthService (L4) is available for batch processing or
-# more detailed health analysis but is too slow for real-time API calls
-# due to the number of queries required (~90 queries for full system health).
+# All endpoints use efficient SQL queries via L6 driver for performance with
+# remote databases. The full PlatformHealthService (L4) is available for batch
+# processing or more detailed health analysis but is too slow for real-time
+# API calls due to the number of queries required (~90 queries for full system
+# health).
 
 
 # =============================================================================
@@ -57,14 +62,37 @@ router = APIRouter(prefix="/platform", tags=["platform"])
 
 
 # =============================================================================
+# DOMAIN CAPABILITIES CONSTANT
+# =============================================================================
+
+DOMAIN_CAPABILITIES = {
+    "LOGS": ["LOGS_LIST", "LOGS_DETAIL", "LOGS_EXPORT"],
+    "INCIDENTS": ["INCIDENTS_LIST", "INCIDENTS_DETAIL", "INCIDENT_ACKNOWLEDGE", "INCIDENT_RESOLVE"],
+    "KEYS": ["KEYS_LIST", "KEYS_FREEZE", "KEYS_UNFREEZE"],
+    "POLICY": ["POLICY_CONSTRAINTS", "GUARDRAIL_DETAIL"],
+    "KILLSWITCH": ["KILLSWITCH_STATUS", "KILLSWITCH_ACTIVATE", "KILLSWITCH_DEACTIVATE"],
+    "ACTIVITY": ["ACTIVITY_LIST", "ACTIVITY_DETAIL"],
+}
+
+
+def _get_all_capabilities() -> tuple[list[str], dict[str, str]]:
+    """Build list of all capabilities and capability-to-domain mapping."""
+    all_caps = []
+    cap_to_domain = {}
+    for domain, caps in DOMAIN_CAPABILITIES.items():
+        all_caps.extend(caps)
+        for cap in caps:
+            cap_to_domain[cap] = domain
+    return all_caps, cap_to_domain
+
+
+# =============================================================================
 # ENDPOINTS
 # =============================================================================
 
 
 @router.get("/health", response_model=None)
-def get_platform_health(
-    session: Session = Depends(get_session),
-) -> Dict[str, Any]:
+async def get_platform_health() -> Dict[str, Any]:
     """
     Get platform system health (lightweight version).
 
@@ -73,35 +101,28 @@ def get_platform_health(
 
     Audience: Founder only
     """
-    from sqlalchemy import text
-
     now = datetime.now(timezone.utc)
+    registry = get_operation_registry()
 
-    # Single query to get BLCA status
-    blca_result = session.execute(
-        text("""
-            SELECT decision FROM governance_signals
-            WHERE signal_type = 'BLCA_STATUS'
-            AND scope = 'SYSTEM'
-            AND superseded_at IS NULL
-            ORDER BY recorded_at DESC
-            LIMIT 1
-        """)
-    ).fetchone()
-    blca_status = blca_result[0] if blca_result else "UNKNOWN"
+    # Query BLCA status via registry dispatch
+    blca_result = await registry.execute("platform.health", OperationContext(
+        session=None,
+        tenant_id="",
+        params={"method": "get_blca_status"},
+    ))
+    if not blca_result.success:
+        raise HTTPException(status_code=500, detail=blca_result.error)
+    blca_status = blca_result.data.get("status") or "UNKNOWN"
 
-    # Single query to get lifecycle coherence
-    lifecycle_result = session.execute(
-        text("""
-            SELECT decision FROM governance_signals
-            WHERE signal_type = 'LIFECYCLE_QUALIFIER_COHERENCE'
-            AND scope = 'SYSTEM'
-            AND superseded_at IS NULL
-            ORDER BY recorded_at DESC
-            LIMIT 1
-        """)
-    ).fetchone()
-    lifecycle_coherence = lifecycle_result[0] if lifecycle_result else "UNKNOWN"
+    # Query lifecycle coherence via registry dispatch
+    coherence_result = await registry.execute("platform.health", OperationContext(
+        session=None,
+        tenant_id="",
+        params={"method": "get_lifecycle_coherence"},
+    ))
+    if not coherence_result.success:
+        raise HTTPException(status_code=500, detail=coherence_result.error)
+    lifecycle_coherence = coherence_result.data.get("coherence") or "UNKNOWN"
 
     # Determine overall state
     state = "HEALTHY"
@@ -120,9 +141,7 @@ def get_platform_health(
 
 
 @router.get("/capabilities", response_model=None)
-def get_capabilities_eligibility(
-    session: Session = Depends(get_session),
-) -> Dict[str, Any]:
+async def get_capabilities_eligibility() -> Dict[str, Any]:
     """
     Get capability eligibility list (lightweight version).
 
@@ -130,31 +149,18 @@ def get_capabilities_eligibility(
 
     Audience: Founder only
     """
-    from sqlalchemy import text
-
     now = datetime.now(timezone.utc)
+    registry = get_operation_registry()
 
-    # All capabilities
-    DOMAIN_CAPABILITIES = {
-        "LOGS": ["LOGS_LIST", "LOGS_DETAIL", "LOGS_EXPORT"],
-        "INCIDENTS": ["INCIDENTS_LIST", "INCIDENTS_DETAIL", "INCIDENT_ACKNOWLEDGE", "INCIDENT_RESOLVE"],
-        "KEYS": ["KEYS_LIST", "KEYS_FREEZE", "KEYS_UNFREEZE"],
-        "POLICY": ["POLICY_CONSTRAINTS", "GUARDRAIL_DETAIL"],
-        "KILLSWITCH": ["KILLSWITCH_STATUS", "KILLSWITCH_ACTIVATE", "KILLSWITCH_DEACTIVATE"],
-        "ACTIVITY": ["ACTIVITY_LIST", "ACTIVITY_DETAIL"],
-    }
-
-    # Single query to get all blocked scopes
-    blocked_result = session.execute(
-        text("""
-            SELECT DISTINCT scope FROM governance_signals
-            WHERE decision = 'BLOCKED'
-            AND superseded_at IS NULL
-            AND (expires_at IS NULL OR expires_at > NOW())
-        """)
-    ).fetchall()
-
-    blocked_scopes = {row[0] for row in blocked_result}
+    # Query all blocked scopes via registry dispatch
+    scopes_result = await registry.execute("platform.health", OperationContext(
+        session=None,
+        tenant_id="",
+        params={"method": "get_blocked_scopes"},
+    ))
+    if not scopes_result.success:
+        raise HTTPException(status_code=500, detail=scopes_result.error)
+    blocked_scopes = set(scopes_result.data.get("scopes", []))
     system_blocked = "SYSTEM" in blocked_scopes
 
     # Build capability list
@@ -191,9 +197,8 @@ def get_capabilities_eligibility(
 
 
 @router.get("/domains/{domain_name}", response_model=None)
-def get_domain_health(
+async def get_domain_health(
     domain_name: str,
-    session: Session = Depends(get_session),
 ) -> Dict[str, Any]:
     """
     Get health for a specific domain (lightweight version).
@@ -207,17 +212,6 @@ def get_domain_health(
     Raises:
         404: Domain not found
     """
-    from sqlalchemy import text
-
-    DOMAIN_CAPABILITIES = {
-        "LOGS": ["LOGS_LIST", "LOGS_DETAIL", "LOGS_EXPORT"],
-        "INCIDENTS": ["INCIDENTS_LIST", "INCIDENTS_DETAIL", "INCIDENT_ACKNOWLEDGE", "INCIDENT_RESOLVE"],
-        "KEYS": ["KEYS_LIST", "KEYS_FREEZE", "KEYS_UNFREEZE"],
-        "POLICY": ["POLICY_CONSTRAINTS", "GUARDRAIL_DETAIL"],
-        "KILLSWITCH": ["KILLSWITCH_STATUS", "KILLSWITCH_ACTIVATE", "KILLSWITCH_DEACTIVATE"],
-        "ACTIVITY": ["ACTIVITY_LIST", "ACTIVITY_DETAIL"],
-    }
-
     domain = domain_name.upper()
     if domain not in DOMAIN_CAPABILITIES:
         raise HTTPException(
@@ -225,17 +219,17 @@ def get_domain_health(
             detail=f"Domain '{domain_name}' not found. Valid domains: {list(DOMAIN_CAPABILITIES.keys())}",
         )
 
-    # Single query to get blocked scopes
-    blocked_result = session.execute(
-        text("""
-            SELECT DISTINCT scope FROM governance_signals
-            WHERE decision = 'BLOCKED'
-            AND superseded_at IS NULL
-            AND (expires_at IS NULL OR expires_at > NOW())
-        """)
-    ).fetchall()
+    registry = get_operation_registry()
 
-    blocked_scopes = {row[0] for row in blocked_result}
+    # Query blocked scopes via registry dispatch
+    scopes_result = await registry.execute("platform.health", OperationContext(
+        session=None,
+        tenant_id="",
+        params={"method": "get_blocked_scopes"},
+    ))
+    if not scopes_result.success:
+        raise HTTPException(status_code=500, detail=scopes_result.error)
+    blocked_scopes = set(scopes_result.data.get("scopes", []))
     system_blocked = "SYSTEM" in blocked_scopes
 
     # Build capability list for this domain
@@ -278,9 +272,8 @@ def get_domain_health(
 
 
 @router.get("/capabilities/{capability_name}", response_model=None)
-def get_capability_health(
+async def get_capability_health(
     capability_name: str,
-    session: Session = Depends(get_session),
 ) -> Dict[str, Any]:
     """
     Get health for a specific capability (lightweight version).
@@ -294,23 +287,7 @@ def get_capability_health(
     Raises:
         404: Capability not found
     """
-    from sqlalchemy import text
-
-    DOMAIN_CAPABILITIES = {
-        "LOGS": ["LOGS_LIST", "LOGS_DETAIL", "LOGS_EXPORT"],
-        "INCIDENTS": ["INCIDENTS_LIST", "INCIDENTS_DETAIL", "INCIDENT_ACKNOWLEDGE", "INCIDENT_RESOLVE"],
-        "KEYS": ["KEYS_LIST", "KEYS_FREEZE", "KEYS_UNFREEZE"],
-        "POLICY": ["POLICY_CONSTRAINTS", "GUARDRAIL_DETAIL"],
-        "KILLSWITCH": ["KILLSWITCH_STATUS", "KILLSWITCH_ACTIVATE", "KILLSWITCH_DEACTIVATE"],
-        "ACTIVITY": ["ACTIVITY_LIST", "ACTIVITY_DETAIL"],
-    }
-
-    all_capabilities = []
-    cap_to_domain = {}
-    for domain, caps in DOMAIN_CAPABILITIES.items():
-        all_capabilities.extend(caps)
-        for cap in caps:
-            cap_to_domain[cap] = domain
+    all_capabilities, cap_to_domain = _get_all_capabilities()
 
     cap_name = capability_name.upper()
     if cap_name not in all_capabilities:
@@ -319,37 +296,38 @@ def get_capability_health(
             detail=f"Capability '{capability_name}' not found. Valid capabilities: {sorted(all_capabilities)}",
         )
 
-    # Get any blocking/warning signals for this capability
-    signals_result = session.execute(
-        text("""
-            SELECT signal_type, decision, reason, recorded_by, recorded_at
-            FROM governance_signals
-            WHERE (scope = :cap_name OR scope = 'SYSTEM')
-            AND decision IN ('BLOCKED', 'WARN')
-            AND superseded_at IS NULL
-            AND (expires_at IS NULL OR expires_at > NOW())
-            ORDER BY recorded_at DESC
-            LIMIT 5
-        """),
-        {"cap_name": cap_name},
-    ).fetchall()
+    registry = get_operation_registry()
+
+    # Get blocking/warning signals via registry dispatch
+    signals_result = await registry.execute("platform.health", OperationContext(
+        session=None,
+        tenant_id="",
+        params={
+            "method": "get_capability_signals",
+            "capability_name": cap_name,
+            "limit": 5,
+        },
+    ))
+    if not signals_result.success:
+        raise HTTPException(status_code=500, detail=signals_result.error)
+    signals = signals_result.data.get("signals", [])
 
     reasons = []
     is_blocked = False
     is_degraded = False
 
-    for row in signals_result:
-        signal_type, decision, reason, recorded_by, recorded_at = row
+    for signal in signals:
+        decision = signal["decision"]
         if decision == "BLOCKED":
             is_blocked = True
         elif decision == "WARN":
             is_degraded = True
         reasons.append(
             {
-                "signal_type": signal_type,
+                "signal_type": signal["signal_type"],
                 "decision": decision,
-                "reason": reason or f"Signal from {recorded_by}",
-                "recorded_at": recorded_at.isoformat() if recorded_at else None,
+                "reason": signal["reason"] or f"Signal from {signal['recorded_by']}",
+                "recorded_at": signal["recorded_at"].isoformat() if signal["recorded_at"] else None,
             }
         )
 
@@ -384,14 +362,13 @@ def get_capability_health(
 
 
 @router.get("/eligibility/{capability_name}")
-def check_capability_eligibility(
+async def check_capability_eligibility(
     capability_name: str,
-    session: Session = Depends(get_session),
 ) -> Dict[str, Any]:
     """
     Quick eligibility check for a capability (lightweight version).
 
-    Uses direct SQL to check for blocking signals in a single query.
+    Uses registry dispatch to check for blocking signals in a single query.
 
     Args:
         capability_name: Capability name
@@ -406,21 +383,7 @@ def check_capability_eligibility(
     Raises:
         404: Capability not found
     """
-    from sqlalchemy import text
-
-    # Valid capabilities
-    DOMAIN_CAPABILITIES = {
-        "LOGS": ["LOGS_LIST", "LOGS_DETAIL", "LOGS_EXPORT"],
-        "INCIDENTS": ["INCIDENTS_LIST", "INCIDENTS_DETAIL", "INCIDENT_ACKNOWLEDGE", "INCIDENT_RESOLVE"],
-        "KEYS": ["KEYS_LIST", "KEYS_FREEZE", "KEYS_UNFREEZE"],
-        "POLICY": ["POLICY_CONSTRAINTS", "GUARDRAIL_DETAIL"],
-        "KILLSWITCH": ["KILLSWITCH_STATUS", "KILLSWITCH_ACTIVATE", "KILLSWITCH_DEACTIVATE"],
-        "ACTIVITY": ["ACTIVITY_LIST", "ACTIVITY_DETAIL"],
-    }
-
-    all_capabilities = []
-    for caps in DOMAIN_CAPABILITIES.values():
-        all_capabilities.extend(caps)
+    all_capabilities, _ = _get_all_capabilities()
 
     cap_name = capability_name.upper()
     if cap_name not in all_capabilities:
@@ -429,19 +392,21 @@ def check_capability_eligibility(
             detail=f"Capability '{capability_name}' not found",
         )
 
-    # Single query to check for blocking signals
-    blocked_result = session.execute(
-        text("""
-            SELECT COUNT(*) FROM governance_signals
-            WHERE (scope = :cap_name OR scope = 'SYSTEM')
-            AND decision = 'BLOCKED'
-            AND superseded_at IS NULL
-            AND (expires_at IS NULL OR expires_at > NOW())
-        """),
-        {"cap_name": cap_name},
-    ).scalar()
+    registry = get_operation_registry()
 
-    is_blocked = (blocked_result or 0) > 0
+    # Check for blocking signals via registry dispatch
+    count_result = await registry.execute("platform.health", OperationContext(
+        session=None,
+        tenant_id="",
+        params={
+            "method": "count_blocked_for_capability",
+            "capability_name": cap_name,
+        },
+    ))
+    if not count_result.success:
+        raise HTTPException(status_code=500, detail=count_result.error)
+    blocked_count = count_result.data.get("count", 0)
+    is_blocked = blocked_count > 0
 
     # Check for hardcoded disqualified (KILLSWITCH_STATUS per CAPABILITY_LIFECYCLE.yaml)
     if cap_name == "KILLSWITCH_STATUS":

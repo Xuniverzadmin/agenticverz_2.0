@@ -576,6 +576,77 @@ class IncidentsFacade:
         )
 
     # -------------------------------------------------------------------------
+    # Deprecated List (full filter set)
+    # -------------------------------------------------------------------------
+
+    async def list_incidents(
+        self,
+        session: "AsyncSession",
+        tenant_id: str,
+        *,
+        topic: Optional[str] = None,
+        lifecycle_state: Optional[str] = None,
+        severity: Optional[str] = None,
+        category: Optional[str] = None,
+        cause_type: Optional[str] = None,
+        is_synthetic: Optional[bool] = None,
+        created_after: Optional[datetime] = None,
+        created_before: Optional[datetime] = None,
+        limit: int = 20,
+        offset: int = 0,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+    ) -> IncidentListResult:
+        """List incidents with full filter set (deprecated endpoint)."""
+        driver = IncidentsFacadeDriver(session)
+
+        snapshot = await driver.fetch_all_incidents(
+            tenant_id=tenant_id,
+            topic=topic,
+            lifecycle_state=lifecycle_state,
+            severity=severity,
+            category=category,
+            cause_type=cause_type,
+            is_synthetic=is_synthetic,
+            created_after=created_after,
+            created_before=created_before,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
+
+        filters_applied: dict[str, Any] = {"tenant_id": tenant_id}
+        if topic:
+            filters_applied["topic"] = topic
+        elif lifecycle_state:
+            filters_applied["lifecycle_state"] = lifecycle_state
+        if severity:
+            filters_applied["severity"] = severity
+        if category:
+            filters_applied["category"] = category
+        if cause_type:
+            filters_applied["cause_type"] = cause_type
+        if is_synthetic is not None:
+            filters_applied["is_synthetic"] = is_synthetic
+        if created_after:
+            filters_applied["created_after"] = created_after.isoformat()
+        if created_before:
+            filters_applied["created_before"] = created_before.isoformat()
+
+        items = [self._snapshot_to_summary(s) for s in snapshot.items]
+        has_more = offset + len(items) < snapshot.total
+        next_offset = offset + limit if has_more else None
+
+        return IncidentListResult(
+            items=items,
+            total=snapshot.total,
+            has_more=has_more,
+            filters_applied=filters_applied,
+            pagination=PaginationResult(limit=limit, offset=offset, next_offset=next_offset),
+        )
+
+    # -------------------------------------------------------------------------
     # Detail Operations
     # -------------------------------------------------------------------------
 
@@ -743,6 +814,147 @@ class IncidentsFacade:
             summaries=summaries,
             total_cost_impact=total_cost,
             baseline_days=baseline_days,
+            generated_at=datetime.now(timezone.utc),
+        )
+
+    # -------------------------------------------------------------------------
+    # Historical Analytics
+    # -------------------------------------------------------------------------
+
+    async def get_historical_trend(
+        self,
+        session: "AsyncSession",
+        tenant_id: str,
+        *,
+        window_days: int = 90,
+        granularity: str = "week",
+    ) -> HistoricalTrendResult:
+        """Get historical trend. Backend-computed, deterministic."""
+        driver = IncidentsFacadeDriver(session)
+
+        rows = await driver.fetch_historical_trend(
+            tenant_id=tenant_id,
+            window_days=window_days,
+            trunc_unit=granularity,
+        )
+
+        data_points: list[HistoricalTrendDataPointResult] = []
+        total_incidents = 0
+
+        for row in rows:
+            total_incidents += row.incident_count
+            data_points.append(HistoricalTrendDataPointResult(
+                period=row.period,
+                incident_count=row.incident_count,
+                resolved_count=row.resolved_count,
+                avg_resolution_time_ms=row.avg_resolution_time_ms,
+            ))
+
+        return HistoricalTrendResult(
+            data_points=data_points,
+            granularity=granularity,
+            window_days=window_days,
+            total_incidents=total_incidents,
+            generated_at=datetime.now(timezone.utc),
+        )
+
+    async def get_historical_distribution(
+        self,
+        session: "AsyncSession",
+        tenant_id: str,
+        *,
+        window_days: int = 90,
+    ) -> HistoricalDistributionResult:
+        """Get historical distribution. Backend-computed, deterministic."""
+        driver = IncidentsFacadeDriver(session)
+
+        data = await driver.fetch_historical_distribution(
+            tenant_id=tenant_id,
+            window_days=window_days,
+        )
+
+        total_incidents = data["total_incidents"]
+
+        by_category = [
+            HistoricalDistributionEntryResult(
+                dimension=r.dimension,
+                value=r.value,
+                count=r.count,
+                percentage=round(r.count / total_incidents * 100, 2) if total_incidents > 0 else 0,
+            )
+            for r in data["by_category"]
+        ]
+
+        by_severity = [
+            HistoricalDistributionEntryResult(
+                dimension=r.dimension,
+                value=r.value,
+                count=r.count,
+                percentage=round(r.count / total_incidents * 100, 2) if total_incidents > 0 else 0,
+            )
+            for r in data["by_severity"]
+        ]
+
+        by_cause_type = [
+            HistoricalDistributionEntryResult(
+                dimension=r.dimension,
+                value=r.value,
+                count=r.count,
+                percentage=round(r.count / total_incidents * 100, 2) if total_incidents > 0 else 0,
+            )
+            for r in data["by_cause_type"]
+        ]
+
+        return HistoricalDistributionResult(
+            by_category=by_category,
+            by_severity=by_severity,
+            by_cause_type=by_cause_type,
+            window_days=window_days,
+            total_incidents=total_incidents,
+            generated_at=datetime.now(timezone.utc),
+        )
+
+    async def get_historical_cost_trend(
+        self,
+        session: "AsyncSession",
+        tenant_id: str,
+        *,
+        window_days: int = 90,
+        granularity: str = "week",
+    ) -> CostTrendResult:
+        """Get historical cost trend. Backend-computed, deterministic."""
+        driver = IncidentsFacadeDriver(session)
+
+        rows = await driver.fetch_historical_cost_trend(
+            tenant_id=tenant_id,
+            window_days=window_days,
+            granularity=granularity,
+        )
+
+        data_points: list[CostTrendDataPointResult] = []
+        total_cost = 0.0
+        total_incidents = 0
+
+        for row in rows:
+            cost = row.total_cost
+            count = row.incident_count
+            total_cost += cost
+            total_incidents += count
+            avg_cost = cost / count if count > 0 else 0.0
+
+            data_points.append(CostTrendDataPointResult(
+                period=row.period,
+                total_cost=round(cost, 2),
+                incident_count=count,
+                avg_cost_per_incident=round(avg_cost, 2),
+            ))
+
+        return CostTrendResult(
+            data_points=data_points,
+            granularity=granularity,
+            window_days=window_days,
+            total_cost=round(total_cost, 2),
+            total_incidents=total_incidents,
             generated_at=datetime.now(timezone.utc),
         )
 

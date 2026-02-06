@@ -11,6 +11,8 @@
 
 The **policies** domain is the largest and most complex domain in the HOC architecture, containing **77 files** across L5 and L6 layers. It implements the complete policy lifecycle: DSL compilation, runtime enforcement, conflict resolution, recovery evaluation, and lessons learned. This domain serves as the **governance control plane** for the entire system, enforcing customer-defined rules, limits, and protections across all operations.
 
+**L2 Purity Update (2026-02-06):** L2 policy APIs no longer import L5 engines directly. They use L4 bridge capabilities (`PoliciesEngineBridge`, `AccountBridge`) for policy engine and RBAC access (PIN-L2-PURITY).
+
 ### Domain Metrics
 
 | Metric | Value |
@@ -1101,4 +1103,59 @@ Reference: `docs/memory-pins/PIN-514-runtime-convergence.md`, `docs/memory-pins/
 policies_bridge = get_policies_bridge()
 reader = policies_bridge.policy_evaluations_capability(session)
 evaluations = await reader.fetch_policy_evaluations_for_run(tenant_id, run_id)
+```
+
+## PIN-520 L4 Injection Pattern (Iter3.1)
+
+**Date:** 2026-02-06
+**Reference:** PIN-520, TODO_ITER3.1.md
+
+### L5 Purity Achieved
+
+L5 engines in the policies domain no longer import from `hoc_spine.orchestrator` or `hoc_spine.authority`. Dependencies are now injected by L4 callers.
+
+### Changes Made
+
+| File | Violation Removed | Pattern Applied |
+|------|-------------------|-----------------|
+| `governance_facade.py` | runtime_switch imports (5 locations) | Constructor injection via ModuleType |
+| `failure_mode_handler.py` | profile_policy_mode import | Module-level setter injection |
+| `eligibility_engine.py` | orchestrator type imports | Imports from account/L5_engines |
+
+### L4 Bridge Capabilities Added (policies_bridge.py)
+
+| Capability | Purpose | Injected Into |
+|------------|---------|---------------|
+| `governance_runtime_capability()` | Runtime switch module | GovernanceFacade |
+| `governance_config_capability()` | Governance config getter | failure_mode_handler |
+
+### Adapter Protocol Added (founder_contract_review_adapter.py)
+
+| Protocol | Purpose |
+|----------|---------|
+| `ContractStatePort` | L2 adapter receives contract state via Protocol, not direct L4 import |
+
+### Injection Point
+
+```python
+# L4 caller pattern for governance facade
+bridge = get_policies_engine_bridge()
+facade = GovernanceFacade(runtime_module=bridge.governance_runtime_capability())
+
+# L4 caller pattern for failure mode handler
+from app.hoc.cus.policies.L5_engines.failure_mode_handler import set_governance_config_getter
+bridge = get_policies_engine_bridge()
+set_governance_config_getter(bridge.governance_config_capability())
+```
+
+### Evidence
+
+```bash
+# Zero hoc_spine.orchestrator imports in L5 engines
+rg "from app\\.hoc\\.cus\\.hoc_spine\\.orchestrator" app/hoc/cus/policies/L5_engines/
+# Result: No matches found
+
+# Zero hoc_spine.authority imports in adapters
+rg "from app\\.hoc\\.cus\\.hoc_spine\\.authority" app/hoc/cus/policies/adapters/
+# Result: No matches found
 ```

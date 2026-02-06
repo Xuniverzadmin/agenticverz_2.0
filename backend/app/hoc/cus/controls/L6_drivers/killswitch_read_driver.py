@@ -222,9 +222,15 @@ def get_killswitch_read_driver(session: Optional[Session] = None) -> KillswitchR
 __all__ = [
     "KillswitchReadDriver",
     "get_killswitch_read_driver",
+    "CustomerKillswitchReadService",
+    "get_customer_killswitch_read_service",
     # DTOs
     "KillswitchStateDTO",
     "GuardrailInfoDTO",
     "IncidentStatsDTO",
     "KillswitchStatusDTO",
 ]
+
+# Backward compatibility aliases (legacy names from app.services.killswitch.customer_killswitch_read_service)
+CustomerKillswitchReadService = KillswitchReadDriver
+get_customer_killswitch_read_service = get_killswitch_read_driver

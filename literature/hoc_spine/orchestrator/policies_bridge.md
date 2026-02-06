@@ -30,6 +30,8 @@ for FastAPI endpoints that cannot use the async registry pattern.
 
 ## Capabilities
 
+### PoliciesBridge (L4 → L5/L6, sync capabilities)
+
 | Method | Returns | Module | Session |
 |--------|---------|--------|---------|
 | `customer_policy_read_capability(session)` | `CustomerPolicyReadService` | L5 engine | yes |
@@ -37,17 +39,34 @@ for FastAPI endpoints that cannot use the async registry pattern.
 | `recovery_write_capability(session)` | `RecoveryWriteService` | L6 driver | yes |
 | `recovery_matcher_capability(session)` | `RecoveryMatcher` | L6 driver | yes |
 
+### PoliciesEngineBridge (L4 → L5 engine access, sync capabilities)
+
+| Method | Returns | Module | Session |
+|--------|---------|--------|---------|
+| `prevention_hook_capability()` | `prevention_hook` module | L5 engine | no |
+| `policy_engine_capability()` | `get_policy_engine()` | L5 engine | no |
+| `policy_engine_class_capability()` | `PolicyEngine` class | L5 engine | no |
+| `governance_runtime_capability()` | `runtime_switch` module | L5 GovernanceFacade - PIN-520 Iter3.1 (2026-02-06) | no |
+| `governance_config_capability()` | Governance config getter | L5 failure_mode_handler - PIN-520 Iter3.1 (2026-02-06) | no |
+
 ## Usage Pattern
 
 ```python
 from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.policies_bridge import (
     get_policies_bridge,
+    get_policies_engine_bridge,
 )
 
 # Sync API endpoint usage (PIN-520 Phase 1)
 bridge = get_policies_bridge()
 write_service = bridge.recovery_write_capability(session)
 candidate_id, is_insert, count = write_service.upsert_recovery_candidate(...)
+
+# L2 sync policy engine access (PIN-L2-PURITY)
+engine_bridge = get_policies_engine_bridge()
+policy_engine = engine_bridge.policy_engine_capability()
+PolicyEngine = engine_bridge.policy_engine_class_capability()
+prevention_hook = engine_bridge.prevention_hook_capability()
 ```
 
 ## Bridge Contract
@@ -58,6 +77,8 @@ candidate_id, is_insert, count = write_service.upsert_recovery_candidate(...)
 | Session parameter for sync caps | Required for L2 sync APIs |
 | Lazy imports only | No top-level L5/L6 imports |
 | L4 handlers + L2 APIs | Callers validation |
+
+**Note:** `PoliciesEngineBridge` exists to keep the base bridge within the 5-method limit.
 
 ## PIN-520 Phase 1 (L4 Uniformity Initiative)
 

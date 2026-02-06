@@ -47,7 +47,7 @@ from typing import Any, Dict, List, Optional
 
 # L4 → L4 import: Classification authority from RecoveryRuleEngine
 # This is the ONLY correct way to get classification logic - L4 owns it.
-from app.services.recovery_rule_engine import (
+from app.hoc.cus.incidents.L5_engines.recovery_rule_engine import (
     classify_error_category,
     suggest_recovery_mode,
 )

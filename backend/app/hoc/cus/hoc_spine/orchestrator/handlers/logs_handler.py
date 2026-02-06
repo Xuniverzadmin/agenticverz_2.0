@@ -314,6 +314,69 @@ class LogsPdfHandler:
         return OperationResult.ok(data)
 
 
+class LogsCaptureHandler:
+    """
+    Handler for logs.capture operations.
+
+    Dispatches to capture_driver for evidence capture (PIN-520 Phase 1).
+    Used by workers.py for Evidence Architecture v1.0.
+
+    Methods:
+      - capture_environment: Capture environment evidence at run creation
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.logs.L6_drivers.capture_driver import (
+            capture_environment_evidence,
+        )
+        from app.core.execution_context import ExecutionContext, EvidenceSource
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail(
+                "Missing 'method' in params", "MISSING_METHOD"
+            )
+
+        if method_name == "capture_environment":
+            # Rebuild ExecutionContext from params
+            run_id = ctx.params.get("run_id")
+            trace_id = ctx.params.get("trace_id")
+            source = ctx.params.get("source", "SDK")
+            is_synthetic = ctx.params.get("is_synthetic", False)
+            synthetic_scenario_id = ctx.params.get("synthetic_scenario_id")
+
+            if not run_id or not trace_id:
+                return OperationResult.fail(
+                    "Missing 'run_id' or 'trace_id'", "MISSING_CONTEXT"
+                )
+
+            # Create ExecutionContext
+            evidence_source = EvidenceSource[source] if isinstance(source, str) else source
+            execution_ctx = ExecutionContext.create(
+                run_id=run_id,
+                trace_id=trace_id,
+                source=evidence_source,
+                is_synthetic=is_synthetic,
+                synthetic_scenario_id=synthetic_scenario_id,
+            )
+
+            # Capture environment evidence
+            capture_environment_evidence(
+                execution_ctx,
+                sdk_mode=ctx.params.get("sdk_mode", "api"),
+                execution_environment=ctx.params.get("execution_environment", "prod"),
+                telemetry_delivery_status=ctx.params.get("telemetry_delivery_status", "connected"),
+                capture_confidence_score=ctx.params.get("capture_confidence_score", 1.0),
+            )
+
+            return OperationResult.ok({"captured": True, "run_id": run_id})
+
+        else:
+            return OperationResult.fail(
+                f"Unknown capture method: {method_name}", "UNKNOWN_METHOD"
+            )
+
+
 def register(registry: OperationRegistry) -> None:
     """Register logs operations with the registry."""
     registry.register("logs.query", LogsQueryHandler())
@@ -322,3 +385,5 @@ def register(registry: OperationRegistry) -> None:
     registry.register("logs.replay", LogsReplayHandler())
     registry.register("logs.evidence_report", LogsEvidenceReportHandler())
     registry.register("logs.pdf", LogsPdfHandler())
+    # PIN-520 Phase 1: Capture handler for workers.py migration
+    registry.register("logs.capture", LogsCaptureHandler())

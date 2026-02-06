@@ -423,3 +423,7 @@ def get_export_bundle_driver() -> ExportBundleDriver:
     if _export_bundle_driver is None:
         _export_bundle_driver = ExportBundleDriver()
     return _export_bundle_driver
+
+
+# Backward compatibility alias (legacy name from app.services.export_bundle_service)
+get_export_bundle_service = get_export_bundle_driver

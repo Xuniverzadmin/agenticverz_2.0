@@ -29,7 +29,7 @@ from ..auth.tenant_roles import TenantRole
 from ..db import get_async_session
 from ..models.policy import PolicyApprovalRequest, PolicyProposal, PolicyVersion
 from ..schemas.response import wrap_dict
-from ..services.policy_proposal import review_policy_proposal
+from app.hoc.cus.policies.L5_engines.policy_proposal_engine import review_policy_proposal
 
 logger = logging.getLogger("nova.api.policy_proposals")
 

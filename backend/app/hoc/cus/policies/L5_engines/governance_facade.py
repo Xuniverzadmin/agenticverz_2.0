@@ -55,6 +55,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
+from types import ModuleType
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("nova.services.governance.facade")
@@ -162,13 +163,22 @@ class GovernanceFacade:
     This is the ONLY entry point for L2 APIs and SDK to interact with
     governance control services.
 
-    Layer: L4 (Domain Logic)
+    Layer: L5 (Domain Engine)
     Callers: governance.py (L2), aos_sdk
+
+    PIN-520: runtime_switch is now injected via L4 bridge instead of being
+    imported directly from L4 authority.
     """
 
-    def __init__(self):
-        """Initialize facade with lazy-loaded services."""
-        self._runtime_switch_loaded = False
+    def __init__(self, runtime_switch: Optional[ModuleType] = None):
+        """Initialize facade with optional runtime_switch injection.
+
+        Args:
+            runtime_switch: The runtime_switch module for governance state management.
+                           If not provided, governance operations will be unavailable.
+                           L4 handlers should inject via PoliciesEngineBridge.
+        """
+        self._runtime_switch = runtime_switch
         self._boot_time = datetime.now(timezone.utc)
 
     # =========================================================================
@@ -197,17 +207,22 @@ class GovernanceFacade:
             extra={"reason": reason, "actor": actor}
         )
 
-        try:
-            from app.hoc.cus.hoc_spine.authority.runtime_switch import (
-                disable_governance_runtime,
-                get_governance_state,
-                is_governance_active,
-                is_degraded_mode,
+        # PIN-520: runtime_switch must be injected via L4 bridge
+        if self._runtime_switch is None:
+            return KillSwitchResult(
+                success=False,
+                previous_mode=GovernanceMode.NORMAL,
+                current_mode=GovernanceMode.NORMAL,
+                timestamp=datetime.now(timezone.utc),
+                actor=actor,
+                reason=reason,
+                error="runtime_switch not available - inject via L4 PoliciesEngineBridge",
             )
 
+        try:
             # Capture previous state
-            was_active = is_governance_active()
-            was_degraded = is_degraded_mode()
+            was_active = self._runtime_switch.is_governance_active()
+            was_degraded = self._runtime_switch.is_degraded_mode()
 
             if was_degraded:
                 previous_mode = GovernanceMode.DEGRADED
@@ -217,7 +232,7 @@ class GovernanceFacade:
                 previous_mode = GovernanceMode.KILL
 
             # Execute kill switch
-            disable_governance_runtime(reason=reason, actor=actor)
+            self._runtime_switch.disable_governance_runtime(reason=reason, actor=actor)
 
             return KillSwitchResult(
                 success=True,
@@ -261,17 +276,23 @@ class GovernanceFacade:
             extra={"actor": actor}
         )
 
-        try:
-            from app.hoc.cus.hoc_spine.authority.runtime_switch import (
-                enable_governance_runtime,
-                is_governance_active,
+        # PIN-520: runtime_switch must be injected via L4 bridge
+        if self._runtime_switch is None:
+            return KillSwitchResult(
+                success=False,
+                previous_mode=GovernanceMode.KILL,
+                current_mode=GovernanceMode.KILL,
+                timestamp=datetime.now(timezone.utc),
+                actor=actor,
+                error="runtime_switch not available - inject via L4 PoliciesEngineBridge",
             )
 
-            was_active = is_governance_active()
+        try:
+            was_active = self._runtime_switch.is_governance_active()
             previous_mode = GovernanceMode.NORMAL if was_active else GovernanceMode.KILL
 
             # Re-enable governance
-            enable_governance_runtime(actor=actor)
+            self._runtime_switch.enable_governance_runtime(actor=actor)
 
             return KillSwitchResult(
                 success=True,
@@ -321,19 +342,22 @@ class GovernanceFacade:
             extra={"mode": mode.value, "reason": reason, "actor": actor}
         )
 
-        try:
-            from app.hoc.cus.hoc_spine.authority.runtime_switch import (
-                enter_degraded_mode,
-                exit_degraded_mode,
-                enable_governance_runtime,
-                disable_governance_runtime,
-                is_governance_active,
-                is_degraded_mode,
+        # PIN-520: runtime_switch must be injected via L4 bridge
+        if self._runtime_switch is None:
+            return KillSwitchResult(
+                success=False,
+                previous_mode=GovernanceMode.NORMAL,
+                current_mode=GovernanceMode.NORMAL,
+                timestamp=datetime.now(timezone.utc),
+                actor=actor,
+                reason=reason,
+                error="runtime_switch not available - inject via L4 PoliciesEngineBridge",
             )
 
+        try:
             # Capture previous state
-            was_active = is_governance_active()
-            was_degraded = is_degraded_mode()
+            was_active = self._runtime_switch.is_governance_active()
+            was_degraded = self._runtime_switch.is_degraded_mode()
 
             if was_degraded:
                 previous_mode = GovernanceMode.DEGRADED
@@ -344,14 +368,14 @@ class GovernanceFacade:
 
             # Apply new mode
             if mode == GovernanceMode.KILL:
-                disable_governance_runtime(reason=reason, actor=actor)
+                self._runtime_switch.disable_governance_runtime(reason=reason, actor=actor)
             elif mode == GovernanceMode.DEGRADED:
-                enter_degraded_mode(reason=reason, actor=actor)
+                self._runtime_switch.enter_degraded_mode(reason=reason, actor=actor)
             else:  # NORMAL
                 if was_degraded:
-                    exit_degraded_mode(actor=actor)
+                    self._runtime_switch.exit_degraded_mode(actor=actor)
                 elif not was_active:
-                    enable_governance_runtime(actor=actor)
+                    self._runtime_switch.enable_governance_runtime(actor=actor)
 
             return KillSwitchResult(
                 success=True,
@@ -381,19 +405,27 @@ class GovernanceFacade:
         """
         Get current governance state.
 
+        PIN-520: Uses injected runtime_switch instead of importing from L4 authority.
+
         Returns:
             GovernanceStateResult with current state details
         """
-        try:
-            from app.hoc.cus.hoc_spine.authority.runtime_switch import (
-                get_governance_state as get_runtime_state,
-                is_governance_active,
-                is_degraded_mode,
+        # PIN-520: runtime_switch must be injected via L4 bridge
+        if self._runtime_switch is None:
+            # Return safe defaults if not injected
+            return GovernanceStateResult(
+                mode=GovernanceMode.NORMAL,
+                active=True,
+                degraded_mode=False,
+                last_changed=None,
+                last_change_reason=None,
+                last_change_actor=None,
             )
 
-            state = get_runtime_state()
-            is_active = is_governance_active()
-            degraded = is_degraded_mode()
+        try:
+            state = self._runtime_switch.get_governance_state()
+            is_active = self._runtime_switch.is_governance_active()
+            degraded = self._runtime_switch.is_degraded_mode()
 
             if degraded:
                 mode = GovernanceMode.DEGRADED
@@ -600,17 +632,24 @@ class GovernanceFacade:
         """
         Get SPINE component health status.
 
+        PIN-520: Uses injected runtime_switch instead of importing from L4 authority.
+
         Returns:
             BootStatusResult with component health details
         """
         try:
-            from app.hoc.cus.hoc_spine.authority.runtime_switch import is_governance_active
+            # PIN-520: Use injected runtime_switch
+            governance_active = (
+                self._runtime_switch.is_governance_active()
+                if self._runtime_switch
+                else True  # Default to active if not injected
+            )
 
             # Check core components
             components = {
                 "governance": {
-                    "status": "healthy" if is_governance_active() else "disabled",
-                    "active": is_governance_active(),
+                    "status": "healthy" if governance_active else "disabled",
+                    "active": governance_active,
                 },
                 "policy_engine": {
                     "status": "healthy",
@@ -675,17 +714,27 @@ class GovernanceFacade:
 _facade_instance: Optional[GovernanceFacade] = None
 
 
-def get_governance_facade() -> GovernanceFacade:
+def get_governance_facade(
+    runtime_switch: Optional[ModuleType] = None,
+) -> GovernanceFacade:
     """
     Get the governance facade instance.
 
     This is the recommended way to access governance control operations
     from L2 APIs and the SDK.
 
+    PIN-520: L4 callers must inject runtime_switch. L5 must not import from hoc_spine.
+
+    Args:
+        runtime_switch: The runtime_switch module for governance state management (injected by L4 caller).
+
     Returns:
         GovernanceFacade instance
     """
     global _facade_instance
     if _facade_instance is None:
-        _facade_instance = GovernanceFacade()
+        _facade_instance = GovernanceFacade(runtime_switch=runtime_switch)
+    elif runtime_switch is not None and _facade_instance._runtime_switch is None:
+        # Allow late injection if runtime_switch wasn't provided initially
+        _facade_instance._runtime_switch = runtime_switch
     return _facade_instance

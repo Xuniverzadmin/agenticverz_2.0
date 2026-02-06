@@ -165,7 +165,7 @@ class BusinessBuilderWorker:
 
         # M9 Failure Catalog - use RecoveryMatcher for pattern matching
         try:
-            from app.services.recovery_matcher import RecoveryMatcher
+            from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
 
             self._failure_catalog = RecoveryMatcher()
             logger.info("M9 Failure catalog loaded (via RecoveryMatcher)")
@@ -174,7 +174,7 @@ class BusinessBuilderWorker:
 
         # M10 Recovery Engine - use RecoveryMatcher for suggestions
         try:
-            from app.services.recovery_matcher import RecoveryMatcher
+            from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
 
             self._recovery_engine = RecoveryMatcher()
             logger.info("M10 Recovery engine loaded (via RecoveryMatcher)")

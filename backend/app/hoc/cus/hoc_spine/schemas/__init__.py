@@ -19,3 +19,9 @@ Each file must declare its consumers in the header.
 
 Exports will be added as files are moved here.
 """
+
+from .authority_decision import AuthorityDecision
+
+__all__ = [
+    "AuthorityDecision",
+]

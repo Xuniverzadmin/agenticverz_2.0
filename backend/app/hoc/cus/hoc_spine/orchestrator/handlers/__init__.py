@@ -84,3 +84,97 @@ def register_all_handlers(registry: "OperationRegistry") -> None:
 
     analytics_prediction_handler.register(registry)  # analytics.prediction
     analytics_snapshot_handler.register(registry)    # analytics.snapshot
+
+    # Phase B4 — Ops domain (1 operation: ops.cost)
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import ops_handler
+
+    ops_handler.register(registry)  # ops.cost
+
+    # Agent domain — Platform health, discovery stats, routing, and strategy
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import agent_handler
+
+    agent_handler.register(registry)  # agent.discovery_stats, agent.routing, agent.strategy
+
+    # M25 Integration domain — L2 first-principles purity extraction
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import m25_integration_handler
+
+    m25_integration_handler.register(registry)  # m25.read_*, m25.write_*, m25.update_*
+
+    # Proxy domain — L2→L6 elimination (v1_proxy.py)
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import proxy_handler
+
+    proxy_handler.register(registry)  # proxy.ops
+
+    # Platform domain — L2→L6 elimination (platform.py)
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import platform_handler
+
+    platform_handler.register(registry)  # platform.health
+
+    # Killswitch domain — L2→L6 elimination (v1_killswitch.py)
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import killswitch_handler
+
+    killswitch_handler.register(registry)  # killswitch.read, killswitch.write
+
+
+def bootstrap_hoc_spine() -> None:
+    """
+    Bootstrap the HOC Spine runtime system (ITER3.3).
+
+    This function:
+    1. Validates all hoc_spine modules import successfully (fail-fast on NameError/ModuleNotFoundError)
+    2. Registers all operation handlers with the OperationRegistry
+    3. Freezes the registry to prevent runtime registration
+
+    Must be called at application startup before serving requests.
+
+    Raises:
+        RuntimeError: If any hoc_spine module fails to import
+    """
+    import logging
+    import importlib
+    import pkgutil
+
+    logger = logging.getLogger("nova.hoc_spine.bootstrap")
+
+    # Step 1: Validate all hoc_spine modules import successfully
+    logger.info("hoc_spine.bootstrap: validating module imports...")
+
+    package_path = "app/hoc/cus/hoc_spine"
+    package_name = "app.hoc.cus.hoc_spine"
+    import_failures = []
+
+    for importer, modname, ispkg in pkgutil.walk_packages(
+        path=[package_path], prefix=package_name + "."
+    ):
+        if "__pycache__" in modname or modname.endswith("_test"):
+            continue
+        try:
+            importlib.import_module(modname)
+        except Exception as e:
+            import_failures.append((modname, type(e).__name__, str(e)[:200]))
+
+    if import_failures:
+        failure_details = "\n".join(
+            f"  - {mod}: {etype}: {emsg}" for mod, etype, emsg in import_failures
+        )
+        raise RuntimeError(
+            f"HOC Spine bootstrap failed: {len(import_failures)} module(s) failed to import:\n{failure_details}"
+        )
+
+    logger.info("hoc_spine.bootstrap: all modules import successfully")
+
+    # Step 2: Register all operation handlers
+    from app.hoc.cus.hoc_spine.orchestrator.operation_registry import get_operation_registry
+
+    registry = get_operation_registry()
+    register_all_handlers(registry)
+
+    logger.info(
+        "hoc_spine.bootstrap: handlers registered",
+        extra={"operation_count": len(registry._handlers)},
+    )
+
+    # Step 3: Freeze the registry to prevent runtime registration
+    registry.freeze()
+
+    logger.info("hoc_spine.bootstrap: registry frozen — HOC Spine runtime ready")

@@ -47,6 +47,7 @@ class IncidentsQueryHandler:
 
         facade = get_incidents_facade()
         dispatch = {
+            "list_incidents": facade.list_incidents,
             "list_active_incidents": facade.list_active_incidents,
             "list_resolved_incidents": facade.list_resolved_incidents,
             "list_historical_incidents": facade.list_historical_incidents,
@@ -54,6 +55,9 @@ class IncidentsQueryHandler:
             "get_incidents_for_run": facade.get_incidents_for_run,
             "get_metrics": facade.get_metrics,
             "analyze_cost_impact": facade.analyze_cost_impact,
+            "get_historical_trend": facade.get_historical_trend,
+            "get_historical_distribution": facade.get_historical_distribution,
+            "get_historical_cost_trend": facade.get_historical_cost_trend,
             "detect_patterns": facade.detect_patterns,
             "analyze_recurrence": facade.analyze_recurrence,
             "get_incident_learnings": facade.get_incident_learnings,
@@ -201,6 +205,173 @@ class IncidentsRecoveryRuleHandler:
         )
 
 
+class CostGuardQueryHandler:
+    """
+    Handler for incidents.cost_guard operations.
+
+    Dispatches to CostGuardDriver methods for cost visibility queries.
+    Extracted from cost_guard.py L2 to comply with L2 no-execute rule.
+
+    Methods:
+      - get_spend_totals: Get spend today/mtd/week
+      - get_budget: Get budget limits
+      - get_baseline: Get baseline for trend
+      - get_last_snapshot: Get last snapshot time
+      - get_total_spend: Get total spend for period
+      - get_baselines: Get all baselines
+      - get_spend_by_feature: Breakdown by feature
+      - get_spend_by_model: Breakdown by model
+      - get_spend_by_user: Breakdown by user
+      - get_cost_anomalies: Get cost anomalies
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.incidents.L6_drivers.cost_guard_driver import (
+            get_cost_guard_driver,
+        )
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail(
+                "Missing 'method' in params", "MISSING_METHOD"
+            )
+
+        driver = get_cost_guard_driver(ctx.session)
+
+        try:
+            if method_name == "get_spend_totals":
+                result = driver.get_spend_totals(
+                    tenant_id=ctx.tenant_id,
+                    today_start=ctx.params["today_start"],
+                    month_start=ctx.params["month_start"],
+                    week_ago=ctx.params["week_ago"],
+                )
+                return OperationResult.ok({
+                    "today": result.today,
+                    "mtd": result.mtd,
+                    "week": result.week,
+                })
+
+            elif method_name == "get_budget":
+                result = driver.get_budget(tenant_id=ctx.tenant_id)
+                return OperationResult.ok({
+                    "daily_limit_cents": result.daily_limit_cents,
+                    "monthly_limit_cents": result.monthly_limit_cents,
+                })
+
+            elif method_name == "get_baseline":
+                result = driver.get_baseline(tenant_id=ctx.tenant_id)
+                return OperationResult.ok({"baseline": result})
+
+            elif method_name == "get_last_snapshot":
+                result = driver.get_last_snapshot(tenant_id=ctx.tenant_id)
+                return OperationResult.ok({"completed_at": result})
+
+            elif method_name == "get_total_spend":
+                result = driver.get_total_spend(
+                    tenant_id=ctx.tenant_id,
+                    period_start=ctx.params["period_start"],
+                )
+                return OperationResult.ok({"total": result})
+
+            elif method_name == "get_baselines":
+                result = driver.get_baselines(tenant_id=ctx.tenant_id)
+                return OperationResult.ok({"baselines": result})
+
+            elif method_name == "get_spend_by_feature":
+                result = driver.get_spend_by_feature(
+                    tenant_id=ctx.tenant_id,
+                    period_start=ctx.params["period_start"],
+                    limit=ctx.params.get("limit", 10),
+                )
+                return OperationResult.ok({
+                    "rows": [
+                        {
+                            "name": r.name,
+                            "display_name": r.display_name,
+                            "spend_cents": r.spend_cents,
+                            "request_count": r.request_count,
+                        }
+                        for r in result
+                    ]
+                })
+
+            elif method_name == "get_spend_by_model":
+                result = driver.get_spend_by_model(
+                    tenant_id=ctx.tenant_id,
+                    period_start=ctx.params["period_start"],
+                    limit=ctx.params.get("limit", 10),
+                )
+                return OperationResult.ok({
+                    "rows": [
+                        {
+                            "name": r.name,
+                            "display_name": r.display_name,
+                            "spend_cents": r.spend_cents,
+                            "request_count": r.request_count,
+                        }
+                        for r in result
+                    ]
+                })
+
+            elif method_name == "get_spend_by_user":
+                result = driver.get_spend_by_user(
+                    tenant_id=ctx.tenant_id,
+                    period_start=ctx.params["period_start"],
+                    limit=ctx.params.get("limit", 10),
+                )
+                return OperationResult.ok({
+                    "rows": [
+                        {
+                            "name": r.name,
+                            "display_name": r.display_name,
+                            "spend_cents": r.spend_cents,
+                            "request_count": r.request_count,
+                        }
+                        for r in result
+                    ]
+                })
+
+            elif method_name == "get_cost_anomalies":
+                anomalies, has_more = driver.get_cost_anomalies(
+                    tenant_id=ctx.tenant_id,
+                    cutoff=ctx.params["cutoff"],
+                    include_resolved=ctx.params.get("include_resolved", False),
+                    limit=ctx.params.get("limit", 20),
+                )
+                return OperationResult.ok({
+                    "anomalies": [
+                        {
+                            "id": a.id,
+                            "anomaly_type": a.anomaly_type,
+                            "severity": a.severity,
+                            "current_value_cents": a.current_value_cents,
+                            "expected_value_cents": a.expected_value_cents,
+                            "threshold_pct": a.threshold_pct,
+                            "message": a.message,
+                            "incident_id": a.incident_id,
+                            "action_taken": a.action_taken,
+                            "resolved": a.resolved,
+                            "detected_at": a.detected_at,
+                            "resolved_at": a.resolved_at,
+                        }
+                        for a in anomalies
+                    ],
+                    "has_more": has_more,
+                })
+
+            return OperationResult.fail(
+                f"Unknown cost_guard method: {method_name}", "UNKNOWN_METHOD"
+            )
+
+        except KeyError as e:
+            return OperationResult.fail(
+                f"Missing required parameter: {e}", "MISSING_PARAM"
+            )
+        except Exception as e:
+            return OperationResult.fail(str(e), "QUERY_ERROR")
+
+
 def register(registry: OperationRegistry) -> None:
     """Register incidents operations with the registry."""
     registry.register("incidents.query", IncidentsQueryHandler())
@@ -208,3 +379,5 @@ def register(registry: OperationRegistry) -> None:
     registry.register("incidents.write", IncidentsWriteHandler())
     # PIN-520 Phase 1: Recovery rule engine
     registry.register("incidents.recovery_rules", IncidentsRecoveryRuleHandler())
+    # Cost guard queries (extracted from L2 cost_guard.py)
+    registry.register("incidents.cost_guard", CostGuardQueryHandler())

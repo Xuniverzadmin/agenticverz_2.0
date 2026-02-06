@@ -30,10 +30,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.gateway_middleware import get_auth_context
-from app.db import get_async_session_dep
 from app.schemas.limits.overrides import (
     LimitOverrideRequest,
     LimitOverrideResponse,
@@ -42,6 +39,7 @@ from app.schemas.limits.overrides import (
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
+    get_session_dep,
 )
 
 
@@ -124,7 +122,7 @@ class OverrideListResponse(BaseModel):
 async def create_override(
     request: Request,
     body: CreateOverrideRequest,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> OverrideDetail:
     """
     Request a temporary limit override.
@@ -190,7 +188,7 @@ async def list_overrides(
     status: Optional[str] = Query(default=None, description="Filter by status"),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> OverrideListResponse:
     """List overrides for the tenant."""
     auth_context = get_auth_context(request)
@@ -236,7 +234,7 @@ async def list_overrides(
 async def get_override(
     request: Request,
     override_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> OverrideDetail:
     """Get override by ID."""
     auth_context = get_auth_context(request)
@@ -276,7 +274,7 @@ async def get_override(
 async def cancel_override(
     request: Request,
     override_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> OverrideDetail:
     """Cancel a pending or active override."""
     auth_context = get_auth_context(request)

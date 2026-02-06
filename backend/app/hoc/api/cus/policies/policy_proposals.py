@@ -6,9 +6,9 @@
 #   Execution: async
 # Role: Policy Proposals API (PB-S4)
 # Callers: Customer Console
-# Allowed Imports: L3, L4, L5, L6
-# Forbidden Imports: L1
-# Reference: PB-S4, PIN-373
+# Allowed Imports: L4 (registry dispatch only)
+# Forbidden Imports: L1, sqlalchemy, session.execute
+# Reference: PB-S4, PIN-373, PIN-513 (L2 Purity)
 """
 PB-S4 Policy Proposals API
 
@@ -24,6 +24,10 @@ O1: API endpoint exists ✓
 O2: List visible with pagination ✓
 O3: Detail accessible ✓
 O4: Approve/Reject actions (human-controlled) ✓ (PIN-373)
+
+PIN-513 L2 Purity:
+- All DB operations routed through L4 registry → L5 engine → L6 driver
+- Zero session.execute() calls in L2
 """
 
 import logging
@@ -32,15 +36,16 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
-from sqlalchemy import func, select
 
-from ..auth.gateway_middleware import get_auth_context
-from ..auth.role_guard import require_role
-from ..auth.tenant_roles import TenantRole
-from ..db import get_async_session
-from ..models.policy import PolicyApprovalRequest, PolicyProposal, PolicyVersion
-from ..schemas.response import wrap_dict
-from ..services.policy_proposal import review_policy_proposal
+from app.auth.role_guard import require_role
+from app.auth.tenant_roles import TenantRole
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_async_session_context,
+    get_operation_registry,
+)
+from app.schemas.response import wrap_dict
+# NOTE: PolicyApprovalRequest and review_policy_proposal now routed through L4 handler
 
 logger = logging.getLogger("nova.api.policy_proposals")
 
@@ -130,58 +135,53 @@ async def list_proposals(
     READ-ONLY: This endpoint only reads data.
     No execution data is modified by this query.
     """
-    async with get_async_session() as session:
-        # Build query
-        query = select(PolicyProposal).order_by(PolicyProposal.created_at.desc())
+    async with get_async_session_context() as session:
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "policies.proposals_query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id or "",
+                params={
+                    "method": "list_proposals_paginated",
+                    "tenant_id": tenant_id,
+                    "status": status,
+                    "proposal_type": proposal_type,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            ),
+        )
 
-        if tenant_id:
-            query = query.where(PolicyProposal.tenant_id == tenant_id)
-        if status:
-            query = query.where(PolicyProposal.status == status)
-        if proposal_type:
-            query = query.where(PolicyProposal.proposal_type == proposal_type)
+        if not result.success:
+            raise HTTPException(status_code=500, detail=result.error)
 
-        # Get total count
-        count_query = select(func.count()).select_from(query.subquery())
-        count_result = await session.execute(count_query)
-        total = count_result.scalar() or 0
-
-        # Apply pagination
-        query = query.limit(limit).offset(offset)
-
-        result = await session.execute(query)
-        records = result.scalars().all()
-
-        # Aggregate by status and type
-        by_status: dict[str, int] = {}
-        by_type: dict[str, int] = {}
-        for r in records:
-            by_status[r.status] = by_status.get(r.status, 0) + 1
-            by_type[r.proposal_type] = by_type.get(r.proposal_type, 0) + 1
+        data = result.data
+        records = data["items"]
 
         items = [
             ProposalSummaryResponse(
-                id=str(r.id),
-                tenant_id=r.tenant_id,
-                proposal_name=r.proposal_name,
-                proposal_type=r.proposal_type,
-                status=r.status,
-                rationale=r.rationale[:200] if r.rationale else "",
-                created_at=r.created_at.isoformat() if r.created_at else None,
-                reviewed_at=r.reviewed_at.isoformat() if r.reviewed_at else None,
-                reviewed_by=r.reviewed_by,
-                effective_from=r.effective_from.isoformat() if r.effective_from else None,
-                provenance_count=len(r.triggering_feedback_ids) if r.triggering_feedback_ids else 0,
+                id=r["id"],
+                tenant_id=r["tenant_id"],
+                proposal_name=r["proposal_name"],
+                proposal_type=r["proposal_type"],
+                status=r["status"],
+                rationale=r["rationale"][:200] if r["rationale"] else "",
+                created_at=r["created_at"].isoformat() if r["created_at"] else None,
+                reviewed_at=r["reviewed_at"].isoformat() if r["reviewed_at"] else None,
+                reviewed_by=r["reviewed_by"],
+                effective_from=r["effective_from"].isoformat() if r["effective_from"] else None,
+                provenance_count=r["provenance_count"],
             )
             for r in records
         ]
 
         return ProposalListResponse(
-            total=total,
+            total=data["total"],
             limit=limit,
             offset=offset,
-            by_status=by_status,
-            by_type=by_type,
+            by_status=data["by_status"],
+            by_type=data["by_type"],
             items=items,
         )
 
@@ -197,37 +197,31 @@ async def get_proposal_stats(
     READ-ONLY: This endpoint only reads aggregated data.
     No execution data is modified by this query.
     """
-    async with get_async_session() as session:
-        # Base query
-        query = select(PolicyProposal)
-        if tenant_id:
-            query = query.where(PolicyProposal.tenant_id == tenant_id)
+    async with get_async_session_context() as session:
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "policies.proposals_query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id or "",
+                params={
+                    "method": "get_proposal_stats",
+                    "tenant_id": tenant_id,
+                },
+            ),
+        )
 
-        result = await session.execute(query)
-        records = result.scalars().all()
+        if not result.success:
+            raise HTTPException(status_code=500, detail=result.error)
 
-        # Aggregate stats
-        total = len(records)
-        by_status: dict[str, int] = {}
-        by_type: dict[str, int] = {}
-
-        for r in records:
-            by_status[r.status] = by_status.get(r.status, 0) + 1
-            by_type[r.proposal_type] = by_type.get(r.proposal_type, 0) + 1
-
-        # Approval rate
-        approved = by_status.get("approved", 0)
-        rejected = by_status.get("rejected", 0)
-        reviewed = approved + rejected
-        approval_rate = (approved / reviewed * 100) if reviewed > 0 else 0
-
+        data = result.data
         return wrap_dict({
-            "total": total,
-            "by_status": by_status,
-            "by_type": by_type,
-            "reviewed": reviewed,
-            "pending": by_status.get("draft", 0),
-            "approval_rate_percent": round(approval_rate, 1),
+            "total": data["total"],
+            "by_status": data["by_status"],
+            "by_type": data["by_type"],
+            "reviewed": data["reviewed"],
+            "pending": data["pending"],
+            "approval_rate_percent": data["approval_rate_percent"],
             "read_only": True,
             "pb_s4_compliant": True,
         })
@@ -249,44 +243,69 @@ async def get_proposal(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid proposal ID format")
 
-    async with get_async_session() as session:
-        # Get proposal
-        result = await session.execute(select(PolicyProposal).where(PolicyProposal.id == proposal_uuid))
-        record = result.scalar_one_or_none()
+    async with get_async_session_context() as session:
+        registry = get_operation_registry()
 
+        # Get proposal detail
+        result = await registry.execute(
+            "policies.proposals_query",
+            OperationContext(
+                session=session,
+                tenant_id="",
+                params={
+                    "method": "get_proposal_detail",
+                    "proposal_id": str(proposal_uuid),
+                },
+            ),
+        )
+
+        if not result.success:
+            raise HTTPException(status_code=500, detail=result.error)
+
+        record = result.data
         if not record:
             raise HTTPException(status_code=404, detail=f"Proposal {proposal_id} not found")
 
         # Get versions
-        versions_result = await session.execute(
-            select(PolicyVersion)
-            .where(PolicyVersion.proposal_id == proposal_uuid)
-            .order_by(PolicyVersion.version.desc())
+        versions_result = await registry.execute(
+            "policies.proposals_query",
+            OperationContext(
+                session=session,
+                tenant_id="",
+                params={
+                    "method": "list_proposal_versions",
+                    "proposal_id": str(proposal_uuid),
+                },
+            ),
         )
-        versions = versions_result.scalars().all()
+
+        if not versions_result.success:
+            raise HTTPException(status_code=500, detail=versions_result.error)
+
+        versions = versions_result.data or []
 
         return ProposalDetailResponse(
-            id=str(record.id),
-            tenant_id=record.tenant_id,
-            proposal_name=record.proposal_name,
-            proposal_type=record.proposal_type,
-            status=record.status,
-            rationale=record.rationale,
-            proposed_rule=record.proposed_rule or {},
-            triggering_feedback_ids=record.triggering_feedback_ids or [],
-            created_at=record.created_at.isoformat() if record.created_at else None,
-            reviewed_at=record.reviewed_at.isoformat() if record.reviewed_at else None,
-            reviewed_by=record.reviewed_by,
-            review_notes=record.review_notes,
-            effective_from=record.effective_from.isoformat() if record.effective_from else None,
+            id=record["id"],
+            tenant_id=record["tenant_id"],
+            proposal_name=record["proposal_name"],
+            proposal_type=record["proposal_type"],
+            status=record["status"],
+            rationale=record["rationale"],
+            proposed_rule=record["proposed_rule"] or {},
+            triggering_feedback_ids=record["triggering_feedback_ids"] or [],
+            created_at=record["created_at"].isoformat() if record["created_at"] else None,
+            reviewed_at=record["reviewed_at"].isoformat() if record["reviewed_at"] else None,
+            reviewed_by=record["reviewed_by"],
+            review_notes=record["review_notes"],
+            effective_from=record["effective_from"].isoformat() if record["effective_from"] else None,
             versions=[
                 {
-                    "id": str(v.id),
-                    "version": v.version,
-                    "rule_snapshot": v.rule_snapshot or {},
-                    "created_at": v.created_at.isoformat() if v.created_at else None,
-                    "created_by": v.created_by,
-                    "change_reason": v.change_reason,
+                    "id": v["id"],
+                    "version": v["version"],
+                    "rule_snapshot": v["rule_snapshot"] or {},
+                    "created_at": v["created_at"].isoformat() if v["created_at"] else None,
+                    "created_by": v["created_by"],
+                    "change_reason": v["change_reason"],
                 }
                 for v in versions
             ],
@@ -309,23 +328,34 @@ async def list_proposal_versions(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid proposal ID format")
 
-    async with get_async_session() as session:
-        result = await session.execute(
-            select(PolicyVersion)
-            .where(PolicyVersion.proposal_id == proposal_uuid)
-            .order_by(PolicyVersion.version.desc())
+    async with get_async_session_context() as session:
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "policies.proposals_query",
+            OperationContext(
+                session=session,
+                tenant_id="",
+                params={
+                    "method": "list_proposal_versions",
+                    "proposal_id": str(proposal_uuid),
+                },
+            ),
         )
-        versions = result.scalars().all()
+
+        if not result.success:
+            raise HTTPException(status_code=500, detail=result.error)
+
+        versions = result.data or []
 
         return [
             VersionResponse(
-                id=str(v.id),
-                proposal_id=str(v.proposal_id),
-                version=v.version,
-                rule_snapshot=v.rule_snapshot or {},
-                created_at=v.created_at.isoformat() if v.created_at else None,
-                created_by=v.created_by,
-                change_reason=v.change_reason,
+                id=v["id"],
+                proposal_id=v["proposal_id"],
+                version=v["version"],
+                rule_snapshot=v["rule_snapshot"] or {},
+                created_at=v["created_at"].isoformat() if v["created_at"] else None,
+                created_by=v["created_by"],
+                change_reason=v["change_reason"],
             )
             for v in versions
         ]
@@ -374,17 +404,28 @@ async def approve_proposal(
         raise HTTPException(status_code=400, detail="Invalid proposal ID format")
 
     try:
-        async with get_async_session() as session:
-            approval_request = PolicyApprovalRequest(
-                action="approve",
-                reviewed_by=request.reviewed_by,
-                review_notes=request.review_notes,
+        async with get_async_session_context() as session:
+            # Route through L4 handler which owns transaction boundary (PIN-L2-PURITY)
+            registry = get_operation_registry()
+            result = await registry.execute(
+                "policies.approval",
+                OperationContext(
+                    session=session,
+                    tenant_id="",
+                    params={
+                        "method": "review_proposal",
+                        "proposal_id": proposal_id,
+                        "action": "approve",
+                        "reviewed_by": request.reviewed_by,
+                        "review_notes": request.review_notes,
+                    },
+                ),
             )
 
-            updated_proposal = await review_policy_proposal(
-                session, proposal_uuid, approval_request
-            )
-            await session.commit()
+            if not result.success:
+                raise HTTPException(status_code=500, detail=result.error)
+
+            data = result.data
 
             logger.info(
                 "proposal_approved_via_api",
@@ -396,14 +437,16 @@ async def approve_proposal(
             )
 
             return ApprovalResponse(
-                proposal_id=str(updated_proposal.id),
-                status=updated_proposal.status,
-                reviewed_by=updated_proposal.reviewed_by or "",
-                reviewed_at=updated_proposal.reviewed_at.isoformat() if updated_proposal.reviewed_at else None,
+                proposal_id=data["id"],
+                status=data["status"],
+                reviewed_by=data["reviewed_by"] or "",
+                reviewed_at=data["reviewed_at"],
                 message="Proposal approved successfully",
             )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception(f"Error approving proposal {proposal_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -431,17 +474,28 @@ async def reject_proposal(
         raise HTTPException(status_code=400, detail="Invalid proposal ID format")
 
     try:
-        async with get_async_session() as session:
-            approval_request = PolicyApprovalRequest(
-                action="reject",
-                reviewed_by=request.reviewed_by,
-                review_notes=request.review_notes,
+        async with get_async_session_context() as session:
+            # Route through L4 handler which owns transaction boundary (PIN-L2-PURITY)
+            registry = get_operation_registry()
+            result = await registry.execute(
+                "policies.approval",
+                OperationContext(
+                    session=session,
+                    tenant_id="",
+                    params={
+                        "method": "review_proposal",
+                        "proposal_id": proposal_id,
+                        "action": "reject",
+                        "reviewed_by": request.reviewed_by,
+                        "review_notes": request.review_notes,
+                    },
+                ),
             )
 
-            updated_proposal = await review_policy_proposal(
-                session, proposal_uuid, approval_request
-            )
-            await session.commit()
+            if not result.success:
+                raise HTTPException(status_code=500, detail=result.error)
+
+            data = result.data
 
             logger.info(
                 "proposal_rejected_via_api",
@@ -454,14 +508,16 @@ async def reject_proposal(
             )
 
             return ApprovalResponse(
-                proposal_id=str(updated_proposal.id),
-                status=updated_proposal.status,
-                reviewed_by=updated_proposal.reviewed_by or "",
-                reviewed_at=updated_proposal.reviewed_at.isoformat() if updated_proposal.reviewed_at else None,
+                proposal_id=data["id"],
+                status=data["status"],
+                reviewed_by=data["reviewed_by"] or "",
+                reviewed_at=data["reviewed_at"],
                 message="Proposal rejected",
             )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception(f"Error rejecting proposal {proposal_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

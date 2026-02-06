@@ -29,7 +29,7 @@ from app.db import (
 
 # Phase 2B: Write service for DB operations
 from app.schemas.response import wrap_dict
-from app.services.cost_write_service import CostWriteService
+from app.hoc.cus.analytics.L5_engines.cost_write_engine import CostWriteService
 
 
 def get_tenant_id(tenant_id: str = Query(..., description="Tenant ID")) -> str:
@@ -1226,7 +1226,7 @@ async def trigger_anomaly_detection(
     - Processed through the M25 loop (Pattern → Recovery → Policy → Routing)
     - Resulting in automated policies to prevent future cost anomalies
     """
-    from app.services.cost_anomaly_detector import run_anomaly_detection
+    from app.hoc.cus.analytics.L5_engines.cost_anomaly_detector_engine import run_anomaly_detection
     from app.hoc.cus.hoc_spine.orchestrator.coordinators.anomaly_incident_coordinator import (
         get_anomaly_incident_coordinator,
     )

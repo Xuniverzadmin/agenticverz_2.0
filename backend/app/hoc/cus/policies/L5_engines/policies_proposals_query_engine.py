@@ -200,6 +200,76 @@ class ProposalsQueryEngine:
         """Count draft proposals for badge display."""
         return await self._driver.count_draft_proposals(tenant_id)
 
+    # =========================================================================
+    # PB-S4 API Endpoints (PIN-513 L2 Purity)
+    # =========================================================================
+
+    async def list_proposals_paginated(
+        self,
+        *,
+        tenant_id: Optional[str] = None,
+        status: Optional[str] = None,
+        proposal_type: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """
+        List proposals with pagination and aggregation for PB-S4 API.
+
+        Returns dict with:
+            - total: int
+            - items: list[dict]
+            - by_status: dict[str, int]
+            - by_type: dict[str, int]
+        """
+        return await self._driver.list_proposals_paginated(
+            tenant_id=tenant_id,
+            status=status,
+            proposal_type=proposal_type,
+            limit=limit,
+            offset=offset,
+        )
+
+    async def get_proposal_stats(
+        self,
+        *,
+        tenant_id: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """
+        Get aggregated proposal statistics for PB-S4 API.
+
+        Returns dict with:
+            - total: int
+            - by_status: dict[str, int]
+            - by_type: dict[str, int]
+            - reviewed: int
+            - pending: int
+            - approval_rate_percent: float
+        """
+        return await self._driver.get_proposal_stats(tenant_id=tenant_id)
+
+    async def get_proposal_detail(
+        self,
+        proposal_id: str,
+    ) -> Optional[dict[str, Any]]:
+        """
+        Get full proposal detail by ID for PB-S4 API.
+
+        Returns None if not found.
+        """
+        return await self._driver.get_proposal_detail(proposal_id)
+
+    async def list_proposal_versions(
+        self,
+        proposal_id: str,
+    ) -> list[dict[str, Any]]:
+        """
+        List all versions for a proposal for PB-S4 API.
+
+        Returns list ordered by version DESC.
+        """
+        return await self._driver.list_proposal_versions(proposal_id)
+
 
 # =============================================================================
 # Factory

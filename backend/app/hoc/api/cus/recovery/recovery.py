@@ -30,9 +30,12 @@ from pydantic import BaseModel, Field
 from app.auth.console_auth import verify_fops_token
 from app.middleware.rate_limit import rate_limit_dependency
 from app.schemas.response import wrap_dict
-# L6 driver imports (migrated to HOC per SWEEP-09)
-from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
-from app.hoc.cus.policies.L6_drivers.recovery_write_driver import RecoveryWriteService
+# L4 session helper (L2 must not import sqlalchemy/sqlmodel directly)
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+    get_sync_session_dep,
+)
 
 logger = logging.getLogger("nova.api.recovery")
 
@@ -177,14 +180,26 @@ class CandidateDetailResponse(CandidateResponse):
     execution_result: Optional[Dict[str, Any]] = None
 
 
-# =============================================================================
-# Dependency for Matcher
-# =============================================================================
+async def _execute_registry(operation: str, *, session, method: str, **params):
+    """
+    L2 first-principles: recovery endpoints do not call drivers or DB directly.
+    All DB access routes via L4 registry handlers.
 
-
-def get_matcher() -> RecoveryMatcher:
-    """Get matcher instance."""
-    return RecoveryMatcher()
+    Sync session pattern (PIN-520): ctx.session=None and params["sync_session"]=session.
+    """
+    registry = get_operation_registry()
+    ctx = OperationContext(
+        session=None,
+        tenant_id="default",
+        params={"method": method, "sync_session": session, **params},
+    )
+    result = await registry.execute(operation, ctx)
+    if not result.success:
+        raise HTTPException(
+            status_code=500,
+            detail=f"{operation}:{method} failed: {result.error} ({result.error_code})",
+        )
+    return result.data
 
 
 # =============================================================================
@@ -195,7 +210,7 @@ def get_matcher() -> RecoveryMatcher:
 @router.post("/suggest", response_model=SuggestResponse)
 async def suggest_recovery(
     request: SuggestRequest,
-    matcher: RecoveryMatcher = Depends(get_matcher),
+    session=Depends(get_sync_session_dep),
     _rate_limited: bool = Depends(rate_limit_dependency),
 ):
     """
@@ -214,13 +229,16 @@ async def suggest_recovery(
     try:
         logger.info(f"Recovery suggest request: failure_match_id={request.failure_match_id}")
 
-        result = matcher.suggest(
-            {
+        data = await _execute_registry(
+            "policies.recovery.match",
+            session=session,
+            method="suggest",
+            request={
                 "failure_match_id": request.failure_match_id,
                 "failure_payload": request.failure_payload,
                 "source": request.source,
                 "occurred_at": request.occurred_at.isoformat() if request.occurred_at else None,
-            }
+            },
         )
 
         # Increment metrics
@@ -229,11 +247,11 @@ async def suggest_recovery(
         recovery_suggestions_total.labels(source=request.source or "unknown", decision="pending").inc()
 
         return SuggestResponse(
-            matched_entry=result.matched_entry,
-            suggested_recovery=result.suggested_recovery,
-            confidence=result.confidence,
-            candidate_id=result.candidate_id,
-            explain=result.explain,
+            matched_entry=data.get("matched_entry"),
+            suggested_recovery=data.get("suggested_recovery"),
+            confidence=float(data.get("confidence", 0.0)),
+            candidate_id=data.get("candidate_id"),
+            explain=data.get("explain") or {},
         )
 
     except Exception as e:
@@ -246,7 +264,7 @@ async def list_candidates(
     status: str = Query("pending", description="Filter by status: pending, approved, rejected, all"),
     limit: int = Query(50, ge=1, le=500, description="Max results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    matcher: RecoveryMatcher = Depends(get_matcher),
+    session=Depends(get_sync_session_dep),
     _rate_limited: bool = Depends(rate_limit_dependency),
 ):
     """
@@ -258,12 +276,22 @@ async def list_candidates(
         Paginated list of candidates
     """
     try:
-        candidates = matcher.get_candidates(
+        candidates_result = await _execute_registry(
+            "policies.recovery.match",
+            session=session,
+            method="get_candidates",
             status=status,
             limit=limit,
             offset=offset,
         )
-        total = matcher.count_candidates(status=status)
+        count_result = await _execute_registry(
+            "policies.recovery.match",
+            session=session,
+            method="count_candidates",
+            status=status,
+        )
+        candidates = candidates_result.get("candidates") or []
+        total = int(count_result.get("count") or 0)
 
         return CandidateListResponse(
             candidates=[CandidateResponse(**c) for c in candidates],
@@ -280,7 +308,7 @@ async def list_candidates(
 @router.post("/approve", response_model=CandidateResponse)
 async def approve_candidate(
     request: ApproveRequest,
-    matcher: RecoveryMatcher = Depends(get_matcher),
+    session=Depends(get_sync_session_dep),
     _rate_limited: bool = Depends(rate_limit_dependency),
 ):
     """
@@ -298,7 +326,10 @@ async def approve_candidate(
             f"decision={request.decision}, by={request.approved_by}"
         )
 
-        result = matcher.approve_candidate(
+        result = await _execute_registry(
+            "policies.recovery.match",
+            session=session,
+            method="approve_candidate_transactional",
             candidate_id=request.candidate_id,
             approved_by=request.approved_by,
             decision=request.decision,
@@ -322,7 +353,7 @@ async def approve_candidate(
 @router.delete("/candidates/{candidate_id}")
 async def delete_candidate(
     candidate_id: int,
-    matcher: RecoveryMatcher = Depends(get_matcher),
+    session=Depends(get_sync_session_dep),
     _rate_limited: bool = Depends(rate_limit_dependency),
 ):
     """
@@ -332,8 +363,10 @@ async def delete_candidate(
     Audit trail is preserved.
     """
     try:
-        # Use approve with special 'rejected' status and note
-        matcher.approve_candidate(
+        await _execute_registry(
+            "policies.recovery.match",
+            session=session,
+            method="approve_candidate_transactional",
             candidate_id=candidate_id,
             approved_by="admin",
             decision="rejected",
@@ -351,7 +384,7 @@ async def delete_candidate(
 
 @router.get("/stats")
 async def get_recovery_stats(
-    matcher: RecoveryMatcher = Depends(get_matcher),
+    session=Depends(get_sync_session_dep),
     _rate_limited: bool = Depends(rate_limit_dependency),
 ):
     """
@@ -360,12 +393,15 @@ async def get_recovery_stats(
     Returns aggregate metrics for monitoring and dashboards.
     """
     try:
-        # Get counts by status using efficient GROUP BY query
-        counts = matcher.count_by_status()
+        counts = await _execute_registry(
+            "policies.recovery.match",
+            session=session,
+            method="count_by_status",
+        )
 
-        pending = counts["pending"]
-        approved = counts["approved"]
-        rejected = counts["rejected"]
+        pending = int(counts.get("pending") or 0)
+        approved = int(counts.get("approved") or 0)
+        rejected = int(counts.get("rejected") or 0)
         total = pending + approved + rejected
 
         return wrap_dict({
@@ -393,7 +429,7 @@ async def get_candidate_detail(
     candidate_id: int = Path(..., description="Candidate ID"),
     include_provenance: bool = Query(True, description="Include provenance history"),
     include_inputs: bool = Query(True, description="Include input data"),
-    matcher: RecoveryMatcher = Depends(get_matcher),
+    session=Depends(get_sync_session_dep),
     _rate_limited: bool = Depends(rate_limit_dependency),
 ):
     """
@@ -402,178 +438,54 @@ async def get_candidate_detail(
     Includes full provenance history, inputs, and selected action details.
     """
     try:
-        import os
+        candidate_data = await _execute_registry(
+            "policies.recovery.read",
+            session=session,
+            method="get_candidate_detail",
+            candidate_id=candidate_id,
+        )
 
-        from sqlalchemy import text
-        from sqlmodel import Session, create_engine
+        if not candidate_data:
+            raise HTTPException(status_code=404, detail=f"Candidate {candidate_id} not found")
 
-        db_url = os.getenv("DATABASE_URL")
-        if not db_url:
-            raise HTTPException(status_code=500, detail="DATABASE_URL not configured")
-
-        engine = create_engine(db_url)
-
-        with Session(engine) as session:
-            # Get candidate
-            result = session.execute(
-                text(
-                    """
-                    SELECT
-                        rc.id, rc.failure_match_id, rc.suggestion, rc.confidence,
-                        rc.explain, rc.decision, rc.occurrence_count, rc.last_occurrence_at,
-                        rc.created_at, rc.approved_by_human, rc.approved_at, rc.review_note,
-                        rc.error_code, rc.source, rc.selected_action_id, rc.rules_evaluated,
-                        rc.execution_status, rc.executed_at, rc.execution_result
-                    FROM recovery_candidates rc
-                    WHERE rc.id = :id
-                """
-                ),
-                {"id": candidate_id},
+        # Get selected action if present
+        selected_action = None
+        selected_action_id = candidate_data.get("selected_action_id")
+        if selected_action_id:
+            selected_action = await _execute_registry(
+                "policies.recovery.read",
+                session=session,
+                method="get_selected_action",
+                action_id=selected_action_id,
             )
-            row = result.fetchone()
 
-            if not row:
-                raise HTTPException(status_code=404, detail=f"Candidate {candidate_id} not found")
+        candidate_data["selected_action"] = selected_action
 
-            import json
+        # Get inputs if requested (via L6 driver)
+        inputs = []
+        if include_inputs:
+            inputs = await _execute_registry(
+                "policies.recovery.read",
+                session=session,
+                method="get_suggestion_inputs",
+                suggestion_id=candidate_id,
+            )
 
-            candidate_data = {
-                "id": row[0],
-                "failure_match_id": str(row[1]),
-                "suggestion": row[2],
-                "confidence": row[3],
-                "explain": json.loads(row[4]) if isinstance(row[4], str) else (row[4] or {}),
-                "decision": row[5],
-                "occurrence_count": row[6],
-                "last_occurrence_at": row[7].isoformat() if row[7] else None,
-                "created_at": row[8].isoformat() if row[8] else None,
-                "approved_by_human": row[9],
-                "approved_at": row[10].isoformat() if row[10] else None,
-                "review_note": row[11],
-                "error_code": row[12],
-                "source": row[13],
-                "rules_evaluated": json.loads(row[15]) if isinstance(row[15], str) else (row[15] or []),
-                "execution_status": row[16],
-                "executed_at": row[17].isoformat() if row[17] else None,
-                "execution_result": json.loads(row[18]) if isinstance(row[18], str) else row[18],
-            }
+        candidate_data["inputs"] = inputs
 
-            # Get selected action if present
-            selected_action = None
-            if row[14]:  # selected_action_id
-                action_result = session.execute(
-                    text(
-                        """
-                        SELECT id, action_code, name, description, action_type, template,
-                               applies_to_error_codes, applies_to_skills, success_rate,
-                               total_applications, is_automated, requires_approval, priority, is_active
-                        FROM m10_recovery.suggestion_action
-                        WHERE id = :id
-                    """
-                    ),
-                    {"id": row[14]},
-                )
-                action_row = action_result.fetchone()
-                if action_row:
-                    selected_action = {
-                        "id": action_row[0],
-                        "action_code": action_row[1],
-                        "name": action_row[2],
-                        "description": action_row[3],
-                        "action_type": action_row[4],
-                        "template": json.loads(action_row[5])
-                        if isinstance(action_row[5], str)
-                        else (action_row[5] or {}),
-                        "applies_to_error_codes": action_row[6] or [],
-                        "applies_to_skills": action_row[7] or [],
-                        "success_rate": action_row[8],
-                        "total_applications": action_row[9],
-                        "is_automated": action_row[10],
-                        "requires_approval": action_row[11],
-                        "priority": action_row[12],
-                        "is_active": action_row[13],
-                    }
+        # Get provenance if requested (via L6 driver)
+        provenance = []
+        if include_provenance:
+            provenance = await _execute_registry(
+                "policies.recovery.read",
+                session=session,
+                method="get_suggestion_provenance",
+                suggestion_id=candidate_id,
+            )
 
-            candidate_data["selected_action"] = selected_action
+        candidate_data["provenance"] = provenance
 
-            # Get inputs if requested
-            inputs = []
-            if include_inputs:
-                try:
-                    inputs_result = session.execute(
-                        text(
-                            """
-                            SELECT id, input_type, raw_value, normalized_value, parsed_data,
-                                   confidence, weight, source, created_at
-                            FROM m10_recovery.suggestion_input
-                            WHERE suggestion_id = :id
-                            ORDER BY created_at ASC
-                        """
-                        ),
-                        {"id": candidate_id},
-                    )
-                    for inp_row in inputs_result.fetchall():
-                        inputs.append(
-                            {
-                                "id": inp_row[0],
-                                "input_type": inp_row[1],
-                                "raw_value": inp_row[2],
-                                "normalized_value": inp_row[3],
-                                "parsed_data": json.loads(inp_row[4])
-                                if isinstance(inp_row[4], str)
-                                else (inp_row[4] or {}),
-                                "confidence": inp_row[5],
-                                "weight": inp_row[6],
-                                "source": inp_row[7],
-                                "created_at": inp_row[8].isoformat() if inp_row[8] else None,
-                            }
-                        )
-                except Exception:
-                    pass  # Table may not exist yet
-
-            candidate_data["inputs"] = inputs
-
-            # Get provenance if requested
-            provenance = []
-            if include_provenance:
-                try:
-                    prov_result = session.execute(
-                        text(
-                            """
-                            SELECT id, event_type, details, rule_id, action_id,
-                                   confidence_before, confidence_after, actor, actor_type,
-                                   created_at, duration_ms
-                            FROM m10_recovery.suggestion_provenance
-                            WHERE suggestion_id = :id
-                            ORDER BY created_at ASC
-                        """
-                        ),
-                        {"id": candidate_id},
-                    )
-                    for prov_row in prov_result.fetchall():
-                        provenance.append(
-                            {
-                                "id": prov_row[0],
-                                "event_type": prov_row[1],
-                                "details": json.loads(prov_row[2])
-                                if isinstance(prov_row[2], str)
-                                else (prov_row[2] or {}),
-                                "rule_id": prov_row[3],
-                                "action_id": prov_row[4],
-                                "confidence_before": prov_row[5],
-                                "confidence_after": prov_row[6],
-                                "actor": prov_row[7],
-                                "actor_type": prov_row[8],
-                                "created_at": prov_row[9].isoformat() if prov_row[9] else None,
-                                "duration_ms": prov_row[10],
-                            }
-                        )
-                except Exception:
-                    pass  # Table may not exist yet
-
-            candidate_data["provenance"] = provenance
-
-            return CandidateDetailResponse(**candidate_data)
+        return CandidateDetailResponse(**candidate_data)
 
     except HTTPException:
         raise
@@ -586,7 +498,7 @@ async def get_candidate_detail(
 async def update_candidate(
     candidate_id: int,
     request: CandidateUpdateRequest,
-    matcher: RecoveryMatcher = Depends(get_matcher),
+    session=Depends(get_sync_session_dep),
     _rate_limited: bool = Depends(rate_limit_dependency),
 ):
     """
@@ -598,98 +510,35 @@ async def update_candidate(
     - Marking execution as started/completed/failed
     """
     try:
-        import json
-        import os
+        exists_result = await _execute_registry(
+            "policies.recovery.read",
+            session=session,
+            method="candidate_exists",
+            candidate_id=candidate_id,
+        )
+        if not exists_result.get("exists"):
+            raise HTTPException(status_code=404, detail=f"Candidate {candidate_id} not found")
+        old_confidence = float(exists_result.get("confidence") or 0.0)
 
-        from sqlalchemy import text
-        from sqlmodel import Session, create_engine
-
-        db_url = os.getenv("DATABASE_URL")
-        if not db_url:
-            raise HTTPException(status_code=500, detail="DATABASE_URL not configured")
-
-        engine = create_engine(db_url)
-
-        with Session(engine) as session:
-            # Phase 2B: Use write service for DB operations
-            write_service = RecoveryWriteService(session)
-
-            # Verify candidate exists
-            result = session.execute(
-                text("SELECT id, confidence FROM recovery_candidates WHERE id = :id"), {"id": candidate_id}
-            )
-            row = result.fetchone()
-            if not row:
-                raise HTTPException(status_code=404, detail=f"Candidate {candidate_id} not found")
-
-            old_confidence = row[1]
-
-            # Build update query dynamically
-            updates = []
-            params = {"id": candidate_id}
-
-            if request.execution_status:
-                valid_statuses = ["pending", "executing", "succeeded", "failed", "rolled_back", "skipped"]
-                if request.execution_status not in valid_statuses:
-                    raise HTTPException(
-                        status_code=400, detail=f"Invalid execution_status. Must be one of: {valid_statuses}"
-                    )
-                updates.append("execution_status = :execution_status")
-                params["execution_status"] = request.execution_status
-
-                if request.execution_status in ("succeeded", "failed", "rolled_back"):
-                    updates.append("executed_at = now()")
-
-            if request.selected_action_id is not None:
-                updates.append("selected_action_id = :selected_action_id")
-                params["selected_action_id"] = request.selected_action_id
-
-            if request.execution_result is not None:
-                updates.append("execution_result = CAST(:execution_result AS jsonb)")
-                params["execution_result"] = json.dumps(request.execution_result)
-
-            if not updates:
-                raise HTTPException(status_code=400, detail="No updates provided")
-
-            # Phase 2B: Execute update via write service
-            write_service.update_recovery_candidate(candidate_id, updates, params)
-
-            # Record provenance
-            try:
-                event_type = (
-                    "executed"
-                    if request.execution_status == "executing"
-                    else (
-                        "success"
-                        if request.execution_status == "succeeded"
-                        else ("failure" if request.execution_status == "failed" else "manual_override")
-                    )
+        if request.execution_status:
+            valid_statuses = ["pending", "executing", "succeeded", "failed", "rolled_back", "skipped"]
+            if request.execution_status not in valid_statuses:
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid execution_status. Must be one of: {valid_statuses}"
                 )
 
-                # Phase 2B: Insert provenance via write service
-                write_service.insert_suggestion_provenance(
-                    suggestion_id=candidate_id,
-                    event_type=event_type,
-                    details_json=json.dumps(
-                        {
-                            "execution_status": request.execution_status,
-                            "note": request.note,
-                        }
-                    ),
-                    action_id=request.selected_action_id,
-                    confidence_before=old_confidence,
-                    actor="api",
-                )
-            except Exception:
-                pass  # Provenance table may not exist yet
-
-            write_service.commit()
-
-            return wrap_dict({
-                "status": "updated",
-                "candidate_id": candidate_id,
-                "updates_applied": list(params.keys()),
-            })
+        data = await _execute_registry(
+            "policies.recovery.write",
+            session=session,
+            method="update_candidate_transactional",
+            candidate_id=candidate_id,
+            execution_status=request.execution_status,
+            selected_action_id=request.selected_action_id,
+            execution_result=request.execution_result,
+            note=request.note,
+            old_confidence=old_confidence,
+        )
+        return wrap_dict(data)
 
     except HTTPException:
         raise
@@ -703,6 +552,7 @@ async def list_actions(
     action_type: Optional[str] = Query(None, description="Filter by action type"),
     active_only: bool = Query(True, description="Only return active actions"),
     limit: int = Query(50, ge=1, le=200),
+    session=Depends(get_sync_session_dep),
     _rate_limited: bool = Depends(rate_limit_dependency),
 ):
     """
@@ -712,61 +562,20 @@ async def list_actions(
     that can be selected for candidates.
     """
     try:
-        import json
-        import os
+        result = await _execute_registry(
+            "policies.recovery.read",
+            session=session,
+            method="list_actions",
+            action_type=action_type,
+            active_only=active_only,
+            limit=limit,
+        )
+        actions_data = result.get("actions") or []
 
-        from sqlalchemy import text
-        from sqlmodel import Session, create_engine
+        # Convert to response models
+        actions = [ActionResponse(**action) for action in actions_data]
 
-        db_url = os.getenv("DATABASE_URL")
-        if not db_url:
-            raise HTTPException(status_code=500, detail="DATABASE_URL not configured")
-
-        engine = create_engine(db_url)
-
-        with Session(engine) as session:
-            query = """
-                SELECT id, action_code, name, description, action_type, template,
-                       applies_to_error_codes, applies_to_skills, success_rate,
-                       total_applications, is_automated, requires_approval, priority, is_active
-                FROM m10_recovery.suggestion_action
-                WHERE 1=1
-            """
-            params = {"limit": limit}
-
-            if active_only:
-                query += " AND is_active = TRUE"
-
-            if action_type:
-                query += " AND action_type = :action_type"
-                params["action_type"] = action_type
-
-            query += " ORDER BY priority DESC, name ASC LIMIT :limit"
-
-            result = session.execute(text(query), params)
-            actions = []
-
-            for row in result.fetchall():
-                actions.append(
-                    ActionResponse(
-                        id=row[0],
-                        action_code=row[1],
-                        name=row[2],
-                        description=row[3],
-                        action_type=row[4],
-                        template=json.loads(row[5]) if isinstance(row[5], str) else (row[5] or {}),
-                        applies_to_error_codes=row[6] or [],
-                        applies_to_skills=row[7] or [],
-                        success_rate=row[8],
-                        total_applications=row[9],
-                        is_automated=row[10],
-                        requires_approval=row[11],
-                        priority=row[12],
-                        is_active=row[13],
-                    )
-                )
-
-            return ActionListResponse(actions=actions, total=len(actions))
+        return ActionListResponse(actions=actions, total=len(actions))
 
     except Exception as e:
         logger.error(f"List actions error: {e}", exc_info=True)
@@ -789,10 +598,11 @@ async def evaluate_rules(
     Does NOT create a candidate or modify any data.
     """
     try:
-        # L5 engine import (migrated to HOC per SWEEP-09)
-        from app.hoc.cus.incidents.L5_engines.recovery_rule_engine import (
-            evaluate_rules as run_evaluation,
-        )
+        # L4 bridge for recovery rule engine
+        from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges import get_incidents_engine_bridge
+
+        engine_module = get_incidents_engine_bridge().recovery_rule_engine_capability()
+        run_evaluation = engine_module.evaluate_rules
 
         result = run_evaluation(
             error_code=request.error_code,
@@ -891,8 +701,11 @@ async def test_recovery_scope(
     - request_sample: Run on a sample of requests
     - budget_fraction: Run within a budget fraction
     """
-    # L6 driver import (migrated to HOC per SWEEP-30)
-    from app.hoc.cus.controls.L6_drivers.scoped_execution import test_recovery_scope as do_scope_test
+    # L4 bridge for scoped execution
+    from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges import get_controls_bridge
+
+    scoped_exec = get_controls_bridge().scoped_execution_capability()
+    do_scope_test = scoped_exec.test_recovery_scope
 
     try:
         result = await do_scope_test(
@@ -992,8 +805,11 @@ async def create_scope(request: CreateScopeRequest):
 
     INVARIANT: "A recovery action without a valid execution scope is invalid by definition."
     """
-    # L6 driver import (migrated to HOC per SWEEP-30)
-    from app.hoc.cus.controls.L6_drivers.scoped_execution import create_recovery_scope
+    # L4 bridge for scoped execution
+    from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges import get_controls_bridge
+
+    scoped_exec = get_controls_bridge().scoped_execution_capability()
+    create_recovery_scope = scoped_exec.create_recovery_scope
 
     try:
         result = await create_recovery_scope(
@@ -1045,17 +861,18 @@ async def execute_recovery(request: ExecuteRequest):
 
     Only with a valid, active scope can execution proceed.
     """
-    # L6 driver imports (migrated to HOC per SWEEP-30)
-    from app.hoc.cus.controls.L6_drivers.scoped_execution import (
-        ScopeActionMismatch,
-        ScopedExecutionRequired,
-        ScopeExhausted,
-        ScopeExpired,
-        ScopeIncidentMismatch,
-        ScopeNotFound,
-        execute_with_scope,
-        validate_scope_required,
-    )
+    # L4 bridge for scoped execution
+    from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges import get_controls_bridge
+
+    scoped_exec = get_controls_bridge().scoped_execution_capability()
+    ScopeActionMismatch = scoped_exec.ScopeActionMismatch
+    ScopedExecutionRequired = scoped_exec.ScopedExecutionRequired
+    ScopeExhausted = scoped_exec.ScopeExhausted
+    ScopeExpired = scoped_exec.ScopeExpired
+    ScopeIncidentMismatch = scoped_exec.ScopeIncidentMismatch
+    ScopeNotFound = scoped_exec.ScopeNotFound
+    execute_with_scope = scoped_exec.execute_with_scope
+    validate_scope_required = scoped_exec.validate_scope_required
 
     try:
         # CRITICAL: If no scope_id provided, FAIL immediately
@@ -1157,8 +974,11 @@ async def list_scopes(incident_id: str = Path(..., description="Incident ID")):
 
     Shows scope status (active, exhausted, expired, revoked) for visibility.
     """
-    # L6 driver import (migrated to HOC per SWEEP-30)
-    from app.hoc.cus.controls.L6_drivers.scoped_execution import get_scope_store
+    # L4 bridge for scoped execution
+    from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges import get_controls_bridge
+
+    scoped_exec = get_controls_bridge().scoped_execution_capability()
+    get_scope_store = scoped_exec.get_scope_store
 
     try:
         store = get_scope_store()
@@ -1182,8 +1002,11 @@ async def revoke_scope(scope_id: str = Path(..., description="Scope ID to revoke
 
     Revoked scopes cannot be used for execution.
     """
-    # L6 driver import (migrated to HOC per SWEEP-30)
-    from app.hoc.cus.controls.L6_drivers.scoped_execution import get_scope_store
+    # L4 bridge for scoped execution
+    from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges import get_controls_bridge
+
+    scoped_exec = get_controls_bridge().scoped_execution_capability()
+    get_scope_store = scoped_exec.get_scope_store
 
     try:
         store = get_scope_store()

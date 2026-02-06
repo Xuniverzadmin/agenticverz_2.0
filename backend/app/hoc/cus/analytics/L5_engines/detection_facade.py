@@ -58,10 +58,30 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Protocol
 import uuid
 
 logger = logging.getLogger("nova.services.detection.facade")
+
+
+# =============================================================================
+# PIN-520: Protocol for anomaly coordinator injection (L5 purity)
+# =============================================================================
+
+
+class AnomalyCoordinatorPort(Protocol):
+    """
+    Protocol for anomaly detection + incident ingestion (PIN-520 L5 purity).
+
+    L5 declares what it needs; L4 provides the implementation via bridge.
+    This removes the L5 → L4 orchestrator import violation.
+    """
+
+    async def detect_and_ingest(
+        self, session: Any, tenant_id: str
+    ) -> Dict[str, Any]:
+        """Run detection and ingest results into incidents."""
+        ...
 
 
 class DetectionType(str, Enum):
@@ -182,14 +202,24 @@ class DetectionFacade:
     This is the ONLY entry point for L2 APIs and SDK to interact with
     detection services.
 
-    Layer: L4 (Domain Logic)
+    Layer: L5 (Domain Engine)
     Callers: detection.py (L2), aos_sdk, Worker
+
+    PIN-520: anomaly_coordinator is now injected via L4 bridge instead of
+    being imported directly from L4 orchestrator.
     """
 
-    def __init__(self):
-        """Initialize facade with lazy-loaded services."""
+    def __init__(self, anomaly_coordinator: Optional[AnomalyCoordinatorPort] = None):
+        """Initialize facade with lazy-loaded services.
+
+        Args:
+            anomaly_coordinator: Optional coordinator for anomaly detection + ingestion.
+                                 If not provided, cost detection will be unavailable.
+                                 L4 handlers should inject via AnalyticsEngineBridge.
+        """
         self._cost_detector = None
         self._last_run: Optional[datetime] = None
+        self._anomaly_coordinator = anomaly_coordinator
 
         # In-memory store for demo (would be database in production)
         self._anomalies: Dict[str, AnomalyInfo] = {}
@@ -272,7 +302,11 @@ class DetectionFacade:
         tenant_id: str,
         session,
     ) -> DetectionResult:
-        """Run cost anomaly detection."""
+        """Run cost anomaly detection.
+
+        PIN-520: Uses injected anomaly_coordinator instead of importing
+        from L4 orchestrator. L5 must not import L4.
+        """
         now = datetime.now(timezone.utc)
 
         if session is None:
@@ -299,13 +333,22 @@ class DetectionFacade:
                 error="CostAnomalyDetector not available",
             )
 
-        try:
-            from app.hoc.cus.hoc_spine.orchestrator.coordinators.anomaly_incident_coordinator import (
-                get_anomaly_incident_coordinator,
+        # PIN-520: Coordinator must be injected via L4 bridge
+        if self._anomaly_coordinator is None:
+            return DetectionResult(
+                success=False,
+                detection_type="cost",
+                anomalies_detected=0,
+                anomalies_created=0,
+                incidents_created=0,
+                tenant_id=tenant_id,
+                run_at=now.isoformat(),
+                error="Anomaly coordinator not available (inject via L4 bridge)",
             )
 
-            coordinator = get_anomaly_incident_coordinator()
-            result = await coordinator.detect_and_ingest(session, tenant_id)
+        try:
+            # PIN-520: Use injected coordinator instead of L4 orchestrator import
+            result = await self._anomaly_coordinator.detect_and_ingest(session, tenant_id)
 
             detected = result.get("detected", [])
             incidents = result.get("incidents_created", [])
@@ -544,17 +587,29 @@ class DetectionFacade:
 _facade_instance: Optional[DetectionFacade] = None
 
 
-def get_detection_facade() -> DetectionFacade:
+def get_detection_facade(
+    anomaly_coordinator: Optional[AnomalyCoordinatorPort] = None,
+) -> DetectionFacade:
     """
     Get the detection facade instance.
 
     This is the recommended way to access detection operations
     from L2 APIs and the SDK.
 
+    PIN-520: L4 callers must inject anomaly_coordinator.
+    L5 must not import from hoc_spine.
+
+    Args:
+        anomaly_coordinator: Optional coordinator for cost anomaly detection.
+                             Required for cost detection to work (injected by L4 caller).
+
     Returns:
         DetectionFacade instance
     """
     global _facade_instance
     if _facade_instance is None:
-        _facade_instance = DetectionFacade()
+        _facade_instance = DetectionFacade(anomaly_coordinator=anomaly_coordinator)
+    elif anomaly_coordinator is not None and _facade_instance._anomaly_coordinator is None:
+        # Allow late injection if coordinator wasn't provided initially
+        _facade_instance._anomaly_coordinator = anomaly_coordinator
     return _facade_instance

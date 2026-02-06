@@ -37,7 +37,7 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-from app.services.notifications.facade import (
+from app.hoc.cus.account.L5_engines.notifications_facade import (
     NotificationsFacade,
     get_notifications_facade,
 )

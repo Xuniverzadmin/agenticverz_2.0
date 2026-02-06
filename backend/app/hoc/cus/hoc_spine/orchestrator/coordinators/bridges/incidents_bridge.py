@@ -97,9 +97,54 @@ def get_incident_driver(db_url=None):
 get_incident_facade = get_incident_driver
 
 
+# =============================================================================
+# INCIDENTS ENGINE BRIDGE (extends IncidentsBridge to avoid 5-method limit)
+# =============================================================================
+
+
+class IncidentsEngineBridge:
+    """Extended capabilities for incidents domain engines. Max 5 methods."""
+
+    def recovery_rule_engine_capability(self):
+        """
+        Return recovery rule engine for error classification (PIN-L2-PURITY).
+
+        Used by recovery.py for evaluating recovery rules on failures.
+        """
+        from app.hoc.cus.incidents.L5_engines import recovery_rule_engine
+
+        return recovery_rule_engine
+
+    def evidence_recorder_capability(self):
+        """
+        Return lessons coordinator for evidence recording (PIN-520).
+
+        Used to inject into IncidentEngine for cross-domain evidence recording.
+        L5 incident_engine.get_incident_engine(evidence_recorder=...) should receive this.
+        """
+        from app.hoc.cus.hoc_spine.orchestrator.coordinators.lessons_coordinator import (
+            get_lessons_coordinator,
+        )
+
+        return get_lessons_coordinator()
+
+
+_engine_bridge_instance = None
+
+
+def get_incidents_engine_bridge() -> IncidentsEngineBridge:
+    """Get the singleton IncidentsEngineBridge instance."""
+    global _engine_bridge_instance
+    if _engine_bridge_instance is None:
+        _engine_bridge_instance = IncidentsEngineBridge()
+    return _engine_bridge_instance
+
+
 __all__ = [
     "IncidentsBridge",
     "get_incidents_bridge",
     "get_incident_driver",
     "get_incident_facade",
+    "IncidentsEngineBridge",
+    "get_incidents_engine_bridge",
 ]

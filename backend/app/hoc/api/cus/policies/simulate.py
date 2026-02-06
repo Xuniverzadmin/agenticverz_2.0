@@ -29,10 +29,7 @@ Returns:
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.gateway_middleware import get_auth_context
-from app.db import get_async_session_dep
 from app.hoc.cus.controls.L5_schemas.simulation import (
     LimitSimulationRequest,
     LimitSimulationResponse,
@@ -41,6 +38,7 @@ from app.hoc.cus.controls.L5_schemas.simulation import (
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
+    get_session_dep,
 )
 
 
@@ -93,7 +91,7 @@ class SimulateResponse(BaseModel):
 async def simulate_execution(
     request: Request,
     body: SimulateRequest,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> SimulateResponse:
     """
     Simulate an execution against all limits.

@@ -33,13 +33,11 @@ from typing import Annotated, Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.gateway_middleware import get_auth_context
-from app.db import get_async_session_dep
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
+    get_session_dep,
 )
 
 logger = logging.getLogger("nova.api.mcp_servers")
@@ -232,7 +230,7 @@ def get_tenant_id_from_auth(request: Request) -> str:
 async def register_mcp_server(
     request: Request,
     body: McpServerRegisterRequest,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> McpRegistrationResponse:
     """Register a new MCP server. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -293,7 +291,7 @@ async def list_mcp_servers(
         bool,
         Query(description="Include disabled servers"),
     ] = False,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> McpServerListResponse:
     """List MCP servers. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -345,7 +343,7 @@ async def list_mcp_servers(
 async def get_mcp_server(
     request: Request,
     server_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> McpServerResponse:
     """Get MCP server details. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -402,7 +400,7 @@ async def get_mcp_server(
 async def discover_mcp_tools(
     request: Request,
     server_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> McpDiscoveryResponse:
     """Discover tools from MCP server. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -456,7 +454,7 @@ async def discover_mcp_tools(
 async def check_mcp_health(
     request: Request,
     server_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> McpHealthResponse:
     """Health check MCP server. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -513,7 +511,7 @@ async def check_mcp_health(
 async def delete_mcp_server(
     request: Request,
     server_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> McpDeleteResponse:
     """Delete MCP server. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -567,7 +565,7 @@ async def delete_mcp_server(
 async def list_mcp_tools(
     request: Request,
     server_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> McpToolListResponse:
     """List tools for MCP server. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -626,7 +624,7 @@ async def list_mcp_invocations(
     server_id: str,
     limit: Annotated[int, Query(ge=1, le=100, description="Max items")] = 50,
     offset: Annotated[int, Query(ge=0, description="Items to skip")] = 0,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> McpInvocationListResponse:
     """List invocations for MCP server. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -695,7 +693,7 @@ async def invoke_mcp_tool(
     server_id: str,
     tool_id: str,
     body: McpInvokeRequest,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> McpInvokeResponse:
     """Invoke an MCP tool with governance. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)

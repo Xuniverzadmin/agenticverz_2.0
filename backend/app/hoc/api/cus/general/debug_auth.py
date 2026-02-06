@@ -33,6 +33,9 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    get_async_session_context,
+)
 from app.schemas.response import wrap_dict
 from app.auth.contexts import (
     AuthPlane,
@@ -105,10 +108,9 @@ async def _get_tenant_state(tenant_id: Optional[str]) -> tuple[Optional[str], Op
         return None, None
 
     try:
-        from app.db import get_async_session
         from app.domain.tenants.state_resolver import TenantState, TenantStateResolver
 
-        async with get_async_session() as session:
+        async with get_async_session_context() as session:
             resolver = TenantStateResolver(session)
             state = await resolver.resolve(tenant_id)
             return state.name, state.value

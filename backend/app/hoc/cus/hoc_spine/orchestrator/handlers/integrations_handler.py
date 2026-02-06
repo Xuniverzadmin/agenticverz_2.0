@@ -48,7 +48,8 @@ class IntegrationsQueryHandler:
                 "Missing 'method' in params", "MISSING_METHOD"
             )
 
-        facade = get_integrations_facade()
+        # L4 handler passes session to L5 facade (PIN-520 transaction ownership)
+        facade = get_integrations_facade(session=ctx.params.get("sync_session") or ctx.session)
         dispatch = {
             "list_integrations": facade.list_integrations,
             "get_integration": facade.get_integration,

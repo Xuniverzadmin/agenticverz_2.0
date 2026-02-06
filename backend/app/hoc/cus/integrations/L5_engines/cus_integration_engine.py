@@ -461,12 +461,18 @@ class CusIntegrationEngine:
 
 
 # Factory function
-def get_cus_integration_engine() -> CusIntegrationEngine:
-    """Get engine instance with default driver.
+def get_cus_integration_engine(session) -> CusIntegrationEngine:
+    """Get engine instance with driver configured for session.
+
+    Args:
+        session: Database session from L4 handler (required)
 
     Returns:
         CusIntegrationEngine instance
+
+    Note:
+        Session is REQUIRED. L4 handler owns transaction boundary.
     """
-    driver = get_cus_integration_driver()
+    driver = get_cus_integration_driver(session=session)
     return CusIntegrationEngine(driver=driver)
 

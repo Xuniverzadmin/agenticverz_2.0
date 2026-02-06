@@ -28,10 +28,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.gateway_middleware import get_auth_context
-from app.db import get_async_session_dep
 from app.schemas.limits.policy_limits import (
     CreatePolicyLimitRequest,
     LimitCategoryEnum,
@@ -44,6 +41,7 @@ from app.schemas.limits.policy_limits import (
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
+    get_session_dep,
 )
 
 
@@ -164,7 +162,7 @@ class LimitDetail(BaseModel):
 async def create_limit(
     request: Request,
     body: CreateLimitRequest,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> LimitDetail:
     """
     Create a new policy limit.
@@ -231,7 +229,7 @@ async def update_limit(
     request: Request,
     limit_id: str,
     body: UpdateLimitRequest,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> LimitDetail:
     """
     Update an existing policy limit.
@@ -299,7 +297,7 @@ async def update_limit(
 async def delete_limit(
     request: Request,
     limit_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> None:
     """
     Soft-delete a policy limit.
@@ -352,7 +350,7 @@ async def delete_limit(
 async def get_threshold_params(
     request: Request,
     limit_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> ThresholdParamsResponse:
     """
     Get threshold parameters for a limit.
@@ -360,56 +358,47 @@ async def get_threshold_params(
     Returns both raw params and effective params (with defaults applied).
     Only valid for limits with limit_category = THRESHOLD.
     """
-    from app.models.policy_control_plane import Limit, LimitCategory
-    from sqlmodel import select
-
     auth_context = get_auth_context(request)
     tenant_id = auth_context.tenant_id
 
-    # Fetch the limit
-    stmt = select(Limit).where(
-        Limit.id == limit_id,
-        Limit.tenant_id == tenant_id,
-    )
-    result = await session.execute(stmt)
-    limit = result.scalar_one_or_none()
-
-    if not limit:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "limit_not_found", "message": f"Limit {limit_id} not found"},
-        )
-
-    if limit.limit_category != LimitCategory.THRESHOLD.value:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "invalid_limit_category",
-                "message": f"Limit {limit_id} is not a THRESHOLD category limit",
-            },
-        )
-
-    # Compute effective params via L4 operation registry
-    raw_params = limit.params or {}
+    # Fetch the limit and compute effective params via L4 operation registry
     registry = get_operation_registry()
-    eff_op = await registry.execute(
+    op = await registry.execute(
         "controls.thresholds",
         OperationContext(
-            session=None,
+            session=session,
             tenant_id=tenant_id,
-            params={"method": "get_effective_params", "raw_params": raw_params},
+            params={
+                "method": "get_threshold_params",
+                "limit_id": limit_id,
+            },
         ),
     )
-    if not eff_op.success:
-        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": eff_op.error})
-    effective = eff_op.data
+    if not op.success:
+        error_code = getattr(op, "error_code", None) or ""
+        if error_code == "LIMIT_NOT_FOUND":
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "limit_not_found", "message": f"Limit {limit_id} not found"},
+            )
+        elif error_code == "INVALID_CATEGORY":
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "invalid_limit_category",
+                    "message": f"Limit {limit_id} is not a THRESHOLD category limit",
+                },
+            )
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    result = op.data
 
     return ThresholdParamsResponse(
-        limit_id=limit.id,
-        tenant_id=limit.tenant_id,
-        params=raw_params,
-        effective_params=effective,
-        updated_at=limit.updated_at,
+        limit_id=result["limit_id"],
+        tenant_id=result["tenant_id"],
+        params=result["params"],
+        effective_params=result["effective_params"],
+        updated_at=result["updated_at"],
     )
 
 
@@ -423,7 +412,7 @@ async def set_threshold_params(
     request: Request,
     limit_id: str,
     body: ThresholdParamsRequest,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> ThresholdParamsResponse:
     """
     Set threshold parameters for a limit.
@@ -441,88 +430,58 @@ async def set_threshold_params(
 
     No partial garbage. No unknown keys. No absurd values.
     """
-    from datetime import timezone
-
-    from app.models.policy_control_plane import Limit, LimitCategory
-    from sqlmodel import select
-
     auth_context = get_auth_context(request)
     tenant_id = auth_context.tenant_id
 
-    # Fetch the limit
-    stmt = select(Limit).where(
-        Limit.id == limit_id,
-        Limit.tenant_id == tenant_id,
-    )
-    result = await session.execute(stmt)
-    limit = result.scalar_one_or_none()
-
-    if not limit:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "limit_not_found", "message": f"Limit {limit_id} not found"},
-        )
-
-    if limit.limit_category != LimitCategory.THRESHOLD.value:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "invalid_limit_category",
-                "message": f"Limit {limit_id} is not a THRESHOLD category limit",
-            },
-        )
-
-    # Build new params (merge with existing)
-    current_params = limit.params or {}
     update_data = body.model_dump(exclude_none=True)
 
-    new_params = {**current_params, **update_data}
-
-    # Validate params via L4 operation registry
+    # Validate, update, and compute effective params via L4 operation registry
     registry = get_operation_registry()
-    validate_op = await registry.execute(
+    op = await registry.execute(
         "controls.thresholds",
         OperationContext(
-            session=None,
+            session=session,
             tenant_id=tenant_id,
-            params={"method": "validate_params", "params": new_params},
-        ),
-    )
-    if not validate_op.success:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "invalid_params",
-                "message": validate_op.error,
+            params={
+                "method": "set_threshold_params",
+                "limit_id": limit_id,
+                "update_data": update_data,
             },
-        )
-
-    # Update the limit
-    limit.params = new_params
-    limit.updated_at = datetime.now(timezone.utc)
-    session.add(limit)
-    await session.commit()
-    await session.refresh(limit)
-
-    # Compute effective params via L4 operation registry
-    eff_op = await registry.execute(
-        "controls.thresholds",
-        OperationContext(
-            session=None,
-            tenant_id=tenant_id,
-            params={"method": "get_effective_params", "raw_params": new_params},
         ),
     )
-    if not eff_op.success:
-        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": eff_op.error})
-    effective = eff_op.data
+    if not op.success:
+        error_code = getattr(op, "error_code", None) or ""
+        if error_code == "LIMIT_NOT_FOUND":
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "limit_not_found", "message": f"Limit {limit_id} not found"},
+            )
+        elif error_code == "INVALID_CATEGORY":
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "invalid_limit_category",
+                    "message": f"Limit {limit_id} is not a THRESHOLD category limit",
+                },
+            )
+        elif error_code == "INVALID_PARAMS":
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "invalid_params",
+                    "message": op.error,
+                },
+            )
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    result = op.data
 
     return ThresholdParamsResponse(
-        limit_id=limit.id,
-        tenant_id=limit.tenant_id,
-        params=new_params,
-        effective_params=effective,
-        updated_at=limit.updated_at,
+        limit_id=result["limit_id"],
+        tenant_id=result["tenant_id"],
+        params=result["params"],
+        effective_params=result["effective_params"],
+        updated_at=result["updated_at"],
     )
 
 

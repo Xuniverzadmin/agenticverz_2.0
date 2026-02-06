@@ -45,9 +45,11 @@ Usage:
     # L2 API file (e.g., hoc/api/cus/overview/overview.py)
     from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
         get_operation_registry,
+        get_session_dep,
         OperationContext,
     )
 
+    session = Depends(get_session_dep)
     registry = get_operation_registry()
     result = await registry.execute("overview.query", OperationContext(
         session=session,
@@ -85,6 +87,7 @@ Handler registration:
 
 **External:**
 - `sqlalchemy.ext.asyncio`
+ - `app.db` (via `get_session_dep` local import)
 
 ## Transaction Boundary
 
@@ -100,6 +103,14 @@ Get the operation registry singleton.
 
 Returns the same instance for the lifetime of the process.
 Handlers register against this instance at import time.
+
+### `get_session_dep() -> AsyncGenerator[AsyncSession, None]`
+
+L4-provided session dependency for L2 endpoints.
+
+L2 files must NOT import sqlalchemy or app.db directly. Use this dependency
+to keep L2 free of DB/ORM imports while still providing a session for
+OperationContext construction.
 
 ### `reset_operation_registry() -> None`
 
@@ -192,6 +203,9 @@ exports:
     - name: get_operation_registry
       signature: "get_operation_registry() -> OperationRegistry"
       consumers: ["orchestrator"]
+    - name: get_session_dep
+      signature: "get_session_dep() -> AsyncGenerator[AsyncSession, None]"
+      consumers: ["L2 APIs"]
     - name: reset_operation_registry
       signature: "reset_operation_registry() -> None"
       consumers: ["orchestrator"]
@@ -246,4 +260,3 @@ pairing:
   expected_l5_consumers: []
   orchestrator_operations: []
 ```
-

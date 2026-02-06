@@ -207,3 +207,6 @@ __all__ = [
     "IncidentReadDriver",
     "get_incident_read_driver",
 ]
+
+# Backward compatibility alias (legacy name from app.services.incident_read_service)
+get_incident_read_service = get_incident_read_driver

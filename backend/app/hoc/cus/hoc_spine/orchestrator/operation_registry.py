@@ -35,9 +35,14 @@ What the registry adds to every operation:
     4. Single dispatch point (operation name → handler lookup)
 
 What the registry does NOT do:
-    - Own transactions (the session comes from L2 via FastAPI DI)
     - Execute business logic (that stays in L5)
     - Make decisions (authority is checked, not created here)
+
+Transaction ownership (PIN-520, TRANSACTION_COORDINATION_RATIONALE.md):
+    - L4 handlers OWN transaction boundaries (commit/rollback)
+    - L5 engines may call session.add(), session.flush()
+    - L6 drivers may call session.add(), session.execute() - NEVER commit
+    - Session comes from L2 via FastAPI DI, but L4 decides when to commit
 
 Usage:
     # L2 API file (e.g., hoc/api/cus/overview/overview.py)
@@ -79,9 +84,13 @@ Handler registration:
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Optional, Protocol, runtime_checkable
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Generator, Optional, Protocol, runtime_checkable
 
 from sqlalchemy.ext.asyncio import AsyncSession
+
+if TYPE_CHECKING:
+    from app.hoc.cus.hoc_spine.schemas.authority_decision import AuthorityDecision
 
 from app.hoc.cus.hoc_spine.services.time import utc_now
 
@@ -101,11 +110,19 @@ class OperationContext:
     """
     Immutable context passed to every operation handler.
 
-    The session comes from L2 via FastAPI DI. The registry does NOT
-    create sessions or own transaction boundaries.
+    The session comes from L2 via FastAPI DI. L4 handlers own transaction
+    boundaries (commit/rollback).
+
+    Session patterns:
+        - Async operations: session is AsyncSession (ctx.session)
+        - Sync operations: session=None, pass sync session via params["sync_session"]
+        - Self-contained: session=None, L4 handler creates session internally
+
+    Note: sync_session smuggling via params is the accepted pattern until
+    we refactor to explicit dual-session fields (future work).
     """
 
-    session: AsyncSession
+    session: Optional[AsyncSession]  # None for sync or self-contained operations
     tenant_id: str
     params: dict[str, Any] = field(default_factory=dict)
     # Caller metadata (populated by registry, not by L2)
@@ -159,8 +176,13 @@ class OperationHandler(Protocol):
     The handler MUST NOT:
       - Import from L2
       - Create sessions
-      - Call session.commit() (transaction ownership stays with caller)
       - Call other domain handlers directly (use registry for cross-domain)
+
+    Transaction ownership (PIN-520):
+      - L4 handlers/coordinators own transaction boundaries for write operations.
+      - L5 engines may call session.add(), session.flush().
+      - L6 drivers may call session.add(), session.execute() — NEVER commit/rollback.
+      - Read-only operations should not commit/rollback.
     """
 
     async def execute(self, ctx: OperationContext) -> OperationResult:
@@ -270,8 +292,8 @@ class OperationRegistry:
         """
         start = time.monotonic()
 
-        # --- Pre-dispatch: authority check ---
-        governance_active = self._check_authority(operation)
+        # --- Pre-dispatch: authority check (ITER3.4 — unified AuthorityDecision) ---
+        authority_decision = self._check_authority(operation)
 
         # --- Lookup handler ---
         handler = self._handlers.get(operation)
@@ -280,7 +302,7 @@ class OperationRegistry:
                 error=f"No handler registered for operation: {operation}",
                 error_code="UNKNOWN_OPERATION",
             )
-            self._audit_dispatch(operation, ctx, result, 0.0, governance_active)
+            self._audit_dispatch(operation, ctx, result, 0.0, authority_decision)
             return result
 
         # --- Build enriched context ---
@@ -315,7 +337,7 @@ class OperationRegistry:
         duration_ms = (time.monotonic() - start) * 1000
         result.operation = operation
         result.duration_ms = duration_ms
-        self._audit_dispatch(operation, ctx, result, duration_ms, governance_active)
+        self._audit_dispatch(operation, ctx, result, duration_ms, authority_decision)
 
         return result
 
@@ -323,15 +345,20 @@ class OperationRegistry:
     # Authority
     # =========================================================================
 
-    def _check_authority(self, operation: str) -> bool:
+    def _check_authority(self, operation: str) -> "AuthorityDecision":
         """
-        Check governance runtime state before dispatch.
+        Check governance runtime state before dispatch (ITER3.4 unified).
 
-        Returns True if governance is active, False if kill-switched.
+        Returns AuthorityDecision with allow/deny/degraded state.
         Operations execute either way — authority state is recorded, not enforced
         as a gate on domain operations (kill switch affects governance workflow,
         not domain reads/writes).
+
+        ITER3.4: Returns AuthorityDecision for uniform authority handling
+        across all L4 checks. The decision is included in audit logs.
         """
+        from app.hoc.cus.hoc_spine.schemas.authority_decision import AuthorityDecision
+
         try:
             from app.hoc.cus.hoc_spine.authority.runtime_switch import (
                 is_degraded_mode,
@@ -346,20 +373,36 @@ class OperationRegistry:
                     "operation.governance_disabled",
                     extra={"operation": operation},
                 )
+                return AuthorityDecision.allow_with_degraded_flag(
+                    reason="Governance kill-switch active",
+                    conditions=("governance_disabled",),
+                )
+
             if degraded:
                 logger.warning(
                     "operation.degraded_mode",
                     extra={"operation": operation},
                 )
+                return AuthorityDecision.allow_with_degraded_flag(
+                    reason="System in degraded mode",
+                    conditions=("degraded_mode",),
+                )
 
-            return active
+            return AuthorityDecision.allow(
+                reason="Governance active",
+                conditions=("governance_active",),
+            )
+
         except Exception as exc:
             # Authority check failure must not block operations
             logger.error(
                 "operation.authority_check_failed",
                 extra={"operation": operation, "error": str(exc)},
             )
-            return False
+            return AuthorityDecision.allow_with_degraded_flag(
+                reason=f"Authority check failed: {exc}",
+                conditions=("authority_check_error",),
+            )
 
     # =========================================================================
     # Audit
@@ -371,19 +414,34 @@ class OperationRegistry:
         ctx: OperationContext,
         result: OperationResult,
         duration_ms: float,
-        governance_active: bool,
+        authority_decision: Any,  # AuthorityDecision (avoid import cycle)
     ) -> None:
         """
-        Emit structured audit log for every dispatch.
+        Emit structured audit log for every dispatch (ITER3.4 — includes authority decision).
 
         V1: structured logging only. AuditStore integration planned for Phase A.6.
+
+        ITER3.4: authority_decision is now AuthorityDecision, providing:
+        - allowed: bool
+        - reason: str (why allowed/denied)
+        - degraded: bool (system in degraded mode)
+        - code: str (machine-readable status)
+        - conditions: tuple[str, ...] (checked conditions)
         """
+        # Extract authority fields (ITER3.4 uniformity)
+        authority_data = {
+            "governance_active": authority_decision.allowed,
+            "authority_degraded": authority_decision.degraded,
+            "authority_reason": authority_decision.reason,
+            "authority_code": authority_decision.code,
+        }
+
         log_data = {
             "operation": operation,
             "tenant_id": ctx.tenant_id,
             "success": result.success,
             "duration_ms": round(duration_ms, 2),
-            "governance_active": governance_active,
+            **authority_data,
         }
 
         if not result.success:
@@ -439,6 +497,72 @@ class OperationRegistry:
 _registry_instance: Optional[OperationRegistry] = None
 
 
+async def get_session_dep() -> AsyncGenerator[AsyncSession, None]:
+    """
+    L4-provided session dependency for L2 endpoints.
+
+    L2 files must NOT import sqlalchemy or app.db directly.
+    Instead, they import this dependency from L4 (operation_registry)
+    and use it with FastAPI Depends():
+
+        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import get_session_dep
+        session = Depends(get_session_dep)
+
+    This keeps L2 free of DB/ORM imports while still providing
+    the session needed for OperationContext construction.
+    """
+    from app.db import get_async_session_dep
+
+    async for session in get_async_session_dep():
+        yield session
+
+
+def get_sync_session_dep() -> Generator:
+    """
+    L4-provided SYNC session dependency for L2 endpoints that use
+    synchronous Session (sqlmodel Session).
+
+    Usage:
+        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import get_sync_session_dep
+        session = Depends(get_sync_session_dep)
+    """
+    from app.db import get_session
+
+    yield from get_session()
+
+
+def sql_text(sql: str):
+    """
+    L4-provided wrapper for sqlalchemy text().
+
+    L2 files must not import sqlalchemy directly. Use this helper
+    for raw SQL text queries:
+
+        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import sql_text
+        result = await session.execute(sql_text("SELECT ..."), params)
+    """
+    from sqlalchemy import text as _text
+
+    return _text(sql)
+
+
+@asynccontextmanager
+async def get_async_session_context():
+    """
+    L4-provided async session context manager for L2 endpoints that
+    use `async with get_async_session() as session:` pattern.
+
+    Usage:
+        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import get_async_session_context
+        async with get_async_session_context() as session:
+            ...
+    """
+    from app.db import get_async_session
+
+    async with get_async_session() as session:
+        yield session
+
+
 def get_operation_registry() -> OperationRegistry:
     """
     Get the operation registry singleton.
@@ -460,3 +584,4 @@ def reset_operation_registry() -> None:
     """
     global _registry_instance
     _registry_instance = None
+

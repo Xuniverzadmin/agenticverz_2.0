@@ -6,8 +6,8 @@
 #   Execution: async
 # Role: PB-S3 Pattern Feedback API (READ-ONLY)
 # Callers: Customer Console
-# Allowed Imports: L3, L4, L5, L6
-# Forbidden Imports: L1
+# Allowed Imports: L4 (registry)
+# Forbidden Imports: L1, L5, L6, sqlalchemy
 # Reference: PB-S3
 """
 PB-S3 Pattern Feedback API (READ-ONLY)
@@ -29,16 +29,17 @@ O4: Execution unchanged ✓ (no POST/PUT/DELETE)
 
 import logging
 from typing import Optional
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import func, select
 
-from ..auth import verify_api_key
-from ..db import get_async_session
-from ..models.feedback import PatternFeedback
-from ..schemas.response import wrap_dict
+from app.auth import verify_api_key
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    get_async_session_context,
+    get_operation_registry,
+    OperationContext,
+)
+from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.feedback")
 
@@ -118,59 +119,39 @@ async def list_feedback(
     READ-ONLY: This endpoint only reads data.
     No execution data is modified by this query.
     """
-    async with get_async_session() as session:
-        # Build query
-        query = select(PatternFeedback).order_by(PatternFeedback.detected_at.desc())
+    async with get_async_session_context() as session:
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "analytics.feedback",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id or "system",
+                params={
+                    "method": "list_feedback",
+                    "pattern_type": pattern_type,
+                    "severity": severity,
+                    "acknowledged": acknowledged,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            ),
+        )
 
-        if tenant_id:
-            query = query.where(PatternFeedback.tenant_id == tenant_id)
-        if pattern_type:
-            query = query.where(PatternFeedback.pattern_type == pattern_type)
-        if severity:
-            query = query.where(PatternFeedback.severity == severity)
-        if acknowledged is not None:
-            query = query.where(PatternFeedback.acknowledged == acknowledged)
+        if not result.success:
+            raise HTTPException(status_code=500, detail=result.error)
 
-        # Get total count
-        count_query = select(func.count()).select_from(query.subquery())
-        count_result = await session.execute(count_query)
-        total = count_result.scalar() or 0
-
-        # Apply pagination
-        query = query.limit(limit).offset(offset)
-
-        result = await session.execute(query)
-        records = result.scalars().all()
-
-        # Aggregate by type and severity
-        by_type: dict[str, int] = {}
-        by_severity: dict[str, int] = {}
-        for r in records:
-            by_type[r.pattern_type] = by_type.get(r.pattern_type, 0) + 1
-            by_severity[r.severity] = by_severity.get(r.severity, 0) + 1
-
+        data = result.data
         items = [
-            FeedbackSummaryResponse(
-                id=str(r.id),
-                tenant_id=r.tenant_id,
-                pattern_type=r.pattern_type,
-                severity=r.severity,
-                description=r.description[:200] if r.description else "",
-                signature=r.signature,
-                occurrence_count=r.occurrence_count,
-                detected_at=r.detected_at.isoformat() if r.detected_at else None,
-                acknowledged=r.acknowledged,
-                provenance_count=len(r.provenance) if r.provenance else 0,
-            )
-            for r in records
+            FeedbackSummaryResponse(**item)
+            for item in data["items"]
         ]
 
         return FeedbackListResponse(
-            total=total,
-            limit=limit,
-            offset=offset,
-            by_type=by_type,
-            by_severity=by_severity,
+            total=data["total"],
+            limit=data["limit"],
+            offset=data["offset"],
+            by_type=data["by_type"],
+            by_severity=data["by_severity"],
             items=items,
         )
 
@@ -186,36 +167,28 @@ async def get_feedback(
     READ-ONLY: This endpoint only reads data.
     No execution data is modified by this query.
     """
-    try:
-        feedback_uuid = UUID(feedback_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid feedback ID format")
-
-    async with get_async_session() as session:
-        result = await session.execute(select(PatternFeedback).where(PatternFeedback.id == feedback_uuid))
-        record = result.scalar_one_or_none()
-
-        if not record:
-            raise HTTPException(status_code=404, detail=f"Feedback {feedback_id} not found")
-
-        return FeedbackDetailResponse(
-            id=str(record.id),
-            tenant_id=record.tenant_id,
-            pattern_type=record.pattern_type,
-            severity=record.severity,
-            description=record.description,
-            signature=record.signature,
-            provenance=record.provenance or [],
-            occurrence_count=record.occurrence_count,
-            time_window_minutes=record.time_window_minutes,
-            threshold_used=record.threshold_used,
-            extra_data=record.extra_data,
-            detected_at=record.detected_at.isoformat() if record.detected_at else None,
-            created_at=record.created_at.isoformat() if record.created_at else None,
-            acknowledged=record.acknowledged,
-            acknowledged_at=record.acknowledged_at.isoformat() if record.acknowledged_at else None,
-            acknowledged_by=record.acknowledged_by,
+    async with get_async_session_context() as session:
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "analytics.feedback",
+            OperationContext(
+                session=session,
+                tenant_id="system",
+                params={
+                    "method": "get_feedback",
+                    "feedback_id": feedback_id,
+                },
+            ),
         )
+
+        if not result.success:
+            if result.error_code == "NOT_FOUND":
+                raise HTTPException(status_code=404, detail=result.error)
+            if result.error_code == "INVALID_FORMAT":
+                raise HTTPException(status_code=400, detail=result.error)
+            raise HTTPException(status_code=500, detail=result.error)
+
+        return FeedbackDetailResponse(**result.data)
 
 
 @router.get("/stats/summary")
@@ -229,32 +202,20 @@ async def get_feedback_stats(
     READ-ONLY: This endpoint only reads aggregated data.
     No execution data is modified by this query.
     """
-    async with get_async_session() as session:
-        # Base query
-        query = select(PatternFeedback)
-        if tenant_id:
-            query = query.where(PatternFeedback.tenant_id == tenant_id)
+    async with get_async_session_context() as session:
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "analytics.feedback",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id or "system",
+                params={
+                    "method": "get_feedback_stats",
+                },
+            ),
+        )
 
-        result = await session.execute(query)
-        records = result.scalars().all()
+        if not result.success:
+            raise HTTPException(status_code=500, detail=result.error)
 
-        # Aggregate stats
-        total = len(records)
-        acknowledged_count = sum(1 for r in records if r.acknowledged)
-        unacknowledged_count = total - acknowledged_count
-
-        by_type: dict[str, int] = {}
-        by_severity: dict[str, int] = {}
-        for r in records:
-            by_type[r.pattern_type] = by_type.get(r.pattern_type, 0) + 1
-            by_severity[r.severity] = by_severity.get(r.severity, 0) + 1
-
-        return wrap_dict({
-            "total": total,
-            "acknowledged": acknowledged_count,
-            "unacknowledged": unacknowledged_count,
-            "by_type": by_type,
-            "by_severity": by_severity,
-            "read_only": True,
-            "pb_s3_compliant": True,
-        })
+        return wrap_dict(result.data)

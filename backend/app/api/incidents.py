@@ -53,7 +53,7 @@ from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
 from app.models.killswitch import Incident
 from app.schemas.response import wrap_dict
-from app.services.incidents_facade import get_incidents_facade
+from app.hoc.cus.incidents.L5_engines.incidents_facade import get_incidents_facade
 
 # =============================================================================
 # Module Configuration
@@ -1846,8 +1846,8 @@ async def export_evidence(
     """Export incident evidence bundle."""
     from fastapi.responses import Response
 
-    from app.services.export_bundle_service import get_export_bundle_service
-    from app.services.pdf_renderer import get_pdf_renderer
+    from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_service
+    from app.hoc.cus.logs.L5_engines.pdf_renderer import get_pdf_renderer
 
     tenant_id = get_tenant_id_from_auth(request)
     auth_ctx = get_auth_context(request)
@@ -1911,8 +1911,8 @@ async def export_soc2(
     """Export SOC2-compliant bundle as PDF."""
     from fastapi.responses import Response
 
-    from app.services.export_bundle_service import get_export_bundle_service
-    from app.services.pdf_renderer import get_pdf_renderer
+    from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_service
+    from app.hoc.cus.logs.L5_engines.pdf_renderer import get_pdf_renderer
 
     tenant_id = get_tenant_id_from_auth(request)
     auth_ctx = get_auth_context(request)
@@ -1976,8 +1976,8 @@ async def export_executive_debrief(
     """Export executive debrief as PDF."""
     from fastapi.responses import Response
 
-    from app.services.export_bundle_service import get_export_bundle_service
-    from app.services.pdf_renderer import get_pdf_renderer
+    from app.hoc.cus.incidents.L6_drivers.export_bundle_driver import get_export_bundle_service
+    from app.hoc.cus.logs.L5_engines.pdf_renderer import get_pdf_renderer
 
     tenant_id = get_tenant_id_from_auth(request)
     auth_ctx = get_auth_context(request)

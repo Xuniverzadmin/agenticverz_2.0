@@ -30,16 +30,13 @@ from app.hoc.cus.activity.L5_engines.activity_facade import (
     ActivityFacade,
     get_activity_facade,
 )
-from app.hoc.cus.hoc_spine.orchestrator.run_governance_facade import (
-    RunGovernanceFacade,
-    get_run_governance_facade,
-)
+
+# NOTE: RunGovernanceFacade removed (PIN-520 L5 purity)
+# Callers should import directly from hoc_spine if needed:
+#   from app.hoc.cus.hoc_spine.orchestrator.run_governance_facade import get_run_governance_facade
 
 __all__ = [
     # activity_facade
     "ActivityFacade",
     "get_activity_facade",
-    # run_governance_facade
-    "RunGovernanceFacade",
-    "get_run_governance_facade",
 ]

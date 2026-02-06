@@ -23,9 +23,6 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.db_async import get_async_session
 from app.schemas.response import wrap_dict
 from app.policy import (
     ActionType,
@@ -39,6 +36,7 @@ from app.policy import (
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
+    get_session_dep,
 )
 
 router = APIRouter(prefix="/policy-layer", tags=["policy-layer"])
@@ -140,7 +138,7 @@ class PolicyMetrics(BaseModel):
 @router.post("/evaluate", response_model=PolicyEvaluationResult)
 async def evaluate_action(
     request: EvaluateRequest,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> PolicyEvaluationResult:
     """
     Evaluate a proposed action against all applicable policies.
@@ -189,7 +187,7 @@ async def evaluate_action(
 @router.post("/simulate", response_model=PolicyEvaluationResult)
 async def simulate_evaluation(
     request: SimulateRequest,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> PolicyEvaluationResult:
     """
     Simulate policy evaluation without side effects.
@@ -233,7 +231,7 @@ async def simulate_evaluation(
 
 @router.get("/state", response_model=PolicyState)
 async def get_policy_state(
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> PolicyState:
     """
     Get the current state of the policy layer.
@@ -261,7 +259,7 @@ async def get_policy_state(
 
 @router.post("/reload")
 async def reload_policies(
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Hot-reload policies from database.
@@ -306,7 +304,7 @@ async def list_violations(
     severity_min: Optional[float] = Query(None, ge=0.0, le=1.0),
     hours: int = Query(24, ge=1, le=720),
     limit: int = Query(100, ge=1, le=1000),
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     List policy violations with filtering.
@@ -339,7 +337,7 @@ async def list_violations(
 @router.get("/violations/{violation_id}", response_model=PolicyViolation)
 async def get_violation(
     violation_id: str,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> PolicyViolation:
     """Get a specific violation by ID."""
     registry = get_operation_registry()
@@ -363,7 +361,7 @@ async def get_violation(
 async def acknowledge_violation(
     violation_id: str,
     notes: Optional[str] = None,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Acknowledge a violation (mark as reviewed).
@@ -397,7 +395,7 @@ async def acknowledge_violation(
 async def list_risk_ceilings(
     tenant_id: Optional[str] = None,
     include_inactive: bool = False,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """List all risk ceilings with current values."""
     registry = get_operation_registry()
@@ -433,7 +431,7 @@ async def list_risk_ceilings(
 @router.get("/risk-ceilings/{ceiling_id}")
 async def get_risk_ceiling(
     ceiling_id: str,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """Get a specific risk ceiling with current utilization."""
     registry = get_operation_registry()
@@ -471,7 +469,7 @@ async def get_risk_ceiling(
 async def update_risk_ceiling(
     ceiling_id: str,
     update: RiskCeilingUpdate,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """Update a risk ceiling configuration."""
     registry = get_operation_registry()
@@ -500,7 +498,7 @@ async def update_risk_ceiling(
 @router.post("/risk-ceilings/{ceiling_id}/reset")
 async def reset_risk_ceiling(
     ceiling_id: str,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """Reset a risk ceiling's current value to 0."""
     registry = get_operation_registry()
@@ -530,7 +528,7 @@ async def reset_risk_ceiling(
 async def list_safety_rules(
     tenant_id: Optional[str] = None,
     include_inactive: bool = False,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> List[Dict[str, Any]]:
     """List all safety rules."""
     registry = get_operation_registry()
@@ -565,7 +563,7 @@ async def list_safety_rules(
 async def update_safety_rule(
     rule_id: str,
     update: SafetyRuleUpdate,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """Update a safety rule configuration."""
     registry = get_operation_registry()
@@ -598,7 +596,7 @@ async def update_safety_rule(
 @router.get("/ethical-constraints")
 async def list_ethical_constraints(
     include_inactive: bool = False,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> List[Dict[str, Any]]:
     """List all ethical constraints."""
     registry = get_operation_registry()
@@ -636,7 +634,7 @@ async def list_ethical_constraints(
 @router.get("/cooldowns", response_model=List[CooldownInfo])
 async def list_active_cooldowns(
     agent_id: Optional[str] = None,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> List[CooldownInfo]:
     """List all active cooldowns."""
     registry = get_operation_registry()
@@ -658,7 +656,7 @@ async def list_active_cooldowns(
 async def clear_cooldowns(
     agent_id: str,
     rule_name: Optional[str] = None,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Clear cooldowns for an agent.
@@ -688,7 +686,7 @@ async def clear_cooldowns(
 @router.get("/metrics", response_model=PolicyMetrics)
 async def get_policy_metrics(
     hours: int = Query(24, ge=1, le=720),
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> PolicyMetrics:
     """Get policy engine metrics for the specified time window."""
     registry = get_operation_registry()
@@ -714,7 +712,7 @@ async def get_policy_metrics(
 @router.post("/evaluate/batch")
 async def evaluate_batch(
     requests: List[EvaluateRequest],
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> List[PolicyEvaluationResult]:
     """
     Evaluate multiple actions in a single call.
@@ -779,7 +777,7 @@ class RollbackRequest(BaseModel):
 async def list_policy_versions(
     limit: int = Query(20, ge=1, le=100),
     include_inactive: bool = False,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> List[Dict[str, Any]]:
     """
     List all policy versions.
@@ -803,7 +801,7 @@ async def list_policy_versions(
 
 @router.get("/versions/current")
 async def get_current_version(
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Get the currently active policy version.
@@ -830,7 +828,7 @@ async def get_current_version(
 @router.post("/versions")
 async def create_policy_version(
     request: CreateVersionRequest,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Create a new policy version snapshot.
@@ -865,7 +863,7 @@ async def create_policy_version(
 @router.post("/versions/rollback")
 async def rollback_to_version(
     request: RollbackRequest,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Rollback to a previous policy version.
@@ -900,7 +898,7 @@ async def rollback_to_version(
 @router.get("/versions/{version_id}/provenance")
 async def get_version_provenance(
     version_id: str,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> List[Dict[str, Any]]:
     """
     Get the provenance (change history) for a policy version.
@@ -929,7 +927,7 @@ async def get_version_provenance(
 
 @router.get("/dependencies")
 async def get_dependency_graph(
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Get the policy dependency graph.
@@ -981,7 +979,7 @@ async def get_dependency_graph(
 @router.get("/conflicts")
 async def list_conflicts(
     include_resolved: bool = False,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> List[Dict[str, Any]]:
     """
     List policy conflicts.
@@ -1029,7 +1027,7 @@ class ResolveConflictRequest(BaseModel):
 async def resolve_conflict(
     conflict_id: str,
     request: ResolveConflictRequest,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Resolve a policy conflict.
@@ -1084,7 +1082,7 @@ class TemporalPolicyCreate(BaseModel):
 async def list_temporal_policies(
     metric: Optional[str] = None,
     include_inactive: bool = False,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> List[Dict[str, Any]]:
     """
     List temporal (sliding window) policies.
@@ -1123,7 +1121,7 @@ async def list_temporal_policies(
 @router.post("/temporal-policies")
 async def create_temporal_policy(
     request: TemporalPolicyCreate,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Create a new temporal policy.
@@ -1154,7 +1152,7 @@ async def create_temporal_policy(
 async def get_temporal_utilization(
     policy_id: str,
     agent_id: Optional[str] = None,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Get current utilization for a temporal policy.
@@ -1213,7 +1211,7 @@ class ContextAwareEvaluateRequest(BaseModel):
 @router.post("/evaluate/context-aware")
 async def evaluate_with_context(
     request: ContextAwareEvaluateRequest,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Context-aware policy evaluation (GAP 4).
@@ -1295,7 +1293,7 @@ async def evaluate_with_context(
 
 @router.get("/dependencies/dag/validate")
 async def validate_dependency_dag(
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Validate that policy dependencies form a valid DAG.
@@ -1340,7 +1338,7 @@ class AddDependencyRequest(BaseModel):
 @router.post("/dependencies/add")
 async def add_dependency_with_dag_check(
     request: AddDependencyRequest,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Add a policy dependency with DAG validation.
@@ -1392,7 +1390,7 @@ async def add_dependency_with_dag_check(
 
 @router.get("/dependencies/evaluation-order")
 async def get_evaluation_order(
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Get the topological evaluation order for policies.
@@ -1445,7 +1443,7 @@ class PruneTemporalMetricsRequest(BaseModel):
 @router.post("/temporal-metrics/prune")
 async def prune_temporal_metrics(
     request: PruneTemporalMetricsRequest,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Prune and compact temporal metric events.
@@ -1483,7 +1481,7 @@ async def prune_temporal_metrics(
 
 @router.get("/temporal-metrics/storage-stats")
 async def get_temporal_storage_stats(
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Get storage statistics for temporal metrics.
@@ -1522,7 +1520,7 @@ class ActivateVersionRequest(BaseModel):
 @router.post("/versions/activate")
 async def activate_policy_version(
     request: ActivateVersionRequest,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Activate a policy version with pre-activation integrity checks.
@@ -1579,7 +1577,7 @@ async def activate_policy_version(
 @router.post("/versions/{version_id}/check")
 async def check_version_integrity(
     version_id: str,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Run integrity checks on a version without activating.
@@ -1639,7 +1637,7 @@ async def list_lessons(
     severity: Optional[str] = Query(None, description="Filter: CRITICAL, HIGH, MEDIUM, LOW"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     List lessons learned.
@@ -1688,7 +1686,7 @@ async def list_lessons(
 @router.get("/lessons/stats")
 async def get_lesson_stats(
     tenant_id: str,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Get lesson statistics for a tenant.
@@ -1717,7 +1715,7 @@ async def get_lesson_stats(
 async def get_lesson(
     lesson_id: str,
     tenant_id: str,
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Get a specific lesson by ID.
@@ -1752,7 +1750,7 @@ async def convert_lesson_to_draft(
     lesson_id: str,
     request: LessonConvertRequest,
     tenant_id: str = Query(..., description="Tenant ID"),
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Convert a lesson to a draft policy proposal.
@@ -1796,7 +1794,7 @@ async def defer_lesson(
     lesson_id: str,
     request: LessonDeferRequest,
     tenant_id: str = Query(..., description="Tenant ID"),
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Defer a lesson until a future date.
@@ -1839,7 +1837,7 @@ async def dismiss_lesson(
     lesson_id: str,
     request: LessonDismissRequest,
     tenant_id: str = Query(..., description="Tenant ID"),
-    db: AsyncSession = Depends(get_async_session),
+    db = Depends(get_session_dep),
 ) -> Dict[str, Any]:
     """
     Dismiss a lesson (mark as not actionable).

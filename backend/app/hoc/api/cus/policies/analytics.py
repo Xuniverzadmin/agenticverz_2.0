@@ -49,13 +49,11 @@ from typing import Annotated, Dict, List
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.gateway_middleware import get_auth_context
-from app.db import get_async_session_dep
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
+    get_session_dep,
 )
 
 logger = logging.getLogger(__name__)
@@ -262,7 +260,7 @@ async def get_usage_statistics(
         ScopeType,
         Query(description="Aggregation scope: org, project, or env"),
     ] = ScopeType.ORG,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> UsageStatisticsResponse:
     """
     Get usage statistics for the specified time window.
@@ -461,7 +459,7 @@ async def get_cost_statistics(
         ScopeType,
         Query(description="Aggregation scope: org, project, or env"),
     ] = ScopeType.ORG,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> CostStatisticsResponse:
     """
     Get cost statistics for the specified time window.
@@ -607,7 +605,7 @@ async def _get_usage_data(
     to_ts: datetime,
     resolution: ResolutionType,
     scope: ScopeType,
-    session: AsyncSession,
+    session,
 ) -> UsageStatisticsResponse:
     """
     Internal helper to get usage data (shared by read and export endpoints).
@@ -745,7 +743,7 @@ async def export_usage_csv(
         ScopeType,
         Query(description="Aggregation scope: org, project, or env"),
     ] = ScopeType.ORG,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> Response:
     """
     Export usage statistics as CSV.
@@ -831,7 +829,7 @@ async def export_usage_json(
         ScopeType,
         Query(description="Aggregation scope: org, project, or env"),
     ] = ScopeType.ORG,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> UsageStatisticsResponse:
     """
     Export usage statistics as JSON.
@@ -860,7 +858,7 @@ async def _get_cost_data(
     to_ts: datetime,
     resolution: ResolutionType,
     scope: ScopeType,
-    session: AsyncSession,
+    session,
 ) -> CostStatisticsResponse:
     """
     Internal helper to get cost data (shared by read and export endpoints).
@@ -1025,7 +1023,7 @@ async def export_cost_csv(
         ScopeType,
         Query(description="Aggregation scope: org, project, or env"),
     ] = ScopeType.ORG,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> Response:
     """
     Export cost statistics as CSV.
@@ -1112,7 +1110,7 @@ async def export_cost_json(
         ScopeType,
         Query(description="Aggregation scope: org, project, or env"),
     ] = ScopeType.ORG,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> CostStatisticsResponse:
     """
     Export cost statistics as JSON.

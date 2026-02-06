@@ -64,7 +64,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
-from app.services.activity_facade import get_activity_facade
+from app.hoc.cus.activity.L5_engines.activity_facade import get_activity_facade
 
 # =============================================================================
 # Logging
@@ -2098,8 +2098,8 @@ async def list_signals(
         rows = result.mappings().all()
 
         # Import fingerprint computation
-        from app.services.activity.signal_identity import compute_signal_fingerprint_from_row
-        from app.services.activity.signal_feedback_service import SignalFeedbackService
+        from app.hoc.cus.activity.L5_engines.signal_identity import compute_signal_fingerprint_from_row
+        from app.hoc.cus.activity.L5_engines.signal_feedback_engine import SignalFeedbackService
 
         # First pass: compute fingerprints and build signal data
         signal_data = []

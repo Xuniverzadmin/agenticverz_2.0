@@ -44,13 +44,11 @@ from typing import Annotated, Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.gateway_middleware import get_auth_context
-from app.db import get_async_session_dep
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
+    get_session_dep,
 )
 
 logger = logging.getLogger("nova.api.overview")
@@ -261,7 +259,7 @@ def get_tenant_id_from_auth(request: Request) -> str:
 )
 async def get_highlights(
     request: Request,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> HighlightsResponse:
     """System pulse and domain counts. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -341,7 +339,7 @@ async def get_decisions(
     ] = None,
     limit: Annotated[int, Query(ge=1, le=100, description="Max items")] = 50,
     offset: Annotated[int, Query(ge=0, description="Items to skip")] = 0,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> DecisionsResponse:
     """Pending decisions from incidents and policy proposals. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -412,7 +410,7 @@ async def get_decisions(
 async def get_costs(
     request: Request,
     period_days: Annotated[int, Query(ge=1, le=365, description="Period in days")] = 30,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> CostsResponse:
     """Cost intelligence summary. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -477,7 +475,7 @@ async def get_costs(
 )
 async def get_decisions_count(
     request: Request,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> DecisionsCountResponse:
     """Decisions count by domain and priority. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -527,7 +525,7 @@ async def get_decisions_count(
 async def get_recovery_stats(
     request: Request,
     period_days: Annotated[int, Query(ge=1, le=365, description="Period in days")] = 30,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> RecoveryStatsResponse:
     """Recovery statistics from incidents. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)

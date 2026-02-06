@@ -44,6 +44,16 @@ class AccountBridge:
         )
         return get_billing_provider()
 
+    def rbac_engine_capability(self):
+        """
+        Return RBAC engine for role-based access control (PIN-L2-PURITY).
+
+        Used by rbac_api.py for authorization checks and role management.
+        """
+        from app.hoc.cus.account.auth.L5_engines.rbac_engine import get_rbac_engine
+
+        return get_rbac_engine()
+
 
 # Singleton
 _instance = None

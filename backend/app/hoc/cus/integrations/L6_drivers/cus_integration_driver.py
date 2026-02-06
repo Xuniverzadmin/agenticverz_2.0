@@ -1,12 +1,18 @@
 # Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Role: Customer Integration Driver
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-520 (L6 Purity)
 """Customer Integration Driver
 
 L6 driver for customer integration data access.
 
 Pure persistence - no business logic.
 All methods accept primitive parameters and return raw facts.
+
+L6 Contract:
+    - Session REQUIRED (passed from L4 handler)
+    - L6 does NOT commit (L4 owns transaction boundary)
 """
 
 import logging
@@ -17,7 +23,6 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Session, col, func, select
 
-from app.db import get_engine
 from app.models.cus_models import (
     CusHealthState,
     CusIntegration,
@@ -67,23 +72,16 @@ class CusIntegrationDriver:
     """L6 driver for customer integration data access.
 
     Pure persistence - no business logic.
+    L6 does NOT commit — L4 handler owns transaction boundary.
     """
 
-    def __init__(self, session: Optional[Session] = None):
-        """Initialize driver.
+    def __init__(self, session: Session):
+        """Initialize driver with required session.
 
         Args:
-            session: Optional session for transaction scope.
-                     If None, creates new session per operation.
+            session: Session from L4 handler (required)
         """
-        self._external_session = session
-
-    def _get_session(self) -> Tuple[Session, bool]:
-        """Get session, returning (session, should_close)."""
-        if self._external_session:
-            return self._external_session, False
-        engine = get_engine()
-        return Session(engine), True
+        self._session = session
 
     # =========================================================================
     # FETCH OPERATIONS
@@ -103,17 +101,12 @@ class CusIntegrationDriver:
         Returns:
             CusIntegration if found, None otherwise
         """
-        session, should_close = self._get_session()
-        try:
-            return session.exec(
-                select(CusIntegration).where(
-                    CusIntegration.id == UUID(integration_id),
-                    CusIntegration.tenant_id == tenant_id,
-                )
-            ).first()
-        finally:
-            if should_close:
-                session.close()
+        return self._session.exec(
+            select(CusIntegration).where(
+                CusIntegration.id == UUID(integration_id),
+                CusIntegration.tenant_id == tenant_id,
+            )
+        ).first()
 
     def fetch_by_name(
         self,
@@ -129,17 +122,12 @@ class CusIntegrationDriver:
         Returns:
             CusIntegration if found, None otherwise
         """
-        session, should_close = self._get_session()
-        try:
-            return session.exec(
-                select(CusIntegration).where(
-                    CusIntegration.tenant_id == tenant_id,
-                    CusIntegration.name == name,
-                )
-            ).first()
-        finally:
-            if should_close:
-                session.close()
+        return self._session.exec(
+            select(CusIntegration).where(
+                CusIntegration.tenant_id == tenant_id,
+                CusIntegration.name == name,
+            )
+        ).first()
 
     def fetch_list(
         self,
@@ -161,33 +149,28 @@ class CusIntegrationDriver:
         Returns:
             Tuple of (integrations, total_count)
         """
-        session, should_close = self._get_session()
-        try:
-            # Build base query
-            query = select(CusIntegration).where(
-                CusIntegration.tenant_id == tenant_id
-            )
+        # Build base query
+        query = select(CusIntegration).where(
+            CusIntegration.tenant_id == tenant_id
+        )
 
-            # Apply filters
-            if status:
-                query = query.where(CusIntegration.status == status)
-            if provider_type:
-                query = query.where(CusIntegration.provider_type == provider_type)
+        # Apply filters
+        if status:
+            query = query.where(CusIntegration.status == status)
+        if provider_type:
+            query = query.where(CusIntegration.provider_type == provider_type)
 
-            # Get total count
-            count_query = select(func.count()).select_from(query.subquery())
-            total = session.exec(count_query).one()
+        # Get total count
+        count_query = select(func.count()).select_from(query.subquery())
+        total = self._session.exec(count_query).one()
 
-            # Apply pagination and ordering
-            query = query.order_by(col(CusIntegration.created_at).desc())
-            query = query.offset(offset).limit(limit)
+        # Apply pagination and ordering
+        query = query.order_by(col(CusIntegration.created_at).desc())
+        query = query.offset(offset).limit(limit)
 
-            integrations = list(session.exec(query).all())
+        integrations = list(self._session.exec(query).all())
 
-            return integrations, total
-        finally:
-            if should_close:
-                session.close()
+        return integrations, total
 
     def fetch_monthly_usage(
         self,
@@ -207,29 +190,24 @@ class CusIntegrationDriver:
         Returns:
             UsageAggregate with budget and token totals
         """
-        session, should_close = self._get_session()
-        try:
-            query = select(
-                func.sum(CusUsageDaily.total_cost_cents),
-                func.sum(CusUsageDaily.total_tokens_in + CusUsageDaily.total_tokens_out),
-            ).where(
-                CusUsageDaily.integration_id == UUID(integration_id),
-                CusUsageDaily.tenant_id == tenant_id,
-                CusUsageDaily.date >= period_start,
-                CusUsageDaily.date < period_end,
-            )
+        query = select(
+            func.sum(CusUsageDaily.total_cost_cents),
+            func.sum(CusUsageDaily.total_tokens_in + CusUsageDaily.total_tokens_out),
+        ).where(
+            CusUsageDaily.integration_id == UUID(integration_id),
+            CusUsageDaily.tenant_id == tenant_id,
+            CusUsageDaily.date >= period_start,
+            CusUsageDaily.date < period_end,
+        )
 
-            result = session.exec(query).first()
-            budget_used = result[0] or 0 if result else 0
-            tokens_used = result[1] or 0 if result else 0
+        result = self._session.exec(query).first()
+        budget_used = result[0] or 0 if result else 0
+        tokens_used = result[1] or 0 if result else 0
 
-            return UsageAggregate(
-                budget_used_cents=int(budget_used),
-                tokens_used=int(tokens_used),
-            )
-        finally:
-            if should_close:
-                session.close()
+        return UsageAggregate(
+            budget_used_cents=int(budget_used),
+            tokens_used=int(tokens_used),
+        )
 
     def fetch_current_rpm(
         self,
@@ -243,19 +221,14 @@ class CusIntegrationDriver:
         Returns:
             Count of requests in the last minute
         """
-        session, should_close = self._get_session()
-        try:
-            one_minute_ago = datetime.now(timezone.utc).replace(
-                second=0, microsecond=0
-            )
-            query = select(func.count()).where(
-                CusLLMUsage.integration_id == UUID(integration_id),
-                CusLLMUsage.created_at >= one_minute_ago,
-            )
-            return session.exec(query).one() or 0
-        finally:
-            if should_close:
-                session.close()
+        one_minute_ago = datetime.now(timezone.utc).replace(
+            second=0, microsecond=0
+        )
+        query = select(func.count()).where(
+            CusLLMUsage.integration_id == UUID(integration_id),
+            CusLLMUsage.created_at >= one_minute_ago,
+        )
+        return self._session.exec(query).one() or 0
 
     # =========================================================================
     # WRITE OPERATIONS
@@ -283,35 +256,33 @@ class CusIntegrationDriver:
 
         Returns:
             Created CusIntegration
+
+        Note:
+            L6 does NOT commit — L4 handler owns transaction boundary.
         """
-        session, should_close = self._get_session()
-        try:
-            integration = CusIntegration(
-                id=str(uuid4()),
-                tenant_id=tenant_id,
-                name=name,
-                provider_type=provider_type.lower() if isinstance(provider_type, str) else provider_type,
-                credential_ref=credential_ref,
-                config=config,
-                status=status,
-                health_state=health_state,
-                default_model=default_model,
-                budget_limit_cents=budget_limit_cents,
-                token_limit_month=token_limit_month,
-                rate_limit_rpm=rate_limit_rpm,
-                created_by=created_by,
-            )
+        integration = CusIntegration(
+            id=str(uuid4()),
+            tenant_id=tenant_id,
+            name=name,
+            provider_type=provider_type.lower() if isinstance(provider_type, str) else provider_type,
+            credential_ref=credential_ref,
+            config=config,
+            status=status,
+            health_state=health_state,
+            default_model=default_model,
+            budget_limit_cents=budget_limit_cents,
+            token_limit_month=token_limit_month,
+            rate_limit_rpm=rate_limit_rpm,
+            created_by=created_by,
+        )
 
-            session.add(integration)
-            session.commit()
-            session.refresh(integration)
+        self._session.add(integration)
+        self._session.flush()
+        self._session.refresh(integration)
 
-            logger.info(f"Created integration {integration.id} for tenant {tenant_id}")
+        logger.info(f"Created integration {integration.id} for tenant {tenant_id}")
 
-            return integration
-        finally:
-            if should_close:
-                session.close()
+        return integration
 
     def update_fields(
         self,
@@ -328,35 +299,33 @@ class CusIntegrationDriver:
 
         Returns:
             Updated CusIntegration if found, None otherwise
+
+        Note:
+            L6 does NOT commit — L4 handler owns transaction boundary.
         """
-        session, should_close = self._get_session()
-        try:
-            integration = session.exec(
-                select(CusIntegration).where(
-                    CusIntegration.id == UUID(integration_id),
-                    CusIntegration.tenant_id == tenant_id,
-                )
-            ).first()
+        integration = self._session.exec(
+            select(CusIntegration).where(
+                CusIntegration.id == UUID(integration_id),
+                CusIntegration.tenant_id == tenant_id,
+            )
+        ).first()
 
-            if not integration:
-                return None
+        if not integration:
+            return None
 
-            for key, value in updates.items():
-                if hasattr(integration, key) and value is not None:
-                    setattr(integration, key, value)
+        for key, value in updates.items():
+            if hasattr(integration, key) and value is not None:
+                setattr(integration, key, value)
 
-            integration.updated_at = datetime.now(timezone.utc)
+        integration.updated_at = datetime.now(timezone.utc)
 
-            session.add(integration)
-            session.commit()
-            session.refresh(integration)
+        self._session.add(integration)
+        self._session.flush()
+        self._session.refresh(integration)
 
-            logger.info(f"Updated integration {integration_id}")
+        logger.info(f"Updated integration {integration_id}")
 
-            return integration
-        finally:
-            if should_close:
-                session.close()
+        return integration
 
     def update_status(
         self,
@@ -373,32 +342,30 @@ class CusIntegrationDriver:
 
         Returns:
             Updated CusIntegration if found, None otherwise
+
+        Note:
+            L6 does NOT commit — L4 handler owns transaction boundary.
         """
-        session, should_close = self._get_session()
-        try:
-            integration = session.exec(
-                select(CusIntegration).where(
-                    CusIntegration.id == UUID(integration_id),
-                    CusIntegration.tenant_id == tenant_id,
-                )
-            ).first()
+        integration = self._session.exec(
+            select(CusIntegration).where(
+                CusIntegration.id == UUID(integration_id),
+                CusIntegration.tenant_id == tenant_id,
+            )
+        ).first()
 
-            if not integration:
-                return None
+        if not integration:
+            return None
 
-            integration.status = status
-            integration.updated_at = datetime.now(timezone.utc)
+        integration.status = status
+        integration.updated_at = datetime.now(timezone.utc)
 
-            session.add(integration)
-            session.commit()
-            session.refresh(integration)
+        self._session.add(integration)
+        self._session.flush()
+        self._session.refresh(integration)
 
-            logger.info(f"Updated integration {integration_id} status to {status}")
+        logger.info(f"Updated integration {integration_id} status to {status}")
 
-            return integration
-        finally:
-            if should_close:
-                session.close()
+        return integration
 
     def update_config(
         self,
@@ -415,30 +382,28 @@ class CusIntegrationDriver:
 
         Returns:
             Updated CusIntegration if found, None otherwise
+
+        Note:
+            L6 does NOT commit — L4 handler owns transaction boundary.
         """
-        session, should_close = self._get_session()
-        try:
-            integration = session.exec(
-                select(CusIntegration).where(
-                    CusIntegration.id == UUID(integration_id),
-                    CusIntegration.tenant_id == tenant_id,
-                )
-            ).first()
+        integration = self._session.exec(
+            select(CusIntegration).where(
+                CusIntegration.id == UUID(integration_id),
+                CusIntegration.tenant_id == tenant_id,
+            )
+        ).first()
 
-            if not integration:
-                return None
+        if not integration:
+            return None
 
-            integration.config = {**integration.config, **config_updates}
-            integration.updated_at = datetime.now(timezone.utc)
+        integration.config = {**integration.config, **config_updates}
+        integration.updated_at = datetime.now(timezone.utc)
 
-            session.add(integration)
-            session.commit()
-            session.refresh(integration)
+        self._session.add(integration)
+        self._session.flush()
+        self._session.refresh(integration)
 
-            return integration
-        finally:
-            if should_close:
-                session.close()
+        return integration
 
     def update_health(
         self,
@@ -459,41 +424,43 @@ class CusIntegrationDriver:
 
         Returns:
             Updated CusIntegration if found, None otherwise
+
+        Note:
+            L6 does NOT commit — L4 handler owns transaction boundary.
         """
-        session, should_close = self._get_session()
-        try:
-            integration = session.exec(
-                select(CusIntegration).where(
-                    CusIntegration.id == UUID(integration_id),
-                    CusIntegration.tenant_id == tenant_id,
-                )
-            ).first()
+        integration = self._session.exec(
+            select(CusIntegration).where(
+                CusIntegration.id == UUID(integration_id),
+                CusIntegration.tenant_id == tenant_id,
+            )
+        ).first()
 
-            if not integration:
-                return None
+        if not integration:
+            return None
 
-            integration.health_state = health_state
-            integration.health_message = health_message
-            integration.health_checked_at = health_checked_at
-            integration.updated_at = datetime.now(timezone.utc)
+        integration.health_state = health_state
+        integration.health_message = health_message
+        integration.health_checked_at = health_checked_at
+        integration.updated_at = datetime.now(timezone.utc)
 
-            session.add(integration)
-            session.commit()
+        self._session.add(integration)
+        self._session.flush()
+        self._session.refresh(integration)
 
-            return integration
-        finally:
-            if should_close:
-                session.close()
+        return integration
 
 
 # Factory function
-def get_cus_integration_driver(session: Optional[Session] = None) -> CusIntegrationDriver:
+def get_cus_integration_driver(session: Session) -> CusIntegrationDriver:
     """Get driver instance.
 
     Args:
-        session: Optional session for transaction scope
+        session: Session from L4 handler (required)
 
     Returns:
         CusIntegrationDriver instance
+
+    Note:
+        Session is REQUIRED. L4 handler owns transaction boundary.
     """
     return CusIntegrationDriver(session=session)

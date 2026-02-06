@@ -285,7 +285,13 @@ __all__ = [
     # Driver
     "KeysDriver",
     "get_keys_driver",
+    "get_keys_read_driver",
+    "get_keys_write_driver",
     # Snapshots
     "KeySnapshot",
     "KeyUsageSnapshot",
 ]
+
+# Backward compatibility aliases (legacy names from app.services.keys_driver)
+get_keys_read_driver = get_keys_driver
+get_keys_write_driver = get_keys_driver

@@ -30,7 +30,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
-from ..auth.gateway_middleware import get_auth_context
+from app.auth.gateway_middleware import get_auth_context
 
 logger = logging.getLogger("nova.api.sdk")
 
@@ -79,7 +79,7 @@ async def _maybe_advance_to_sdk_connected(tenant_id: str) -> Optional[str]:
     Returns the new state name if transition occurred, None otherwise.
     """
     try:
-        from ..auth.onboarding_transitions import (
+        from app.auth.onboarding_transitions import (
             TransitionTrigger,
             get_onboarding_service,
         )
@@ -157,7 +157,7 @@ async def sdk_handshake(
     new_state = await _maybe_advance_to_sdk_connected(tenant_id)
 
     # Get current state for response
-    from ..auth.onboarding_transitions import get_onboarding_service
+    from app.auth.onboarding_transitions import get_onboarding_service
 
     service = get_onboarding_service()
     current_state = await service.get_current_state(tenant_id)

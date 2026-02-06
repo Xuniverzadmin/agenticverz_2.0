@@ -8,48 +8,56 @@
 # Callers: Console UI, SDK
 # Allowed Imports: L3, L4, L5, L6
 # Forbidden Imports: L1
+# Reference: L2 first-principles purity migration — 0 session.execute calls in L2
 
 """
 M26 Cost Intelligence API
 
 Core Objective:
-Every token spent is attributable to tenant → user → feature → request.
+Every token spent is attributable to tenant -> user -> feature -> request.
 Every anomaly must trigger an action, not a chart.
 
 This is not reporting. This is CONTROL.
+
+L2 PURITY:
+- No session.execute() calls in this file
+- All DB operations routed through L4 bridge -> L5 engine -> L6 driver
+- L2 is thin: validation, response mapping, and routing only
 """
 
 from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, List, Optional, cast
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import text
-from sqlmodel import Session, select
 
-from app.db import (
-    CostAnomaly,
-    CostBudget,
-    FeatureTag,
-    get_session,
-    utc_now,
-)
+# L4 session dependency (L2 must not import sqlalchemy/sqlmodel/app.db directly)
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import get_sync_session_dep
+from app.hoc.cus.hoc_spine.services.time import utc_now
 
-# Phase 2B: Write service for DB operations
-from app.schemas.response import wrap_dict
-# PIN-520 Phase 1: Route through L4 bridge instead of direct L5 import
+# L4 bridges for domain capabilities
 from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.analytics_bridge import (
     get_analytics_bridge,
 )
+from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.logs_bridge import (
+    get_logs_bridge,
+)
+from app.schemas.response import wrap_dict
 
 
 def _get_cost_write_service(session):
-    """Get cost write service via L4 bridge (PIN-520 compliance)."""
+    """Get cost write service via L4 analytics bridge (PIN-520 compliance)."""
     bridge = get_analytics_bridge()
     return bridge.cost_write_capability(session)
+
+
+def _get_cost_intelligence_engine(session):
+    """Get cost intelligence engine via L4 logs bridge (L2 purity migration)."""
+    bridge = get_logs_bridge()
+    return bridge.cost_intelligence_capability(session)
 
 
 def get_tenant_id(tenant_id: str = Query(..., description="Tenant ID")) -> str:
@@ -298,23 +306,18 @@ class BudgetResponse(BaseModel):
 async def create_feature_tag(
     data: FeatureTagCreate,
     tenant_id: str = Depends(get_tenant_id),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> FeatureTagResponse:
     """
     Register a new feature tag.
 
     Feature tags are MANDATORY for cost attribution.
-    No tag → request defaulted to 'unclassified' (and flagged).
+    No tag -> request defaulted to 'unclassified' (and flagged).
     """
-    # Check if tag already exists for this tenant
-    existing = session.exec(
-        select(FeatureTag).where(
-            FeatureTag.tenant_id == tenant_id,
-            FeatureTag.tag == data.tag,
-        )
-    ).first()
+    engine = _get_cost_intelligence_engine(session)
 
-    if existing:
+    # Check if tag already exists for this tenant
+    if engine.check_feature_tag_exists(tenant_id, data.tag):
         raise HTTPException(status_code=409, detail=f"Feature tag '{data.tag}' already exists for this tenant")
 
     # Validate tag format (namespace.action)
@@ -323,7 +326,7 @@ async def create_feature_tag(
             status_code=400, detail="Feature tag must be in namespace.action format (e.g., 'customer_support.chat')"
         )
 
-    # Phase 2B: Use write service for DB operations
+    # Use write service for DB operations
     cost_service = _get_cost_write_service(session)
     feature_tag = cost_service.create_feature_tag(
         tenant_id=tenant_id,
@@ -352,27 +355,23 @@ async def create_feature_tag(
 async def list_feature_tags(
     include_inactive: bool = False,
     tenant_id: str = Depends(get_tenant_id),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> List[FeatureTagResponse]:
     """List all feature tags for the tenant."""
-    query = select(FeatureTag).where(FeatureTag.tenant_id == tenant_id)
-
-    if not include_inactive:
-        query = query.where(FeatureTag.is_active == True)
-
-    tags = session.exec(query.order_by(FeatureTag.tag)).all()
+    engine = _get_cost_intelligence_engine(session)
+    tags = engine.list_feature_tags(tenant_id, include_inactive)
 
     return [
         FeatureTagResponse(
-            id=tag.id,
-            tenant_id=tag.tenant_id,
-            tag=tag.tag,
-            display_name=tag.display_name,
-            description=tag.description,
-            budget_cents=tag.budget_cents,
-            is_active=tag.is_active,
-            created_at=tag.created_at,
-            updated_at=tag.updated_at,
+            id=tag["id"],
+            tenant_id=tag["tenant_id"],
+            tag=tag["tag"],
+            display_name=tag["display_name"],
+            description=tag["description"],
+            budget_cents=tag["budget_cents"],
+            is_active=tag["is_active"],
+            created_at=tag["created_at"],
+            updated_at=tag["updated_at"],
         )
         for tag in tags
     ]
@@ -383,23 +382,20 @@ async def update_feature_tag(
     tag: str,
     data: FeatureTagUpdate,
     tenant_id: str = Depends(get_tenant_id),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> FeatureTagResponse:
     """Update a feature tag."""
-    feature_tag = session.exec(
-        select(FeatureTag).where(
-            FeatureTag.tenant_id == tenant_id,
-            FeatureTag.tag == tag,
-        )
-    ).first()
+    engine = _get_cost_intelligence_engine(session)
 
-    if not feature_tag:
+    # Check existence
+    existing = engine.get_feature_tag(tenant_id, tag)
+    if not existing:
         raise HTTPException(status_code=404, detail=f"Feature tag '{tag}' not found")
 
-    # Phase 2B: Use write service for DB operations
-    cost_service = _get_cost_write_service(session)
-    feature_tag = cost_service.update_feature_tag(
-        feature_tag=feature_tag,
+    # Update via engine
+    updated = engine.update_feature_tag(
+        tenant_id=tenant_id,
+        tag=tag,
         display_name=data.display_name,
         description=data.description,
         budget_cents=data.budget_cents,
@@ -407,15 +403,15 @@ async def update_feature_tag(
     )
 
     return FeatureTagResponse(
-        id=feature_tag.id,
-        tenant_id=feature_tag.tenant_id,
-        tag=feature_tag.tag,
-        display_name=feature_tag.display_name,
-        description=feature_tag.description,
-        budget_cents=feature_tag.budget_cents,
-        is_active=feature_tag.is_active,
-        created_at=feature_tag.created_at,
-        updated_at=feature_tag.updated_at,
+        id=updated["id"],
+        tenant_id=updated["tenant_id"],
+        tag=updated["tag"],
+        display_name=updated["display_name"],
+        description=updated["description"],
+        budget_cents=updated["budget_cents"],
+        is_active=updated["is_active"],
+        created_at=updated["created_at"],
+        updated_at=updated["updated_at"],
     )
 
 
@@ -428,7 +424,7 @@ async def update_feature_tag(
 async def record_cost(
     data: CostRecordCreate,
     tenant_id: str = Depends(get_tenant_id),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> dict:
     """
     Record a cost entry.
@@ -436,23 +432,17 @@ async def record_cost(
     This is called internally after each LLM invocation.
     Feature tag validation: if tag doesn't exist, default to 'unclassified'.
     """
+    engine = _get_cost_intelligence_engine(session)
     feature_tag = data.feature_tag
 
     # Validate feature tag if provided
     if feature_tag and feature_tag != "unclassified":
-        existing_tag = session.exec(
-            select(FeatureTag).where(
-                FeatureTag.tenant_id == tenant_id,
-                FeatureTag.tag == feature_tag,
-                FeatureTag.is_active == True,
-            )
-        ).first()
-
+        existing_tag = engine.get_active_feature_tag(tenant_id, feature_tag)
         if not existing_tag:
             logger.warning(f"Unknown feature tag '{feature_tag}' - defaulting to 'unclassified'")
             feature_tag = "unclassified"
 
-    # Phase 2B: Use write service for DB operations
+    # Use write service for DB operations
     cost_service = _get_cost_write_service(session)
     record = cost_service.create_cost_record(
         tenant_id=tenant_id,
@@ -479,13 +469,15 @@ async def record_cost(
 async def get_cost_dashboard(
     period: str = Query("24h", regex="^(24h|7d|30d)$"),
     tenant_id: str = Depends(get_tenant_id),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> CostDashboard:
     """
     Get complete cost dashboard.
 
     If a CTO can't answer "what burned money yesterday?" in 10 seconds, this failed.
     """
+    engine = _get_cost_intelligence_engine(session)
+
     # Calculate time range
     now = utc_now()
     if period == "24h":
@@ -498,23 +490,41 @@ async def get_cost_dashboard(
         period_start = now - timedelta(days=30)
         days = 30
 
-    # Get summary
-    summary = await _get_cost_summary(session, tenant_id, period_start, now, days)
+    # Get summary via engine
+    summary_data = engine.get_cost_summary(tenant_id, period_start, now, days)
+    summary = CostSummary(
+        tenant_id=summary_data["tenant_id"],
+        period_start=summary_data["period_start"],
+        period_end=summary_data["period_end"],
+        total_cost_cents=summary_data["total_cost_cents"],
+        total_input_tokens=summary_data["total_input_tokens"],
+        total_output_tokens=summary_data["total_output_tokens"],
+        request_count=summary_data["request_count"],
+        budget_cents=summary_data["budget_cents"],
+        budget_used_pct=summary_data["budget_used_pct"],
+        days_remaining_at_current_rate=summary_data["days_remaining_at_current_rate"],
+        provenance=CostProvenance(**summary_data["provenance"]),
+    )
 
     # Get by feature
-    by_feature = await _get_costs_by_feature(session, tenant_id, period_start, summary.total_cost_cents)
+    by_feature_data = engine.get_costs_by_feature(tenant_id, period_start, summary.total_cost_cents)
+    by_feature = [CostByFeature(**item) for item in by_feature_data]
 
     # Get by user
-    by_user = await _get_costs_by_user(session, tenant_id, period_start, summary.total_cost_cents)
+    by_user_data = engine.get_costs_by_user(tenant_id, period_start, summary.total_cost_cents)
+    by_user = [CostByUser(**item) for item in by_user_data]
 
     # Get by model
-    by_model = await _get_costs_by_model(session, tenant_id, period_start, summary.total_cost_cents)
+    by_model_data = engine.get_costs_by_model(tenant_id, period_start, summary.total_cost_cents)
+    by_model = [CostByModel(**item) for item in by_model_data]
 
     # Get anomalies
-    anomalies = await _get_recent_anomalies(session, tenant_id, days=days)
+    anomalies_data = engine.get_recent_anomalies(tenant_id, days=days)
+    anomalies = [CostAnomalyResponse(**item) for item in anomalies_data]
 
     # Get projection
-    projection = await _get_cost_projection(session, tenant_id, lookback_days=7, forecast_days=7)
+    projection_data = engine.get_cost_projection(tenant_id, lookback_days=7, forecast_days=7)
+    projection = CostProjection(**projection_data)
 
     return CostDashboard(
         summary=summary,
@@ -530,9 +540,11 @@ async def get_cost_dashboard(
 async def get_cost_summary(
     period: str = Query("24h", regex="^(24h|7d|30d)$"),
     tenant_id: str = Depends(get_tenant_id),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> CostSummary:
     """Get cost summary for the period."""
+    engine = _get_cost_intelligence_engine(session)
+
     now = utc_now()
     if period == "24h":
         period_start = now - timedelta(hours=24)
@@ -544,19 +556,33 @@ async def get_cost_summary(
         period_start = now - timedelta(days=30)
         days = 30
 
-    return await _get_cost_summary(session, tenant_id, period_start, now, days)
+    summary_data = engine.get_cost_summary(tenant_id, period_start, now, days)
+    return CostSummary(
+        tenant_id=summary_data["tenant_id"],
+        period_start=summary_data["period_start"],
+        period_end=summary_data["period_end"],
+        total_cost_cents=summary_data["total_cost_cents"],
+        total_input_tokens=summary_data["total_input_tokens"],
+        total_output_tokens=summary_data["total_output_tokens"],
+        request_count=summary_data["request_count"],
+        budget_cents=summary_data["budget_cents"],
+        budget_used_pct=summary_data["budget_used_pct"],
+        days_remaining_at_current_rate=summary_data["days_remaining_at_current_rate"],
+        provenance=CostProvenance(**summary_data["provenance"]),
+    )
 
 
 @router.get("/by-feature", response_model=CostByFeatureEnvelope)
 async def get_costs_by_feature(
     period: str = Query("24h", regex="^(24h|7d|30d)$"),
     tenant_id: str = Depends(get_tenant_id),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> CostByFeatureEnvelope:
     """Get cost breakdown by feature tag.
 
     Returns envelope with provenance for SDSR ANALYTICS domain compliance.
     """
+    engine = _get_cost_intelligence_engine(session)
     now = utc_now()
     period_start = (
         now - timedelta(hours=24)
@@ -567,21 +593,11 @@ async def get_costs_by_feature(
     )
 
     # Get total for percentage calculation
-    total_result = session.execute(
-        text(
-            """
-            SELECT COALESCE(SUM(cost_cents), 0) as total
-            FROM cost_records
-            WHERE tenant_id = :tenant_id AND created_at >= :period_start
-        """
-        ).bindparams(tenant_id=tenant_id, period_start=period_start)
-    ).first()
-    total_cost = total_result[0] if total_result else 0
-
-    data = await _get_costs_by_feature(session, tenant_id, period_start, total_cost)
+    total_cost = engine.get_total_cost(tenant_id, period_start)
+    data = engine.get_costs_by_feature(tenant_id, period_start, total_cost)
 
     return CostByFeatureEnvelope(
-        data=data,
+        data=[CostByFeature(**item) for item in data],
         provenance=AnalyticsProvenance(
             sources=["cost_records", "feature_tags"],
             window=period,
@@ -595,12 +611,13 @@ async def get_costs_by_feature(
 async def get_costs_by_user(
     period: str = Query("24h", regex="^(24h|7d|30d)$"),
     tenant_id: str = Depends(get_tenant_id),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> CostByUserEnvelope:
     """Get cost breakdown by user with anomaly detection.
 
     Returns envelope with provenance for SDSR ANALYTICS domain compliance.
     """
+    engine = _get_cost_intelligence_engine(session)
     now = utc_now()
     period_start = (
         now - timedelta(hours=24)
@@ -611,21 +628,11 @@ async def get_costs_by_user(
     )
 
     # Get total for percentage calculation
-    total_result = session.execute(
-        text(
-            """
-            SELECT COALESCE(SUM(cost_cents), 0) as total
-            FROM cost_records
-            WHERE tenant_id = :tenant_id AND created_at >= :period_start
-        """
-        ).bindparams(tenant_id=tenant_id, period_start=period_start)
-    ).first()
-    total_cost = total_result[0] if total_result else 0
-
-    data = await _get_costs_by_user(session, tenant_id, period_start, total_cost)
+    total_cost = engine.get_total_cost(tenant_id, period_start)
+    data = engine.get_costs_by_user(tenant_id, period_start, total_cost)
 
     return CostByUserEnvelope(
-        data=data,
+        data=[CostByUser(**item) for item in data],
         provenance=AnalyticsProvenance(
             sources=["cost_records"],
             window=period,
@@ -639,12 +646,13 @@ async def get_costs_by_user(
 async def get_costs_by_model(
     period: str = Query("24h", regex="^(24h|7d|30d)$"),
     tenant_id: str = Depends(get_tenant_id),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> CostByModelEnvelope:
     """Get cost breakdown by model.
 
     Returns envelope with provenance for SDSR ANALYTICS domain compliance.
     """
+    engine = _get_cost_intelligence_engine(session)
     now = utc_now()
     period_start = (
         now - timedelta(hours=24)
@@ -654,21 +662,11 @@ async def get_costs_by_model(
         else now - timedelta(days=30)
     )
 
-    total_result = session.execute(
-        text(
-            """
-            SELECT COALESCE(SUM(cost_cents), 0) as total
-            FROM cost_records
-            WHERE tenant_id = :tenant_id AND created_at >= :period_start
-        """
-        ).bindparams(tenant_id=tenant_id, period_start=period_start)
-    ).first()
-    total_cost = total_result[0] if total_result else 0
-
-    data = await _get_costs_by_model(session, tenant_id, period_start, total_cost)
+    total_cost = engine.get_total_cost(tenant_id, period_start)
+    data = engine.get_costs_by_model(tenant_id, period_start, total_cost)
 
     return CostByModelEnvelope(
-        data=data,
+        data=[CostByModel(**item) for item in data],
         provenance=AnalyticsProvenance(
             sources=["cost_records"],
             window=period,
@@ -683,20 +681,21 @@ async def get_anomalies(
     days: int = Query(7, ge=1, le=90),
     include_resolved: bool = False,
     tenant_id: str = Depends(get_tenant_id),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> CostAnomaliesEnvelope:
     """Get detected cost anomalies.
 
     Returns envelope with provenance for SDSR ANALYTICS domain compliance.
     """
+    engine = _get_cost_intelligence_engine(session)
     now = utc_now()
-    data = await _get_recent_anomalies(session, tenant_id, days, include_resolved)
+    data = engine.get_recent_anomalies(tenant_id, days, include_resolved)
 
     # Build window description
     window = f"{days}d" if days != 1 else "24h"
 
     return CostAnomaliesEnvelope(
-        data=data,
+        data=[CostAnomalyResponse(**item) for item in data],
         provenance=AnalyticsProvenance(
             sources=["cost_anomalies", "cost_records"],
             window=window,
@@ -711,10 +710,12 @@ async def get_projection(
     lookback_days: int = Query(7, ge=1, le=30),
     forecast_days: int = Query(7, ge=1, le=30),
     tenant_id: str = Depends(get_tenant_id),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> CostProjection:
     """Get cost projection based on historical data."""
-    return await _get_cost_projection(session, tenant_id, lookback_days, forecast_days)
+    engine = _get_cost_intelligence_engine(session)
+    projection_data = engine.get_cost_projection(tenant_id, lookback_days, forecast_days)
+    return CostProjection(**projection_data)
 
 
 # =============================================================================
@@ -726,7 +727,7 @@ async def get_projection(
 async def create_or_update_budget(
     data: BudgetCreate,
     tenant_id: str = Depends(get_tenant_id),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> BudgetResponse:
     """Create or update a budget."""
     if data.budget_type not in ("tenant", "feature", "user"):
@@ -735,41 +736,45 @@ async def create_or_update_budget(
     if data.budget_type in ("feature", "user") and not data.entity_id:
         raise HTTPException(status_code=400, detail=f"entity_id required for {data.budget_type} budget")
 
-    # Find existing budget (read operation)
-    existing = session.exec(
-        select(CostBudget).where(
-            CostBudget.tenant_id == tenant_id,
-            CostBudget.budget_type == data.budget_type,
-            CostBudget.entity_id == data.entity_id,
-        )
-    ).first()
+    engine = _get_cost_intelligence_engine(session)
 
-    # Phase 2B: Use write service for DB operations
-    cost_service = _get_cost_write_service(session)
-    budget = cost_service.create_or_update_budget(
-        existing_budget=existing,
-        tenant_id=tenant_id,
-        budget_type=data.budget_type,
-        entity_id=data.entity_id,
-        daily_limit_cents=data.daily_limit_cents,
-        monthly_limit_cents=data.monthly_limit_cents,
-        warn_threshold_pct=data.warn_threshold_pct,
-        hard_limit_enabled=data.hard_limit_enabled,
-    )
+    # Find existing budget
+    existing = engine.get_budget_by_type(tenant_id, data.budget_type, data.entity_id)
+
+    if existing:
+        # Update existing budget
+        budget = engine.update_budget(
+            budget_id=existing["id"],
+            daily_limit_cents=data.daily_limit_cents,
+            monthly_limit_cents=data.monthly_limit_cents,
+            warn_threshold_pct=data.warn_threshold_pct,
+            hard_limit_enabled=data.hard_limit_enabled,
+        )
+    else:
+        # Create new budget
+        budget = engine.create_budget(
+            tenant_id=tenant_id,
+            budget_type=data.budget_type,
+            entity_id=data.entity_id,
+            daily_limit_cents=data.daily_limit_cents,
+            monthly_limit_cents=data.monthly_limit_cents,
+            warn_threshold_pct=data.warn_threshold_pct,
+            hard_limit_enabled=data.hard_limit_enabled,
+        )
 
     # Get current spend
-    current_spend = await _get_current_spend(session, tenant_id, data.budget_type, data.entity_id)
+    current_spend = engine.get_current_spend(tenant_id, data.budget_type, data.entity_id)
 
     return BudgetResponse(
-        id=budget.id,
-        tenant_id=budget.tenant_id,
-        budget_type=budget.budget_type,
-        entity_id=budget.entity_id,
-        daily_limit_cents=budget.daily_limit_cents,
-        monthly_limit_cents=budget.monthly_limit_cents,
-        warn_threshold_pct=budget.warn_threshold_pct,
-        hard_limit_enabled=budget.hard_limit_enabled,
-        is_active=budget.is_active,
+        id=budget["id"],
+        tenant_id=budget["tenant_id"],
+        budget_type=budget["budget_type"],
+        entity_id=budget["entity_id"],
+        daily_limit_cents=budget["daily_limit_cents"],
+        monthly_limit_cents=budget["monthly_limit_cents"],
+        warn_threshold_pct=budget["warn_threshold_pct"],
+        hard_limit_enabled=budget["hard_limit_enabled"],
+        is_active=budget["is_active"],
         current_daily_spend_cents=current_spend.get("daily"),
         current_monthly_spend_cents=current_spend.get("monthly"),
     )
@@ -778,432 +783,32 @@ async def create_or_update_budget(
 @router.get("/budgets", response_model=List[BudgetResponse])
 async def list_budgets(
     tenant_id: str = Depends(get_tenant_id),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> List[BudgetResponse]:
     """List all budgets for the tenant."""
-    budgets = session.exec(
-        select(CostBudget).where(
-            CostBudget.tenant_id == tenant_id,
-            CostBudget.is_active == True,
-        )
-    ).all()
+    engine = _get_cost_intelligence_engine(session)
+    budgets = engine.list_budgets(tenant_id)
 
     result = []
     for budget in budgets:
-        current_spend = await _get_current_spend(session, tenant_id, budget.budget_type, budget.entity_id)
+        current_spend = engine.get_current_spend(tenant_id, budget["budget_type"], budget["entity_id"])
         result.append(
             BudgetResponse(
-                id=budget.id,
-                tenant_id=budget.tenant_id,
-                budget_type=budget.budget_type,
-                entity_id=budget.entity_id,
-                daily_limit_cents=budget.daily_limit_cents,
-                monthly_limit_cents=budget.monthly_limit_cents,
-                warn_threshold_pct=budget.warn_threshold_pct,
-                hard_limit_enabled=budget.hard_limit_enabled,
-                is_active=budget.is_active,
+                id=budget["id"],
+                tenant_id=budget["tenant_id"],
+                budget_type=budget["budget_type"],
+                entity_id=budget["entity_id"],
+                daily_limit_cents=budget["daily_limit_cents"],
+                monthly_limit_cents=budget["monthly_limit_cents"],
+                warn_threshold_pct=budget["warn_threshold_pct"],
+                hard_limit_enabled=budget["hard_limit_enabled"],
+                is_active=budget["is_active"],
                 current_daily_spend_cents=current_spend.get("daily"),
                 current_monthly_spend_cents=current_spend.get("monthly"),
             )
         )
 
     return wrap_dict({"items": [r.model_dump() for r in result], "total": len(result)})
-
-
-# =============================================================================
-# Helper Functions
-# =============================================================================
-
-
-async def _get_cost_summary(
-    session: Session,
-    tenant_id: str,
-    period_start: datetime,
-    period_end: datetime,
-    days: int,
-) -> CostSummary:
-    """Get cost summary for a period."""
-    result = session.execute(
-        text(
-            """
-            SELECT
-                COALESCE(SUM(cost_cents), 0) as total_cost,
-                COALESCE(SUM(input_tokens), 0) as total_input,
-                COALESCE(SUM(output_tokens), 0) as total_output,
-                COUNT(*) as request_count
-            FROM cost_records
-            WHERE tenant_id = :tenant_id
-              AND created_at >= :period_start
-              AND created_at <= :period_end
-        """
-        ),
-        {"tenant_id": tenant_id, "period_start": period_start, "period_end": period_end},
-    ).first()
-
-    total_cost = result[0] if result else 0
-    total_input = result[1] if result else 0
-    total_output = result[2] if result else 0
-    request_count = result[3] if result else 0
-
-    # Get budget
-    budget = session.exec(
-        select(CostBudget).where(
-            CostBudget.tenant_id == tenant_id,
-            CostBudget.budget_type == "tenant",
-            CostBudget.entity_id == None,
-            CostBudget.is_active == True,
-        )
-    ).first()
-
-    budget_cents = budget.daily_limit_cents * days if budget and budget.daily_limit_cents else None
-    budget_used_pct = (total_cost / budget_cents * 100) if budget_cents and budget_cents > 0 else None
-
-    # Calculate days remaining at current rate
-    daily_avg = total_cost / days if days > 0 else 0
-    days_remaining = None
-    if budget and budget.monthly_limit_cents and daily_avg > 0:
-        remaining = budget.monthly_limit_cents - total_cost
-        days_remaining = remaining / daily_avg if remaining > 0 else 0
-
-    # Build period description for provenance
-    if days == 1:
-        period_desc = "Last 24 hours"
-    elif days == 7:
-        period_desc = "Last 7 days"
-    else:
-        period_desc = f"Last {days} days"
-
-    return CostSummary(
-        tenant_id=tenant_id,
-        period_start=period_start,
-        period_end=period_end,
-        total_cost_cents=total_cost,
-        total_input_tokens=total_input,
-        total_output_tokens=total_output,
-        request_count=request_count,
-        budget_cents=budget_cents,
-        budget_used_pct=budget_used_pct,
-        days_remaining_at_current_rate=days_remaining,
-        provenance=CostProvenance(
-            aggregation="sum",
-            data_source="cost_records",
-            computed_at=utc_now(),
-            period_description=period_desc,
-        ),
-    )
-
-
-async def _get_costs_by_feature(
-    session: Session,
-    tenant_id: str,
-    period_start: datetime,
-    total_cost: float,
-) -> List[CostByFeature]:
-    """Get costs grouped by feature tag."""
-    results = session.execute(
-        text(
-            """
-            SELECT
-                COALESCE(cr.feature_tag, 'unclassified') as feature_tag,
-                ft.display_name,
-                ft.budget_cents,
-                COALESCE(SUM(cr.cost_cents), 0) as total_cost,
-                COUNT(*) as request_count
-            FROM cost_records cr
-            LEFT JOIN feature_tags ft ON cr.feature_tag = ft.tag AND cr.tenant_id = ft.tenant_id
-            WHERE cr.tenant_id = :tenant_id AND cr.created_at >= :period_start
-            GROUP BY cr.feature_tag, ft.display_name, ft.budget_cents
-            ORDER BY total_cost DESC
-        """
-        ),
-        {"tenant_id": tenant_id, "period_start": period_start},
-    ).all()
-
-    return [
-        CostByFeature(
-            feature_tag=row[0],
-            display_name=row[1],
-            total_cost_cents=row[3],
-            request_count=row[4],
-            pct_of_total=(row[3] / total_cost * 100) if total_cost > 0 else 0,
-            budget_cents=row[2],
-            budget_used_pct=(row[3] / row[2] * 100) if row[2] and row[2] > 0 else None,
-        )
-        for row in results
-    ]
-
-
-async def _get_costs_by_user(
-    session: Session,
-    tenant_id: str,
-    period_start: datetime,
-    total_cost: float,
-) -> List[CostByUser]:
-    """Get costs grouped by user with anomaly detection."""
-    # Get current period costs by user
-    results = session.execute(
-        text(
-            """
-            SELECT
-                COALESCE(user_id, 'anonymous') as user_id,
-                COALESCE(SUM(cost_cents), 0) as total_cost,
-                COUNT(*) as request_count
-            FROM cost_records
-            WHERE tenant_id = :tenant_id AND created_at >= :period_start
-            GROUP BY user_id
-            ORDER BY total_cost DESC
-        """
-        ),
-        {"tenant_id": tenant_id, "period_start": period_start},
-    ).all()
-
-    # Calculate average to detect anomalies (user spending > 2x average)
-    if not results:
-        return []
-
-    avg_cost = sum(row[1] for row in results) / len(results)
-
-    return [
-        CostByUser(
-            user_id=row[0],
-            total_cost_cents=row[1],
-            request_count=row[2],
-            pct_of_total=(row[1] / total_cost * 100) if total_cost > 0 else 0,
-            is_anomaly=row[1] > avg_cost * 2,
-            anomaly_message=f"Spending {row[1] / avg_cost:.1f}x average" if row[1] > avg_cost * 2 else None,
-        )
-        for row in results
-    ]
-
-
-async def _get_costs_by_model(
-    session: Session,
-    tenant_id: str,
-    period_start: datetime,
-    total_cost: float,
-) -> List[CostByModel]:
-    """Get costs grouped by model."""
-    results = session.execute(
-        text(
-            """
-            SELECT
-                model,
-                COALESCE(SUM(cost_cents), 0) as total_cost,
-                COALESCE(SUM(input_tokens), 0) as total_input,
-                COALESCE(SUM(output_tokens), 0) as total_output,
-                COUNT(*) as request_count
-            FROM cost_records
-            WHERE tenant_id = :tenant_id AND created_at >= :period_start
-            GROUP BY model
-            ORDER BY total_cost DESC
-        """
-        ),
-        {"tenant_id": tenant_id, "period_start": period_start},
-    ).all()
-
-    return [
-        CostByModel(
-            model=row[0],
-            total_cost_cents=row[1],
-            total_input_tokens=row[2],
-            total_output_tokens=row[3],
-            request_count=row[4],
-            pct_of_total=(row[1] / total_cost * 100) if total_cost > 0 else 0,
-        )
-        for row in results
-    ]
-
-
-async def _get_recent_anomalies(
-    session: Session,
-    tenant_id: str,
-    days: int = 7,
-    include_resolved: bool = False,
-) -> List[CostAnomalyResponse]:
-    """Get recent anomalies."""
-    cutoff = utc_now() - timedelta(days=days)
-
-    query = select(CostAnomaly).where(
-        CostAnomaly.tenant_id == tenant_id,
-        CostAnomaly.detected_at >= cutoff,
-    )
-
-    if not include_resolved:
-        query = query.where(CostAnomaly.resolved == False)
-
-    anomalies = session.exec(query.order_by(cast(Any, CostAnomaly.detected_at).desc())).all()
-
-    return [
-        CostAnomalyResponse(
-            id=a.id,
-            tenant_id=a.tenant_id,
-            anomaly_type=a.anomaly_type,
-            severity=a.severity,
-            entity_type=a.entity_type,
-            entity_id=a.entity_id,
-            current_value_cents=a.current_value_cents,
-            expected_value_cents=a.expected_value_cents,
-            deviation_pct=a.deviation_pct,
-            message=a.message,
-            incident_id=a.incident_id,
-            action_taken=a.action_taken,
-            resolved=a.resolved,
-            detected_at=a.detected_at,
-        )
-        for a in anomalies
-    ]
-
-
-async def _get_cost_projection(
-    session: Session,
-    tenant_id: str,
-    lookback_days: int = 7,
-    forecast_days: int = 7,
-) -> CostProjection:
-    """Calculate cost projection based on historical trend."""
-    lookback_start = utc_now() - timedelta(days=lookback_days)
-
-    # Get daily costs for the lookback period
-    results = session.execute(
-        text(
-            """
-            SELECT
-                DATE(created_at) as day,
-                COALESCE(SUM(cost_cents), 0) as daily_cost
-            FROM cost_records
-            WHERE tenant_id = :tenant_id AND created_at >= :lookback_start
-            GROUP BY DATE(created_at)
-            ORDER BY day
-        """
-        ),
-        {"tenant_id": tenant_id, "lookback_start": lookback_start},
-    ).all()
-
-    if not results:
-        return CostProjection(
-            tenant_id=tenant_id,
-            lookback_days=lookback_days,
-            forecast_days=forecast_days,
-            current_daily_avg_cents=0,
-            projected_total_cents=0,
-            monthly_projection_cents=0,
-            budget_cents=None,
-            days_until_budget_exhausted=None,
-            trend="stable",
-        )
-
-    daily_costs = [row[1] for row in results]
-    current_daily_avg = sum(daily_costs) / len(daily_costs)
-
-    # Simple trend detection: compare first half to second half
-    if len(daily_costs) >= 4:
-        mid = len(daily_costs) // 2
-        first_half_avg = sum(daily_costs[:mid]) / mid
-        second_half_avg = sum(daily_costs[mid:]) / (len(daily_costs) - mid)
-
-        if second_half_avg > first_half_avg * 1.2:
-            trend = "increasing"
-        elif second_half_avg < first_half_avg * 0.8:
-            trend = "decreasing"
-        else:
-            trend = "stable"
-    else:
-        trend = "stable"
-
-    projected_total = current_daily_avg * forecast_days
-    monthly_projection = current_daily_avg * 30
-
-    # Get budget for exhaustion calculation
-    budget = session.exec(
-        select(CostBudget).where(
-            CostBudget.tenant_id == tenant_id,
-            CostBudget.budget_type == "tenant",
-            CostBudget.entity_id == None,
-            CostBudget.is_active == True,
-        )
-    ).first()
-
-    days_until_exhausted = None
-    budget_cents = None
-    if budget and budget.monthly_limit_cents and current_daily_avg > 0:
-        budget_cents = budget.monthly_limit_cents
-        # Get current month spend
-        month_start = utc_now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        month_spend = session.execute(
-            text(
-                """
-                SELECT COALESCE(SUM(cost_cents), 0)
-                FROM cost_records
-                WHERE tenant_id = :tenant_id AND created_at >= :month_start
-            """
-            ),
-            {"tenant_id": tenant_id, "month_start": month_start},
-        ).first()
-
-        remaining = budget.monthly_limit_cents - (month_spend[0] if month_spend else 0)
-        days_until_exhausted = remaining / current_daily_avg if remaining > 0 else 0
-
-    return CostProjection(
-        tenant_id=tenant_id,
-        lookback_days=lookback_days,
-        forecast_days=forecast_days,
-        current_daily_avg_cents=current_daily_avg,
-        projected_total_cents=projected_total,
-        monthly_projection_cents=monthly_projection,
-        budget_cents=budget_cents,
-        days_until_budget_exhausted=days_until_exhausted,
-        trend=trend,
-    )
-
-
-async def _get_current_spend(
-    session: Session,
-    tenant_id: str,
-    budget_type: str,
-    entity_id: Optional[str],
-) -> dict:
-    """Get current daily and monthly spend for a budget entity."""
-    today_start = utc_now().replace(hour=0, minute=0, second=0, microsecond=0)
-    month_start = utc_now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-    where_clause = "tenant_id = :tenant_id"
-    params = {"tenant_id": tenant_id, "today_start": today_start, "month_start": month_start}
-
-    if budget_type == "feature":
-        where_clause += " AND feature_tag = :entity_id"
-        params["entity_id"] = entity_id
-    elif budget_type == "user":
-        where_clause += " AND user_id = :entity_id"
-        params["entity_id"] = entity_id
-
-    # Daily spend
-    daily_result = session.execute(
-        text(
-            f"""
-            SELECT COALESCE(SUM(cost_cents), 0)
-            FROM cost_records
-            WHERE {where_clause} AND created_at >= :today_start
-        """
-        ),
-        params,
-    ).first()
-
-    # Monthly spend
-    monthly_result = session.execute(
-        text(
-            f"""
-            SELECT COALESCE(SUM(cost_cents), 0)
-            FROM cost_records
-            WHERE {where_clause} AND created_at >= :month_start
-        """
-        ),
-        params,
-    ).first()
-
-    return {
-        "daily": daily_result[0] if daily_result else 0,
-        "monthly": monthly_result[0] if monthly_result else 0,
-    }
 
 
 # =============================================================================
@@ -1230,7 +835,7 @@ class AnomalyDetectionResponse(BaseModel):
 async def trigger_anomaly_detection(
     request: AnomalyDetectionRequest = AnomalyDetectionRequest(),
     tenant_id: str = Depends(get_tenant_id),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> AnomalyDetectionResponse:
     """
     Trigger anomaly detection for this tenant.
@@ -1243,7 +848,7 @@ async def trigger_anomaly_detection(
     M25 Integration:
     When escalate_to_m25=True (default), HIGH and CRITICAL anomalies are:
     - Converted to M25 incidents
-    - Processed through the M25 loop (Pattern → Recovery → Policy → Routing)
+    - Processed through the M25 loop (Pattern -> Recovery -> Policy -> Routing)
     - Resulting in automated policies to prevent future cost anomalies
     """
     # PIN-521: Route all detection through L4 coordinator (no direct L5 imports in L2)
@@ -1277,12 +882,10 @@ async def trigger_anomaly_detection(
             current_value_cents=a.current_value_cents,
             expected_value_cents=a.expected_value_cents,
             deviation_pct=a.deviation_pct,
-            threshold_pct=a.threshold_pct,
             message=a.message,
             incident_id=a.incident_id,
             action_taken=a.action_taken,
             resolved=a.resolved,
-            resolved_at=a.resolved_at,
             detected_at=a.detected_at,
         )
         for a in detected

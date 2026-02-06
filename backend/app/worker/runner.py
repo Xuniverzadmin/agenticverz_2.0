@@ -45,10 +45,10 @@ from ..metrics import (
     nova_skill_duration_seconds,
 )
 # L4 Domain Facades (PIN-454 FIX-002: L5 must use facades, not direct engine imports)
-from ..services.incidents import get_incident_facade
-from ..services.governance.run_governance_facade import get_run_governance_facade
+from app.hoc.cus.incidents.L5_engines.incident_engine import get_incident_engine
+from app.hoc.cus.hoc_spine.orchestrator.run_governance_facade import get_run_governance_facade
 # PIN-454 FIX-001: Transaction Coordinator for atomic cross-domain writes
-from ..services.governance.transaction_coordinator import (
+from app.hoc.cus.hoc_spine.drivers.transaction_coordinator import (
     get_transaction_coordinator,
     TransactionFailed,
     TRANSACTION_COORDINATOR_ENABLED,
@@ -360,8 +360,8 @@ class RunRunner:
                 logger.warning("create_incident_skip_no_run", extra={"run_id": self.run_id})
                 return
 
-            incident_facade = get_incident_facade()
-            incident_id = incident_facade.check_and_create_incident(
+            incident_engine = get_incident_engine()
+            incident_id = incident_engine.check_and_create_incident(
                 run_id=self.run_id,
                 status="failed",
                 error_message=error_message or run.error_message,
@@ -476,8 +476,8 @@ class RunRunner:
         This is the original implementation kept as fallback.
         """
         # PIN-407: Create incident record (SUCCESS, FAILURE, BLOCKED, etc.)
-        incident_facade = get_incident_facade()
-        incident_id = incident_facade.create_incident_for_run(
+        incident_engine = get_incident_engine()
+        incident_id = incident_engine.create_incident_for_run(
             run_id=self.run_id,
             tenant_id=run.tenant_id,
             run_status=run_status,

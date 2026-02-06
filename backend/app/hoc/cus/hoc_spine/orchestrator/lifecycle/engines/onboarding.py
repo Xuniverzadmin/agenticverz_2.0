@@ -44,7 +44,13 @@ from typing import Any, Dict, Optional
 
 from app.models.knowledge_lifecycle import KnowledgePlaneLifecycleState
 
-from .base import BaseStageHandler, StageContext, StageResult, StageStatus
+# PIN-520 ITER3.3: Fix broken relative import (.base doesn't exist)
+from app.hoc.cus.hoc_spine.services.lifecycle_stages_base import (
+    BaseStageHandler,
+    StageContext,
+    StageResult,
+    StageStatus,
+)
 
 logger = logging.getLogger(__name__)
 

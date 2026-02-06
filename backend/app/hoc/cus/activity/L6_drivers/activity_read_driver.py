@@ -338,6 +338,47 @@ class ActivityReadDriver:
         result = await self._session.execute(text(sql), query_params)
         return [dict(row) for row in result.mappings().all()]
 
+    async def fetch_dimension_breakdown(
+        self,
+        dimension: str,
+        where_sql: str,
+        params: dict[str, Any],
+        limit: int,
+    ) -> list[dict[str, Any]]:
+        """
+        Fetch dimension breakdown (GROUP BY dimension).
+
+        Args:
+            dimension: Column to group by (must be a valid v_runs_o2 column)
+            where_sql: WHERE clause SQL
+            params: Query parameters
+            limit: Max groups
+
+        Returns:
+            List of dicts with 'value' and 'count' keys
+        """
+        # Allowlist columns to prevent SQL injection via dimension param
+        allowed = {
+            "risk_level", "latency_bucket", "evidence_health",
+            "integrity_status", "source", "provider_type", "status", "state",
+        }
+        if dimension not in allowed:
+            return []
+
+        sql = f"""
+            SELECT
+                COALESCE({dimension}::text, 'unknown') as value,
+                COUNT(*) as count
+            FROM v_runs_o2
+            WHERE {where_sql}
+            GROUP BY {dimension}
+            ORDER BY count DESC
+            LIMIT :limit
+        """
+        query_params = {**params, "limit": limit}
+        result = await self._session.execute(text(sql), query_params)
+        return [dict(row) for row in result.mappings().all()]
+
 
 def get_activity_read_driver(session: AsyncSession) -> ActivityReadDriver:
     """Get an ActivityReadDriver instance."""

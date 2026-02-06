@@ -42,8 +42,8 @@ from sqlmodel import Session
 from app.models.killswitch import TriggerType
 
 # L4 imports ONLY (no L6 direct queries!)
-from app.services.guard_write_service import GuardWriteService
-from app.services.killswitch.customer_killswitch_read_service import (
+from app.hoc.cus.hoc_spine.authority.guard_write_engine import GuardWriteService
+from app.hoc.cus.controls.L6_drivers.killswitch_read_driver import (
     CustomerKillswitchReadService,
     get_customer_killswitch_read_service,
 )

@@ -35,6 +35,18 @@ class ControlsBridge:
         from app.hoc.cus.controls.L6_drivers.limits_read_driver import LimitsReadDriver
         return LimitsReadDriver(session)
 
+    def scoped_execution_capability(self):
+        """
+        Return scoped execution module for risk-gated recovery actions (PIN-L2-PURITY).
+
+        Used by recovery.py for scoped execution of recovery actions.
+        Provides: test_recovery_scope, create_recovery_scope, execute_with_scope,
+                  validate_scope_required, get_scope_store, and exception types.
+        """
+        from app.hoc.cus.controls.L6_drivers import scoped_execution
+
+        return scoped_execution
+
 
 # Singleton
 _instance = None

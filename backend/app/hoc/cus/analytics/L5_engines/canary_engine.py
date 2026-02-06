@@ -152,6 +152,7 @@ class CanaryRunner:
     async def run(
         self,
         samples: Optional[List[CanarySample]] = None,
+        session: Any = None,
     ) -> CanaryReport:
         """
         Run canary validation.
@@ -161,6 +162,7 @@ class CanaryRunner:
 
         Args:
             samples: Optional pre-loaded samples (otherwise loads from provenance)
+            session: Optional async session (from L4 coordinator, for DB persistence)
 
         Returns:
             CanaryReport with results
@@ -193,16 +195,17 @@ class CanaryRunner:
                     )
 
                 # We are the leader - run the actual canary
-                return await self._run_internal(run_id, start_time, samples)
+                return await self._run_internal(run_id, start_time, samples, session)
         else:
             # No leader election - run directly
-            return await self._run_internal(run_id, start_time, samples)
+            return await self._run_internal(run_id, start_time, samples, session)
 
     async def _run_internal(
         self,
         run_id: str,
         start_time: datetime,
         samples: Optional[List[CanarySample]] = None,
+        session: Any = None,
     ) -> CanaryReport:
         """
         Internal canary run logic (called after leader election).
@@ -211,6 +214,7 @@ class CanaryRunner:
             run_id: Unique run identifier
             start_time: Run start timestamp
             samples: Optional pre-loaded samples
+            session: Optional async session (from L4 coordinator)
 
         Returns:
             CanaryReport with results
@@ -296,7 +300,7 @@ class CanaryRunner:
             report.artifact_paths = artifact_paths
 
         # Persist report to database
-        await self._persist_report_to_db(report)
+        await self._persist_report_to_db(report, session=session)
 
         # Report to circuit breaker if failed
         if not passed:
@@ -592,12 +596,20 @@ class CanaryRunner:
         passed = len(failure_reasons) == 0
         return passed, failure_reasons
 
-    async def _persist_report_to_db(self, report: CanaryReport) -> None:
+    async def _persist_report_to_db(
+        self,
+        report: CanaryReport,
+        session: Any = None,
+    ) -> None:
         """
         Persist canary report to database for /canary/reports endpoint.
 
         INVARIANT: A canary report must never exist in DB without artifacts.
         If artifact_paths is empty and artifacts are configured, refuse the write.
+
+        Args:
+            report: The canary report to persist
+            session: Optional async session (if None, skip DB persistence)
         """
         # Artifact-before-DB invariant (Gap 3 fix)
         if self.config.save_artifacts and not report.artifact_paths:
@@ -610,10 +622,16 @@ class CanaryRunner:
                 "Artifacts must be saved before database persistence."
             )
 
+        # Skip DB persistence if no session (e.g., local testing)
+        if session is None:
+            logger.warning(f"Skipping DB persistence: no session provided. run_id={report.run_id}")
+            return
+
         try:
             from app.hoc.cus.analytics.L6_drivers.canary_report_driver import write_canary_report
 
             await write_canary_report(
+                session=session,
                 run_id=report.run_id,
                 timestamp=report.timestamp,
                 status=report.status,
@@ -677,6 +695,7 @@ class CanaryRunner:
 async def run_canary(
     sample_count: int = 100,
     drift_threshold: float = 0.2,
+    session: Any = None,
 ) -> CanaryReport:
     """
     Convenience function to run canary.
@@ -684,6 +703,7 @@ async def run_canary(
     Args:
         sample_count: Number of samples to test
         drift_threshold: Maximum acceptable drift
+        session: Optional async session (from L4 coordinator, for DB persistence)
 
     Returns:
         CanaryReport
@@ -693,4 +713,4 @@ async def run_canary(
         drift_threshold=drift_threshold,
     )
     runner = CanaryRunner(config)
-    return await runner.run()
+    return await runner.run(session=session)

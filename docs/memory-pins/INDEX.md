@@ -497,6 +497,9 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-522](PIN-522-pin-522-auth-subdomain-migration-complete.md) | **PIN-522: Auth Subdomain Migration Complete** | Architecture | **✅ COMPLETE** | 2026-02-04 |
 | [PIN-523](PIN-523-pin-523-phase-2-blocking-todo-wiring-complete.md) | **PIN-523 Phase 2 BLOCKING TODO Wiring Complete** | HOC Migration | **✅ COMPLETE** | 2026-02-04 |
 | [PIN-524](PIN-524-pin-524-phase-3-legacy-import-deprecation-complete.md) | **PIN-524 Phase 3 Legacy Import Deprecation Complete** | HOC Migration | **✅ COMPLETE** | 2026-02-04 |
+| [PIN-525](PIN-525-policy-enforcement-write-driver.md) | **PolicyEnforcementWriteDriver Implementation** | HOC Migration / Enforcement Audit Trail | **✅ COMPLETE** | 2026-02-04 |
+| [PIN-526](PIN-526-hoc-api-wiring-migration.md) | **HOC API Wiring Migration** | Architecture Migration | **✅ COMPLETE** | 2026-02-04 |
+| [PIN-527](PIN-527-l2-purity-bridge-completion.md) | **L2 Purity Bridge Completion** | HOC Governance | **✅ COMPLETE** | 2026-02-06 |
 
 ---
 

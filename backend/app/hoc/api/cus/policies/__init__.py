@@ -17,7 +17,9 @@ Provides endpoints for:
 - Limit overrides (temporary increases)
 """
 
-from app.api.limits.simulate import router as simulate_router
-from app.api.limits.override import router as override_router
+# Legacy imports removed - routers now imported directly in main.py
+# TOMBSTONE_EXPIRY: 2026-03-04
+# This __init__.py previously re-exported legacy routers
+# Now each router module exports its own router directly
 
-__all__ = ["simulate_router", "override_router"]
+__all__: list[str] = []

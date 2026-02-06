@@ -28,10 +28,7 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.gateway_middleware import get_auth_context
-from app.db import get_async_session_dep
 from app.schemas.limits.policy_rules import (
     CreatePolicyRuleRequest,
     PolicyRuleResponse,
@@ -40,6 +37,7 @@ from app.schemas.limits.policy_rules import (
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
+    get_session_dep,
 )
 
 
@@ -116,7 +114,7 @@ class RuleDetail(BaseModel):
 async def create_rule(
     request: Request,
     body: CreateRuleRequest,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> RuleDetail:
     """
     Create a new policy rule.
@@ -178,7 +176,7 @@ async def update_rule(
     request: Request,
     rule_id: str,
     body: UpdateRuleRequest,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> RuleDetail:
     """
     Update an existing policy rule.

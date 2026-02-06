@@ -46,17 +46,14 @@ from typing import Annotated, Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
-from app.db import get_async_session_dep
-from app.models.killswitch import Incident
 from app.schemas.response import wrap_dict
-# L4 operation registry imports
+# L4 operation registry imports — L2 must not import sqlalchemy/app.db directly
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
+    get_session_dep,
 )
 
 # =============================================================================
@@ -532,7 +529,7 @@ async def list_incidents(
     sort_by: Annotated[SortField, Query(description="Field to sort by")] = SortField.CREATED_AT,
     sort_order: Annotated[SortOrder, Query(description="Sort direction")] = SortOrder.DESC,
     # Dependencies
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> IncidentListResponse:
     """List incidents with unified query filters. Tenant-scoped."""
 
@@ -550,118 +547,64 @@ async def list_incidents(
 
     tenant_id = get_tenant_id_from_auth(request)
 
-    # Build filters
-    filters_applied: dict[str, Any] = {"tenant_id": tenant_id}
-
-    # Base query with tenant isolation
-    stmt = select(Incident).where(Incident.tenant_id == tenant_id)
-
-    # Topic filter (maps to lifecycle states)
-    if topic:
-        if topic == Topic.ACTIVE:
-            stmt = stmt.where(Incident.lifecycle_state.in_(["ACTIVE", "ACKED"]))
-            filters_applied["topic"] = "ACTIVE"
-        else:
-            stmt = stmt.where(Incident.lifecycle_state == "RESOLVED")
-            filters_applied["topic"] = "RESOLVED"
-    elif lifecycle_state:
-        stmt = stmt.where(Incident.lifecycle_state == lifecycle_state.value)
-        filters_applied["lifecycle_state"] = lifecycle_state.value
-
-    if severity:
-        stmt = stmt.where(Incident.severity == severity.value)
-        filters_applied["severity"] = severity.value
-
-    if category:
-        stmt = stmt.where(Incident.category == category)
-        filters_applied["category"] = category
-
-    if cause_type:
-        stmt = stmt.where(Incident.cause_type == cause_type.value)
-        filters_applied["cause_type"] = cause_type.value
-
-    if is_synthetic is not None:
-        stmt = stmt.where(Incident.is_synthetic == is_synthetic)
-        filters_applied["is_synthetic"] = is_synthetic
-
-    if created_after:
-        stmt = stmt.where(Incident.created_at >= created_after)
-        filters_applied["created_after"] = created_after.isoformat()
-
-    if created_before:
-        stmt = stmt.where(Incident.created_at <= created_before)
-        filters_applied["created_before"] = created_before.isoformat()
-
-    # Count query (same filters, no pagination)
-    count_stmt = select(func.count(Incident.id)).where(Incident.tenant_id == tenant_id)
-    if topic:
-        if topic == Topic.ACTIVE:
-            count_stmt = count_stmt.where(Incident.lifecycle_state.in_(["ACTIVE", "ACKED"]))
-        else:
-            count_stmt = count_stmt.where(Incident.lifecycle_state == "RESOLVED")
-    elif lifecycle_state:
-        count_stmt = count_stmt.where(Incident.lifecycle_state == lifecycle_state.value)
-    if severity:
-        count_stmt = count_stmt.where(Incident.severity == severity.value)
-    if category:
-        count_stmt = count_stmt.where(Incident.category == category)
-    if cause_type:
-        count_stmt = count_stmt.where(Incident.cause_type == cause_type.value)
-    if is_synthetic is not None:
-        count_stmt = count_stmt.where(Incident.is_synthetic == is_synthetic)
-    if created_after:
-        count_stmt = count_stmt.where(Incident.created_at >= created_after)
-    if created_before:
-        count_stmt = count_stmt.where(Incident.created_at <= created_before)
-
-    # Sorting
-    sort_column = getattr(Incident, sort_by.value)
-    if sort_order == SortOrder.DESC:
-        stmt = stmt.order_by(sort_column.desc())
-    else:
-        stmt = stmt.order_by(sort_column.asc())
-
-    # Pagination
-    stmt = stmt.limit(limit).offset(offset)
-
     try:
-        # Execute count
-        count_result = await session.execute(count_stmt)
-        total = count_result.scalar() or 0
-
-        # Execute data query
-        result = await session.execute(stmt)
-        incidents = result.scalars().all()
+        registry = get_operation_registry()
+        op = await registry.execute(
+            "incidents.query",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "list_incidents",
+                    "topic": topic.value if topic else None,
+                    "lifecycle_state": lifecycle_state.value if lifecycle_state else None,
+                    "severity": severity.value if severity else None,
+                    "category": category,
+                    "cause_type": cause_type.value if cause_type else None,
+                    "is_synthetic": is_synthetic,
+                    "created_after": created_after,
+                    "created_before": created_before,
+                    "limit": limit,
+                    "offset": offset,
+                    "sort_by": sort_by.value,
+                    "sort_order": sort_order.value,
+                },
+            ),
+        )
+        if not op.success:
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+        result = op.data
 
         items = [
             IncidentSummary(
-                incident_id=inc.id,
-                tenant_id=inc.tenant_id,
-                lifecycle_state=inc.lifecycle_state or "ACTIVE",
-                severity=inc.severity or "medium",
-                category=inc.category or "UNKNOWN",
-                title=inc.title or "Untitled Incident",
-                description=inc.description,
-                llm_run_id=inc.llm_run_id,
-                cause_type=inc.cause_type or "SYSTEM",
-                error_code=inc.error_code,
-                error_message=inc.error_message,
-                created_at=inc.created_at,
-                resolved_at=inc.resolved_at,
-                is_synthetic=inc.is_synthetic or False,
+                incident_id=item.incident_id,
+                tenant_id=item.tenant_id,
+                lifecycle_state=item.lifecycle_state,
+                severity=item.severity,
+                category=item.category,
+                title=item.title,
+                description=item.description,
+                llm_run_id=item.llm_run_id,
+                cause_type=item.cause_type,
+                error_code=item.error_code,
+                error_message=item.error_message,
+                created_at=item.created_at,
+                resolved_at=item.resolved_at,
+                is_synthetic=item.is_synthetic,
             )
-            for inc in incidents
+            for item in result.items
         ]
-
-        has_more = offset + len(items) < total
-        next_offset = offset + limit if has_more else None
 
         return IncidentListResponse(
             items=items,
-            total=total,
-            has_more=has_more,
-            filters_applied=filters_applied,
-            pagination=Pagination(limit=limit, offset=offset, next_offset=next_offset),
+            total=result.total,
+            has_more=result.has_more,
+            filters_applied=result.filters_applied,
+            pagination=Pagination(
+                limit=result.pagination.limit,
+                offset=result.pagination.offset,
+                next_offset=result.pagination.next_offset,
+            ),
         )
 
     except Exception as e:
@@ -685,46 +628,49 @@ async def list_incidents(
 async def get_incidents_for_run(
     request: Request,
     run_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> IncidentsByRunResponse:
     """Get all incidents linked to a specific run. Tenant-scoped."""
 
     tenant_id = get_tenant_id_from_auth(request)
 
-    stmt = (
-        select(Incident)
-        .where(Incident.tenant_id == tenant_id)
-        .where(Incident.source_run_id == run_id)
-        .order_by(Incident.created_at.desc())
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "incidents.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_incidents_for_run", "run_id": run_id},
+        ),
     )
-
-    result = await session.execute(stmt)
-    incidents = result.scalars().all()
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     items = [
         IncidentSummary(
-            incident_id=inc.id,
-            tenant_id=inc.tenant_id,
-            lifecycle_state=inc.lifecycle_state or "ACTIVE",
-            severity=inc.severity or "medium",
-            category=inc.category or "UNKNOWN",
-            title=inc.title or "Untitled Incident",
-            description=inc.description,
-            llm_run_id=inc.llm_run_id,
-            cause_type=inc.cause_type or "SYSTEM",
-            error_code=inc.error_code,
-            error_message=inc.error_message,
-            created_at=inc.created_at,
-            resolved_at=inc.resolved_at,
-            is_synthetic=inc.is_synthetic or False,
+            incident_id=item.incident_id,
+            tenant_id=item.tenant_id,
+            lifecycle_state=item.lifecycle_state,
+            severity=item.severity,
+            category=item.category,
+            title=item.title,
+            description=item.description,
+            llm_run_id=item.llm_run_id,
+            cause_type=item.cause_type,
+            error_code=item.error_code,
+            error_message=item.error_message,
+            created_at=item.created_at,
+            resolved_at=item.resolved_at,
+            is_synthetic=item.is_synthetic,
         )
-        for inc in incidents
+        for item in result.incidents
     ]
 
     return IncidentsByRunResponse(
         run_id=run_id,
         incidents=items,
-        total=len(items),
+        total=result.total,
     )
 
 
@@ -749,7 +695,7 @@ async def detect_patterns(
     request: Request,
     window_hours: Annotated[int, Query(ge=1, le=168, description="Hours to look back (max 168 = 7 days)")] = 24,
     limit: Annotated[int, Query(ge=1, le=50, description="Max patterns per type")] = 10,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> PatternDetectionResponse:
     """Detect incident patterns. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -807,7 +753,7 @@ async def analyze_recurrence(
     baseline_days: Annotated[int, Query(ge=1, le=90, description="Days to analyze (max 90)")] = 30,
     recurrence_threshold: Annotated[int, Query(ge=2, le=100, description="Min occurrences to flag as recurring")] = 3,
     limit: Annotated[int, Query(ge=1, le=50, description="Max groups to return")] = 20,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> RecurrenceAnalysisResponse:
     """Analyze recurring incident patterns. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -871,58 +817,42 @@ async def analyze_cost_impact(
     request: Request,
     baseline_days: Annotated[int, Query(ge=1, le=90, description="Days to analyze (max 90)")] = 30,
     limit: Annotated[int, Query(ge=1, le=50, description="Max categories to return")] = 20,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> CostImpactResponse:
     """Analyze cost impact across incidents. Tenant-scoped."""
-    from datetime import timezone
-
-    from sqlalchemy import text
-
     tenant_id = get_tenant_id_from_auth(request)
-    baseline_days = min(baseline_days, 90)
 
-    # Query cost impact by category
-    sql = text("""
-        SELECT
-            COALESCE(category, 'uncategorized') AS category,
-            resolution_method,
-            COUNT(*) AS incident_count,
-            SUM(cost_impact) AS total_cost_impact,
-            AVG(cost_impact) AS avg_cost_impact
-        FROM incidents
-        WHERE tenant_id = :tenant_id
-          AND cost_impact IS NOT NULL
-          AND created_at >= NOW() - INTERVAL '1 day' * :baseline_days
-        GROUP BY category, resolution_method
-        ORDER BY total_cost_impact DESC NULLS LAST
-        LIMIT :limit
-    """)
-
-    result = await session.execute(sql, {
-        "tenant_id": tenant_id,
-        "baseline_days": baseline_days,
-        "limit": limit,
-    })
-
-    summaries: List[CostImpactSummary] = []
-    total_cost = 0.0
-
-    for row in result.mappings():
-        cost = float(row["total_cost_impact"]) if row["total_cost_impact"] else 0.0
-        total_cost += cost
-        summaries.append(CostImpactSummary(
-            category=row["category"],
-            incident_count=row["incident_count"],
-            total_cost_impact=cost,
-            avg_cost_impact=float(row["avg_cost_impact"]) if row["avg_cost_impact"] else 0.0,
-            resolution_method=row["resolution_method"],
-        ))
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "incidents.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "analyze_cost_impact",
+                "baseline_days": baseline_days,
+                "limit": limit,
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     return CostImpactResponse(
-        summaries=summaries,
-        total_cost_impact=total_cost,
-        baseline_days=baseline_days,
-        generated_at=datetime.now(timezone.utc),
+        summaries=[
+            CostImpactSummary(
+                category=s.category,
+                incident_count=s.incident_count,
+                total_cost_impact=s.total_cost_impact,
+                avg_cost_impact=s.avg_cost_impact,
+                resolution_method=s.resolution_method,
+            )
+            for s in result.summaries
+        ],
+        total_cost_impact=result.total_cost_impact,
+        baseline_days=result.baseline_days,
+        generated_at=result.generated_at,
     )
 
 
@@ -967,7 +897,7 @@ async def list_active_incidents(
     sort_by: Annotated[SortField, Query(description="Field to sort by")] = SortField.CREATED_AT,
     sort_order: Annotated[SortOrder, Query(description="Sort direction")] = SortOrder.DESC,
     # Dependencies
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> IncidentListResponse:
     """List ACTIVE incidents. Topic enforced at endpoint boundary."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1072,7 +1002,7 @@ async def list_resolved_incidents(
     sort_by: Annotated[SortField, Query(description="Field to sort by")] = SortField.RESOLVED_AT,
     sort_order: Annotated[SortOrder, Query(description="Sort direction")] = SortOrder.DESC,
     # Dependencies
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> IncidentListResponse:
     """List RESOLVED incidents. Topic enforced at endpoint boundary."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1175,7 +1105,7 @@ async def list_historical_incidents(
     sort_by: Annotated[SortField, Query(description="Field to sort by")] = SortField.RESOLVED_AT,
     sort_order: Annotated[SortOrder, Query(description="Sort direction")] = SortOrder.DESC,
     # Dependencies
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> IncidentListResponse:
     """List HISTORICAL incidents (resolved beyond retention). Topic enforced."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1264,106 +1194,42 @@ async def list_historical_incidents(
 async def get_incident_metrics(
     request: Request,
     window_days: Annotated[int, Query(ge=1, le=90, description="Window in days")] = 30,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> IncidentMetricsResponse:
     """Get incident metrics. Backend-computed, deterministic."""
-    from datetime import timezone
-    from sqlalchemy import text
-
     tenant_id = get_tenant_id_from_auth(request)
 
-    # Single comprehensive query for all metrics
-    # NOTE: contained_at and sla_target_seconds columns don't exist yet.
-    # Using resolved_at - created_at for resolution time. Containment and SLA
-    # will be added when those columns are created (Phase 1 is additive only).
-    sql = text("""
-        WITH incident_stats AS (
-            SELECT
-                lifecycle_state,
-                severity,
-                -- Containment time: will be NULL until contained_at column is added
-                NULL::bigint AS time_to_containment_ms,
-                -- Resolution time: resolved_at - created_at
-                CASE WHEN resolved_at IS NOT NULL
-                     THEN EXTRACT(EPOCH FROM (resolved_at - created_at)) * 1000
-                     ELSE NULL
-                END AS time_to_resolution_ms,
-                -- SLA: NULL until sla_target_seconds column is added
-                NULL::boolean AS sla_met
-            FROM incidents
-            WHERE tenant_id = :tenant_id
-              AND created_at >= NOW() - INTERVAL '1 day' * :window_days
-        )
-        SELECT
-            -- Counts by state
-            COUNT(*) FILTER (WHERE lifecycle_state IN ('ACTIVE', 'ACKED')) AS active_count,
-            COUNT(*) FILTER (WHERE lifecycle_state = 'ACKED') AS acked_count,
-            COUNT(*) FILTER (WHERE lifecycle_state = 'RESOLVED') AS resolved_count,
-            COUNT(*) AS total_count,
-
-            -- Containment metrics (NULL until contained_at column exists)
-            NULL::bigint AS avg_time_to_containment_ms,
-            NULL::bigint AS median_time_to_containment_ms,
-
-            -- Resolution metrics
-            AVG(time_to_resolution_ms)::bigint AS avg_time_to_resolution_ms,
-            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY time_to_resolution_ms)::bigint AS median_time_to_resolution_ms,
-
-            -- SLA metrics (NULL until sla_target_seconds column exists)
-            0 AS sla_met_count,
-            0 AS sla_breached_count,
-
-            -- Severity breakdown
-            COUNT(*) FILTER (WHERE severity = 'critical') AS critical_count,
-            COUNT(*) FILTER (WHERE severity = 'high') AS high_count,
-            COUNT(*) FILTER (WHERE severity = 'medium') AS medium_count,
-            COUNT(*) FILTER (WHERE severity = 'low') AS low_count
-
-        FROM incident_stats
-    """)
-
-    result = await session.execute(sql, {
-        "tenant_id": tenant_id,
-        "window_days": window_days,
-    })
-
-    row = result.mappings().first()
-
-    if not row:
-        # No incidents - return zeros
-        return IncidentMetricsResponse(
-            active_count=0,
-            acked_count=0,
-            resolved_count=0,
-            total_count=0,
-            window_days=window_days,
-            generated_at=datetime.now(timezone.utc),
-        )
-
-    # Calculate SLA compliance rate
-    sla_total = (row["sla_met_count"] or 0) + (row["sla_breached_count"] or 0)
-    sla_compliance_rate = None
-    if sla_total > 0:
-        sla_compliance_rate = round((row["sla_met_count"] or 0) / sla_total * 100, 2)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "incidents.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_metrics", "window_days": window_days},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     return IncidentMetricsResponse(
-        active_count=row["active_count"] or 0,
-        acked_count=row["acked_count"] or 0,
-        resolved_count=row["resolved_count"] or 0,
-        total_count=row["total_count"] or 0,
-        avg_time_to_containment_ms=row["avg_time_to_containment_ms"],
-        median_time_to_containment_ms=row["median_time_to_containment_ms"],
-        avg_time_to_resolution_ms=row["avg_time_to_resolution_ms"],
-        median_time_to_resolution_ms=row["median_time_to_resolution_ms"],
-        sla_met_count=row["sla_met_count"] or 0,
-        sla_breached_count=row["sla_breached_count"] or 0,
-        sla_compliance_rate=sla_compliance_rate,
-        critical_count=row["critical_count"] or 0,
-        high_count=row["high_count"] or 0,
-        medium_count=row["medium_count"] or 0,
-        low_count=row["low_count"] or 0,
-        window_days=window_days,
-        generated_at=datetime.now(timezone.utc),
+        active_count=result.active_count,
+        acked_count=result.acked_count,
+        resolved_count=result.resolved_count,
+        total_count=result.total_count,
+        avg_time_to_containment_ms=result.avg_time_to_containment_ms,
+        median_time_to_containment_ms=result.median_time_to_containment_ms,
+        avg_time_to_resolution_ms=result.avg_time_to_resolution_ms,
+        median_time_to_resolution_ms=result.median_time_to_resolution_ms,
+        sla_met_count=result.sla_met_count,
+        sla_breached_count=result.sla_breached_count,
+        sla_compliance_rate=result.sla_compliance_rate,
+        critical_count=result.critical_count,
+        high_count=result.high_count,
+        medium_count=result.medium_count,
+        low_count=result.low_count,
+        window_days=result.window_days,
+        generated_at=result.generated_at,
     )
 
 
@@ -1386,12 +1252,9 @@ async def get_historical_trend(
     request: Request,
     window_days: Annotated[int, Query(ge=7, le=365, description="Window in days")] = 90,
     granularity: Annotated[str, Query(description="Aggregation granularity")] = "week",
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> HistoricalTrendResponse:
     """Get historical trend. Backend-computed, deterministic."""
-    from datetime import timezone
-    from sqlalchemy import text
-
     tenant_id = get_tenant_id_from_auth(request)
 
     # Validate granularity
@@ -1401,60 +1264,37 @@ async def get_historical_trend(
             detail={"error": "invalid_granularity", "message": "Must be: day, week, month"},
         )
 
-    # Use date_trunc for grouping
-    trunc_unit = granularity
-    if granularity == "day":
-        trunc_unit = "day"
-    elif granularity == "week":
-        trunc_unit = "week"
-    elif granularity == "month":
-        trunc_unit = "month"
-
-    sql = text(f"""
-        SELECT
-            DATE_TRUNC(:trunc_unit, created_at) AS period,
-            COUNT(*) AS incident_count,
-            COUNT(*) FILTER (WHERE lifecycle_state = 'RESOLVED') AS resolved_count,
-            AVG(
-                CASE WHEN resolved_at IS NOT NULL
-                THEN EXTRACT(EPOCH FROM (resolved_at - created_at)) * 1000
-                ELSE NULL END
-            )::bigint AS avg_resolution_time_ms
-        FROM incidents
-        WHERE tenant_id = :tenant_id
-          AND created_at >= NOW() - INTERVAL '1 day' * :window_days
-        GROUP BY DATE_TRUNC(:trunc_unit, created_at)
-        ORDER BY period ASC
-    """)
-
-    result = await session.execute(sql, {
-        "tenant_id": tenant_id,
-        "window_days": window_days,
-        "trunc_unit": trunc_unit,
-    })
-
-    data_points: List[HistoricalTrendDataPoint] = []
-    total_incidents = 0
-
-    for row in result.mappings():
-        period_date = row["period"]
-        period_str = period_date.strftime("%Y-%m-%d") if period_date else "unknown"
-        count = row["incident_count"] or 0
-        total_incidents += count
-
-        data_points.append(HistoricalTrendDataPoint(
-            period=period_str,
-            incident_count=count,
-            resolved_count=row["resolved_count"] or 0,
-            avg_resolution_time_ms=row["avg_resolution_time_ms"],
-        ))
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "incidents.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_historical_trend",
+                "window_days": window_days,
+                "granularity": granularity,
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     return HistoricalTrendResponse(
-        data_points=data_points,
-        granularity=granularity,
-        window_days=window_days,
-        total_incidents=total_incidents,
-        generated_at=datetime.now(timezone.utc),
+        data_points=[
+            HistoricalTrendDataPoint(
+                period=dp.period,
+                incident_count=dp.incident_count,
+                resolved_count=dp.resolved_count,
+                avg_resolution_time_ms=dp.avg_resolution_time_ms,
+            )
+            for dp in result.data_points
+        ],
+        granularity=result.granularity,
+        window_days=result.window_days,
+        total_incidents=result.total_incidents,
+        generated_at=result.generated_at,
     )
 
 
@@ -1476,113 +1316,46 @@ async def get_historical_trend(
 async def get_historical_distribution(
     request: Request,
     window_days: Annotated[int, Query(ge=7, le=365, description="Window in days")] = 90,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> HistoricalDistributionResponse:
     """Get historical distribution. Backend-computed, deterministic."""
-    from datetime import timezone
-    from sqlalchemy import text
-
     tenant_id = get_tenant_id_from_auth(request)
 
-    # Total count for percentage calculation
-    total_sql = text("""
-        SELECT COUNT(*) as total
-        FROM incidents
-        WHERE tenant_id = :tenant_id
-          AND created_at >= NOW() - INTERVAL '1 day' * :window_days
-    """)
-
-    total_result = await session.execute(total_sql, {
-        "tenant_id": tenant_id,
-        "window_days": window_days,
-    })
-    total_incidents = total_result.scalar() or 0
-
-    # Category distribution
-    category_sql = text("""
-        SELECT COALESCE(category, 'uncategorized') as value, COUNT(*) as count
-        FROM incidents
-        WHERE tenant_id = :tenant_id
-          AND created_at >= NOW() - INTERVAL '1 day' * :window_days
-        GROUP BY category
-        ORDER BY count DESC
-    """)
-
-    category_result = await session.execute(category_sql, {
-        "tenant_id": tenant_id,
-        "window_days": window_days,
-    })
-
-    by_category: List[HistoricalDistributionEntry] = []
-    for row in category_result.mappings():
-        count = row["count"] or 0
-        pct = round(count / total_incidents * 100, 2) if total_incidents > 0 else 0
-        by_category.append(HistoricalDistributionEntry(
-            dimension="category",
-            value=row["value"],
-            count=count,
-            percentage=pct,
-        ))
-
-    # Severity distribution
-    severity_sql = text("""
-        SELECT COALESCE(severity, 'unknown') as value, COUNT(*) as count
-        FROM incidents
-        WHERE tenant_id = :tenant_id
-          AND created_at >= NOW() - INTERVAL '1 day' * :window_days
-        GROUP BY severity
-        ORDER BY count DESC
-    """)
-
-    severity_result = await session.execute(severity_sql, {
-        "tenant_id": tenant_id,
-        "window_days": window_days,
-    })
-
-    by_severity: List[HistoricalDistributionEntry] = []
-    for row in severity_result.mappings():
-        count = row["count"] or 0
-        pct = round(count / total_incidents * 100, 2) if total_incidents > 0 else 0
-        by_severity.append(HistoricalDistributionEntry(
-            dimension="severity",
-            value=row["value"],
-            count=count,
-            percentage=pct,
-        ))
-
-    # Cause type distribution
-    cause_sql = text("""
-        SELECT COALESCE(cause_type, 'unknown') as value, COUNT(*) as count
-        FROM incidents
-        WHERE tenant_id = :tenant_id
-          AND created_at >= NOW() - INTERVAL '1 day' * :window_days
-        GROUP BY cause_type
-        ORDER BY count DESC
-    """)
-
-    cause_result = await session.execute(cause_sql, {
-        "tenant_id": tenant_id,
-        "window_days": window_days,
-    })
-
-    by_cause_type: List[HistoricalDistributionEntry] = []
-    for row in cause_result.mappings():
-        count = row["count"] or 0
-        pct = round(count / total_incidents * 100, 2) if total_incidents > 0 else 0
-        by_cause_type.append(HistoricalDistributionEntry(
-            dimension="cause_type",
-            value=row["value"],
-            count=count,
-            percentage=pct,
-        ))
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "incidents.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_historical_distribution", "window_days": window_days},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     return HistoricalDistributionResponse(
-        by_category=by_category,
-        by_severity=by_severity,
-        by_cause_type=by_cause_type,
-        window_days=window_days,
-        total_incidents=total_incidents,
-        generated_at=datetime.now(timezone.utc),
+        by_category=[
+            HistoricalDistributionEntry(
+                dimension=e.dimension, value=e.value, count=e.count, percentage=e.percentage,
+            )
+            for e in result.by_category
+        ],
+        by_severity=[
+            HistoricalDistributionEntry(
+                dimension=e.dimension, value=e.value, count=e.count, percentage=e.percentage,
+            )
+            for e in result.by_severity
+        ],
+        by_cause_type=[
+            HistoricalDistributionEntry(
+                dimension=e.dimension, value=e.value, count=e.count, percentage=e.percentage,
+            )
+            for e in result.by_cause_type
+        ],
+        window_days=result.window_days,
+        total_incidents=result.total_incidents,
+        generated_at=result.generated_at,
     )
 
 
@@ -1604,12 +1377,9 @@ async def get_historical_cost_trend(
     request: Request,
     window_days: Annotated[int, Query(ge=7, le=365, description="Window in days")] = 90,
     granularity: Annotated[str, Query(description="Aggregation granularity")] = "week",
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> CostTrendResponse:
     """Get historical cost trend. Backend-computed, deterministic."""
-    from datetime import timezone
-    from sqlalchemy import text
-
     tenant_id = get_tenant_id_from_auth(request)
 
     if granularity not in ("day", "week", "month"):
@@ -1618,53 +1388,38 @@ async def get_historical_cost_trend(
             detail={"error": "invalid_granularity", "message": "Must be: day, week, month"},
         )
 
-    sql = text(f"""
-        SELECT
-            DATE_TRUNC(:granularity, created_at) AS period,
-            COALESCE(SUM(cost_impact), 0) AS total_cost,
-            COUNT(*) AS incident_count
-        FROM incidents
-        WHERE tenant_id = :tenant_id
-          AND created_at >= NOW() - INTERVAL '1 day' * :window_days
-        GROUP BY DATE_TRUNC(:granularity, created_at)
-        ORDER BY period ASC
-    """)
-
-    result = await session.execute(sql, {
-        "tenant_id": tenant_id,
-        "window_days": window_days,
-        "granularity": granularity,
-    })
-
-    data_points: List[CostTrendDataPoint] = []
-    total_cost = 0.0
-    total_incidents = 0
-
-    for row in result.mappings():
-        period_date = row["period"]
-        period_str = period_date.strftime("%Y-%m-%d") if period_date else "unknown"
-        cost = float(row["total_cost"]) if row["total_cost"] else 0.0
-        count = row["incident_count"] or 0
-
-        total_cost += cost
-        total_incidents += count
-
-        avg_cost = cost / count if count > 0 else 0.0
-
-        data_points.append(CostTrendDataPoint(
-            period=period_str,
-            total_cost=round(cost, 2),
-            incident_count=count,
-            avg_cost_per_incident=round(avg_cost, 2),
-        ))
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "incidents.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_historical_cost_trend",
+                "window_days": window_days,
+                "granularity": granularity,
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+    result = op.data
 
     return CostTrendResponse(
-        data_points=data_points,
-        granularity=granularity,
-        window_days=window_days,
-        total_cost=round(total_cost, 2),
-        total_incidents=total_incidents,
-        generated_at=datetime.now(timezone.utc),
+        data_points=[
+            CostTrendDataPoint(
+                period=dp.period,
+                total_cost=dp.total_cost,
+                incident_count=dp.incident_count,
+                avg_cost_per_incident=dp.avg_cost_per_incident,
+            )
+            for dp in result.data_points
+        ],
+        granularity=result.granularity,
+        window_days=result.window_days,
+        total_cost=result.total_cost,
+        total_incidents=result.total_incidents,
+        generated_at=result.generated_at,
     )
 
 
@@ -1682,39 +1437,52 @@ async def get_historical_cost_trend(
 async def get_incident_detail(
     request: Request,
     incident_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> IncidentDetailResponse:
     """Get incident detail (O3). Tenant isolation enforced."""
 
     tenant_id = get_tenant_id_from_auth(request)
 
-    stmt = select(Incident).where(Incident.id == incident_id).where(Incident.tenant_id == tenant_id)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "incidents.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_incident_detail", "incident_id": incident_id},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
-    result = await session.execute(stmt)
-    incident = result.scalar_one_or_none()
-
-    if not incident:
+    result = op.data
+    if not result:
         raise HTTPException(status_code=404, detail="Incident not found")
 
     return IncidentDetailResponse(
-        incident_id=incident.id,
-        tenant_id=incident.tenant_id,
-        lifecycle_state=incident.lifecycle_state or "ACTIVE",
-        severity=incident.severity or "medium",
-        category=incident.category or "UNKNOWN",
-        title=incident.title or "Untitled Incident",
-        description=incident.description,
-        llm_run_id=incident.llm_run_id,
-        source_run_id=incident.source_run_id,
-        cause_type=incident.cause_type or "SYSTEM",
-        error_code=incident.error_code,
-        error_message=incident.error_message,
-        affected_agent_id=incident.affected_agent_id,
-        created_at=incident.created_at,
-        updated_at=incident.updated_at,
-        resolved_at=incident.resolved_at,
-        is_synthetic=incident.is_synthetic or False,
-        synthetic_scenario_id=incident.synthetic_scenario_id,
+        incident_id=result.incident_id,
+        tenant_id=result.tenant_id,
+        lifecycle_state=result.lifecycle_state,
+        severity=result.severity,
+        category=result.category,
+        title=result.title,
+        description=result.description,
+        llm_run_id=result.llm_run_id,
+        source_run_id=result.source_run_id,
+        cause_type=result.cause_type,
+        error_code=result.error_code,
+        error_message=result.error_message,
+        affected_agent_id=result.affected_agent_id,
+        created_at=result.created_at,
+        updated_at=result.updated_at,
+        resolved_at=result.resolved_at,
+        is_synthetic=result.is_synthetic,
+        synthetic_scenario_id=result.synthetic_scenario_id,
+        policy_id=result.policy_id,
+        policy_ref=result.policy_ref,
+        violation_id=result.violation_id,
+        violation_ref=result.violation_ref,
+        lesson_ref=result.lesson_ref,
     )
 
 
@@ -1793,7 +1561,7 @@ async def get_incident_proof(
 async def get_incident_learnings(
     request: Request,
     incident_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> LearningsResponse:
     """Get post-mortem learnings for an incident. Tenant-scoped."""
     tenant_id = get_tenant_id_from_auth(request)

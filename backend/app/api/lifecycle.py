@@ -45,7 +45,7 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-from app.services.lifecycle.facade import (
+from app.hoc.cus.hoc_spine.services.lifecycle_facade import (
     LifecycleFacade,
     get_lifecycle_facade,
 )

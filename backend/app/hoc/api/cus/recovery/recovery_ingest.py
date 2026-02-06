@@ -38,8 +38,12 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, create_engine
+# L4 session helper (L2 must not import sqlalchemy/sqlmodel directly)
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    get_sync_session_dep,
+    get_operation_registry,
+    OperationContext,
+)
 
 from app.metrics import (
     recovery_ingest_duplicates_total,
@@ -48,16 +52,9 @@ from app.metrics import (
     recovery_ingest_total,
 )
 from app.middleware.rate_limit import rate_limit_dependency
-# PIN-520 Phase 1: Route through L4 bridge instead of direct L6 import
-from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.policies_bridge import (
-    get_policies_bridge,
-)
 
-
-def _get_recovery_write_service(session):
-    """Get recovery write service via L4 bridge (PIN-520 compliance)."""
-    bridge = get_policies_bridge()
-    return bridge.recovery_write_capability(session)
+# NOTE: RecoveryWriteService access removed - now routed through L4 registry
+# (policies.recovery.write handler) which owns transaction boundaries
 
 logger = logging.getLogger("nova.api.recovery_ingest")
 
@@ -98,30 +95,6 @@ class IngestResponse(BaseModel):
 
 
 # =============================================================================
-# Database Session Dependency
-# =============================================================================
-
-
-def get_db_session():
-    """Create database session for request."""
-    db_url = os.getenv("DATABASE_URL")
-    if not db_url:
-        raise HTTPException(status_code=500, detail="DATABASE_URL not configured")
-
-    engine = create_engine(
-        db_url,
-        pool_pre_ping=True,
-        pool_size=10,
-        max_overflow=20,
-    )
-    session = Session(engine)
-    try:
-        yield session
-    finally:
-        session.close()
-
-
-# =============================================================================
 # Ingest Endpoint
 # =============================================================================
 
@@ -139,7 +112,7 @@ def get_db_session():
 )
 async def ingest_failure(
     request: IngestRequest,
-    session: Session = Depends(get_db_session),
+    session=Depends(get_sync_session_dep),
     _rate_limited: bool = Depends(rate_limit_dependency),
 ):
     """
@@ -181,67 +154,95 @@ async def ingest_failure(
         # =================================================================
         # Atomic upsert: INSERT ... ON CONFLICT DO UPDATE RETURNING
         # This eliminates all race conditions between SELECT+INSERT
+        # L4 handler owns transaction boundary (commit/rollback)
         # =================================================================
-        # Phase 2B: Use write service for DB operations
-        write_service = _get_recovery_write_service(session)
+        explain_json = json.dumps(
+            {
+                "method": "pending_evaluation",
+                "source": request.source,
+                "ingested_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
 
+        # Route through L4 registry with transactional method
+        registry = get_operation_registry()
+        upsert_ctx = OperationContext(
+            session=session,
+            tenant_id="default",
+            params={
+                "method": "upsert_candidate_transactional",
+                "failure_match_id": failure_match_id,
+                "suggestion": suggestion,
+                "confidence": 0.2,  # Default pending evaluation
+                "explain_json": explain_json,
+                "error_code": error_type,
+                "error_signature": error_signature,
+                "source": request.source,
+                "idempotency_key": idempotency_key,
+            },
+        )
+        upsert_result = registry.execute("policies.recovery.write", upsert_ctx)
+        # Note: registry.execute is async but this endpoint uses sync session
+        # We need to handle this via synchronous registry call pattern
+        import asyncio
         try:
-            explain_json = json.dumps(
-                {
-                    "method": "pending_evaluation",
-                    "source": request.source,
-                    "ingested_at": datetime.now(timezone.utc).isoformat(),
-                }
-            )
-            candidate_id, is_insert, occurrence_count = write_service.upsert_recovery_candidate(
-                failure_match_id=failure_match_id,
-                suggestion=suggestion,
-                confidence=0.2,  # Default pending evaluation
-                explain_json=explain_json,
-                error_code=error_type,
-                error_signature=error_signature,
-                source=request.source,
-                idempotency_key=idempotency_key,
-            )
-            session.commit()
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        upsert_result = loop.run_until_complete(registry.execute("policies.recovery.write", upsert_ctx))
 
-            if not is_insert:
-                # This was an update (duplicate)
-                logger.info(f"Updated existing candidate: id={candidate_id}, occurrence_count={occurrence_count}")
-                status_label = "duplicate"
-                recovery_ingest_duplicates_total.labels(detection_method="upsert_conflict").inc()
-                return IngestResponse(
-                    candidate_id=candidate_id,
-                    status="duplicate",
-                    message=f"Updated occurrence count to {occurrence_count}",
-                    is_duplicate=True,
-                    failure_match_id=failure_match_id,
-                )
-
-        except IntegrityError as ie:
-            session.rollback()
-
+        if upsert_result.error_code == "INTEGRITY_ERROR":
             # Handle edge case: idempotency_key conflict (different failure_match_id)
-            msg = str(ie.orig).lower() if ie.orig else ""
+            msg = upsert_result.error.lower() if upsert_result.error else ""
             logger.warning(f"IntegrityError on upsert: {msg}")
 
             if idempotency_key and "idempotency_key" in msg:
                 # Idempotency key matched different failure_match_id
-                existing = write_service.get_candidate_by_idempotency_key(idempotency_key)
+                # Get existing candidate via L4 registry
+                get_ctx = OperationContext(
+                    session=session,
+                    tenant_id="default",
+                    params={
+                        "method": "get_by_idempotency_key",
+                        "idempotency_key": idempotency_key,
+                    },
+                )
+                get_result = loop.run_until_complete(registry.execute("policies.recovery.write", get_ctx))
 
-                if existing:
+                if get_result.success and get_result.data:
                     status_label = "duplicate"
                     recovery_ingest_duplicates_total.labels(detection_method="idempotency_key").inc()
                     return IngestResponse(
-                        candidate_id=existing[0],
+                        candidate_id=get_result.data["candidate_id"],
                         status="duplicate",
                         message="Idempotency key matched existing candidate",
                         is_duplicate=True,
-                        failure_match_id=existing[1],
+                        failure_match_id=get_result.data["failure_match_id"],
                     )
 
             # Unknown integrity error
-            raise HTTPException(status_code=500, detail=f"Database integrity error: {str(ie.orig)}")
+            raise HTTPException(status_code=500, detail=f"Database integrity error: {upsert_result.error}")
+
+        if not upsert_result.success:
+            raise HTTPException(status_code=500, detail=f"Failed to upsert candidate: {upsert_result.error}")
+
+        candidate_id = upsert_result.data["candidate_id"]
+        is_insert = upsert_result.data["is_insert"]
+        occurrence_count = upsert_result.data["occurrence_count"]
+
+        if not is_insert:
+            # This was an update (duplicate)
+            logger.info(f"Updated existing candidate: id={candidate_id}, occurrence_count={occurrence_count}")
+            status_label = "duplicate"
+            recovery_ingest_duplicates_total.labels(detection_method="upsert_conflict").inc()
+            return IngestResponse(
+                candidate_id=candidate_id,
+                status="duplicate",
+                message=f"Updated occurrence count to {occurrence_count}",
+                is_duplicate=True,
+                failure_match_id=failure_match_id,
+            )
 
         # =================================================================
         # Optionally enqueue for background evaluation
@@ -310,7 +311,7 @@ async def _enqueue_evaluation_async(
     candidate_id: int,
     failure_match_id: str,
     idempotency_key: Optional[str] = None,
-    session: Optional[Session] = None,
+    session=None,
 ) -> bool:
     """
     Enqueue candidate for background evaluation using Redis Streams.
@@ -355,29 +356,38 @@ async def _enqueue_evaluation_async(
     except Exception as e:
         logger.warning(f"Redis Stream enqueue error: {e}, trying DB fallback")
 
-    # DB Fallback: Insert into work_queue table
+    # DB Fallback: Insert into work_queue table via L4 registry
     try:
         if session is None:
-            # Need to create a session for DB fallback
-            db_url = os.getenv("DATABASE_URL")
-            if db_url:
-                engine = create_engine(db_url, pool_pre_ping=True)
-                session = Session(engine)
-                owns_session = True
-            else:
-                logger.error("No DATABASE_URL for fallback queue")
-                return False
+            # Need to create a session for DB fallback - use L4 sync session
+            from app.hoc.cus.hoc_spine.orchestrator.operation_registry import get_sync_session_dep as _get_sync
+            session_gen = _get_sync()
+            session = next(session_gen)
+            owns_session = True
         else:
             owns_session = False
 
         try:
-            # Phase 2B: Use write service for DB operations
-            write_service = _get_recovery_write_service(session)
-            write_service.enqueue_evaluation_db_fallback(candidate_id, idempotency_key)
-            session.commit()
-            enqueue_method = "db_fallback"
-            logger.info(f"Evaluation enqueued to DB fallback: candidate_id={candidate_id}")
-            return True
+            # L4 handler owns transaction boundary (commit/rollback)
+            registry = get_operation_registry()
+            enqueue_ctx = OperationContext(
+                session=session,
+                tenant_id="default",
+                params={
+                    "method": "enqueue_evaluation_transactional",
+                    "candidate_id": candidate_id,
+                    "idempotency_key": idempotency_key,
+                },
+            )
+            enqueue_result = await registry.execute("policies.recovery.write", enqueue_ctx)
+
+            if enqueue_result.success:
+                enqueue_method = "db_fallback"
+                logger.info(f"Evaluation enqueued to DB fallback: candidate_id={candidate_id}")
+                return True
+            else:
+                logger.error(f"DB fallback enqueue failed: {enqueue_result.error}")
+                return False
         finally:
             if owns_session:
                 session.close()
@@ -391,7 +401,7 @@ def _enqueue_evaluation(
     candidate_id: int,
     failure_match_id: str,
     idempotency_key: Optional[str] = None,
-    session: Optional[Session] = None,
+    session=None,
 ) -> None:
     """
     Sync wrapper for enqueue_evaluation.

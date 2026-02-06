@@ -36,7 +36,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Callable, Optional, Protocol
 
 from app.hoc.cus.integrations.L5_schemas.loop_events import (
     # PIN-521: Removed unused imports (LoopEvent, LoopStage, ensure_json_serializable)
@@ -46,8 +46,36 @@ from app.hoc.cus.integrations.L5_schemas.loop_events import (
     RoutingAdjustment,
 )
 
-# V2.0.0 - hoc_spine orchestrator
-from app.hoc.cus.hoc_spine.orchestrator import create_incident_from_cost_anomaly_sync
+# PIN-520: Removed orchestrator import - L5 must not import L4 orchestrator
+# Incident creation is now injected via constructor (first-principles fix)
+
+
+# =============================================================================
+# INCIDENT CREATOR PROTOCOL (PIN-520)
+# =============================================================================
+
+
+class IncidentCreatorPort(Protocol):
+    """
+    Protocol for incident creation capability.
+
+    L4 bridge injects the implementation. L5 does not know about orchestrator.
+    """
+
+    def __call__(
+        self,
+        session: Any,
+        tenant_id: str,
+        anomaly_id: str,
+        anomaly_type: str,
+        severity: str,
+        current_value_cents: int,
+        expected_value_cents: int,
+        entity_type: str,
+        entity_id: str,
+    ) -> str:
+        """Create an incident and return its ID."""
+        ...
 
 logger = logging.getLogger("nova.integrations.cost")
 
@@ -182,18 +210,30 @@ class CostLoopBridge:
 
     Creates real incidents from cost anomalies using mandatory governance.
     No simulation. No optional dispatcher. Every HIGH+ anomaly creates an incident or crashes.
+
+    PIN-520: Incident creator is injected via constructor (L5 does not import orchestrator).
     """
 
-    def __init__(self, db_session):
+    def __init__(
+        self,
+        db_session: Any,
+        incident_creator: IncidentCreatorPort,
+    ):
         """
-        Initialize with database session.
+        Initialize with database session and incident creator.
 
         Args:
             db_session: Database session for creating incidents (REQUIRED)
+            incident_creator: Callable that creates incidents (injected by L4)
+
+        PIN-520: L4 integrations_bridge provides the incident_creator implementation.
         """
         if db_session is None:
             raise ValueError("db_session is required for CostLoopBridge - governance is not optional")
+        if incident_creator is None:
+            raise ValueError("incident_creator is required - L4 must inject governance capability")
         self.db_session = db_session
+        self._create_incident = incident_creator
 
     def on_anomaly_detected(self, anomaly: CostAnomaly) -> Optional[str]:
         """
@@ -212,9 +252,9 @@ class CostLoopBridge:
             logger.info(f"Skipping {anomaly.severity.value} severity anomaly: {anomaly.id}")
             return None
 
-        # MANDATORY: Create real incident via governance function
+        # MANDATORY: Create real incident via injected capability (PIN-520)
         # This will raise GovernanceError if it fails - no silent failure allowed
-        incident_id = create_incident_from_cost_anomaly_sync(
+        incident_id = self._create_incident(
             session=self.db_session,
             tenant_id=anomaly.tenant_id,
             anomaly_id=anomaly.id,
@@ -1071,21 +1111,30 @@ class CostLoopOrchestrator:
 
     MANDATORY GOVERNANCE: Incident creation is not optional.
     If db_session is missing, initialization fails.
+
+    PIN-520: incident_creator is injected by L4 (L5 does not import orchestrator).
     """
 
-    def __init__(self, db_session):
+    def __init__(
+        self,
+        db_session: Any,
+        incident_creator: IncidentCreatorPort,
+    ):
         """
-        Initialize orchestrator with database session.
+        Initialize orchestrator with database session and incident creator.
 
         Args:
             db_session: Database session for governance operations (REQUIRED)
+            incident_creator: Callable that creates incidents (injected by L4)
         """
         if db_session is None:
             raise ValueError("db_session is required for CostLoopOrchestrator - governance is not optional")
+        if incident_creator is None:
+            raise ValueError("incident_creator is required - L4 must inject governance capability")
         self.db_session = db_session
 
-        # Initialize bridges
-        self.bridge_c1 = CostLoopBridge(db_session)
+        # Initialize bridges (PIN-520: pass incident_creator to CostLoopBridge)
+        self.bridge_c1 = CostLoopBridge(db_session, incident_creator)
         self.bridge_c2 = CostPatternMatcher(db_session)
         self.bridge_c3 = CostRecoveryGenerator(db_session)
         self.bridge_c4 = CostPolicyGenerator(db_session)

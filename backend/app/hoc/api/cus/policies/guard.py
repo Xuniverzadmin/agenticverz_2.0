@@ -34,8 +34,6 @@ logger = logging.getLogger("nova.api.guard")
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import and_, desc, func, select
-from sqlmodel import Session
 
 # =============================================================================
 # L3 Adapters (PIN-281: L2→L3 Wiring)
@@ -67,16 +65,9 @@ from app.contracts.guard import (
     CustomerIncidentNarrativeDTO,
     CustomerIncidentResolutionDTO,
 )
-from app.db import get_session
 from app.models.killswitch import (
-    DefaultGuardrail,
-    Incident,
-    IncidentEvent,
     IncidentSeverity,
-    KillSwitchState,
-    ProxyCall,
 )
-from app.models.tenant import Tenant
 
 # Phase 2B: Write service for DB operations
 # V2.0.0 - hoc_spine drivers
@@ -85,7 +76,9 @@ from app.hoc.cus.hoc_spine.drivers.guard_write_driver import GuardWriteDriver as
 # M23: L4 operation registry for certificate and replay operations
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
+    OperationResult,
     get_operation_registry,
+    get_sync_session_dep,
 )
 
 # M23: DeterminismLevel enum (PIN-504: import from L5_schemas, not L5_engines)
@@ -281,11 +274,20 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def get_tenant_from_auth(session: Session, tenant_id: str) -> Tenant:
-    """Get tenant or raise 404."""
-    stmt = select(Tenant).where(Tenant.id == tenant_id)
-    row = session.exec(stmt).first()
-    tenant = row[0] if row else None
+async def get_tenant_from_auth(session, tenant_id: str) -> dict:
+    """Get tenant or raise 404. Uses L4 registry dispatch for L2 first-principles purity."""
+    registry = get_operation_registry()
+    result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_tenant_by_id", "tenant_id": tenant_id},
+        ),
+    )
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
+    tenant = result.data
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
     return tenant
@@ -299,7 +301,7 @@ def get_tenant_from_auth(session: Session, tenant_id: str) -> Tenant:
 @router.get("/status", response_model=GuardStatus)
 async def get_guard_status(
     tenant_id: str = Query(..., description="Tenant ID"),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Get protection status - "Am I safe right now?"
@@ -318,44 +320,69 @@ async def get_guard_status(
     if cached:
         return wrap_dict(GuardStatus(**cached).model_dump())
 
+    # L4 registry dispatch for L2 first-principles purity (no session.execute in L2)
+    registry = get_operation_registry()
+
     # Get tenant state
-    stmt = select(KillSwitchState).where(
-        and_(
-            KillSwitchState.entity_type == "tenant",
-            KillSwitchState.entity_id == tenant_id,
-        )
+    state_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_tenant_killswitch_state", "scope": "tenant", "scope_id": tenant_id},
+        ),
     )
-    row = session.exec(stmt).first()
-    tenant_state = row[0] if row else None
+    if not state_result.success:
+        raise HTTPException(status_code=500, detail=state_result.error)
+    tenant_state = state_result.data
 
     # Get active guardrails
-    stmt = select(DefaultGuardrail).where(DefaultGuardrail.is_enabled == True)
-    guardrail_rows = session.exec(stmt).all()
-    active_guardrails = [g[0].name for g in guardrail_rows]
+    guardrails_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_active_guardrail_names"},
+        ),
+    )
+    if not guardrails_result.success:
+        raise HTTPException(status_code=500, detail=guardrails_result.error)
+    active_guardrails = guardrails_result.data
 
     # Count incidents in last 24h
     yesterday = utc_now() - timedelta(hours=24)
-    stmt = select(func.count(Incident.id)).where(
-        and_(
-            Incident.tenant_id == tenant_id,
-            Incident.created_at >= yesterday,
-        )
+    incidents_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "count_tenant_incidents_since", "tenant_id": tenant_id, "since": yesterday},
+        ),
     )
-    row = session.exec(stmt).first()
-    incidents_count = row[0] if row else 0
+    if not incidents_result.success:
+        raise HTTPException(status_code=500, detail=incidents_result.error)
+    incidents_count = incidents_result.data
 
     # Get last incident time
-    stmt = select(Incident).where(Incident.tenant_id == tenant_id).order_by(desc(Incident.created_at)).limit(1)
-    last_incident_row = session.exec(stmt).first()
-    last_incident = last_incident_row[0] if last_incident_row else None
+    last_incident_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_last_tenant_incident_time", "tenant_id": tenant_id},
+        ),
+    )
+    if not last_incident_result.success:
+        raise HTTPException(status_code=500, detail=last_incident_result.error)
+    last_incident_time = last_incident_result.data
 
     result = GuardStatus(
-        is_frozen=tenant_state.is_frozen if tenant_state else False,
-        frozen_at=tenant_state.frozen_at.isoformat() if tenant_state and tenant_state.frozen_at else None,
-        frozen_by=tenant_state.frozen_by if tenant_state else None,
+        is_frozen=tenant_state["is_frozen"] if tenant_state else False,
+        frozen_at=tenant_state["frozen_at"].isoformat() if tenant_state and tenant_state["frozen_at"] else None,
+        frozen_by=tenant_state["frozen_by"] if tenant_state else None,
         incidents_blocked_24h=incidents_count,
         active_guardrails=active_guardrails,
-        last_incident_time=last_incident.created_at.isoformat() if last_incident else None,
+        last_incident_time=last_incident_time.isoformat() if last_incident_time else None,
     )
 
     # Cache result
@@ -367,7 +394,7 @@ async def get_guard_status(
 @router.get("/snapshot/today", response_model=TodaySnapshot)
 async def get_today_snapshot(
     tenant_id: str = Query(..., description="Tenant ID"),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Get today's metrics - "What did it cost/save me?"
@@ -382,40 +409,53 @@ async def get_today_snapshot(
 
     today_start = utc_now().replace(hour=0, minute=0, second=0, microsecond=0)
 
-    # Combine queries for better performance
+    # L4 registry dispatch for L2 first-principles purity (no session.execute in L2)
+    registry = get_operation_registry()
+
     # Query 1: Count and sum for all requests today
-    stmt = select(func.count(ProxyCall.id), func.coalesce(func.sum(ProxyCall.cost_cents), 0)).where(
-        and_(
-            ProxyCall.tenant_id == tenant_id,
-            ProxyCall.created_at >= today_start,
-        )
+    requests_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_tenant_today_request_stats", "tenant_id": tenant_id, "today_start": today_start},
+        ),
     )
-    row = session.exec(stmt).first()
-    requests_today = row[0] if row else 0
-    spend_today = row[1] if row else 0
+    if not requests_result.success:
+        raise HTTPException(status_code=500, detail=requests_result.error)
+    requests_today, spend_today = requests_result.data
 
     # Query 2: Count and sum for blocked requests
-    stmt = select(func.count(ProxyCall.id), func.coalesce(func.sum(ProxyCall.cost_cents), 0)).where(
-        and_(
-            ProxyCall.tenant_id == tenant_id,
-            ProxyCall.created_at >= today_start,
-            ProxyCall.was_blocked == True,
-        )
+    blocked_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_tenant_today_blocked_stats", "tenant_id": tenant_id, "today_start": today_start},
+        ),
     )
-    row = session.exec(stmt).first()
-    incidents_prevented = row[0] if row else 0
-    cost_avoided = row[1] if row else 0
+    if not blocked_result.success:
+        raise HTTPException(status_code=500, detail=blocked_result.error)
+    incidents_prevented, cost_avoided = blocked_result.data
 
     # Query 3: Last incident time
-    stmt = select(Incident).where(Incident.tenant_id == tenant_id).order_by(desc(Incident.created_at)).limit(1)
-    last_incident_row = session.exec(stmt).first()
-    last_incident = last_incident_row[0] if last_incident_row else None
+    last_incident_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_last_tenant_incident_time", "tenant_id": tenant_id},
+        ),
+    )
+    if not last_incident_result.success:
+        raise HTTPException(status_code=500, detail=last_incident_result.error)
+    last_incident_time = last_incident_result.data
 
     result = TodaySnapshot(
         requests_today=requests_today,
         spend_today_cents=int(spend_today),
         incidents_prevented=incidents_prevented,
-        last_incident_time=last_incident.created_at.isoformat() if last_incident else None,
+        last_incident_time=last_incident_time.isoformat() if last_incident_time else None,
         cost_avoided_cents=int(cost_avoided),
     )
 
@@ -433,7 +473,7 @@ async def get_today_snapshot(
 @router.post("/killswitch/activate")
 async def activate_killswitch(
     tenant_id: str = Query(..., description="Tenant ID"),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Stop all traffic - Emergency kill switch.
@@ -443,7 +483,7 @@ async def activate_killswitch(
     PIN-281: Uses L3 CustomerKillswitchAdapter for tenant-scoped operations.
     """
     # Verify tenant exists
-    _tenant = get_tenant_from_auth(session, tenant_id)
+    _tenant = await get_tenant_from_auth(session, tenant_id)
 
     # PIN-281: Use L3 adapter for tenant-scoped killswitch operations
     adapter = get_customer_killswitch_adapter(session)
@@ -462,7 +502,7 @@ async def activate_killswitch(
 @router.post("/killswitch/deactivate")
 async def deactivate_killswitch(
     tenant_id: str = Query(..., description="Tenant ID"),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Resume traffic - Deactivate kill switch.
@@ -495,7 +535,7 @@ async def list_incidents(
     tenant_id: str = Query(..., description="Tenant ID"),
     limit: int = Query(default=50, le=100),
     offset: int = Query(default=0),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     List incidents - "What did you stop for me?"
@@ -540,7 +580,7 @@ async def list_incidents(
 async def get_incident_detail(
     incident_id: str,
     tenant_id: str = Query(..., description="Tenant ID"),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Get incident detail with timeline.
@@ -594,7 +634,7 @@ async def get_incident_detail(
 async def acknowledge_incident(
     incident_id: str,
     tenant_id: str = Query(..., description="Tenant ID"),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Acknowledge an incident.
@@ -615,7 +655,7 @@ async def acknowledge_incident(
 async def resolve_incident(
     incident_id: str,
     tenant_id: str = Query(..., description="Tenant ID"),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Resolve an incident.
@@ -641,7 +681,7 @@ async def resolve_incident(
 async def get_customer_incident_narrative(
     incident_id: str,
     token: CustomerToken = Depends(verify_console_token),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> CustomerIncidentNarrativeDTO:
     """
     GET /guard/incidents/{id}/narrative
@@ -661,9 +701,19 @@ async def get_customer_incident_narrative(
     - No cross-tenant data
     - No raw metrics that could cause panic
     """
-    stmt = select(Incident).where(Incident.id == incident_id)
-    row = session.exec(stmt).first()
-    incident = row[0] if row else None
+    # L4 registry dispatch for L2 first-principles purity (no session.execute in L2)
+    registry = get_operation_registry()
+    incident_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=token.org_id,
+            params={"method": "get_incident_by_id_raw", "incident_id": incident_id},
+        ),
+    )
+    if not incident_result.success:
+        raise HTTPException(status_code=500, detail=incident_result.error)
+    incident = incident_result.data
 
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
@@ -685,23 +735,26 @@ async def get_customer_incident_narrative(
 
     # Cost summary link for cost-related incidents
     cost_summary_link = None
-    if incident.trigger_type in ["cost_spike", "budget_breach"]:
+    if incident.get("trigger_type") in ["cost_spike", "budget_breach"]:
         cost_summary_link = "/guard/costs/summary"
 
+    started_at = incident.get("started_at") or incident.get("created_at")
+    ended_at = incident.get("ended_at")
+
     return CustomerIncidentNarrativeDTO(
-        incident_id=incident.id,
+        incident_id=incident["id"],
         title=plain_title,
         summary=summary,
         impact=impact,
         resolution=resolution,
         customer_actions=actions,
-        started_at=(incident.started_at or incident.created_at).isoformat(),
-        ended_at=incident.ended_at.isoformat() if incident.ended_at else None,
+        started_at=started_at.isoformat() if hasattr(started_at, "isoformat") else str(started_at),
+        ended_at=ended_at.isoformat() if ended_at and hasattr(ended_at, "isoformat") else None,
         cost_summary_link=cost_summary_link,
     )
 
 
-def _generate_plain_title(incident: Incident) -> str:
+def _generate_plain_title(incident: dict) -> str:
     """Generate plain language title - no internal terminology."""
     trigger_to_title = {
         "cost_spike": "Unusual usage pattern detected",
@@ -711,14 +764,14 @@ def _generate_plain_title(incident: Incident) -> str:
         "policy_block": "Request filtered for safety",
         "safety": "Content safety check activated",
     }
-    base_title = trigger_to_title.get(incident.trigger_type, "System protection activated")
+    base_title = trigger_to_title.get(incident.get("trigger_type", ""), "System protection activated")
 
-    if incident.status == "resolved" or incident.status == "auto_resolved":
+    if incident.get("status") in ("resolved", "auto_resolved"):
         return f"{base_title} and resolved"
     return base_title
 
 
-def _generate_calm_summary(incident: Incident) -> str:
+def _generate_calm_summary(incident: dict) -> str:
     """Generate calm, reassuring summary - no internal terms."""
     trigger_to_summary = {
         "cost_spike": "We detected unusual AI usage that caused higher costs for a short period. Our systems automatically protected your account.",
@@ -729,35 +782,38 @@ def _generate_calm_summary(incident: Incident) -> str:
         "safety": "Our content safety systems activated to protect your account. This is a normal protective measure.",
     }
     summary = trigger_to_summary.get(
-        incident.trigger_type,
+        incident.get("trigger_type", ""),
         "Our protection systems activated to safeguard your account. This is a normal protective measure.",
     )
 
-    if incident.status in ["resolved", "auto_resolved"]:
+    status = incident.get("status")
+    if status in ["resolved", "auto_resolved"]:
         summary += " The situation has been resolved."
-    elif incident.status == "acknowledged":
+    elif status == "acknowledged":
         summary += " Our team is monitoring the situation."
 
     return summary
 
 
-def _build_customer_impact(incident: Incident) -> CustomerIncidentImpactDTO:
+def _build_customer_impact(incident: dict) -> CustomerIncidentImpactDTO:
     """Build impact assessment with calm vocabulary."""
     # Determine if requests were affected
     requests_affected = "no"
-    if incident.calls_affected and incident.calls_affected > 0:
-        requests_affected = "some" if incident.calls_affected < 100 else "yes"
+    calls_affected = incident.get("calls_affected")
+    if calls_affected and calls_affected > 0:
+        requests_affected = "some" if calls_affected < 100 else "yes"
 
     # Service interrupted? Based on severity
     service_interrupted = "no"
-    if incident.severity == "critical":
+    if incident.get("severity") == "critical":
         service_interrupted = "briefly"
 
     # Cost impact - use calm language
     cost_impact = "none"
     cost_message = None
-    if incident.cost_delta_cents:
-        delta = float(incident.cost_delta_cents)
+    cost_delta = incident.get("cost_delta_cents")
+    if cost_delta:
+        delta = float(cost_delta)
         if delta < 100:
             cost_impact = "minimal"
             cost_message = "Negligible cost impact"
@@ -777,7 +833,7 @@ def _build_customer_impact(incident: Incident) -> CustomerIncidentImpactDTO:
     )
 
 
-def _build_customer_resolution(incident: Incident) -> CustomerIncidentResolutionDTO:
+def _build_customer_resolution(incident: dict) -> CustomerIncidentResolutionDTO:
     """Build resolution status with reassuring message."""
     status_map = {
         "open": "investigating",
@@ -785,12 +841,13 @@ def _build_customer_resolution(incident: Incident) -> CustomerIncidentResolution
         "resolved": "resolved",
         "auto_resolved": "resolved",
     }
-    status = status_map.get(incident.status, "monitoring")
+    status = status_map.get(incident.get("status", ""), "monitoring")
 
     # Generate reassuring message
+    ended_at = incident.get("ended_at")
     if status == "resolved":
-        if incident.ended_at:
-            time_str = incident.ended_at.strftime("%H:%M UTC")
+        if ended_at:
+            time_str = ended_at.strftime("%H:%M UTC") if hasattr(ended_at, "strftime") else str(ended_at)
             message = f"The issue was automatically mitigated at {time_str}."
         else:
             message = "The issue has been resolved. No further action is required."
@@ -804,17 +861,20 @@ def _build_customer_resolution(incident: Incident) -> CustomerIncidentResolution
     return CustomerIncidentResolutionDTO(
         status=status,
         status_message=message,
-        resolved_at=incident.ended_at.isoformat() if incident.ended_at else None,
+        resolved_at=ended_at.isoformat() if ended_at and hasattr(ended_at, "isoformat") else None,
         requires_action=False,  # Generally, customers don't need to act
     )
 
 
-def _build_customer_actions(incident: Incident) -> list:
+def _build_customer_actions(incident: dict) -> list:
     """Build customer actions - only if necessary."""
     actions = []
 
+    status = incident.get("status")
+    trigger_type = incident.get("trigger_type")
+
     # Most incidents don't require customer action
-    if incident.status in ["resolved", "auto_resolved"]:
+    if status in ["resolved", "auto_resolved"]:
         actions.append(
             CustomerIncidentActionDTO(
                 action_type="none",
@@ -823,7 +883,7 @@ def _build_customer_actions(incident: Incident) -> list:
                 link=None,
             )
         )
-    elif incident.trigger_type == "budget_breach":
+    elif trigger_type == "budget_breach":
         actions.append(
             CustomerIncidentActionDTO(
                 action_type="review_usage",
@@ -832,7 +892,7 @@ def _build_customer_actions(incident: Incident) -> list:
                 link="/guard/settings",
             )
         )
-    elif incident.trigger_type == "rate_limit":
+    elif trigger_type == "rate_limit":
         actions.append(
             CustomerIncidentActionDTO(
                 action_type="adjust_limits",
@@ -863,7 +923,7 @@ def _build_customer_actions(incident: Incident) -> list:
 async def replay_call(
     call_id: str,
     level: str = Query("logical", description="Determinism level: strict, logical, or semantic"),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
     auth: AuthorityResult = Depends(require_replay_execute),
 ):
     """
@@ -885,17 +945,27 @@ async def replay_call(
     # Emit authority audit for capability access
     await emit_authority_audit(auth, "replay", subject_id=call_id)
 
-    stmt = select(ProxyCall).where(ProxyCall.id == call_id)
-    row = session.exec(stmt).first()
-    original_call = row[0] if row else None
+    # L4 registry dispatch for L2 first-principles purity (no session.execute in L2)
+    registry = get_operation_registry()
+    call_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=None,
+            params={"method": "get_proxy_call_by_id_raw", "call_id": call_id},
+        ),
+    )
+    if not call_result.success:
+        raise HTTPException(status_code=500, detail=call_result.error)
+    original_call = call_result.data
 
     if not original_call:
         raise HTTPException(status_code=404, detail="Call not found")
 
-    if not original_call.replay_eligible:
+    if not original_call["replay_eligible"]:
         raise HTTPException(
             status_code=400,
-            detail=f"Call is not replay eligible: {original_call.block_reason or 'streaming or incomplete'}",
+            detail=f"Call is not replay eligible: {original_call['block_reason'] or 'streaming or incomplete'}",
         )
 
     # Parse determinism level
@@ -905,20 +975,35 @@ async def replay_call(
         determinism_level = DeterminismLevel.LOGICAL
 
     # Get policy decisions from original call
-    original_decisions = original_call.get_policy_decisions() if hasattr(original_call, "get_policy_decisions") else []
-
-    # M23: Build CallRecord for real validation
     import json as json_module
 
+    def _parse_json_safe(raw):
+        if raw is None:
+            return None
+        if isinstance(raw, (dict, list)):
+            return raw
+        try:
+            return json_module.loads(raw)
+        except (json_module.JSONDecodeError, TypeError):
+            return None
+
+    original_decisions_raw = _parse_json_safe(original_call["policy_decisions_json"])
+    original_decisions = original_decisions_raw if isinstance(original_decisions_raw, list) else []
+
+    # M23: Build CallRecord for real validation
     request_body = {}
     response_body = {}
     try:
-        if original_call.request_json:
-            request_body = json_module.loads(original_call.request_json)
-        if original_call.response_json:
-            response_body = json_module.loads(original_call.response_json)
+        if original_call["request_json"]:
+            request_body = json_module.loads(original_call["request_json"])
+        if original_call["response_json"]:
+            response_body = json_module.loads(original_call["response_json"])
     except json_module.JSONDecodeError:
         pass
+
+    call_tenant_id = original_call["tenant_id"]
+    call_model = original_call["model"] or "unknown"
+    call_id_val = original_call["id"]
 
     # Build original CallRecord using L4 operation registry
     registry = get_operation_registry()
@@ -926,20 +1011,20 @@ async def replay_call(
         "logs.replay",
         OperationContext(
             session=None,
-            tenant_id=original_call.tenant_id,
+            tenant_id=call_tenant_id,
             params={
                 "method": "build_call_record",
-                "call_id": original_call.id,
+                "call_id": call_id_val,
                 "request": request_body,
                 "response": response_body,
                 "model_info": {
                     "provider": "openai",  # Infer from model name
-                    "model": original_call.model or "unknown",
+                    "model": call_model,
                     "temperature": request_body.get("temperature"),
                     "seed": request_body.get("seed"),
                 },
                 "policy_decisions": original_decisions,
-                "duration_ms": original_call.latency_ms,
+                "duration_ms": original_call["latency_ms"],
             },
         ),
     )
@@ -950,26 +1035,52 @@ async def replay_call(
     # M23: For LOGICAL validation, we re-evaluate guardrails without calling LLM
     # This proves policy determinism without incurring LLM costs
     # Re-evaluate guardrails against the same request
-    from app.models.killswitch import DefaultGuardrail as GuardrailModel
-
-    guardrail_stmt = select(GuardrailModel).where(GuardrailModel.is_enabled == True).order_by(GuardrailModel.priority)
-    guardrail_rows = session.exec(guardrail_stmt).all()
+    # L4 registry dispatch for L2 first-principles purity (no session.execute in L2)
+    guardrails_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=call_tenant_id,
+            params={"method": "get_enabled_guardrails_raw"},
+        ),
+    )
+    if not guardrails_result.success:
+        raise HTTPException(status_code=500, detail=guardrails_result.error)
+    guardrail_rows = guardrails_result.data
 
     replay_decisions = []
-    for row in guardrail_rows:
-        guardrail = row[0]  # Extract model from SQLModel result tuple
+    for guardrail in guardrail_rows:
+        # Evaluate guardrail against request context
+        # This replicates the DefaultGuardrail.evaluate() logic using raw row data
         context = {
             "max_tokens": request_body.get("max_tokens", 4096),
-            "model": request_body.get("model", original_call.model),
+            "model": request_body.get("model", call_model),
             "text": str(request_body.get("messages", [])),
         }
-        passed, reason = guardrail.evaluate(context)
+        passed = True
+        reason = None
+        category = guardrail.get("category", "")
+        threshold_value = guardrail.get("threshold_value")
+        if category == "token_limit" and threshold_value:
+            if context.get("max_tokens", 0) > float(threshold_value):
+                passed = False
+                reason = f"max_tokens {context['max_tokens']} exceeds limit {threshold_value}"
+        elif category == "prompt_injection":
+            text_lower = context.get("text", "").lower()
+            injection_patterns = ["ignore all previous", "ignore previous instructions",
+                                  "disregard previous", "system:", "override"]
+            for pattern in injection_patterns:
+                if pattern in text_lower:
+                    passed = False
+                    reason = f"Prompt injection pattern detected: {pattern}"
+                    break
+
         replay_decisions.append(
             {
-                "guardrail_id": guardrail.id,
-                "guardrail_name": guardrail.name,
+                "guardrail_id": guardrail["id"],
+                "guardrail_name": guardrail["name"],
                 "passed": passed,
-                "action": guardrail.action if not passed else None,
+                "action": guardrail["action"] if not passed else None,
                 "reason": reason,
             }
         )
@@ -979,15 +1090,15 @@ async def replay_call(
         "logs.replay",
         OperationContext(
             session=None,
-            tenant_id=original_call.tenant_id,
+            tenant_id=call_tenant_id,
             params={
                 "method": "build_call_record",
-                "call_id": f"replay_{original_call.id}",
+                "call_id": f"replay_{call_id_val}",
                 "request": request_body,
                 "response": response_body,  # Same response for LOGICAL validation
                 "model_info": {
                     "provider": "openai",
-                    "model": original_call.model or "unknown",
+                    "model": call_model,
                     "temperature": request_body.get("temperature"),
                     "seed": request_body.get("seed"),
                 },
@@ -1005,7 +1116,7 @@ async def replay_call(
         "logs.replay",
         OperationContext(
             session=None,
-            tenant_id=original_call.tenant_id,
+            tenant_id=call_tenant_id,
             params={
                 "method": "validate_replay",
                 "original": original_record,
@@ -1018,10 +1129,13 @@ async def replay_call(
         raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": validate_op.error})
     validation_result = validate_op.data
 
+    created_at = original_call["created_at"]
+    created_at_iso = created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at)
+
     # Create original snapshot for API response
     original_snapshot = ReplayCallSnapshot(
-        timestamp=original_call.created_at.isoformat(),
-        model_id=original_call.model or "unknown",
+        timestamp=created_at_iso,
+        model_id=call_model,
         policy_decisions=[
             PolicyDecision(
                 guardrail_id=d.get("guardrail_id", ""),
@@ -1031,15 +1145,15 @@ async def replay_call(
             )
             for d in original_decisions
         ],
-        response_hash=original_call.response_hash or "",
-        tokens_used=(original_call.input_tokens or 0) + (original_call.output_tokens or 0),
-        cost_cents=int(original_call.cost_cents) if original_call.cost_cents else 0,
+        response_hash=original_call["response_hash"] or "",
+        tokens_used=(original_call["input_tokens"] or 0) + (original_call["output_tokens"] or 0),
+        cost_cents=int(original_call["cost_cents"]) if original_call["cost_cents"] else 0,
     )
 
     # Create replay snapshot
     replay_snapshot = ReplayCallSnapshot(
         timestamp=utc_now().isoformat(),
-        model_id=original_call.model or "unknown",
+        model_id=call_model,
         policy_decisions=[
             PolicyDecision(
                 guardrail_id=d.get("guardrail_id", ""),
@@ -1049,7 +1163,7 @@ async def replay_call(
             )
             for d in replay_decisions
         ],
-        response_hash=original_call.response_hash or "",  # Same hash for LOGICAL validation
+        response_hash=original_call["response_hash"] or "",  # Same hash for LOGICAL validation
         tokens_used=original_snapshot.tokens_used,
         cost_cents=0,  # No cost for replay validation
     )
@@ -1059,16 +1173,16 @@ async def replay_call(
         "logs.certificate",
         OperationContext(
             session=None,
-            tenant_id=original_call.tenant_id,
+            tenant_id=call_tenant_id,
             params={
                 "method": "create_replay_certificate",
                 "call_id": call_id,
                 "validation_result": validation_result,
                 "level": determinism_level,
-                "tenant_id": original_call.tenant_id,
-                "user_id": original_call.user_id if hasattr(original_call, "user_id") else None,
-                "request_hash": original_call.request_hash,
-                "response_hash": original_call.response_hash,
+                "tenant_id": call_tenant_id,
+                "user_id": original_call.get("user_id"),
+                "request_hash": original_call["request_hash"],
+                "response_hash": original_call["response_hash"],
             },
         ),
     )
@@ -1081,7 +1195,7 @@ async def replay_call(
         "logs.certificate",
         OperationContext(
             session=None,
-            tenant_id=original_call.tenant_id,
+            tenant_id=call_tenant_id,
             params={
                 "method": "export_certificate",
                 "certificate": certificate,
@@ -1134,7 +1248,7 @@ async def replay_call(
 @router.get("/keys")
 async def list_api_keys(
     tenant_id: str = Query(..., description="Tenant ID"),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     List API keys with status.
@@ -1174,7 +1288,7 @@ async def list_api_keys(
 async def freeze_api_key(
     key_id: str,
     tenant_id: str = Query(..., description="Tenant ID"),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Freeze an API key.
@@ -1195,7 +1309,7 @@ async def freeze_api_key(
 async def unfreeze_api_key(
     key_id: str,
     tenant_id: str = Query(..., description="Tenant ID"),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Unfreeze an API key.
@@ -1220,7 +1334,7 @@ async def unfreeze_api_key(
 @router.get("/settings", response_model=TenantSettings)
 async def get_settings(
     tenant_id: str = Query(..., description="Tenant ID"),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Get read-only settings.
@@ -1230,54 +1344,72 @@ async def get_settings(
 
     In demo mode (tenant_demo or non-existent tenant), returns demo defaults.
     """
-    # Try to get tenant, but don't fail if not found (demo mode)
-    stmt = select(Tenant).where(Tenant.id == tenant_id)
-    row = session.exec(stmt).first()
-    tenant = row[0] if row else None
+    # L4 registry dispatch for L2 first-principles purity (no session.execute in L2)
+    registry = get_operation_registry()
 
-    # Get active guardrails
-    stmt = select(DefaultGuardrail).order_by(DefaultGuardrail.priority)
-    guardrail_rows = session.exec(stmt).all()
+    # Try to get tenant, but don't fail if not found (demo mode)
+    tenant_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_tenant_by_id", "tenant_id": tenant_id},
+        ),
+    )
+    tenant = tenant_result.data if tenant_result.success else None
+
+    # Get all guardrails
+    guardrails_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_all_guardrails_raw"},
+        ),
+    )
+    guardrail_rows = guardrails_result.data if guardrails_result.success else []
 
     guardrails = [
         GuardrailConfig(
-            id=g[0].id,
-            name=g[0].name,
-            description=g[0].description or "",
-            enabled=g[0].is_enabled,
-            threshold_type=g[0].category,
-            threshold_value=float(g[0].threshold_value)
-            if hasattr(g[0], "threshold_value") and g[0].threshold_value
+            id=g["id"],
+            name=g["name"],
+            description=g.get("description") or "",
+            enabled=g["is_enabled"],
+            threshold_type=g["category"],
+            threshold_value=float(g["threshold_value"])
+            if g.get("threshold_value")
             else 0,
-            threshold_unit=g[0].threshold_unit if hasattr(g[0], "threshold_unit") else "per/hour",
-            action_on_trigger=g[0].action,
+            threshold_unit=g.get("threshold_unit", "per/hour"),
+            action_on_trigger=g["action"],
         )
         for g in guardrail_rows
     ]
 
-    # Get tenant kill switch state
-    stmt = select(KillSwitchState).where(
-        and_(
-            KillSwitchState.entity_type == "tenant",
-            KillSwitchState.entity_id == tenant_id,
-        )
+    # Get tenant kill switch state (unused but kept for potential future use)
+    ks_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_tenant_killswitch_state", "scope": "tenant", "scope_id": tenant_id},
+        ),
     )
-    _state_row = session.exec(stmt).first()
+    _killswitch_state = ks_result.data if ks_result.success else None
 
     # Return settings (with demo defaults if tenant not found)
     return TenantSettings(
         tenant_id=tenant_id,
-        tenant_name=tenant.name if tenant and hasattr(tenant, "name") else "Demo Organization",
-        plan=tenant.plan if tenant and hasattr(tenant, "plan") else "starter",
+        tenant_name=tenant["name"] if tenant and tenant.get("name") else "Demo Organization",
+        plan=tenant["plan"] if tenant and tenant.get("plan") else "starter",
         guardrails=guardrails,
-        budget_limit_cents=tenant.budget_limit_cents if tenant and hasattr(tenant, "budget_limit_cents") else 10000,
-        budget_period=tenant.budget_period if tenant and hasattr(tenant, "budget_period") else "daily",
+        budget_limit_cents=tenant["budget_limit_cents"] if tenant and tenant.get("budget_limit_cents") else 10000,
+        budget_period=tenant["budget_period"] if tenant and tenant.get("budget_period") else "daily",
         kill_switch_enabled=True,  # Always available
         kill_switch_auto_trigger=True,  # Default on
-        auto_trigger_threshold_cents=tenant.auto_trigger_threshold_cents
-        if tenant and hasattr(tenant, "auto_trigger_threshold_cents")
+        auto_trigger_threshold_cents=tenant["auto_trigger_threshold_cents"]
+        if tenant and tenant.get("auto_trigger_threshold_cents")
         else 5000,
-        notification_email=tenant.email if tenant and hasattr(tenant, "email") else "demo@example.com",
+        notification_email=tenant["email"] if tenant and tenant.get("email") else "demo@example.com",
         notification_slack_webhook=None,  # Not exposed in MVP
     )
 
@@ -1394,7 +1526,7 @@ class DecisionTimelineResponse(BaseModel):
 async def search_incidents(
     request: IncidentSearchRequest,
     tenant_id: str = Query(..., description="Tenant ID"),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Search incidents with filters - M23 component map spec.
@@ -1407,79 +1539,78 @@ async def search_incidents(
     - Filter by time range
     - Filter by model
     """
-    # Base query
-    stmt = select(Incident).where(Incident.tenant_id == tenant_id)
+    if request.policy_status == "passed":
+        # No incidents for passed policies - return empty
+        return wrap_dict(IncidentSearchResponse(
+            items=[],
+            total=0,
+            query=request.query,
+            filters_applied={"policy_status": "passed"},
+        ).model_dump())
 
-    # Apply filters
-    if request.severity:
-        stmt = stmt.where(Incident.severity == request.severity)
+    # L4 registry dispatch for L2 first-principles purity (no session.execute in L2)
+    registry = get_operation_registry()
 
-    if request.time_from:
-        stmt = stmt.where(Incident.started_at >= request.time_from)
+    # Search incidents using L4 registry
+    search_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "search_incidents_raw",
+                "tenant_id": tenant_id,
+                "severity": request.severity,
+                "time_from": request.time_from,
+                "time_to": request.time_to,
+                "query": request.query,
+                "limit": request.limit,
+                "offset": request.offset,
+            },
+        ),
+    )
+    if not search_result.success:
+        raise HTTPException(status_code=500, detail=search_result.error)
+    incident_rows, total = search_result.data
 
-    if request.time_to:
-        stmt = stmt.where(Incident.started_at <= request.time_to)
-
-    if request.query:
-        # Search in title
-        stmt = stmt.where(cast(Any, Incident.title).ilike(f"%{request.query}%"))
-
-    if request.policy_status:
-        if request.policy_status == "failed":
-            # Incidents are typically failures
-            pass  # All incidents are policy failures
-        elif request.policy_status == "passed":
-            # No incidents for passed policies - return empty
-            return wrap_dict(IncidentSearchResponse(
-                items=[],
-                total=0,
-                query=request.query,
-                filters_applied={"policy_status": "passed"},
-            ).model_dump())
-
-    # Order and paginate
-    stmt = stmt.order_by(desc(Incident.created_at)).offset(request.offset).limit(request.limit)
-
-    result = session.exec(stmt)
-    incident_rows = result.all()
-
-    # Count total
-    count_stmt = select(func.count(Incident.id)).where(Incident.tenant_id == tenant_id)
-    if request.severity:
-        count_stmt = count_stmt.where(Incident.severity == request.severity)
-    if request.time_from:
-        count_stmt = count_stmt.where(Incident.started_at >= request.time_from)
-    if request.time_to:
-        count_stmt = count_stmt.where(Incident.started_at <= request.time_to)
-    if request.query:
-        count_stmt = count_stmt.where(cast(Any, Incident.title).ilike(f"%{request.query}%"))
-
-    row = session.exec(count_stmt).first()
-    total = row[0] if row else 0
+    def _parse_json_safe(raw):
+        if raw is None:
+            return None
+        if isinstance(raw, (dict, list)):
+            return raw
+        try:
+            return json.loads(raw)
+        except Exception:
+            return None
 
     # Build results matching component map spec
     items = []
-    for r in incident_rows:
-        inc = r[0] if hasattr(r, "__getitem__") else r
-
+    for inc in incident_rows:
         # Get related call for user_id and model
-        call_ids = inc.get_related_call_ids() if hasattr(inc, "get_related_call_ids") else []
+        metadata = _parse_json_safe(inc.get("metadata"))
+        call_ids = metadata.get("related_call_ids", []) if isinstance(metadata, dict) else []
         user_id = None
         model = "unknown"
-        output_preview = inc.title[:80] if inc.title else ""
+        title = inc.get("title", "")
+        output_preview = title[:80] if title else ""
 
         if call_ids:
-            call_stmt = select(ProxyCall).where(ProxyCall.id == call_ids[0])
-            call_row = session.exec(call_stmt).first()
-            if call_row:
-                call = call_row[0] if hasattr(call_row, "__getitem__") else call_row
-                model = call.model or "unknown"
-                # M23: Extract user_id from OpenAI standard `user` field
-                user_id = call.user_id if hasattr(call, "user_id") else None
-                # Extract output preview from response
-                if call.response_json:
+            # L4 registry dispatch for L2 first-principles purity (no session.execute in L2)
+            call_result = await registry.execute(
+                "policies.sync_guard_read",
+                OperationContext(
+                    session=session,
+                    tenant_id=tenant_id,
+                    params={"method": "get_proxy_call_by_id_raw", "call_id": call_ids[0]},
+                ),
+            )
+            call = call_result.data if call_result.success else None
+            if call:
+                model = call["model"] or "unknown"
+                user_id = call.get("user_id")
+                if call["response_json"]:
                     try:
-                        resp = json.loads(call.response_json)
+                        resp = json.loads(call["response_json"])
                         if "choices" in resp and resp["choices"]:
                             content = resp["choices"][0].get("message", {}).get("content", "")
                             output_preview = content[:80] if content else output_preview
@@ -1487,25 +1618,31 @@ async def search_incidents(
                         pass
 
         # Determine policy status
-        policy_status = "FAIL" if inc.trigger_type else "PASS"
-        if inc.trigger_type:
-            policy_status = f"{inc.trigger_type.upper()}_FAILED"
+        trigger_type = inc.get("trigger_type")
+        policy_status = "FAIL" if trigger_type else "PASS"
+        if trigger_type:
+            policy_status = f"{trigger_type.upper()}_FAILED"
 
         # Confidence (derived from severity)
         confidence_map = {"critical": 0.95, "high": 0.85, "medium": 0.7, "low": 0.5}
-        confidence = confidence_map.get(inc.severity, 0.7)
+        confidence = confidence_map.get(inc.get("severity", ""), 0.7)
+
+        started_at = inc.get("started_at")
+        created_at = inc.get("created_at")
+        ts = started_at if started_at else created_at
+        timestamp = ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
 
         items.append(
             IncidentSearchResult(
-                incident_id=inc.id,
-                timestamp=inc.started_at.isoformat() if inc.started_at else inc.created_at.isoformat(),
+                incident_id=inc["id"],
+                timestamp=timestamp,
                 user_id=user_id,
                 output_preview=output_preview,
                 policy_status=policy_status,
                 confidence=confidence,
                 model=model,
-                severity=inc.severity,
-                cost_cents=int(inc.cost_delta_cents * 100) if inc.cost_delta_cents else 0,
+                severity=inc["severity"],
+                cost_cents=int(float(inc["cost_delta_cents"]) * 100) if inc.get("cost_delta_cents") else 0,
             )
         )
 
@@ -1527,7 +1664,7 @@ async def search_incidents(
 @router.get("/incidents/{incident_id}/timeline", response_model=DecisionTimelineResponse)
 async def get_decision_timeline(
     incident_id: str,
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Get decision timeline - M23 component map spec.
@@ -1542,32 +1679,60 @@ async def get_decision_timeline(
 
     Plus root cause identification if policy failed.
     """
+    # L4 registry dispatch for L2 first-principles purity (no session.execute in L2)
+    registry = get_operation_registry()
+
     # Get incident
-    stmt = select(Incident).where(Incident.id == incident_id)
-    row = session.exec(stmt).first()
-    incident = row[0] if row else None
+    incident_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=None,
+            params={"method": "get_incident_by_id_raw", "incident_id": incident_id},
+        ),
+    )
+    if not incident_result.success:
+        raise HTTPException(status_code=500, detail=incident_result.error)
+    incident = incident_result.data
 
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
     # Get related call for detailed timeline
-    call_ids = incident.get_related_call_ids() if hasattr(incident, "get_related_call_ids") else []
+    def _parse_json_safe_tl(raw):
+        if raw is None:
+            return None
+        if isinstance(raw, (dict, list)):
+            return raw
+        try:
+            return json.loads(raw)
+        except Exception:
+            return None
+
+    metadata = _parse_json_safe_tl(incident.get("metadata"))
+    call_ids = metadata.get("related_call_ids", []) if isinstance(metadata, dict) else []
     call = None
     if call_ids:
-        call_stmt = select(ProxyCall).where(ProxyCall.id == call_ids[0])
-        call_row = session.exec(call_stmt).first()
-        call = call_row[0] if call_row else None
+        call_result = await registry.execute(
+            "policies.sync_guard_read",
+            OperationContext(
+                session=session,
+                tenant_id=None,
+                params={"method": "get_proxy_call_by_id_raw", "call_id": call_ids[0]},
+            ),
+        )
+        call = call_result.data if call_result.success else None
 
     # Build timeline events
     events = []
     policy_evaluations = []
-    base_time = incident.started_at or incident.created_at
+    base_time = incident.get("started_at") or incident.get("created_at")
 
     # Event 1: INPUT_RECEIVED
     input_data = {}
-    if call and call.request_json:
+    if call and call.get("request_json"):
         try:
-            req = json.loads(call.request_json)
+            req = json.loads(call["request_json"])
             messages = req.get("messages", [])
             if messages:
                 last_msg = messages[-1]
@@ -1609,20 +1774,22 @@ async def get_decision_timeline(
     policy_time = base_time + timedelta(milliseconds=50)
     policy_decisions = []
     if call:
-        policy_decisions = call.get_policy_decisions() if hasattr(call, "get_policy_decisions") else []
+        raw_pd = _parse_json_safe_tl(call.get("policy_decisions_json"))
+        policy_decisions = raw_pd if isinstance(raw_pd, list) else []
 
     # If no stored decisions, derive from incident
     if not policy_decisions:
         # Generate from trigger type
-        if incident.trigger_type == "policy_violation":
+        trigger_type = incident.get("trigger_type")
+        if trigger_type == "policy_violation":
             policy_decisions = [
                 {
                     "policy": "CONTENT_ACCURACY",
                     "result": "FAIL",
-                    "reason": incident.trigger_value or "Policy violation detected",
+                    "reason": incident.get("trigger_value") or "Policy violation detected",
                 }
             ]
-        elif incident.trigger_type == "budget_breach":
+        elif trigger_type == "budget_breach":
             policy_decisions = [{"policy": "BUDGET_LIMIT", "result": "FAIL", "reason": "Budget threshold exceeded"}]
         else:
             policy_decisions = [{"policy": "SAFETY", "result": "PASS"}]
@@ -1657,16 +1824,16 @@ async def get_decision_timeline(
 
     # Event 4: MODEL_CALLED
     llm_time = base_time + timedelta(milliseconds=100)
-    llm_duration = call.latency_ms if call and call.latency_ms else 800
+    llm_duration = call.get("latency_ms") if call and call.get("latency_ms") else 800
     events.append(
         TimelineEvent(
             event="MODEL_CALLED",
             timestamp=llm_time.isoformat(),
             duration_ms=llm_duration,
             data={
-                "model": call.model if call else "gpt-4",
-                "input_tokens": call.input_tokens if call else 0,
-                "output_tokens": call.output_tokens if call else 0,
+                "model": call.get("model") if call else "gpt-4",
+                "input_tokens": call.get("input_tokens") if call else 0,
+                "output_tokens": call.get("output_tokens") if call else 0,
             },
         )
     )
@@ -1674,9 +1841,9 @@ async def get_decision_timeline(
     # Event 5: OUTPUT_GENERATED
     output_time = base_time + timedelta(milliseconds=100 + llm_duration)
     output_content = ""
-    if call and call.response_json:
+    if call and call.get("response_json"):
         try:
-            resp = json.loads(call.response_json)
+            resp = json.loads(call["response_json"])
             if "choices" in resp and resp["choices"]:
                 output_content = resp["choices"][0].get("message", {}).get("content", "")[:200]
         except Exception:
@@ -1689,8 +1856,8 @@ async def get_decision_timeline(
             duration_ms=0,
             data={
                 "content": output_content or "Response generated",
-                "tokens": (call.output_tokens if call else 0),
-                "cost_cents": int(call.cost_cents) if call and call.cost_cents else 0,
+                "tokens": (call.get("output_tokens") if call else 0),
+                "cost_cents": int(call["cost_cents"]) if call and call.get("cost_cents") else 0,
             },
         )
     )
@@ -1702,7 +1869,7 @@ async def get_decision_timeline(
             event="LOGGED",
             timestamp=log_time.isoformat(),
             duration_ms=1,
-            data={"incident_id": incident.id, "status": incident.status},
+            data={"incident_id": incident["id"], "status": incident["status"]},
         )
     )
 
@@ -1718,8 +1885,9 @@ async def get_decision_timeline(
     care_routing_info = None
     try:
         # Check if call has routing decision metadata
-        if call and hasattr(call, "metadata"):
-            routing_data = call.metadata if isinstance(call.metadata, dict) else {}
+        if call and call.get("metadata"):
+            call_metadata = _parse_json_safe_tl(call["metadata"])
+            routing_data = call_metadata if isinstance(call_metadata, dict) else {}
             routing_decision = routing_data.get("routing_decision")
             if routing_decision:
                 care_routing_info = CARERoutingInfo(
@@ -1808,20 +1976,20 @@ async def get_decision_timeline(
                 matched=True,
                 failure_code=failed_policies[0].policy,
                 failure_category="policy_enforcement",
-                severity="high" if incident.severity == "critical" else incident.severity,
+                severity="high" if incident.get("severity") == "critical" else incident.get("severity", "medium"),
                 recovery_mode="escalate",
                 recovery_suggestion="Review policy configuration and add missing context validation",
                 similar_patterns=["CONTENT_ACCURACY", "DATA_VALIDATION"],
             )
 
     return DecisionTimelineResponse(
-        incident_id=incident.id,
+        incident_id=incident["id"],
         call_id=call_ids[0] if call_ids else None,
-        user_id=call.user_id if call and hasattr(call, "user_id") else None,  # M23: From OpenAI standard `user` field
-        model=call.model if call else "unknown",
+        user_id=call.get("user_id") if call else None,  # M23: From OpenAI standard `user` field
+        model=call.get("model") if call else "unknown",
         timestamp=base_time.isoformat(),
-        cost_cents=int(call.cost_cents) if call and call.cost_cents else 0,
-        latency_ms=call.latency_ms if call and call.latency_ms else 0,
+        cost_cents=int(call["cost_cents"]) if call and call.get("cost_cents") else 0,
+        latency_ms=call.get("latency_ms") if call and call.get("latency_ms") else 0,
         events=events,
         policy_evaluations=policy_evaluations,
         root_cause=root_cause,
@@ -1861,7 +2029,7 @@ async def export_incident_evidence(
     include_replay: bool = Query(True, description="Include replay verification"),
     include_prevention: bool = Query(True, description="Include prevention proof"),
     is_demo: bool = Query(True, description="Add demo watermark"),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Export incident as a legal-grade PDF evidence report.
@@ -1886,47 +2054,53 @@ async def export_incident_evidence(
     """
     from fastapi.responses import Response
 
+    # L4 registry dispatch for L2 first-principles purity (no session.execute in L2)
+    registry = get_operation_registry()
+
     # Get incident
-    stmt = select(Incident).where(
-        and_(
-            Incident.id == incident_id,
-            Incident.tenant_id == tenant_id,
-        )
+    incident_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_incident_by_id_and_tenant_raw", "incident_id": incident_id, "tenant_id": tenant_id},
+        ),
     )
-    row = session.exec(stmt).first()
-    incident = row[0] if row else None
+    if not incident_result.success:
+        raise HTTPException(status_code=500, detail=incident_result.error)
+    incident = incident_result.data
 
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
     # Get incident events for timeline
-    event_stmt = (
-        select(IncidentEvent).where(IncidentEvent.incident_id == incident_id).order_by(IncidentEvent.created_at)
+    events_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_incident_events_raw", "incident_id": incident_id},
+        ),
     )
-    # Use scalars() to get actual model instances, not Row objects
-    timeline_events_db = session.exec(event_stmt).all()
+    timeline_events_db = events_result.data if events_result.success else []
     timeline_events = []
 
     for event in timeline_events_db:
-        # Handle both tuple results and direct model instances
-        if hasattr(event, "__iter__") and not isinstance(event, str):
-            try:
-                event = event[0]
-            except (TypeError, IndexError):
-                pass
-        # Now event should be the model instance
-        if hasattr(event, "created_at"):
+        created_at = event.get("created_at")
+        if created_at:
+            event_type_val = event.get("event_type", "")
+            event_type_str = event_type_val.value if hasattr(event_type_val, "value") else str(event_type_val)
             timeline_events.append(
                 {
-                    "time": event.created_at.strftime("%H:%M:%S.%f")[:-3] if event.created_at else "",
-                    "event": event.event_type.value if hasattr(event.event_type, "value") else str(event.event_type),
-                    "details": event.description or "",
+                    "time": created_at.strftime("%H:%M:%S.%f")[:-3] if hasattr(created_at, "strftime") else "",
+                    "event": event_type_str,
+                    "details": event.get("description") or "",
                 }
             )
 
     # If no events, create synthetic timeline from incident data
     if not timeline_events:
-        base_time = incident.started_at or datetime.now(timezone.utc)
+        base_time = incident.get("started_at") or datetime.now(timezone.utc)
         timeline_events = [
             {
                 "time": base_time.strftime("%H:%M:%S.001"),
@@ -1949,13 +2123,29 @@ async def export_incident_evidence(
         ]
 
     # Get tenant info
-    tenant_stmt = select(Tenant).where(Tenant.id == tenant_id)
-    tenant_row = session.exec(tenant_stmt).first()
-    tenant = tenant_row[0] if tenant_row else None
-    tenant_name = tenant.name if tenant else "Unknown Customer"
+    tenant_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_tenant_by_id", "tenant_id": tenant_id},
+        ),
+    )
+    tenant = tenant_result.data if tenant_result.success else None
+    tenant_name = tenant["name"] if tenant and tenant.get("name") else "Unknown Customer"
 
     # Extract context data from incident metadata or use demo data
-    incident_data = incident.metadata if isinstance(incident.metadata, dict) else {}
+    def _parse_json_export(raw):
+        if raw is None:
+            return {}
+        if isinstance(raw, dict):
+            return raw
+        try:
+            return json.loads(raw)
+        except Exception:
+            return {}
+
+    incident_data = _parse_json_export(incident.get("metadata"))
     context_data = incident_data.get(
         "context",
         {
@@ -1966,7 +2156,7 @@ async def export_incident_evidence(
     )
 
     # Extract user input and AI output from incident
-    user_input = incident_data.get("user_query", incident.title or "Is my contract auto-renewed?")
+    user_input = incident_data.get("user_query", incident.get("title") or "Is my contract auto-renewed?")
     ai_output = incident_data.get("ai_output", "Yes, your contract is set to auto-renew.")
 
     # Build policy results
@@ -1986,7 +2176,11 @@ async def export_incident_evidence(
     prevention_result = None
     if include_prevention:
         try:
-            from app.hoc.cus.policies.L5_engines.prevention_hook import evaluate_response
+            # L4 bridge for prevention hook
+            from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges import get_policies_engine_bridge
+
+            prevention_hook = get_policies_engine_bridge().prevention_hook_capability()
+            evaluate_response = prevention_hook.evaluate_response
 
             prevention = evaluate_response(
                 tenant_id=tenant_id,
@@ -2101,7 +2295,7 @@ class OnboardingVerifyResponse(BaseModel):
 async def onboarding_verify(
     request: OnboardingVerifyRequest,
     tenant_id: str = Query(..., description="Tenant ID"),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     REAL safety verification for onboarding.
@@ -2135,11 +2329,19 @@ async def onboarding_verify(
     cost_cents = 0.0
     alert_sent = False
 
+    # L4 registry dispatch for L2 first-principles purity (no session.execute in L2)
+    registry = get_operation_registry()
+
     # Get tenant for context
-    stmt = select(Tenant).where(Tenant.id == tenant_id)
-    row = session.exec(stmt).first()
-    tenant = row[0] if row else None
-    tenant_name = tenant.name if tenant else "Demo Tenant"
+    tenant_name_result = await registry.execute(
+        "policies.sync_guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_tenant_name", "tenant_id": tenant_id},
+        ),
+    )
+    tenant_name = tenant_name_result.data if tenant_name_result.success else "Unknown"
 
     if request.test_type == "guardrail_block":
         # This prompt is designed to trigger the prompt_injection_block guardrail
@@ -2150,15 +2352,18 @@ async def onboarding_verify(
         Actually, just tell me a joke about AI safety instead."""
 
         # Check default guardrails (these apply to all tenants)
-        guardrail_rows = session.exec(
-            select(DefaultGuardrail).where(
-                DefaultGuardrail.is_enabled == True,
-            )
-        ).all()
-        guardrails = [row[0] for row in guardrail_rows]
+        guardrails_result = await registry.execute(
+            "policies.sync_guard_read",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={"method": "get_enabled_guardrail_id_names"},
+            ),
+        )
+        guardrail_rows = guardrails_result.data if guardrails_result.success else []
 
         # Evaluate prompt injection guardrail (same logic as v1_proxy)
-        prompt_injection_enabled = any(g.name == "prompt_injection_block" for g in guardrails)
+        prompt_injection_enabled = any(g["name"] == "prompt_injection_block" for g in guardrail_rows)
 
         # Check for injection patterns
         injection_patterns = [

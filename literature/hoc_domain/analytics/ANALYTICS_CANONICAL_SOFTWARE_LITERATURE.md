@@ -480,3 +480,54 @@ Now a backward-compatibility re-export file. Canonical home: `hoc_spine/services
 ### Updated: L5_engines/metrics_engine.py
 
 Now a backward-compatibility re-export file. Canonical home: `hoc_spine/services/costsim_metrics.py`. Alert rules YAML kept in analytics for domain specificity.
+
+## PIN-520 L4 Injection Pattern (Iter3.1)
+
+**Date:** 2026-02-06
+**Reference:** PIN-520, TODO_ITER3.1.md
+
+### L5 Purity Achieved
+
+L5 engines in the analytics domain no longer import from `hoc_spine.orchestrator`. Dependencies are now injected by L4 callers.
+
+### Changes Made
+
+| File | Violation Removed | Pattern Applied |
+|------|-------------------|-----------------|
+| `detection_facade.py` | anomaly_incident_coordinator import | Protocol + constructor injection |
+| `alert_worker_engine.py` | AlertDriver + get_alert_delivery_adapter | Constructor injection |
+
+### L4 Bridge Capabilities Added (analytics_bridge.py / AnalyticsEngineBridge)
+
+| Capability | Purpose | Injected Into |
+|------------|---------|---------------|
+| `anomaly_coordinator_capability()` | Anomaly incident coordinator factory | DetectionFacade |
+| `detection_facade_capability()` | Detection facade factory | L4 handlers |
+| `alert_driver_capability()` | AlertDriver class | AlertWorkerEngine |
+| `alert_adapter_factory_capability()` | get_alert_delivery_adapter function | AlertWorkerEngine |
+
+### Injection Point
+
+```python
+# L4 caller pattern
+bridge = get_analytics_engine_bridge()
+
+# Detection facade injection
+detection_facade = bridge.detection_facade_capability()(
+    anomaly_coordinator=bridge.anomaly_coordinator_capability()()
+)
+
+# Alert worker engine injection
+alert_engine = AlertWorkerEngine(
+    alert_driver_class=bridge.alert_driver_capability(),
+    alert_adapter_factory=bridge.alert_adapter_factory_capability(),
+)
+```
+
+### Evidence
+
+```bash
+# Zero hoc_spine.orchestrator imports in L5
+rg "from app\\.hoc\\.cus\\.hoc_spine\\.orchestrator" app/hoc/cus/analytics/L5_engines/
+# Result: No matches found
+```

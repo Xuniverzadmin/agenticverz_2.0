@@ -41,8 +41,15 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 # PIN-318: Phase 1.2 Authority Hardening - Replace query param auth with proper token auth
-from ..auth.console_auth import FounderToken, verify_fops_token
-from ..schemas.response import wrap_dict
+from app.auth.console_auth import FounderToken, verify_fops_token
+
+# L4-provided registry and session context (L2 must not import sqlalchemy/sqlmodel/app.db directly)
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    get_async_session_context,
+    get_operation_registry,
+    OperationContext,
+)
+from app.schemas.response import wrap_dict
 
 
 def get_tenant_id_from_token(token: FounderToken = Depends(verify_fops_token)) -> str:
@@ -227,34 +234,31 @@ async def get_loop_stages(
     tenant_id: str = Depends(get_tenant_id),
 ) -> list[StageDetail]:
     """Get detailed stage information for a loop."""
-    from sqlalchemy import text
-
-    from app.db import get_async_session
-
-    async with get_async_session() as session:
-        result = await session.execute(
-            text(
-                """
-                SELECT stage, details, failure_state, confidence_band, created_at
-                FROM loop_events
-                WHERE incident_id = :incident_id
-                ORDER BY created_at ASC
-            """
+    async with get_async_session_context() as session:
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "m25.read_stages",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={"incident_id": incident_id},
             ),
-            {"incident_id": incident_id},
         )
-        events = result.fetchall()
 
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error or "Failed to read stages")
+
+    # Handler returns pre-formatted stage data
     stages = []
-    for event in events:
+    for event in result.data:
         stages.append(
             StageDetail(
-                stage=event.stage,
-                status="failed" if event.failure_state else "completed",
-                timestamp=event.created_at,
-                details=event.details if isinstance(event.details, dict) else {},
-                failure_state=event.failure_state,
-                confidence_band=event.confidence_band,
+                stage=event["stage"],
+                status="failed" if event.get("failure_state") else "completed",
+                timestamp=datetime.fromisoformat(event["created_at"]) if event.get("created_at") else None,
+                details=event.get("details") if isinstance(event.get("details"), dict) else {},
+                failure_state=event.get("failure_state"),
+                confidence_band=event.get("confidence_band"),
             )
         )
 
@@ -414,42 +418,40 @@ async def get_checkpoint(
     tenant_id: str = Depends(get_tenant_id),
 ) -> CheckpointResponse:
     """Get details of a specific checkpoint."""
-    from sqlalchemy import text
-
-    from app.db import get_async_session
-
-    async with get_async_session() as session:
-        result = await session.execute(
-            text(
-                """
-                SELECT * FROM human_checkpoints
-                WHERE id = :id AND tenant_id = :tenant_id
-            """
+    async with get_async_session_context() as session:
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "m25.read_checkpoint",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={"checkpoint_id": checkpoint_id},
             ),
-            {"id": checkpoint_id, "tenant_id": tenant_id},
         )
-        row = result.fetchone()
 
-    if not row:
-        raise HTTPException(status_code=404, detail="Checkpoint not found")
+    if not result.success:
+        if result.error_code == "NOT_FOUND":
+            raise HTTPException(status_code=404, detail="Checkpoint not found")
+        raise HTTPException(status_code=500, detail=result.error or "Failed to read checkpoint")
 
     import json
 
-    options = row.options if isinstance(row.options, list) else json.loads(row.options or "[]")
+    cp = result.data
+    options = cp["options"] if isinstance(cp["options"], list) else json.loads(cp["options"] or "[]")
 
     return CheckpointResponse(
-        checkpoint_id=row.id,
-        checkpoint_type=row.checkpoint_type,
-        incident_id=row.incident_id,
-        stage=row.stage,
-        target_id=row.target_id,
-        description=row.description or "",
+        checkpoint_id=cp["id"],
+        checkpoint_type=cp["checkpoint_type"],
+        incident_id=cp["incident_id"],
+        stage=cp["stage"],
+        target_id=cp["target_id"],
+        description=cp["description"] or "",
         options=options,
-        created_at=row.created_at,
-        is_pending=row.resolved_at is None,
-        resolved_at=row.resolved_at,
-        resolved_by=row.resolved_by,
-        resolution=row.resolution,
+        created_at=datetime.fromisoformat(cp["created_at"]) if cp.get("created_at") else datetime.now(timezone.utc),
+        is_pending=cp.get("resolved_at") is None,
+        resolved_at=datetime.fromisoformat(cp["resolved_at"]) if cp.get("resolved_at") else None,
+        resolved_by=cp.get("resolved_by"),
+        resolution=cp.get("resolution"),
     )
 
 
@@ -500,141 +502,53 @@ async def get_integration_stats(
     hours: int = Query(24, ge=1, le=720, description="Period in hours"),
 ) -> IntegrationStatsResponse:
     """Get integration loop statistics for the specified period."""
-    from sqlalchemy import text
-
-    from app.db import get_async_session
-
     cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
 
-    async with get_async_session() as session:
-        # Get loop counts
-        loops_result = await session.execute(
-            text(
-                """
-                SELECT
-                    COUNT(*) as total,
-                    COUNT(*) FILTER (WHERE is_complete) as complete,
-                    AVG(EXTRACT(EPOCH FROM (completed_at - started_at)) * 1000)
-                        FILTER (WHERE completed_at IS NOT NULL) as avg_time_ms
-                FROM loop_traces
-                WHERE tenant_id = :tenant_id
-                AND started_at >= :cutoff
-            """
+    async with get_async_session_context() as session:
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "m25.read_stats",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={"cutoff": cutoff.isoformat()},
             ),
-            {"tenant_id": tenant_id, "cutoff": cutoff},
         )
-        loops = loops_result.fetchone()
 
-        # Get pattern match stats
-        patterns_result = await session.execute(
-            text(
-                """
-                SELECT
-                    COUNT(*) as total,
-                    COUNT(*) FILTER (WHERE confidence_band = 'strong_match') as strong,
-                    COUNT(*) FILTER (WHERE confidence_band = 'weak_match') as weak,
-                    COUNT(*) FILTER (WHERE confidence_band = 'novel') as novel
-                FROM loop_events
-                WHERE tenant_id = :tenant_id
-                AND stage = 'pattern_matched'
-                AND created_at >= :cutoff
-            """
-            ),
-            {"tenant_id": tenant_id, "cutoff": cutoff},
-        )
-        patterns = patterns_result.fetchone()
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error or "Failed to read stats")
 
-        # Get recovery stats
-        recovery_result = await session.execute(
-            text(
-                """
-                SELECT
-                    COUNT(*) as total,
-                    COUNT(*) FILTER (WHERE status = 'applied') as applied,
-                    COUNT(*) FILTER (WHERE status = 'rejected') as rejected
-                FROM recovery_candidates
-                WHERE source_incident_id IN (
-                    SELECT incident_id FROM loop_traces
-                    WHERE tenant_id = :tenant_id
-                )
-                AND created_at >= :cutoff
-            """
-            ),
-            {"tenant_id": tenant_id, "cutoff": cutoff},
-        )
-        recoveries = recovery_result.fetchone()
+    # Handler returns combined stats dict
+    stats = result.data
+    loops = stats["loops"]
+    patterns = stats["patterns"]
+    recoveries = stats["recoveries"]
+    policies = stats["policies"]
+    routing = stats["routing"]
+    checkpoints = stats["checkpoints"]
 
-        # Get policy stats
-        policy_result = await session.execute(
-            text(
-                """
-                SELECT
-                    COUNT(*) as total,
-                    COUNT(*) FILTER (WHERE mode = 'shadow') as shadow,
-                    COUNT(*) FILTER (WHERE mode = 'active') as active
-                FROM policy_rules
-                WHERE source_type = 'recovery'
-                AND created_at >= :cutoff
-            """
-            ),
-            {"cutoff": cutoff},
-        )
-        policies = policy_result.fetchone()
-
-        # Get routing adjustment stats
-        routing_result = await session.execute(
-            text(
-                """
-                SELECT
-                    COUNT(*) as total,
-                    COUNT(*) FILTER (WHERE was_rolled_back) as rolled_back
-                FROM routing_policy_adjustments
-                WHERE created_at >= :cutoff
-            """
-            ),
-            {"cutoff": cutoff},
-        )
-        routing = routing_result.fetchone()
-
-        # Get checkpoint stats
-        checkpoint_result = await session.execute(
-            text(
-                """
-                SELECT
-                    COUNT(*) FILTER (WHERE resolved_at IS NULL) as pending,
-                    COUNT(*) FILTER (WHERE resolved_at IS NOT NULL) as resolved
-                FROM human_checkpoints
-                WHERE tenant_id = :tenant_id
-                AND created_at >= :cutoff
-            """
-            ),
-            {"tenant_id": tenant_id, "cutoff": cutoff},
-        )
-        checkpoints = checkpoint_result.fetchone()
-
-    assert loops is not None
-    total = loops.total or 0
-    complete = loops.complete or 0
+    total = loops["total"]
+    complete = loops["complete"]
 
     return IntegrationStatsResponse(
         total_incidents=total,
-        patterns_matched=(patterns.total or 0) - (patterns.novel or 0),
-        patterns_created=patterns.novel or 0,
-        strong_matches=patterns.strong or 0,
-        weak_matches=patterns.weak or 0,
-        novel_patterns=patterns.novel or 0,
-        recoveries_suggested=recoveries.total or 0,
-        recoveries_applied=recoveries.applied or 0,
-        recoveries_rejected=recoveries.rejected or 0,
-        policies_generated=policies.total or 0,
-        policies_in_shadow=policies.shadow or 0,
-        policies_active=policies.active or 0,
-        routing_adjustments=routing.total or 0,
-        adjustments_rolled_back=routing.rolled_back or 0,
-        avg_loop_completion_time_ms=loops.avg_time_ms or 0,
+        patterns_matched=patterns["total"] - patterns["novel"],
+        patterns_created=patterns["novel"],
+        strong_matches=patterns["strong"],
+        weak_matches=patterns["weak"],
+        novel_patterns=patterns["novel"],
+        recoveries_suggested=recoveries["total"],
+        recoveries_applied=recoveries["applied"],
+        recoveries_rejected=recoveries["rejected"],
+        policies_generated=policies["total"],
+        policies_in_shadow=policies["shadow"],
+        policies_active=policies["active"],
+        routing_adjustments=routing["total"],
+        adjustments_rolled_back=routing["rolled_back"],
+        avg_loop_completion_time_ms=loops["avg_time_ms"] or 0,
         loop_completion_rate=complete / total if total > 0 else 0,
-        checkpoints_pending=checkpoints.pending or 0,
-        checkpoints_resolved=checkpoints.resolved or 0,
+        checkpoints_pending=checkpoints["pending"],
+        checkpoints_resolved=checkpoints["resolved"],
         period_hours=hours,
     )
 
@@ -774,10 +688,6 @@ async def get_graduation_status(
     - Status is re-evaluated on each call
     - Degradation occurs when evidence regresses
     """
-    from sqlalchemy import text
-
-    from app.db import get_async_session
-
     # Import graduation engine
     from app.integrations.graduation_engine import (
         CapabilityGates,
@@ -785,7 +695,7 @@ async def get_graduation_status(
         GraduationEvidence,
     )
 
-    async with get_async_session() as session:
+    async with get_async_session_context() as session:
         # Compute derived status from evidence
         engine = GraduationEngine()
 
@@ -838,28 +748,31 @@ async def get_graduation_status(
                 next_action="Run migration 044_m25_graduation_hardening first",
             )
 
-        # Get simulation state (separate from real)
-        sim_result = await session.execute(
-            text(
-                """
-                SELECT
-                    EXISTS(SELECT 1 FROM prevention_records WHERE is_simulated = true) as sim_gate1,
-                    EXISTS(SELECT 1 FROM regret_events WHERE is_simulated = true) as sim_gate2,
-                    EXISTS(SELECT 1 FROM timeline_views WHERE is_simulated = true) as sim_gate3
-            """
-            )
+        # Get simulation state (separate from real) via registry dispatch
+        registry = get_operation_registry()
+        sim_result = await registry.execute(
+            "m25.read_simulation_state",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+            ),
         )
-        sim_row = sim_result.fetchone()
+
+        if not sim_result.success:
+            # Fallback to empty sim state if read fails
+            sim_state = {"sim_gate1": False, "sim_gate2": False, "sim_gate3": False}
+        else:
+            sim_state = sim_result.data
 
         simulation = SimulationStatus(
-            is_demo_mode=(sim_row.sim_gate1 or sim_row.sim_gate2 or sim_row.sim_gate3) if sim_row else False,
+            is_demo_mode=(sim_state["sim_gate1"] or sim_state["sim_gate2"] or sim_state["sim_gate3"]),
             simulated_gates={
-                "gate1": sim_row.sim_gate1 if sim_row else False,
-                "gate2": sim_row.sim_gate2 if sim_row else False,
-                "gate3": sim_row.sim_gate3 if sim_row else False,
+                "gate1": sim_state["sim_gate1"],
+                "gate2": sim_state["sim_gate2"],
+                "gate3": sim_state["sim_gate3"],
             },
             warning="SIMULATION DATA EXISTS - Real graduation excludes simulated records"
-            if (sim_row and (sim_row.sim_gate1 or sim_row.sim_gate2 or sim_row.sim_gate3))
+            if (sim_state["sim_gate1"] or sim_state["sim_gate2"] or sim_state["sim_gate3"])
             else None,
         )
 
@@ -945,49 +858,38 @@ async def simulate_prevention(
     This endpoint creates demo data for UI testing only.
     Real graduation requires real prevention evidence.
     """
-    from sqlalchemy import text
-
-    from app.db import get_async_session
-
     # Use sim_ prefix to make simulated records obvious
     record_id = f"prev_sim_{uuid.uuid4().hex[:12]}"
     blocked_id = f"inc_sim_prevented_{uuid.uuid4().hex[:8]}"
 
-    async with get_async_session() as session:
-        # Insert prevention record WITH is_simulated=true
+    async with get_async_session_context() as session:
+        # Insert prevention record WITH is_simulated=true via registry dispatch
         # This record is EXCLUDED from real graduation computation
-        await session.execute(
-            text(
-                """
-                INSERT INTO prevention_records (
-                    id, policy_id, pattern_id, original_incident_id,
-                    blocked_incident_id, tenant_id, outcome,
-                    signature_match_confidence, policy_age_seconds,
-                    is_simulated, created_at
-                ) VALUES (
-                    :id, :policy_id, :pattern_id, :original_incident_id,
-                    :blocked_incident_id, :tenant_id, 'prevented',
-                    :confidence, 3600,
-                    true, NOW()
-                )
-            """
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "m25.write_prevention",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "id": record_id,
+                    "policy_id": request.policy_id,
+                    "pattern_id": request.pattern_id,
+                    "original_incident_id": request.original_incident_id,
+                    "blocked_incident_id": blocked_id,
+                    "confidence": request.confidence,
+                    "is_simulated": True,
+                },
             ),
-            {
-                "id": record_id,
-                "policy_id": request.policy_id,
-                "pattern_id": request.pattern_id,
-                "original_incident_id": request.original_incident_id,
-                "blocked_incident_id": blocked_id,
-                "tenant_id": tenant_id,
-                "confidence": request.confidence,
-            },
         )
+
+        if not result.success:
+            raise HTTPException(status_code=500, detail=result.error or "Failed to simulate prevention")
 
         # DO NOT update m25_graduation_status directly!
         # Graduation is DERIVED from real evidence only.
         # The GraduationEngine will exclude is_simulated=true records.
-
-        await session.commit()
+        # L4 handler owns the commit - no L2 commit needed.
 
     return wrap_dict({
         "status": "simulated",
@@ -1023,72 +925,37 @@ async def simulate_regret(
     This endpoint creates demo data for UI testing only.
     Real graduation requires real regret/demotion evidence.
     """
-    from sqlalchemy import text
-
-    from app.db import get_async_session
-
     # Use sim_ prefix to make simulated records obvious
     regret_id = f"regret_sim_{uuid.uuid4().hex[:12]}"
 
-    async with get_async_session() as session:
-        # Insert regret event WITH is_simulated=true
+    async with get_async_session_context() as session:
+        # Insert regret event WITH is_simulated=true via registry dispatch
         # This record is EXCLUDED from real graduation computation
-        await session.execute(
-            text(
-                """
-                INSERT INTO regret_events (
-                    id, policy_id, tenant_id, regret_type,
-                    description, severity, affected_calls, affected_users,
-                    was_auto_rolled_back, is_simulated, created_at
-                ) VALUES (
-                    :id, :policy_id, :tenant_id, :regret_type,
-                    :description, :severity, 50, 10,
-                    true, true, NOW()
-                )
-            """
+        # Note: The handler also upserts policy_regret_summary with severity * 0.5
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "m25.write_regret",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "id": regret_id,
+                    "policy_id": request.policy_id,
+                    "regret_type": request.regret_type,
+                    "description": request.description,
+                    "severity": request.severity,
+                    "is_simulated": True,
+                },
             ),
-            {
-                "id": regret_id,
-                "policy_id": request.policy_id,
-                "tenant_id": tenant_id,
-                "regret_type": request.regret_type,
-                "description": request.description,
-                "severity": request.severity,
-            },
         )
 
-        # Insert or update policy regret summary for demo purposes
-        # Note: This is simulated demotion, not real
-        await session.execute(
-            text(
-                """
-                INSERT INTO policy_regret_summary (
-                    policy_id, regret_score, regret_event_count,
-                    demoted_at, demoted_reason, last_updated
-                ) VALUES (
-                    :policy_id, :score, 1,
-                    NOW(), 'SIMULATED demotion - does not count toward graduation',
-                    NOW()
-                )
-                ON CONFLICT (policy_id) DO UPDATE SET
-                    regret_score = policy_regret_summary.regret_score + :score,
-                    regret_event_count = policy_regret_summary.regret_event_count + 1,
-                    demoted_at = NOW(),
-                    demoted_reason = 'SIMULATED demotion - does not count toward graduation',
-                    last_updated = NOW()
-            """
-            ),
-            {
-                "policy_id": request.policy_id,
-                "score": request.severity * 0.5,
-            },
-        )
+        if not result.success:
+            raise HTTPException(status_code=500, detail=result.error or "Failed to simulate regret")
 
         # DO NOT update m25_graduation_status directly!
         # Graduation is DERIVED from real evidence only.
         # The GraduationEngine will exclude is_simulated=true records.
-
-        await session.commit()
+        # L4 handler owns the commit - no L2 commit needed.
 
     return wrap_dict({
         "status": "simulated",
@@ -1115,42 +982,37 @@ async def simulate_timeline_view(
     This endpoint creates demo data for UI testing only.
     Real graduation requires real timeline views.
     """
-    from sqlalchemy import text
-
-    from app.db import get_async_session
-
     view_id = f"tv_sim_{uuid.uuid4().hex[:12]}"
+    session_id = f"sim_session_{uuid.uuid4().hex[:8]}"
 
-    async with get_async_session() as session:
-        # Insert into timeline_views WITH is_simulated=true
+    async with get_async_session_context() as session:
+        # Insert into timeline_views WITH is_simulated=true via registry dispatch
         # This record is EXCLUDED from real graduation computation
-        await session.execute(
-            text(
-                """
-                INSERT INTO timeline_views (
-                    id, incident_id, tenant_id, user_id,
-                    has_prevention, has_rollback,
-                    is_simulated, session_id, viewed_at
-                ) VALUES (
-                    :id, :incident_id, :tenant_id, 'demo_user',
-                    true, false,
-                    true, :session_id, NOW()
-                )
-            """
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "m25.write_timeline_view",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "id": view_id,
+                    "incident_id": incident_id,
+                    "user_id": "demo_user",
+                    "has_prevention": True,
+                    "has_rollback": False,
+                    "is_simulated": True,
+                    "session_id": session_id,
+                },
             ),
-            {
-                "id": view_id,
-                "incident_id": incident_id,
-                "tenant_id": tenant_id,
-                "session_id": f"sim_session_{uuid.uuid4().hex[:8]}",
-            },
         )
+
+        if not result.success:
+            raise HTTPException(status_code=500, detail=result.error or "Failed to simulate timeline view")
 
         # DO NOT update m25_graduation_status directly!
         # Graduation is DERIVED from real evidence only.
         # The GraduationEngine will exclude is_simulated=true records.
-
-        await session.commit()
+        # L4 handler owns the commit - no L2 commit needed.
 
     return wrap_dict({
         "status": "simulated",
@@ -1181,43 +1043,35 @@ async def record_timeline_view(
     - User opens the prevention timeline UI
     - Timeline shows learning proof (prevention or rollback)
     """
-    from sqlalchemy import text
-
-    from app.db import get_async_session
-
     view_id = f"tv_{uuid.uuid4().hex[:12]}"
     user_id = user.get("sub", "unknown")
     session_id = f"session_{uuid.uuid4().hex[:8]}"
 
-    async with get_async_session() as session:
-        # Insert REAL timeline view (is_simulated=false)
+    async with get_async_session_context() as session:
+        # Insert REAL timeline view (is_simulated=false) via registry dispatch
         # This COUNTS toward graduation
-        await session.execute(
-            text(
-                """
-                INSERT INTO timeline_views (
-                    id, incident_id, tenant_id, user_id,
-                    has_prevention, has_rollback,
-                    is_simulated, session_id, viewed_at
-                ) VALUES (
-                    :id, :incident_id, :tenant_id, :user_id,
-                    :has_prevention, :has_rollback,
-                    false, :session_id, NOW()
-                )
-            """
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "m25.write_timeline_view",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "id": view_id,
+                    "incident_id": incident_id,
+                    "user_id": user_id,
+                    "has_prevention": has_prevention,
+                    "has_rollback": has_rollback,
+                    "is_simulated": False,
+                    "session_id": session_id,
+                },
             ),
-            {
-                "id": view_id,
-                "incident_id": incident_id,
-                "tenant_id": tenant_id,
-                "user_id": user_id,
-                "has_prevention": has_prevention,
-                "has_rollback": has_rollback,
-                "session_id": session_id,
-            },
         )
 
-        await session.commit()
+        if not result.success:
+            raise HTTPException(status_code=500, detail=result.error or "Failed to record timeline view")
+
+        # L4 handler owns the commit - no L2 commit needed.
 
     return wrap_dict({
         "status": "recorded",
@@ -1247,15 +1101,12 @@ async def trigger_graduation_re_evaluation(
     """
     import json
 
-    from sqlalchemy import text
-
-    from app.db import get_async_session
     from app.integrations.graduation_engine import (
         GraduationEngine,
         GraduationEvidence,
     )
 
-    async with get_async_session() as session:
+    async with get_async_session_context() as session:
         engine = GraduationEngine()
 
         try:
@@ -1268,74 +1119,68 @@ async def trigger_graduation_re_evaluation(
                 "message": f"Failed to compute graduation: {str(e)}",
             })
 
-        # Store in graduation_history for audit trail
-        await session.execute(
-            text(
-                """
-                INSERT INTO graduation_history (
-                    level, gates_json, computed_at, is_degraded,
-                    degraded_from, degradation_reason, evidence_snapshot
-                ) VALUES (
-                    :level, :gates_json, NOW(), :is_degraded,
-                    :degraded_from, :degradation_reason, :evidence_snapshot
-                )
-            """
-            ),
-            {
-                "level": status.level.value,
-                "gates_json": json.dumps(
-                    {
-                        name: {
-                            "passed": gate.passed,
-                            "score": gate.score,
-                            "degraded": gate.degraded,
+        # Store in graduation_history for audit trail via registry dispatch
+        # Note: commit=False here because update_graduation_status will commit both
+        registry = get_operation_registry()
+        hist_result = await registry.execute(
+            "m25.write_graduation_history",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "level": status.level.value,
+                    "gates_json": json.dumps(
+                        {
+                            name: {
+                                "passed": gate.passed,
+                                "score": gate.score,
+                                "degraded": gate.degraded,
+                            }
+                            for name, gate in status.gates.items()
                         }
-                        for name, gate in status.gates.items()
-                    }
-                ),
-                "is_degraded": status.is_degraded,
-                "degraded_from": status.degraded_from.value if status.degraded_from else None,
-                "degradation_reason": status.degradation_reason,
-                "evidence_snapshot": json.dumps(
-                    {
-                        "prevention_count": evidence.prevention_count,
-                        "regret_count": evidence.regret_count,
-                        "demotion_count": evidence.demotion_count,
-                        "timeline_view_count": evidence.timeline_view_count,
-                        "prevention_rate": evidence.prevention_rate,
-                        "regret_rate": evidence.regret_rate,
-                    }
-                ),
-            },
-        )
-
-        # Update m25_graduation_status with derived values
-        # (This table still exists for backward compat, but values are DERIVED)
-        await session.execute(
-            text(
-                """
-                UPDATE m25_graduation_status
-                SET is_derived = true,
-                    last_evidence_eval = NOW(),
-                    status_label = :status_label,
-                    is_graduated = :is_graduated,
-                    gate1_passed = :gate1_passed,
-                    gate2_passed = :gate2_passed,
-                    gate3_passed = :gate3_passed,
-                    last_checked = NOW()
-                WHERE id = 1
-            """
+                    ),
+                    "is_degraded": status.is_degraded,
+                    "degraded_from": status.degraded_from.value if status.degraded_from else None,
+                    "degradation_reason": status.degradation_reason,
+                    "evidence_snapshot": json.dumps(
+                        {
+                            "prevention_count": evidence.prevention_count,
+                            "regret_count": evidence.regret_count,
+                            "demotion_count": evidence.demotion_count,
+                            "timeline_view_count": evidence.timeline_view_count,
+                            "prevention_rate": evidence.prevention_rate,
+                            "regret_rate": evidence.regret_rate,
+                        }
+                    ),
+                    "commit": False,  # L4 will NOT commit - next operation will
+                },
             ),
-            {
-                "status_label": status.status_label,
-                "is_graduated": status.is_graduated,
-                "gate1_passed": status.gates.get("prevention", type("", (), {"passed": False})).passed,
-                "gate2_passed": status.gates.get("rollback", type("", (), {"passed": False})).passed,
-                "gate3_passed": status.gates.get("timeline", type("", (), {"passed": False})).passed,
-            },
         )
 
-        await session.commit()
+        if not hist_result.success:
+            logger.warning(f"Failed to insert graduation history: {hist_result.error}")
+
+        # Update m25_graduation_status with derived values via registry dispatch
+        # (This table still exists for backward compat, but values are DERIVED)
+        # This operation commits both writes atomically (L4 owns transaction boundary)
+        status_result = await registry.execute(
+            "m25.update_graduation_status",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "status_label": status.status_label,
+                    "is_graduated": status.is_graduated,
+                    "gate1_passed": status.gates.get("prevention", type("", (), {"passed": False})).passed,
+                    "gate2_passed": status.gates.get("rollback", type("", (), {"passed": False})).passed,
+                    "gate3_passed": status.gates.get("timeline", type("", (), {"passed": False})).passed,
+                    # commit=True (default) - L4 handler commits both writes
+                },
+            ),
+        )
+
+        if not status_result.success:
+            logger.warning(f"Failed to update graduation status: {status_result.error}")
 
     return wrap_dict({
         "status": "re-evaluated",
@@ -1392,161 +1237,114 @@ async def get_prevention_timeline(
 
     Viewing this timeline with a prevention event proves Gate 3.
     """
-    from sqlalchemy import text
-
-    from app.db import get_async_session
-
     timeline_events = []
 
-    async with get_async_session() as session:
-        # Get incident info
-        incident_result = await session.execute(
-            text(
-                """
-                SELECT id, tenant_id, title, severity, created_at
-                FROM incidents
-                WHERE id = :incident_id
-            """
+    async with get_async_session_context() as session:
+        # Get combined timeline data via registry dispatch
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "m25.read_timeline",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={"incident_id": incident_id},
             ),
-            {"incident_id": incident_id},
         )
-        incident = incident_result.fetchone()
 
-        if not incident:
-            raise HTTPException(status_code=404, detail="Incident not found")
+        if not result.success:
+            if result.error_code == "NOT_FOUND":
+                raise HTTPException(status_code=404, detail="Incident not found")
+            if result.error_code == "FORBIDDEN":
+                raise HTTPException(status_code=403, detail="Access denied")
+            raise HTTPException(status_code=500, detail=result.error or "Failed to read timeline")
 
-        if incident.tenant_id != tenant_id:
-            raise HTTPException(status_code=403, detail="Access denied")
+        data = result.data
+        incident = data["incident"]
 
         # Add incident created event
         timeline_events.append(
             TimelineEventResponse(
                 type="incident_created",
-                timestamp=incident.created_at.isoformat()
-                if incident.created_at
+                timestamp=incident["created_at"]
+                if incident.get("created_at")
                 else datetime.now(timezone.utc).isoformat(),
-                icon="🚨",
+                icon="incident",
                 headline="Incident detected",
-                description=incident.title or "Incident occurred",
-                details={"severity": incident.severity, "id": incident.id},
+                description=incident.get("title") or "Incident occurred",
+                details={"severity": incident.get("severity"), "id": incident["id"]},
             )
         )
 
-        # Get loop events for this incident
-        events_result = await session.execute(
-            text(
-                """
-                SELECT stage, details, confidence_band, created_at
-                FROM loop_events
-                WHERE incident_id = :incident_id
-                ORDER BY created_at ASC
-            """
-            ),
-            {"incident_id": incident_id},
-        )
-        loop_events = events_result.fetchall()
-
-        for event in loop_events:
-            if event.stage == "pattern_matched":
+        # Process loop events from handler response
+        for event in data.get("events", []):
+            if event.get("stage") == "pattern_matched":
                 timeline_events.append(
                     TimelineEventResponse(
                         type="pattern_matched",
-                        timestamp=event.created_at.isoformat(),
-                        icon="🔍",
+                        timestamp=event.get("created_at") or "",
+                        icon="search",
                         headline="Pattern identified",
-                        description=f"Matched with confidence: {event.confidence_band or 'unknown'}",
-                        details=event.details if isinstance(event.details, dict) else {},
+                        description=f"Matched with confidence: {event.get('confidence_band') or 'unknown'}",
+                        details=event.get("details") if isinstance(event.get("details"), dict) else {},
                     )
                 )
-            elif event.stage == "policy_generated":
+            elif event.get("stage") == "policy_generated":
                 timeline_events.append(
                     TimelineEventResponse(
                         type="policy_born",
-                        timestamp=event.created_at.isoformat(),
-                        icon="📋",
+                        timestamp=event.get("created_at") or "",
+                        icon="policy",
                         headline="Policy born from failure",
                         description="New policy created to prevent recurrence",
-                        details=event.details if isinstance(event.details, dict) else {},
+                        details=event.get("details") if isinstance(event.get("details"), dict) else {},
                     )
                 )
 
-        # Get prevention records where this incident was the ORIGINAL
-        prevention_result = await session.execute(
-            text(
-                """
-                SELECT id, blocked_incident_id, policy_id, pattern_id,
-                       signature_match_confidence, created_at
-                FROM prevention_records
-                WHERE original_incident_id = :incident_id
-                ORDER BY created_at ASC
-            """
-            ),
-            {"incident_id": incident_id},
-        )
-        preventions = prevention_result.fetchall()
-
-        for prev in preventions:
+        # Process prevention records from handler response
+        for prev in data.get("preventions", []):
+            confidence = prev.get("signature_match_confidence", 0)
             timeline_events.append(
                 TimelineEventResponse(
                     type="prevention",
-                    timestamp=prev.created_at.isoformat(),
-                    icon="🛡️",
+                    timestamp=prev.get("created_at") or "",
+                    icon="shield",
                     headline="PREVENTION: Similar incident BLOCKED",
-                    description=f"Policy prevented recurrence with {prev.signature_match_confidence:.0%} confidence",
+                    description=f"Policy prevented recurrence with {confidence:.0%} confidence",
                     details={
-                        "blocked_incident": prev.blocked_incident_id,
-                        "policy": prev.policy_id,
-                        "pattern": prev.pattern_id,
+                        "blocked_incident": prev.get("blocked_incident_id"),
+                        "policy": prev.get("policy_id"),
+                        "pattern": prev.get("pattern_id"),
                     },
                     is_milestone=True,
                 )
             )
 
-        # Get regret events for policies born from this incident
-        regret_result = await session.execute(
-            text(
-                """
-                SELECT re.id, re.policy_id, re.regret_type, re.description,
-                       re.severity, re.was_auto_rolled_back, re.created_at
-                FROM regret_events re
-                WHERE re.policy_id IN (
-                    SELECT DISTINCT details->>'policy_id'
-                    FROM loop_events
-                    WHERE incident_id = :incident_id
-                    AND stage = 'policy_generated'
-                )
-                ORDER BY re.created_at ASC
-            """
-            ),
-            {"incident_id": incident_id},
-        )
-        regrets = regret_result.fetchall()
-
-        for regret in regrets:
+        # Process regret events from handler response
+        for regret in data.get("regrets", []):
             timeline_events.append(
                 TimelineEventResponse(
                     type="regret",
-                    timestamp=regret.created_at.isoformat(),
-                    icon="⚠️",
+                    timestamp=regret.get("created_at") or "",
+                    icon="warning",
                     headline="Policy caused harm (regret)",
-                    description=regret.description or f"Regret type: {regret.regret_type}",
+                    description=regret.get("description") or f"Regret type: {regret.get('regret_type')}",
                     details={
-                        "regret_type": regret.regret_type,
-                        "severity": regret.severity,
-                        "auto_rolled_back": regret.was_auto_rolled_back,
+                        "regret_type": regret.get("regret_type"),
+                        "severity": regret.get("severity"),
+                        "auto_rolled_back": regret.get("was_auto_rolled_back"),
                     },
                 )
             )
 
-            if regret.was_auto_rolled_back:
+            if regret.get("was_auto_rolled_back"):
                 timeline_events.append(
                     TimelineEventResponse(
                         type="rollback",
-                        timestamp=regret.created_at.isoformat(),
-                        icon="↩️",
+                        timestamp=regret.get("created_at") or "",
+                        icon="undo",
                         headline="Policy auto-demoted",
                         description="System self-corrected by demoting harmful policy",
-                        details={"policy": regret.policy_id},
+                        details={"policy": regret.get("policy_id")},
                         is_milestone=True,
                     )
                 )
@@ -1562,7 +1360,7 @@ async def get_prevention_timeline(
     if has_prevention and has_rollback:
         narrative = (
             "This incident shows the full learning loop: "
-            "failure → policy → prevention → feedback. "
+            "failure -> policy -> prevention -> feedback. "
             "The system learned, protected, and self-corrected."
         )
     elif has_prevention:

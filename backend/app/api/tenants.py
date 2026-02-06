@@ -18,13 +18,13 @@ from sqlmodel import Session
 
 from ..auth.tenant_auth import TenantContext, get_tenant_context
 from ..db import utc_now
-from ..services.tenant_service import (
+from app.hoc.cus.account.L5_engines.tenant_engine import (
     QuotaExceededError,
-    TenantService,
-    TenantServiceError,
+    TenantEngine as TenantService,
+    TenantEngineError as TenantServiceError,
 )
 from ..schemas.response import wrap_dict, wrap_list
-from ..services.worker_registry_service import (
+from app.hoc.cus.integrations.L6_drivers.worker_registry_driver import (
     WorkerNotFoundError,
     WorkerRegistryService,
 )

@@ -186,11 +186,15 @@ All files in `hoc/cus/` now include:
 # Forbidden: session.commit(), session.rollback() — L{x} DOES NOT COMMIT
 ```
 
-The only legitimate commit location:
+Legitimate commit locations:
 
 ```
-app/hoc/cus/general/L4_runtime/drivers/transaction_coordinator.py
+app/hoc/cus/hoc_spine/orchestrator/handlers/*_handler.py  (L4 handlers)
 ```
+
+Note: The original `L4_runtime/transaction_coordinator.py` pattern has been replaced
+by per-domain L4 handlers that own transaction boundaries for their operations.
+See PIN-520 for migration details.
 
 ---
 

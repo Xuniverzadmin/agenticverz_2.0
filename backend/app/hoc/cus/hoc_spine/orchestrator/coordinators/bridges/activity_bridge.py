@@ -32,4 +32,69 @@ def get_activity_bridge() -> ActivityBridge:
     return _instance
 
 
-__all__ = ["ActivityBridge", "get_activity_bridge"]
+# =============================================================================
+# ACTIVITY ENGINE BRIDGE (extends ActivityBridge to avoid 5-method limit)
+# =============================================================================
+
+
+class ActivityEngineBridge:
+    """Extended capabilities for activity domain coordinators. Max 5 methods.
+
+    PIN-520: These capabilities are injected into L5 ActivityFacade so it
+    doesn't need to import L4 coordinators directly.
+    """
+
+    def run_evidence_coordinator_capability(self):
+        """
+        Return RunEvidenceCoordinator for cross-domain evidence queries (PIN-520).
+
+        Used by activity_facade.py get_run_evidence() method.
+        """
+        from app.hoc.cus.hoc_spine.orchestrator.coordinators.run_evidence_coordinator import (
+            get_run_evidence_coordinator,
+        )
+
+        return get_run_evidence_coordinator()
+
+    def run_proof_coordinator_capability(self):
+        """
+        Return RunProofCoordinator for integrity proof queries (PIN-520).
+
+        Used by activity_facade.py get_run_proof() method.
+        """
+        from app.hoc.cus.hoc_spine.orchestrator.coordinators.run_proof_coordinator import (
+            get_run_proof_coordinator,
+        )
+
+        return get_run_proof_coordinator()
+
+    def signal_feedback_coordinator_capability(self):
+        """
+        Return SignalFeedbackCoordinator for feedback queries (PIN-520).
+
+        Used by activity_facade.py _get_signal_feedback() method.
+        """
+        from app.hoc.cus.hoc_spine.orchestrator.coordinators.signal_feedback_coordinator import (
+            get_signal_feedback_coordinator,
+        )
+
+        return get_signal_feedback_coordinator()
+
+
+_engine_bridge_instance = None
+
+
+def get_activity_engine_bridge() -> ActivityEngineBridge:
+    """Get the singleton ActivityEngineBridge instance."""
+    global _engine_bridge_instance
+    if _engine_bridge_instance is None:
+        _engine_bridge_instance = ActivityEngineBridge()
+    return _engine_bridge_instance
+
+
+__all__ = [
+    "ActivityBridge",
+    "get_activity_bridge",
+    "ActivityEngineBridge",
+    "get_activity_engine_bridge",
+]

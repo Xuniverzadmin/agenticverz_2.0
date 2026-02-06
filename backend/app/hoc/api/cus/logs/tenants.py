@@ -1,0 +1,676 @@
+# Layer: L2 — Product APIs
+# AUDIENCE: CUSTOMER
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: async
+# Role: Tenant and API key management endpoints (CRUD, usage, quotas)
+# Callers: Console UI, SDK
+# Allowed Imports: L3, L4, L5, L6
+# Forbidden Imports: L1
+
+"""
+Tenant & API Key Management API (M21)
+
+Provides:
+- Tenant management endpoints
+- API key CRUD operations
+- Usage and quota queries
+- Worker registry endpoints
+"""
+
+import logging
+from datetime import datetime, timezone
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, Field
+
+from app.auth.tenant_auth import TenantContext, get_tenant_context
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+    get_sync_session_dep,
+)
+# L4 bridge for integrations domain (PIN-L2-PURITY)
+from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges import (
+    get_integrations_driver_bridge,
+)
+from app.schemas.response import wrap_dict, wrap_list
+
+logger = logging.getLogger("nova.api.tenants")
+
+# L4 bridge provides exception types for except clauses (PIN-L2-PURITY)
+WorkerNotFoundError = get_integrations_driver_bridge().worker_registry_exceptions()["WorkerNotFoundError"]
+
+router = APIRouter(prefix="/api/v1", tags=["Tenants & API Keys"])
+
+
+# ============== Dependency Injection ==============
+
+
+def get_services(
+    session=Depends(get_sync_session_dep),
+):
+    """Get worker registry and session for route handlers."""
+    # L4 bridge for worker registry (PIN-L2-PURITY)
+    worker_registry = get_integrations_driver_bridge().worker_registry_capability(session)
+
+    return {
+        "registry": worker_registry,
+        "session": session,
+    }
+
+
+# ============== L4 Registry Dispatch Helpers ==============
+
+
+async def _tenant_op(session, tenant_id: str, method: str, **kwargs):
+    """Execute a tenant operation via L4 registry (account.tenant)."""
+    registry = get_operation_registry()
+    return await registry.execute(
+        "account.tenant",
+        OperationContext(
+            session=None,
+            tenant_id=tenant_id,
+            params={"method": method, "sync_session": session, **kwargs},
+        ),
+    )
+
+
+async def _api_keys_op(session, tenant_id: str, method: str, **kwargs):
+    """Execute an API keys operation via L4 registry (api_keys.write)."""
+    registry = get_operation_registry()
+    return await registry.execute(
+        "api_keys.write",
+        OperationContext(
+            session=None,
+            tenant_id=tenant_id,
+            params={"method": method, "sync_session": session, "tenant_id": tenant_id, **kwargs},
+        ),
+    )
+
+
+# ============== Onboarding Transition Helpers ==============
+
+
+async def _maybe_advance_to_api_key_created(tenant_id: str) -> None:
+    """
+    PIN-399: Trigger onboarding state transition on first API key creation.
+
+    Called after successful API key creation to potentially advance
+    a tenant from IDENTITY_VERIFIED to API_KEY_CREATED.
+
+    TRIGGER: First successful API key creation.
+
+    This is idempotent - if tenant is already at or past API_KEY_CREATED,
+    this is a no-op.
+    """
+    try:
+        from app.auth.onboarding_transitions import (
+            TransitionTrigger,
+            get_onboarding_service,
+        )
+
+        service = get_onboarding_service()
+        result = await service.advance_to_api_key_created(
+            tenant_id=tenant_id,
+            trigger=TransitionTrigger.FIRST_API_KEY_CREATED,
+        )
+
+        if result.success and not result.was_no_op:
+            logger.info(
+                "onboarding_advanced_on_api_key_creation",
+                extra={
+                    "tenant_id": tenant_id,
+                    "from_state": result.from_state.name,
+                    "to_state": result.to_state.name,
+                },
+            )
+
+    except Exception as e:
+        # Onboarding transition failure should not block API key creation
+        logger.warning(f"Failed to advance onboarding state on API key creation: {e}")
+
+
+# ============== Request/Response Schemas ==============
+
+
+class TenantResponse(BaseModel):
+    """Tenant information response."""
+
+    id: str
+    name: str
+    slug: str
+    plan: str
+    status: str
+    max_workers: int
+    max_runs_per_day: int
+    max_concurrent_runs: int
+    max_tokens_per_month: int
+    max_api_keys: int
+    runs_today: int
+    runs_this_month: int
+    tokens_this_month: int
+    created_at: str
+
+
+class APIKeyCreateRequest(BaseModel):
+    """Request to create an API key."""
+
+    name: str = Field(..., min_length=1, max_length=100)
+    permissions: Optional[List[str]] = Field(default=None)
+    allowed_workers: Optional[List[str]] = Field(default=None)
+    expires_in_days: Optional[int] = Field(default=None, ge=1, le=365)
+    rate_limit_rpm: Optional[int] = Field(default=None, ge=1, le=1000)
+    max_concurrent_runs: Optional[int] = Field(default=None, ge=1, le=100)
+
+
+class APIKeyResponse(BaseModel):
+    """API key information (without the actual key)."""
+
+    id: str
+    name: str
+    key_prefix: str
+    status: str
+    last_used_at: Optional[str]
+    total_requests: int
+    expires_at: Optional[str]
+    created_at: str
+
+
+class APIKeyCreatedResponse(APIKeyResponse):
+    """Response when creating an API key (includes the key once)."""
+
+    key: str = Field(..., description="The full API key. Store this securely - it won't be shown again!")
+
+
+class AnalyticsProvenance(BaseModel):
+    """Provenance envelope for analytics interpretation panels.
+
+    SDSR requires provenance metadata on all interpretation panels to ensure
+    the UI can correctly display how data was derived.
+    """
+
+    sources: List[str] = Field(..., description="Data sources used")
+    window: str = Field(..., description="Time window (e.g., '24h', '7d', '30d')")
+    aggregation: str = Field(..., description="Aggregation method")
+    generated_at: datetime = Field(..., description="When this data was computed")
+
+
+class UsageSummaryResponse(BaseModel):
+    """Usage summary for a tenant with provenance for SDSR ANALYTICS domain."""
+
+    tenant_id: str
+    period: dict
+    meters: dict
+    total_records: int
+    provenance: AnalyticsProvenance = Field(..., description="Provenance metadata for interpretation")
+
+
+class WorkerSummaryResponse(BaseModel):
+    """Worker summary information."""
+
+    id: str
+    name: str
+    description: Optional[str]
+    version: str
+    status: str
+    moats: List[str]
+    tokens_per_run_estimate: Optional[int]
+    cost_per_run_cents: Optional[int]
+
+
+class WorkerDetailResponse(WorkerSummaryResponse):
+    """Detailed worker information."""
+
+    is_public: bool
+    default_config: dict
+    input_schema: dict
+    output_schema: dict
+    created_at: Optional[str]
+    updated_at: Optional[str]
+
+
+class WorkerConfigRequest(BaseModel):
+    """Request to configure a worker for a tenant."""
+
+    enabled: bool = True
+    config: Optional[dict] = None
+    brand: Optional[dict] = None
+    max_runs_per_day: Optional[int] = Field(default=None, ge=1)
+    max_tokens_per_run: Optional[int] = Field(default=None, ge=1000)
+
+
+class WorkerConfigResponse(BaseModel):
+    """Worker configuration response."""
+
+    worker_id: str
+    enabled: bool
+    config: dict
+    brand: dict
+    max_runs_per_day: Optional[int]
+    max_tokens_per_run: Optional[int]
+
+
+class RunHistoryItem(BaseModel):
+    """Run history item."""
+
+    id: str
+    worker_id: str
+    task: str
+    status: str
+    success: Optional[bool]
+    total_tokens: Optional[int]
+    total_latency_ms: Optional[int]
+    cost_cents: Optional[int]
+    created_at: str
+    completed_at: Optional[str]
+
+
+class QuotaCheckResponse(BaseModel):
+    """Quota check response."""
+
+    allowed: bool
+    reason: str
+    quota_name: str
+    current: int
+    limit: int
+
+
+# ============== Tenant Endpoints ==============
+
+
+@router.get("/tenant", response_model=TenantResponse)
+async def get_current_tenant(
+    ctx: TenantContext = Depends(get_tenant_context),
+    services: dict = Depends(get_services),
+):
+    """
+    Get information about the current tenant (from API key).
+    """
+    result = await _tenant_op(services["session"], ctx.tenant_id, "get_tenant")
+    if not result.success or not result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    tenant = result.data
+    return TenantResponse(
+        id=tenant.id,
+        name=tenant.name,
+        slug=tenant.slug,
+        plan=tenant.plan,
+        status=tenant.status,
+        max_workers=tenant.max_workers,
+        max_runs_per_day=tenant.max_runs_per_day,
+        max_concurrent_runs=tenant.max_concurrent_runs,
+        max_tokens_per_month=tenant.max_tokens_per_month,
+        max_api_keys=tenant.max_api_keys,
+        runs_today=tenant.runs_today,
+        runs_this_month=tenant.runs_this_month,
+        tokens_this_month=tenant.tokens_this_month,
+        created_at=tenant.created_at.isoformat() if tenant.created_at else "",
+    )
+
+
+@router.get("/tenant/usage", response_model=UsageSummaryResponse)
+async def get_tenant_usage(
+    period: str = Query("24h", regex="^(24h|7d|30d)$"),
+    ctx: TenantContext = Depends(get_tenant_context),
+    services: dict = Depends(get_services),
+):
+    """
+    Get usage summary for the current tenant.
+
+    Returns envelope with provenance for SDSR ANALYTICS domain compliance.
+    """
+    result = await _tenant_op(services["session"], ctx.tenant_id, "get_usage_summary")
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
+    summary = result.data
+    now = datetime.now(timezone.utc)
+
+    return UsageSummaryResponse(
+        tenant_id=summary.get("tenant_id", ctx.tenant_id),
+        period=summary.get("period", {"type": period}),
+        meters=summary.get("meters", {}),
+        total_records=summary.get("total_records", 0),
+        provenance=AnalyticsProvenance(
+            sources=["usage_records", "runs", "cost_records"],
+            window=period,
+            aggregation="SUM",
+            generated_at=now,
+        ),
+    )
+
+
+@router.get("/tenant/quota/runs", response_model=QuotaCheckResponse)
+async def check_run_quota(
+    ctx: TenantContext = Depends(get_tenant_context),
+    services: dict = Depends(get_services),
+):
+    """
+    Check if the tenant can create a new run.
+    """
+    t_result = await _tenant_op(services["session"], ctx.tenant_id, "get_tenant")
+    tenant = t_result.data if t_result.success else None
+    q_result = await _tenant_op(services["session"], ctx.tenant_id, "check_run_quota")
+    if not q_result.success:
+        raise HTTPException(status_code=500, detail=q_result.error)
+    allowed, reason = q_result.data
+
+    return QuotaCheckResponse(
+        allowed=allowed,
+        reason=reason,
+        quota_name="runs_per_day",
+        current=tenant.runs_today if tenant else 0,
+        limit=tenant.max_runs_per_day if tenant else 0,
+    )
+
+
+@router.get("/tenant/quota/tokens", response_model=QuotaCheckResponse)
+async def check_token_quota(
+    tokens_needed: int = Query(default=10000, ge=1),
+    ctx: TenantContext = Depends(get_tenant_context),
+    services: dict = Depends(get_services),
+):
+    """
+    Check if the tenant has token budget for an operation.
+    """
+    t_result = await _tenant_op(services["session"], ctx.tenant_id, "get_tenant")
+    tenant = t_result.data if t_result.success else None
+    q_result = await _tenant_op(services["session"], ctx.tenant_id, "check_token_quota", tokens_needed=tokens_needed)
+    if not q_result.success:
+        raise HTTPException(status_code=500, detail=q_result.error)
+    allowed, reason = q_result.data
+
+    return QuotaCheckResponse(
+        allowed=allowed,
+        reason=reason,
+        quota_name="tokens_per_month",
+        current=tenant.tokens_this_month if tenant else 0,
+        limit=tenant.max_tokens_per_month if tenant else 0,
+    )
+
+
+# ============== API Key Endpoints ==============
+
+
+@router.get("/api-keys", response_model=List[APIKeyResponse])
+async def list_api_keys(
+    include_revoked: bool = False,
+    ctx: TenantContext = Depends(get_tenant_context),
+    services: dict = Depends(get_services),
+):
+    """
+    List all API keys for the current tenant.
+
+    Requires admin permission.
+    """
+    if not ctx.has_permission("admin:*") and not ctx.has_permission("keys:read"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied: requires admin or keys:read permission"
+        )
+
+    result = await _api_keys_op(
+        services["session"], ctx.tenant_id, "list_api_keys",
+        include_revoked=include_revoked,
+    )
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
+    keys = result.data
+
+    return [
+        APIKeyResponse(
+            id=k.id,
+            name=k.name,
+            key_prefix=k.key_prefix,
+            status=k.status,
+            last_used_at=k.last_used_at.isoformat() if k.last_used_at else None,
+            total_requests=k.total_requests,
+            expires_at=k.expires_at.isoformat() if k.expires_at else None,
+            created_at=k.created_at.isoformat() if k.created_at else "",
+        )
+        for k in keys
+    ]
+
+
+@router.post("/api-keys", response_model=APIKeyCreatedResponse, status_code=201)
+async def create_api_key(
+    request: APIKeyCreateRequest,
+    ctx: TenantContext = Depends(get_tenant_context),
+    services: dict = Depends(get_services),
+):
+    """
+    Create a new API key for the current tenant.
+
+    **Important:** The full API key is only shown once in this response.
+    Store it securely!
+
+    Requires admin permission.
+    """
+    if not ctx.has_permission("admin:*") and not ctx.has_permission("keys:create"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied: requires admin or keys:create permission"
+        )
+
+    result = await _api_keys_op(
+        services["session"], ctx.tenant_id, "create_api_key",
+        name=request.name, user_id=ctx.user_id,
+        permissions=request.permissions, allowed_workers=request.allowed_workers,
+        expires_in_days=request.expires_in_days, rate_limit_rpm=request.rate_limit_rpm,
+        max_concurrent_runs=request.max_concurrent_runs,
+    )
+    if not result.success:
+        if result.error_code == "QUOTA_EXCEEDED":
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=f"API key limit exceeded: {result.error}"
+            )
+        raise HTTPException(status_code=500, detail=result.error)
+
+    full_key = result.data["full_key"]
+    api_key = result.data["api_key"]
+
+    # PIN-399: Trigger onboarding state transition on first API key creation
+    await _maybe_advance_to_api_key_created(ctx.tenant_id)
+
+    return APIKeyCreatedResponse(
+        id=api_key.id,
+        name=api_key.name,
+        key_prefix=api_key.key_prefix,
+        key=full_key,
+        status=api_key.status,
+        last_used_at=None,
+        total_requests=0,
+        expires_at=api_key.expires_at.isoformat() if api_key.expires_at else None,
+        created_at=api_key.created_at.isoformat() if api_key.created_at else "",
+    )
+
+
+@router.delete("/api-keys/{key_id}")
+async def revoke_api_key(
+    key_id: str,
+    reason: str = Query(default="Manual revocation"),
+    ctx: TenantContext = Depends(get_tenant_context),
+    services: dict = Depends(get_services),
+):
+    """
+    Revoke an API key.
+
+    The key cannot be un-revoked. Create a new key instead.
+
+    Requires admin permission.
+    """
+    if not ctx.has_permission("admin:*") and not ctx.has_permission("keys:revoke"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied: requires admin or keys:revoke permission"
+        )
+
+    result = await _api_keys_op(
+        services["session"], ctx.tenant_id, "revoke_api_key",
+        key_id=key_id, reason=reason, user_id=ctx.user_id,
+    )
+    if not result.success:
+        raise HTTPException(status_code=404, detail=result.error)
+    return wrap_dict({"success": True, "message": f"API key {key_id} revoked"})
+
+
+# ============== Worker Registry Endpoints ==============
+
+
+@router.get("/workers", response_model=List[WorkerSummaryResponse])
+async def list_workers(
+    status: Optional[str] = None,
+    ctx: TenantContext = Depends(get_tenant_context),
+    services: dict = Depends(get_services),
+):
+    """
+    List all available workers.
+    """
+    summaries = services["registry"].list_worker_summaries(status=status)
+    return [WorkerSummaryResponse(**s) for s in summaries]
+
+
+@router.get("/workers/available", response_model=List[dict])
+async def list_available_workers_for_tenant(
+    include_disabled: bool = False,
+    ctx: TenantContext = Depends(get_tenant_context),
+    services: dict = Depends(get_services),
+):
+    """
+    List workers available to the current tenant with their configurations.
+    """
+    workers = services["registry"].get_workers_for_tenant(
+        ctx.tenant_id,
+        include_disabled=include_disabled,
+    )
+    return wrap_list(workers)
+
+
+@router.get("/workers/{worker_id}", response_model=WorkerDetailResponse)
+async def get_worker_details(
+    worker_id: str,
+    ctx: TenantContext = Depends(get_tenant_context),
+    services: dict = Depends(get_services),
+):
+    """
+    Get detailed information about a specific worker.
+    """
+    try:
+        details = services["registry"].get_worker_details(worker_id)
+        return WorkerDetailResponse(**details)
+    except WorkerNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Worker '{worker_id}' not found")
+
+
+@router.get("/workers/{worker_id}/config", response_model=WorkerConfigResponse)
+async def get_worker_config(
+    worker_id: str,
+    ctx: TenantContext = Depends(get_tenant_context),
+    services: dict = Depends(get_services),
+):
+    """
+    Get the effective configuration for a worker (tenant overrides merged with defaults).
+    """
+    try:
+        config = services["registry"].get_effective_worker_config(ctx.tenant_id, worker_id)
+        return WorkerConfigResponse(**config)
+    except WorkerNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Worker '{worker_id}' not found")
+
+
+@router.put("/workers/{worker_id}/config", response_model=WorkerConfigResponse)
+async def set_worker_config(
+    worker_id: str,
+    request: WorkerConfigRequest,
+    ctx: TenantContext = Depends(get_tenant_context),
+    services: dict = Depends(get_services),
+):
+    """
+    Set tenant-specific configuration for a worker.
+
+    Requires admin permission.
+    """
+    if not ctx.has_permission("admin:*") and not ctx.has_permission("workers:configure"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Permission denied: requires admin or workers:configure permission",
+        )
+
+    try:
+        services["registry"].set_tenant_worker_config(
+            tenant_id=ctx.tenant_id,
+            worker_id=worker_id,
+            enabled=request.enabled,
+            config=request.config,
+            brand=request.brand,
+            max_runs_per_day=request.max_runs_per_day,
+            max_tokens_per_run=request.max_tokens_per_run,
+        )
+
+        # Return effective config
+        config = services["registry"].get_effective_worker_config(ctx.tenant_id, worker_id)
+        return WorkerConfigResponse(**config)
+
+    except WorkerNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Worker '{worker_id}' not found")
+
+
+# ============== Run History Endpoints ==============
+
+
+@router.get("/runs", response_model=List[RunHistoryItem])
+async def list_runs(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    status: Optional[str] = None,
+    worker_id: Optional[str] = None,
+    ctx: TenantContext = Depends(get_tenant_context),
+    services: dict = Depends(get_services),
+):
+    """
+    List runs for the current tenant.
+    """
+    result = await _tenant_op(
+        services["session"], ctx.tenant_id, "list_runs",
+        limit=limit, offset=offset, status=status, worker_id=worker_id,
+    )
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
+    runs = result.data
+
+    return [
+        RunHistoryItem(
+            id=r.id,
+            worker_id=r.worker_id,
+            task=r.task[:200],  # Truncate
+            status=r.status,
+            success=r.success,
+            total_tokens=r.total_tokens,
+            total_latency_ms=r.total_latency_ms,
+            cost_cents=r.cost_cents,
+            created_at=r.created_at.isoformat() if r.created_at else "",
+            completed_at=r.completed_at.isoformat() if r.completed_at else None,
+        )
+        for r in runs
+    ]
+
+
+# ============== Health Check ==============
+
+
+@router.get("/tenant/health")
+async def tenant_health():
+    """
+    Health check for tenant system.
+    """
+    return wrap_dict({
+        "status": "healthy",
+        "version": "M21",
+        "features": [
+            "tenant_isolation",
+            "api_key_management",
+            "quota_enforcement",
+            "usage_metering",
+            "worker_registry",
+        ],
+    })

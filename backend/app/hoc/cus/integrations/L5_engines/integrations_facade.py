@@ -38,7 +38,10 @@ from typing import Any, Optional
 from uuid import UUID
 
 # L5 engine import (migrated to HOC per SWEEP-03 Batch 3)
-from app.hoc.cus.integrations.L5_engines.cus_integration_engine import CusIntegrationEngine
+from app.hoc.cus.integrations.L5_engines.cus_integration_engine import (
+    CusIntegrationEngine,
+    get_cus_integration_engine,
+)
 
 
 # =============================================================================
@@ -162,9 +165,16 @@ class IntegrationsFacade:
     All operations are tenant-scoped for isolation.
     """
 
-    def __init__(self) -> None:
-        """Initialize with CusIntegrationEngine."""
-        self._service = CusIntegrationEngine()
+    def __init__(self, session) -> None:
+        """Initialize with CusIntegrationEngine.
+
+        Args:
+            session: Database session from L4 handler (required)
+
+        Note:
+            Session is REQUIRED. L4 handler owns transaction boundary.
+        """
+        self._service = get_cus_integration_engine(session=session)
 
     # -------------------------------------------------------------------------
     # List / Read Operations
@@ -464,15 +474,20 @@ class IntegrationsFacade:
 # Singleton Factory
 # =============================================================================
 
-_facade_instance: IntegrationsFacade | None = None
+def get_integrations_facade(session) -> IntegrationsFacade:
+    """Get an IntegrationsFacade instance.
 
+    Args:
+        session: Database session from L4 handler (required)
 
-def get_integrations_facade() -> IntegrationsFacade:
-    """Get the singleton IntegrationsFacade instance."""
-    global _facade_instance
-    if _facade_instance is None:
-        _facade_instance = IntegrationsFacade()
-    return _facade_instance
+    Returns:
+        IntegrationsFacade instance
+
+    Note:
+        Session is REQUIRED. L4 handler owns transaction boundary.
+        Not a singleton — each request creates a new facade with its session.
+    """
+    return IntegrationsFacade(session=session)
 
 
 __all__ = [

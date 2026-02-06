@@ -6,8 +6,9 @@
 #   Execution: async
 # Role: Memory pins REST API (tenant-isolated key-value storage)
 # Callers: SDK, Console UI
-# Allowed Imports: L3, L4, L5, L6
-# Forbidden Imports: L1
+# Allowed Imports: L4 (operation_registry)
+# Forbidden Imports: L1, L5, L6, sqlalchemy
+# Reference: HOC Phase Plan — Gate 1 B2
 
 """
 Memory Pins API - M7 Implementation
@@ -19,46 +20,32 @@ Features:
 - JSONB values for flexible schema
 - Optional TTL for expiring entries
 - RBAC enforcement (when enabled)
-- Prometheus metrics
+- Prometheus metrics (via L5 engine)
 
 Endpoints:
 - POST /api/v1/memory/pins - Create or upsert a pin
 - GET /api/v1/memory/pins/{key} - Get a pin by key
 - GET /api/v1/memory/pins - List pins for tenant
 - DELETE /api/v1/memory/pins/{key} - Delete a pin
+- POST /api/v1/memory/pins/cleanup - Clean up expired pins
+
+All DB access routed through L4 operation registry → L5 engine → L6 driver.
 """
 
 import logging
-import os
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError
-
-from ..db import get_session as get_db_session
-from ..schemas.response import wrap_dict
-from ..utils.metrics_helpers import get_or_create_counter, get_or_create_histogram
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+    get_session_dep,
+)
+from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.memory_pins")
-
-# Feature flag
-MEMORY_PINS_ENABLED = os.getenv("MEMORY_PINS_ENABLED", "true").lower() == "true"
-
-# Prometheus metrics (idempotent registration - PIN-120 PREV-1)
-MEMORY_PINS_OPERATIONS = get_or_create_counter(
-    "memory_pins_operations_total",
-    "Total memory pin operations",
-    ["operation", "status"],
-)
-MEMORY_PINS_LATENCY = get_or_create_histogram(
-    "memory_pins_latency_seconds",
-    "Memory pin operation latency",
-    ["operation"],
-    buckets=[0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0],
-)
 
 router = APIRouter(prefix="/api/v1/memory", tags=["memory"])
 
@@ -80,7 +67,6 @@ class MemoryPinCreate(BaseModel):
     @field_validator("key")
     @classmethod
     def validate_key(cls, v: str) -> str:
-        # Disallow certain characters for safety
         forbidden = ["..", "/", "\\", "\x00"]
         for f in forbidden:
             if f in v:
@@ -127,15 +113,8 @@ class MemoryPinDeleteResponse(BaseModel):
 # ============================================================================
 
 
-def check_feature_enabled():
-    """Check if memory pins feature is enabled."""
-    if not MEMORY_PINS_ENABLED:
-        raise HTTPException(status_code=503, detail="Memory pins feature is disabled")
-
-
 def extract_tenant_from_request(request: Request, tenant_id: Optional[str] = None) -> str:
     """Extract tenant ID from request or parameter."""
-    # Priority: explicit param > header > default
     if tenant_id:
         return tenant_id
     header_tenant = request.headers.get("X-Tenant-ID")
@@ -144,55 +123,19 @@ def extract_tenant_from_request(request: Request, tenant_id: Optional[str] = Non
     return "global"
 
 
-def write_memory_audit(
-    db,
-    operation: str,
-    tenant_id: str,
-    key: str,
-    success: bool,
-    latency_ms: float,
-    agent_id: Optional[str] = None,
-    source: Optional[str] = None,
-    cache_hit: bool = False,
-    error_message: Optional[str] = None,
-    old_value_hash: Optional[str] = None,
-    new_value_hash: Optional[str] = None,
-    extra: Optional[Dict[str, Any]] = None,
-):
-    """Write an audit entry to system.memory_audit."""
-    import json
-
-    try:
-        db.execute(
-            text(
-                """
-                INSERT INTO system.memory_audit
-                    (operation, tenant_id, key, agent_id, source, cache_hit,
-                     latency_ms, success, error_message, old_value_hash, new_value_hash, extra)
-                VALUES
-                    (:operation, :tenant_id, :key, :agent_id, :source, :cache_hit,
-                     :latency_ms, :success, :error_message, :old_value_hash, :new_value_hash, :extra)
-            """
-            ),
-            {
-                "operation": operation,
-                "tenant_id": tenant_id,
-                "key": key,
-                "agent_id": agent_id,
-                "source": source,
-                "cache_hit": cache_hit,
-                "latency_ms": latency_ms,
-                "success": success,
-                "error_message": error_message,
-                "old_value_hash": old_value_hash,
-                "new_value_hash": new_value_hash,
-                "extra": json.dumps(extra) if extra else "{}",
-            },
-        )
-        db.commit()
-    except Exception as e:
-        logger.warning(f"Failed to write memory audit: {e}")
-        # Don't fail the main operation if audit fails
+def _pin_row_to_response(pin: Any) -> MemoryPinResponse:
+    """Convert a MemoryPinRow dataclass to response model."""
+    return MemoryPinResponse(
+        id=pin.id,
+        tenant_id=pin.tenant_id,
+        key=pin.key,
+        value=pin.value,
+        source=pin.source,
+        created_at=pin.created_at,
+        updated_at=pin.updated_at,
+        ttl_seconds=pin.ttl_seconds,
+        expires_at=pin.expires_at,
+    )
 
 
 # ============================================================================
@@ -201,7 +144,11 @@ def write_memory_audit(
 
 
 @router.post("/pins", response_model=MemoryPinResponse, status_code=201)
-async def create_or_upsert_pin(pin: MemoryPinCreate, request: Request, db=Depends(get_db_session)):
+async def create_or_upsert_pin(
+    pin: MemoryPinCreate,
+    request: Request,
+    session = Depends(get_session_dep),
+):
     """
     Create or upsert a memory pin.
 
@@ -210,97 +157,34 @@ async def create_or_upsert_pin(pin: MemoryPinCreate, request: Request, db=Depend
 
     Requires RBAC permission: memory_pin:write
     """
-    import json
-    import time
-
-    start = time.time()
-    check_feature_enabled()
+    registry = get_operation_registry()
 
     try:
-        # Convert value to JSON string for PostgreSQL JSONB
-        value_json = json.dumps(pin.value)
-
-        # Use upsert (INSERT ... ON CONFLICT UPDATE)
-        result = db.execute(
-            text(
-                """
-                INSERT INTO system.memory_pins (tenant_id, key, value, source, ttl_seconds)
-                VALUES (:tenant_id, :key, CAST(:value AS jsonb), :source, :ttl_seconds)
-                ON CONFLICT (tenant_id, key)
-                DO UPDATE SET
-                    value = EXCLUDED.value,
-                    source = EXCLUDED.source,
-                    ttl_seconds = EXCLUDED.ttl_seconds,
-                    updated_at = now()
-                RETURNING id, tenant_id, key, value, source, created_at, updated_at, ttl_seconds, expires_at
-            """
+        op = await registry.execute(
+            "account.memory_pins",
+            OperationContext(
+                session=session,
+                tenant_id=pin.tenant_id,
+                params={
+                    "method": "upsert_pin",
+                    "key": pin.key,
+                    "value": pin.value,
+                    "source": pin.source,
+                    "ttl_seconds": pin.ttl_seconds,
+                },
             ),
-            {
-                "tenant_id": pin.tenant_id,
-                "key": pin.key,
-                "value": value_json,
-                "source": pin.source,
-                "ttl_seconds": pin.ttl_seconds,
-            },
         )
-        db.commit()
+        if not op.success:
+            if op.error_code == "FEATURE_DISABLED":
+                raise HTTPException(status_code=503, detail="Memory pins feature is disabled")
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
-        row = result.fetchone()
-        if not row:
-            raise HTTPException(status_code=500, detail="Failed to create pin")
+        return wrap_dict(_pin_row_to_response(op.data.pin).model_dump())
 
-        response = MemoryPinResponse(
-            id=row.id,
-            tenant_id=row.tenant_id,
-            key=row.key,
-            value=row.value if isinstance(row.value, dict) else json.loads(row.value),
-            source=row.source,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
-            ttl_seconds=row.ttl_seconds,
-            expires_at=row.expires_at,
-        )
-
-        latency_ms = (time.time() - start) * 1000
-        MEMORY_PINS_OPERATIONS.labels(operation="upsert", status="success").inc()
-        MEMORY_PINS_LATENCY.labels(operation="upsert").observe(latency_ms / 1000)
-
-        # Write audit log
-        import hashlib
-
-        value_hash = hashlib.sha256(value_json.encode()).hexdigest()[:16]
-        write_memory_audit(
-            db,
-            operation="upsert",
-            tenant_id=pin.tenant_id,
-            key=pin.key,
-            success=True,
-            latency_ms=latency_ms,
-            source=pin.source,
-            new_value_hash=value_hash,
-        )
-
-        logger.info(
-            "memory_pin_upserted",
-            extra={
-                "tenant_id": pin.tenant_id,
-                "key": pin.key,
-                "source": pin.source,
-                "has_ttl": pin.ttl_seconds is not None,
-            },
-        )
-
-        return wrap_dict(response.model_dump())
-
-    except IntegrityError as e:
-        db.rollback()
-        MEMORY_PINS_OPERATIONS.labels(operation="upsert", status="error").inc()
-        logger.error(f"Integrity error creating pin: {e}")
-        raise HTTPException(status_code=409, detail="Conflict creating pin")
+    except HTTPException:
+        raise
     except Exception as e:
-        db.rollback()
-        MEMORY_PINS_OPERATIONS.labels(operation="upsert", status="error").inc()
-        logger.error(f"Error creating pin: {e}")
+        logger.exception(f"[MEMORY_PINS] upsert failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -309,7 +193,7 @@ async def get_pin(
     key: str,
     request: Request,
     tenant_id: str = Query(default="global", description="Tenant ID"),
-    db=Depends(get_db_session),
+    session = Depends(get_session_dep),
 ):
     """
     Get a memory pin by key.
@@ -318,58 +202,31 @@ async def get_pin(
 
     Requires RBAC permission: memory_pin:read
     """
-    import time
-
-    start = time.time()
-    check_feature_enabled()
+    registry = get_operation_registry()
 
     try:
-        result = db.execute(
-            text(
-                """
-                SELECT id, tenant_id, key, value, source, created_at, updated_at, ttl_seconds, expires_at
-                FROM system.memory_pins
-                WHERE tenant_id = :tenant_id
-                  AND key = :key
-                  AND (expires_at IS NULL OR expires_at > now())
-            """
+        op = await registry.execute(
+            "account.memory_pins",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={"method": "get_pin", "key": key},
             ),
-            {"tenant_id": tenant_id, "key": key},
         )
-        row = result.fetchone()
+        if not op.success:
+            if op.error_code == "FEATURE_DISABLED":
+                raise HTTPException(status_code=503, detail="Memory pins feature is disabled")
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
-        if not row:
-            MEMORY_PINS_OPERATIONS.labels(operation="get", status="not_found").inc()
+        if op.data.pin is None:
             raise HTTPException(status_code=404, detail=f"Pin not found: {key}")
 
-        import json
-
-        response = MemoryPinResponse(
-            id=row.id,
-            tenant_id=row.tenant_id,
-            key=row.key,
-            value=row.value if isinstance(row.value, dict) else json.loads(row.value),
-            source=row.source,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
-            ttl_seconds=row.ttl_seconds,
-            expires_at=row.expires_at,
-        )
-
-        latency_ms = (time.time() - start) * 1000
-        MEMORY_PINS_OPERATIONS.labels(operation="get", status="success").inc()
-        MEMORY_PINS_LATENCY.labels(operation="get").observe(latency_ms / 1000)
-
-        # Write audit log
-        write_memory_audit(db, operation="get", tenant_id=tenant_id, key=key, success=True, latency_ms=latency_ms)
-
-        return wrap_dict(response.model_dump())
+        return wrap_dict(_pin_row_to_response(op.data.pin).model_dump())
 
     except HTTPException:
         raise
     except Exception as e:
-        MEMORY_PINS_OPERATIONS.labels(operation="get", status="error").inc()
-        logger.error(f"Error getting pin: {e}")
+        logger.exception(f"[MEMORY_PINS] get failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -381,7 +238,7 @@ async def list_pins(
     limit: int = Query(default=100, ge=1, le=1000, description="Max results"),
     offset: int = Query(default=0, ge=0, description="Offset for pagination"),
     include_expired: bool = Query(default=False, description="Include expired pins"),
-    db=Depends(get_db_session),
+    session = Depends(get_session_dep),
 ):
     """
     List memory pins for a tenant.
@@ -390,69 +247,35 @@ async def list_pins(
 
     Requires RBAC permission: memory_pin:read
     """
-    import time
-
-    start = time.time()
-    check_feature_enabled()
+    registry = get_operation_registry()
 
     try:
-        # Build query with optional filters
-        where_clauses = ["tenant_id = :tenant_id"]
-        params = {"tenant_id": tenant_id, "limit": limit, "offset": offset}
-
-        if prefix:
-            where_clauses.append("key LIKE :prefix")
-            params["prefix"] = f"{prefix}%"
-
-        if not include_expired:
-            where_clauses.append("(expires_at IS NULL OR expires_at > now())")
-
-        where_sql = " AND ".join(where_clauses)
-
-        # Get total count
-        count_result = db.execute(text(f"SELECT COUNT(*) FROM system.memory_pins WHERE {where_sql}"), params)
-        total = count_result.scalar()
-
-        # Get pins
-        result = db.execute(
-            text(
-                f"""
-                SELECT id, tenant_id, key, value, source, created_at, updated_at, ttl_seconds, expires_at
-                FROM system.memory_pins
-                WHERE {where_sql}
-                ORDER BY created_at DESC
-                LIMIT :limit OFFSET :offset
-            """
+        op = await registry.execute(
+            "account.memory_pins",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "list_pins",
+                    "prefix": prefix,
+                    "include_expired": include_expired,
+                    "limit": limit,
+                    "offset": offset,
+                },
             ),
-            params,
         )
+        if not op.success:
+            if op.error_code == "FEATURE_DISABLED":
+                raise HTTPException(status_code=503, detail="Memory pins feature is disabled")
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
-        import json
+        pins = [_pin_row_to_response(p) for p in (op.data.pins or [])]
+        return MemoryPinListResponse(pins=pins, total=op.data.total, limit=limit, offset=offset)
 
-        pins = []
-        for row in result:
-            pins.append(
-                MemoryPinResponse(
-                    id=row.id,
-                    tenant_id=row.tenant_id,
-                    key=row.key,
-                    value=row.value if isinstance(row.value, dict) else json.loads(row.value),
-                    source=row.source,
-                    created_at=row.created_at,
-                    updated_at=row.updated_at,
-                    ttl_seconds=row.ttl_seconds,
-                    expires_at=row.expires_at,
-                )
-            )
-
-        MEMORY_PINS_OPERATIONS.labels(operation="list", status="success").inc()
-        MEMORY_PINS_LATENCY.labels(operation="list").observe(time.time() - start)
-
-        return MemoryPinListResponse(pins=pins, total=total, limit=limit, offset=offset)
-
+    except HTTPException:
+        raise
     except Exception as e:
-        MEMORY_PINS_OPERATIONS.labels(operation="list", status="error").inc()
-        logger.error(f"Error listing pins: {e}")
+        logger.exception(f"[MEMORY_PINS] list failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -461,7 +284,7 @@ async def delete_pin(
     key: str,
     request: Request,
     tenant_id: str = Query(default="global", description="Tenant ID"),
-    db=Depends(get_db_session),
+    session = Depends(get_session_dep),
 ):
     """
     Delete a memory pin by key.
@@ -470,46 +293,31 @@ async def delete_pin(
 
     Requires RBAC permission: memory_pin:delete
     """
-    import time
-
-    start = time.time()
-    check_feature_enabled()
+    registry = get_operation_registry()
 
     try:
-        result = db.execute(
-            text(
-                """
-                DELETE FROM system.memory_pins
-                WHERE tenant_id = :tenant_id AND key = :key
-                RETURNING id
-            """
+        op = await registry.execute(
+            "account.memory_pins",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={"method": "delete_pin", "key": key},
             ),
-            {"tenant_id": tenant_id, "key": key},
         )
-        db.commit()
+        if not op.success:
+            if op.error_code == "FEATURE_DISABLED":
+                raise HTTPException(status_code=503, detail="Memory pins feature is disabled")
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
-        deleted_row = result.fetchone()
-        if not deleted_row:
-            MEMORY_PINS_OPERATIONS.labels(operation="delete", status="not_found").inc()
+        if not op.data.deleted:
             raise HTTPException(status_code=404, detail=f"Pin not found: {key}")
-
-        latency_ms = (time.time() - start) * 1000
-        MEMORY_PINS_OPERATIONS.labels(operation="delete", status="success").inc()
-        MEMORY_PINS_LATENCY.labels(operation="delete").observe(latency_ms / 1000)
-
-        # Write audit log
-        write_memory_audit(db, operation="delete", tenant_id=tenant_id, key=key, success=True, latency_ms=latency_ms)
-
-        logger.info("memory_pin_deleted", extra={"tenant_id": tenant_id, "key": key})
 
         return MemoryPinDeleteResponse(deleted=True, key=key, tenant_id=tenant_id)
 
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
-        MEMORY_PINS_OPERATIONS.labels(operation="delete", status="error").inc()
-        logger.error(f"Error deleting pin: {e}")
+        logger.exception(f"[MEMORY_PINS] delete failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -517,7 +325,7 @@ async def delete_pin(
 async def cleanup_expired_pins(
     request: Request,
     tenant_id: Optional[str] = Query(default=None, description="Limit to specific tenant"),
-    db=Depends(get_db_session),
+    session = Depends(get_session_dep),
 ):
     """
     Clean up expired memory pins.
@@ -526,53 +334,30 @@ async def cleanup_expired_pins(
 
     Requires RBAC permission: memory_pin:admin
     """
-    import time
-
-    start = time.time()
-    check_feature_enabled()
+    registry = get_operation_registry()
 
     try:
-        if tenant_id:
-            result = db.execute(
-                text(
-                    """
-                    DELETE FROM system.memory_pins
-                    WHERE tenant_id = :tenant_id
-                      AND expires_at IS NOT NULL
-                      AND expires_at < now()
-                    RETURNING id
-                """
-                ),
-                {"tenant_id": tenant_id},
-            )
-        else:
-            result = db.execute(
-                text(
-                    """
-                    DELETE FROM system.memory_pins
-                    WHERE expires_at IS NOT NULL
-                      AND expires_at < now()
-                    RETURNING id
-                """
-                )
-            )
-
-        db.commit()
-        deleted_count = len(result.fetchall())
-
-        MEMORY_PINS_OPERATIONS.labels(operation="cleanup", status="success").inc()
-        MEMORY_PINS_LATENCY.labels(operation="cleanup").observe(time.time() - start)
-
-        logger.info("memory_pins_cleanup", extra={"deleted_count": deleted_count, "tenant_id": tenant_id})
+        op = await registry.execute(
+            "account.memory_pins",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id or "system",
+                params={"method": "cleanup_expired", "tenant_id": tenant_id},
+            ),
+        )
+        if not op.success:
+            if op.error_code == "FEATURE_DISABLED":
+                raise HTTPException(status_code=503, detail="Memory pins feature is disabled")
+            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
         return wrap_dict({
-            "deleted_count": deleted_count,
+            "deleted_count": op.data.deleted_count,
             "tenant_id": tenant_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": op.data.timestamp,
         })
 
+    except HTTPException:
+        raise
     except Exception as e:
-        db.rollback()
-        MEMORY_PINS_OPERATIONS.labels(operation="cleanup", status="error").inc()
-        logger.error(f"Error cleaning up pins: {e}")
+        logger.exception(f"[MEMORY_PINS] cleanup failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

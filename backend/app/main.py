@@ -409,6 +409,20 @@ async def lifespan(app: FastAPI):
         logger.critical(f"STARTUP ABORTED - SPINE validation failed: {e}")
         raise
 
+    # =========================================================================
+    # ITER3.3: HOC Spine Bootstrap (Registry Hardening)
+    # =========================================================================
+    # Bootstrap hoc_spine: validate all modules import, register handlers, freeze registry.
+    # Failure to import any module crashes startup (fail-fast policy).
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import bootstrap_hoc_spine
+
+    try:
+        bootstrap_hoc_spine()
+        logger.info("hoc_spine_bootstrap_complete")
+    except RuntimeError as e:
+        logger.critical(f"STARTUP ABORTED - HOC Spine bootstrap failed: {e}")
+        raise
+
     # PIN-413: Create immutable system record for API startup
     _create_system_record(
         component=SystemComponent.API.value,
@@ -890,110 +904,110 @@ async def openapi_inspect():
 
 
 # Include API routers
-from .api.aos_accounts import router as accounts_router  # ACCOUNTS: Unified facade (/api/v1/accounts/*)
-from .api.activity import router as activity_router  # ACTIVITY Domain: Unified facade (/api/v1/activity/*)
-from .api.analytics import router as analytics_router  # ANALYTICS Domain: Unified facade (/api/v1/analytics/*)
-from .api.agents import router as agents_router  # M12 Multi-Agent System
-from .api.authz_status import router as authz_status_router  # T5: Internal authz status
-from .api.aos_cus_integrations import router as aos_cus_integrations_router  # CONNECTIVITY: Customer LLM Integrations BYOK (/api/v1/integrations/*)
+from .hoc.api.cus.policies.aos_accounts import router as accounts_router  # ACCOUNTS: Unified facade (/api/v1/accounts/*)
+from .hoc.api.cus.activity.activity import router as activity_router  # ACTIVITY Domain: Unified facade (/api/v1/activity/*)
+from .hoc.api.cus.policies.analytics import router as analytics_router  # ANALYTICS Domain: Unified facade (/api/v1/analytics/*)
+from .hoc.api.cus.general.agents import router as agents_router  # M12 Multi-Agent System
+from .hoc.api.cus.agent.authz_status import router as authz_status_router  # T5: Internal authz status
+from .hoc.api.cus.policies.aos_cus_integrations import router as aos_cus_integrations_router  # CONNECTIVITY: Customer LLM Integrations BYOK (/api/v1/integrations/*)
 from .hoc.api.cus.integrations.mcp_servers import router as mcp_servers_router  # PIN-516: MCP Servers (/api/v1/integrations/mcp-servers/*)
-from .api.aos_api_key import router as aos_api_key_router  # CONNECTIVITY: API Keys facade (/api/v1/api-keys/*)
-from .api.cus_telemetry import router as cus_telemetry_router  # Customer LLM telemetry ingestion
-from .api.cus_enforcement import router as cus_enforcement_router  # Customer LLM enforcement checks
-from .api.cost_guard import router as cost_guard_router  # /guard/costs/* - Customer cost visibility
+from .hoc.api.cus.policies.aos_api_key import router as aos_api_key_router  # CONNECTIVITY: API Keys facade (/api/v1/api-keys/*)
+from .hoc.api.cus.integrations.cus_telemetry import router as cus_telemetry_router  # Customer LLM telemetry ingestion
+from .hoc.api.cus.policies.cus_enforcement import router as cus_enforcement_router  # Customer LLM enforcement checks
+from .hoc.api.cus.incidents.cost_guard import router as cost_guard_router  # /guard/costs/* - Customer cost visibility
 
 # M26 Cost Intelligence - Token attribution, anomaly detection, budget enforcement
-from .api.cost_intelligence import router as cost_intelligence_router
+from .hoc.api.cus.logs.cost_intelligence import router as cost_intelligence_router
 
 # M29 Category 4: Cost Intelligence Completion
-from .api.cost_ops import router as cost_ops_router  # /ops/cost/* - Founder cost visibility
-from .api.costsim import router as costsim_router
-from .api.customer_visibility import router as customer_visibility_router  # Phase 4C-2 Customer Visibility
-from .api.embedding import router as embedding_router  # PIN-047 Embedding Quota API
+from .hoc.api.cus.ops.cost_ops import router as cost_ops_router  # /ops/cost/* - Founder cost visibility
+from .hoc.api.cus.analytics.costsim import router as costsim_router
+from .hoc.api.cus.policies.customer_visibility import router as customer_visibility_router  # Phase 4C-2 Customer Visibility
+from .hoc.api.cus.api_keys.embedding import router as embedding_router  # PIN-047 Embedding Quota API
 
 # M29 Category 6: Founder Action Paths
-from .api.founder_actions import router as founder_actions_router  # /ops/actions/* - Founder actions
+from .hoc.api.fdr.ops.founder_actions import router as founder_actions_router  # /ops/actions/* - Founder actions
 
 # CRM Contract Review (approve/reject workflow)
-from .api.founder_contract_review import (
+from .hoc.api.fdr.agent.founder_contract_review import (
     router as founder_contract_review_router,  # /fdr/contracts/* - Contract review
 )
-from .api.founder_explorer import router as explorer_router  # H3 Founder Explorer (cross-tenant READ-ONLY)
+from .hoc.api.fdr.account.founder_explorer import router as explorer_router  # H3 Founder Explorer (cross-tenant READ-ONLY)
 
 # PIN-399 Phase-4: Founder onboarding recovery (force-complete)
-from .api.founder_onboarding import router as founder_onboarding_router
+from .hoc.api.fdr.incidents.founder_onboarding import router as founder_onboarding_router
 
 # PIN-333: Founder AUTO_EXECUTE Review (evidence-only, read-only)
-from .api.founder_review import router as founder_review_router  # /fdr/review/* - Evidence review
-from .api.founder_timeline import router as founder_timeline_router  # Phase 4C-1 Founder Timeline
+from .hoc.api.fdr.logs.founder_review import router as founder_review_router  # /fdr/review/* - Evidence review
+from .hoc.api.fdr.logs.founder_timeline import router as founder_timeline_router  # Phase 4C-1 Founder Timeline
 
 # M22.1 UI Console - Dual-console architecture (Customer + Operator)
-from .api.guard import router as guard_router  # Customer Console (/guard/*)
-from .api.guard_logs import router as guard_logs_router  # PIN-281: Customer Logs (/guard/logs/*)
-from .api.guard_policies import router as guard_policies_router  # PIN-281: Customer Policies (/guard/policies/*)
-from .api.health import router as health_router
-from .api.incidents import router as incidents_router  # INCIDENTS Domain: Unified facade (/api/v1/incidents/*)
+from .hoc.api.cus.policies.guard import router as guard_router  # Customer Console (/guard/*)
+from .hoc.api.cus.logs.guard_logs import router as guard_logs_router  # PIN-281: Customer Logs (/guard/logs/*)
+from .hoc.api.cus.policies.guard_policies import router as guard_policies_router  # PIN-281: Customer Policies (/guard/policies/*)
+from .hoc.api.cus.general.health import router as health_router
+from .hoc.api.cus.incidents.incidents import router as incidents_router  # INCIDENTS Domain: Unified facade (/api/v1/incidents/*)
 
 # M28: failures_router removed (PIN-145) - duplicates /ops/incidents/patterns
-from .api.M25_integrations import router as m25_integration_router  # M25 Pillar Integration Loop (INTERNAL)
+from .hoc.api.cus.policies.M25_integrations import router as m25_integration_router  # M25 Pillar Integration Loop (INTERNAL)
 
 # M29 Category 7: Legacy Route Handlers (410 Gone)
-from .api.legacy_routes import router as legacy_routes_router  # 410 Gone for deprecated paths
-from .api.logs import router as logs_router  # LOGS Domain: Unified facade (/api/v1/logs/*)
-from .api.memory_pins import router as memory_pins_router
-from .api.onboarding import router as onboarding_router  # M24 Customer Onboarding
+from .hoc.api.cus.general.legacy_routes import router as legacy_routes_router  # 410 Gone for deprecated paths
+from .hoc.api.cus.policies.logs import router as logs_router  # LOGS Domain: Unified facade (/api/v1/logs/*)
+from .hoc.api.cus.account.memory_pins import router as memory_pins_router
+from .hoc.api.cus.agent.onboarding import router as onboarding_router  # M24 Customer Onboarding
 
 # M28: operator_router removed (PIN-145) - redundant with /ops/*
-from .api.ops import router as ops_router  # M24 Ops Console (founder intelligence)
-from .api.overview import router as overview_router  # OVERVIEW Domain: Unified facade (/api/v1/overview/*)
-from .api.platform import router as platform_router  # PIN-284 Platform Health (founder-only)
-from .api.policies import router as policies_router  # POLICIES Domain: Unified facade (/api/v1/policies/*)
-from .api.policy import router as policy_router
-from .api.policy_layer import router as policy_layer_router  # M19 Policy Layer
+from .hoc.api.fdr.incidents.ops import router as ops_router  # M24 Ops Console (founder intelligence)
+from .hoc.api.cus.overview.overview import router as overview_router  # OVERVIEW Domain: Unified facade (/api/v1/overview/*)
+from .hoc.api.cus.agent.platform import router as platform_router  # PIN-284 Platform Health (founder-only)
+from .hoc.api.cus.policies.policies import router as policies_router  # POLICIES Domain: Unified facade (/api/v1/policies/*)
+from .hoc.api.cus.policies.policy import router as policy_router
+from .hoc.api.cus.policies.policy_layer import router as policy_layer_router  # M19 Policy Layer
 
 # PIN-LIM: Limits Management Domain
-from .api.policy_limits_crud import router as policy_limits_crud_router  # PIN-LIM-01: Policy limits CRUD
-from .api.policy_rules_crud import router as policy_rules_crud_router  # PIN-LIM-02: Policy rules CRUD
-from .api.limits.simulate import router as limits_simulate_router  # PIN-LIM-04: Limit simulation
-from .api.limits.override import router as limits_override_router  # PIN-LIM-05: Limit overrides
-from .api.rbac_api import router as rbac_router
-from .api.recovery import router as recovery_router
-from .api.recovery_ingest import router as recovery_ingest_router
-from .api.replay import router as replay_router  # H1 Replay UX (READ-ONLY slice/timeline)
-from .api.runtime import router as runtime_router
-from .api.scenarios import router as scenarios_router  # H2 Scenario-based Cost Simulation (advisory)
+from .hoc.api.cus.policies.policy_limits_crud import router as policy_limits_crud_router  # PIN-LIM-01: Policy limits CRUD
+from .hoc.api.cus.policies.policy_rules_crud import router as policy_rules_crud_router  # PIN-LIM-02: Policy rules CRUD
+from .hoc.api.cus.policies.simulate import router as limits_simulate_router  # PIN-LIM-04: Limit simulation
+from .hoc.api.cus.policies.override import router as limits_override_router  # PIN-LIM-05: Limit overrides
+from .hoc.api.cus.policies.rbac_api import router as rbac_router
+from .hoc.api.cus.recovery.recovery import router as recovery_router
+from .hoc.api.cus.recovery.recovery_ingest import router as recovery_ingest_router
+from .hoc.api.cus.policies.replay import router as replay_router  # H1 Replay UX (READ-ONLY slice/timeline)
+from .hoc.api.cus.policies.runtime import router as runtime_router
+from .hoc.api.cus.analytics.scenarios import router as scenarios_router  # H2 Scenario-based Cost Simulation (advisory)
 
 # PIN-399: SDK handshake and registration endpoints
-from .api.sdk import router as sdk_router
+from .hoc.api.cus.general.sdk import router as sdk_router
 
 # PIN-409: Session context for frontend auth state
-from .api.session_context import router as session_context_router
+from .hoc.api.cus.integrations.session_context import router as session_context_router
 
 # Debug: Auth context visibility endpoint (AUTHORITY_CONTRACT.md)
-from .api.debug_auth import router as debug_auth_router
-from .api.status_history import router as status_history_router
-from .api.tenants import router as tenants_router  # M21 - RE-ENABLED: PIN-399 Onboarding State Machine
-from .api.traces import router as traces_router
-from .api.v1_killswitch import router as v1_killswitch_router  # Kill switch, incidents, replay
+from .hoc.api.cus.general.debug_auth import router as debug_auth_router
+from .hoc.api.cus.policies.status_history import router as status_history_router
+from .hoc.api.cus.logs.tenants import router as tenants_router  # M21 - RE-ENABLED: PIN-399 Onboarding State Machine
+from .hoc.api.cus.logs.traces import router as traces_router
+from .hoc.api.cus.policies.v1_killswitch import router as v1_killswitch_router  # Kill switch, incidents, replay
 
 # M22 KillSwitch MVP - OpenAI-compatible proxy with safety controls
-from .api.v1_proxy import router as v1_proxy_router  # Drop-in OpenAI replacement
-from .api.workers import router as workers_router  # Business Builder Worker v0.2
+from .hoc.api.cus.integrations.v1_proxy import router as v1_proxy_router  # Drop-in OpenAI replacement
+from .hoc.api.cus.policies.workers import router as workers_router  # Business Builder Worker v0.2
 from .predictions.api import router as c2_predictions_router  # C2 Predictions (advisory only)
 
 # W4 Phase: L2 API Facades (GAP-090 to GAP-136)
-from .api.retrieval import router as retrieval_router  # RETRIEVAL: /api/v1/retrieval/* (GAP-094)
-from .api.detection import router as detection_router  # DETECTION: /api/v1/detection/* (GAP-102)
-from .api.compliance import router as compliance_router  # COMPLIANCE: /api/v1/compliance/* (GAP-103)
-from .api.evidence import router as evidence_router  # EVIDENCE: /api/v1/evidence/* (GAP-104, GAP-105)
-from .api.notifications import router as notifications_router  # NOTIFICATIONS: /api/v1/notifications/* (GAP-109)
-from .api.alerts import router as alerts_router  # ALERTS: /api/v1/alerts/* (GAP-110, GAP-111, GAP-124)
-from .api.scheduler import router as scheduler_router  # SCHEDULER: /api/v1/scheduler/* (GAP-112)
-from .api.datasources import router as datasources_router  # DATASOURCES: /api/v1/datasources/* (GAP-113)
-from .api.monitors import router as monitors_router  # MONITORS: /api/v1/monitors/* (GAP-120, GAP-121)
-from .api.rate_limits import router as rate_limits_router  # RATE_LIMITS: /api/v1/rate-limits/* (GAP-122)
-from .api.controls import router as controls_router  # CONTROLS: /api/v1/controls/* (GAP-123)
-from .api.lifecycle import router as lifecycle_router  # LIFECYCLE: /api/v1/lifecycle/* (GAP-131-136)
+from .hoc.api.cus.policies.retrieval import router as retrieval_router  # RETRIEVAL: /api/v1/retrieval/* (GAP-094)
+from .hoc.api.cus.policies.detection import router as detection_router  # DETECTION: /api/v1/detection/* (GAP-102)
+from .hoc.api.cus.policies.compliance import router as compliance_router  # COMPLIANCE: /api/v1/compliance/* (GAP-103)
+from .hoc.api.cus.policies.evidence import router as evidence_router  # EVIDENCE: /api/v1/evidence/* (GAP-104, GAP-105)
+from .hoc.api.cus.policies.notifications import router as notifications_router  # NOTIFICATIONS: /api/v1/notifications/* (GAP-109)
+from .hoc.api.cus.policies.alerts import router as alerts_router  # ALERTS: /api/v1/alerts/* (GAP-110, GAP-111, GAP-124)
+from .hoc.api.cus.policies.scheduler import router as scheduler_router  # SCHEDULER: /api/v1/scheduler/* (GAP-112)
+from .hoc.api.cus.policies.datasources import router as datasources_router  # DATASOURCES: /api/v1/datasources/* (GAP-113)
+from .hoc.api.cus.policies.monitors import router as monitors_router  # MONITORS: /api/v1/monitors/* (GAP-120, GAP-121)
+from .hoc.api.cus.policies.rate_limits import router as rate_limits_router  # RATE_LIMITS: /api/v1/rate-limits/* (GAP-122)
+from .hoc.api.cus.policies.controls import router as controls_router  # CONTROLS: /api/v1/controls/* (GAP-123)
+from .hoc.api.cus.policies.lifecycle import router as lifecycle_router  # LIFECYCLE: /api/v1/lifecycle/* (GAP-131-136)
 
 # PIN-411: Aurora Runtime Projections - REMOVED (all domains now have unified facades)
 # Activity → /api/v1/activity/*, Incidents → /api/v1/incidents/*, Overview → /api/v1/overview/*
@@ -1078,16 +1092,16 @@ app.include_router(founder_actions_router)  # /ops/actions/* - Freeze, throttle,
 app.include_router(legacy_routes_router)  # /dashboard, /operator/*, /demo/*, /simulation/*
 
 # Phase B Observability APIs (READ-ONLY) - PB-S3, PB-S4, PB-S5
-from .api.feedback import router as feedback_router  # PB-S3 pattern_feedback
-from .api.policy_proposals import router as policy_proposals_router  # PB-S4 policy_proposals
-from .api.predictions import router as predictions_router  # PB-S5 prediction_events
+from .hoc.api.cus.analytics.feedback import router as feedback_router  # PB-S3 pattern_feedback
+from .hoc.api.cus.policies.policy_proposals import router as policy_proposals_router  # PB-S4 policy_proposals
+from .hoc.api.cus.analytics.predictions import router as predictions_router  # PB-S5 prediction_events
 
 app.include_router(feedback_router)  # /api/v1/feedback - Pattern feedback (read-only)
 app.include_router(policy_proposals_router)  # /api/v1/policy-proposals - Policy proposals (read-only)
 app.include_router(predictions_router)  # /api/v1/predictions - Predictions (read-only)
 
 # Phase C Discovery Ledger (internal, founder/dev only)
-from .api.discovery import router as discovery_router
+from .hoc.api.cus.agent.discovery import router as discovery_router
 
 app.include_router(discovery_router)  # /api/v1/discovery - Discovery Ledger (read-only)
 
@@ -1104,6 +1118,15 @@ app.include_router(monitors_router, prefix="/api/v1")  # MONITORS: /api/v1/monit
 app.include_router(rate_limits_router, prefix="/api/v1")  # RATE_LIMITS: /api/v1/rate-limits/* (GAP-122)
 app.include_router(controls_router, prefix="/api/v1")  # CONTROLS: /api/v1/controls/* (GAP-123)
 app.include_router(lifecycle_router, prefix="/api/v1")  # LIFECYCLE: /api/v1/lifecycle/* (GAP-131-136)
+
+# Phase 3: New HOC-only routers (PIN-526 migration)
+from .hoc.api.fdr.account.founder_lifecycle import router as founder_lifecycle_router
+from .hoc.api.cus.policies.connectors import router as connectors_router
+from .hoc.api.cus.policies.governance import router as governance_router
+
+app.include_router(founder_lifecycle_router)  # /fdr/lifecycle/* - Founder lifecycle management
+app.include_router(connectors_router, prefix="/api/v1")  # /api/v1/connectors/* - Connector management
+app.include_router(governance_router, prefix="/api/v1")  # /api/v1/governance/* - Governance endpoints
 
 # PIN-411: Aurora Runtime Projections - REMOVED (all domains now have unified facades)
 # See unified facades: /api/v1/activity/*, /api/v1/incidents/*, /api/v1/overview/*,
@@ -1656,7 +1679,7 @@ async def post_goal(
         # the run is queued for L5 execution.
         # Reference: PIN-257 Phase R-2 (L5→L4 Violation Fix)
         try:
-            from app.services.plan_generation_engine import generate_plan_for_run
+            from app.hoc.cus.policies.L5_engines.plan_generation_engine import generate_plan_for_run
 
             plan_result = generate_plan_for_run(
                 agent_id=agent_id,

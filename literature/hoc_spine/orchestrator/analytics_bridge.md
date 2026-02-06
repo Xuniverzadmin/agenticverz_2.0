@@ -42,6 +42,10 @@ Implements the Switchboard Pattern (Law 4 - PIN-507):
 | `divergence_capability()` | `divergence_engine` | `generate_divergence_report` |
 | `datasets_capability()` | `datasets_engine` | `get_dataset_validator`, `validate_all_datasets`, `validate_dataset` |
 | `cost_write_capability(session)` | `CostWriteDriver` | PIN-520 Phase 1: Sync DB writes for cost records, feature tags, budgets |
+| `anomaly_coordinator_capability()` | Anomaly coordinator factory | L5 DetectionFacade - PIN-520 Iter3.1 (2026-02-06) |
+| `detection_facade_capability()` | Detection facade factory | L4 handlers - PIN-520 Iter3.1 (2026-02-06) |
+| `alert_driver_capability()` | `AlertDriver` class | L5 AlertWorkerEngine - PIN-520 Iter3.1 (2026-02-06) |
+| `alert_adapter_factory_capability()` | `get_alert_delivery_adapter` | L5 AlertWorkerEngine - PIN-520 Iter3.1 (2026-02-06) |
 
 ## Usage Pattern
 

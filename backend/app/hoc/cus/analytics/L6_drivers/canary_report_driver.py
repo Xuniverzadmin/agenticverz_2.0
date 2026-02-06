@@ -13,10 +13,10 @@
 #   Scope: domain (analytics)
 #   Models: CostSimCanaryReportModel
 # Role: CostSim Canary Report Driver - DB operations for canary validation reports
-# Callers: canary_engine.py (L5), analytics_handler.py (L4)
+# Callers: canary_engine.py (L5), canary_coordinator.py (L4)
 # Allowed Imports: L6, L7 (models)
-# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT (when session passed)
-# Reference: PIN-518 (Analytics Storage Follow-ups)
+# Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
+# Reference: PIN-518, PIN-520 (L6 Purity)
 """
 Canary Report Driver for CostSim V2.
 
@@ -59,13 +59,14 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db_async import AsyncSessionLocal, async_session_context
+from app.db_async import async_session_context
 from app.models.costsim_cb import CostSimCanaryReportModel
 
 logger = logging.getLogger("nova.costsim.canary_report_driver")
 
 
 async def write_canary_report(
+    session: AsyncSession,
     run_id: str,
     timestamp: datetime,
     status: str,
@@ -81,12 +82,16 @@ async def write_canary_report(
     failure_reasons: Optional[List[str]] = None,
     artifact_paths: Optional[List[str]] = None,
     golden_comparison: Optional[Dict[str, Any]] = None,
-    session: Optional[AsyncSession] = None,
 ) -> int:
     """
     Write a canary report to the database.
 
+    L6 Contract:
+        - Session REQUIRED (passed from L4 coordinator)
+        - L6 does NOT commit (L4 owns transaction boundary)
+
     Args:
+        session: Async session (required, from L4 coordinator)
         run_id: Unique run identifier
         timestamp: Run timestamp
         status: Run status (pass, fail, error, skipped)
@@ -102,55 +107,36 @@ async def write_canary_report(
         failure_reasons: List of failure reasons
         artifact_paths: List of artifact file paths
         golden_comparison: Golden comparison results
-        session: Optional async session (if None, creates own session and commits)
 
     Returns:
         ID of created record
     """
-    own_session = session is None
+    record = CostSimCanaryReportModel(
+        run_id=run_id,
+        timestamp=timestamp,
+        status=status,
+        total_samples=total_samples,
+        matching_samples=matching_samples,
+        minor_drift_samples=minor_drift_samples,
+        major_drift_samples=major_drift_samples,
+        median_cost_diff=median_cost_diff,
+        p90_cost_diff=p90_cost_diff,
+        kl_divergence=kl_divergence,
+        outlier_count=outlier_count,
+        passed=passed,
+        failure_reasons_json=json.dumps(failure_reasons) if failure_reasons else None,
+        artifact_paths_json=json.dumps(artifact_paths) if artifact_paths else None,
+        golden_comparison_json=json.dumps(golden_comparison) if golden_comparison else None,
+    )
 
-    if own_session:
-        session = AsyncSessionLocal()
+    session.add(record)
+    await session.flush()
+    await session.refresh(record)
+    # L6 does NOT commit — L4 coordinator owns transaction boundary
 
-    try:
-        record = CostSimCanaryReportModel(
-            run_id=run_id,
-            timestamp=timestamp,
-            status=status,
-            total_samples=total_samples,
-            matching_samples=matching_samples,
-            minor_drift_samples=minor_drift_samples,
-            major_drift_samples=major_drift_samples,
-            median_cost_diff=median_cost_diff,
-            p90_cost_diff=p90_cost_diff,
-            kl_divergence=kl_divergence,
-            outlier_count=outlier_count,
-            passed=passed,
-            failure_reasons_json=json.dumps(failure_reasons) if failure_reasons else None,
-            artifact_paths_json=json.dumps(artifact_paths) if artifact_paths else None,
-            golden_comparison_json=json.dumps(golden_comparison) if golden_comparison else None,
-        )
+    logger.info(f"Canary report created: id={record.id}, run_id={run_id}, passed={passed}")
 
-        session.add(record)
-        await session.flush()
-        await session.refresh(record)
-
-        logger.info(f"Canary report created: id={record.id}, run_id={run_id}, passed={passed}")
-
-        if own_session:
-            await session.commit()
-
-        return record.id
-
-    except Exception as e:
-        logger.error(f"Failed to write canary report: {e}")
-        if own_session:
-            await session.rollback()
-        raise
-
-    finally:
-        if own_session:
-            await session.close()
+    return record.id
 
 
 async def query_canary_reports(

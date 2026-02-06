@@ -29,18 +29,18 @@ O4: Execution unchanged ✓ (no POST/PUT/DELETE)
 """
 
 import logging
-from datetime import datetime
 from typing import Optional
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import func, select
 
-from ..auth.authority import AuthorityResult, emit_authority_audit, require_predictions_read
-from ..db import get_async_session
-from ..models.prediction import PredictionEvent
-from ..schemas.response import wrap_dict
+from app.auth.authority import AuthorityResult, emit_authority_audit, require_predictions_read
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    get_operation_registry,
+    get_session_dep,
+    OperationContext,
+)
+from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.predictions")
 
@@ -110,6 +110,7 @@ async def list_predictions(
     include_expired: bool = Query(False, description="Include expired predictions"),
     limit: int = Query(50, ge=1, le=200, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
+    session=Depends(get_session_dep),
     auth: AuthorityResult = Depends(require_predictions_read),
 ):
     """
@@ -122,70 +123,58 @@ async def list_predictions(
     # Emit authority audit for capability access
     await emit_authority_audit(auth, "predictions", subject_id="list")
 
-    now = datetime.utcnow()
+    registry = get_operation_registry()
+    result = await registry.execute(
+        "analytics.prediction_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id or "system",
+            params={
+                "method": "list",
+                "prediction_type": prediction_type,
+                "subject_type": subject_type,
+                "subject_id": subject_id,
+                "include_expired": include_expired,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
+    )
 
-    async with get_async_session() as session:
-        # Build query
-        query = select(PredictionEvent).order_by(PredictionEvent.created_at.desc())
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
 
-        if tenant_id:
-            query = query.where(PredictionEvent.tenant_id == tenant_id)
-        if prediction_type:
-            query = query.where(PredictionEvent.prediction_type == prediction_type)
-        if subject_type:
-            query = query.where(PredictionEvent.subject_type == subject_type)
-        if subject_id:
-            query = query.where(PredictionEvent.subject_id == subject_id)
-        if not include_expired:
-            query = query.where((PredictionEvent.valid_until.is_(None)) | (PredictionEvent.valid_until > now))
-
-        # Get total count
-        count_query = select(func.count()).select_from(query.subquery())
-        count_result = await session.execute(count_query)
-        total = count_result.scalar() or 0
-
-        # Apply pagination
-        query = query.limit(limit).offset(offset)
-
-        result = await session.execute(query)
-        records = result.scalars().all()
-
-        # Aggregate by type and subject_type
-        by_type: dict[str, int] = {}
-        by_subject_type: dict[str, int] = {}
-        for r in records:
-            by_type[r.prediction_type] = by_type.get(r.prediction_type, 0) + 1
-            by_subject_type[r.subject_type] = by_subject_type.get(r.subject_type, 0) + 1
-
-        items = [
-            PredictionSummaryResponse(
-                id=str(r.id),
-                tenant_id=r.tenant_id,
-                prediction_type=r.prediction_type,
-                subject_type=r.subject_type,
-                subject_id=r.subject_id,
-                confidence_score=r.confidence_score,
-                is_advisory=r.is_advisory,
-                created_at=r.created_at.isoformat() if r.created_at else None,
-                valid_until=r.valid_until.isoformat() if r.valid_until else None,
-                is_valid=(r.valid_until is None or r.valid_until > now),
-            )
-            for r in records
-        ]
-
-        return PredictionListResponse(
-            total=total,
-            limit=limit,
-            offset=offset,
-            by_type=by_type,
-            by_subject_type=by_subject_type,
-            items=items,
+    data = result.data
+    items = [
+        PredictionSummaryResponse(
+            id=item["id"],
+            tenant_id=item["tenant_id"],
+            prediction_type=item["prediction_type"],
+            subject_type=item["subject_type"],
+            subject_id=item["subject_id"],
+            confidence_score=item["confidence_score"],
+            is_advisory=item["is_advisory"],
+            created_at=item["created_at"],
+            valid_until=item["expires_at"],
+            is_valid=item["is_valid"],
         )
+        for item in data["items"]
+    ]
+
+    return PredictionListResponse(
+        total=data["total"],
+        limit=data["limit"],
+        offset=data["offset"],
+        by_type=data["by_type"],
+        by_subject_type=data["by_subject_type"],
+        items=items,
+    )
 
 
 @router.get("/{prediction_id}", response_model=PredictionDetailResponse)
 async def get_prediction(
     prediction_id: str,
+    session=Depends(get_session_dep),
     auth: AuthorityResult = Depends(require_predictions_read),
 ):
     """
@@ -198,35 +187,42 @@ async def get_prediction(
     # Emit authority audit for capability access
     await emit_authority_audit(auth, "predictions", subject_id=prediction_id)
 
-    try:
-        prediction_uuid = UUID(prediction_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid prediction ID format")
+    registry = get_operation_registry()
+    result = await registry.execute(
+        "analytics.prediction_read",
+        OperationContext(
+            session=session,
+            tenant_id="system",
+            params={
+                "method": "get",
+                "prediction_id": prediction_id,
+            },
+        ),
+    )
 
-    now = datetime.utcnow()
-
-    async with get_async_session() as session:
-        result = await session.execute(select(PredictionEvent).where(PredictionEvent.id == prediction_uuid))
-        record = result.scalar_one_or_none()
-
-        if not record:
+    if not result.success:
+        if result.error_code == "NOT_FOUND":
             raise HTTPException(status_code=404, detail=f"Prediction {prediction_id} not found")
+        if "Invalid" in (result.error or ""):
+            raise HTTPException(status_code=400, detail="Invalid prediction ID format")
+        raise HTTPException(status_code=500, detail=result.error)
 
-        return PredictionDetailResponse(
-            id=str(record.id),
-            tenant_id=record.tenant_id,
-            prediction_type=record.prediction_type,
-            subject_type=record.subject_type,
-            subject_id=record.subject_id,
-            confidence_score=record.confidence_score,
-            prediction_value=record.prediction_value or {},
-            contributing_factors=record.contributing_factors or [],
-            valid_until=record.valid_until.isoformat() if record.valid_until else None,
-            created_at=record.created_at.isoformat() if record.created_at else None,
-            is_advisory=record.is_advisory,
-            notes=record.notes,
-            is_valid=(record.valid_until is None or record.valid_until > now),
-        )
+    data = result.data
+    return PredictionDetailResponse(
+        id=data["id"],
+        tenant_id=data["tenant_id"],
+        prediction_type=data["prediction_type"],
+        subject_type=data["subject_type"],
+        subject_id=data["subject_id"],
+        confidence_score=data["confidence_score"],
+        prediction_value=data["prediction_value"],
+        contributing_factors=data["contributing_factors"],
+        valid_until=data["expires_at"],
+        created_at=data["created_at"],
+        is_advisory=data["is_advisory"],
+        notes=data["notes"],
+        is_valid=data["is_valid"],
+    )
 
 
 @router.get("/subject/{subject_type}/{subject_id}")
@@ -235,6 +231,7 @@ async def get_predictions_for_subject(
     subject_id: str,
     include_expired: bool = Query(False, description="Include expired predictions"),
     limit: int = Query(20, ge=1, le=100, description="Maximum results"),
+    session=Depends(get_session_dep),
     auth: AuthorityResult = Depends(require_predictions_read),
 ):
     """
@@ -246,50 +243,33 @@ async def get_predictions_for_subject(
     # Emit authority audit for capability access
     await emit_authority_audit(auth, "predictions", subject_id=f"{subject_type}:{subject_id}")
 
-    now = datetime.utcnow()
+    registry = get_operation_registry()
+    result = await registry.execute(
+        "analytics.prediction_read",
+        OperationContext(
+            session=session,
+            tenant_id="system",
+            params={
+                "method": "for_subject",
+                "subject_type": subject_type,
+                "subject_id": subject_id,
+                "include_expired": include_expired,
+                "limit": limit,
+            },
+        ),
+    )
 
-    async with get_async_session() as session:
-        query = (
-            select(PredictionEvent)
-            .where(PredictionEvent.subject_type == subject_type)
-            .where(PredictionEvent.subject_id == subject_id)
-            .order_by(PredictionEvent.created_at.desc())
-        )
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
 
-        if not include_expired:
-            query = query.where((PredictionEvent.valid_until.is_(None)) | (PredictionEvent.valid_until > now))
-
-        query = query.limit(limit)
-
-        result = await session.execute(query)
-        records = result.scalars().all()
-
-        return wrap_dict({
-            "subject_type": subject_type,
-            "subject_id": subject_id,
-            "predictions": [
-                {
-                    "id": str(r.id),
-                    "prediction_type": r.prediction_type,
-                    "confidence_score": r.confidence_score,
-                    "prediction_value": r.prediction_value,
-                    "created_at": r.created_at.isoformat() if r.created_at else None,
-                    "valid_until": r.valid_until.isoformat() if r.valid_until else None,
-                    "is_advisory": r.is_advisory,
-                    "is_valid": (r.valid_until is None or r.valid_until > now),
-                }
-                for r in records
-            ],
-            "count": len(records),
-            "read_only": True,
-            "pb_s5_compliant": True,
-        })
+    return wrap_dict(result.data)
 
 
 @router.get("/stats/summary")
 async def get_prediction_stats(
     tenant_id: Optional[str] = Query(None, description="Filter by tenant"),
     include_expired: bool = Query(False, description="Include expired predictions"),
+    session=Depends(get_session_dep),
     auth: AuthorityResult = Depends(require_predictions_read),
 ):
     """
@@ -301,48 +281,20 @@ async def get_prediction_stats(
     # Emit authority audit for capability access
     await emit_authority_audit(auth, "predictions", subject_id="stats")
 
-    now = datetime.utcnow()
-
-    async with get_async_session() as session:
-        # Base query
-        query = select(PredictionEvent)
-        if tenant_id:
-            query = query.where(PredictionEvent.tenant_id == tenant_id)
-        if not include_expired:
-            query = query.where((PredictionEvent.valid_until.is_(None)) | (PredictionEvent.valid_until > now))
-
-        result = await session.execute(query)
-        records = result.scalars().all()
-
-        # Aggregate stats
-        total = len(records)
-        by_type: dict[str, int] = {}
-        by_subject_type: dict[str, int] = {}
-        confidence_sum = 0.0
-        high_confidence_count = 0  # > 0.7
-
-        for r in records:
-            by_type[r.prediction_type] = by_type.get(r.prediction_type, 0) + 1
-            by_subject_type[r.subject_type] = by_subject_type.get(r.subject_type, 0) + 1
-            confidence_sum += r.confidence_score
-            if r.confidence_score > 0.7:
-                high_confidence_count += 1
-
-        avg_confidence = (confidence_sum / total) if total > 0 else 0
-
-        # Verify all are advisory (PB-S5 enforcement)
-        non_advisory = sum(1 for r in records if not r.is_advisory)
-
-        return wrap_dict({
-            "total": total,
-            "by_type": by_type,
-            "by_subject_type": by_subject_type,
-            "avg_confidence": round(avg_confidence, 3),
-            "high_confidence_count": high_confidence_count,
-            "advisory_compliance": {
-                "all_advisory": non_advisory == 0,
-                "non_advisory_count": non_advisory,
+    registry = get_operation_registry()
+    result = await registry.execute(
+        "analytics.prediction_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id or "system",
+            params={
+                "method": "stats",
+                "include_expired": include_expired,
             },
-            "read_only": True,
-            "pb_s5_compliant": True,
-        })
+        ),
+    )
+
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
+
+    return wrap_dict(result.data)

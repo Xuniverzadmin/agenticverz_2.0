@@ -146,3 +146,76 @@ def get_analytics_bridge() -> AnalyticsBridge:
     if _bridge_instance is None:
         _bridge_instance = AnalyticsBridge()
     return _bridge_instance
+
+
+# =============================================================================
+# ANALYTICS ENGINE BRIDGE (extends AnalyticsBridge to avoid 5-method limit)
+# =============================================================================
+
+
+class AnalyticsEngineBridge:
+    """Extended capabilities for analytics domain coordinators. Max 5 methods."""
+
+    def anomaly_coordinator_capability(self):
+        """
+        Return anomaly incident coordinator for detection + ingestion (PIN-520).
+
+        Used by detection_facade.py to run cost anomaly detection without
+        importing L4 orchestrator directly. L4 owns the orchestration decision.
+        """
+        from app.hoc.cus.hoc_spine.orchestrator.coordinators.anomaly_incident_coordinator import (
+            get_anomaly_incident_coordinator,
+        )
+
+        return get_anomaly_incident_coordinator()
+
+    def detection_facade_capability(self):
+        """
+        Return detection facade module for anomaly detection operations (PIN-520).
+
+        Provides access to DetectionFacade for L4 handlers.
+        """
+        from app.hoc.cus.analytics.L5_engines import detection_facade
+
+        return detection_facade
+
+    def alert_driver_capability(self):
+        """
+        Return AlertDriver class for alert queue DB operations (PIN-520).
+
+        Used by alert_worker_engine.py for alert processing.
+        L4 owns access to hoc_spine drivers; L5 receives via injection.
+        """
+        from app.hoc.cus.hoc_spine.drivers.alert_driver import AlertDriver
+
+        return AlertDriver
+
+    def alert_adapter_factory_capability(self):
+        """
+        Return get_alert_delivery_adapter factory for HTTP delivery (PIN-520).
+
+        Used by alert_worker_engine.py for Alertmanager delivery.
+        L4 owns access to hoc_spine services; L5 receives via injection.
+        """
+        from app.hoc.cus.hoc_spine.services import get_alert_delivery_adapter
+
+        return get_alert_delivery_adapter
+
+
+_engine_bridge_instance: AnalyticsEngineBridge | None = None
+
+
+def get_analytics_engine_bridge() -> AnalyticsEngineBridge:
+    """Get the singleton AnalyticsEngineBridge instance."""
+    global _engine_bridge_instance
+    if _engine_bridge_instance is None:
+        _engine_bridge_instance = AnalyticsEngineBridge()
+    return _engine_bridge_instance
+
+
+__all__ = [
+    "AnalyticsBridge",
+    "get_analytics_bridge",
+    "AnalyticsEngineBridge",
+    "get_analytics_engine_bridge",
+]

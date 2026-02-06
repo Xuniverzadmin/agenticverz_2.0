@@ -62,7 +62,7 @@ from app.models.killswitch import (
 from app.models.tenant import APIKey, Tenant
 
 # Phase 2B: Write service for DB operations
-from app.services.guard_write_service import GuardWriteService
+from app.hoc.cus.hoc_spine.authority.guard_write_engine import GuardWriteService
 
 # =============================================================================
 # Router

@@ -9,6 +9,14 @@
 
 ## File Registry
 
+### L2 APIs
+
+**`hoc/api/cus/ops/cost_ops.py`** (LOC TBD)
+- Role: Founder ops cost intelligence endpoints (L2)
+- Callers: Founder Ops Console UI
+- Delegates: L4 operation registry (`ops.cost`)
+- Session DI: `get_session_dep` from `hoc_spine.orchestrator.operation_registry` (L2 does not import DB/ORM)
+
 ### L5 Engines
 
 **`founder_action_write_service.py`** (109 LOC)

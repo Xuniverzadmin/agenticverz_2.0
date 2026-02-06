@@ -39,9 +39,9 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
-from ..auth.gateway_middleware import get_auth_context
-from ..auth.onboarding_state import OnboardingState
-from ..schemas.response import wrap_dict
+from app.auth.gateway_middleware import get_auth_context
+from app.auth.onboarding_state import OnboardingState
+from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.onboarding")
 
@@ -254,7 +254,7 @@ async def get_onboarding_status(request: Request):
         )
 
     # Get current state from database
-    from ..auth.onboarding_transitions import get_onboarding_service
+    from app.auth.onboarding_transitions import get_onboarding_service
 
     service = get_onboarding_service()
     current_state = await service.get_current_state(tenant_id)
@@ -317,7 +317,7 @@ async def verify_identity(request: Request):
         )
 
     # Trigger transition
-    from ..auth.onboarding_transitions import (
+    from app.auth.onboarding_transitions import (
         TransitionTrigger,
         get_onboarding_service,
     )
@@ -368,7 +368,7 @@ async def advance_api_key_created(request: Request):
             detail="Tenant context required",
         )
 
-    from ..auth.onboarding_transitions import (
+    from app.auth.onboarding_transitions import (
         TransitionTrigger,
         get_onboarding_service,
     )

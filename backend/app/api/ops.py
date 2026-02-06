@@ -1479,7 +1479,7 @@ async def get_infra_incident_summary(
     from datetime import timedelta
 
     from app.adapters.founder_ops_adapter import FounderOpsAdapter
-    from app.services.ops import get_ops_facade
+    from app.hoc.cus.ops.L5_engines.cost_ops_engine import get_ops_facade
 
     # Calculate time window
     now = datetime.now(timezone.utc)

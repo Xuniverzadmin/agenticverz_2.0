@@ -6,9 +6,9 @@
 #   Execution: async
 # Role: Status History API endpoints (M6)
 # Callers: Customer Console
-# Allowed Imports: L3, L4, L5, L6
-# Forbidden Imports: L1
-# Reference: M6 Status History
+# Allowed Imports: L4 (via registry)
+# Forbidden Imports: L1, L5, L6, sqlalchemy, sqlmodel, app.db
+# Reference: M6 Status History, L2 first-principles purity
 """
 API endpoints for immutable status history audit trail.
 
@@ -39,9 +39,13 @@ from typing import Any, Dict, List, Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
-from sqlmodel import Session, func, select
 
-from app.db import StatusHistory, get_session
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+    get_session_dep,
+)
+from app.schemas.response import wrap_dict
 
 router = APIRouter(prefix="/status_history", tags=["status_history"])
 
@@ -187,7 +191,7 @@ async def query_status_history(
     end_time: Optional[datetime] = Query(None, description="Filter until this time"),
     limit: int = Query(100, ge=1, le=1000, description="Max results"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
-    session: Session = Depends(get_session),
+    session=Depends(get_session_dep),
 ):
     """
     Query status history with filters.
@@ -200,32 +204,30 @@ async def query_status_history(
     - new_status: Target status
     - start_time/end_time: Time range
     """
-    # Build query
-    query = select(StatusHistory)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id or "global",
+            params={
+                "method": "query_status_history",
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "tenant_id": tenant_id,
+                "actor_type": actor_type,
+                "new_status": new_status,
+                "start_time": start_time,
+                "end_time": end_time,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail=op.error)
 
-    if entity_type:
-        query = query.where(StatusHistory.entity_type == entity_type)
-    if entity_id:
-        query = query.where(StatusHistory.entity_id == entity_id)
-    if tenant_id:
-        query = query.where(StatusHistory.tenant_id == tenant_id)
-    if actor_type:
-        query = query.where(StatusHistory.actor_type == actor_type)
-    if new_status:
-        query = query.where(StatusHistory.new_status == new_status)
-    if start_time:
-        query = query.where(StatusHistory.created_at >= start_time)
-    if end_time:
-        query = query.where(StatusHistory.created_at <= end_time)
-
-    # Count total
-    count_query = select(func.count()).select_from(query.subquery())
-    total = session.exec(count_query).one()
-
-    # Apply pagination and ordering
-    query = query.order_by(cast(Any, StatusHistory.created_at).desc()).offset(offset).limit(limit)
-
-    results = session.exec(query).all()
+    results, total = op.data
 
     return StatusHistoryListResponse(
         items=[
@@ -258,22 +260,31 @@ async def get_entity_history(
     entity_type: str,
     entity_id: str,
     limit: int = Query(100, ge=1, le=1000),
-    session: Session = Depends(get_session),
+    session=Depends(get_session_dep),
 ):
     """
     Get complete status history for a specific entity.
 
     Returns all status transitions in chronological order.
     """
-    query = (
-        select(StatusHistory)
-        .where(StatusHistory.entity_type == entity_type)
-        .where(StatusHistory.entity_id == entity_id)
-        .order_by(cast(Any, StatusHistory.created_at).asc())
-        .limit(limit)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.guard_read",
+        OperationContext(
+            session=session,
+            tenant_id="global",
+            params={
+                "method": "get_entity_status_history",
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "limit": limit,
+            },
+        ),
     )
+    if not op.success:
+        raise HTTPException(status_code=500, detail=op.error)
 
-    results = session.exec(query).all()
+    results = op.data
 
     return StatusHistoryListResponse(
         items=[
@@ -304,7 +315,7 @@ async def get_entity_history(
 @router.post("/export", response_model=ExportResponse)
 async def create_export(
     request: ExportRequest,
-    session: Session = Depends(get_session),
+    session=Depends(get_session_dep),
 ):
     """
     Create an export of status history records.
@@ -318,23 +329,26 @@ async def create_export(
     if request.format not in ("csv", "jsonl"):
         raise HTTPException(status_code=400, detail="Format must be 'csv' or 'jsonl'")
 
-    # Build query
-    query = select(StatusHistory)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=request.tenant_id or "global",
+            params={
+                "method": "get_all_status_history",
+                "entity_type": request.entity_type,
+                "entity_id": request.entity_id,
+                "tenant_id": request.tenant_id,
+                "start_time": request.start_time,
+                "end_time": request.end_time,
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail=op.error)
 
-    if request.entity_type:
-        query = query.where(StatusHistory.entity_type == request.entity_type)
-    if request.entity_id:
-        query = query.where(StatusHistory.entity_id == request.entity_id)
-    if request.tenant_id:
-        query = query.where(StatusHistory.tenant_id == request.tenant_id)
-    if request.start_time:
-        query = query.where(StatusHistory.created_at >= request.start_time)
-    if request.end_time:
-        query = query.where(StatusHistory.created_at <= request.end_time)
-
-    query = query.order_by(cast(Any, StatusHistory.created_at).asc())
-
-    results = session.exec(query).all()
+    results = op.data
 
     # Generate export ID
     export_id = str(uuid.uuid4())[:12]
@@ -347,7 +361,7 @@ async def create_export(
         file_path = EXPORT_DIR / f"{export_id}.csv"
         with open(file_path, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(StatusHistory.csv_headers())
+            writer.writerow(results[0].__class__.csv_headers() if results else [])
             for record in results:
                 writer.writerow(record.to_csv_row())
     else:  # jsonl
@@ -408,59 +422,36 @@ async def download_export(
 @router.get("/stats", response_model=StatsResponse)
 async def get_stats(
     tenant_id: Optional[str] = Query(None, description="Filter by tenant"),
-    session: Session = Depends(get_session),
+    session=Depends(get_session_dep),
 ):
     """
     Get statistics about status history records.
 
     Useful for audit reporting and monitoring.
     """
-    # Base query
-    base_query = select(StatusHistory)
-    if tenant_id:
-        base_query = base_query.where(StatusHistory.tenant_id == tenant_id)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "policies.guard_read",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id or "global",
+            params={
+                "method": "get_status_history_stats",
+                "tenant_id": tenant_id,
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail=op.error)
 
-    # Total count
-    total_query = select(func.count()).select_from(base_query.subquery())
-    total_records = session.exec(total_query).one()
-
-    # By entity type
-    entity_type_query = select(StatusHistory.entity_type, func.count()).group_by(StatusHistory.entity_type)
-    if tenant_id:
-        entity_type_query = entity_type_query.where(StatusHistory.tenant_id == tenant_id)
-    entity_type_results = session.exec(entity_type_query).all()
-    records_by_entity_type = {et: count for et, count in entity_type_results}
-
-    # By actor type
-    actor_type_query = select(StatusHistory.actor_type, func.count()).group_by(StatusHistory.actor_type)
-    if tenant_id:
-        actor_type_query = actor_type_query.where(StatusHistory.tenant_id == tenant_id)
-    actor_type_results = session.exec(actor_type_query).all()
-    records_by_actor_type = {at: count for at, count in actor_type_results}
-
-    # By status
-    status_query = select(StatusHistory.new_status, func.count()).group_by(StatusHistory.new_status)
-    if tenant_id:
-        status_query = status_query.where(StatusHistory.tenant_id == tenant_id)
-    status_results = session.exec(status_query).all()
-    records_by_status = {s: count for s, count in status_results}
-
-    # Time range
-    time_query = select(func.min(StatusHistory.created_at), func.max(StatusHistory.created_at))
-    if tenant_id:
-        time_query = time_query.where(StatusHistory.tenant_id == tenant_id)
-    oldest, newest = session.exec(time_query).one()
-
-    time_range_days = None
-    if oldest and newest:
-        time_range_days = (newest - oldest).total_seconds() / 86400
+    stats = op.data
 
     return StatsResponse(
-        total_records=total_records,
-        records_by_entity_type=records_by_entity_type,
-        records_by_actor_type=records_by_actor_type,
-        records_by_status=records_by_status,
-        oldest_record=oldest,
-        newest_record=newest,
-        time_range_days=time_range_days,
+        total_records=stats["total_records"],
+        records_by_entity_type=stats["records_by_entity_type"],
+        records_by_actor_type=stats["records_by_actor_type"],
+        records_by_status=stats["records_by_status"],
+        oldest_record=stats["oldest_record"],
+        newest_record=stats["newest_record"],
+        time_range_days=stats["time_range_days"],
     )

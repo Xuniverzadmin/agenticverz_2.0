@@ -65,10 +65,10 @@ from app.jobs.failure_classification_engine import (
     compute_signature,
     get_summary_stats,
 )
-from app.services.recovery_rule_engine import (
+from app.hoc.cus.incidents.L5_engines.recovery_rule_engine import (
     classify_error_category as suggest_category,
 )
-from app.services.recovery_rule_engine import (
+from app.hoc.cus.incidents.L5_engines.recovery_rule_engine import (
     suggest_recovery_mode as suggest_recovery,
 )
 

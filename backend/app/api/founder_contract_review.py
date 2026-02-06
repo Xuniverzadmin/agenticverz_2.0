@@ -62,7 +62,7 @@ from app.models.contract import (
     ContractStatus,
     InvalidTransitionError,
 )
-from app.services.governance.contract_service import (
+from app.hoc.cus.hoc_spine.authority.contracts.contract_engine import (
     ContractService,
     ContractState,
 )

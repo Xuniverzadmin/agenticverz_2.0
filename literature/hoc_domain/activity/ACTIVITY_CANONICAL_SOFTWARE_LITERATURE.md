@@ -71,8 +71,9 @@
 ```
 
 **Key Characteristics:**
-- **Main Entry Point:** `activity_facade.py` — 15+ async methods, 18 dataclasses
+- **Main Entry Point:** `activity_facade.py` — 16+ async methods, 18 dataclasses
 - **5 L4 Operations:** activity.query, activity.signal_fingerprint, activity.signal_feedback, activity.telemetry, activity.discovery (PIN-520)
+- **L2 Access Pattern:** L2 uses L4 operation registry calls (no direct ActivityFacade imports)
 - **Cross-Domain Pattern:** L6 control → L5 control → L4 runtime → L5 activity → L6 activity
 - **4 Stub Engines:** Attention ranking, cost analysis, pattern detection, signal feedback (all need ideal contractor)
 
@@ -86,7 +87,7 @@
 |---|------|-----------------|------|-----|---------|--------------|
 | 1 | `__init__.py` | — (package init) | SUPPORT | ~15 | — | Re-exports from threshold_engine, activity_facade, run_governance_facade |
 | 2 | `activity_enums.py` | SignalType, SeverityLevel, RunState, RiskType, EvidenceHealth | ENUMS | ~120 | Converters: severity_from_string, severity_to_int | None (pure data) |
-| 3 | `activity_facade.py` | ActivityFacade (singleton) | FACADE | ~850 | 15+ async methods: get_runs, get_run_detail, get_run_evidence, get_run_proof, get_status_summary, get_live_runs, get_completed_runs, get_signals, get_metrics, get_threshold_signals, get_risk_signals, get_patterns, get_cost_analysis, get_attention_queue, acknowledge_signal, suppress_signal | ActivityReadDriver (L6), PatternDetectionService, CostAnalysisService, AttentionRankingService, SignalFeedbackService, signal_identity |
+| 3 | `activity_facade.py` | ActivityFacade (singleton) | FACADE | ~900 | 16+ async methods: get_runs, get_run_detail, get_run_evidence, get_run_proof, get_status_summary, get_live_runs, get_completed_runs, get_signals, get_metrics, get_threshold_signals, get_risk_signals, get_dimension_breakdown, get_patterns, get_cost_analysis, get_attention_queue, acknowledge_signal, suppress_signal | ActivityReadDriver (L6), PatternDetectionService, CostAnalysisService, AttentionRankingService, SignalFeedbackService, signal_identity |
 | 4 | `attention_ranking_engine.py` | AttentionRankingService | STUB_ENGINE | ~80 | get_attention_queue (stub), compute_attention_score (formula: severity*0.4 + recency*0.3 + frequency*0.3) | None (pure logic) |
 | 5 | `cost_analysis_engine.py` | CostAnalysisService | STUB_ENGINE | ~95 | analyze_costs (stub), get_cost_breakdown (stub) | None (pure logic) |
 | 6 | `cus_telemetry_engine.py` | CusTelemetryEngine: telemetry ingestion, queries, aggregation (384 lines). Rewired from legacy 2026-02-02 (PIN-512 Cat-B). | CANONICAL | ~384 | ingest, batch_ingest, query_telemetry, aggregate, get_summary | CusTelemetryDriver (L6) |
@@ -95,14 +96,14 @@
 | 9 | `signal_identity.py` | compute_signal_fingerprint_from_row, compute_signal_fingerprint | PURE_COMPUTATION | ~45 | sha256[:32] fingerprinting | None (hashlib only) |
 
 **18 Dataclasses in activity_facade.py:**
-PolicyContextResult, RunSummaryResult, RunSummaryV2Result, RunListResult, RunsResult, RunDetailResult, RunEvidenceResult, RunProofResult, StatusCount, StatusSummaryResult, SignalProjectionResult, SignalsResult, MetricsResult, ThresholdSignalResult, ThresholdSignalsResult, RiskSignalsResult, LiveRunsResult (alias), CompletedRunsResult (alias)
+PolicyContextResult, RunSummaryResult, RunSummaryV2Result, RunListResult, RunsResult, RunDetailResult, RunEvidenceResult, RunProofResult, StatusCount, StatusSummaryResult, SignalProjectionResult, SignalsResult, MetricsResult, ThresholdSignalResult, ThresholdSignalsResult, RiskSignalsResult, DimensionGroupResult, DimensionBreakdownResult
 
 ### L6 Drivers (4 files + 1 deprecated)
 
 | # | File | Class | Tables | LOC | Methods |
 |---|------|-------|--------|-----|---------|
 | 10 | `__init__.py` | — (package init) | — | ~15 | Re-exports from controls/threshold_driver: LimitSnapshot, ThresholdDriver, ThresholdDriverSync, emit_and_persist_threshold_signal, emit_threshold_signal_sync |
-| 11 | `activity_read_driver.py` | ActivityReadDriver(session) | v_runs_o2 (READ) | ~380 | count_runs, fetch_runs, fetch_run_detail, fetch_status_summary, fetch_runs_with_policy_context, fetch_at_risk_runs, fetch_metrics, fetch_threshold_signals |
+| 11 | `activity_read_driver.py` | ActivityReadDriver(session) | v_runs_o2 (READ) | ~420 | count_runs, fetch_runs, fetch_run_detail, fetch_status_summary, fetch_runs_with_policy_context, fetch_at_risk_runs, fetch_metrics, fetch_threshold_signals, fetch_dimension_breakdown |
 | 12 | `orphan_recovery_driver.py` | detect_orphaned_runs, mark_run_as_crashed, recover_orphaned_runs, get_crash_recovery_summary | WorkerRun (READ+WRITE) | ~280 | PB-S2 truth guarantee. Renamed from orphan_recovery.py (2026-01-31) |
 | 13 | `run_signal_driver.py` | RunSignalDriver(session) | WorkerRun (WRITE) | ~150 | update_risk_level(run_id, signals), get_risk_level(run_id). SIGNAL_TO_RISK_LEVEL mapping. Backward alias: RunSignalService |
 | 14 | `llm_threshold_service.py.deprecated` | — (deprecated) | — | — | DEPRECATED file, not active |
@@ -272,12 +273,14 @@ L2 API → L4 handler.handle(operation, args)
 
 **Verification Status:** All 5 operations registered and callable. L4→L5 delegation confirmed.
 
+**ActivityQueryHandler Dispatch Updates:** Added `get_dimension_breakdown` route to ActivityFacade for grouped dimension analytics.
+
 ### External Callers
 
 | # | Caller File | Imports From Activity | Purpose | Status |
 |---|-------------|----------------------|---------|--------|
 | 1 | `int/agent/main.py` | `from .services.orphan_recovery import recover_orphaned_runs` | Orphan run recovery (legacy path) | LEGACY PATH (should route through L4) |
-| 2 | `hoc/api/cus/activity/activity.py` | ActivityFacade | L2 API endpoints | WIRED |
+| 2 | `hoc/api/cus/activity/activity.py` | L4 operation_registry | L2 API endpoints | WIRED |
 | 3 | Various L5 engines | activity_enums (SignalType, SeverityLevel) | Shared domain vocabulary | WIRED |
 
 **Legacy Path Issue:** `int/agent/main.py` imports from `.services.orphan_recovery` (legacy path). Should be updated to call through L4 spine: `hoc_spine.orchestrate("activity.orphan_recovery", args)`.
@@ -316,7 +319,7 @@ Complete map of all files outside activity domain that call into it.
 | # | Layer | File | Imports From Activity | Status |
 |---|-------|------|----------------------|--------|
 | 1 | L4 spine | `activity_handler.py` | `activity_facade`, `signal_identity`, etc. | WIRED |
-| 2 | L2 HOC API | `hoc/api/cus/activity/activity.py` | `ActivityFacade` | WIRED |
+| 2 | L2 HOC API | `hoc/api/cus/activity/activity.py` | L4 operation_registry | WIRED |
 | 3 | L5 controls | `threshold_engine.py` | activity_enums (SignalType, SeverityLevel) | WIRED (enums) |
 | 4 | L6 controls | `threshold_driver.py` | `run_signal_driver` (RunSignalDriver) | VIOLATION V1 |
 | 5 | int/agent | `main.py` | orphan_recovery (legacy path) | LEGACY PATH |
@@ -548,3 +551,48 @@ INTEGRITY_CONFIG = {
 - ✅ Activity L5 does not evaluate policy
 - ✅ Activity L5 does not compute integrity (delegated to coordinator)
 - ✅ All cross-domain queries go through L4 coordinators
+
+## 12. PIN-520 L4 Injection Pattern (Iter3.1)
+
+**Date:** 2026-02-06
+**Reference:** PIN-520, TODO_ITER3.1.md
+
+### L5 Purity Achieved
+
+L5 engines in the activity domain no longer import from `hoc_spine.orchestrator` or `hoc_spine.authority`. Dependencies are now injected by L4 callers.
+
+### Changes Made
+
+| File | Violation Removed | Pattern Applied |
+|------|-------------------|-----------------|
+| `activity_facade.py` | 3 coordinator imports | Protocol + constructor injection |
+
+### L4 Bridge Capabilities Added (activity_bridge.py)
+
+| Capability | Purpose | Injected Into |
+|------------|---------|---------------|
+| `run_evidence_coordinator_capability()` | Evidence coordinator factory | ActivityFacade |
+| `run_proof_coordinator_capability()` | Proof coordinator factory | ActivityFacade |
+| `signal_feedback_coordinator_capability()` | Signal feedback factory | ActivityFacade |
+
+### Injection Point
+
+L4 handlers/callers use `get_activity_bridge()` to obtain coordinator capabilities, then inject them into L5 engines via constructor or setter.
+
+```python
+# L4 caller pattern (handler/coordinator)
+bridge = get_activity_bridge()
+facade = ActivityFacade(
+    evidence_coordinator=bridge.run_evidence_coordinator_capability(),
+    proof_coordinator=bridge.run_proof_coordinator_capability(),
+    signal_feedback_coordinator=bridge.signal_feedback_coordinator_capability(),
+)
+```
+
+### Evidence
+
+```bash
+# Zero hoc_spine.orchestrator imports in L5
+rg "from app\\.hoc\\.cus\\.hoc_spine\\.orchestrator" app/hoc/cus/activity/L5_engines/
+# Result: No matches found
+```

@@ -41,15 +41,22 @@ from typing import Optional
 
 # Lazy imports for database-dependent modules (avoid requiring DATABASE_URL for demo)
 def _get_db_imports():
-    """Lazy import database-dependent modules."""
-    from sqlmodel import Session, select
+    """Lazy import database-dependent modules.
+
+    Uses L4-provided session and sql_text helpers instead of direct
+    sqlmodel/sqlalchemy imports per L2 DB hygiene rules.
+    """
+    from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+        get_sync_session_dep,
+        sql_text,
+    )
 
     from .db import Agent, Run, engine, init_db
     from .events import get_publisher
     from .planners import get_planner
     from .worker.runner import RunRunner
 
-    return Session, select, Agent, Run, engine, init_db, get_planner, RunRunner, get_publisher
+    return get_sync_session_dep, sql_text, Agent, Run, engine, init_db, get_planner, RunRunner, get_publisher
 
 
 # These don't require database - use absolute imports for CLI compatibility
@@ -69,62 +76,85 @@ logger = None  # Lazy init
 
 def create_agent(name: str) -> str:
     """Create a new agent and return its ID."""
-    Session, select, Agent, Run, engine, init_db, _, _, _ = _get_db_imports()
-    with Session(engine) as session:
+    get_sync_session_dep, sql_text, Agent, Run, engine, init_db, _, _, _ = _get_db_imports()
+    session = next(get_sync_session_dep())
+    try:
         agent = Agent(name=name, status="active")
         session.add(agent)
         session.commit()
         session.refresh(agent)
         # Extract ID while session is open (returns scalar, not ORM object)
         agent_id = agent.id
+    finally:
+        session.close()
     return agent_id
 
 
 def list_agents() -> list:
     """List all agents."""
-    Session, select, Agent, Run, engine, init_db, _, _, _ = _get_db_imports()
-    with Session(engine) as session:
-        agents = session.exec(select(Agent)).all()
+    get_sync_session_dep, sql_text, Agent, Run, engine, init_db, _, _, _ = _get_db_imports()
+    session = next(get_sync_session_dep())
+    try:
+        result = session.execute(sql_text("SELECT id, name, status, created_at FROM agent"))
+        rows = result.mappings().all()
         return [
             {
-                "id": a.id,
-                "name": a.name,
-                "status": a.status,
-                "created_at": a.created_at.isoformat() if a.created_at else None,
+                "id": a["id"],
+                "name": a["name"],
+                "status": a["status"],
+                "created_at": a["created_at"].isoformat() if a["created_at"] else None,
             }
-            for a in agents
+            for a in rows
         ]
+    finally:
+        session.close()
 
 
 def get_run(run_id: str) -> Optional[dict]:
     """Get run status and details."""
-    Session, select, Agent, Run, engine, init_db, _, _, _ = _get_db_imports()
-    with Session(engine) as session:
-        run = session.get(Run, run_id)
+    get_sync_session_dep, sql_text, Agent, Run, engine, init_db, _, _, _ = _get_db_imports()
+    session = next(get_sync_session_dep())
+    try:
+        result = session.execute(
+            sql_text(
+                "SELECT id, agent_id, goal, status, attempts, error_message, "
+                "plan_json, tool_calls_json, created_at, started_at, completed_at, duration_ms "
+                "FROM run WHERE id = :run_id"
+            ),
+            {"run_id": run_id},
+        )
+        run = result.mappings().first()
         if not run:
             return None
         return {
-            "run_id": run.id,
-            "agent_id": run.agent_id,
-            "goal": run.goal,
-            "status": run.status,
-            "attempts": run.attempts,
-            "error_message": run.error_message,
-            "plan": json.loads(run.plan_json) if run.plan_json else None,
-            "tool_calls": json.loads(run.tool_calls_json) if run.tool_calls_json else None,
-            "created_at": run.created_at.isoformat() if run.created_at else None,
-            "started_at": run.started_at.isoformat() if run.started_at else None,
-            "completed_at": run.completed_at.isoformat() if run.completed_at else None,
-            "duration_ms": run.duration_ms,
+            "run_id": run["id"],
+            "agent_id": run["agent_id"],
+            "goal": run["goal"],
+            "status": run["status"],
+            "attempts": run["attempts"],
+            "error_message": run["error_message"],
+            "plan": json.loads(run["plan_json"]) if run["plan_json"] else None,
+            "tool_calls": json.loads(run["tool_calls_json"]) if run["tool_calls_json"] else None,
+            "created_at": run["created_at"].isoformat() if run["created_at"] else None,
+            "started_at": run["started_at"].isoformat() if run["started_at"] else None,
+            "completed_at": run["completed_at"].isoformat() if run["completed_at"] else None,
+            "duration_ms": run["duration_ms"],
         }
+    finally:
+        session.close()
 
 
 def create_run(agent_id: str, goal: str) -> str:
     """Create a new run for an agent and return its ID."""
-    Session, select, Agent, Run, engine, init_db, _, _, _ = _get_db_imports()
-    with Session(engine) as session:
-        agent = session.get(Agent, agent_id)
-        if not agent:
+    get_sync_session_dep, sql_text, Agent, Run, engine, init_db, _, _, _ = _get_db_imports()
+    session = next(get_sync_session_dep())
+    try:
+        # Verify agent exists
+        agent_result = session.execute(
+            sql_text("SELECT id FROM agent WHERE id = :agent_id"),
+            {"agent_id": agent_id},
+        )
+        if not agent_result.mappings().first():
             raise ValueError(f"Agent not found: {agent_id}")
 
         run = Run(
@@ -136,6 +166,8 @@ def create_run(agent_id: str, goal: str) -> str:
         session.commit()
         session.refresh(run)
         return run.id
+    finally:
+        session.close()
 
 
 def execute_run_sync(run_id: str, wait: bool = True, poll_interval: float = 1.0) -> dict:
@@ -178,7 +210,7 @@ def run_goal(agent_id: str, goal: str, wait: bool = True, verbose: bool = False)
     Returns:
         Final run status dict
     """
-    Session, select, Agent, Run, engine, init_db, _, _, _ = _get_db_imports()
+    get_sync_session_dep, sql_text, Agent, Run, engine, init_db, _, _, _ = _get_db_imports()
 
     if verbose:
         print(f"Creating run for agent {agent_id}...")
@@ -191,13 +223,19 @@ def run_goal(agent_id: str, goal: str, wait: bool = True, verbose: bool = False)
         print("Executing...")
 
     # Mark as running
-    with Session(engine) as session:
-        run = session.get(Run, run_id)
-        run.status = "running"
-        run.started_at = datetime.now(timezone.utc)
-        run.attempts = 1
-        session.add(run)
+    session = next(get_sync_session_dep())
+    try:
+        now = datetime.now(timezone.utc)
+        session.execute(
+            sql_text(
+                "UPDATE run SET status = 'running', started_at = :now, attempts = 1 "
+                "WHERE id = :run_id"
+            ),
+            {"now": now, "run_id": run_id},
+        )
         session.commit()
+    finally:
+        session.close()
 
     result = execute_run_sync(run_id, wait=wait)
 
@@ -384,7 +422,7 @@ def main():
         return
 
     # Initialize database for other commands
-    _, _, _, _, _, init_db, _, _, _ = _get_db_imports()
+    _, _, _, _, _, init_db, _, _, _ = _get_db_imports()  # noqa: F841 — only init_db used
     init_db()
 
     try:

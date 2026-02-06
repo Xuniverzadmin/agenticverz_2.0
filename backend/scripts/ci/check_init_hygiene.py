@@ -35,6 +35,7 @@
 #  29. L6/driver no L5 engine imports — extended to int/ and fdr/ trees (PIN-513)
 #  30. Zero-logic facade detection — advisory (PIN-513)
 #  31. Single Activity Facade — only one activity_facade.py allowed in HOC (PIN-519)
+#  32. No legacy app.services imports in HOC/worker/startup (PIN-520 ITER3.5)
 #
 # Usage:
 #   python3 scripts/ci/check_init_hygiene.py [--ci]
@@ -1493,6 +1494,57 @@ def check_single_activity_facade(violations: list[Violation]) -> None:
                     ))
 
 
+def check_no_legacy_services_imports(violations: list[Violation]) -> None:
+    """
+    Check 32: No legacy app.services imports anywhere in backend/app/ (ITER3.6)
+
+    No file under backend/app/** may import from app.services.* unless it is
+    itself within backend/app/services/**. Also catches relative imports
+    (from ..services) that resolve to app.services.
+    """
+    app_root = BACKEND_ROOT / "app"
+    services_root = app_root / "services"
+    for py_file in app_root.rglob("*.py"):
+        # Skip files inside app/services/ itself
+        try:
+            py_file.relative_to(services_root)
+            continue
+        except ValueError:
+            pass
+        try:
+            source = py_file.read_text()
+        except (UnicodeDecodeError, OSError):
+            continue
+        for i, line in enumerate(source.splitlines(), 1):
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
+                continue
+            if "from app.services" in line or "import app.services" in line:
+                violations.append(Violation(
+                    str(py_file), i,
+                    f"Legacy app.services import: {line.strip()[:80]}",
+                    "LEGACY_SERVICES_IMPORT",
+                ))
+            # Also catch relative imports that resolve to app.services.
+            # e.g. app/api/foo.py  "from ..services" → app.services (BAD)
+            # but  app/agents/skills/foo.py "from ..services" → app.agents.services (OK)
+            if "from ..services" in line or "from ...services" in line:
+                # Compute the resolved package to check if it's app.services
+                rel = py_file.relative_to(app_root)
+                # Parts excluding filename: e.g. ("api",) or ("agents", "skills")
+                pkg_parts = list(rel.parts[:-1])
+                dots = line.split("from")[1].split("services")[0].count(".")
+                # Go up `dots - 1` levels from the file's package
+                resolved_parts = pkg_parts[:len(pkg_parts) - (dots - 1)]
+                # If resolved_parts is empty, the import resolves to app.services
+                if not resolved_parts:
+                    violations.append(Violation(
+                        str(py_file), i,
+                        f"Relative legacy services import: {line.strip()[:80]}",
+                        "LEGACY_SERVICES_IMPORT",
+                    ))
+
+
 def main():
     ci_mode = "--ci" in sys.argv
     violations: list[Violation] = []
@@ -1546,6 +1598,9 @@ def main():
 
     # PIN-519 checks (31)
     check_single_activity_facade(violations)
+
+    # PIN-520 ITER3.5 checks (32)
+    check_no_legacy_services_imports(violations)
 
     blocking = [v for v in violations if not v.is_known_exception]
     warnings = [v for v in violations if v.is_known_exception]

@@ -41,7 +41,7 @@ from app.integrations.events import (
     RoutingAdjustment,
     ensure_json_serializable,
 )
-from app.services.governance.cross_domain import create_incident_from_cost_anomaly_sync
+from app.hoc.cus.hoc_spine.drivers.cross_domain import create_incident_from_cost_anomaly_sync
 
 logger = logging.getLogger("nova.integrations.cost")
 

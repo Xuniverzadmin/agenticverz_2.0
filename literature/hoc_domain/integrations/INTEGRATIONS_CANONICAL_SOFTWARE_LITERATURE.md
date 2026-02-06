@@ -688,3 +688,46 @@ class MCPAuditEmitterPort(Protocol):
     async def emit_tool_completed(...) -> Any: ...
     async def emit_tool_failed(...) -> Any: ...
 ```
+
+---
+
+## PIN-520 L4 Injection Pattern (Iter3.1)
+
+**Date:** 2026-02-06
+**Reference:** PIN-520, TODO_ITER3.1.md
+
+### L5 Purity Achieved
+
+L5 engines in the integrations domain no longer import from `hoc_spine.orchestrator`. Dependencies are now injected by L4 callers.
+
+### Changes Made
+
+| File | Violation Removed | Pattern Applied |
+|------|-------------------|-----------------|
+| `cost_bridges_engine.py` | create_incident_from_cost_anomaly_sync import | Protocol + constructor injection |
+
+### L4 Bridge Capabilities Added (integrations_bridge.py / IntegrationsEngineBridge)
+
+| Capability | Purpose | Injected Into |
+|------------|---------|---------------|
+| `incident_creator_capability()` | Incident creation factory | CostBridgesEngine |
+
+### Injection Point
+
+```python
+# L4 caller pattern
+bridge = get_integrations_engine_bridge()
+
+# Cost bridges engine with incident creator injection
+engine = CostBridgesEngine(
+    incident_creator=bridge.incident_creator_capability()
+)
+```
+
+### Evidence
+
+```bash
+# Zero hoc_spine.orchestrator imports in L5
+rg "from app\\.hoc\\.cus\\.hoc_spine\\.orchestrator" app/hoc/cus/integrations/L5_engines/
+# Result: No matches found
+```

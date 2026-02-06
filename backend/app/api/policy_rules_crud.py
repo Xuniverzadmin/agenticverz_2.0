@@ -37,7 +37,7 @@ from app.schemas.limits.policy_rules import (
     PolicyRuleResponse,
     UpdatePolicyRuleRequest,
 )
-from app.services.limits.policy_rules_service import (
+from app.hoc.cus.policies.L5_engines.policy_rules_engine import (
     PolicyRulesService,
     PolicyRulesServiceError,
     RuleNotFoundError,

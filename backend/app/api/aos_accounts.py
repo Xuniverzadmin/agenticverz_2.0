@@ -61,7 +61,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
-from app.services.accounts_facade import get_accounts_facade
+from app.hoc.cus.account.L5_engines.accounts_facade import get_accounts_facade
 from app.models.tenant import (
     Invitation,
     Subscription,
@@ -609,7 +609,7 @@ async def get_billing_summary(
         )
 
         # Handle error result
-        from app.services.accounts_facade import AccountsErrorResult
+        from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
         if isinstance(result, AccountsErrorResult):
             raise HTTPException(status_code=result.status_code, detail=result.message)
 
@@ -681,7 +681,7 @@ async def update_profile(
         )
 
         # Handle error result
-        from app.services.accounts_facade import AccountsErrorResult
+        from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
         if isinstance(result, AccountsErrorResult):
             raise HTTPException(status_code=result.status_code, detail=result.message)
 
@@ -744,7 +744,7 @@ async def get_billing_invoices(
         )
 
         # Handle error result
-        from app.services.accounts_facade import AccountsErrorResult
+        from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
         if isinstance(result, AccountsErrorResult):
             raise HTTPException(status_code=result.status_code, detail=result.message)
 
@@ -1004,7 +1004,7 @@ async def invite_user(
         )
 
         # Handle error result
-        from app.services.accounts_facade import AccountsErrorResult
+        from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
         if isinstance(result, AccountsErrorResult):
             raise HTTPException(status_code=result.status_code, detail=result.message)
 
@@ -1046,7 +1046,7 @@ async def list_invitations(
         )
 
         # Handle error result
-        from app.services.accounts_facade import AccountsErrorResult
+        from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
         if isinstance(result, AccountsErrorResult):
             raise HTTPException(status_code=result.status_code, detail=result.message)
 
@@ -1189,7 +1189,7 @@ async def update_user_role(
     auth_ctx = get_auth_context(request)
 
     try:
-        from app.services.accounts_facade import AccountsErrorResult
+        from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
 
         facade = get_accounts_facade()
         result = await facade.update_user_role(
@@ -1241,7 +1241,7 @@ async def remove_user(
     auth_ctx = get_auth_context(request)
 
     try:
-        from app.services.accounts_facade import AccountsErrorResult
+        from app.hoc.cus.account.L5_engines.accounts_facade import AccountsErrorResult
 
         facade = get_accounts_facade()
         result = await facade.remove_user(

@@ -30,18 +30,23 @@ from uuid import UUID
 from fastapi import APIRouter, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from ..agents.services.blackboard_service import get_blackboard_service
-from ..schemas.response import wrap_dict
-from ..agents.services.credit_service import CREDIT_COSTS, get_credit_service
-from ..agents.services.job_service import JobConfig, get_job_service
-from ..agents.services.message_service import get_message_service
-from ..agents.services.registry_service import get_registry_service
-from ..agents.services.worker_service import get_worker_service
-from ..agents.skills.agent_invoke import AgentInvokeSkill
+from app.agents.services.blackboard_service import get_blackboard_service
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_async_session_context,
+    get_operation_registry,
+)
+from app.schemas.response import wrap_dict
+from app.agents.services.credit_service import CREDIT_COSTS, get_credit_service
+from app.agents.services.job_service import JobConfig, get_job_service
+from app.agents.services.message_service import get_message_service
+from app.agents.services.registry_service import get_registry_service
+from app.agents.services.worker_service import get_worker_service
+from app.agents.skills.agent_invoke import AgentInvokeSkill
 
 # M15.1: SBA imports
 try:
-    from ..agents.sba import (
+    from app.agents.sba import (
         SUPPORTED_SBA_VERSIONS,
         SBASchema,
         SBAService,
@@ -2146,25 +2151,23 @@ async def update_agent_strategy(
         updated_sba = dict(agent.sba)
         updated_sba["routing_config"] = routing_config
 
-        # Save via raw SQL (SBA service update doesn't support partial updates easily)
-        import json
-        import os
-
-        from sqlalchemy import create_engine, text
-
-        engine = create_engine(os.environ.get("DATABASE_URL"))
-        with engine.connect() as conn:
-            conn.execute(
-                text(
-                    """
-                    UPDATE agents.agent_registry
-                    SET sba = CAST(:sba AS JSONB)
-                    WHERE agent_id = :agent_id
-                """
+        # Save via L4 registry dispatch (L2 must not execute DB directly)
+        async with get_async_session_context() as db_session:
+            registry = get_operation_registry()
+            op = await registry.execute(
+                "agent.strategy",
+                OperationContext(
+                    session=db_session,
+                    tenant_id="default",
+                    params={
+                        "method": "update_sba",
+                        "agent_id": agent_id,
+                        "sba": updated_sba,
+                    },
                 ),
-                {"agent_id": agent_id, "sba": json.dumps(updated_sba)},
             )
-            conn.commit()
+            if not op.success:
+                raise HTTPException(status_code=500, detail=op.error)
 
         return wrap_dict({
             "agent_id": agent_id,
@@ -2189,41 +2192,31 @@ async def get_routing_stats(
     Returns aggregate stats on routing decisions.
     """
     try:
-        import os
-
-        from sqlalchemy import create_engine, text
-
-        engine = create_engine(os.environ.get("DATABASE_URL"))
-
-        with engine.connect() as conn:
-            # Get recent stats
-            result = conn.execute(
-                text(
-                    """
-                    SELECT
-                        COUNT(*) as total_decisions,
-                        COUNT(*) FILTER (WHERE routed = true) as successful_routes,
-                        AVG(total_latency_ms) as avg_latency_ms,
-                        COUNT(DISTINCT selected_agent_id) as unique_agents,
-                        MAX(decided_at) as last_decision
-                    FROM routing.routing_decisions
-                    WHERE tenant_id = :tenant_id
-                    AND decided_at > now() - interval '24 hours'
-                """
+        async with get_async_session_context() as db_session:
+            # Get stats via L4 registry dispatch (L2 must not execute DB directly)
+            registry = get_operation_registry()
+            op = await registry.execute(
+                "agent.routing",
+                OperationContext(
+                    session=db_session,
+                    tenant_id=x_tenant_id,
+                    params={"method": "get_stats", "hours": 24},
                 ),
-                {"tenant_id": x_tenant_id},
             )
-            row = result.fetchone()
 
-            if row:
+            if op.success and op.data:
+                data = op.data
+                total = data.get("total_decisions", 0) or 0
+                successful = data.get("successful_routes", 0) or 0
+                last_decision = data.get("last_decision")
                 return wrap_dict({
                     "period": "24h",
-                    "total_decisions": row[0] or 0,
-                    "successful_routes": row[1] or 0,
-                    "success_rate": round((row[1] or 0) / max(row[0] or 1, 1), 3),
-                    "avg_latency_ms": round(row[2] or 0, 2),
-                    "unique_agents_routed": row[3] or 0,
-                    "last_decision": row[4].isoformat() if row[4] else None,
+                    "total_decisions": total,
+                    "successful_routes": successful,
+                    "success_rate": round(successful / max(total, 1), 3),
+                    "avg_latency_ms": round(data.get("avg_latency_ms") or 0, 2),
+                    "unique_agents_routed": data.get("unique_agents", 0) or 0,
+                    "last_decision": last_decision.isoformat() if last_decision else None,
                 })
             else:
                 return wrap_dict({
@@ -2338,43 +2331,33 @@ async def explain_routing_decision(
         raise HTTPException(status_code=501, detail="M18 module not available")
 
     try:
-        import os
-
-        from sqlalchemy import create_engine, text
-
-        engine = create_engine(os.environ.get("DATABASE_URL"))
-
-        with engine.connect() as conn:
-            # Get the routing decision
-            result = conn.execute(
-                text(
-                    """
-                    SELECT
-                        request_id, selected_agent_id, routed, decision_reason,
-                        error, actionable_fix, total_latency_ms,
-                        confidence_score, agent_reputation_at_route,
-                        quarantine_state_at_route, decided_at
-                    FROM routing.routing_decisions
-                    WHERE request_id = :request_id
-                    AND tenant_id = :tenant_id
-                """
+        async with get_async_session_context() as db_session:
+            # Get the routing decision via L4 registry dispatch (L2 must not execute DB directly)
+            registry = get_operation_registry()
+            op = await registry.execute(
+                "agent.routing",
+                OperationContext(
+                    session=db_session,
+                    tenant_id=x_tenant_id,
+                    params={"method": "get_decision", "request_id": request_id},
                 ),
-                {"request_id": request_id, "tenant_id": x_tenant_id},
             )
-            row = result.fetchone()
 
-            if not row:
-                raise HTTPException(status_code=404, detail=f"Decision not found: {request_id}")
+            if not op.success:
+                if op.error_code == "NOT_FOUND":
+                    raise HTTPException(status_code=404, detail=f"Decision not found: {request_id}")
+                raise HTTPException(status_code=500, detail=op.error)
 
-            agent_id = row[1] or "none"
-            routed = row[2]
-            decision_reason = row[3] or "Unknown"
-            error = row[4]
-            actionable_fix = row[5]
-            latency_ms = row[6] or 0
-            confidence = row[7] or 0
-            reputation_at_route = row[8] or 1.0
-            quarantine_state = row[9] or "active"
+            row = op.data
+            agent_id = row.get("selected_agent_id") or "none"
+            routed = row.get("routed")
+            decision_reason = row.get("decision_reason") or "Unknown"
+            error = row.get("error")
+            actionable_fix = row.get("actionable_fix")
+            latency_ms = row.get("total_latency_ms") or 0
+            confidence = row.get("confidence_score") or 0
+            reputation_at_route = row.get("agent_reputation_at_route") or 1.0
+            quarantine_state = row.get("quarantine_state_at_route") or "active"
 
             # Build explanation
             explanation = {

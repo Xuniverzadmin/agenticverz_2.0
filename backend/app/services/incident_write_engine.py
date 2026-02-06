@@ -26,8 +26,12 @@ from app.services.incident_write_driver import (
     IncidentWriteDriver,
     get_incident_write_driver,
 )
-# PIN-513: services→HOC dependency severed. No-op shim replaces HOC audit import.
-from app.services._audit_shim import AuditLedgerShim as AuditLedgerService
+# PIN-513: services→HOC dependency severed. Inline no-op replaces HOC audit.
+class AuditLedgerService:
+    def __init__(self, *a, **kw): pass
+    def record(self, *a, **kw): pass
+    def emit(self, *a, **kw): pass
+    def log_decision(self, *a, **kw): return None
 
 if TYPE_CHECKING:
     from sqlmodel import Session

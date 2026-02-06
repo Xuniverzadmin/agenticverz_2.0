@@ -405,8 +405,8 @@ class PolicyViolationDriver:
     # REMOVED: commit() helper — L6 DOES NOT COMMIT (L4 coordinator owns transaction boundary)
 
 
-def insert_policy_evaluation_sync(
-    database_url: str,
+def insert_policy_evaluation_sync_with_cursor(
+    cursor,
     evaluation_id: str,
     run_id: str,
     tenant_id: str,
@@ -418,12 +418,14 @@ def insert_policy_evaluation_sync(
     synthetic_scenario_id: Optional[str],
 ) -> Optional[str]:
     """
-    Insert policy evaluation record using sync psycopg2 connection.
+    Insert policy evaluation record using provided cursor.
 
-    This is used in worker contexts where async is not available.
+    L6 Contract:
+        - Cursor REQUIRED (passed from L4 owner)
+        - L6 does NOT commit (L4 owns transaction boundary)
 
     Args:
-        database_url: Database connection URL
+        cursor: psycopg2 cursor from L4 owner
         evaluation_id: Generated evaluation ID
         run_id: Run being evaluated
         tenant_id: Tenant scope
@@ -435,47 +437,36 @@ def insert_policy_evaluation_sync(
         synthetic_scenario_id: Scenario ID for SDSR
 
     Returns:
-        evaluation_id if inserted, None if failed
+        evaluation_id if inserted, None if conflict
     """
-    import psycopg2
-
-    try:
-        conn = psycopg2.connect(database_url)
-        try:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO prevention_records (
-                        id, policy_id, pattern_id, original_incident_id, blocked_incident_id,
-                        tenant_id, outcome, signature_match_confidence, created_at,
-                        is_synthetic, synthetic_scenario_id
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT DO NOTHING
-                    RETURNING id
-                    """,
-                    (
-                        evaluation_id,
-                        f"policy_eval_{run_id[:8]}",
-                        f"policies_checked:{policies_checked}",
-                        run_id,
-                        run_id,
-                        tenant_id,
-                        outcome,
-                        confidence,
-                        created_at,
-                        is_synthetic,
-                        synthetic_scenario_id,
-                    ),
-                )
-                result = cur.fetchone()
-                conn.commit()
-                return result[0] if result else None
-        finally:
-            conn.close()
-    except Exception as e:
-        logger.error(f"policy_eval_sync_db_error: {e}")
-        return None
+    cursor.execute(
+        """
+        INSERT INTO prevention_records (
+            id, policy_id, pattern_id, original_incident_id, blocked_incident_id,
+            tenant_id, outcome, signature_match_confidence, created_at,
+            is_synthetic, synthetic_scenario_id
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT DO NOTHING
+        RETURNING id
+        """,
+        (
+            evaluation_id,
+            f"policy_eval_{run_id[:8]}",
+            f"policies_checked:{policies_checked}",
+            run_id,
+            run_id,
+            tenant_id,
+            outcome,
+            confidence,
+            created_at,
+            is_synthetic,
+            synthetic_scenario_id,
+        ),
+    )
+    result = cursor.fetchone()
+    # L6 does NOT commit — L4 owner commits
+    return result[0] if result else None
 
 
 def get_policy_violation_driver(session: AsyncSession) -> PolicyViolationDriver:
@@ -486,5 +477,5 @@ def get_policy_violation_driver(session: AsyncSession) -> PolicyViolationDriver:
 __all__ = [
     "PolicyViolationDriver",
     "get_policy_violation_driver",
-    "insert_policy_evaluation_sync",
+    "insert_policy_evaluation_sync_with_cursor",
 ]

@@ -48,7 +48,8 @@ logger = logging.getLogger("nova.services.plan_generation_engine")
 
 # L4/L5/L6 imports (allowed per layer rules)
 from app.memory import get_retriever
-from app.hoc.int.platform.facades import get_planner
+# PIN-520 ITER3.3: Fix broken import (get_planner is in app.planners)
+from app.planners import get_planner
 from app.skills import get_skill_manifest
 from app.utils.budget_tracker import get_budget_tracker
 from app.utils.plan_inspector import validate_plan

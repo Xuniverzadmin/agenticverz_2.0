@@ -41,7 +41,7 @@ from app.schemas.limits.policy_limits import (
     ResetPeriodEnum,
     UpdatePolicyLimitRequest,
 )
-from app.services.limits.policy_limits_service import (
+from app.hoc.cus.policies.L5_engines.policy_limits_engine import (
     ImmutableFieldError,
     LimitNotFoundError,
     LimitValidationError,

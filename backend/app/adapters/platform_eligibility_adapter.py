@@ -33,7 +33,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 # L4 imports (allowed)
-from app.services.platform.platform_health_service import (
+from app.hoc.int.platform.engines.platform_health_engine import (
     CapabilityHealth,
     DomainHealth,
     HealthReason,

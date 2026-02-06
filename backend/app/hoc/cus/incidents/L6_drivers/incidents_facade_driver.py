@@ -112,6 +112,34 @@ class CostImpactRowSnapshot:
     avg_cost_impact: float
 
 
+@dataclass
+class HistoricalTrendRowSnapshot:
+    """Single row from historical trend query."""
+
+    period: str
+    incident_count: int
+    resolved_count: int
+    avg_resolution_time_ms: Optional[int]
+
+
+@dataclass
+class HistoricalDistributionRowSnapshot:
+    """Single row from distribution query."""
+
+    dimension: str
+    value: str
+    count: int
+
+
+@dataclass
+class CostTrendRowSnapshot:
+    """Single row from cost trend query."""
+
+    period: str
+    total_cost: float
+    incident_count: int
+
+
 # =============================================================================
 # Incidents Facade Driver
 # =============================================================================
@@ -495,6 +523,251 @@ class IncidentsFacadeDriver:
         return rows
 
     # -------------------------------------------------------------------------
+    # Deprecated List (all incidents with filters)
+    # -------------------------------------------------------------------------
+
+    async def fetch_all_incidents(
+        self,
+        tenant_id: str,
+        *,
+        topic: Optional[str] = None,
+        lifecycle_state: Optional[str] = None,
+        severity: Optional[str] = None,
+        category: Optional[str] = None,
+        cause_type: Optional[str] = None,
+        is_synthetic: Optional[bool] = None,
+        created_after: Optional[datetime] = None,
+        created_before: Optional[datetime] = None,
+        limit: int = 20,
+        offset: int = 0,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+    ) -> IncidentListSnapshot:
+        """Fetch incidents with full filter set (deprecated endpoint)."""
+        stmt = select(Incident).where(Incident.tenant_id == tenant_id)
+        count_stmt = select(func.count(Incident.id)).where(Incident.tenant_id == tenant_id)
+
+        # Topic filter (maps to lifecycle states)
+        if topic:
+            if topic == "ACTIVE":
+                stmt = stmt.where(Incident.lifecycle_state.in_(["ACTIVE", "ACKED"]))
+                count_stmt = count_stmt.where(Incident.lifecycle_state.in_(["ACTIVE", "ACKED"]))
+            else:
+                stmt = stmt.where(Incident.lifecycle_state == "RESOLVED")
+                count_stmt = count_stmt.where(Incident.lifecycle_state == "RESOLVED")
+        elif lifecycle_state:
+            stmt = stmt.where(Incident.lifecycle_state == lifecycle_state)
+            count_stmt = count_stmt.where(Incident.lifecycle_state == lifecycle_state)
+
+        if severity:
+            stmt = stmt.where(Incident.severity == severity)
+            count_stmt = count_stmt.where(Incident.severity == severity)
+
+        if category:
+            stmt = stmt.where(Incident.category == category)
+            count_stmt = count_stmt.where(Incident.category == category)
+
+        if cause_type:
+            stmt = stmt.where(Incident.cause_type == cause_type)
+            count_stmt = count_stmt.where(Incident.cause_type == cause_type)
+
+        if is_synthetic is not None:
+            stmt = stmt.where(Incident.is_synthetic == is_synthetic)
+            count_stmt = count_stmt.where(Incident.is_synthetic == is_synthetic)
+
+        if created_after:
+            stmt = stmt.where(Incident.created_at >= created_after)
+            count_stmt = count_stmt.where(Incident.created_at >= created_after)
+
+        if created_before:
+            stmt = stmt.where(Incident.created_at <= created_before)
+            count_stmt = count_stmt.where(Incident.created_at <= created_before)
+
+        # Sorting
+        sort_column = getattr(Incident, sort_by)
+        if sort_order == "desc":
+            stmt = stmt.order_by(sort_column.desc())
+        else:
+            stmt = stmt.order_by(sort_column.asc())
+
+        # Pagination
+        stmt = stmt.limit(limit).offset(offset)
+
+        count_result = await self._session.execute(count_stmt)
+        total = count_result.scalar() or 0
+
+        result = await self._session.execute(stmt)
+        incidents = result.scalars().all()
+
+        items = [self._to_snapshot(inc) for inc in incidents]
+        return IncidentListSnapshot(items=items, total=total)
+
+    # -------------------------------------------------------------------------
+    # Historical Analytics
+    # -------------------------------------------------------------------------
+
+    async def fetch_historical_trend(
+        self,
+        tenant_id: str,
+        window_days: int,
+        trunc_unit: str,
+    ) -> list[HistoricalTrendRowSnapshot]:
+        """Fetch historical trend data grouped by time period."""
+        sql = text("""
+            SELECT
+                DATE_TRUNC(:trunc_unit, created_at) AS period,
+                COUNT(*) AS incident_count,
+                COUNT(*) FILTER (WHERE lifecycle_state = 'RESOLVED') AS resolved_count,
+                AVG(
+                    CASE WHEN resolved_at IS NOT NULL
+                    THEN EXTRACT(EPOCH FROM (resolved_at - created_at)) * 1000
+                    ELSE NULL END
+                )::bigint AS avg_resolution_time_ms
+            FROM incidents
+            WHERE tenant_id = :tenant_id
+              AND created_at >= NOW() - INTERVAL '1 day' * :window_days
+            GROUP BY DATE_TRUNC(:trunc_unit, created_at)
+            ORDER BY period ASC
+        """)
+
+        result = await self._session.execute(sql, {
+            "tenant_id": tenant_id,
+            "window_days": window_days,
+            "trunc_unit": trunc_unit,
+        })
+
+        rows: list[HistoricalTrendRowSnapshot] = []
+        for row in result.mappings():
+            period_date = row["period"]
+            period_str = period_date.strftime("%Y-%m-%d") if period_date else "unknown"
+            rows.append(HistoricalTrendRowSnapshot(
+                period=period_str,
+                incident_count=row["incident_count"] or 0,
+                resolved_count=row["resolved_count"] or 0,
+                avg_resolution_time_ms=row["avg_resolution_time_ms"],
+            ))
+
+        return rows
+
+    async def fetch_historical_distribution(
+        self,
+        tenant_id: str,
+        window_days: int,
+    ) -> dict[str, Any]:
+        """Fetch distribution data across category, severity, cause_type."""
+        # Total count
+        total_sql = text("""
+            SELECT COUNT(*) as total
+            FROM incidents
+            WHERE tenant_id = :tenant_id
+              AND created_at >= NOW() - INTERVAL '1 day' * :window_days
+        """)
+
+        total_result = await self._session.execute(total_sql, {
+            "tenant_id": tenant_id,
+            "window_days": window_days,
+        })
+        total_incidents = total_result.scalar() or 0
+
+        # Category distribution
+        category_sql = text("""
+            SELECT COALESCE(category, 'uncategorized') as value, COUNT(*) as count
+            FROM incidents
+            WHERE tenant_id = :tenant_id
+              AND created_at >= NOW() - INTERVAL '1 day' * :window_days
+            GROUP BY category
+            ORDER BY count DESC
+        """)
+        category_result = await self._session.execute(category_sql, {
+            "tenant_id": tenant_id,
+            "window_days": window_days,
+        })
+        by_category = [
+            HistoricalDistributionRowSnapshot(dimension="category", value=r["value"], count=r["count"] or 0)
+            for r in category_result.mappings()
+        ]
+
+        # Severity distribution
+        severity_sql = text("""
+            SELECT COALESCE(severity, 'unknown') as value, COUNT(*) as count
+            FROM incidents
+            WHERE tenant_id = :tenant_id
+              AND created_at >= NOW() - INTERVAL '1 day' * :window_days
+            GROUP BY severity
+            ORDER BY count DESC
+        """)
+        severity_result = await self._session.execute(severity_sql, {
+            "tenant_id": tenant_id,
+            "window_days": window_days,
+        })
+        by_severity = [
+            HistoricalDistributionRowSnapshot(dimension="severity", value=r["value"], count=r["count"] or 0)
+            for r in severity_result.mappings()
+        ]
+
+        # Cause type distribution
+        cause_sql = text("""
+            SELECT COALESCE(cause_type, 'unknown') as value, COUNT(*) as count
+            FROM incidents
+            WHERE tenant_id = :tenant_id
+              AND created_at >= NOW() - INTERVAL '1 day' * :window_days
+            GROUP BY cause_type
+            ORDER BY count DESC
+        """)
+        cause_result = await self._session.execute(cause_sql, {
+            "tenant_id": tenant_id,
+            "window_days": window_days,
+        })
+        by_cause_type = [
+            HistoricalDistributionRowSnapshot(dimension="cause_type", value=r["value"], count=r["count"] or 0)
+            for r in cause_result.mappings()
+        ]
+
+        return {
+            "total_incidents": total_incidents,
+            "by_category": by_category,
+            "by_severity": by_severity,
+            "by_cause_type": by_cause_type,
+        }
+
+    async def fetch_historical_cost_trend(
+        self,
+        tenant_id: str,
+        window_days: int,
+        granularity: str,
+    ) -> list[CostTrendRowSnapshot]:
+        """Fetch cost trend data grouped by time period."""
+        sql = text("""
+            SELECT
+                DATE_TRUNC(:granularity, created_at) AS period,
+                COALESCE(SUM(cost_impact), 0) AS total_cost,
+                COUNT(*) AS incident_count
+            FROM incidents
+            WHERE tenant_id = :tenant_id
+              AND created_at >= NOW() - INTERVAL '1 day' * :window_days
+            GROUP BY DATE_TRUNC(:granularity, created_at)
+            ORDER BY period ASC
+        """)
+
+        result = await self._session.execute(sql, {
+            "tenant_id": tenant_id,
+            "window_days": window_days,
+            "granularity": granularity,
+        })
+
+        rows: list[CostTrendRowSnapshot] = []
+        for row in result.mappings():
+            period_date = row["period"]
+            period_str = period_date.strftime("%Y-%m-%d") if period_date else "unknown"
+            rows.append(CostTrendRowSnapshot(
+                period=period_str,
+                total_cost=float(row["total_cost"]) if row["total_cost"] else 0.0,
+                incident_count=row["incident_count"] or 0,
+            ))
+
+        return rows
+
+    # -------------------------------------------------------------------------
     # Internal Helpers
     # -------------------------------------------------------------------------
 
@@ -528,4 +801,7 @@ __all__ = [
     "IncidentListSnapshot",
     "MetricsSnapshot",
     "CostImpactRowSnapshot",
+    "HistoricalTrendRowSnapshot",
+    "HistoricalDistributionRowSnapshot",
+    "CostTrendRowSnapshot",
 ]

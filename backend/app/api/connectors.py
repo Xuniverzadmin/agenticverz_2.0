@@ -36,7 +36,7 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-from app.services.connectors.facade import (
+from app.hoc.cus.integrations.L5_engines.connectors_facade import (
     ConnectorsFacade,
     get_connectors_facade,
 )

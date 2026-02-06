@@ -30,12 +30,26 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
-from sqlalchemy import text
 
-from ..auth.authorization_choke import check_permission_request
-from ..auth.rbac_engine import get_rbac_engine
-from ..db import get_session as get_db_session
-from ..schemas.response import wrap_dict
+from app.auth.authorization_choke import check_permission_request
+
+# L4 session + registry for dispatching to L6 drivers (PIN-L2-PURITY)
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    get_operation_registry,
+    get_sync_session_dep,
+    OperationContext,
+)
+# L4 bridge for account domain (PIN-L2-PURITY)
+from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges import (
+    get_account_bridge,
+)
+from app.schemas.response import wrap_dict
+
+
+def _get_rbac_engine():
+    """Get rbac_engine via L4 bridge to maintain L2 purity."""
+    # L4 bridge for RBAC engine (PIN-L2-PURITY)
+    return get_account_bridge().rbac_engine_capability()
 
 logger = logging.getLogger("nova.api.rbac")
 
@@ -116,7 +130,7 @@ async def get_policy_info(request: Request):
     if not decision.allowed:
         raise HTTPException(status_code=403, detail=decision.reason)
 
-    engine = get_rbac_engine()
+    engine = _get_rbac_engine()
     info = engine.get_policy_info()
 
     return PolicyInfoResponse(
@@ -145,7 +159,7 @@ async def reload_policies(request: Request):
     if not decision.allowed:
         raise HTTPException(status_code=403, detail=decision.reason)
 
-    engine = get_rbac_engine()
+    engine = _get_rbac_engine()
 
     # Get current hash before reload
     info_before = engine.get_policy_info()
@@ -194,7 +208,7 @@ async def get_permission_matrix(request: Request) -> Dict[str, Any]:
     if not decision.allowed:
         raise HTTPException(status_code=403, detail=decision.reason)
 
-    engine = get_rbac_engine()
+    engine = _get_rbac_engine()
 
     # Access internal policy (not ideal but needed for introspection)
     with engine._policy_lock:
@@ -214,7 +228,7 @@ async def query_audit_logs(
     since: Optional[datetime] = Query(default=None, description="Filter since timestamp"),
     limit: int = Query(default=100, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
-    db=Depends(get_db_session),
+    db=Depends(get_sync_session_dep),
 ):
     """
     Query RBAC audit logs.
@@ -229,75 +243,42 @@ async def query_audit_logs(
         raise HTTPException(status_code=403, detail=decision.reason)
 
     try:
-        # Build query
-        where_clauses = []
-        params: Dict[str, Any] = {"limit": limit, "offset": offset}
-
-        if resource:
-            where_clauses.append("resource = :resource")
-            params["resource"] = resource
-
-        if action:
-            where_clauses.append("action = :action")
-            params["action"] = action
-
-        if allowed is not None:
-            where_clauses.append("allowed = :allowed")
-            params["allowed"] = allowed
-
-        if subject:
-            where_clauses.append("subject = :subject")
-            params["subject"] = subject
-
-        if tenant_id:
-            where_clauses.append("tenant_id = :tenant_id")
-            params["tenant_id"] = tenant_id
-
-        if since:
-            where_clauses.append("ts >= :since")
-            params["since"] = since
-
-        where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
-
-        # Get total count
-        count_result = db.execute(text(f"SELECT COUNT(*) FROM system.rbac_audit WHERE {where_sql}"), params)
-        total = count_result.scalar() or 0
-
-        # Get entries
-        result = db.execute(
-            text(
-                f"""
-                SELECT id, ts, subject, resource, action, allowed, reason, roles, path, method, tenant_id, latency_ms
-                FROM system.rbac_audit
-                WHERE {where_sql}
-                ORDER BY ts DESC
-                LIMIT :limit OFFSET :offset
-            """
+        # L2 purity: dispatch to L6 driver via L4 registry
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "rbac.audit",
+            OperationContext(
+                session=None,  # Async session not used; sync session passed via params
+                tenant_id="",  # System-wide operation
+                params={
+                    "method": "query_audit_logs",
+                    "sync_session": db,
+                    "resource": resource,
+                    "action": action,
+                    "allowed": allowed,
+                    "subject": subject,
+                    "tenant_id": tenant_id,
+                    "since": since,
+                    "limit": limit,
+                    "offset": offset,
+                },
             ),
-            params,
         )
 
-        entries = []
-        for row in result:
-            entries.append(
-                AuditEntry(
-                    id=row.id,
-                    ts=row.ts,
-                    subject=row.subject,
-                    resource=row.resource,
-                    action=row.action,
-                    allowed=row.allowed,
-                    reason=row.reason,
-                    roles=row.roles,
-                    path=row.path,
-                    method=row.method,
-                    tenant_id=row.tenant_id,
-                    latency_ms=row.latency_ms,
-                )
-            )
+        if not result.success:
+            raise HTTPException(status_code=500, detail=result.error)
 
-        return AuditResponse(entries=entries, total=total, limit=limit, offset=offset)
+        # Transform L6 DTOs to API response
+        entries = [AuditEntry(**e) for e in result.data["entries"]]
+        return AuditResponse(
+            entries=entries,
+            total=result.data["total"],
+            limit=limit,
+            offset=offset,
+        )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error querying audit logs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -305,7 +286,7 @@ async def query_audit_logs(
 
 @router.post("/audit/cleanup")
 async def cleanup_audit_logs(
-    request: Request, retention_days: int = Query(default=90, ge=1, le=365), db=Depends(get_db_session)
+    request: Request, retention_days: int = Query(default=90, ge=1, le=365), db=Depends(get_sync_session_dep)
 ):
     """
     Clean up old audit logs.
@@ -320,9 +301,26 @@ async def cleanup_audit_logs(
         raise HTTPException(status_code=403, detail=decision.reason)
 
     try:
-        result = db.execute(text("SELECT system.cleanup_rbac_audit(:days)"), {"days": retention_days})
-        db.commit()
-        deleted_count = result.scalar() or 0
+        # L2 purity: dispatch to L6 driver via L4 registry
+        # L2 purity: L4 handler owns commit/rollback (L6 driver does not commit)
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "rbac.audit",
+            OperationContext(
+                session=None,  # Async session not used; sync session passed via params
+                tenant_id="",  # System-wide operation
+                params={
+                    "method": "cleanup_audit_logs",
+                    "sync_session": db,
+                    "retention_days": retention_days,
+                },
+            ),
+        )
+
+        if not result.success:
+            raise HTTPException(status_code=500, detail=result.error)
+
+        deleted_count = result.data["deleted_count"]
 
         logger.info(
             "rbac_audit_cleanup",
@@ -339,6 +337,8 @@ async def cleanup_audit_logs(
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error cleaning up audit logs: {e}")
         raise HTTPException(status_code=500, detail=str(e))

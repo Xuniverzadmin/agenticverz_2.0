@@ -59,14 +59,11 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from pydantic import BaseModel
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.gateway_middleware import get_auth_context
-from app.db import get_async_session_dep
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
+    get_session_dep,
 )
 
 # =============================================================================
@@ -828,22 +825,13 @@ async def list_runs(
     sort_by: Annotated[SortField, Query(description="Field to sort by")] = SortField.STARTED_AT,
     sort_order: Annotated[SortOrder, Query(description="Sort direction")] = SortOrder.DESC,
     # Dependencies
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> RunListResponse:
     """List runs with unified query filters. READ-ONLY from v_runs_o2 view."""
 
-    # Tenant isolation from auth_context
     tenant_id = get_tenant_id_from_auth(request)
 
-    # ==========================================================================
-    # DEPRECATION WARNING (Phase 5 - Lockdown)
-    # ==========================================================================
-    # This endpoint is DEPRECATED. Use topic-scoped endpoints instead:
-    # - /activity/live for LIVE runs
-    # - /activity/completed for COMPLETED runs
-    # - /activity/signals for attention signals
-    # Reference: ACTIVITY_DOMAIN_V2_MIGRATION_PLAN.md
-    # ==========================================================================
+    # DEPRECATION: Use /activity/live or /activity/completed instead
     user_agent = request.headers.get("user-agent", "unknown")
     logger.warning(
         "DEPRECATED_ENDPOINT_CALLED: /api/v1/activity/runs | "
@@ -853,167 +841,78 @@ async def list_runs(
         "migration_path=Use /activity/live or /activity/completed"
     )
 
-    # Build filters
-    filters_applied: dict[str, Any] = {"tenant_id": tenant_id}
-    where_clauses = ["tenant_id = :tenant_id"]
-    params: dict[str, Any] = {"tenant_id": tenant_id}
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "activity.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_runs",
+                "project_id": project_id,
+                "state": state.value if state else None,
+                "status": status,
+                "risk": risk,
+                "risk_level": [r.value for r in risk_level] if risk_level else None,
+                "latency_bucket": [lb.value for lb in latency_bucket] if latency_bucket else None,
+                "evidence_health": [e.value for e in evidence_health] if evidence_health else None,
+                "integrity_status": [i.value for i in integrity_status] if integrity_status else None,
+                "source": [s.value for s in source] if source else None,
+                "provider_type": [p.value for p in provider_type] if provider_type else None,
+                "is_synthetic": is_synthetic,
+                "started_after": started_after,
+                "started_before": started_before,
+                "completed_after": completed_after,
+                "completed_before": completed_before,
+                "limit": limit,
+                "offset": offset,
+                "sort_by": sort_by.value,
+                "sort_order": sort_order.value,
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
-    # Optional filters
-    if project_id:
-        where_clauses.append("project_id = :project_id")
-        params["project_id"] = project_id
-        filters_applied["project_id"] = project_id
-
-    if state:
-        where_clauses.append("state = :state")
-        params["state"] = state.value
-        filters_applied["state"] = state.value
-
-    if status:
-        where_clauses.append("status = ANY(:status)")
-        params["status"] = status
-        filters_applied["status"] = status
-
-    if risk:
-        where_clauses.append("(risk_level != 'NORMAL' OR incident_count > 0 OR policy_violation = true)")
-        filters_applied["risk"] = True
-
-    if risk_level:
-        values = [r.value for r in risk_level]
-        where_clauses.append("risk_level = ANY(:risk_level)")
-        params["risk_level"] = values
-        filters_applied["risk_level"] = values
-
-    if latency_bucket:
-        values = [lb.value for lb in latency_bucket]
-        where_clauses.append("latency_bucket = ANY(:latency_bucket)")
-        params["latency_bucket"] = values
-        filters_applied["latency_bucket"] = values
-
-    if evidence_health:
-        values = [e.value for e in evidence_health]
-        where_clauses.append("evidence_health = ANY(:evidence_health)")
-        params["evidence_health"] = values
-        filters_applied["evidence_health"] = values
-
-    if integrity_status:
-        values = [i.value for i in integrity_status]
-        where_clauses.append("integrity_status = ANY(:integrity_status)")
-        params["integrity_status"] = values
-        filters_applied["integrity_status"] = values
-
-    if source:
-        values = [s.value for s in source]
-        where_clauses.append("source = ANY(:source)")
-        params["source"] = values
-        filters_applied["source"] = values
-
-    if provider_type:
-        values = [p.value for p in provider_type]
-        where_clauses.append("provider_type = ANY(:provider_type)")
-        params["provider_type"] = values
-        filters_applied["provider_type"] = values
-
-    if is_synthetic is not None:
-        where_clauses.append("is_synthetic = :is_synthetic")
-        params["is_synthetic"] = is_synthetic
-        filters_applied["is_synthetic"] = is_synthetic
-
-    if started_after:
-        where_clauses.append("started_at >= :started_after")
-        params["started_after"] = started_after
-        filters_applied["started_after"] = started_after.isoformat()
-
-    if started_before:
-        where_clauses.append("started_at <= :started_before")
-        params["started_before"] = started_before
-        filters_applied["started_before"] = started_before.isoformat()
-
-    if completed_after:
-        where_clauses.append("completed_at >= :completed_after")
-        params["completed_after"] = completed_after
-        filters_applied["completed_after"] = completed_after.isoformat()
-
-    if completed_before:
-        where_clauses.append("completed_at <= :completed_before")
-        params["completed_before"] = completed_before
-        filters_applied["completed_before"] = completed_before.isoformat()
-
-    where_sql = " AND ".join(where_clauses)
-    sort_column = sort_by.value
-    sort_dir = "DESC" if sort_order == SortOrder.DESC else "ASC"
-
-    # Count query
-    count_sql = f"SELECT COUNT(*) as total FROM v_runs_o2 WHERE {where_sql}"
-
-    # Data query
-    data_sql = f"""
-        SELECT
-            run_id, tenant_id, project_id, is_synthetic, source, provider_type,
-            state, status, started_at, last_seen_at, completed_at, duration_ms,
-            risk_level, latency_bucket, evidence_health, integrity_status,
-            incident_count, policy_draft_count, policy_violation,
-            input_tokens, output_tokens, estimated_cost_usd
-        FROM v_runs_o2
-        WHERE {where_sql}
-        ORDER BY {sort_column} {sort_dir}
-        LIMIT :limit OFFSET :offset
-    """
-
-    params["limit"] = limit
-    params["offset"] = offset
-
-    try:
-        count_result = await session.execute(text(count_sql), params)
-        total = count_result.scalar() or 0
-
-        data_result = await session.execute(text(data_sql), params)
-        rows = data_result.mappings().all()
-
-        items = [
-            RunSummary(
-                run_id=row["run_id"],
-                tenant_id=row["tenant_id"],
-                project_id=row["project_id"],
-                is_synthetic=row["is_synthetic"],
-                source=row["source"],
-                provider_type=row["provider_type"],
-                state=row["state"],
-                status=row["status"],
-                started_at=row["started_at"],
-                last_seen_at=row["last_seen_at"],
-                completed_at=row["completed_at"],
-                duration_ms=float(row["duration_ms"]) if row["duration_ms"] else None,
-                risk_level=row["risk_level"],
-                latency_bucket=row["latency_bucket"],
-                evidence_health=row["evidence_health"],
-                integrity_status=row["integrity_status"],
-                incident_count=row["incident_count"] or 0,
-                policy_draft_count=row["policy_draft_count"] or 0,
-                policy_violation=row["policy_violation"] or False,
-                input_tokens=row["input_tokens"],
-                output_tokens=row["output_tokens"],
-                estimated_cost_usd=float(row["estimated_cost_usd"]) if row["estimated_cost_usd"] else None,
-            )
-            for row in rows
-        ]
-
-        has_more = offset + len(items) < total
-        next_offset = offset + limit if has_more else None
-
-        return RunListResponse(
-            items=items,
-            total=total,
-            has_more=has_more,
-            filters_applied=filters_applied,
-            pagination=Pagination(limit=limit, offset=offset, next_offset=next_offset),
+    result = op.data
+    items = [
+        RunSummary(
+            run_id=item.run_id,
+            tenant_id=item.tenant_id,
+            project_id=item.project_id,
+            is_synthetic=item.is_synthetic,
+            source=item.source,
+            provider_type=item.provider_type,
+            state=item.state,
+            status=item.status,
+            started_at=item.started_at,
+            last_seen_at=item.last_seen_at,
+            completed_at=item.completed_at,
+            duration_ms=item.duration_ms,
+            risk_level=item.risk_level,
+            latency_bucket=item.latency_bucket,
+            evidence_health=item.evidence_health,
+            integrity_status=item.integrity_status,
+            incident_count=item.incident_count,
+            policy_draft_count=item.policy_draft_count,
+            policy_violation=item.policy_violation,
+            input_tokens=item.input_tokens,
+            output_tokens=item.output_tokens,
+            estimated_cost_usd=item.estimated_cost_usd,
         )
+        for item in result.items
+    ]
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail={"error": "query_failed", "message": str(e)},
-        )
+    has_more = result.has_more
+    next_offset = offset + limit if has_more else None
+
+    return RunListResponse(
+        items=items,
+        total=result.total,
+        has_more=has_more,
+        filters_applied=result.filters_applied,
+        pagination=Pagination(limit=limit, offset=offset, next_offset=next_offset),
+    )
 
 
 # =============================================================================
@@ -1030,7 +929,7 @@ async def list_runs(
 async def get_run_detail(
     request: Request,
     run_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> RunDetailResponse:
     """Get run detail (O3). Tenant isolation enforced."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1155,43 +1054,37 @@ async def get_run_proof(
 async def get_summary_by_status(
     request: Request,
     state: Annotated[RunState | None, Query(description="Filter by run state")] = None,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> StatusSummaryResponse:
     """Get run summary by status (COMP-O3). READ-ONLY from v_runs_o2."""
 
     tenant_id = get_tenant_id_from_auth(request)
 
-    # Build query
-    where_clause = "tenant_id = :tenant_id"
-    params: dict[str, Any] = {"tenant_id": tenant_id}
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "activity.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_status_summary",
+                "state": state.value if state else None,
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
-    if state:
-        where_clause += " AND state = :state"
-        params["state"] = state.value
-
-    sql = text(f"""
-        SELECT
-            status,
-            COUNT(*) as count
-        FROM v_runs_o2
-        WHERE {where_clause}
-        GROUP BY status
-        ORDER BY count DESC
-    """)
-
-    result = await session.execute(sql, params)
-    rows = result.mappings().all()
-
-    # Calculate total and percentages
-    total = sum(row["count"] for row in rows)
+    result = op.data
+    total = result.total
 
     buckets = [
         StatusBucket(
-            status=row["status"],
-            count=row["count"],
-            percentage=round((row["count"] / total * 100) if total > 0 else 0, 2),
+            status=s.status,
+            count=s.count,
+            percentage=round((s.count / total * 100) if total > 0 else 0, 2),
         )
-        for row in rows
+        for s in result.statuses
     ]
 
     return StatusSummaryResponse(
@@ -1207,7 +1100,7 @@ async def get_summary_by_status(
 
 
 async def _get_runs_by_dimension_internal(
-    session: AsyncSession,
+    session,
     tenant_id: str,
     dim: DimensionValue,
     state: RunState,
@@ -1221,43 +1114,37 @@ async def _get_runs_by_dimension_internal(
 
     Policy: TOPIC-SCOPED-ENDPOINT-001
     """
-    dimension_col = dim.value
-    where_clause = "tenant_id = :tenant_id AND state = :state"
-    params: dict[str, Any] = {
-        "tenant_id": tenant_id,
-        "state": state.value,
-        "limit": limit,
-    }
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "activity.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_dimension_breakdown",
+                "dimension": dim.value,
+                "state": state.value,
+                "limit": limit,
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
-    sql = text(f"""
-        SELECT
-            COALESCE({dimension_col}::text, 'unknown') as value,
-            COUNT(*) as count
-        FROM v_runs_o2
-        WHERE {where_clause}
-        GROUP BY {dimension_col}
-        ORDER BY count DESC
-        LIMIT :limit
-    """)
-
-    result = await session.execute(sql, params)
-    rows = result.mappings().all()
-
-    total = sum(row["count"] for row in rows)
-
+    result = op.data
     groups = [
         DimensionGroup(
-            value=row["value"],
-            count=row["count"],
-            percentage=round((row["count"] / total * 100) if total > 0 else 0, 2),
+            value=g.value,
+            count=g.count,
+            percentage=g.percentage,
         )
-        for row in rows
+        for g in result.groups
     ]
 
     return DimensionBreakdownResponse(
-        dimension=dimension_col,
+        dimension=result.dimension,
         groups=groups,
-        total_runs=total,
+        total_runs=result.total_runs,
         state_filter=state.value,
         generated_at=datetime.utcnow(),
     )
@@ -1286,7 +1173,7 @@ async def get_live_runs_by_dimension(
     request: Request,
     dim: Annotated[DimensionValue, Query(description="Dimension to group by")],
     limit: Annotated[int, Query(ge=1, le=100, description="Max groups to return")] = 20,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> DimensionBreakdownResponse:
     """Get LIVE runs grouped by dimension. State=LIVE is hardcoded."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1322,7 +1209,7 @@ async def get_completed_runs_by_dimension(
     request: Request,
     dim: Annotated[DimensionValue, Query(description="Dimension to group by")],
     limit: Annotated[int, Query(ge=1, le=100, description="Max groups to return")] = 20,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> DimensionBreakdownResponse:
     """Get COMPLETED runs grouped by dimension. State=COMPLETED is hardcoded."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1361,48 +1248,38 @@ async def get_runs_by_dimension(
     dim: Annotated[DimensionValue, Query(description="Dimension to group by")],
     state: Annotated[RunState | None, Query(description="Filter by run state")] = None,
     limit: Annotated[int, Query(ge=1, le=100, description="Max groups to return")] = 20,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> DimensionBreakdownResponse:
     """[INTERNAL] Get runs grouped by dimension with optional state. NOT FOR PANELS."""
     tenant_id = get_tenant_id_from_auth(request)
 
-    dimension_col = dim.value
-    where_clause = "tenant_id = :tenant_id"
-    params: dict[str, Any] = {"tenant_id": tenant_id, "limit": limit}
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "activity.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_dimension_breakdown",
+                "dimension": dim.value,
+                "state": state.value if state else None,
+                "limit": limit,
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
-    if state:
-        where_clause += " AND state = :state"
-        params["state"] = state.value
-
-    sql = text(f"""
-        SELECT
-            COALESCE({dimension_col}::text, 'unknown') as value,
-            COUNT(*) as count
-        FROM v_runs_o2
-        WHERE {where_clause}
-        GROUP BY {dimension_col}
-        ORDER BY count DESC
-        LIMIT :limit
-    """)
-
-    result = await session.execute(sql, params)
-    rows = result.mappings().all()
-
-    total = sum(row["count"] for row in rows)
-
+    result = op.data
     groups = [
-        DimensionGroup(
-            value=row["value"],
-            count=row["count"],
-            percentage=round((row["count"] / total * 100) if total > 0 else 0, 2),
-        )
-        for row in rows
+        DimensionGroup(value=g.value, count=g.count, percentage=g.percentage)
+        for g in result.groups
     ]
 
     return DimensionBreakdownResponse(
-        dimension=dimension_col,
+        dimension=result.dimension,
         groups=groups,
-        total_runs=total,
+        total_runs=result.total_runs,
         state_filter=state.value if state else None,
         generated_at=datetime.utcnow(),
     )
@@ -1429,7 +1306,7 @@ async def get_patterns(
     request: Request,
     window_hours: Annotated[int, Query(ge=1, le=168, description="Hours to look back")] = 24,
     limit: Annotated[int, Query(ge=1, le=50, description="Max patterns per type")] = 10,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> PatternDetectionResponse:
     """Detect instability patterns (SIG-O3). READ-ONLY from aos_traces/aos_trace_steps."""
 
@@ -1495,7 +1372,7 @@ async def get_cost_analysis(
     request: Request,
     baseline_days: Annotated[int, Query(ge=1, le=30, description="Days for baseline")] = 7,
     anomaly_threshold: Annotated[float, Query(ge=1.0, le=5.0, description="Threshold percentage")] = 50.0,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> CostAnalysisResponse:
     """Analyze cost anomalies (SIG-O4). READ-ONLY from runs table."""
 
@@ -1560,7 +1437,7 @@ async def get_cost_analysis(
 async def get_attention_queue(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=100, description="Max items to return")] = 20,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> AttentionQueueResponse:
     """Get attention queue (SIG-O5). READ-ONLY from v_runs_o2."""
 
@@ -1637,41 +1514,35 @@ class RiskSignalsResponse(BaseModel):
 )
 async def get_risk_signals(
     request: Request,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> RiskSignalsResponse:
     """
     Returns aggregated risk signal counts.
 
     Supports: activity.risk_signals capability
     Consumers: Overview panels, Activity summary panels
-
-    Only considers:
-    - Live runs (state = 'LIVE')
-    - Completed runs in the last 24 hours
     """
     tenant_id = get_tenant_id_from_auth(request)
 
-    sql = text("""
-        SELECT
-            COUNT(*) FILTER (WHERE risk_level IN ('NEAR_THRESHOLD', 'AT_RISK', 'VIOLATED')) as at_risk_count,
-            COUNT(*) FILTER (WHERE risk_level = 'VIOLATED') as violated_count,
-            COUNT(*) FILTER (WHERE risk_level = 'AT_RISK') as at_risk_level_count,
-            COUNT(*) FILTER (WHERE risk_level = 'NEAR_THRESHOLD') as near_threshold_count,
-            COUNT(*) FILTER (WHERE risk_level != 'NORMAL') as total_at_risk
-        FROM v_runs_o2
-        WHERE tenant_id = :tenant_id
-          AND (state = 'LIVE' OR completed_at >= NOW() - INTERVAL '24 hours')
-    """)
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "activity.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_risk_signals"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
-    result = await session.execute(sql, {"tenant_id": tenant_id})
-    row = result.mappings().first()
-
+    result = op.data
     return RiskSignalsResponse(
-        at_risk_count=row["at_risk_count"] or 0 if row else 0,
-        violated_count=row["violated_count"] or 0 if row else 0,
-        at_risk_level_count=row["at_risk_level_count"] or 0 if row else 0,
-        near_threshold_count=row["near_threshold_count"] or 0 if row else 0,
-        total_at_risk=row["total_at_risk"] or 0 if row else 0,
+        at_risk_count=result.at_risk_count,
+        violated_count=result.violated_count,
+        at_risk_level_count=result.by_risk_type.get("AT_RISK", 0),
+        near_threshold_count=result.near_threshold_count,
+        total_at_risk=result.total_at_risk,
         generated_at=datetime.utcnow(),
     )
 
@@ -1720,6 +1591,55 @@ def _extract_policy_context(row: dict) -> PolicyContext:
         facade_ref=facade_ref,
         threshold_ref=threshold_ref,
         violation_ref=violation_ref,
+    )
+
+
+def _policy_context_from_l5(pc: Any) -> PolicyContext:
+    """Convert L5 PolicyContextResult dataclass to L2 PolicyContext Pydantic model."""
+    return PolicyContext(
+        policy_id=pc.policy_id,
+        policy_name=pc.policy_name,
+        policy_scope=pc.policy_scope,
+        limit_type=pc.limit_type,
+        threshold_value=pc.threshold_value,
+        threshold_unit=pc.threshold_unit,
+        threshold_source=pc.threshold_source,
+        evaluation_outcome=pc.evaluation_outcome,
+        actual_value=pc.actual_value,
+        risk_type=pc.risk_type,
+        proximity_pct=pc.proximity_pct,
+        facade_ref=getattr(pc, "facade_ref", None),
+        threshold_ref=getattr(pc, "threshold_ref", None),
+        violation_ref=getattr(pc, "violation_ref", None),
+    )
+
+
+def _run_summary_v2_from_l5(item: Any) -> RunSummaryV2:
+    """Convert L5 RunSummaryV2Result dataclass to L2 RunSummaryV2 Pydantic model."""
+    return RunSummaryV2(
+        run_id=item.run_id,
+        tenant_id=item.tenant_id,
+        project_id=item.project_id,
+        is_synthetic=item.is_synthetic,
+        source=item.source,
+        provider_type=item.provider_type,
+        state=item.state,
+        status=item.status,
+        started_at=item.started_at,
+        last_seen_at=item.last_seen_at,
+        completed_at=item.completed_at,
+        duration_ms=item.duration_ms,
+        risk_level=item.risk_level,
+        latency_bucket=item.latency_bucket,
+        evidence_health=item.evidence_health,
+        integrity_status=item.integrity_status,
+        incident_count=item.incident_count,
+        policy_draft_count=item.policy_draft_count,
+        policy_violation=item.policy_violation,
+        input_tokens=item.input_tokens,
+        output_tokens=item.output_tokens,
+        estimated_cost_usd=item.estimated_cost_usd,
+        policy_context=_policy_context_from_l5(item.policy_context) if item.policy_context else _extract_policy_context({}),
     )
 
 
@@ -1799,7 +1719,7 @@ async def list_live_runs(
     limit: Annotated[int, Query(ge=1, le=200, description="Max runs to return")] = 50,
     offset: Annotated[int, Query(ge=0, description="Number of runs to skip")] = 0,
     # Dependencies
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> LiveRunsResponse:
     """
     List LIVE runs with policy context.
@@ -1810,86 +1730,41 @@ async def list_live_runs(
 
     tenant_id = get_tenant_id_from_auth(request)
 
-    # Build query - state=LIVE is HARDCODED
-    where_clauses = ["tenant_id = :tenant_id", "state = 'LIVE'"]
-    params: dict[str, Any] = {"tenant_id": tenant_id}
+    # Route through L4 registry — state=LIVE hardcoded in L5 facade
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "activity.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_live_runs",
+                "project_id": project_id,
+                "risk_level": [r.value for r in risk_level] if risk_level else None,
+                "evidence_health": [e.value for e in evidence_health] if evidence_health else None,
+                "source": [s.value for s in source] if source else None,
+                "provider_type": [p.value for p in provider_type] if provider_type else None,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
-    # Optional filters
-    if project_id:
-        where_clauses.append("project_id = :project_id")
-        params["project_id"] = project_id
+    result = op.data
+    items = [_run_summary_v2_from_l5(item) for item in result.items]
 
-    if risk_level:
-        values = [r.value for r in risk_level]
-        where_clauses.append("risk_level = ANY(:risk_level)")
-        params["risk_level"] = values
+    has_more = result.has_more
+    next_offset = offset + limit if has_more else None
 
-    if evidence_health:
-        values = [e.value for e in evidence_health]
-        where_clauses.append("evidence_health = ANY(:evidence_health)")
-        params["evidence_health"] = values
-
-    if source:
-        values = [s.value for s in source]
-        where_clauses.append("source = ANY(:source)")
-        params["source"] = values
-
-    if provider_type:
-        values = [p.value for p in provider_type]
-        where_clauses.append("provider_type = ANY(:provider_type)")
-        params["provider_type"] = values
-
-    where_sql = " AND ".join(where_clauses)
-
-    # Count query
-    count_sql = f"SELECT COUNT(*) as total FROM v_runs_o2 WHERE {where_sql}"
-
-    # Data query - includes policy context fields from v_runs_o2
-    data_sql = f"""
-        SELECT
-            run_id, tenant_id, project_id, is_synthetic, source, provider_type,
-            state, status, started_at, last_seen_at, completed_at, duration_ms,
-            risk_level, latency_bucket, evidence_health, integrity_status,
-            incident_count, policy_draft_count, policy_violation,
-            input_tokens, output_tokens, estimated_cost_usd,
-            -- Policy context fields (V2)
-            policy_id, policy_name, policy_scope, limit_type,
-            threshold_value, threshold_unit, threshold_source,
-            risk_type, actual_value, evaluation_outcome, proximity_pct
-        FROM v_runs_o2
-        WHERE {where_sql}
-        ORDER BY started_at DESC
-        LIMIT :limit OFFSET :offset
-    """
-
-    params["limit"] = limit
-    params["offset"] = offset
-
-    try:
-        count_result = await session.execute(text(count_sql), params)
-        total = count_result.scalar() or 0
-
-        data_result = await session.execute(text(data_sql), params)
-        rows = data_result.mappings().all()
-
-        items = [_row_to_run_summary_v2(dict(row)) for row in rows]
-
-        has_more = offset + len(items) < total
-        next_offset = offset + limit if has_more else None
-
-        return LiveRunsResponse(
-            items=items,
-            total=total,
-            has_more=has_more,
-            pagination=Pagination(limit=limit, offset=offset, next_offset=next_offset),
-            generated_at=datetime.utcnow(),
-        )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail={"error": "query_failed", "message": str(e)},
-        )
+    return LiveRunsResponse(
+        items=items,
+        total=result.total,
+        has_more=has_more,
+        pagination=Pagination(limit=limit, offset=offset, next_offset=next_offset),
+        generated_at=datetime.utcnow(),
+    )
 
 
 @router.get(
@@ -1930,7 +1805,7 @@ async def list_completed_runs(
     sort_by: Annotated[SortField, Query(description="Field to sort by")] = SortField.COMPLETED_AT,
     sort_order: Annotated[SortOrder, Query(description="Sort direction")] = SortOrder.DESC,
     # Dependencies
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> CompletedRunsResponse:
     """
     List COMPLETED runs with policy context.
@@ -1941,85 +1816,43 @@ async def list_completed_runs(
 
     tenant_id = get_tenant_id_from_auth(request)
 
-    # Build query - state=COMPLETED is HARDCODED
-    where_clauses = ["tenant_id = :tenant_id", "state = 'COMPLETED'"]
-    params: dict[str, Any] = {"tenant_id": tenant_id}
+    # Route through L4 registry — state=COMPLETED hardcoded in L5 facade
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "activity.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_completed_runs",
+                "project_id": project_id,
+                "status": status,
+                "risk_level": [r.value for r in risk_level] if risk_level else None,
+                "completed_after": completed_after,
+                "completed_before": completed_before,
+                "limit": limit,
+                "offset": offset,
+                "sort_by": sort_by.value,
+                "sort_order": sort_order.value,
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
-    # Optional filters
-    if project_id:
-        where_clauses.append("project_id = :project_id")
-        params["project_id"] = project_id
+    result = op.data
+    items = [_run_summary_v2_from_l5(item) for item in result.items]
 
-    if status:
-        where_clauses.append("status = ANY(:status)")
-        params["status"] = status
+    has_more = result.has_more
+    next_offset = offset + limit if has_more else None
 
-    if risk_level:
-        values = [r.value for r in risk_level]
-        where_clauses.append("risk_level = ANY(:risk_level)")
-        params["risk_level"] = values
-
-    if completed_after:
-        where_clauses.append("completed_at >= :completed_after")
-        params["completed_after"] = completed_after
-
-    if completed_before:
-        where_clauses.append("completed_at <= :completed_before")
-        params["completed_before"] = completed_before
-
-    where_sql = " AND ".join(where_clauses)
-    sort_column = sort_by.value
-    sort_dir = "DESC" if sort_order == SortOrder.DESC else "ASC"
-
-    # Count query
-    count_sql = f"SELECT COUNT(*) as total FROM v_runs_o2 WHERE {where_sql}"
-
-    # Data query - includes policy context fields
-    data_sql = f"""
-        SELECT
-            run_id, tenant_id, project_id, is_synthetic, source, provider_type,
-            state, status, started_at, last_seen_at, completed_at, duration_ms,
-            risk_level, latency_bucket, evidence_health, integrity_status,
-            incident_count, policy_draft_count, policy_violation,
-            input_tokens, output_tokens, estimated_cost_usd,
-            -- Policy context fields (V2)
-            policy_id, policy_name, policy_scope, limit_type,
-            threshold_value, threshold_unit, threshold_source,
-            risk_type, actual_value, evaluation_outcome, proximity_pct
-        FROM v_runs_o2
-        WHERE {where_sql}
-        ORDER BY {sort_column} {sort_dir}
-        LIMIT :limit OFFSET :offset
-    """
-
-    params["limit"] = limit
-    params["offset"] = offset
-
-    try:
-        count_result = await session.execute(text(count_sql), params)
-        total = count_result.scalar() or 0
-
-        data_result = await session.execute(text(data_sql), params)
-        rows = data_result.mappings().all()
-
-        items = [_row_to_run_summary_v2(dict(row)) for row in rows]
-
-        has_more = offset + len(items) < total
-        next_offset = offset + limit if has_more else None
-
-        return CompletedRunsResponse(
-            items=items,
-            total=total,
-            has_more=has_more,
-            pagination=Pagination(limit=limit, offset=offset, next_offset=next_offset),
-            generated_at=datetime.utcnow(),
-        )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail={"error": "query_failed", "message": str(e)},
-        )
+    return CompletedRunsResponse(
+        items=items,
+        total=result.total,
+        has_more=has_more,
+        pagination=Pagination(limit=limit, offset=offset, next_offset=next_offset),
+        generated_at=datetime.utcnow(),
+    )
 
 
 @router.get(
@@ -2053,7 +1886,7 @@ async def list_signals(
     # Pagination
     limit: Annotated[int, Query(ge=1, le=100, description="Max signals to return")] = 20,
     # Dependencies
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> SignalsResponse:
     """
     List activity signals (V2 projection).
@@ -2064,170 +1897,54 @@ async def list_signals(
 
     tenant_id = get_tenant_id_from_auth(request)
 
-    # Build query for runs with signals (risk != NORMAL or evidence issues)
-    where_clauses = [
-        "tenant_id = :tenant_id",
-        "(risk_level != 'NORMAL' OR evidence_health != 'FLOWING' OR evaluation_outcome IN ('BREACH', 'NEAR_THRESHOLD'))",
-    ]
-    params: dict[str, Any] = {"tenant_id": tenant_id, "limit": limit}
+    # Route through L4 registry — signal synthesis handled by L5 facade
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "activity.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_signals",
+                "project_id": project_id,
+                "signal_type": signal_type,
+                "severity": severity,
+                "limit": limit,
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
-    if project_id:
-        where_clauses.append("project_id = :project_id")
-        params["project_id"] = project_id
-
-    # Filter by risk_type if signal_type specified
-    if signal_type:
-        if signal_type == "COST_RISK":
-            where_clauses.append("risk_type = 'COST'")
-        elif signal_type == "TIME_RISK":
-            where_clauses.append("risk_type = 'TIME'")
-        elif signal_type == "TOKEN_RISK":
-            where_clauses.append("risk_type = 'TOKENS'")
-        elif signal_type == "EVIDENCE_DEGRADED":
-            where_clauses.append("evidence_health != 'FLOWING'")
-        elif signal_type == "POLICY_BREACH":
-            where_clauses.append("evaluation_outcome = 'BREACH'")
-
-    if severity:
-        if severity == "HIGH":
-            where_clauses.append("(evaluation_outcome = 'BREACH' OR risk_level = 'VIOLATED')")
-        elif severity == "MEDIUM":
-            where_clauses.append("(evaluation_outcome = 'NEAR_THRESHOLD' OR risk_level = 'AT_RISK')")
-        elif severity == "LOW":
-            where_clauses.append("risk_level = 'NEAR_THRESHOLD'")
-
-    where_sql = " AND ".join(where_clauses)
-
-    # Query runs with signals
-    sql = f"""
-        SELECT
-            run_id, state, started_at, risk_level, evidence_health,
-            policy_id, policy_name, policy_scope, limit_type,
-            threshold_value, threshold_unit, threshold_source,
-            risk_type, actual_value, evaluation_outcome, proximity_pct
-        FROM v_runs_o2
-        WHERE {where_sql}
-        ORDER BY
-            CASE evaluation_outcome
-                WHEN 'BREACH' THEN 1
-                WHEN 'NEAR_THRESHOLD' THEN 2
-                ELSE 3
-            END,
-            started_at DESC
-        LIMIT :limit
-    """
-
-    try:
-        result = await session.execute(text(sql), params)
-        rows = result.mappings().all()
-
-        # Use L4 registry for fingerprint computation and feedback
-        registry = get_operation_registry()
-
-        # First pass: compute fingerprints and build signal data
-        signal_data = []
-        signal_rows_for_fingerprint = []
-
-        for row in rows:
-            # Determine signal type and severity
-            sig_type = "POLICY_BREACH" if row["evaluation_outcome"] == "BREACH" else \
-                       f"{row['risk_type']}_RISK" if row.get("risk_type") else \
-                       "EVIDENCE_DEGRADED" if row["evidence_health"] != "FLOWING" else "UNKNOWN"
-
-            sev = "HIGH" if row["evaluation_outcome"] == "BREACH" or row["risk_level"] == "VIOLATED" else \
-                  "MEDIUM" if row["evaluation_outcome"] == "NEAR_THRESHOLD" or row["risk_level"] == "AT_RISK" else \
-                  "LOW"
-
-            summary = f"Run {row['run_id'][:8]}... " + (
-                f"breached {row.get('limit_type', 'limit')}" if row["evaluation_outcome"] == "BREACH" else
-                f"at {row.get('proximity_pct', 0):.1f}% of threshold" if row["evaluation_outcome"] == "NEAR_THRESHOLD" else
-                "requires attention"
+    result = op.data
+    signals = []
+    for sig in result.signals:
+        feedback_model = None
+        if sig.feedback:
+            feedback_model = SignalFeedbackModel(
+                acknowledged=sig.feedback.acknowledged,
+                acknowledged_by=sig.feedback.acknowledged_by,
+                acknowledged_at=sig.feedback.acknowledged_at,
+                suppressed_until=sig.feedback.suppressed_until,
             )
 
-            signal_rows_for_fingerprint.append({
-                "run_id": row["run_id"],
-                "signal_type": sig_type,
-                "risk_type": row.get("risk_type") or "UNKNOWN",
-                "evaluation_outcome": row.get("evaluation_outcome") or "UNKNOWN",
-            })
+        signals.append(SignalProjection(
+            signal_id=sig.signal_id,
+            signal_fingerprint=sig.signal_fingerprint,
+            run_id=sig.run_id,
+            signal_type=sig.signal_type,
+            severity=sig.severity,
+            summary=sig.summary,
+            policy_context=_policy_context_from_l5(sig.policy_context),
+            created_at=sig.created_at,
+            feedback=feedback_model,
+        ))
 
-            signal_data.append({
-                "row": row,
-                "sig_type": sig_type,
-                "sev": sev,
-                "summary": summary,
-            })
-
-        # Batch compute fingerprints via L4
-        fp_op = await registry.execute(
-            "activity.signal_fingerprint",
-            OperationContext(
-                session=session,
-                tenant_id=tenant_id,
-                params={"method": "compute_batch", "rows": signal_rows_for_fingerprint},
-            ),
-        )
-        if not fp_op.success:
-            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": fp_op.error})
-        fingerprints: list[str] = fp_op.data
-
-        # Attach fingerprints to signal data
-        for i, data in enumerate(signal_data):
-            data["fingerprint"] = fingerprints[i]
-
-        # Fetch feedback for all signals in bulk via L4
-        fb_op = await registry.execute(
-            "activity.signal_feedback",
-            OperationContext(
-                session=session,
-                tenant_id=tenant_id,
-                params={"method": "get_bulk_feedback", "signal_ids": fingerprints},
-            ),
-        )
-        if not fb_op.success:
-            raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": fb_op.error})
-        feedback_map = fb_op.data
-
-        # Second pass: build SignalProjection objects with feedback
-        signals = []
-        for data in signal_data:
-            row = data["row"]
-            fingerprint = data["fingerprint"]
-            feedback = feedback_map.get(fingerprint)
-
-            # Build feedback model if exists
-            feedback_model = None
-            if feedback:
-                feedback_model = SignalFeedbackModel(
-                    acknowledged=feedback.acknowledged,
-                    acknowledged_by=feedback.acknowledged_by,
-                    acknowledged_at=feedback.acknowledged_at,
-                    suppressed_until=feedback.suppressed_until,
-                )
-
-            signals.append(SignalProjection(
-                signal_id=f"sig-{row['run_id'][:8]}-{data['sig_type'].lower()}",
-                signal_fingerprint=fingerprint,
-                run_id=row["run_id"],
-                signal_type=data["sig_type"],
-                severity=data["sev"],
-                summary=data["summary"],
-                policy_context=_extract_policy_context(dict(row)),
-                created_at=row["started_at"] or datetime.utcnow(),
-                feedback=feedback_model,
-            ))
-
-        return SignalsResponse(
-            signals=signals,
-            total=len(signals),
-            generated_at=datetime.utcnow(),
-        )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail={"error": "query_failed", "message": str(e)},
-        )
+    return SignalsResponse(
+        signals=signals,
+        total=result.total,
+        generated_at=datetime.utcnow(),
+    )
 
 
 @router.get(
@@ -2248,7 +1965,7 @@ async def list_signals(
 )
 async def get_activity_metrics(
     request: Request,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> MetricsResponse:
     """
     Get aggregated activity metrics (V2).
@@ -2262,59 +1979,34 @@ async def get_activity_metrics(
 
     tenant_id = get_tenant_id_from_auth(request)
 
-    sql = text("""
-        SELECT
-            -- Risk counts
-            COUNT(*) FILTER (WHERE risk_level IN ('NEAR_THRESHOLD', 'AT_RISK', 'VIOLATED')) as at_risk_count,
-            COUNT(*) FILTER (WHERE risk_level = 'VIOLATED') as violated_count,
-            COUNT(*) FILTER (WHERE risk_level = 'NEAR_THRESHOLD') as near_threshold_count,
-            COUNT(*) FILTER (WHERE risk_level != 'NORMAL') as total_at_risk,
+    # Route through L4 registry
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "activity.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_metrics"},
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
 
-            -- Topic counts
-            COUNT(*) FILTER (WHERE state = 'LIVE') as live_count,
-            COUNT(*) FILTER (WHERE state = 'COMPLETED') as completed_count,
-
-            -- Evidence health
-            COUNT(*) FILTER (WHERE evidence_health = 'FLOWING') as evidence_flowing_count,
-            COUNT(*) FILTER (WHERE evidence_health = 'DEGRADED') as evidence_degraded_count,
-            COUNT(*) FILTER (WHERE evidence_health = 'MISSING') as evidence_missing_count,
-
-            -- Risk type counts (from evaluation_outcome != OK)
-            COUNT(*) FILTER (WHERE risk_type = 'COST' AND evaluation_outcome != 'OK') as cost_risk_count,
-            COUNT(*) FILTER (WHERE risk_type = 'TIME' AND evaluation_outcome != 'OK') as time_risk_count,
-            COUNT(*) FILTER (WHERE risk_type = 'TOKENS' AND evaluation_outcome != 'OK') as token_risk_count,
-            COUNT(*) FILTER (WHERE risk_type = 'RATE' AND evaluation_outcome != 'OK') as rate_risk_count
-        FROM v_runs_o2
-        WHERE tenant_id = :tenant_id
-          AND (state = 'LIVE' OR completed_at >= NOW() - INTERVAL '24 hours')
-    """)
-
-    result = await session.execute(sql, {"tenant_id": tenant_id})
-    row = result.mappings().first()
-
-    if not row:
-        return MetricsResponse(
-            at_risk_count=0, violated_count=0, near_threshold_count=0, total_at_risk=0,
-            live_count=0, completed_count=0,
-            evidence_flowing_count=0, evidence_degraded_count=0, evidence_missing_count=0,
-            cost_risk_count=0, time_risk_count=0, token_risk_count=0, rate_risk_count=0,
-            generated_at=datetime.utcnow(),
-        )
-
+    result = op.data
     return MetricsResponse(
-        at_risk_count=row["at_risk_count"] or 0,
-        violated_count=row["violated_count"] or 0,
-        near_threshold_count=row["near_threshold_count"] or 0,
-        total_at_risk=row["total_at_risk"] or 0,
-        live_count=row["live_count"] or 0,
-        completed_count=row["completed_count"] or 0,
-        evidence_flowing_count=row["evidence_flowing_count"] or 0,
-        evidence_degraded_count=row["evidence_degraded_count"] or 0,
-        evidence_missing_count=row["evidence_missing_count"] or 0,
-        cost_risk_count=row["cost_risk_count"] or 0,
-        time_risk_count=row["time_risk_count"] or 0,
-        token_risk_count=row["token_risk_count"] or 0,
-        rate_risk_count=row["rate_risk_count"] or 0,
+        at_risk_count=result.at_risk_count,
+        violated_count=result.violated_count,
+        near_threshold_count=result.near_threshold_count,
+        total_at_risk=result.total_at_risk,
+        live_count=result.live_count,
+        completed_count=result.completed_count,
+        evidence_flowing_count=result.evidence_flowing_count,
+        evidence_degraded_count=result.evidence_degraded_count,
+        evidence_missing_count=result.evidence_missing_count,
+        cost_risk_count=result.cost_risk_count,
+        time_risk_count=result.time_risk_count,
+        token_risk_count=result.token_risk_count,
+        rate_risk_count=result.rate_risk_count,
         generated_at=datetime.utcnow(),
     )
 
@@ -2346,7 +2038,7 @@ async def get_threshold_signals(
     # Pagination
     limit: Annotated[int, Query(ge=1, le=100, description="Max signals to return")] = 20,
     # Dependencies
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> ThresholdSignalsResponse:
     """
     Get threshold proximity signals (V2).
@@ -2357,74 +2049,43 @@ async def get_threshold_signals(
 
     tenant_id = get_tenant_id_from_auth(request)
 
-    # Build query - only runs with threshold data
-    where_clauses = [
-        "tenant_id = :tenant_id",
-        "threshold_value IS NOT NULL",
-        "evaluation_outcome IS NOT NULL",
-        "evaluation_outcome != 'ADVISORY'",  # Exclude advisory (no actual limit)
+    # Route through L4 registry
+    registry = get_operation_registry()
+    op = await registry.execute(
+        "activity.query",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "method": "get_threshold_signals",
+                "risk_type": risk_type.value if risk_type else None,
+                "evaluation_outcome": evaluation_outcome.value if evaluation_outcome else None,
+                "state": state.value if state else None,
+                "limit": limit,
+            },
+        ),
+    )
+    if not op.success:
+        raise HTTPException(status_code=500, detail={"error": "operation_failed", "message": op.error})
+
+    result = op.data
+    signals = [
+        ThresholdSignal(
+            run_id=sig.run_id,
+            limit_type=sig.limit_type,
+            proximity_pct=sig.proximity_pct,
+            evaluation_outcome=sig.evaluation_outcome,
+            policy_context=_policy_context_from_l5(sig.policy_context),
+        )
+        for sig in result.signals
     ]
-    params: dict[str, Any] = {"tenant_id": tenant_id, "limit": limit}
 
-    if risk_type:
-        where_clauses.append("risk_type = :risk_type")
-        params["risk_type"] = risk_type.value
-
-    if evaluation_outcome:
-        where_clauses.append("evaluation_outcome = :evaluation_outcome")
-        params["evaluation_outcome"] = evaluation_outcome.value
-
-    if state:
-        where_clauses.append("state = :state")
-        params["state"] = state.value
-
-    where_sql = " AND ".join(where_clauses)
-
-    sql = f"""
-        SELECT
-            run_id, limit_type, proximity_pct, evaluation_outcome,
-            policy_id, policy_name, policy_scope,
-            threshold_value, threshold_unit, threshold_source,
-            risk_type, actual_value
-        FROM v_runs_o2
-        WHERE {where_sql}
-        ORDER BY
-            CASE evaluation_outcome
-                WHEN 'BREACH' THEN 1
-                WHEN 'NEAR_THRESHOLD' THEN 2
-                ELSE 3
-            END,
-            proximity_pct DESC NULLS LAST
-        LIMIT :limit
-    """
-
-    try:
-        result = await session.execute(text(sql), params)
-        rows = result.mappings().all()
-
-        signals = [
-            ThresholdSignal(
-                run_id=row["run_id"],
-                limit_type=row["limit_type"] or "UNKNOWN",
-                proximity_pct=float(row["proximity_pct"]) if row["proximity_pct"] else 0.0,
-                evaluation_outcome=row["evaluation_outcome"],
-                policy_context=_extract_policy_context(dict(row)),
-            )
-            for row in rows
-        ]
-
-        return ThresholdSignalsResponse(
-            signals=signals,
-            total=len(signals),
-            risk_type_filter=risk_type.value if risk_type else None,
-            generated_at=datetime.utcnow(),
-        )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail={"error": "query_failed", "message": str(e)},
-        )
+    return ThresholdSignalsResponse(
+        signals=signals,
+        total=result.total,
+        risk_type_filter=risk_type.value if risk_type else None,
+        generated_at=datetime.utcnow(),
+    )
 
 
 # =============================================================================
@@ -2458,7 +2119,7 @@ async def acknowledge_signal(
     request: Request,
     signal_fingerprint: Annotated[str, Path(description="Canonical signal fingerprint (sig-{hash})")],
     body: SignalAckRequest,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> SignalAckResponse:
     """
     Acknowledge a signal.
@@ -2541,7 +2202,7 @@ async def suppress_signal(
     request: Request,
     signal_fingerprint: Annotated[str, Path(description="Canonical signal fingerprint (sig-{hash})")],
     body: SignalSuppressRequest,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> SignalSuppressResponse:
     """
     Suppress a signal temporarily.

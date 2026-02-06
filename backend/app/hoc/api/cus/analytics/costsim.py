@@ -35,14 +35,11 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.db import get_async_session_dep
-
 # PIN-520 Phase 3: Route through L4 registry instead of direct L5/L6 imports
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
+    get_session_dep,
 )
 from app.schemas.response import wrap_dict
 
@@ -443,7 +440,7 @@ async def detect_simulation_drift(
 
 # API Endpoints
 @router.get("/v2/status", response_model=SandboxStatusResponse)
-async def get_sandbox_status(session: AsyncSession = Depends(get_async_session_dep)):
+async def get_sandbox_status(session = Depends(get_session_dep)):
     """
     Get current V2 sandbox status.
 
@@ -477,7 +474,7 @@ async def get_sandbox_status(session: AsyncSession = Depends(get_async_session_d
 
 
 @router.post("/v2/simulate", response_model=SandboxSimulateResponse)
-async def simulate_v2(request: SimulateRequest, session: AsyncSession = Depends(get_async_session_dep)):
+async def simulate_v2(request: SimulateRequest, session = Depends(get_session_dep)):
     """
     Run simulation through V2 sandbox.
 
@@ -660,7 +657,7 @@ async def simulate_v2(request: SimulateRequest, session: AsyncSession = Depends(
 @router.post("/v2/reset")
 async def reset_circuit_breaker(
     reason: Optional[str] = Query(None, description="Reason for reset"),
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ):
     """
     Reset the V2 circuit breaker.
@@ -692,7 +689,7 @@ async def reset_circuit_breaker(
 async def get_incidents(
     include_resolved: bool = Query(False, description="Include resolved incidents"),
     limit: int = Query(10, ge=1, le=100, description="Max incidents to return"),
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ):
     """
     Get circuit breaker incidents.
@@ -725,7 +722,7 @@ async def get_divergence_report(
     end_date: Optional[datetime] = Query(None, description="End of analysis period"),
     tenant_id: Optional[str] = Query(None, description="Filter by tenant"),
     days: int = Query(7, ge=1, le=90, description="Days to analyze (if start_date not provided)"),
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ):
     """
     Get cost divergence report between V1 and V2.
@@ -774,7 +771,7 @@ async def get_divergence_report(
 async def trigger_canary_run(
     sample_count: int = Query(100, ge=10, le=1000, description="Number of samples"),
     drift_threshold: float = Query(0.2, ge=0.0, le=1.0, description="Drift threshold"),
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ):
     """
     Trigger a canary run on-demand.
@@ -822,7 +819,7 @@ async def get_canary_reports(
     limit: int = Query(10, ge=1, le=100, description="Max reports to return"),
     status: Optional[str] = Query(None, description="Filter by status (pass, fail, error, skipped)"),
     passed: Optional[bool] = Query(None, description="Filter by passed status"),
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ):
     """
     Get recent canary run reports.
@@ -887,7 +884,7 @@ class ValidationResultResponse(BaseModel):
 
 
 @router.get("/datasets", response_model=List[DatasetInfo])
-async def list_datasets(session: AsyncSession = Depends(get_async_session_dep)):
+async def list_datasets(session = Depends(get_session_dep)):
     """
     List all available reference datasets.
 
@@ -924,7 +921,7 @@ async def list_datasets(session: AsyncSession = Depends(get_async_session_dep)):
 
 
 @router.get("/datasets/{dataset_id}")
-async def get_dataset_info(dataset_id: str, session: AsyncSession = Depends(get_async_session_dep)):
+async def get_dataset_info(dataset_id: str, session = Depends(get_session_dep)):
     """
     Get information about a specific dataset.
 
@@ -946,7 +943,7 @@ async def get_dataset_info(dataset_id: str, session: AsyncSession = Depends(get_
 
 
 @router.post("/datasets/{dataset_id}/validate", response_model=ValidationResultResponse)
-async def validate_against_dataset(dataset_id: str, session: AsyncSession = Depends(get_async_session_dep)):
+async def validate_against_dataset(dataset_id: str, session = Depends(get_session_dep)):
     """
     Validate V2 against a specific reference dataset.
 
@@ -986,7 +983,7 @@ async def validate_against_dataset(dataset_id: str, session: AsyncSession = Depe
 
 
 @router.post("/datasets/validate-all")
-async def validate_all(session: AsyncSession = Depends(get_async_session_dep)):
+async def validate_all(session = Depends(get_session_dep)):
     """
     Validate V2 against ALL reference datasets.
 

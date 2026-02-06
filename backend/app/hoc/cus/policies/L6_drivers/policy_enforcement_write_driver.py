@@ -200,11 +200,10 @@ async def record_enforcement_standalone(
     details: Optional[Dict[str, Any]] = None,
 ) -> Optional[str]:
     """
-    Record a policy enforcement event with standalone session management.
+    Record a policy enforcement event via L4 handler (L4 owns commit).
 
-    This function creates its own session and commits immediately.
-    Use this for fire-and-forget enforcement recording where the caller
-    doesn't have an existing session.
+    This function dispatches to the L4 PoliciesEnforcementWriteHandler,
+    which creates its own session and commits. L6 driver does NOT commit.
 
     Args:
         tenant_id: Tenant owning the run
@@ -222,25 +221,47 @@ async def record_enforcement_standalone(
         raise exceptions. Enforcement continues regardless of recording success.
     """
     try:
-        from app.db_async import async_session_context
+        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+            OperationContext,
+            get_operation_registry,
+        )
 
-        async with async_session_context() as session:
-            driver = PolicyEnforcementWriteDriver(session)
-            enforcement_id = await driver.record_enforcement(
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "policies.enforcement_write",
+            OperationContext(
+                session=None,  # L4 handler creates its own session
                 tenant_id=tenant_id,
-                rule_id=rule_id,
-                action_taken=action_taken,
-                run_id=run_id,
-                incident_id=incident_id,
-                details=details,
+                params={
+                    "method": "record_enforcement",
+                    "tenant_id": tenant_id,
+                    "rule_id": rule_id,
+                    "action_taken": action_taken,
+                    "run_id": run_id,
+                    "incident_id": incident_id,
+                    "details": details,
+                },
+            ),
+        )
+
+        if result.success:
+            return result.data.get("enforcement_id")
+        else:
+            logger.error(
+                "policy_enforcement.record_failed",
+                extra={
+                    "error": result.error,
+                    "tenant_id": tenant_id,
+                    "rule_id": rule_id,
+                    "action_taken": action_taken,
+                },
             )
-            await session.commit()
-            return enforcement_id
+            return None
 
     except ImportError:
-        # DB not available - log and continue
+        # Registry not available - log and continue
         logger.warning(
-            "policy_enforcement.db_unavailable",
+            "policy_enforcement.registry_unavailable",
             extra={"action": "record_enforcement_standalone"},
         )
         return None

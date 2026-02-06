@@ -42,13 +42,11 @@ from typing import Annotated, Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.gateway_middleware import get_auth_context
-from app.db import get_async_session_dep
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
+    get_session_dep,
 )
 
 # =============================================================================
@@ -172,7 +170,7 @@ async def list_api_keys(
     limit: Annotated[int, Query(ge=1, le=100, description="Max items to return")] = 50,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
     # Dependencies
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> APIKeysListResponse:
     """List API keys. READ-ONLY. Delegates to L4 operation registry."""
 
@@ -243,7 +241,7 @@ async def list_api_keys(
 async def get_api_key_detail(
     request: Request,
     key_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session=Depends(get_session_dep),
 ) -> APIKeyDetailResponse:
     """Get API key detail (O3). Delegates to L4 operation registry."""
 

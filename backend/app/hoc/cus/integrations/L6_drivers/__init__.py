@@ -32,6 +32,16 @@ from .mcp_driver import (
     compute_input_hash,
     compute_output_hash,
 )
+from .proxy_driver import (
+    ApiKeyRow,
+    GuardrailRow,
+    IncidentRow,
+    KillSwitchStateRow,
+    LatencyStats,
+    ProxyDriver,
+    TenantRow,
+    get_proxy_driver,
+)
 
 __all__ = [
     # bridges_driver
@@ -43,4 +53,13 @@ __all__ = [
     "McpInvocationRow",
     "compute_input_hash",
     "compute_output_hash",
+    # proxy_driver (L2 session.execute refactor)
+    "ProxyDriver",
+    "ApiKeyRow",
+    "TenantRow",
+    "KillSwitchStateRow",
+    "GuardrailRow",
+    "LatencyStats",
+    "IncidentRow",
+    "get_proxy_driver",
 ]

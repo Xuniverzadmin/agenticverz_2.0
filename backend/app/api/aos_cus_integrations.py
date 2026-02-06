@@ -65,7 +65,7 @@ from app.schemas.cus_schemas import (
     CusIntegrationUpdate,
 )
 from app.schemas.response import wrap_dict, wrap_list
-from app.services.integrations_facade import get_integrations_facade
+from app.hoc.cus.integrations.L5_engines.integrations_facade import get_integrations_facade
 
 logger = logging.getLogger(__name__)
 

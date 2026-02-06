@@ -63,6 +63,7 @@ class ActivityQueryHandler:
             "get_metrics": facade.get_metrics,
             "get_threshold_signals": facade.get_threshold_signals,
             "get_risk_signals": facade.get_risk_signals,
+            "get_dimension_breakdown": facade.get_dimension_breakdown,
             "get_patterns": facade.get_patterns,
             "get_cost_analysis": facade.get_cost_analysis,
             "get_attention_queue": facade.get_attention_queue,

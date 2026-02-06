@@ -30,13 +30,9 @@ from .tenant_service import (
     TenantServiceError,
     get_tenant_service,
 )
-from .worker_registry_service import (
-    WorkerNotFoundError,
-    WorkerRegistryError,
-    WorkerRegistryService,
-    WorkerUnavailableError,
-    get_worker_registry_service,
-)
+# TOMBSTONE_EXPIRY: 2026-03-04
+# Removed: worker_registry_service (file does not exist, PIN-511 legacy cleanup)
+# Functionality moved to app.hoc.cus.integrations.L6_drivers.worker_registry_driver
 
 __all__ = [
     # Recovery
@@ -46,12 +42,7 @@ __all__ = [
     "TenantServiceError",
     "QuotaExceededError",
     "get_tenant_service",
-    # Worker Registry Service (M21)
-    "WorkerRegistryService",
-    "WorkerRegistryError",
-    "WorkerNotFoundError",
-    "WorkerUnavailableError",
-    "get_worker_registry_service",
+    # Worker Registry Service - REMOVED (PIN-511, file does not exist)
     # Event Emitter (M24)
     "EventEmitter",
     "EventEmitterError",

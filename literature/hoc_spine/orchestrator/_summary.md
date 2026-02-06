@@ -10,6 +10,13 @@
 
 Sole execution entry point from L2. Owns transaction boundaries, operation resolution, and execution order. No code runs without going through here.
 
+Also provides L4-owned session dependency (`get_session_dep`) so L2 can obtain DB sessions without direct DB/ORM imports.
+
+Bridge updates (PIN-L2-PURITY):
+- PoliciesEngineBridge for L2 access to policy engine classes/modules
+- AccountBridge exposes RBAC engine capability
+- IntegrationsDriverBridge exposes worker registry capabilities
+
 ## 2. What Belongs Here
 
 - Operation dispatcher (what runs)
@@ -300,3 +307,56 @@ result = await coordinator.detect_and_ingest(session, tenant_id)
 - ops_write_service.py
 - worker_registry_service.py
 - ops_incident_service.py
+
+---
+
+## PIN-520 Phase 1 Handler & Bridge Extensions (2026-02-03)
+
+**Problem Solved:** workers.py directly imported L5 engines for moat availability checks and L6 drivers for evidence capture, violating L2->L4->L5/L6 layer rules.
+
+**Solution:** New handlers and bridge capabilities absorb these operations, routing them through L4.
+
+### New Handlers
+
+| Handler | Operation | Purpose | Documentation |
+|---------|-----------|---------|---------------|
+| `LogsCaptureHandler` | `logs.capture` | Evidence capture at run creation | [logs_handler.md](logs_handler.md) |
+| `PoliciesHealthHandler` | `policies.health` | Moat availability checks | [policies_handler.md](policies_handler.md) |
+
+### Bridge Extensions
+
+| Bridge | New Capability | Purpose | Documentation |
+|--------|----------------|---------|---------------|
+| `logs_bridge.py` | `capture_driver_capability()` | Evidence capture via L6 driver | [logs_bridge.md](logs_bridge.md) |
+
+### Usage
+
+```python
+# Evidence capture (via logs.capture handler)
+result = await registry.execute(
+    "logs.capture",
+    tenant_id="t-123",
+    session=session,
+    params={
+        "method": "capture_environment",
+        "run_id": "run-456",
+        "trace_id": "trace-789",
+    }
+)
+
+# Moat availability check (via policies.health handler)
+result = await registry.execute(
+    "policies.health",
+    tenant_id="t-123",
+    session=session,
+    params={}
+)
+# result.data = {"m20_policy": "available", "m9_failure_catalog": "available", ...}
+```
+
+### Evidence Architecture v1.0 Integration
+
+The LogsCaptureHandler enables Evidence Architecture v1.0 compliance:
+1. Environment evidence captured at run creation via L4->L6 path
+2. No direct L2->L6 imports in workers.py
+3. Proper layer compliance for evidence workflows

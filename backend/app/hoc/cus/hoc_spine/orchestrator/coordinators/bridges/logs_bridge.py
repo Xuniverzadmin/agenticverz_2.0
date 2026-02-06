@@ -20,8 +20,11 @@ class LogsBridge:
         return get_logs_read_service()
 
     def traces_store_capability(self):
-        """Return TraceStore for run-scoped trace queries (PIN-519)."""
-        from app.hoc.cus.logs.L6_drivers.traces_store import SQLiteTraceStore
+        """Return TraceStore for run-scoped trace queries (PIN-519).
+
+        PIN-520: Use infrastructure store (not L6_drivers).
+        """
+        from app.traces.store import SQLiteTraceStore
         return SQLiteTraceStore()
 
     def audit_ledger_read_capability(self, session):
@@ -40,6 +43,37 @@ class LogsBridge:
         """
         from app.hoc.cus.logs.L6_drivers import capture_driver
         return capture_driver
+
+    def cost_intelligence_capability(self, session):
+        """
+        Return CostIntelligenceEngine for cost intelligence operations (L2 purity migration).
+
+        Provides:
+            - check_feature_tag_exists(tenant_id, tag)
+            - list_feature_tags(tenant_id, include_inactive)
+            - get_feature_tag(tenant_id, tag)
+            - update_feature_tag(tenant_id, tag, ...)
+            - get_cost_summary(tenant_id, period_start, period_end, days)
+            - get_costs_by_feature(tenant_id, period_start, total_cost)
+            - get_costs_by_user(tenant_id, period_start, total_cost)
+            - get_costs_by_model(tenant_id, period_start, total_cost)
+            - get_recent_anomalies(tenant_id, days, include_resolved)
+            - get_cost_projection(tenant_id, lookback_days, forecast_days)
+            - list_budgets(tenant_id)
+            - get_budget_by_type(tenant_id, budget_type, entity_id)
+            - create_budget(...)
+            - update_budget(...)
+            - get_current_spend(tenant_id, budget_type, entity_id)
+        """
+        from app.hoc.cus.logs.L6_drivers.cost_intelligence_sync_driver import (
+            get_cost_intelligence_sync_driver,
+        )
+        from app.hoc.cus.logs.L5_engines.cost_intelligence_engine import (
+            get_cost_intelligence_engine,
+        )
+
+        driver = get_cost_intelligence_sync_driver(session)
+        return get_cost_intelligence_engine(driver)
 
 
 # Singleton

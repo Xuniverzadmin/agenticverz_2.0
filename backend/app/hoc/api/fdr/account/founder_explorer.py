@@ -38,12 +38,15 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import text
-from sqlmodel import Session
 
-from ..auth.console_auth import FounderToken, verify_fops_token
-from ..db import get_session
-from ..schemas.response import wrap_dict, wrap_list
+from app.auth.console_auth import FounderToken, verify_fops_token
+
+# L4 session + SQL helpers (L2 must not import sqlalchemy/sqlmodel/app.db directly)
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    get_sync_session_dep,
+    sql_text,
+)
+from app.schemas.response import wrap_dict, wrap_list
 
 logger = logging.getLogger("nova.api.founder_explorer")
 
@@ -199,7 +202,7 @@ class PatternsResponse(BaseModel):
 @router.get("/summary", response_model=SystemSummary)
 async def get_system_summary(
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Get cross-tenant system summary.
@@ -219,7 +222,7 @@ async def get_system_summary(
 
     try:
         # Get tenant counts
-        tenant_query = text("""
+        tenant_query = sql_text("""
             SELECT
                 COUNT(DISTINCT tenant_id) as total_tenants,
                 COUNT(DISTINCT CASE WHEN created_at > :yesterday THEN tenant_id END) as active_24h,
@@ -229,7 +232,7 @@ async def get_system_summary(
         tenant_result = session.execute(tenant_query, {"yesterday": yesterday, "week_ago": week_ago}).fetchone()
 
         # Get call metrics
-        calls_query = text("""
+        calls_query = sql_text("""
             SELECT
                 COUNT(*) as total_calls,
                 COUNT(CASE WHEN created_at > :yesterday THEN 1 END) as calls_24h,
@@ -244,7 +247,7 @@ async def get_system_summary(
         calls_result = session.execute(calls_query, {"yesterday": yesterday, "week_ago": week_ago}).fetchone()
 
         # Get incident metrics
-        incidents_query = text("""
+        incidents_query = sql_text("""
             SELECT
                 COUNT(*) as total_incidents,
                 COUNT(CASE WHEN status = 'open' THEN 1 END) as open_incidents,
@@ -284,7 +287,7 @@ async def list_tenants(
     limit: int = Query(50, ge=1, le=200, description="Max tenants to return"),
     sort_by: str = Query("calls_24h", description="Sort field"),
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     List all tenants with summary metrics.
@@ -297,7 +300,7 @@ async def list_tenants(
     week_ago = now - timedelta(days=7)
 
     try:
-        query = text("""
+        query = sql_text("""
             WITH tenant_calls AS (
                 SELECT
                     tenant_id,
@@ -380,7 +383,7 @@ async def get_tenant_diagnostics(
     tenant_id: str,
     hours: int = Query(24, ge=1, le=168, description="Analysis window in hours"),
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Get deep diagnostics for a specific tenant.
@@ -400,7 +403,7 @@ async def get_tenant_diagnostics(
 
     try:
         # Calls by hour
-        hourly_query = text("""
+        hourly_query = sql_text("""
             SELECT
                 DATE_TRUNC('hour', created_at) as hour,
                 COUNT(*) as calls,
@@ -419,7 +422,7 @@ async def get_tenant_diagnostics(
         ]
 
         # Calls by skill (model)
-        skill_query = text("""
+        skill_query = sql_text("""
             SELECT
                 model as skill,
                 COUNT(*) as calls,
@@ -444,7 +447,7 @@ async def get_tenant_diagnostics(
         ]
 
         # Error breakdown
-        error_query = text("""
+        error_query = sql_text("""
             SELECT
                 COALESCE(error_type, 'unknown') as error_type,
                 COUNT(*) as count
@@ -459,7 +462,7 @@ async def get_tenant_diagnostics(
         error_breakdown = [{"error_type": r.error_type, "count": r.count} for r in error_results]
 
         # Recent incidents
-        incidents_query = text("""
+        incidents_query = sql_text("""
             SELECT
                 id, title, severity, status, created_at
             FROM incidents
@@ -503,7 +506,7 @@ async def get_tenant_diagnostics(
 @router.get("/system/health", response_model=SystemHealthResponse)
 async def get_system_health(
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Get overall system health indicators.
@@ -515,7 +518,7 @@ async def get_system_health(
 
     # Check database connectivity
     try:
-        session.execute(text("SELECT 1"))
+        session.execute(sql_text("SELECT 1"))
         db_healthy = True
     except Exception:
         db_healthy = False
@@ -535,7 +538,7 @@ async def get_system_health(
 
     # Get recent error count
     try:
-        recent_errors_query = text("""
+        recent_errors_query = sql_text("""
             SELECT COUNT(*) as count
             FROM proxy_calls
             WHERE status = 'error' AND created_at > :cutoff
@@ -571,7 +574,7 @@ async def get_system_health(
 async def get_usage_patterns(
     hours: int = Query(24, ge=1, le=168, description="Analysis window in hours"),
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ):
     """
     Get usage pattern analysis.
@@ -588,7 +591,7 @@ async def get_usage_patterns(
 
     try:
         # Pattern 1: Inactive tenants with high past usage
-        inactive_query = text("""
+        inactive_query = sql_text("""
             WITH recent AS (
                 SELECT tenant_id, COUNT(*) as calls
                 FROM proxy_calls
@@ -626,7 +629,7 @@ async def get_usage_patterns(
             )
 
         # Pattern 2: Error spike
-        error_query = text("""
+        error_query = sql_text("""
             SELECT
                 COUNT(CASE WHEN status = 'error' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0) as error_rate
             FROM proxy_calls
@@ -646,7 +649,7 @@ async def get_usage_patterns(
             )
 
         # Pattern 3: Cost concentration
-        cost_query = text("""
+        cost_query = sql_text("""
             SELECT COUNT(*) as count
             FROM (
                 SELECT tenant_id, SUM(cost_cents) as cost

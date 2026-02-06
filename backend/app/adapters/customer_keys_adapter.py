@@ -38,7 +38,7 @@ from pydantic import BaseModel
 from sqlmodel import Session
 
 # L6 driver imports (reclassified per PIN-468)
-from app.services.keys_driver import (
+from app.hoc.cus.api_keys.L6_drivers.keys_driver import (
     get_keys_read_driver as get_keys_read_service,
     get_keys_write_driver as get_keys_write_service,
 )

@@ -104,7 +104,7 @@ def validate_spine_components() -> SpineValidationResult:
 
     # Check 3: Runtime switch is available (GAP-069)
     try:
-        from app.services.governance.runtime_switch import is_governance_active
+        from app.hoc.cus.hoc_spine.authority.runtime_switch import is_governance_active
         if not is_governance_active():
             warnings.append("Governance is currently disabled at boot")
     except ImportError:

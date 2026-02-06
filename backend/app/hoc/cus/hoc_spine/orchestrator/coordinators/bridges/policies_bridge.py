@@ -46,6 +46,89 @@ class PoliciesBridge:
         from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
         return RecoveryMatcher(session)
 
+    def recovery_read_capability(self, session):
+        """
+        Return recovery read driver for DB read operations (L2 first-principles purity).
+
+        Used by recovery.py for candidate detail, actions list, etc.
+        Removes session.execute() from L2.
+        """
+        from app.hoc.cus.policies.L6_drivers.recovery_read_driver import RecoveryReadDriver
+        return RecoveryReadDriver(session)
+
+
+# =============================================================================
+# POLICIES ENGINE BRIDGE (extends PoliciesBridge to avoid 5-method limit)
+# =============================================================================
+
+
+class PoliciesEngineBridge:
+    """Extended capabilities for policies domain engines. Max 5 methods."""
+
+    def prevention_hook_capability(self):
+        """
+        Return prevention hook engine for response evaluation (PIN-L2-PURITY).
+
+        Used by guard.py for evaluating AI responses against prevention policies.
+        """
+        from app.hoc.cus.policies.L5_engines import prevention_hook
+
+        return prevention_hook
+
+    def policy_engine_capability(self):
+        """
+        Return policy engine for violation queries and pre-checks (PIN-L2-PURITY).
+
+        Used by policy.py for policy enforcement.
+        """
+        from app.hoc.cus.policies.L5_engines.engine import get_policy_engine
+
+        return get_policy_engine()
+
+    def policy_engine_class_capability(self):
+        """
+        Return PolicyEngine class for direct instantiation (PIN-L2-PURITY).
+
+        Used by workers.py which instantiates PolicyEngine directly.
+        """
+        from app.hoc.cus.policies.L5_engines.engine import PolicyEngine
+
+        return PolicyEngine
+
+    def governance_runtime_capability(self):
+        """
+        Return runtime_switch module for governance state management (PIN-520).
+
+        Used by governance_facade.py for kill switch, degraded mode, etc.
+        L4 authority owns these decisions; L5 receives via injection.
+        """
+        from app.hoc.cus.hoc_spine.authority import runtime_switch
+
+        return runtime_switch
+
+    def governance_config_capability(self):
+        """
+        Return get_governance_config function for failure mode config (PIN-520).
+
+        Used by failure_mode_handler.py to get governance configuration.
+        """
+        from app.hoc.cus.hoc_spine.authority.profile_policy_mode import (
+            get_governance_config,
+        )
+
+        return get_governance_config
+
+
+_engine_bridge_instance = None
+
+
+def get_policies_engine_bridge() -> PoliciesEngineBridge:
+    """Get the singleton PoliciesEngineBridge instance."""
+    global _engine_bridge_instance
+    if _engine_bridge_instance is None:
+        _engine_bridge_instance = PoliciesEngineBridge()
+    return _engine_bridge_instance
+
 
 # Singleton
 _instance = None
@@ -59,4 +142,9 @@ def get_policies_bridge() -> PoliciesBridge:
     return _instance
 
 
-__all__ = ["PoliciesBridge", "get_policies_bridge"]
+__all__ = [
+    "PoliciesBridge",
+    "get_policies_bridge",
+    "PoliciesEngineBridge",
+    "get_policies_engine_bridge",
+]

@@ -66,7 +66,6 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 from app.hoc.cus.incidents.L6_drivers.policy_violation_driver import (
     PolicyViolationDriver,
     get_policy_violation_driver,
-    insert_policy_evaluation_sync,
 )
 
 if TYPE_CHECKING:
@@ -643,7 +642,7 @@ def create_policy_evaluation_sync(
     Create a policy evaluation record for ANY run (PIN-407) - SYNC VERSION.
 
     This is a synchronous wrapper for use in worker contexts where we don't
-    have an async session. Uses direct psycopg2 connection via driver.
+    have an async session. Uses psycopg2 with L6 driver.
 
     Args:
         run_id: Run ID
@@ -657,8 +656,17 @@ def create_policy_evaluation_sync(
         policy_evaluation_id if created, None if failed
 
     DECISION: Map run status to policy outcome (business rule).
-    PERSISTENCE: Delegated to driver.
+    PERSISTENCE: L5 owns connection lifecycle for sync path, L6 driver executes.
+
+    Note: L5 creating connection is a deviation from strict L4 ownership,
+    but this sync worker path has no L4 handler. The L6 driver does NOT commit.
     """
+    import psycopg2
+
+    from app.hoc.cus.incidents.L6_drivers.policy_violation_driver import (
+        insert_policy_evaluation_sync_with_cursor,
+    )
+
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         logger.error("policy_eval_sync_no_database_url")
@@ -681,19 +689,31 @@ def create_policy_evaluation_sync(
     # DECISION: Calculate confidence based on outcome
     confidence = 1.0 if outcome == POLICY_OUTCOME_NO_VIOLATION else 0.0
 
-    # PERSISTENCE: Delegate to driver
-    result = insert_policy_evaluation_sync(
-        database_url=database_url,
-        evaluation_id=evaluation_id,
-        run_id=run_id,
-        tenant_id=tenant_id,
-        outcome=outcome,
-        policies_checked=policies_checked,
-        confidence=confidence,
-        created_at=now,
-        is_synthetic=is_synthetic,
-        synthetic_scenario_id=synthetic_scenario_id,
-    )
+    try:
+        # L5 owns connection lifecycle for this sync path (no L4 handler)
+        conn = psycopg2.connect(database_url)
+        try:
+            with conn.cursor() as cursor:
+                # PERSISTENCE: L6 driver executes, L5 commits
+                result = insert_policy_evaluation_sync_with_cursor(
+                    cursor=cursor,
+                    evaluation_id=evaluation_id,
+                    run_id=run_id,
+                    tenant_id=tenant_id,
+                    outcome=outcome,
+                    policies_checked=policies_checked,
+                    confidence=confidence,
+                    created_at=now,
+                    is_synthetic=is_synthetic,
+                    synthetic_scenario_id=synthetic_scenario_id,
+                )
+                # L5 commits (L6 does NOT commit)
+                conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        logger.error(f"policy_eval_sync_error: {e}")
+        return None
 
     if result:
         logger.info(

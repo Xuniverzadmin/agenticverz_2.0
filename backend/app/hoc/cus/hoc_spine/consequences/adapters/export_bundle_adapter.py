@@ -49,6 +49,13 @@ from app.models.export_bundles import (
     TraceStepEvidence,
 )
 
+# Snapshot types for type hints (L6 domain types)
+from app.hoc.cus.logs.L6_drivers.export_bundle_store import (
+    IncidentSnapshot,
+    RunSnapshot,
+    TraceSummarySnapshot,
+)
+
 
 logger = logging.getLogger("nova.adapters.export_bundle")
 

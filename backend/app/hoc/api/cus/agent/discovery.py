@@ -20,9 +20,16 @@ Reference: docs/contracts/visibility_lifecycle.yaml
 
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
 from app.discovery.ledger import get_signals
+
+# L4 session dependency + operation registry (L2 must not import sqlalchemy/sqlmodel/app.db directly)
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    get_operation_registry,
+    get_sync_session_dep,
+    OperationContext,
+)
 from app.schemas.response import wrap_dict
 
 router = APIRouter(prefix="/api/v1/discovery", tags=["discovery"])
@@ -59,64 +66,35 @@ async def list_signals(
 
 
 @router.get("/stats")
-async def signal_stats():
+async def signal_stats(
+    session=Depends(get_sync_session_dep),
+):
     """
     Get summary statistics of discovery signals.
 
     Returns counts by artifact, signal_type, and status.
     """
     try:
-        from sqlalchemy import text
+        # Dispatch to L4 handler via operation registry
+        registry = get_operation_registry()
+        result = await registry.execute(
+            operation="agent.discovery_stats",
+            ctx=OperationContext(
+                session=session,  # type: ignore[arg-type]  # sync session passed via params
+                tenant_id="system",  # discovery ledger is system-wide, no tenant context
+                params={"sync_session": session},
+            ),
+        )
 
-        from app.db import get_sync_engine
-
-        engine = get_sync_engine()
-
-        with engine.connect() as conn:
-            # Count by artifact
-            by_artifact = conn.execute(
-                text(
-                    """
-                SELECT artifact, COUNT(*) as count, SUM(seen_count) as total_seen
-                FROM discovery_ledger
-                GROUP BY artifact
-                ORDER BY total_seen DESC
-            """
-                )
-            ).fetchall()
-
-            # Count by signal_type
-            by_signal_type = conn.execute(
-                text(
-                    """
-                SELECT signal_type, COUNT(*) as count, SUM(seen_count) as total_seen
-                FROM discovery_ledger
-                GROUP BY signal_type
-                ORDER BY total_seen DESC
-            """
-                )
-            ).fetchall()
-
-            # Count by status
-            by_status = conn.execute(
-                text(
-                    """
-                SELECT status, COUNT(*) as count
-                FROM discovery_ledger
-                GROUP BY status
-            """
-                )
-            ).fetchall()
-
+        if not result.success:
             return wrap_dict({
-                "by_artifact": [
-                    {"artifact": r.artifact, "count": r.count, "total_seen": r.total_seen} for r in by_artifact
-                ],
-                "by_signal_type": [
-                    {"signal_type": r.signal_type, "count": r.count, "total_seen": r.total_seen} for r in by_signal_type
-                ],
-                "by_status": [{"status": r.status, "count": r.count} for r in by_status],
+                "by_artifact": [],
+                "by_signal_type": [],
+                "by_status": [],
+                "error": result.error,
             })
+
+        return wrap_dict(result.data)
     except Exception as e:
         return wrap_dict({
             "by_artifact": [],

@@ -38,10 +38,10 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
-from ..auth.console_auth import FounderToken, verify_fops_token
-from ..auth.onboarding_state import OnboardingState
-from ..auth.onboarding_transitions import get_onboarding_service
-from ..schemas.response import wrap_dict
+from app.auth.console_auth import FounderToken, verify_fops_token
+from app.auth.onboarding_state import OnboardingState
+from app.auth.onboarding_transitions import get_onboarding_service
+from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.founder_onboarding")
 
@@ -271,7 +271,7 @@ async def get_stalled_tenants(
 
     Use the force-complete endpoint to resolve if needed.
     """
-    from ..auth.onboarding_transitions import detect_stalled_onboarding
+    from app.auth.onboarding_transitions import detect_stalled_onboarding
 
     stalled = await detect_stalled_onboarding(threshold_hours=threshold_hours)
 

@@ -71,7 +71,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from app.hoc.cus.activity.L6_drivers.activity_read_driver import (
     get_activity_read_driver,
@@ -99,6 +99,41 @@ from app.hoc.cus.activity.L5_engines.activity_enums import (
 )
 
 logger = logging.getLogger("nova.services.activity.facade")
+
+
+# =============================================================================
+# PIN-520: Protocols for coordinator injection (L5 purity)
+# =============================================================================
+
+
+class RunEvidenceCoordinatorPort(Protocol):
+    """Protocol for run evidence coordinator (PIN-520 L5 purity)."""
+
+    async def get_run_evidence(
+        self, session: Any, tenant_id: str, run_id: str
+    ) -> Any:
+        """Get cross-domain evidence for a run."""
+        ...
+
+
+class RunProofCoordinatorPort(Protocol):
+    """Protocol for run proof coordinator (PIN-520 L5 purity)."""
+
+    async def get_run_proof(
+        self, session: Any, tenant_id: str, run_id: str, include_payloads: bool
+    ) -> Any:
+        """Get integrity proof for a run."""
+        ...
+
+
+class SignalFeedbackCoordinatorPort(Protocol):
+    """Protocol for signal feedback coordinator (PIN-520 L5 purity)."""
+
+    async def get_signal_feedback(
+        self, session: Any, tenant_id: str, fingerprint: str
+    ) -> Any:
+        """Get feedback status for a signal."""
+        ...
 
 
 # =============================================================================
@@ -335,6 +370,25 @@ class RiskSignalsResult:
     by_risk_type: dict[str, int] = field(default_factory=dict)
 
 
+@dataclass
+class DimensionGroupResult:
+    """A dimension group with count and percentage."""
+
+    value: str
+    count: int
+    percentage: float
+
+
+@dataclass
+class DimensionBreakdownResult:
+    """Dimension breakdown result."""
+
+    dimension: str
+    groups: list[DimensionGroupResult]
+    total_runs: int
+    state_filter: str | None
+
+
 # Import service result types for pass-through
 from app.hoc.cus.activity.L5_engines.pattern_detection_engine import (
     PatternDetectionResult,
@@ -364,11 +418,29 @@ class ActivityFacade:
 
     Note: Services are instantiated per-request with the session, as they
     require the session in their constructors.
+
+    PIN-520: Coordinators are now injected via L4 bridge instead of being
+    imported directly from L4 orchestrator.
     """
 
-    def __init__(self) -> None:
-        """Initialize facade."""
-        pass  # Services are instantiated per-request
+    def __init__(
+        self,
+        run_evidence_coordinator: RunEvidenceCoordinatorPort | None = None,
+        run_proof_coordinator: RunProofCoordinatorPort | None = None,
+        signal_feedback_coordinator: SignalFeedbackCoordinatorPort | None = None,
+    ) -> None:
+        """Initialize facade with optional coordinator injection.
+
+        Args:
+            run_evidence_coordinator: Coordinator for cross-domain evidence queries (injected by L4 caller).
+            run_proof_coordinator: Coordinator for integrity proof queries (injected by L4 caller).
+            signal_feedback_coordinator: Coordinator for signal feedback queries (injected by L4 caller).
+
+        PIN-520: L4 callers must inject coordinators. L5 must not import from hoc_spine.
+        """
+        self._run_evidence_coordinator = run_evidence_coordinator
+        self._run_proof_coordinator = run_proof_coordinator
+        self._signal_feedback_coordinator = signal_feedback_coordinator
 
     def _get_driver(self, session: AsyncSession) -> ActivityReadDriver:
         """Get activity read driver for this session."""
@@ -640,6 +712,8 @@ class ActivityFacade:
 
         Delegates to L4 RunEvidenceCoordinator for cross-domain queries (PIN-519).
 
+        PIN-520: Uses injected coordinator instead of importing from L4 orchestrator.
+
         Args:
             session: Database session
             tenant_id: Tenant ID for isolation
@@ -648,12 +722,13 @@ class ActivityFacade:
         Returns:
             RunEvidenceResult with cross-domain impact
         """
-        from app.hoc.cus.hoc_spine.orchestrator.coordinators.run_evidence_coordinator import (
-            get_run_evidence_coordinator,
-        )
+        # PIN-520: Coordinator must be injected via L4 bridge
+        if self._run_evidence_coordinator is None:
+            raise RuntimeError(
+                "RunEvidenceCoordinator not available - inject via L4 ActivityEngineBridge"
+            )
 
-        coordinator = get_run_evidence_coordinator()
-        result = await coordinator.get_run_evidence(session, tenant_id, run_id)
+        result = await self._run_evidence_coordinator.get_run_evidence(session, tenant_id, run_id)
 
         # Convert L4 result to L5 result type (they should be compatible)
         return RunEvidenceResult(
@@ -688,6 +763,8 @@ class ActivityFacade:
 
         Delegates to L4 RunProofCoordinator for trace/proof queries (PIN-519).
 
+        PIN-520: Uses injected coordinator instead of importing from L4 orchestrator.
+
         Args:
             session: Database session
             tenant_id: Tenant ID for isolation
@@ -697,12 +774,15 @@ class ActivityFacade:
         Returns:
             RunProofResult with integrity proof
         """
-        from app.hoc.cus.hoc_spine.orchestrator.coordinators.run_proof_coordinator import (
-            get_run_proof_coordinator,
-        )
+        # PIN-520: Coordinator must be injected via L4 bridge
+        if self._run_proof_coordinator is None:
+            raise RuntimeError(
+                "RunProofCoordinator not available - inject via L4 ActivityEngineBridge"
+            )
 
-        coordinator = get_run_proof_coordinator()
-        result = await coordinator.get_run_proof(session, tenant_id, run_id, include_payloads)
+        result = await self._run_proof_coordinator.get_run_proof(
+            session, tenant_id, run_id, include_payloads
+        )
 
         # Convert L4 result to L5 result type
         return RunProofResult(
@@ -730,6 +810,7 @@ class ActivityFacade:
         session: AsyncSession,
         tenant_id: str,
         project_id: str | None = None,
+        state: str | None = None,
     ) -> StatusSummaryResult:
         """
         Get summary by status (COMP-O3).
@@ -738,6 +819,7 @@ class ActivityFacade:
             session: Database session
             tenant_id: Tenant ID for isolation
             project_id: Optional project filter
+            state: Optional state filter (LIVE, COMPLETED)
 
         Returns:
             StatusSummaryResult with counts by status
@@ -748,6 +830,10 @@ class ActivityFacade:
         if project_id:
             where_clauses.append("project_id = :project_id")
             params["project_id"] = project_id
+
+        if state:
+            where_clauses.append("state = :state")
+            params["state"] = state
 
         where_sql = " AND ".join(where_clauses)
 
@@ -773,6 +859,9 @@ class ActivityFacade:
         *,
         project_id: str | None = None,
         risk_level: list[str] | None = None,
+        evidence_health: list[str] | None = None,
+        source: list[str] | None = None,
+        provider_type: list[str] | None = None,
         limit: int = 50,
         offset: int = 0,
         sort_by: str = "started_at",
@@ -786,6 +875,9 @@ class ActivityFacade:
             tenant_id: Tenant ID for isolation
             project_id: Optional project filter
             risk_level: Filter by risk levels
+            evidence_health: Filter by evidence health
+            source: Filter by run source
+            provider_type: Filter by LLM provider
             limit: Max items to return
             offset: Items to skip
             sort_by: Field to sort by
@@ -800,6 +892,9 @@ class ActivityFacade:
             state="LIVE",
             project_id=project_id,
             risk_level=risk_level,
+            evidence_health=evidence_health,
+            source=source,
+            provider_type=provider_type,
             limit=limit,
             offset=offset,
             sort_by=sort_by,
@@ -819,7 +914,10 @@ class ActivityFacade:
         tenant_id: str,
         *,
         project_id: str | None = None,
+        status: list[str] | None = None,
         risk_level: list[str] | None = None,
+        completed_after: datetime | None = None,
+        completed_before: datetime | None = None,
         limit: int = 50,
         offset: int = 0,
         sort_by: str = "started_at",
@@ -832,7 +930,10 @@ class ActivityFacade:
             session: Database session
             tenant_id: Tenant ID for isolation
             project_id: Optional project filter
+            status: Filter by run statuses
             risk_level: Filter by risk levels
+            completed_after: Filter by completion time
+            completed_before: Filter by completion time
             limit: Max items to return
             offset: Items to skip
             sort_by: Field to sort by
@@ -846,7 +947,10 @@ class ActivityFacade:
             tenant_id=tenant_id,
             state="COMPLETED",
             project_id=project_id,
+            status=status,
             risk_level=risk_level,
+            completed_after=completed_after,
+            completed_before=completed_before,
             limit=limit,
             offset=offset,
             sort_by=sort_by,
@@ -867,7 +971,13 @@ class ActivityFacade:
         state: str,
         *,
         project_id: str | None = None,
+        status: list[str] | None = None,
         risk_level: list[str] | None = None,
+        evidence_health: list[str] | None = None,
+        source: list[str] | None = None,
+        provider_type: list[str] | None = None,
+        completed_after: datetime | None = None,
+        completed_before: datetime | None = None,
         limit: int = 50,
         offset: int = 0,
         sort_by: str = "started_at",
@@ -881,9 +991,33 @@ class ActivityFacade:
             where_clauses.append("project_id = :project_id")
             params["project_id"] = project_id
 
+        if status:
+            where_clauses.append("status = ANY(:status)")
+            params["status"] = status
+
         if risk_level:
             where_clauses.append("risk_level = ANY(:risk_level)")
             params["risk_level"] = risk_level
+
+        if evidence_health:
+            where_clauses.append("evidence_health = ANY(:evidence_health)")
+            params["evidence_health"] = evidence_health
+
+        if source:
+            where_clauses.append("source = ANY(:source)")
+            params["source"] = source
+
+        if provider_type:
+            where_clauses.append("provider_type = ANY(:provider_type)")
+            params["provider_type"] = provider_type
+
+        if completed_after:
+            where_clauses.append("completed_at >= :completed_after")
+            params["completed_after"] = completed_after
+
+        if completed_before:
+            where_clauses.append("completed_at <= :completed_before")
+            params["completed_before"] = completed_before
 
         where_sql = " AND ".join(where_clauses)
         sort_dir = "DESC" if sort_order.lower() == "desc" else "ASC"
@@ -959,6 +1093,7 @@ class ActivityFacade:
         tenant_id: str,
         *,
         project_id: str | None = None,
+        signal_type: str | None = None,
         severity: str | None = None,
         limit: int = 50,
         offset: int = 0,
@@ -970,6 +1105,7 @@ class ActivityFacade:
             session: Database session
             tenant_id: Tenant ID for isolation
             project_id: Optional project filter
+            signal_type: Filter by signal type (COST_RISK, TIME_RISK, etc.)
             severity: Filter by severity (HIGH, MEDIUM, LOW)
             limit: Max items to return
             offset: Items to skip
@@ -1004,8 +1140,12 @@ class ActivityFacade:
             row = dict(row_mapping)
 
             # Compute signal type from run data
-            signal_type = self._compute_signal_type(row)
+            computed_signal_type = self._compute_signal_type(row)
             severity_val = self._compute_severity(row)
+
+            # Apply signal_type filter if specified
+            if signal_type and computed_signal_type != signal_type:
+                continue
 
             # Apply severity filter if specified
             if severity and severity_val != severity:
@@ -1042,9 +1182,9 @@ class ActivityFacade:
                     signal_id=f"sig-{row['run_id'][:8]}",
                     signal_fingerprint=fingerprint,
                     run_id=row["run_id"],
-                    signal_type=signal_type,
+                    signal_type=computed_signal_type,
                     severity=severity_val,
-                    summary=self._compute_signal_summary(row, signal_type),
+                    summary=self._compute_signal_summary(row, computed_signal_type),
                     policy_context=policy_context,
                     created_at=row["started_at"] or datetime.now(timezone.utc),
                     feedback=feedback,
@@ -1062,6 +1202,8 @@ class ActivityFacade:
         """
         Get signal feedback from audit ledger via L4 coordinator (PIN-519).
 
+        PIN-520: Uses injected coordinator instead of importing from L4 orchestrator.
+
         Args:
             session: Database session
             tenant_id: Tenant ID for isolation
@@ -1070,13 +1212,16 @@ class ActivityFacade:
         Returns:
             SignalFeedbackStatus if feedback exists, None otherwise
         """
-        from app.hoc.cus.hoc_spine.orchestrator.coordinators.signal_feedback_coordinator import (
-            get_signal_feedback_coordinator,
-        )
+        # PIN-520: Coordinator must be injected via L4 bridge
+        if self._signal_feedback_coordinator is None:
+            # Graceful degradation - return None if coordinator not available
+            logger.debug("SignalFeedbackCoordinator not injected, skipping feedback lookup")
+            return None
 
         try:
-            coordinator = get_signal_feedback_coordinator()
-            result = await coordinator.get_signal_feedback(session, tenant_id, fingerprint)
+            result = await self._signal_feedback_coordinator.get_signal_feedback(
+                session, tenant_id, fingerprint
+            )
 
             if result is None:
                 return None
@@ -1206,6 +1351,8 @@ class ActivityFacade:
         *,
         project_id: str | None = None,
         risk_type: str | None = None,
+        evaluation_outcome: str | None = None,
+        state: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> ThresholdSignalsResult:
@@ -1217,6 +1364,8 @@ class ActivityFacade:
             tenant_id: Tenant ID for isolation
             project_id: Optional project filter
             risk_type: Filter by risk type (COST, TIME, TOKENS, RATE)
+            evaluation_outcome: Filter by evaluation outcome
+            state: Filter by run state (LIVE, COMPLETED)
             limit: Max items to return
             offset: Items to skip
 
@@ -1225,8 +1374,9 @@ class ActivityFacade:
         """
         where_clauses = [
             "tenant_id = :tenant_id",
-            "risk_level != 'NORMAL'",
-            "proximity_pct IS NOT NULL",
+            "threshold_value IS NOT NULL",
+            "evaluation_outcome IS NOT NULL",
+            "evaluation_outcome != 'ADVISORY'",
         ]
         params: dict[str, Any] = {"tenant_id": tenant_id}
 
@@ -1237,6 +1387,14 @@ class ActivityFacade:
         if risk_type:
             where_clauses.append("risk_type = :risk_type")
             params["risk_type"] = risk_type
+
+        if evaluation_outcome:
+            where_clauses.append("evaluation_outcome = :evaluation_outcome")
+            params["evaluation_outcome"] = evaluation_outcome
+
+        if state:
+            where_clauses.append("state = :state")
+            params["state"] = state
 
         where_sql = " AND ".join(where_clauses)
 
@@ -1315,6 +1473,60 @@ class ActivityFacade:
                 "TOKENS": metrics.token_risk_count,
                 "RATE": metrics.rate_risk_count,
             },
+        )
+
+    async def get_dimension_breakdown(
+        self,
+        session: AsyncSession,
+        tenant_id: str,
+        *,
+        dimension: str,
+        state: str | None = None,
+        limit: int = 20,
+    ) -> DimensionBreakdownResult:
+        """
+        Get runs grouped by dimension.
+
+        Args:
+            session: Database session
+            tenant_id: Tenant ID for isolation
+            dimension: Column to group by
+            state: Optional state filter (LIVE, COMPLETED)
+            limit: Max groups to return
+
+        Returns:
+            DimensionBreakdownResult with groups
+        """
+        where_clauses = ["tenant_id = :tenant_id"]
+        params: dict[str, Any] = {"tenant_id": tenant_id, "limit": limit}
+
+        if state:
+            where_clauses.append("state = :state")
+            params["state"] = state
+
+        where_sql = " AND ".join(where_clauses)
+
+        # L6: Delegate data access to driver
+        driver = self._get_driver(session)
+        rows = await driver.fetch_dimension_breakdown(
+            dimension, where_sql, params, limit
+        )
+
+        total = sum(row["count"] for row in rows)
+        groups = [
+            DimensionGroupResult(
+                value=row["value"],
+                count=row["count"],
+                percentage=round((row["count"] / total * 100) if total > 0 else 0, 2),
+            )
+            for row in rows
+        ]
+
+        return DimensionBreakdownResult(
+            dimension=dimension,
+            groups=groups,
+            total_runs=total,
+            state_filter=state,
         )
 
     # =========================================================================
@@ -1484,9 +1696,36 @@ class ActivityFacade:
 _facade_instance: ActivityFacade | None = None
 
 
-def get_activity_facade() -> ActivityFacade:
-    """Get the singleton ActivityFacade instance."""
+def get_activity_facade(
+    run_evidence_coordinator: RunEvidenceCoordinatorPort | None = None,
+    run_proof_coordinator: RunProofCoordinatorPort | None = None,
+    signal_feedback_coordinator: SignalFeedbackCoordinatorPort | None = None,
+) -> ActivityFacade:
+    """Get the singleton ActivityFacade instance.
+
+    PIN-520: L4 callers must inject coordinators. L5 must not import from hoc_spine.
+
+    Args:
+        run_evidence_coordinator: Coordinator for cross-domain evidence queries (injected by L4 caller).
+        run_proof_coordinator: Coordinator for integrity proof queries (injected by L4 caller).
+        signal_feedback_coordinator: Coordinator for signal feedback queries (injected by L4 caller).
+
+    Returns:
+        ActivityFacade instance
+    """
     global _facade_instance
     if _facade_instance is None:
-        _facade_instance = ActivityFacade()
+        _facade_instance = ActivityFacade(
+            run_evidence_coordinator=run_evidence_coordinator,
+            run_proof_coordinator=run_proof_coordinator,
+            signal_feedback_coordinator=signal_feedback_coordinator,
+        )
+    else:
+        # Allow late injection if coordinators weren't provided initially
+        if run_evidence_coordinator and _facade_instance._run_evidence_coordinator is None:
+            _facade_instance._run_evidence_coordinator = run_evidence_coordinator
+        if run_proof_coordinator and _facade_instance._run_proof_coordinator is None:
+            _facade_instance._run_proof_coordinator = run_proof_coordinator
+        if signal_feedback_coordinator and _facade_instance._signal_feedback_coordinator is None:
+            _facade_instance._signal_feedback_coordinator = signal_feedback_coordinator
     return _facade_instance

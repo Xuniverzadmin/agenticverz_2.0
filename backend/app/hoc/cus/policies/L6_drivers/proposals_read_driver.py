@@ -193,6 +193,215 @@ class ProposalsReadDriver:
         )
         return result.scalar() or 0
 
+    # =========================================================================
+    # PB-S4 API Endpoints Support (PIN-513 L2 Purity)
+    # =========================================================================
+
+    async def list_proposals_paginated(
+        self,
+        *,
+        tenant_id: Optional[str] = None,
+        status: Optional[str] = None,
+        proposal_type: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """
+        Fetch paginated proposals with count and aggregation.
+
+        Returns dict with:
+            - total: int (total count with filters)
+            - items: list[dict] (paginated results)
+            - by_status: dict[str, int] (aggregation)
+            - by_type: dict[str, int] (aggregation)
+        """
+        # Build base filter conditions
+        conditions = []
+        if tenant_id:
+            conditions.append(PolicyProposal.tenant_id == tenant_id)
+        if status:
+            conditions.append(PolicyProposal.status == status)
+        if proposal_type:
+            conditions.append(PolicyProposal.proposal_type == proposal_type)
+
+        where_clause = and_(*conditions) if conditions else True
+
+        # Get total count
+        count_stmt = (
+            select(func.count())
+            .select_from(PolicyProposal)
+            .where(where_clause)
+        )
+        count_result = await self._session.execute(count_stmt)
+        total = count_result.scalar() or 0
+
+        # Get paginated items
+        stmt = (
+            select(PolicyProposal)
+            .where(where_clause)
+            .order_by(PolicyProposal.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(stmt)
+        proposals = result.scalars().all()
+
+        # Build items and aggregations
+        by_status: dict[str, int] = {}
+        by_type: dict[str, int] = {}
+        items = []
+
+        for prop in proposals:
+            # Aggregation
+            by_status[prop.status] = by_status.get(prop.status, 0) + 1
+            by_type[prop.proposal_type] = by_type.get(prop.proposal_type, 0) + 1
+
+            feedback_ids = prop.triggering_feedback_ids or []
+            feedback_count = len(feedback_ids) if isinstance(feedback_ids, list) else 0
+
+            items.append(
+                {
+                    "id": str(prop.id),
+                    "tenant_id": prop.tenant_id,
+                    "proposal_name": prop.proposal_name,
+                    "proposal_type": prop.proposal_type,
+                    "status": prop.status,
+                    "rationale": prop.rationale,
+                    "created_at": prop.created_at,
+                    "reviewed_at": prop.reviewed_at,
+                    "reviewed_by": prop.reviewed_by,
+                    "effective_from": prop.effective_from,
+                    "provenance_count": feedback_count,
+                }
+            )
+
+        return {
+            "total": total,
+            "items": items,
+            "by_status": by_status,
+            "by_type": by_type,
+        }
+
+    async def get_proposal_stats(
+        self,
+        *,
+        tenant_id: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """
+        Get aggregated statistics for proposals.
+
+        Returns dict with:
+            - total: int
+            - by_status: dict[str, int]
+            - by_type: dict[str, int]
+            - reviewed: int
+            - pending: int
+            - approval_rate_percent: float
+        """
+        # Build filter
+        conditions = []
+        if tenant_id:
+            conditions.append(PolicyProposal.tenant_id == tenant_id)
+        where_clause = and_(*conditions) if conditions else True
+
+        # Fetch all matching proposals for aggregation
+        stmt = select(
+            PolicyProposal.status,
+            PolicyProposal.proposal_type,
+        ).where(where_clause)
+        result = await self._session.execute(stmt)
+        records = result.all()
+
+        # Aggregate
+        by_status: dict[str, int] = {}
+        by_type: dict[str, int] = {}
+        for row in records:
+            status_val, type_val = row
+            by_status[status_val] = by_status.get(status_val, 0) + 1
+            by_type[type_val] = by_type.get(type_val, 0) + 1
+
+        total = len(records)
+        approved = by_status.get("approved", 0)
+        rejected = by_status.get("rejected", 0)
+        reviewed = approved + rejected
+        pending = by_status.get("draft", 0)
+        approval_rate = (approved / reviewed * 100) if reviewed > 0 else 0
+
+        return {
+            "total": total,
+            "by_status": by_status,
+            "by_type": by_type,
+            "reviewed": reviewed,
+            "pending": pending,
+            "approval_rate_percent": round(approval_rate, 1),
+        }
+
+    async def get_proposal_detail(
+        self,
+        proposal_id: str,
+    ) -> Optional[dict[str, Any]]:
+        """
+        Get full proposal detail by ID.
+
+        Returns None if not found.
+        """
+        result = await self._session.execute(
+            select(PolicyProposal).where(PolicyProposal.id == proposal_id)
+        )
+        prop = result.scalar_one_or_none()
+
+        if not prop:
+            return None
+
+        feedback_ids = prop.triggering_feedback_ids or []
+
+        return {
+            "id": str(prop.id),
+            "tenant_id": prop.tenant_id,
+            "proposal_name": prop.proposal_name,
+            "proposal_type": prop.proposal_type,
+            "status": prop.status,
+            "rationale": prop.rationale,
+            "proposed_rule": prop.proposed_rule or {},
+            "triggering_feedback_ids": feedback_ids,
+            "created_at": prop.created_at,
+            "reviewed_at": prop.reviewed_at,
+            "reviewed_by": prop.reviewed_by,
+            "review_notes": prop.review_notes,
+            "effective_from": prop.effective_from,
+        }
+
+    async def list_proposal_versions(
+        self,
+        proposal_id: str,
+    ) -> list[dict[str, Any]]:
+        """
+        List all versions for a proposal.
+
+        Returns list of version dicts, ordered by version DESC.
+        """
+        from app.models.policy import PolicyVersion
+
+        result = await self._session.execute(
+            select(PolicyVersion)
+            .where(PolicyVersion.proposal_id == proposal_id)
+            .order_by(PolicyVersion.version.desc())
+        )
+        versions = result.scalars().all()
+
+        return [
+            {
+                "id": str(v.id),
+                "proposal_id": str(v.proposal_id),
+                "version": v.version,
+                "rule_snapshot": v.rule_snapshot or {},
+                "created_at": v.created_at,
+                "created_by": v.created_by,
+                "change_reason": v.change_reason,
+            }
+            for v in versions
+        ]
+
 
 def get_proposals_read_driver(session: AsyncSession) -> ProposalsReadDriver:
     """Factory function for ProposalsReadDriver."""

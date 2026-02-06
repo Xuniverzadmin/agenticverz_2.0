@@ -45,11 +45,28 @@ Acceptance Criteria:
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, Callable
 from datetime import datetime, timezone
 import logging
 
 logger = logging.getLogger("nova.policy.failure_mode_handler")
+
+# PIN-520: Module-level holder for injected config getter
+_governance_config_getter: Optional[Callable[[], Any]] = None
+
+
+def set_governance_config_getter(getter: Callable[[], Any]) -> None:
+    """
+    Set the governance config getter for L5 purity (PIN-520).
+
+    PIN-520: L4 callers must inject the config getter at startup.
+    L5 must not import from hoc_spine.
+
+    Args:
+        getter: Function that returns the governance config (injected by L4 caller).
+    """
+    global _governance_config_getter
+    _governance_config_getter = getter
 
 
 class FailureMode(str, Enum):
@@ -89,14 +106,20 @@ def get_failure_mode() -> FailureMode:
     """
     Get configured failure mode.
 
+    PIN-520: Uses injected governance config getter instead of importing from L4 authority.
+    Call set_governance_config_getter() at startup to inject the config getter.
+
     Returns:
         FailureMode from governance config, defaulting to FAIL_CLOSED
     """
-    try:
-        # V2.0.0 - hoc_spine authority
-        from app.hoc.cus.hoc_spine.authority.profile_policy_mode import get_governance_config
+    # PIN-520: Use injected config getter if available
+    if _governance_config_getter is None:
+        # No config getter injected - return safe default
+        logger.debug("failure_mode.no_config_getter - using default FAIL_CLOSED")
+        return DEFAULT_FAILURE_MODE
 
-        config = get_governance_config()
+    try:
+        config = _governance_config_getter()
 
         # Check if custom failure mode is configured
         if hasattr(config, 'default_failure_mode'):

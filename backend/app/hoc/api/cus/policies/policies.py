@@ -43,15 +43,13 @@ logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.gateway_middleware import get_auth_context
-from app.db import get_async_session_dep
 from app.schemas.response import wrap_dict
 # L4 operation registry dispatch (migrated from L5 facade per HOC Topology V2.0.0)
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
+    get_session_dep,
 )
 
 # =============================================================================
@@ -285,7 +283,7 @@ async def list_policy_rules(
     limit: Annotated[int, Query(ge=1, le=100, description="Max rules to return")] = 20,
     offset: Annotated[int, Query(ge=0, description="Number of rules to skip")] = 0,
     # Dependencies
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> RulesListResponse:
     """List policy rules with unified query filters. READ-ONLY."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -362,7 +360,7 @@ async def list_policy_rules(
 async def get_policy_rule_detail(
     request: Request,
     rule_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> PolicyRuleDetailResponse:
     """Get policy rule detail (O3). Tenant isolation enforced."""
 
@@ -477,7 +475,7 @@ async def list_limits(
     max_limit: Annotated[int, Query(ge=1, le=100, alias="limit", description="Max limits to return")] = 20,
     offset: Annotated[int, Query(ge=0, description="Number of limits to skip")] = 0,
     # Dependencies
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> LimitsListResponse:
     """List limits with unified query filters. READ-ONLY."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -557,7 +555,7 @@ async def list_limits(
 async def get_limit_detail(
     request: Request,
     limit_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> LimitDetailResponse:
     """Get limit detail (O3). Tenant isolation enforced."""
 
@@ -759,7 +757,7 @@ async def list_lessons(
     limit: Annotated[int, Query(ge=1, le=100, description="Max lessons to return")] = 20,
     offset: Annotated[int, Query(ge=0, description="Number of lessons to skip")] = 0,
     # Dependencies
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> LessonsListResponse:
     """List lessons learned (O2). READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -814,7 +812,7 @@ async def list_lessons(
 )
 async def get_lesson_stats(
     request: Request,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> LessonStatsResponse:
     """Get lesson statistics (O1). READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -850,7 +848,7 @@ async def get_lesson_stats(
 async def get_lesson_detail(
     request: Request,
     lesson_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> LessonDetailResponse:
     """Get lesson detail (O3). READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -921,7 +919,7 @@ class PolicyStateResponse(BaseModel):
 )
 async def get_policy_state(
     request: Request,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> PolicyStateResponse:
     """Get policy layer state (ACT-O4). Customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -989,7 +987,7 @@ class PolicyMetricsResponse(BaseModel):
 async def get_policy_metrics(
     request: Request,
     hours: Annotated[int, Query(ge=1, le=720, description="Time window in hours")] = 24,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> PolicyMetricsResponse:
     """Get policy metrics (ACT-O5). Customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1088,7 +1086,7 @@ async def list_policy_conflicts(
         Query(description="Filter by severity: BLOCKING, WARNING"),
     ] = None,
     include_resolved: Annotated[bool, Query(description="Include resolved conflicts")] = False,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> ConflictsListResponse:
     """Detect policy conflicts (DFT-O4). Uses PolicyConflictEngine via facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1219,7 +1217,7 @@ async def get_policy_dependencies(
         Optional[str],
         Query(description="Filter to dependencies involving this policy"),
     ] = None,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> DependencyGraphResponse:
     """Get policy dependency graph (DFT-O5). Uses PolicyDependencyEngine via facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1370,7 +1368,7 @@ async def list_policy_violations(
     # Pagination
     limit: Annotated[int, Query(ge=1, le=100, description="Max items")] = 50,
     offset: Annotated[int, Query(ge=0, description="Offset")] = 0,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> ViolationsListResponse:
     """List policy violations (VIO-O1). Unified customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1483,7 +1481,7 @@ async def list_budget_definitions(
     ] = "ACTIVE",
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> BudgetsListResponse:
     """List budget definitions (THR-O2). Customer facade."""
 
@@ -1603,7 +1601,7 @@ async def list_policy_requests(
     include_synthetic: Annotated[bool, Query()] = False,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> PolicyRequestsListResponse:
     """List pending policy requests (ACT-O3). Customer facade."""
     tenant_id = get_tenant_id_from_auth(request)

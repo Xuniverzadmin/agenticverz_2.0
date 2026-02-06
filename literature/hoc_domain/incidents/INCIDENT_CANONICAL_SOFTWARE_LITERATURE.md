@@ -511,3 +511,45 @@ Domain has zero `app.services` imports (active or docstring) and zero `cus.gener
 **`fdr/incidents/engines/ops_incident_service.py`:** Import swapped from `app.services.ops_domain_models` → `app.hoc.fdr.ops.schemas.ops_domain_models`. HOC schemas copy has identical `OpsIncident`, `OpsIncidentCategory`, `OpsSeverity` dataclasses.
 
 **`api/fdr/incidents/ops.py:1482`:** Import swapped from `app.services.ops.get_ops_facade` → `app.hoc.fdr.ops.facades.ops_facade.get_ops_facade`. HOC ops facade now self-contained (its own legacy imports were severed in the same phase). Fully severed.
+
+## PIN-520 L4 Injection Pattern (Iter3.1)
+
+**Date:** 2026-02-06
+**Reference:** PIN-520, TODO_ITER3.1.md
+
+### L5 Purity Achieved
+
+L5 engines in the incidents domain no longer import from `hoc_spine.orchestrator`. Dependencies are now injected by L4 callers.
+
+### Changes Made
+
+| File | Violation Removed | Pattern Applied |
+|------|-------------------|-----------------|
+| `incident_engine.py` | lessons_coordinator import | Optional evidence_recorder injection |
+
+### L4 Bridge Capabilities Added (incidents_bridge.py / IncidentsEngineBridge)
+
+| Capability | Purpose | Injected Into |
+|------------|---------|---------------|
+| `recovery_rule_engine_capability()` | Recovery rule engine factory | L4 handlers |
+| `evidence_recorder_capability()` | Evidence recorder factory | IncidentEngine |
+
+### Injection Point
+
+```python
+# L4 caller pattern
+bridge = get_incidents_engine_bridge()
+
+# Incident engine with evidence recorder injection
+engine = IncidentEngine(
+    evidence_recorder=bridge.evidence_recorder_capability()
+)
+```
+
+### Evidence
+
+```bash
+# Zero hoc_spine.orchestrator imports in L5
+rg "from app\\.hoc\\.cus\\.hoc_spine\\.orchestrator" app/hoc/cus/incidents/L5_engines/
+# Result: No matches found
+```

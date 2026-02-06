@@ -56,14 +56,11 @@ from typing import Annotated, Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.gateway_middleware import get_auth_context
-from app.db import get_async_session_dep
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
+    get_session_dep,
 )
 from app.models.tenant import (
     Invitation,
@@ -300,7 +297,7 @@ async def list_projects(
     limit: Annotated[int, Query(ge=1, le=100, description="Max items to return")] = 50,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
     # Dependencies
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> ProjectsListResponse:
     """READ-ONLY customer facade - delegates to L4 AccountsFacade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -369,7 +366,7 @@ async def list_projects(
 async def get_project_detail(
     request: Request,
     project_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> ProjectDetailResponse:
     """READ-ONLY customer facade - delegates to L4 AccountsFacade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -462,7 +459,7 @@ async def list_users(
     limit: Annotated[int, Query(ge=1, le=100, description="Max items to return")] = 50,
     offset: Annotated[int, Query(ge=0, description="Rows to skip")] = 0,
     # Dependencies
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> UsersListResponse:
     """READ-ONLY customer facade - delegates to L4 AccountsFacade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -532,7 +529,7 @@ async def list_users(
 async def get_user_detail(
     request: Request,
     user_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> UserDetailResponse:
     """READ-ONLY customer facade - delegates to L4 AccountsFacade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -601,7 +598,7 @@ async def get_user_detail(
 )
 async def get_profile(
     request: Request,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> ProfileResponse:
     """READ-ONLY customer facade - delegates to L4 AccountsFacade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -659,7 +656,7 @@ async def get_profile(
 )
 async def get_billing_summary(
     request: Request,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> BillingSummaryResponse:
     """READ-ONLY customer facade - delegates to L4 AccountsFacade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -740,7 +737,7 @@ class ProfileUpdateResponse(BaseModel):
 async def update_profile(
     request: Request,
     update: ProfileUpdateRequest,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> ProfileUpdateResponse:
     """WRITE customer facade - delegates to L4 AccountsFacade."""
     auth_ctx = get_auth_context(request)
@@ -820,7 +817,7 @@ class InvoiceListResponse(BaseModel):
 @router.get("/billing/invoices", response_model=InvoiceListResponse)
 async def get_billing_invoices(
     request: Request,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> InvoiceListResponse:
     """READ-ONLY customer facade - delegates to L4 AccountsFacade."""
     auth_ctx = get_auth_context(request)
@@ -955,7 +952,7 @@ def get_support_contact() -> SupportContactResponse:
 async def create_support_ticket(
     request: Request,
     ticket: SupportTicketCreate,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> SupportTicketResponse:
     """WRITE customer facade - delegates to L4 AccountsFacade."""
     auth_ctx = get_auth_context(request)
@@ -1010,7 +1007,7 @@ async def create_support_ticket(
 async def list_support_tickets(
     request: Request,
     status: Optional[str] = Query(None, description="Filter by status"),
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> SupportTicketListResponse:
     """READ-ONLY customer facade - delegates to L4 AccountsFacade."""
     auth_ctx = get_auth_context(request)
@@ -1130,7 +1127,7 @@ class TenantUserListResponse(BaseModel):
 async def invite_user(
     request: Request,
     invite: InviteUserRequest,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> InvitationResponse:
     """WRITE customer facade - delegates to L4 AccountsFacade."""
     auth_ctx = get_auth_context(request)
@@ -1186,7 +1183,7 @@ async def invite_user(
 async def list_invitations(
     request: Request,
     status: Optional[str] = Query(None, description="Filter by status"),
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> InvitationListResponse:
     """READ-ONLY customer facade - delegates to L4 AccountsFacade."""
     auth_ctx = get_auth_context(request)
@@ -1250,7 +1247,7 @@ async def list_invitations(
 async def accept_invitation(
     invitation_id: str,
     accept: AcceptInvitationRequest,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> dict:
     """
     Accept an invitation to join a tenant.
@@ -1313,7 +1310,7 @@ async def accept_invitation(
 @router.get("/users", response_model=TenantUserListResponse)
 async def list_tenant_users(
     request: Request,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> TenantUserListResponse:
     """
     List users in the current tenant.
@@ -1370,7 +1367,7 @@ async def update_user_role(
     request: Request,
     user_id: str,
     update: UpdateUserRoleRequest,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> TenantUserResponse:
     """
     Update a user's role in the tenant.
@@ -1435,7 +1432,7 @@ async def update_user_role(
 async def remove_user(
     request: Request,
     user_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> dict:
     """
     Remove a user from the tenant.

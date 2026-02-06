@@ -27,6 +27,12 @@ import sys
 from app.hoc.cus.controls.L6_drivers import scoped_execution_driver as scoped_execution
 sys.modules["app.hoc.cus.controls.L6_drivers.scoped_execution"] = scoped_execution
 
+# Killswitch operations driver (v1_killswitch.py refactoring)
+from app.hoc.cus.controls.L6_drivers.killswitch_ops_driver import (
+    KillswitchOpsDriver,
+    get_killswitch_ops_driver,
+)
+
 __all__ = [
     # scoped_execution exports
     "BoundExecutionScope",
@@ -44,4 +50,7 @@ __all__ = [
     "get_scope_store",
     "requires_scoped_execution",
     "scoped_execution",
+    # killswitch_ops exports
+    "KillswitchOpsDriver",
+    "get_killswitch_ops_driver",
 ]

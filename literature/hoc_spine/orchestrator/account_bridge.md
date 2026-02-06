@@ -36,6 +36,7 @@ for FastAPI endpoints that cannot use the async registry pattern.
 | `notifications_capability(session)` | `NotificationsFacade` | L5 engine | yes |
 | `tenant_capability(session)` | `TenantEngine` | L5 engine | yes |
 | `billing_provider_capability()` | `BillingProvider` | L5 engine | no (stateless) |
+| `rbac_engine_capability()` | `get_rbac_engine()` | L5 engine | no |
 
 ## Usage Pattern
 
@@ -71,6 +72,14 @@ a session parameter since the billing provider manages its own state.
 **Callers:**
 - `app/hoc/api/cus/policies/billing_dependencies.py`
 - `app/hoc/api/int/policies/billing_gate.py`
+
+## PIN-L2-PURITY (L2 Bypass Removal)
+
+Added `rbac_engine_capability()` to support L2 policy RBAC endpoints without
+direct L5 imports.
+
+**Caller:**
+- `app/hoc/api/cus/policies/rbac_api.py`
 
 ## Singleton Access
 

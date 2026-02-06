@@ -35,7 +35,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, List, Optional
 
-from app.services.governance.contract_service import ContractState
+from app.hoc.cus.hoc_spine.authority.contracts.contract_engine import ContractState
 
 # =============================================================================
 # L3 VIEW DTOs (Founder-facing, not domain models)

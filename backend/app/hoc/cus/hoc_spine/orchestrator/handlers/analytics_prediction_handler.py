@@ -14,11 +14,12 @@
 """
 Analytics Prediction Handler (L4 Orchestrator)
 
-Routes prediction operations to PredictionEngine (L5).
+Routes prediction operations to PredictionEngine and PredictionReadEngine (L5).
 Predictions are read-only advisory outputs — no execution side effects.
 
 Operations:
   - analytics.prediction → PredictionEngine (generate, summary, cycle)
+  - analytics.prediction_read → PredictionReadEngine (list, get, for_subject, stats)
 
 Note: predict_failure_likelihood and predict_cost_overrun require a
 PredictionDriver (L6) instance. run_prediction_cycle and get_prediction_summary
@@ -115,7 +116,124 @@ class AnalyticsPredictionHandler:
         return OperationResult.ok(result)
 
 
+class AnalyticsPredictionReadHandler:
+    """
+    Handler for analytics.prediction_read operations.
+
+    Dispatches to PredictionReadEngine (L5) methods.
+    Pure read operations - no side effects.
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail(
+                "Missing 'method' in params", "MISSING_METHOD"
+            )
+
+        dispatch = {
+            "list": self._list_predictions,
+            "get": self._get_prediction,
+            "for_subject": self._get_for_subject,
+            "stats": self._get_stats,
+        }
+        method = dispatch.get(method_name)
+        if method is None:
+            return OperationResult.fail(
+                f"Unknown prediction read method: {method_name}", "UNKNOWN_METHOD"
+            )
+
+        return await method(ctx)
+
+    async def _list_predictions(self, ctx: OperationContext) -> OperationResult:
+        """List predictions with filters and pagination."""
+        from app.hoc.cus.analytics.L5_engines.prediction_read_engine import (
+            get_prediction_read_engine,
+        )
+
+        engine = get_prediction_read_engine()
+        result = await engine.list_predictions(
+            session=ctx.session,
+            tenant_id=ctx.tenant_id,
+            prediction_type=ctx.params.get("prediction_type"),
+            subject_type=ctx.params.get("subject_type"),
+            subject_id=ctx.params.get("subject_id"),
+            include_expired=ctx.params.get("include_expired", False),
+            limit=ctx.params.get("limit", 50),
+            offset=ctx.params.get("offset", 0),
+        )
+        return OperationResult.ok(result)
+
+    async def _get_prediction(self, ctx: OperationContext) -> OperationResult:
+        """Get single prediction by ID."""
+        from app.hoc.cus.analytics.L5_engines.prediction_read_engine import (
+            get_prediction_read_engine,
+        )
+
+        prediction_id = ctx.params.get("prediction_id")
+        if not prediction_id:
+            return OperationResult.fail(
+                "Missing 'prediction_id' in params", "MISSING_PREDICTION_ID"
+            )
+
+        engine = get_prediction_read_engine()
+        result = await engine.get_prediction(
+            session=ctx.session,
+            tenant_id=ctx.tenant_id,
+            prediction_id=prediction_id,
+        )
+        if result is None:
+            return OperationResult.fail(
+                f"Prediction {prediction_id} not found", "NOT_FOUND"
+            )
+        return OperationResult.ok(result)
+
+    async def _get_for_subject(self, ctx: OperationContext) -> OperationResult:
+        """Get predictions for a specific subject."""
+        from app.hoc.cus.analytics.L5_engines.prediction_read_engine import (
+            get_prediction_read_engine,
+        )
+
+        subject_type = ctx.params.get("subject_type")
+        subject_id = ctx.params.get("subject_id")
+        if not subject_type or not subject_id:
+            return OperationResult.fail(
+                "Missing 'subject_type' or 'subject_id' in params",
+                "MISSING_SUBJECT_PARAMS",
+            )
+
+        engine = get_prediction_read_engine()
+        result = await engine.get_predictions_for_subject(
+            session=ctx.session,
+            tenant_id=ctx.tenant_id,
+            subject_type=subject_type,
+            subject_id=subject_id,
+            include_expired=ctx.params.get("include_expired", False),
+            limit=ctx.params.get("limit", 20),
+        )
+        return OperationResult.ok(result)
+
+    async def _get_stats(self, ctx: OperationContext) -> OperationResult:
+        """Get prediction statistics."""
+        from app.hoc.cus.analytics.L5_engines.prediction_read_engine import (
+            get_prediction_read_engine,
+        )
+
+        engine = get_prediction_read_engine()
+        result = await engine.get_prediction_stats(
+            session=ctx.session,
+            tenant_id=ctx.tenant_id,
+            include_expired=ctx.params.get("include_expired", False),
+        )
+        return OperationResult.ok(result)
+
+
 def register(registry: OperationRegistry) -> None:
-    """Register analytics.prediction operation with the OperationRegistry."""
+    """Register analytics prediction operations with the OperationRegistry."""
+    # Prediction write/generate operations
     handler = AnalyticsPredictionHandler()
     registry.register("analytics.prediction", handler)
+
+    # Prediction read operations
+    read_handler = AnalyticsPredictionReadHandler()
+    registry.register("analytics.prediction_read", read_handler)

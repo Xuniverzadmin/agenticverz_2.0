@@ -669,8 +669,7 @@ class RecoveryExecutor:
 
 
 # NOTE: evaluate_failure() moved to L4 recovery_evaluation_engine.py
-# Callers should import from:
-#   from app.services.recovery_evaluation_engine import evaluate_and_execute
+# Callers should import from app.hoc.cus.hoc_spine canonical path.
 # Reference: PIN-257 Phase R-1 (L5→L4 Violation Fix)
 
 

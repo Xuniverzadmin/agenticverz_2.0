@@ -36,8 +36,12 @@ from app.models.policy import (
     PolicyProposalCreate,
     PolicyVersion,
 )
-# PIN-513: services→HOC dependency severed. No-op shim replaces HOC audit import.
-from app.services._audit_shim import AuditLedgerShim as AuditLedgerServiceAsync
+# PIN-513: services→HOC dependency severed. Inline no-op replaces HOC audit.
+class AuditLedgerServiceAsync:
+    def __init__(self, *a, **kw): pass
+    def record(self, *a, **kw): pass
+    def emit(self, *a, **kw): pass
+    def log_decision(self, *a, **kw): return None
 from app.services.policy_graph_engine import (
     ConflictSeverity,
     get_conflict_engine,

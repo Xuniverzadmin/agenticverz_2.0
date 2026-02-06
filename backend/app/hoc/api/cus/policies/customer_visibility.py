@@ -23,8 +23,12 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import create_engine, text
-from sqlalchemy.exc import SQLAlchemyError
+# L4 session + registry for L2 first-principles purity
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    get_operation_registry,
+    get_session_dep,
+    OperationContext,
+)
 
 from app.auth import verify_api_key
 from app.middleware.tenancy import get_tenant_id
@@ -192,11 +196,6 @@ class OutcomeReconciliation(BaseModel):
 # =============================================================================
 
 
-def get_db_url() -> Optional[str]:
-    """Get database URL from environment."""
-    return os.environ.get("DATABASE_URL")
-
-
 def get_budget_mode() -> BudgetDeclaration:
     """Determine budget enforcement mode from configuration."""
     # Check if hard limits are configured
@@ -294,130 +293,6 @@ def estimate_cost(agent_id: str, goal: str, stages: List[StageDeclaration]) -> C
     )
 
 
-def fetch_run_outcome(run_id: str, tenant_id: str) -> Optional[Dict[str, Any]]:
-    """Fetch run data for outcome reconciliation.
-
-    Args:
-        run_id: Run ID to fetch
-        tenant_id: Tenant ID for access control (PIN-052 audit fix)
-
-    Returns:
-        Run data dict or None if not found/unauthorized
-    """
-    db_url = get_db_url()
-    if not db_url:
-        return None
-
-    try:
-        engine = create_engine(db_url)
-        with engine.connect() as conn:
-            # PIN-052: Always filter by tenant_id for data isolation
-            result = conn.execute(
-                text(
-                    """
-                    SELECT
-                        id, agent_id, goal, status,
-                        attempts, max_attempts,
-                        error_message,
-                        started_at, completed_at, duration_ms
-                    FROM runs
-                    WHERE id = :run_id AND tenant_id = :tenant_id
-                """
-                ),
-                {"run_id": run_id, "tenant_id": tenant_id},
-            )
-            row = result.fetchone()
-            if not row:
-                return None
-
-            return {
-                "id": row.id,
-                "agent_id": row.agent_id,
-                "goal": row.goal,
-                "status": row.status,
-                "attempts": row.attempts,
-                "max_attempts": row.max_attempts,
-                "error_message": row.error_message,
-                "started_at": row.started_at,
-                "completed_at": row.completed_at,
-                "duration_ms": row.duration_ms,
-            }
-    except SQLAlchemyError as e:
-        logger.warning(f"Failed to fetch run outcome: {e}")
-        return None
-
-
-def fetch_decision_summary(run_id: str, tenant_id: str) -> Dict[str, Any]:
-    """
-    Fetch decision summary for outcome reconciliation.
-
-    Returns EFFECTS only, not decision details.
-
-    Args:
-        run_id: Run ID to fetch decisions for
-        tenant_id: Tenant ID for access control (PIN-052 audit fix)
-    """
-    db_url = get_db_url()
-    if not db_url:
-        return {"budget_warnings": 0, "policy_warnings": 0, "recovery_attempted": False}
-
-    try:
-        engine = create_engine(db_url)
-        with engine.connect() as conn:
-            # PIN-052: Always filter by tenant_id for data isolation
-            # Count budget decisions with warnings
-            budget_result = conn.execute(
-                text(
-                    """
-                    SELECT COUNT(*) FROM contracts.decision_records
-                    WHERE run_id = :run_id
-                    AND tenant_id = :tenant_id
-                    AND decision_type = 'budget'
-                    AND decision_outcome != 'selected'
-                """
-                ),
-                {"run_id": run_id, "tenant_id": tenant_id},
-            )
-            budget_warnings = budget_result.scalar() or 0
-
-            # Count policy decisions with warnings
-            policy_result = conn.execute(
-                text(
-                    """
-                    SELECT COUNT(*) FROM contracts.decision_records
-                    WHERE run_id = :run_id
-                    AND tenant_id = :tenant_id
-                    AND decision_type = 'policy'
-                    AND decision_outcome IN ('blocked', 'rejected')
-                """
-                ),
-                {"run_id": run_id, "tenant_id": tenant_id},
-            )
-            policy_warnings = policy_result.scalar() or 0
-
-            # Check if recovery was attempted
-            recovery_result = conn.execute(
-                text(
-                    """
-                    SELECT COUNT(*) FROM contracts.decision_records
-                    WHERE run_id = :run_id
-                    AND tenant_id = :tenant_id
-                    AND decision_type = 'recovery'
-                """
-                ),
-                {"run_id": run_id, "tenant_id": tenant_id},
-            )
-            recovery_count = recovery_result.scalar() or 0
-
-        engine.dispose()
-        return {
-            "budget_warnings": budget_warnings,
-            "policy_warnings": policy_warnings,
-            "recovery_attempted": recovery_count > 0,
-        }
-    except SQLAlchemyError as e:
-        logger.warning(f"Failed to fetch decision summary: {e}")
-        return {"budget_warnings": 0, "policy_warnings": 0, "recovery_attempted": False}
 
 
 # =============================================================================
@@ -561,6 +436,7 @@ async def get_outcome_reconciliation(
     run_id: str,
     request: Request,
     _: str = Depends(verify_api_key),
+    session=Depends(get_session_dep),
 ) -> OutcomeReconciliation:
     """
     Get outcome reconciliation after execution.
@@ -574,13 +450,36 @@ async def get_outcome_reconciliation(
     # PIN-052: Get tenant_id for data isolation
     tenant_id = get_tenant_id(request)
 
-    # Fetch run data (now with tenant_id filtering)
-    run_data = fetch_run_outcome(run_id, tenant_id)
-    if not run_data:
-        raise HTTPException(status_code=404, detail="Run not found")
+    # L4 registry dispatch for DB operations (L2 first-principles purity)
+    registry = get_operation_registry()
 
-    # Fetch decision summary (effects only, with tenant_id filtering)
-    decision_summary = fetch_decision_summary(run_id, tenant_id)
+    # Fetch run data via L4 -> L6 driver
+    run_result = await registry.execute(
+        "policies.customer_visibility",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "fetch_run_outcome", "run_id": run_id, "tenant_id": tenant_id},
+        ),
+    )
+    if not run_result.success or not run_result.data:
+        raise HTTPException(status_code=404, detail="Run not found")
+    run_data = run_result.data
+
+    # Fetch decision summary via L4 -> L6 driver
+    decision_result = await registry.execute(
+        "policies.customer_visibility",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "fetch_decision_summary", "run_id": run_id, "tenant_id": tenant_id},
+        ),
+    )
+    decision_summary = decision_result.data if decision_result.success else {
+        "budget_warnings": 0,
+        "policy_warnings": 0,
+        "recovery_attempted": False,
+    }
 
     # Build decomposed outcomes
     outcomes: List[OutcomeItem] = []

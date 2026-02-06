@@ -16,7 +16,7 @@
 # Allowed Imports: None (foundational schema)
 # Forbidden Imports: L1, L2, L3, L4, L6, sqlalchemy
 # Reference: PIN-470, PIN-454 (Cross-Domain Orchestration Audit)
-# NOTE: Migrated from app.services.audit.models (2026-01-25)
+# NOTE: Migrated from legacy audit models (2026-01-25)
 
 """
 Runtime Audit Contract (RAC) Models

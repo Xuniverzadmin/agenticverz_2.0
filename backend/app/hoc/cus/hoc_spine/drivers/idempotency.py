@@ -30,7 +30,8 @@ from typing import Optional
 
 from sqlmodel import Session, select
 
-from ..db import Run, engine
+# PIN-520 ITER3.3: Fix broken relative import (..db doesn't exist)
+from app.db import Run, engine
 
 logger = logging.getLogger("nova.utils.idempotency")
 

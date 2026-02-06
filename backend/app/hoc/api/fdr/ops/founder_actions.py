@@ -32,8 +32,6 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import text
-from sqlmodel import Session
 
 from app.auth.console_auth import FounderToken, verify_fops_token
 from app.contracts.ops import (
@@ -44,7 +42,10 @@ from app.contracts.ops import (
     FounderAuditRecordDTO,
     FounderReversalRequestDTO,
 )
-from app.db import get_session
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    get_sync_session_dep,
+    sql_text,
+)
 from app.hoc.fdr.ops.engines.founder_action_write_engine import FounderActionWriteService
 
 logger = logging.getLogger(__name__)
@@ -87,11 +88,11 @@ MUTUALLY_EXCLUSIVE = {
 
 
 def check_rate_limit(
-    session: Session,
+    session,
     founder_id: str,
 ) -> bool:
     """Check if founder has exceeded rate limit. Returns True if allowed."""
-    query = text(
+    query = sql_text(
         """
         SELECT COUNT(*) FROM founder_actions
         WHERE founder_id = :founder_id
@@ -104,7 +105,7 @@ def check_rate_limit(
 
 
 def check_duplicate_action(
-    session: Session,
+    session,
     action_type: str,
     target_id: str,
 ) -> bool:
@@ -117,7 +118,7 @@ def check_duplicate_action(
     - Throttle throttled tenant → True (conflict)
     - Freeze same API key twice → True (conflict)
     """
-    query = text(
+    query = sql_text(
         """
         SELECT id FROM founder_actions
         WHERE action_type = :action_type
@@ -137,7 +138,7 @@ def check_duplicate_action(
 
 
 def check_mutual_exclusion(
-    session: Session,
+    session,
     action_type: str,
     target_id: str,
 ) -> Optional[str]:
@@ -152,7 +153,7 @@ def check_mutual_exclusion(
     for exclusive_pair in MUTUALLY_EXCLUSIVE:
         if action_type == exclusive_pair[0]:
             conflicting_type = exclusive_pair[1]
-            query = text(
+            query = sql_text(
                 """
                 SELECT id FROM founder_actions
                 WHERE action_type = :action_type
@@ -174,15 +175,15 @@ def check_mutual_exclusion(
 
 
 def get_target_name(
-    session: Session,
+    session,
     target_type: str,
     target_id: str,
 ) -> Optional[str]:
     """Get display name for target."""
     if target_type == "TENANT":
-        query = text("SELECT name FROM tenants WHERE id = :id")
+        query = sql_text("SELECT name FROM tenants WHERE id = :id")
     elif target_type == "API_KEY":
-        query = text("SELECT name FROM api_keys WHERE id = :id")
+        query = sql_text("SELECT name FROM api_keys WHERE id = :id")
     else:
         return None
 
@@ -192,17 +193,17 @@ def get_target_name(
 
 
 def validate_target_exists(
-    session: Session,
+    session,
     target_type: str,
     target_id: str,
 ) -> bool:
     """Validate that target exists."""
     if target_type == "TENANT":
-        query = text("SELECT 1 FROM tenants WHERE id = :id")
+        query = sql_text("SELECT 1 FROM tenants WHERE id = :id")
     elif target_type == "API_KEY":
-        query = text("SELECT 1 FROM api_keys WHERE id = :id")
+        query = sql_text("SELECT 1 FROM api_keys WHERE id = :id")
     elif target_type == "INCIDENT":
-        query = text("SELECT 1 FROM incidents WHERE id = :id")
+        query = sql_text("SELECT 1 FROM incidents WHERE id = :id")
     else:
         return False
 
@@ -211,7 +212,7 @@ def validate_target_exists(
 
 
 def apply_action_effect(
-    session: Session,
+    session,
     action_type: str,
     target_type: str,
     target_id: str,
@@ -222,15 +223,15 @@ def apply_action_effect(
     """
     try:
         if action_type == "FREEZE_TENANT":
-            session.execute(text("UPDATE tenants SET status = 'frozen' WHERE id = :id"), {"id": target_id})
+            session.execute(sql_text("UPDATE tenants SET status = 'frozen' WHERE id = :id"), {"id": target_id})
         elif action_type == "THROTTLE_TENANT":
             # Set throttle factor to 10% (0.1)
-            session.execute(text("UPDATE tenants SET throttle_factor = 0.1 WHERE id = :id"), {"id": target_id})
+            session.execute(sql_text("UPDATE tenants SET throttle_factor = 0.1 WHERE id = :id"), {"id": target_id})
         elif action_type == "FREEZE_API_KEY":
-            session.execute(text("UPDATE api_keys SET status = 'revoked' WHERE id = :id"), {"id": target_id})
+            session.execute(sql_text("UPDATE api_keys SET status = 'revoked' WHERE id = :id"), {"id": target_id})
         elif action_type == "OVERRIDE_INCIDENT":
             session.execute(
-                text(
+                sql_text(
                     """
                     UPDATE incidents
                     SET status = 'resolved',
@@ -242,11 +243,11 @@ def apply_action_effect(
                 {"id": target_id},
             )
         elif action_type == "UNFREEZE_TENANT":
-            session.execute(text("UPDATE tenants SET status = 'active' WHERE id = :id"), {"id": target_id})
+            session.execute(sql_text("UPDATE tenants SET status = 'active' WHERE id = :id"), {"id": target_id})
         elif action_type == "UNTHROTTLE_TENANT":
-            session.execute(text("UPDATE tenants SET throttle_factor = 1.0 WHERE id = :id"), {"id": target_id})
+            session.execute(sql_text("UPDATE tenants SET throttle_factor = 1.0 WHERE id = :id"), {"id": target_id})
         elif action_type == "UNFREEZE_API_KEY":
-            session.execute(text("UPDATE api_keys SET status = 'active' WHERE id = :id"), {"id": target_id})
+            session.execute(sql_text("UPDATE api_keys SET status = 'active' WHERE id = :id"), {"id": target_id})
         return True
     except Exception as e:
         logger.error(f"Failed to apply action {action_type}: {e}")
@@ -261,7 +262,7 @@ def apply_action_effect(
 async def execute_action(
     request: FounderActionRequestDTO,
     token: FounderToken,
-    session: Session,
+    session,
 ) -> FounderActionResponseDTO:
     """
     Core action execution logic shared by all action endpoints.
@@ -419,7 +420,7 @@ async def execute_action(
 async def freeze_tenant(
     request: FounderActionRequestDTO,
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ) -> FounderActionResponseDTO:
     """Freeze tenant - immediately block all API calls."""
     # Validate action type matches endpoint
@@ -445,7 +446,7 @@ async def freeze_tenant(
 async def throttle_tenant(
     request: FounderActionRequestDTO,
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ) -> FounderActionResponseDTO:
     """Throttle tenant - reduce rate limit to 10%."""
     if request.action != "THROTTLE_TENANT":
@@ -470,7 +471,7 @@ async def throttle_tenant(
 async def freeze_api_key(
     request: FounderActionRequestDTO,
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ) -> FounderActionResponseDTO:
     """Freeze API key - immediately revoke."""
     if request.action != "FREEZE_API_KEY":
@@ -495,7 +496,7 @@ async def freeze_api_key(
 async def override_incident(
     request: FounderActionRequestDTO,
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ) -> FounderActionResponseDTO:
     """Override incident - mark as false positive. NOT REVERSIBLE."""
     if request.action != "OVERRIDE_INCIDENT":
@@ -520,7 +521,7 @@ async def execute_reversal(
     request: FounderReversalRequestDTO,
     reversal_type: str,
     token: FounderToken,
-    session: Session,
+    session,
 ) -> FounderActionResponseDTO:
     """
     Core reversal execution logic.
@@ -560,7 +561,7 @@ async def execute_reversal(
         )
 
     # Step 3: Find original action
-    query = text(
+    query = sql_text(
         """
         SELECT id, action_type, target_type, target_id, target_name,
                reason_code, is_active, is_reversible
@@ -684,7 +685,7 @@ async def execute_reversal(
 async def unfreeze_tenant(
     request: FounderReversalRequestDTO,
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ) -> FounderActionResponseDTO:
     """Unfreeze tenant - restore access."""
     return await execute_reversal(request, "UNFREEZE_TENANT", token, session)
@@ -699,7 +700,7 @@ async def unfreeze_tenant(
 async def unthrottle_tenant(
     request: FounderReversalRequestDTO,
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ) -> FounderActionResponseDTO:
     """Unthrottle tenant - restore rate limit."""
     return await execute_reversal(request, "UNTHROTTLE_TENANT", token, session)
@@ -714,7 +715,7 @@ async def unthrottle_tenant(
 async def unfreeze_api_key(
     request: FounderReversalRequestDTO,
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ) -> FounderActionResponseDTO:
     """Unfreeze API key - restore access."""
     return await execute_reversal(request, "UNFREEZE_API_KEY", token, session)
@@ -737,7 +738,7 @@ async def get_audit_trail(
     target_id: Optional[str] = None,
     action_type: Optional[str] = None,
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ) -> FounderActionListDTO:
     """Get founder action audit trail."""
     offset = (page - 1) * page_size
@@ -756,11 +757,11 @@ async def get_audit_trail(
     where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
 
     # Get total count
-    count_query = text(f"SELECT COUNT(*) FROM founder_actions WHERE {where_sql}")
+    count_query = sql_text(f"SELECT COUNT(*) FROM founder_actions WHERE {where_sql}")
     total_count = session.execute(count_query, params).scalar() or 0
 
     # Get actions
-    query = text(
+    query = sql_text(
         f"""
         SELECT id, action_type, target_type, target_id, target_name,
                reason_code, founder_email, applied_at, is_active,
@@ -807,10 +808,10 @@ async def get_audit_trail(
 async def get_audit_record(
     action_id: str,
     token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
+    session = Depends(get_sync_session_dep),
 ) -> FounderAuditRecordDTO:
     """Get single audit record."""
-    query = text(
+    query = sql_text(
         """
         SELECT id, action_type, target_type, target_id, reason_code,
                reason_note, source_incident_id, founder_id, founder_email,

@@ -160,9 +160,117 @@ class AccountBillingProviderHandler:
             return OperationResult.fail(str(e), "BILLING_ERROR")
 
 
+class AccountMemoryPinsHandler:
+    """
+    Handler for account.memory_pins operations.
+
+    Dispatches to MemoryPinsEngine methods (upsert_pin, get_pin,
+    list_pins, delete_pin, cleanup_expired).
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.account.L5_engines.memory_pins_engine import (
+            MemoryPinsDisabledError,
+            get_memory_pins_engine,
+        )
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail(
+                "Missing 'method' in params", "MISSING_METHOD"
+            )
+
+        engine = get_memory_pins_engine()
+
+        try:
+            kwargs = dict(ctx.params)
+            kwargs.pop("method", None)
+            dispatch = {
+                "upsert_pin": engine.upsert_pin,
+                "get_pin": engine.get_pin,
+                "list_pins": engine.list_pins,
+                "delete_pin": engine.delete_pin,
+                "cleanup_expired": engine.cleanup_expired,
+            }
+            method = dispatch.get(method_name)
+            if method is None:
+                return OperationResult.fail(
+                    f"Unknown memory pins method: {method_name}", "UNKNOWN_METHOD"
+                )
+
+            data = await method(session=ctx.session, tenant_id=ctx.tenant_id, **kwargs)
+            return OperationResult.ok(data)
+        except MemoryPinsDisabledError as e:
+            return OperationResult.fail(str(e), "FEATURE_DISABLED")
+        except Exception as e:
+            return OperationResult.fail(str(e), "MEMORY_PINS_ERROR")
+
+
+class AccountTenantHandler:
+    """
+    Handler for account.tenant operations.
+
+    PIN-520 ITER3.5: Routes tenant read operations to TenantEngine (L5).
+    Dispatches to TenantEngine methods (get_tenant, get_usage_summary,
+    check_run_quota, check_token_quota, list_runs).
+
+    Sync session pattern: TenantEngine is sync, so L2 passes the sync
+    session via params["sync_session"] (ctx.session is for async only).
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.account.L5_engines.tenant_engine import (
+            QuotaExceededError,
+            get_tenant_engine,
+        )
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail(
+                "Missing 'method' in params", "MISSING_METHOD"
+            )
+
+        sync_session = ctx.params.get("sync_session")
+        if not sync_session:
+            return OperationResult.fail(
+                "Missing 'sync_session' in params", "MISSING_SESSION"
+            )
+
+        engine = get_tenant_engine(sync_session)
+        dispatch = {
+            "get_tenant": engine.get_tenant,
+            "get_usage_summary": engine.get_usage_summary,
+            "check_run_quota": engine.check_run_quota,
+            "check_token_quota": engine.check_token_quota,
+            "list_runs": engine.list_runs,
+        }
+        method = dispatch.get(method_name)
+        if method is None:
+            return OperationResult.fail(
+                f"Unknown tenant method: {method_name}", "UNKNOWN_METHOD"
+            )
+
+        kwargs = dict(ctx.params)
+        kwargs.pop("method", None)
+        kwargs.pop("sync_session", None)
+        if "tenant_id" not in kwargs and ctx.tenant_id:
+            kwargs["tenant_id"] = ctx.tenant_id
+
+        try:
+            data = method(**kwargs)
+            return OperationResult.ok(data)
+        except QuotaExceededError as e:
+            return OperationResult.fail(str(e), "QUOTA_EXCEEDED")
+        except Exception as e:
+            return OperationResult.fail(str(e), "TENANT_ERROR")
+
+
 def register(registry: OperationRegistry) -> None:
     """Register account operations with the registry."""
     registry.register("account.query", AccountQueryHandler())
     registry.register("account.notifications", AccountNotificationsHandler())
     # PIN-520 Phase 1: Billing provider access
     registry.register("account.billing.provider", AccountBillingProviderHandler())
+    registry.register("account.memory_pins", AccountMemoryPinsHandler())
+    # PIN-520 ITER3.5: Tenant operations
+    registry.register("account.tenant", AccountTenantHandler())

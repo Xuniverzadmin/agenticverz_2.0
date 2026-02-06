@@ -1275,7 +1275,7 @@ async def worker_health():
 
     # Check M9 Failure Catalog (via RecoveryMatcher)
     try:
-        from app.services.recovery_matcher import RecoveryMatcher
+        from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
 
         RecoveryMatcher()
         moat_status["m9_failure_catalog"] = "available"
@@ -1284,7 +1284,7 @@ async def worker_health():
 
     # Check M10 Recovery (via RecoveryMatcher)
     try:
-        from app.services.recovery_matcher import RecoveryMatcher
+        from app.hoc.cus.policies.L6_drivers.recovery_matcher import RecoveryMatcher
 
         RecoveryMatcher()
         moat_status["m10_recovery"] = "available"

@@ -17,14 +17,9 @@ Adapters must:
 - Be thin (<200 LOC typically)
 """
 
-from app.adapters.customer_incidents_adapter import (
-    CustomerIncidentDetail,
-    CustomerIncidentEvent,
-    CustomerIncidentListResponse,
-    CustomerIncidentsAdapter,
-    CustomerIncidentSummary,
-    get_customer_incidents_adapter,
-)
+# TOMBSTONE_EXPIRY: 2026-03-04
+# customer_incidents_adapter import disabled - broken dependency chain via app.services
+# Import directly when needed: from app.adapters.customer_incidents_adapter import ...
 from app.adapters.customer_keys_adapter import (
     CustomerKeyAction,
     CustomerKeyInfo,
@@ -116,13 +111,7 @@ __all__ = [
     "CustomerRateLimit",
     "CustomerGuardrail",
     "CustomerPolicyConstraints",
-    # Customer incidents adapter (PIN-281)
-    "CustomerIncidentsAdapter",
-    "get_customer_incidents_adapter",
-    "CustomerIncidentSummary",
-    "CustomerIncidentEvent",
-    "CustomerIncidentDetail",
-    "CustomerIncidentListResponse",
+    # Customer incidents adapter (PIN-281) - DISABLED: broken dependency chain
     # Customer keys adapter (PIN-281)
     "CustomerKeysAdapter",
     "get_customer_keys_adapter",

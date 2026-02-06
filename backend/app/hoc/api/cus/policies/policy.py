@@ -49,21 +49,22 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import TenantTier, requires_feature, requires_tier
-from app.db_async import get_async_session
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
+    get_async_session_context,
     get_operation_registry,
+    get_session_dep,
+)
+from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges import (
+    get_policies_engine_bridge,
 )
 from app.schemas.response import wrap_dict
 
@@ -333,7 +334,7 @@ def _hash_webhook_secret(secret: str) -> str:
 
 
 async def _get_approval_level_config(
-    session: AsyncSession,
+    session,
     policy_type: PolicyType,
     tenant_id: str,
     agent_id: Optional[str] = None,
@@ -341,22 +342,27 @@ async def _get_approval_level_config(
 ) -> Dict[str, Any]:
     """
     Get approval level configuration from PolicyApprovalLevel table.
+
+    Uses L4 registry dispatch to maintain L2 purity (no session.execute).
     """
     try:
-        from app.db import PolicyApprovalLevel
-
-        stmt = select(PolicyApprovalLevel).where(PolicyApprovalLevel.policy_type == policy_type.value)
-
-        result = await session.execute(stmt)
-        configs = result.scalars().all()
-
-        # Find best match (most specific first)
-        for config in configs:
-            if config.tenant_id == tenant_id:
-                if config.agent_id == agent_id and config.skill_id == skill_id:
-                    return _config_to_dict(config)
-            elif config.tenant_id is None:
-                return _config_to_dict(config)
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "policies.approval",
+            OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={
+                    "method": "get_approval_level_config",
+                    "policy_type": policy_type.value,
+                    "tenant_id": tenant_id,
+                    "agent_id": agent_id,
+                    "skill_id": skill_id,
+                },
+            ),
+        )
+        if result.success and result.data:
+            return result.data
 
     except Exception as e:
         logger.warning(f"Failed to load approval config from DB: {e}")
@@ -368,17 +374,6 @@ async def _get_approval_level_config(
         "auto_approve_max_tokens": 1000,
         "escalate_to": None,
         "escalation_timeout_seconds": 300,
-    }
-
-
-def _config_to_dict(config) -> Dict[str, Any]:
-    """Convert PolicyApprovalLevel to dict."""
-    return {
-        "approval_level": int(config.approval_level) if config.approval_level.isdigit() else 3,
-        "auto_approve_max_cost_cents": config.auto_approve_max_cost_cents or 100,
-        "auto_approve_max_tokens": config.auto_approve_max_tokens or 1000,
-        "escalate_to": config.escalate_to,
-        "escalation_timeout_seconds": config.escalation_timeout_seconds,
     }
 
 
@@ -525,7 +520,7 @@ def verify_webhook_signature(body: str, signature: str, key_version: str, secret
 @router.post("/eval", response_model=PolicyEvalResponse)
 async def evaluate_policy(
     request: PolicyEvalRequest,
-    session: AsyncSession = Depends(get_async_session),
+    session=Depends(get_session_dep),
     ctx: TenantContext = Depends(get_tenant_context),
     _tier: None = Depends(requires_feature("policy.audit")),
 ) -> PolicyEvalResponse:
@@ -601,15 +596,13 @@ async def evaluate_policy(
 async def create_approval_request(
     request: ApprovalRequestCreate,
     background_tasks: BackgroundTasks,
-    session: AsyncSession = Depends(get_async_session),
+    session=Depends(get_session_dep),
 ) -> ApprovalRequestResponse:
     """
     Create a new approval request (persisted to DB).
     """
     # Rate limiting per tenant
     _check_rate_limit(request.tenant_id, "approval_create")
-
-    from app.db import ApprovalRequest as ApprovalRequestModel
 
     now = datetime.now(timezone.utc)
     expires_at = now + timedelta(seconds=request.expires_in_seconds)
@@ -623,31 +616,47 @@ async def create_approval_request(
         skill_id=request.skill_id,
     )
 
-    # Create DB model - PERSIST FIRST before any external calls
-    approval = ApprovalRequestModel(
-        policy_type=request.policy_type.value,
-        skill_id=request.skill_id,
-        tenant_id=request.tenant_id,
-        agent_id=request.agent_id,
-        requested_by=request.requested_by,
-        justification=request.justification,
-        required_level=config["approval_level"],
-        escalate_to=config.get("escalate_to"),
-        escalation_timeout_seconds=config.get("escalation_timeout_seconds", 300),
-        webhook_url=request.webhook_url,
-        webhook_secret_hash=_hash_webhook_secret(request.webhook_secret) if request.webhook_secret else None,
-        expires_at=expires_at,
-    )
-    approval.set_payload(request.payload)
+    # Generate IDs
+    approval_id = f"apr_{uuid4().hex[:16]}"
+    correlation_id = uuid4().hex
+    payload_json_str = json.dumps(request.payload)
 
-    session.add(approval)
-    await session.commit()
-    await session.refresh(approval)
+    # Create via L4 registry dispatch (L2 purity: no session.execute)
+    registry = get_operation_registry()
+    create_result = await registry.execute(
+        "policies.approval",
+        OperationContext(
+            session=session,
+            tenant_id=request.tenant_id,
+            params={
+                "method": "create_approval_request",
+                "approval_id": approval_id,
+                "correlation_id": correlation_id,
+                "policy_type": request.policy_type.value,
+                "skill_id": request.skill_id,
+                "tenant_id": request.tenant_id,
+                "agent_id": request.agent_id,
+                "requested_by": request.requested_by,
+                "justification": request.justification,
+                "payload_json": payload_json_str,
+                "required_level": config["approval_level"],
+                "escalate_to": config.get("escalate_to"),
+                "escalation_timeout_seconds": config.get("escalation_timeout_seconds", 300),
+                "webhook_url": request.webhook_url,
+                "webhook_secret_hash": _hash_webhook_secret(request.webhook_secret) if request.webhook_secret else None,
+                "expires_at": expires_at,
+                "now": now,
+            },
+        ),
+    )
+    if not create_result.success:
+        raise HTTPException(status_code=500, detail={"error": "create_failed", "message": create_result.error})
+    # L4 handler owns transaction boundary (PIN-L2-PURITY)
 
     # Record metric
     _record_approval_request_created(request.policy_type.value)
 
-    logger.info(f"Created approval request {approval.id} for {request.skill_id}")
+    logger.info(f"Created approval request {approval_id} for {request.skill_id}")
 
     # Send initial webhook if configured (after DB persist)
     if request.webhook_url:
@@ -656,7 +665,7 @@ async def create_approval_request(
             request.webhook_url,
             {
                 "event": "approval_request_created",
-                "request_id": approval.id,
+                "request_id": approval_id,
                 "status": ApprovalStatus.PENDING.value,
                 "required_level": config["approval_level"],
                 "expires_at": expires_at.isoformat(),
@@ -665,60 +674,88 @@ async def create_approval_request(
         )
 
     return ApprovalRequestResponse(
-        request_id=approval.id,
+        request_id=approval_id,
         status=ApprovalStatus.PENDING,
         required_level=config["approval_level"],
         escalate_to=config.get("escalate_to"),
         expires_at=expires_at.isoformat(),
-        created_at=approval.created_at.isoformat(),
+        created_at=now.isoformat(),
     )
 
 
 @router.get("/requests/{request_id}", response_model=ApprovalStatusResponse)
 async def get_approval_request(
-    request_id: str, session: AsyncSession = Depends(get_async_session)
+    request_id: str, session=Depends(get_session_dep)
 ) -> ApprovalStatusResponse:
     """Get the current status of an approval request."""
-    from app.db import ApprovalRequest as ApprovalRequestModel
+    # L4 registry dispatch (L2 purity: no session.execute)
+    registry = get_operation_registry()
+    get_result = await registry.execute(
+        "policies.approval",
+        OperationContext(
+            session=session,
+            tenant_id="",  # Not tenant-scoped
+            params={"method": "get_approval_request", "request_id": request_id},
+        ),
+    )
+    if not get_result.success:
+        raise HTTPException(status_code=500, detail={"error": "query_failed", "message": get_result.error})
 
-    approval = await session.get(ApprovalRequestModel, request_id)
-    if not approval:
+    row = get_result.data
+    if not row:
         raise HTTPException(status_code=404, detail="Approval request not found")
 
     # Check if expired
     now = datetime.now(timezone.utc)
-    expires_at = (
-        approval.expires_at.replace(tzinfo=timezone.utc) if approval.expires_at.tzinfo is None else approval.expires_at
-    )
+    expires_at = row["expires_at"]
+    if expires_at and expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
 
-    if now > expires_at and approval.status == "pending":
-        approval.status = "expired"
-        approval.updated_at = now
-        await session.commit()
+    status = row["status"]
+    if now > expires_at and status == "pending":
+        # Update status via registry
+        update_result = await registry.execute(
+            "policies.approval",
+            OperationContext(
+                session=session,
+                tenant_id="",
+                params={
+                    "method": "update_approval_request_status",
+                    "request_id": request_id,
+                    "status": "expired",
+                    "updated_at": now,
+                },
+            ),
+        )
+        # L4 handler owns transaction boundary (PIN-L2-PURITY)
         _record_approval_action("expired")
+        status = "expired"
 
-    data = approval.to_dict()
+    payload = json.loads(row["payload_json"]) if row["payload_json"] else {}
+    approvers = json.loads(row["approvals_json"]) if row["approvals_json"] else []
+    status_history = json.loads(row["status_history_json"]) if row["status_history_json"] else []
+
     return ApprovalStatusResponse(
-        request_id=data["request_id"],
-        correlation_id=data.get("correlation_id"),
-        status=ApprovalStatus(data["status"]),
-        status_history=data.get("status_history", []),
-        policy_type=PolicyType(data["policy_type"]),
-        skill_id=data["skill_id"],
-        tenant_id=data["tenant_id"],
-        agent_id=data["agent_id"],
-        payload=data["payload"],
-        requested_by=data["requested_by"],
-        justification=data["justification"],
-        required_level=data["required_level"],
-        current_level=data["current_level"],
-        approvers=data["approvers"],
-        escalate_to=data["escalate_to"],
-        webhook_attempts=data.get("webhook_attempts", 0),
-        last_webhook_status=data.get("last_webhook_status"),
-        expires_at=data["expires_at"],
-        created_at=data["created_at"],
-        updated_at=data["updated_at"],
+        request_id=row["id"],
+        correlation_id=row["correlation_id"],
+        status=ApprovalStatus(status),
+        status_history=status_history,
+        policy_type=PolicyType(row["policy_type"]),
+        skill_id=row["skill_id"],
+        tenant_id=row["tenant_id"],
+        agent_id=row["agent_id"],
+        payload=payload,
+        requested_by=row["requested_by"],
+        justification=row["justification"],
+        required_level=row["required_level"],
+        current_level=row["current_level"],
+        approvers=approvers,
+        escalate_to=row["escalate_to"],
+        webhook_attempts=row["webhook_attempts"] or 0,
+        last_webhook_status=row["last_webhook_status"],
+        expires_at=expires_at.isoformat() if expires_at else None,
+        created_at=row["created_at"].isoformat() if row["created_at"] else None,
+        updated_at=row["updated_at"].isoformat() if row["updated_at"] else None,
     )
 
 
@@ -800,59 +837,119 @@ async def approve_request(
     request_id: str,
     action: ApprovalAction,
     background_tasks: BackgroundTasks,
-    session: AsyncSession = Depends(get_async_session),
+    session=Depends(get_session_dep),
 ) -> ApprovalStatusResponse:
     """Approve an approval request."""
-    from app.db import ApprovalRequest as ApprovalRequestModel
+    # L4 registry dispatch (L2 purity: no session.execute)
+    registry = get_operation_registry()
+    get_result = await registry.execute(
+        "policies.approval",
+        OperationContext(
+            session=session,
+            tenant_id="",
+            params={"method": "get_approval_request_for_action", "request_id": request_id},
+        ),
+    )
+    if not get_result.success:
+        raise HTTPException(status_code=500, detail={"error": "query_failed", "message": get_result.error})
 
-    approval = await session.get(ApprovalRequestModel, request_id)
-    if not approval:
+    row = get_result.data
+    if not row:
         raise HTTPException(status_code=404, detail="Approval request not found")
 
     # RBAC check: verify approver can approve at this level
-    _check_approver_authorization(action.approver_id, action.level, approval.tenant_id)
+    _check_approver_authorization(action.approver_id, action.level, row["tenant_id"])
 
-    if approval.status not in ("pending", "escalated"):
-        raise HTTPException(status_code=400, detail=f"Cannot approve request in status {approval.status}")
+    if row["status"] not in ("pending", "escalated"):
+        raise HTTPException(status_code=400, detail=f"Cannot approve request in status {row['status']}")
 
     # Check expiration
     now = datetime.now(timezone.utc)
-    expires_at = (
-        approval.expires_at.replace(tzinfo=timezone.utc) if approval.expires_at.tzinfo is None else approval.expires_at
-    )
+    expires_at = row["expires_at"]
+    if expires_at and expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
 
     if now > expires_at:
-        approval.status = "expired"
-        approval.updated_at = now
-        await session.commit()
+        await registry.execute(
+            "policies.approval",
+            OperationContext(
+                session=session,
+                tenant_id="",
+                params={
+                    "method": "update_approval_request_status",
+                    "request_id": request_id,
+                    "status": "expired",
+                    "updated_at": now,
+                },
+            ),
+        )
+        # L4 handler owns transaction boundary (PIN-L2-PURITY)
         raise HTTPException(status_code=400, detail="Approval request has expired")
 
     # Record the approval
-    approval.add_approval(action.approver_id, action.level, "approve", action.notes)
+    approvals = json.loads(row["approvals_json"]) if row["approvals_json"] else []
+    approvals.append({
+        "approver_id": action.approver_id,
+        "level": action.level,
+        "action": "approve",
+        "notes": action.notes,
+        "timestamp": now.isoformat(),
+    })
+    new_current_level = max(a["level"] for a in approvals)
+    new_approvals_json = json.dumps(approvals)
+
+    new_status = row["status"]
+    status_history = json.loads(row["status_history_json"]) if row["status_history_json"] else []
+    resolved_at = None
 
     # Check if fully approved
-    if approval.current_level >= approval.required_level:
-        approval.transition_status("approved", actor=action.approver_id, reason=f"Approved at level {action.level}")
-        approval.resolved_at = now
+    if new_current_level >= row["required_level"]:
+        old_status = new_status
+        new_status = "approved"
+        status_history.append({
+            "from_status": old_status,
+            "to_status": "approved",
+            "actor": action.approver_id,
+            "reason": f"Approved at level {action.level}",
+            "timestamp": now.isoformat(),
+        })
+        resolved_at = now
 
-    await session.commit()
+    await registry.execute(
+        "policies.approval",
+        OperationContext(
+            session=session,
+            tenant_id="",
+            params={
+                "method": "update_approval_request_approved",
+                "request_id": request_id,
+                "approvals_json": new_approvals_json,
+                "current_level": new_current_level,
+                "status": new_status,
+                "status_history_json": json.dumps(status_history),
+                "updated_at": now,
+                "resolved_at": resolved_at,
+            },
+        ),
+    )
+    # L4 handler owns transaction boundary (PIN-L2-PURITY)
 
     # Record metric
-    if approval.status == "approved":
+    if new_status == "approved":
         _record_approval_action("approved")
 
     logger.info(f"Approval request {request_id} approved by {action.approver_id} (level {action.level})")
 
     # Send webhook if configured (with correlation_id for idempotency)
-    if approval.webhook_url:
+    if row["webhook_url"]:
         background_tasks.add_task(
             _send_webhook,
-            approval.webhook_url,
+            row["webhook_url"],
             {
-                "event": "approval_request_approved" if approval.status == "approved" else "approval_added",
+                "event": "approval_request_approved" if new_status == "approved" else "approval_added",
                 "request_id": request_id,
-                "correlation_id": approval.correlation_id,
-                "status": approval.status,
+                "correlation_id": row["correlation_id"],
+                "status": new_status,
                 "approver_id": action.approver_id,
                 "level": action.level,
             },
@@ -867,36 +964,83 @@ async def reject_request(
     request_id: str,
     action: ApprovalAction,
     background_tasks: BackgroundTasks,
-    session: AsyncSession = Depends(get_async_session),
+    session=Depends(get_session_dep),
 ) -> ApprovalStatusResponse:
     """Reject an approval request."""
-    from app.db import ApprovalRequest as ApprovalRequestModel
+    # L4 registry dispatch (L2 purity: no session.execute)
+    registry = get_operation_registry()
+    get_result = await registry.execute(
+        "policies.approval",
+        OperationContext(
+            session=session,
+            tenant_id="",
+            params={"method": "get_approval_request_for_reject", "request_id": request_id},
+        ),
+    )
+    if not get_result.success:
+        raise HTTPException(status_code=500, detail={"error": "query_failed", "message": get_result.error})
 
-    approval = await session.get(ApprovalRequestModel, request_id)
-    if not approval:
+    row = get_result.data
+    if not row:
         raise HTTPException(status_code=404, detail="Approval request not found")
 
     # RBAC check: verify rejector can reject at this level
-    _check_approver_authorization(action.approver_id, action.level, approval.tenant_id)
+    _check_approver_authorization(action.approver_id, action.level, row["tenant_id"])
 
-    if approval.status not in ("pending", "escalated"):
-        raise HTTPException(status_code=400, detail=f"Cannot reject request in status {approval.status}")
+    if row["status"] not in ("pending", "escalated"):
+        raise HTTPException(status_code=400, detail=f"Cannot reject request in status {row['status']}")
 
     now = datetime.now(timezone.utc)
-    approval.add_approval(action.approver_id, action.level, "reject", action.notes)
-    approval.transition_status("rejected", actor=action.approver_id, reason=action.notes or "Rejected")
-    approval.resolved_at = now
-    await session.commit()
+
+    # Add rejection to approvals
+    approvals = json.loads(row["approvals_json"]) if row["approvals_json"] else []
+    approvals.append({
+        "approver_id": action.approver_id,
+        "level": action.level,
+        "action": "reject",
+        "notes": action.notes,
+        "timestamp": now.isoformat(),
+    })
+    new_current_level = max(a["level"] for a in approvals)
+
+    # Transition status to rejected
+    status_history = json.loads(row["status_history_json"]) if row["status_history_json"] else []
+    status_history.append({
+        "from_status": row["status"],
+        "to_status": "rejected",
+        "actor": action.approver_id,
+        "reason": action.notes or "Rejected",
+        "timestamp": now.isoformat(),
+    })
+
+    await registry.execute(
+        "policies.approval",
+        OperationContext(
+            session=session,
+            tenant_id="",
+            params={
+                "method": "update_approval_request_approved",
+                "request_id": request_id,
+                "approvals_json": json.dumps(approvals),
+                "current_level": new_current_level,
+                "status": "rejected",
+                "status_history_json": json.dumps(status_history),
+                "updated_at": now,
+                "resolved_at": now,
+            },
+        ),
+    )
+    # L4 handler owns transaction boundary (PIN-L2-PURITY)
 
     # Record metric
     _record_approval_action("rejected")
 
     logger.info(f"Approval request {request_id} rejected by {action.approver_id}")
 
-    if approval.webhook_url:
+    if row["webhook_url"]:
         background_tasks.add_task(
             _send_webhook,
-            approval.webhook_url,
+            row["webhook_url"],
             {
                 "event": "approval_request_rejected",
                 "request_id": request_id,
@@ -915,65 +1059,90 @@ async def list_approval_requests(
     tenant_id: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
-    session: AsyncSession = Depends(get_async_session),
+    session=Depends(get_session_dep),
 ) -> List[ApprovalStatusResponse]:
     """List approval requests with optional filtering."""
-    from app.db import ApprovalRequest as ApprovalRequestModel
+    # L4 registry dispatch (L2 purity: no session.execute)
+    registry = get_operation_registry()
+    list_result = await registry.execute(
+        "policies.approval",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id or "",
+            params={
+                "method": "list_approval_requests",
+                "status": status.value if status else None,
+                "tenant_id": tenant_id,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
+    )
+    if not list_result.success:
+        raise HTTPException(status_code=500, detail={"error": "query_failed", "message": list_result.error})
 
-    stmt = select(ApprovalRequestModel)
-
-    if status:
-        stmt = stmt.where(ApprovalRequestModel.status == status.value)
-    if tenant_id:
-        stmt = stmt.where(ApprovalRequestModel.tenant_id == tenant_id)
-
-    stmt = stmt.order_by(cast(Any, ApprovalRequestModel.created_at).desc())
-    stmt = stmt.offset(offset).limit(limit)
-
-    result = await session.execute(stmt)
-    results = result.scalars().all()
+    rows = list_result.data or []
 
     responses = []
     now = datetime.now(timezone.utc)
+    expired_ids = []
 
-    for approval in results:
+    for row in rows:
         # Check expiration
-        expires_at = (
-            approval.expires_at.replace(tzinfo=timezone.utc)
-            if approval.expires_at.tzinfo is None
-            else approval.expires_at
-        )
-        if now > expires_at and approval.status == "pending":
-            approval.status = "expired"
-            approval.updated_at = now
+        expires_at = row["expires_at"]
+        if expires_at and expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
 
-        data = approval.to_dict()
+        row_status = row["status"]
+        if expires_at and now > expires_at and row_status == "pending":
+            row_status = "expired"
+            expired_ids.append(row["id"])
+
+        payload = json.loads(row["payload_json"]) if row["payload_json"] else {}
+        approvers = json.loads(row["approvals_json"]) if row["approvals_json"] else []
+        status_history = json.loads(row["status_history_json"]) if row["status_history_json"] else []
+
         responses.append(
             ApprovalStatusResponse(
-                request_id=data["request_id"],
-                correlation_id=data.get("correlation_id"),
-                status=ApprovalStatus(data["status"]),
-                status_history=data.get("status_history", []),
-                policy_type=PolicyType(data["policy_type"]),
-                skill_id=data["skill_id"],
-                tenant_id=data["tenant_id"],
-                agent_id=data["agent_id"],
-                payload=data["payload"],
-                requested_by=data["requested_by"],
-                justification=data["justification"],
-                required_level=data["required_level"],
-                current_level=data["current_level"],
-                approvers=data["approvers"],
-                escalate_to=data["escalate_to"],
-                webhook_attempts=data.get("webhook_attempts", 0),
-                last_webhook_status=data.get("last_webhook_status"),
-                expires_at=data["expires_at"],
-                created_at=data["created_at"],
-                updated_at=data["updated_at"],
+                request_id=row["id"],
+                correlation_id=row["correlation_id"],
+                status=ApprovalStatus(row_status),
+                status_history=status_history,
+                policy_type=PolicyType(row["policy_type"]),
+                skill_id=row["skill_id"],
+                tenant_id=row["tenant_id"],
+                agent_id=row["agent_id"],
+                payload=payload,
+                requested_by=row["requested_by"],
+                justification=row["justification"],
+                required_level=row["required_level"],
+                current_level=row["current_level"],
+                approvers=approvers,
+                escalate_to=row["escalate_to"],
+                webhook_attempts=row["webhook_attempts"] or 0,
+                last_webhook_status=row["last_webhook_status"],
+                expires_at=expires_at.isoformat() if expires_at else None,
+                created_at=row["created_at"].isoformat() if row["created_at"] else None,
+                updated_at=row["updated_at"].isoformat() if row["updated_at"] else None,
             )
         )
 
-    await session.commit()
+    # Batch update expired records via L4 handler (owns transaction boundary)
+    if expired_ids:
+        await registry.execute(
+            "policies.approval",
+            OperationContext(
+                session=session,
+                tenant_id="",
+                params={
+                    "method": "batch_update_expired",
+                    "expired_ids": expired_ids,
+                    "updated_at": now,
+                },
+            ),
+        )
+    # L4 handler owns transaction boundary (PIN-L2-PURITY)
+
     return wrap_dict({"items": [r.model_dump() for r in responses], "total": len(responses)})
 
 
@@ -982,55 +1151,94 @@ async def list_approval_requests(
 # =============================================================================
 
 
-async def run_escalation_check(session: AsyncSession) -> int:
+async def run_escalation_check(session) -> int:
     """
     Check for pending requests that need escalation.
     Called by external scheduler (cron/celery).
     """
-    from app.db import ApprovalRequest as ApprovalRequestModel
-
     now = datetime.now(timezone.utc)
     escalated_count = 0
 
-    # Find pending requests past their escalation timeout
-    stmt = select(ApprovalRequestModel).where(ApprovalRequestModel.status == "pending")
+    # L4 registry dispatch (L2 purity: no session.execute)
+    registry = get_operation_registry()
+    list_result = await registry.execute(
+        "policies.approval",
+        OperationContext(
+            session=session,
+            tenant_id="",
+            params={"method": "list_pending_for_escalation"},
+        ),
+    )
+    if not list_result.success:
+        logger.error(f"Failed to list pending requests: {list_result.error}")
+        return 0
 
-    result = await session.execute(stmt)
-    results = result.scalars().all()
+    rows = list_result.data or []
 
-    for approval in results:
-        created_at = (
-            approval.created_at.replace(tzinfo=timezone.utc)
-            if approval.created_at.tzinfo is None
-            else approval.created_at
-        )
-        timeout = timedelta(seconds=approval.escalation_timeout_seconds)
+    # Collect escalations for batch processing
+    escalations = []
+    webhook_tasks = []
+
+    for row in rows:
+        created_at = row["created_at"]
+        if created_at and created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+        timeout = timedelta(seconds=row["escalation_timeout_seconds"])
 
         if now - created_at > timeout:
-            approval.transition_status(
-                "escalated", actor="escalation_worker", reason=f"Timeout after {timeout.total_seconds()}s"
-            )
+            # Transition status to escalated
+            status_history = json.loads(row["status_history_json"]) if row["status_history_json"] else []
+            status_history.append({
+                "from_status": "pending",
+                "to_status": "escalated",
+                "actor": "escalation_worker",
+                "reason": f"Timeout after {timeout.total_seconds()}s",
+                "timestamp": now.isoformat(),
+            })
+
+            escalations.append({
+                "request_id": row["id"],
+                "status_history_json": json.dumps(status_history),
+            })
             escalated_count += 1
 
             # Record escalation metric
             _record_approval_escalation()
 
-            logger.info(f"Escalated approval request {approval.id} after {timeout.total_seconds()}s")
+            logger.info(f"Escalated approval request {row['id']} after {timeout.total_seconds()}s")
 
-            if approval.webhook_url:
-                await _send_webhook(
-                    approval.webhook_url,
-                    {
+            # Queue webhook for after commit
+            if row["webhook_url"]:
+                webhook_tasks.append({
+                    "url": row["webhook_url"],
+                    "payload": {
                         "event": "approval_request_escalated",
-                        "request_id": approval.id,
-                        "correlation_id": approval.correlation_id,
+                        "request_id": row["id"],
+                        "correlation_id": row["correlation_id"],
                         "status": "escalated",
-                        "escalate_to": approval.escalate_to,
+                        "escalate_to": row["escalate_to"],
                     },
-                    None,
-                )
+                })
 
-    await session.commit()
+    # Batch escalate via L4 handler (owns transaction boundary)
+    if escalations:
+        await registry.execute(
+            "policies.approval",
+            OperationContext(
+                session=session,
+                tenant_id="",
+                params={
+                    "method": "batch_escalate",
+                    "escalations": escalations,
+                    "updated_at": now,
+                },
+            ),
+        )
+    # L4 handler owns transaction boundary (PIN-L2-PURITY)
+
+    # Send webhooks after successful commit
+    for task in webhook_tasks:
+        await _send_webhook(task["url"], task["payload"], None)
 
     if escalated_count > 0:
         logger.info(f"Escalation check complete: {escalated_count} requests escalated")
@@ -1050,10 +1258,8 @@ def run_escalation_task():
     """
     import asyncio
 
-    from app.db_async import AsyncSessionLocal
-
     async def _run():
-        async with AsyncSessionLocal() as session:
+        async with get_async_session_context() as session:
             return await run_escalation_check(session)
 
     return asyncio.run(_run())
@@ -1369,64 +1575,58 @@ async def get_active_policies(
     enforcement_mode: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
-    session: AsyncSession = Depends(get_async_session),
+    session=Depends(get_session_dep),
     ctx: TenantContext = Depends(get_tenant_context),
 ) -> ActivePoliciesResponse:
     """V2 Facade: What governs execution now?"""
-    from sqlalchemy import and_, select
-
-    from app.models.policy_control_plane import PolicyRule
-
     try:
-        # Build query for active policies
-        stmt = select(PolicyRule).where(
-            and_(
-                PolicyRule.tenant_id == ctx.tenant_id,
-                PolicyRule.status == "ACTIVE",
-            )
+        # L4 registry dispatch (L2 purity: no session.execute)
+        registry = get_operation_registry()
+        list_result = await registry.execute(
+            "policies.approval",
+            OperationContext(
+                session=session,
+                tenant_id=ctx.tenant_id,
+                params={
+                    "method": "list_policy_rules",
+                    "status": "ACTIVE",
+                    "scope": scope,
+                    "enforcement_mode": enforcement_mode,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            ),
         )
+        if not list_result.success:
+            raise HTTPException(status_code=500, detail={"error": "query_failed", "message": list_result.error})
 
-        if scope:
-            stmt = stmt.where(PolicyRule.scope == scope)
-        if enforcement_mode:
-            stmt = stmt.where(PolicyRule.enforcement_mode == enforcement_mode)
+        data = list_result.data or {"items": [], "total": 0}
+        rows = data.get("items", [])
+        total = data.get("total", 0)
 
-        # Count total
-        from sqlalchemy import func
-
-        count_stmt = select(func.count(PolicyRule.id)).where(
-            and_(
-                PolicyRule.tenant_id == ctx.tenant_id,
-                PolicyRule.status == "ACTIVE",
+        items = []
+        for rule in rows:
+            # Build metadata from raw row
+            meta = PolicyMetadata(
+                created_by=None,
+                created_at=rule["created_at"],
+                origin=rule["source"],
+                source_proposal_id=None,
+                updated_at=rule["updated_at"] if rule.get("updated_at") else None,
             )
-        )
-        if scope:
-            count_stmt = count_stmt.where(PolicyRule.scope == scope)
-        if enforcement_mode:
-            count_stmt = count_stmt.where(PolicyRule.enforcement_mode == enforcement_mode)
-
-        count_result = await session.execute(count_stmt)
-        total = count_result.scalar() or 0
-
-        # Execute with pagination
-        stmt = stmt.order_by(PolicyRule.created_at.desc()).limit(limit).offset(offset)
-        result = await session.execute(stmt)
-        rules = result.scalars().all()
-
-        items = [
-            PolicyContextSummary(
-                policy_id=str(rule.id),
-                policy_name=rule.name,
-                status=rule.status,
-                enforcement_mode=rule.enforcement_mode,
-                scope=rule.scope,
-                source=rule.source,
-                created_at=rule.created_at,
-                facade_ref=f"/policy/active/{rule.id}",
-                metadata=_build_policy_metadata_from_rule(rule),
+            items.append(
+                PolicyContextSummary(
+                    policy_id=str(rule["id"]),
+                    policy_name=rule["name"],
+                    status=rule["status"],
+                    enforcement_mode=rule["enforcement_mode"],
+                    scope=rule["scope"],
+                    source=rule["source"],
+                    created_at=rule["created_at"],
+                    facade_ref=f"/policy/active/{rule['id']}",
+                    metadata=meta,
+                )
             )
-            for rule in rules
-        ]
 
         return ActivePoliciesResponse(
             items=items,
@@ -1453,50 +1653,44 @@ async def get_active_policies(
 )
 async def get_active_policy_detail(
     policy_id: str,
-    session: AsyncSession = Depends(get_async_session),
+    session=Depends(get_session_dep),
     ctx: TenantContext = Depends(get_tenant_context),
 ) -> dict:
     """V2 Facade: Policy detail for cross-domain navigation."""
-    from sqlalchemy import and_, select
-
-    from app.models.policy_control_plane import PolicyRule, PolicyRuleIntegrity
-
     try:
-        stmt = (
-            select(PolicyRule, PolicyRuleIntegrity.integrity_status, PolicyRuleIntegrity.integrity_score)
-            .outerjoin(PolicyRuleIntegrity, PolicyRuleIntegrity.rule_id == PolicyRule.id)
-            .where(
-                and_(
-                    PolicyRule.id == policy_id,
-                    PolicyRule.tenant_id == ctx.tenant_id,
-                )
-            )
+        # L4 registry dispatch (L2 purity: no session.execute)
+        registry = get_operation_registry()
+        get_result = await registry.execute(
+            "policies.approval",
+            OperationContext(
+                session=session,
+                tenant_id=ctx.tenant_id,
+                params={"method": "get_policy_rule_detail", "policy_id": policy_id},
+            ),
         )
+        if not get_result.success:
+            raise HTTPException(status_code=500, detail={"error": "query_failed", "message": get_result.error})
 
-        result = await session.execute(stmt)
-        row = result.first()
-
+        row = get_result.data
         if not row:
             raise HTTPException(status_code=404, detail="Policy not found")
 
-        rule = row[0]
-
         return wrap_dict(
             {
-                "policy_id": str(rule.id),
-                "policy_name": rule.name,
-                "description": getattr(rule, "description", None),
-                "status": rule.status,
-                "enforcement_mode": rule.enforcement_mode,
-                "scope": rule.scope,
-                "source": rule.source,
-                "rule_type": getattr(rule, "rule_type", None),
-                "rule_definition": getattr(rule, "rule_definition", None),
-                "created_at": rule.created_at.isoformat() if rule.created_at else None,
-                "updated_at": rule.updated_at.isoformat() if getattr(rule, "updated_at", None) else None,
-                "integrity_status": row[1] if row[1] else "UNKNOWN",
-                "integrity_score": str(row[2]) if row[2] else "0",
-                "facade_ref": f"/policy/active/{rule.id}",
+                "policy_id": str(row["id"]),
+                "policy_name": row["name"],
+                "description": row.get("description"),
+                "status": row["status"],
+                "enforcement_mode": row["enforcement_mode"],
+                "scope": row["scope"],
+                "source": row["source"],
+                "rule_type": row.get("rule_type"),
+                "rule_definition": row.get("rule_definition"),
+                "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+                "updated_at": row["updated_at"].isoformat() if row.get("updated_at") else None,
+                "integrity_status": row["integrity_status"] if row.get("integrity_status") else "UNKNOWN",
+                "integrity_score": str(row["integrity_score"]) if row.get("integrity_score") else "0",
+                "facade_ref": f"/policy/active/{row['id']}",
                 # Cross-domain references
                 "thresholds_ref": "/policy/thresholds",
                 "violations_ref": "/policy/violations",
@@ -1533,53 +1727,57 @@ async def get_policy_library(
     rule_type: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
-    session: AsyncSession = Depends(get_async_session),
+    session=Depends(get_session_dep),
     ctx: TenantContext = Depends(get_tenant_context),
 ) -> PolicyLibraryResponse:
     """V2 Facade: What patterns are available?"""
-    from sqlalchemy import select
-
-    from app.models.policy_control_plane import PolicyRule
-
     try:
-        stmt = select(PolicyRule).where(PolicyRule.tenant_id == ctx.tenant_id)
+        # L4 registry dispatch (L2 purity: no session.execute)
+        registry = get_operation_registry()
+        list_result = await registry.execute(
+            "policies.approval",
+            OperationContext(
+                session=session,
+                tenant_id=ctx.tenant_id,
+                params={
+                    "method": "list_policy_rules",
+                    "status": status,
+                    "rule_type": rule_type,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            ),
+        )
+        if not list_result.success:
+            raise HTTPException(status_code=500, detail={"error": "query_failed", "message": list_result.error})
 
-        if status:
-            stmt = stmt.where(PolicyRule.status == status)
-        if rule_type:
-            stmt = stmt.where(PolicyRule.rule_type == rule_type)
+        data = list_result.data or {"items": [], "total": 0}
+        rows = data.get("items", [])
+        total = data.get("total", 0)
 
-        # Count
-        from sqlalchemy import func
-
-        count_stmt = select(func.count(PolicyRule.id)).where(PolicyRule.tenant_id == ctx.tenant_id)
-        if status:
-            count_stmt = count_stmt.where(PolicyRule.status == status)
-        if rule_type:
-            count_stmt = count_stmt.where(PolicyRule.rule_type == rule_type)
-
-        count_result = await session.execute(count_stmt)
-        total = count_result.scalar() or 0
-
-        stmt = stmt.order_by(PolicyRule.created_at.desc()).limit(limit).offset(offset)
-        result = await session.execute(stmt)
-        rules = result.scalars().all()
-
-        items = [
-            PolicyLibrarySummary(
-                rule_id=str(rule.id),
-                name=rule.name,
-                enforcement_mode=rule.enforcement_mode,
-                scope=rule.scope,
-                source=rule.source,
-                status=rule.status,
-                rule_type=getattr(rule, "rule_type", None),
-                created_at=rule.created_at,
-                facade_ref=f"/policy/library/{rule.id}",
-                metadata=_build_policy_metadata_from_rule(rule),
+        items = []
+        for rule in rows:
+            meta = PolicyMetadata(
+                created_by=None,
+                created_at=rule["created_at"],
+                origin=rule["source"],
+                source_proposal_id=None,
+                updated_at=rule["updated_at"] if rule.get("updated_at") else None,
             )
-            for rule in rules
-        ]
+            items.append(
+                PolicyLibrarySummary(
+                    rule_id=str(rule["id"]),
+                    name=rule["name"],
+                    enforcement_mode=rule["enforcement_mode"],
+                    scope=rule["scope"],
+                    source=rule["source"],
+                    status=rule["status"],
+                    rule_type=rule.get("rule_type"),
+                    created_at=rule["created_at"],
+                    facade_ref=f"/policy/library/{rule['id']}",
+                    metadata=meta,
+                )
+            )
 
         return PolicyLibraryResponse(
             items=items,
@@ -1778,61 +1976,58 @@ async def get_policy_thresholds(
     status: str = "ACTIVE",
     limit: int = 50,
     offset: int = 0,
-    session: AsyncSession = Depends(get_async_session),
+    session=Depends(get_session_dep),
     ctx: TenantContext = Depends(get_tenant_context),
 ) -> ThresholdsResponse:
     """V2 Facade: What limits are enforced?"""
-    from sqlalchemy import and_, func, select
-
-    from app.models.policy_control_plane import Limit
-
     try:
-        stmt = select(Limit).where(
-            and_(
-                Limit.tenant_id == ctx.tenant_id,
-                Limit.status == status,
-            )
+        # L4 registry dispatch (L2 purity: no session.execute)
+        registry = get_operation_registry()
+        list_result = await registry.execute(
+            "policies.approval",
+            OperationContext(
+                session=session,
+                tenant_id=ctx.tenant_id,
+                params={
+                    "method": "list_limits",
+                    "status": status,
+                    "limit_category": limit_category,
+                    "scope": scope,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            ),
         )
+        if not list_result.success:
+            raise HTTPException(status_code=500, detail={"error": "query_failed", "message": list_result.error})
 
-        if limit_category:
-            stmt = stmt.where(Limit.limit_category == limit_category)
-        if scope:
-            stmt = stmt.where(Limit.scope == scope)
+        data = list_result.data or {"items": [], "total": 0}
+        rows = data.get("items", [])
+        total = data.get("total", 0)
 
-        # Count
-        count_stmt = select(func.count(Limit.id)).where(
-            and_(
-                Limit.tenant_id == ctx.tenant_id,
-                Limit.status == status,
+        items = []
+        for lim in rows:
+            meta = PolicyMetadata(
+                created_by=None,
+                created_at=lim["created_at"],
+                origin="MANUAL",
+                source_proposal_id=None,
+                updated_at=lim["updated_at"] if lim.get("updated_at") else None,
             )
-        )
-        if limit_category:
-            count_stmt = count_stmt.where(Limit.limit_category == limit_category)
-        if scope:
-            count_stmt = count_stmt.where(Limit.scope == scope)
-
-        count_result = await session.execute(count_stmt)
-        total = count_result.scalar() or 0
-
-        stmt = stmt.order_by(Limit.created_at.desc()).limit(limit).offset(offset)
-        result = await session.execute(stmt)
-        limits = result.scalars().all()
-
-        items = [
-            ThresholdSummary(
-                threshold_id=str(lim.id),
-                name=lim.name,
-                limit_category=lim.limit_category,
-                limit_type=lim.limit_type,
-                scope=lim.scope,
-                enforcement=lim.enforcement,
-                max_value=str(lim.max_value),
-                status=lim.status,
-                facade_ref=f"/policy/thresholds/{lim.id}",
-                metadata=_build_policy_metadata_from_limit(lim),
+            items.append(
+                ThresholdSummary(
+                    threshold_id=str(lim["id"]),
+                    name=lim["name"],
+                    limit_category=lim["limit_category"],
+                    limit_type=lim["limit_type"],
+                    scope=lim["scope"],
+                    enforcement=lim["enforcement"],
+                    max_value=str(lim["max_value"]),
+                    status=lim["status"],
+                    facade_ref=f"/policy/thresholds/{lim['id']}",
+                    metadata=meta,
+                )
             )
-            for lim in limits
-        ]
 
         return ThresholdsResponse(
             items=items,
@@ -1858,54 +2053,48 @@ async def get_policy_thresholds(
 )
 async def get_policy_threshold_detail(
     threshold_id: str,
-    session: AsyncSession = Depends(get_async_session),
+    session=Depends(get_session_dep),
     ctx: TenantContext = Depends(get_tenant_context),
 ) -> dict:
     """V2 Facade: Threshold detail for cross-domain navigation."""
-    from sqlalchemy import and_, select
-
-    from app.models.policy_control_plane import Limit, LimitIntegrity
-
     try:
-        stmt = (
-            select(Limit, LimitIntegrity.integrity_status, LimitIntegrity.integrity_score)
-            .outerjoin(LimitIntegrity, LimitIntegrity.limit_id == Limit.id)
-            .where(
-                and_(
-                    Limit.id == threshold_id,
-                    Limit.tenant_id == ctx.tenant_id,
-                )
-            )
+        # L4 registry dispatch (L2 purity: no session.execute)
+        registry = get_operation_registry()
+        get_result = await registry.execute(
+            "policies.approval",
+            OperationContext(
+                session=session,
+                tenant_id=ctx.tenant_id,
+                params={"method": "get_limit_detail", "threshold_id": threshold_id},
+            ),
         )
+        if not get_result.success:
+            raise HTTPException(status_code=500, detail={"error": "query_failed", "message": get_result.error})
 
-        result = await session.execute(stmt)
-        row = result.first()
-
+        row = get_result.data
         if not row:
             raise HTTPException(status_code=404, detail="Threshold not found")
 
-        lim = row[0]
-
         return wrap_dict(
             {
-                "threshold_id": str(lim.id),
-                "name": lim.name,
-                "description": getattr(lim, "description", None),
-                "limit_category": lim.limit_category,
-                "limit_type": lim.limit_type,
-                "scope": lim.scope,
-                "enforcement": lim.enforcement,
-                "max_value": str(lim.max_value),
-                "window_seconds": lim.window_seconds,
-                "reset_period": lim.reset_period,
-                "status": lim.status,
-                "created_at": lim.created_at.isoformat() if lim.created_at else None,
-                "updated_at": lim.updated_at.isoformat() if getattr(lim, "updated_at", None) else None,
-                "integrity_status": row[1] if row[1] else "UNKNOWN",
-                "integrity_score": str(row[2]) if row[2] else "0",
-                "facade_ref": f"/policy/thresholds/{lim.id}",
+                "threshold_id": str(row["id"]),
+                "name": row["name"],
+                "description": row.get("description"),
+                "limit_category": row["limit_category"],
+                "limit_type": row["limit_type"],
+                "scope": row["scope"],
+                "enforcement": row["enforcement"],
+                "max_value": str(row["max_value"]),
+                "window_seconds": row["window_seconds"],
+                "reset_period": row["reset_period"],
+                "status": row["status"],
+                "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+                "updated_at": row["updated_at"].isoformat() if row.get("updated_at") else None,
+                "integrity_status": row.get("integrity_status") if row.get("integrity_status") else "UNKNOWN",
+                "integrity_score": str(row["integrity_score"]) if row.get("integrity_score") else "0",
+                "facade_ref": f"/policy/thresholds/{row['id']}",
                 # Cross-domain references
-                "violations_ref": f"/policy/violations?threshold_id={lim.id}",
+                "violations_ref": f"/policy/violations?threshold_id={row['id']}",
             }
         )
 
@@ -1943,14 +2132,15 @@ async def get_policy_violations_v2(
     hours: int = 24,
     limit: int = 50,
     offset: int = 0,
-    session: AsyncSession = Depends(get_async_session),
+    session=Depends(get_session_dep),
     ctx: TenantContext = Depends(get_tenant_context),
 ) -> ViolationsResponse:
     """V2 Facade: What enforcement occurred?"""
-    from app.hoc.cus.policies.L5_engines.engine import get_policy_engine
+    # L4 bridge for policy engine (PIN-L2-PURITY)
+    policy_engine = get_policies_engine_bridge().policy_engine_capability()
 
     try:
-        engine = get_policy_engine()
+        engine = policy_engine
 
         # Convert string violation_type to enum if provided
         from app.policy.models import ViolationType as ViolationTypeEnum
@@ -2019,14 +2209,15 @@ async def get_policy_violations_v2(
 )
 async def get_policy_violation_detail(
     violation_id: str,
-    session: AsyncSession = Depends(get_async_session),
+    session=Depends(get_session_dep),
     ctx: TenantContext = Depends(get_tenant_context),
 ) -> dict:
     """V2 Facade: Violation detail for cross-domain navigation."""
-    from app.hoc.cus.policies.L5_engines.engine import get_policy_engine
+    # L4 bridge for policy engine (PIN-L2-PURITY)
+    policy_engine = get_policies_engine_bridge().policy_engine_capability()
 
     try:
-        engine = get_policy_engine()
+        engine = policy_engine
 
         # Get violation by ID
         violations = await engine.get_violations(

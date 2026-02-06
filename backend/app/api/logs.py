@@ -67,7 +67,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.gateway_middleware import get_auth_context
 from app.db import get_async_session_dep
-from app.services.logs_facade import get_logs_facade
+from app.hoc.cus.logs.L5_engines.logs_facade import get_logs_facade
 
 # =============================================================================
 # Router

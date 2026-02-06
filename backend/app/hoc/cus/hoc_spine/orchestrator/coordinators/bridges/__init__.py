@@ -22,11 +22,26 @@ from .activity_bridge import ActivityBridge, get_activity_bridge
 from .analytics_bridge import AnalyticsBridge, get_analytics_bridge
 from .api_keys_bridge import ApiKeysBridge, get_api_keys_bridge
 from .controls_bridge import ControlsBridge, get_controls_bridge
-from .incidents_bridge import IncidentsBridge, get_incidents_bridge
-from .integrations_bridge import IntegrationsBridge, get_integrations_bridge
+from .incidents_bridge import (
+    IncidentsBridge,
+    IncidentsEngineBridge,
+    get_incidents_bridge,
+    get_incidents_engine_bridge,
+)
+from .integrations_bridge import (
+    IntegrationsBridge,
+    IntegrationsDriverBridge,
+    get_integrations_bridge,
+    get_integrations_driver_bridge,
+)
 from .logs_bridge import LogsBridge, get_logs_bridge
 from .overview_bridge import OverviewBridge, get_overview_bridge
-from .policies_bridge import PoliciesBridge, get_policies_bridge
+from .policies_bridge import (
+    PoliciesBridge,
+    PoliciesEngineBridge,
+    get_policies_bridge,
+    get_policies_engine_bridge,
+)
 
 __all__ = [
     "AccountBridge", "get_account_bridge",
@@ -35,8 +50,11 @@ __all__ = [
     "ApiKeysBridge", "get_api_keys_bridge",
     "ControlsBridge", "get_controls_bridge",
     "IncidentsBridge", "get_incidents_bridge",
+    "IncidentsEngineBridge", "get_incidents_engine_bridge",
     "IntegrationsBridge", "get_integrations_bridge",
+    "IntegrationsDriverBridge", "get_integrations_driver_bridge",
     "LogsBridge", "get_logs_bridge",
     "OverviewBridge", "get_overview_bridge",
     "PoliciesBridge", "get_policies_bridge",
+    "PoliciesEngineBridge", "get_policies_engine_bridge",
 ]

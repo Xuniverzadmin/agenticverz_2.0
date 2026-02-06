@@ -898,13 +898,20 @@ class IncidentEngine:
 _incident_engine: Optional[IncidentEngine] = None
 
 
-def get_incident_engine() -> IncidentEngine:
-    """Get or create singleton incident engine instance."""
+def get_incident_engine(evidence_recorder: Any = None) -> IncidentEngine:
+    """
+    Get or create singleton incident engine instance.
+
+    Args:
+        evidence_recorder: Optional evidence recorder (lessons coordinator).
+            If not provided, engine runs without evidence recording.
+            L4 callers should use incidents_bridge.evidence_recorder_capability()
+            to get the lessons coordinator implementation.
+
+    PIN-520: Removed orchestrator import - L5 must not import L4 orchestrator.
+    Callers that need evidence recording should inject via L4 bridge.
+    """
     global _incident_engine
     if _incident_engine is None:
-        # PIN-504: Inject lessons coordinator as evidence recorder
-        from app.hoc.cus.hoc_spine.orchestrator.coordinators.lessons_coordinator import (
-            get_lessons_coordinator,
-        )
-        _incident_engine = IncidentEngine(evidence_recorder=get_lessons_coordinator())
+        _incident_engine = IncidentEngine(evidence_recorder=evidence_recorder)
     return _incident_engine

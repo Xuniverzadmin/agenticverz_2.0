@@ -1,4 +1,4 @@
-# Layer: L2 — Product APIs
+# Layer: L2 -- Product APIs
 # AUDIENCE: CUSTOMER
 # Product: guard-console
 # Temporal:
@@ -26,15 +26,16 @@ Endpoints:
 
 CRITICAL: Uses FROZEN DTOs from app.contracts.guard.
 NEVER expose founder-only fields (affected_tenants, churn_risk, etc.).
+
+REFACTORED: All session.execute() calls moved to L6 driver via L4 handler.
+L2 now uses registry dispatch for all DB operations.
 """
 
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Literal, Optional
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy import text
-from sqlmodel import Session
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 # Category 2 Auth: Console authentication (aud=console, org_id required)
 from app.auth.console_auth import CustomerToken, verify_console_token
@@ -47,7 +48,13 @@ from app.contracts.guard import (
     CustomerCostIncidentListDTO,
     CustomerCostSummaryDTO,
 )
-from app.db import get_session
+
+# L4 registry for dispatch (L2 must not import sqlalchemy/sqlmodel/app.db directly)
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    get_operation_registry,
+    get_sync_session_dep,
+    OperationContext,
+)
 
 logger = logging.getLogger("nova.api.cost_guard")
 
@@ -114,6 +121,20 @@ def _generate_summary(
         return f"Your total spend for this period is ${total_spend / 100:.2f}"
 
 
+async def _dispatch(session, tenant_id: str, method: str, **params):
+    """Dispatch to L4 registry for cost_guard operations."""
+    registry = get_operation_registry()
+    ctx = OperationContext(
+        session=session,
+        tenant_id=tenant_id,
+        params={"method": method, **params},
+    )
+    result = await registry.execute("incidents.cost_guard", ctx)
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
+    return result.data
+
+
 # =============================================================================
 # ENDPOINTS
 # =============================================================================
@@ -123,7 +144,7 @@ def _generate_summary(
 async def get_cost_summary(
     tenant_id: str = Query(..., description="Your tenant ID"),
     token: CustomerToken = Depends(verify_console_token),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> CustomerCostSummaryDTO:
     """
     GET /guard/costs/summary
@@ -142,57 +163,31 @@ async def get_cost_summary(
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     week_ago = now - timedelta(days=7)
 
-    # Get spend totals
-    spend_result = session.execute(
-        text(
-            """
-            SELECT
-                COALESCE(SUM(CASE WHEN created_at >= :today THEN cost_cents ELSE 0 END), 0) as today,
-                COALESCE(SUM(CASE WHEN created_at >= :month THEN cost_cents ELSE 0 END), 0) as mtd,
-                COALESCE(SUM(CASE WHEN created_at >= :week THEN cost_cents ELSE 0 END), 0) as week
-            FROM cost_records
-            WHERE tenant_id = :tenant_id
-        """
-        ),
-        {"tenant_id": tenant_id, "today": today_start, "month": month_start, "week": week_ago},
-    ).first()
+    # Get spend totals via L4 dispatch
+    spend_data = await _dispatch(
+        session,
+        tenant_id,
+        "get_spend_totals",
+        today_start=today_start,
+        month_start=month_start,
+        week_ago=week_ago,
+    )
+    spend_today = spend_data["today"]
+    spend_mtd = spend_data["mtd"]
+    spend_7d = spend_data["week"]
 
-    spend_today = int(spend_result[0]) if spend_result else 0
-    spend_mtd = int(spend_result[1]) if spend_result else 0
-    spend_7d = int(spend_result[2]) if spend_result else 0
-
-    # Get budget
-    budget_result = session.execute(
-        text(
-            """
-            SELECT daily_limit_cents, monthly_limit_cents
-            FROM cost_budgets
-            WHERE tenant_id = :tenant_id AND budget_type = 'tenant' AND is_active = true
-        """
-        ),
-        {"tenant_id": tenant_id},
-    ).first()
-
-    budget_daily = int(budget_result[0]) if budget_result and budget_result[0] else None
-    budget_monthly = int(budget_result[1]) if budget_result and budget_result[1] else None
+    # Get budget via L4 dispatch
+    budget_data = await _dispatch(session, tenant_id, "get_budget")
+    budget_daily = budget_data["daily_limit_cents"]
+    budget_monthly = budget_data["monthly_limit_cents"]
 
     # Calculate budget percentages
     budget_used_daily = (spend_today / budget_daily * 100) if budget_daily else None
     budget_used_monthly = (spend_mtd / budget_monthly * 100) if budget_monthly else None
 
-    # Get baseline for trend calculation
-    baseline_result = session.execute(
-        text(
-            """
-            SELECT avg_daily_cost_cents
-            FROM cost_snapshot_baselines
-            WHERE tenant_id = :tenant_id AND entity_type = 'tenant' AND is_current = true
-        """
-        ),
-        {"tenant_id": tenant_id},
-    ).first()
-
-    baseline = float(baseline_result[0]) if baseline_result and baseline_result[0] else None
+    # Get baseline for trend calculation via L4 dispatch
+    baseline_data = await _dispatch(session, tenant_id, "get_baseline")
+    baseline = baseline_data["baseline"]
     deviation = ((spend_today - baseline) / baseline * 100) if baseline and baseline > 0 else None
 
     # Calculate projection
@@ -213,21 +208,9 @@ async def get_cost_summary(
     # Map to customer-friendly trend
     trend, trend_message = _map_trend(deviation)
 
-    # Get last snapshot time
-    snapshot_result = session.execute(
-        text(
-            """
-            SELECT completed_at
-            FROM cost_snapshots
-            WHERE tenant_id = :tenant_id AND status = 'complete'
-            ORDER BY completed_at DESC
-            LIMIT 1
-        """
-        ),
-        {"tenant_id": tenant_id},
-    ).first()
-
-    last_updated = snapshot_result[0] if snapshot_result else now
+    # Get last snapshot time via L4 dispatch
+    snapshot_data = await _dispatch(session, tenant_id, "get_last_snapshot")
+    last_updated = snapshot_data["completed_at"] if snapshot_data["completed_at"] else now
 
     return CustomerCostSummaryDTO(
         spend_today_cents=spend_today,
@@ -250,7 +233,7 @@ async def get_cost_explained(
     tenant_id: str = Query(..., description="Your tenant ID"),
     period: Literal["today", "7d", "30d"] = Query("7d"),
     token: CustomerToken = Depends(verify_console_token),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> CustomerCostExplainedDTO:
     """
     GET /guard/costs/explained
@@ -273,61 +256,35 @@ async def get_cost_explained(
     else:  # 30d
         period_start = now - timedelta(days=30)
 
-    # Get total spend
-    total_result = session.execute(
-        text(
-            """
-            SELECT COALESCE(SUM(cost_cents), 0)
-            FROM cost_records
-            WHERE tenant_id = :tenant_id AND created_at >= :start
-        """
-        ),
-        {"tenant_id": tenant_id, "start": period_start},
-    ).first()
+    # Get total spend via L4 dispatch
+    total_data = await _dispatch(
+        session,
+        tenant_id,
+        "get_total_spend",
+        period_start=period_start,
+    )
+    total_spend = total_data["total"]
 
-    total_spend = int(total_result[0]) if total_result else 0
+    # Get baselines for trend via L4 dispatch
+    baselines_data = await _dispatch(session, tenant_id, "get_baselines")
+    baselines = baselines_data["baselines"]
 
-    # Get baseline for trend
-    baseline_result = session.execute(
-        text(
-            """
-            SELECT entity_id, avg_daily_cost_cents
-            FROM cost_snapshot_baselines
-            WHERE tenant_id = :tenant_id AND is_current = true
-        """
-        ),
-        {"tenant_id": tenant_id},
-    ).all()
-
-    baselines = {row[0]: float(row[1]) for row in baseline_result if row[0]}
-
-    # Get by feature
-    feature_result = session.execute(
-        text(
-            """
-            SELECT
-                COALESCE(cr.feature_tag, 'unclassified') as feature,
-                ft.display_name,
-                COALESCE(SUM(cr.cost_cents), 0) as spend,
-                COUNT(*) as requests
-            FROM cost_records cr
-            LEFT JOIN feature_tags ft ON cr.feature_tag = ft.tag AND cr.tenant_id = ft.tenant_id
-            WHERE cr.tenant_id = :tenant_id AND cr.created_at >= :start
-            GROUP BY cr.feature_tag, ft.display_name
-            ORDER BY spend DESC
-            LIMIT 10
-        """
-        ),
-        {"tenant_id": tenant_id, "start": period_start},
-    ).all()
+    # Get by feature via L4 dispatch
+    feature_data = await _dispatch(
+        session,
+        tenant_id,
+        "get_spend_by_feature",
+        period_start=period_start,
+        limit=10,
+    )
 
     by_feature = []
-    for row in feature_result:
-        pct = (row[2] / total_spend * 100) if total_spend > 0 else 0
-        baseline = baselines.get(row[0])
+    for row in feature_data["rows"]:
+        pct = (row["spend_cents"] / total_spend * 100) if total_spend > 0 else 0
+        baseline = baselines.get(row["name"])
         trend = "normal"
         if baseline and baseline > 0:
-            deviation = (row[2] - baseline) / baseline * 100
+            deviation = (row["spend_cents"] - baseline) / baseline * 100
             if deviation > 200:
                 trend = "spike"
             elif deviation > 50:
@@ -335,75 +292,57 @@ async def get_cost_explained(
 
         by_feature.append(
             CostBreakdownItemDTO(
-                name=row[0],
-                display_name=row[1],
-                spend_cents=int(row[2]),
-                request_count=int(row[3]),
+                name=row["name"],
+                display_name=row["display_name"],
+                spend_cents=row["spend_cents"],
+                request_count=row["request_count"],
                 pct_of_total=round(pct, 1),
                 trend=trend,
             )
         )
 
-    # Get by model
-    model_result = session.execute(
-        text(
-            """
-            SELECT
-                model,
-                COALESCE(SUM(cost_cents), 0) as spend,
-                COUNT(*) as requests
-            FROM cost_records
-            WHERE tenant_id = :tenant_id AND created_at >= :start
-            GROUP BY model
-            ORDER BY spend DESC
-            LIMIT 10
-        """
-        ),
-        {"tenant_id": tenant_id, "start": period_start},
-    ).all()
+    # Get by model via L4 dispatch
+    model_data = await _dispatch(
+        session,
+        tenant_id,
+        "get_spend_by_model",
+        period_start=period_start,
+        limit=10,
+    )
 
     by_model = []
-    for row in model_result:
-        pct = (row[1] / total_spend * 100) if total_spend > 0 else 0
+    for row in model_data["rows"]:
+        pct = (row["spend_cents"] / total_spend * 100) if total_spend > 0 else 0
         # Simple model display name mapping
-        display = row[0].replace("claude-", "Claude ").replace("-", " ").title() if row[0] else None
+        display = row["name"].replace("claude-", "Claude ").replace("-", " ").title() if row["name"] else None
 
         by_model.append(
             CostBreakdownItemDTO(
-                name=row[0],
+                name=row["name"],
                 display_name=display,
-                spend_cents=int(row[1]),
-                request_count=int(row[2]),
+                spend_cents=row["spend_cents"],
+                request_count=row["request_count"],
                 pct_of_total=round(pct, 1),
                 trend="normal",  # Model trend is usually stable
             )
         )
 
-    # Get by user (top 10)
-    user_result = session.execute(
-        text(
-            """
-            SELECT
-                COALESCE(user_id, 'anonymous') as user_id,
-                COALESCE(SUM(cost_cents), 0) as spend,
-                COUNT(*) as requests
-            FROM cost_records
-            WHERE tenant_id = :tenant_id AND created_at >= :start
-            GROUP BY user_id
-            ORDER BY spend DESC
-            LIMIT 10
-        """
-        ),
-        {"tenant_id": tenant_id, "start": period_start},
-    ).all()
+    # Get by user via L4 dispatch
+    user_data = await _dispatch(
+        session,
+        tenant_id,
+        "get_spend_by_user",
+        period_start=period_start,
+        limit=10,
+    )
 
     by_user = []
-    for row in user_result:
-        pct = (row[1] / total_spend * 100) if total_spend > 0 else 0
-        baseline = baselines.get(f"user:{row[0]}")
+    for row in user_data["rows"]:
+        pct = (row["spend_cents"] / total_spend * 100) if total_spend > 0 else 0
+        baseline = baselines.get(f"user:{row['name']}")
         trend = "normal"
         if baseline and baseline > 0:
-            deviation = (row[1] - baseline) / baseline * 100
+            deviation = (row["spend_cents"] - baseline) / baseline * 100
             if deviation > 200:
                 trend = "spike"
             elif deviation > 50:
@@ -411,10 +350,10 @@ async def get_cost_explained(
 
         by_user.append(
             CostBreakdownItemDTO(
-                name=row[0],
+                name=row["name"],
                 display_name=None,
-                spend_cents=int(row[1]),
-                request_count=int(row[2]),
+                spend_cents=row["spend_cents"],
+                request_count=row["request_count"],
                 pct_of_total=round(pct, 1),
                 trend=trend,
             )
@@ -451,7 +390,7 @@ async def get_cost_incidents(
     include_resolved: bool = Query(False),
     limit: int = Query(20, ge=1, le=100),
     token: CustomerToken = Depends(verify_console_token),
-    session: Session = Depends(get_session),
+    session=Depends(get_sync_session_dep),
 ) -> CustomerCostIncidentListDTO:
     """
     GET /guard/costs/incidents
@@ -463,38 +402,24 @@ async def get_cost_incidents(
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(days=30)
 
-    # Get cost anomalies that have been linked to incidents
-    where_clause = "tenant_id = :tenant_id AND detected_at >= :cutoff"
-    params = {"tenant_id": tenant_id, "cutoff": cutoff, "limit": limit + 1}
+    # Get cost anomalies via L4 dispatch
+    anomaly_data = await _dispatch(
+        session,
+        tenant_id,
+        "get_cost_anomalies",
+        cutoff=cutoff,
+        include_resolved=include_resolved,
+        limit=limit,
+    )
 
-    if not include_resolved:
-        where_clause += " AND resolved = false"
-
-    result = session.execute(
-        text(
-            f"""
-            SELECT
-                id, anomaly_type, severity,
-                current_value_cents, expected_value_cents, threshold_pct,
-                message, incident_id, action_taken,
-                resolved, detected_at, resolved_at
-            FROM cost_anomalies
-            WHERE {where_clause}
-            ORDER BY detected_at DESC
-            LIMIT :limit
-        """
-        ),
-        params,
-    ).all()
-
-    has_more = len(result) > limit
-    result = result[:limit]
+    result = anomaly_data["anomalies"]
+    has_more = anomaly_data["has_more"]
 
     # Map to customer-friendly DTOs
     incidents = []
     for row in result:
         # Map anomaly_type to trigger_type
-        anomaly_type = row[1]
+        anomaly_type = row["anomaly_type"]
         if "budget" in anomaly_type.lower():
             if "exceeded" in anomaly_type.lower():
                 trigger_type = "budget_exceeded"
@@ -504,13 +429,13 @@ async def get_cost_incidents(
             trigger_type = "cost_spike"
 
         # Calculate cost avoided (difference between current and threshold)
-        current = float(row[3] or 0)
-        threshold = float(row[5] or 0)
+        current = float(row["current_value_cents"] or 0)
+        threshold = float(row["threshold_pct"] or 0)
         cost_avoided = max(0, int(current - threshold))
 
         # Map severity to calm status
-        severity = row[2] or "medium"
-        is_resolved = row[9] or False
+        severity = row["severity"] or "medium"
+        is_resolved = row["resolved"] or False
 
         if is_resolved:
             status = "resolved"
@@ -533,19 +458,22 @@ async def get_cost_incidents(
         else:
             recommendation = "Increase your budget or pause operations to resume spending"
 
+        detected_at = row["detected_at"]
+        resolved_at = row["resolved_at"]
+
         incidents.append(
             CustomerCostIncidentDTO(
-                id=f"inc_{row[0]}",
+                id=f"inc_{row['id']}",
                 title=title,
                 status=status,
                 trigger_type=trigger_type,
                 cost_at_trigger_cents=int(current),
                 cost_avoided_cents=cost_avoided,
                 threshold_cents=int(threshold) if threshold else None,
-                action_taken=row[8] or "Alerted you about this cost event",
+                action_taken=row["action_taken"] or "Alerted you about this cost event",
                 recommendation=recommendation,
-                detected_at=row[10].isoformat() if row[10] else now.isoformat(),
-                resolved_at=row[11].isoformat() if row[11] else None,
+                detected_at=detected_at.isoformat() if isinstance(detected_at, datetime) else (detected_at or now.isoformat()),
+                resolved_at=resolved_at.isoformat() if isinstance(resolved_at, datetime) else resolved_at,
             )
         )
 

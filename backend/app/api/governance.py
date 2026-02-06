@@ -36,7 +36,7 @@ from pydantic import BaseModel, Field
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.schemas.response import wrap_dict
-from app.services.governance.facade import (
+from app.hoc.cus.policies.L5_engines.governance_facade import (
     GovernanceFacade,
     GovernanceMode,
     get_governance_facade,

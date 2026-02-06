@@ -23,9 +23,9 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from ..auth import verify_api_key
-from ..schemas.response import wrap_dict
-from ..memory.embedding_metrics import (
+from app.auth import verify_api_key
+from app.schemas.response import wrap_dict
+from app.memory.embedding_metrics import (
     EMBEDDING_DAILY_QUOTA,
     VECTOR_SEARCH_ENABLED,
     VECTOR_SEARCH_FALLBACK,

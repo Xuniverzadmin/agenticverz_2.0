@@ -43,7 +43,6 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import select
 
 # Absolute imports (import hygiene - no relative imports)
 from app.auth import verify_api_key
@@ -51,18 +50,20 @@ from app.auth.authority import AuthorityResult, emit_authority_audit, require_re
 
 # Phase 5B: Policy Pre-Check Integration
 from app.contracts.decisions import emit_policy_precheck_decision
-from app.db import CostBudget, get_async_session
 
 # PIN-520 Phase 1: Route L5/L6 through L4 registry
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
+    get_async_session_context,
     get_operation_registry,
 )
-from app.models.tenant import WorkerRun
-from app.hoc.cus.policies.L5_engines.engine import PolicyEngine
 from app.schemas.response import wrap_dict
 # V2.0.0 - hoc_spine drivers
 from app.hoc.cus.hoc_spine.drivers.worker_write_driver_async import WorkerWriteServiceAsync
+# L4 bridge for policy engine (PIN-L2-PURITY)
+from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges import (
+    get_policies_engine_bridge,
+)
 
 logger = logging.getLogger("nova.api.workers")
 
@@ -258,7 +259,7 @@ async def _store_run(run_id: str, data: Dict[str, Any], tenant_id: str = "defaul
 
     P0-005 Fix: Database is the source of truth, not memory.
     """
-    async with get_async_session() as session:
+    async with get_async_session_context() as session:
         # Phase 2B: Use write service for DB operations
         write_service = WorkerWriteServiceAsync(session)
         await write_service.upsert_worker_run(run_id, tenant_id, data)
@@ -266,10 +267,15 @@ async def _store_run(run_id: str, data: Dict[str, Any], tenant_id: str = "defaul
 
         # Verification mode guardrail
         if VERIFICATION_MODE:
-            # Verify the write succeeded
-            verify_result = await session.execute(select(WorkerRun).where(WorkerRun.id == run_id))
-            verified = verify_result.scalar_one_or_none()
-            if not verified:
+            # Verify the write succeeded via L4 registry
+            registry = get_operation_registry()
+            verify_ctx = OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={"method": "verify_run_exists", "run_id": run_id},
+            )
+            verify_result = await registry.execute("policies.workers", verify_ctx)
+            if not verify_result.success or not verify_result.data.get("exists"):
                 raise RuntimeError(f"PERSISTENCE_VIOLATION: Run {run_id} completed without DB commit")
 
         # P0-006 Fix: Cost invariant enforcement
@@ -307,7 +313,7 @@ async def _insert_cost_record(
     P0-006 Fix: Cost must be recorded as part of worker execution.
     This creates the authoritative cost fact that S2 requires.
     """
-    async with get_async_session() as session:
+    async with get_async_session_context() as session:
         # Phase 2B: Use write service for DB operations
         write_service = WorkerWriteServiceAsync(session)
         await write_service.insert_cost_record(
@@ -359,65 +365,54 @@ async def _check_and_emit_cost_advisory(
         "daily_limit_cents": None,
     }
 
-    async with get_async_session() as session:
-        # Get tenant's active budget
-        budget_result = await session.execute(
-            select(CostBudget).where(
-                CostBudget.tenant_id == tenant_id,
-                CostBudget.is_active == True,
-                CostBudget.budget_type == "tenant",
-            )
-        )
-        budget = budget_result.scalar_one_or_none()
+    registry = get_operation_registry()
 
-        if not budget or not budget.daily_limit_cents:
+    async with get_async_session_context() as session:
+        # Get tenant's active budget via L4 registry
+        budget_ctx = OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_active_tenant_budget", "tenant_id": tenant_id, "budget_type": "tenant"},
+        )
+        budget_result = await registry.execute("policies.workers", budget_ctx)
+        budget = budget_result.data if budget_result.success else None
+
+        if not budget or not budget.get("daily_limit_cents"):
             logger.info(
                 "no_budget_configured",
                 extra={"run_id": run_id, "tenant_id": tenant_id},
             )
             return result
 
-        result["budget_id"] = budget.id
-        result["daily_limit_cents"] = budget.daily_limit_cents
+        result["budget_id"] = budget["id"]
+        result["daily_limit_cents"] = budget["daily_limit_cents"]
 
-        # Calculate today's total spend (including this run)
-
-        from sqlalchemy import text
-
+        # Calculate today's total spend (including this run) via L4 registry
         today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
 
-        spend_result = await session.execute(
-            text(
-                """
-                SELECT COALESCE(SUM(cost_cents), 0)
-                FROM cost_records
-                WHERE tenant_id = :tenant_id
-                AND created_at >= :today_start
-            """
-            ),
-            {"tenant_id": tenant_id, "today_start": today_start},
+        spend_ctx = OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "get_daily_spend", "tenant_id": tenant_id, "today_start": today_start},
         )
-        daily_spend = int(spend_result.scalar() or 0)
+        spend_result = await registry.execute("policies.workers", spend_ctx)
+        daily_spend = spend_result.data.get("spend_cents", 0) if spend_result.success else 0
         result["daily_spend_cents"] = daily_spend
 
         # Check if threshold crossed
-        warn_threshold = budget.daily_limit_cents * (budget.warn_threshold_pct / 100.0)
+        warn_threshold = budget["daily_limit_cents"] * (budget["warn_threshold_pct"] / 100.0)
         threshold_crossed = daily_spend > warn_threshold
         result["threshold_crossed"] = threshold_crossed
 
-        if threshold_crossed and not budget.hard_limit_enabled:
-            # Idempotency check: only emit if no advisory exists for this run
-            existing_check = await session.execute(
-                text(
-                    """
-                    SELECT id FROM cost_anomalies
-                    WHERE anomaly_type = 'BUDGET_WARNING'
-                    AND metadata->>'run_id' = :run_id
-                """
-                ),
-                {"run_id": run_id},
+        if threshold_crossed and not budget["hard_limit_enabled"]:
+            # Idempotency check: only emit if no advisory exists for this run via L4 registry
+            existing_ctx = OperationContext(
+                session=session,
+                tenant_id=tenant_id,
+                params={"method": "get_existing_advisory", "run_id": run_id},
             )
-            existing = existing_check.scalar_one_or_none()
+            existing_result = await registry.execute("policies.workers", existing_ctx)
+            existing = existing_result.data.get("advisory_id") if existing_result.success else None
 
             if existing:
                 # Advisory already exists for this run (idempotent)
@@ -432,10 +427,10 @@ async def _check_and_emit_cost_advisory(
                 # Budget snapshot: capture budget-at-run-time for audit trail
                 # This ensures historical analysis uses the budget that was active during the run
                 budget_snapshot = {
-                    "budget_id": budget.id,
-                    "daily_limit_cents": budget.daily_limit_cents,
-                    "warn_threshold_pct": budget.warn_threshold_pct,
-                    "hard_limit_enabled": budget.hard_limit_enabled,
+                    "budget_id": budget["id"],
+                    "daily_limit_cents": budget["daily_limit_cents"],
+                    "warn_threshold_pct": budget["warn_threshold_pct"],
+                    "hard_limit_enabled": budget["hard_limit_enabled"],
                 }
 
                 # Phase 2B: Use write service for DB operations
@@ -483,23 +478,17 @@ async def _verify_advisory_invariant(
     if not VERIFICATION_MODE:
         return
 
-    async with get_async_session() as session:
-        # Count advisories for this run
-        from sqlalchemy import text
+    registry = get_operation_registry()
 
-        count_result = await session.execute(
-            text(
-                """
-                SELECT COUNT(*)
-                FROM cost_anomalies
-                WHERE tenant_id = :tenant_id
-                AND anomaly_type = 'BUDGET_WARNING'
-                AND metadata->>'run_id' = :run_id
-            """
-            ),
-            {"tenant_id": tenant_id, "run_id": run_id},
+    async with get_async_session_context() as session:
+        # Count advisories for this run via L4 registry
+        count_ctx = OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"method": "count_advisories", "tenant_id": tenant_id, "run_id": run_id},
         )
-        advisory_count = int(count_result.scalar() or 0)
+        count_result = await registry.execute("policies.workers", count_ctx)
+        advisory_count = count_result.data.get("count", 0) if count_result.success else 0
 
         threshold_crossed = advisory_result["threshold_crossed"]
 
@@ -531,60 +520,44 @@ async def _verify_advisory_invariant(
 
 async def _get_run(run_id: str) -> Optional[Dict[str, Any]]:
     """
-    Get a run from PostgreSQL.
+    Get a run from PostgreSQL via L4 registry.
 
     Returns dict format matching WorkerRunResponse for API compatibility.
     """
-    async with get_async_session() as session:
-        result = await session.execute(select(WorkerRun).where(WorkerRun.id == run_id))
-        run = result.scalar_one_or_none()
+    registry = get_operation_registry()
 
-        if not run:
+    async with get_async_session_context() as session:
+        ctx = OperationContext(
+            session=session,
+            tenant_id="default",
+            params={"method": "get_run", "run_id": run_id},
+        )
+        result = await registry.execute("policies.workers", ctx)
+
+        if not result.success or result.data is None:
             return None
 
-        return wrap_dict({
-            "run_id": run.id,
-            "task": run.task,
-            "status": run.status,
-            "success": run.success,
-            "error": run.error,
-            "artifacts": json.loads(run.output_json) if run.output_json else None,
-            "replay_token": json.loads(run.replay_token_json) if run.replay_token_json else None,
-            "total_tokens_used": run.total_tokens or 0,
-            "total_latency_ms": float(run.total_latency_ms) if run.total_latency_ms else 0.0,
-            "policy_violations": [],  # Not stored in detail
-            "recovery_log": [],  # Not stored in detail
-            "drift_metrics": {},
-            "execution_trace": [],
-            "routing_decisions": [],
-            "cost_report": None,
-            "created_at": run.created_at.isoformat() if run.created_at else None,
-        })
+        return wrap_dict(result.data)
 
 
 async def _list_runs(limit: int = 20, tenant_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """
-    List recent runs from PostgreSQL.
+    List recent runs from PostgreSQL via L4 registry.
     """
-    async with get_async_session() as session:
-        query = select(WorkerRun).order_by(WorkerRun.created_at.desc()).limit(limit)
-        if tenant_id:
-            query = query.where(WorkerRun.tenant_id == tenant_id)
+    registry = get_operation_registry()
 
-        result = await session.execute(query)
-        runs = result.scalars().all()
+    async with get_async_session_context() as session:
+        ctx = OperationContext(
+            session=session,
+            tenant_id=tenant_id or "default",
+            params={"method": "list_runs", "limit": limit, "tenant_id": tenant_id},
+        )
+        result = await registry.execute("policies.workers", ctx)
 
-        return [
-            {
-                "run_id": run.id,
-                "task": run.task,
-                "status": run.status,
-                "success": run.success,
-                "created_at": run.created_at.isoformat() if run.created_at else "",
-                "total_latency_ms": float(run.total_latency_ms) if run.total_latency_ms else None,
-            }
-            for run in runs
-        ]
+        if not result.success:
+            return []
+
+        return result.data or []
 
 
 # =============================================================================
@@ -881,6 +854,8 @@ async def run_worker(
     )
 
     try:
+        # L4 bridge for policy engine (PIN-L2-PURITY)
+        PolicyEngine = get_policies_engine_bridge().policy_engine_class_capability()
         policy_engine = PolicyEngine()
         pre_check_result = await policy_engine.pre_check(
             request_id=request_id,
@@ -1151,51 +1126,63 @@ async def retry_run(
     - No agent execution triggered
     - DB write only, deterministic
     """
-    from app.db import Run
+    registry = get_operation_registry()
 
-    async with get_async_session() as session:
-        # Get original run
-        result = await session.execute(
-            select(Run).where(Run.id == run_id)
+    async with get_async_session_context() as session:
+        # Get original run via L4 registry
+        get_ctx = OperationContext(
+            session=session,
+            tenant_id="default",
+            params={"method": "get_run_for_retry", "run_id": run_id},
         )
-        original = result.scalar_one_or_none()
+        get_result = await registry.execute("policies.workers", get_ctx)
+        original = get_result.data if get_result.success else None
 
         if not original:
             raise HTTPException(status_code=404, detail="Run not found")
 
         # Validate status - only completed or failed runs can be retried
         valid_statuses = ["completed", "failed", "succeeded"]
-        if original.status.lower() not in valid_statuses:
+        if original["status"].lower() not in valid_statuses:
             raise HTTPException(
                 status_code=400,
-                detail=f"Cannot retry run with status '{original.status}'. Must be completed or failed."
+                detail=f"Cannot retry run with status '{original['status']}'. Must be completed or failed."
             )
 
-        # Create new run linked to original
+        # Create new run linked to original via L4 registry
         # Note: Use naive datetime for asyncpg compatibility
         from datetime import datetime as dt
-        new_run = Run(
-            agent_id=original.agent_id,
-            goal=original.goal,
-            status="queued",
-            parent_run_id=original.id,
-            tenant_id=original.tenant_id,
-            max_attempts=original.max_attempts,
-            priority=original.priority,
-            created_at=dt.utcnow(),
-        )
+        new_run_id = str(uuid.uuid4())
+        now_naive = dt.utcnow()
 
-        session.add(new_run)
-        await session.commit()
-        await session.refresh(new_run)
+        insert_ctx = OperationContext(
+            session=session,
+            tenant_id=original["tenant_id"],
+            params={
+                "method": "insert_retry_run",
+                "new_run_id": new_run_id,
+                "agent_id": original["agent_id"],
+                "goal": original["goal"],
+                "parent_run_id": original["id"],
+                "tenant_id": original["tenant_id"],
+                "max_attempts": original["max_attempts"],
+                "priority": original["priority"],
+                "created_at": now_naive,
+            },
+        )
+        insert_result = await registry.execute("policies.workers", insert_ctx)
+        if not insert_result.success:
+            raise HTTPException(status_code=500, detail=f"Failed to create retry run: {insert_result.error}")
+
+        # L4 handler owns transaction boundary - commit happens in PoliciesWorkersHandler
 
         # Audit log
         logger.info(
-            f"run_retry_requested: original={run_id} new={new_run.id} status=queued"
+            f"run_retry_requested: original={run_id} new={new_run_id} status=queued"
         )
 
         return RunRetryResponse(
-            id=new_run.id,
+            id=new_run_id,
             parent_run_id=run_id,
             status="queued",
         )
@@ -1292,14 +1279,17 @@ async def worker_health():
         moat_status["m9_failure_catalog"] = "unavailable"
         moat_status["m10_recovery"] = "unavailable"
 
-    # Get count from DB
+    # Get count from DB via L4 registry
     run_count = 0
     try:
-        async with get_async_session() as session:
-            from sqlalchemy import func
-
-            result = await session.execute(select(func.count()).select_from(WorkerRun))
-            run_count = result.scalar() or 0
+        async with get_async_session_context() as session:
+            count_ctx = OperationContext(
+                session=session,
+                tenant_id="default",
+                params={"method": "count_runs"},
+            )
+            count_result = await registry.execute("policies.workers", count_ctx)
+            run_count = count_result.data.get("count", 0) if count_result.success else 0
     except Exception:
         pass
 
@@ -1322,7 +1312,7 @@ async def delete_run(
 
     Note: In production, this would require admin privileges.
     """
-    async with get_async_session() as session:
+    async with get_async_session_context() as session:
         # Phase 2B: Use write service for DB operations
         write_service = WorkerWriteServiceAsync(session)
         run = await write_service.get_worker_run(run_id)

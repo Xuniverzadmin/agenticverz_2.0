@@ -606,3 +606,6 @@ __all__ = [
     "IncidentWriteDriver",
     "get_incident_write_driver",
 ]
+
+# Backward compatibility alias (legacy name from app.services.incident_write_service)
+get_incident_write_service = get_incident_write_driver

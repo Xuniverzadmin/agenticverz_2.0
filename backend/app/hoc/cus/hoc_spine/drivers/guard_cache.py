@@ -41,7 +41,8 @@ import logging
 import os
 from typing import Dict, Optional
 
-from .metrics_helpers import get_or_create_counter, get_or_create_histogram
+# PIN-520 ITER3.3: Fix broken relative import
+from app.hoc.cus.hoc_spine.services.metrics_helpers import get_or_create_counter, get_or_create_histogram
 
 logger = logging.getLogger("nova.guard.cache")
 

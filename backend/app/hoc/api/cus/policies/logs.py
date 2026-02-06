@@ -63,13 +63,11 @@ from typing import Annotated, Any, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.gateway_middleware import get_auth_context
-from app.db import get_async_session_dep
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     get_operation_registry,
+    get_session_dep,
 )
 
 # =============================================================================
@@ -526,7 +524,7 @@ async def list_llm_run_records(
     created_before: Annotated[Optional[datetime], Query(description="Filter created_at <=")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> LLMRunRecordsResponse:
     """List LLM run records. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -595,7 +593,7 @@ async def list_llm_run_records(
 async def get_llm_run_envelope(
     request: Request,
     run_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> LLMRunEnvelope:
     """O1: Canonical immutable run record. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -658,7 +656,7 @@ async def get_llm_run_envelope(
 async def get_llm_run_trace(
     request: Request,
     run_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> LLMRunTrace:
     """O2: Step-by-step execution trace. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -724,7 +722,7 @@ async def get_llm_run_trace(
 async def get_llm_run_governance(
     request: Request,
     run_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> LLMRunGovernance:
     """O3: Policy interaction trace. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -785,7 +783,7 @@ async def get_llm_run_governance(
 async def get_llm_run_replay(
     request: Request,
     run_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> LLMRunReplay:
     """O4: 60-second replay window. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -850,7 +848,7 @@ async def get_llm_run_replay(
 async def get_llm_run_export(
     request: Request,
     run_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> LLMRunExport:
     """O5: Export information. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -914,7 +912,7 @@ async def list_system_records(
     created_before: Annotated[Optional[datetime], Query(description="Filter created_at <=")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> SystemRecordsResponse:
     """List system records. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -976,7 +974,7 @@ async def list_system_records(
 async def get_system_snapshot(
     request: Request,
     run_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> SystemSnapshot:
     """O1: Environment baseline snapshot. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1060,7 +1058,7 @@ async def get_system_telemetry(
 async def get_system_events(
     request: Request,
     run_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> SystemEvents:
     """O3: Infra events affecting run. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1122,7 +1120,7 @@ async def get_system_events(
 async def get_system_replay(
     request: Request,
     run_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> SystemReplay:
     """O4: Infra replay window. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1186,7 +1184,7 @@ async def get_system_audit(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> SystemAudit:
     """O5: Infra attribution. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1257,7 +1255,7 @@ async def list_audit_entries(
     created_before: Annotated[Optional[datetime], Query(description="Filter created_at <=")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> AuditLedgerResponse:
     """List audit entries. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1318,7 +1316,7 @@ async def list_audit_entries(
 async def get_audit_entry(
     request: Request,
     entry_id: str,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> AuditLedgerDetailItem:
     """Get audit entry detail. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1366,7 +1364,7 @@ async def get_audit_entry(
 async def get_audit_identity(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> AuditIdentity:
     """O1: Identity lifecycle. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1423,7 +1421,7 @@ async def get_audit_identity(
 async def get_audit_authorization(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> AuditAuthorization:
     """O2: Authorization decisions. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1482,7 +1480,7 @@ async def get_audit_authorization(
 async def get_audit_access(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> AuditAccess:
     """O3: Log access audit. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)
@@ -1590,7 +1588,7 @@ async def get_audit_exports(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
-    session: AsyncSession = Depends(get_async_session_dep),
+    session = Depends(get_session_dep),
 ) -> AuditExports:
     """O5: Compliance exports. READ-ONLY customer facade."""
     tenant_id = get_tenant_id_from_auth(request)

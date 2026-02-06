@@ -34,12 +34,46 @@ Reference: PIN-293, PART2_CRM_WORKFLOW_CHARTER.md, part2-design-v1
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Protocol
 
-# DEAD IMPORT REPOINTED (2026-01-31) — Cleansing Cycle
-# Was: from app.hoc.cus.general.L5_workflow.contracts.engines.contract_engine import ContractState
-# Reason: cus/general/ abolished per PIN-485. ContractState migrated to hoc_spine.
-from app.hoc.cus.hoc_spine.authority.contracts.contract_engine import ContractState
+
+# =============================================================================
+# PIN-520: Protocol for contract input (L2 must not import from L4 authority)
+# =============================================================================
+
+
+class ContractStatePort(Protocol):
+    """
+    Protocol for contract state input to the adapter (PIN-520 L2 purity).
+
+    L2 adapters must not import L4 authority types directly.
+    L4 passes ContractState instances which satisfy this Protocol.
+    """
+
+    contract_id: Any
+    version: int
+    title: str
+    description: Optional[str]
+    status: Any  # Enum with .value
+    status_reason: Optional[str]
+    risk_level: Any  # Enum with .value
+    source: Any  # Enum with .value
+    affected_capabilities: Any  # Iterable
+    confidence_score: Optional[Any]
+    proposed_changes: dict
+    validator_verdict: Optional[Any]
+    eligibility_verdict: Optional[Any]
+    issue_id: Any
+    created_by: str
+    created_at: Optional[datetime]
+    expires_at: Optional[datetime]
+    approved_by: Optional[str]
+    approved_at: Optional[datetime]
+    transition_history: Optional[Any]
+
+
+# Alias for backward compatibility with existing code
+ContractState = ContractStatePort
 
 # =============================================================================
 # VIEW DTOs (Founder-facing, not domain models)

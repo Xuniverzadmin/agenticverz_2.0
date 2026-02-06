@@ -1,0 +1,61 @@
+schema_version: "1.0"
+protocol: "HK-01"
+id: "HK-20260205-070500"
+timestamp: "2026-02-05T07:05:00Z"
+triggered_by: "user"
+
+scans:
+  disk:
+    total_gb: 193
+    used_gb: 31
+    available_gb: 162
+    usage_percent: 17
+  memory:
+    total_gb: 11.0
+    used_gb: 3.0
+    available_gb: 8.7
+  docker:
+    images_count: 92
+    images_size_gb: 7.146
+    containers_count: 7
+    volumes_count: 8
+    build_cache_mb: 5447
+
+services_pre_check:
+  frontend: "skipped"
+  backend: "healthy"
+  database: "healthy"
+  worker: "healthy"
+
+tier_1_actions:
+  containers_removed: 0
+  images_pruned: 85
+  build_cache_cleared_mb: 5447
+  processes_killed: 1
+  page_cache_cleared: true
+  journal_vacuumed: true
+  tmp_files_cleaned: 0
+  cache_files_cleaned: 15433
+
+tier_2_actions:
+  requested: []
+  approved: []
+  executed: []
+  skipped: []
+
+services_post_check:
+  frontend: "skipped"
+  backend: "healthy"
+  database: "healthy"
+  worker: "healthy"
+
+space_reclaimed:
+  docker_mb: 5734
+  system_mb: 6000
+  total_mb: 11734
+
+result:
+  services_protected: true
+  no_active_work_disrupted: true
+  success: true
+  notes: "Disk dropped from 31G/17% to 25G/13%. Docker images 92→7, build cache fully cleared (5.4GB). 15,433 stale cache files removed. 1 stale pytest process killed. All 3 protected services verified healthy post-cleanup. 4 orphan Docker volumes (96MB) available for Tier-2 prune if desired."
