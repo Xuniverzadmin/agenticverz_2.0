@@ -85,8 +85,6 @@ Generic action result (activate, deactivate, etc.).
 
 ### `ContractVersionDTO(BaseModel)`
 
-GET /api/v1/contracts/version response.
-
 Contract version for client compatibility checks.
 
 ## Domain Usage
@@ -148,4 +146,3 @@ pairing:
   expected_l5_consumers: []
   orchestrator_operations: []
 ```
-

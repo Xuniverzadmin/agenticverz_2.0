@@ -7,6 +7,16 @@
 
 ---
 
+## Reality Correction (2026-02-06)
+
+This domain has been refactored under PIN-520 / strict HOC topology:
+- L2 APIs dispatch via `OperationRegistry.execute(...)` into hoc_spine handlers.
+- L5 engines do not accept `Session` parameters.
+- L6 drivers are session-bound and never commit; L4 owns commit/rollback.
+
+As a result, any generated call chains that show `L2 → L6` directly are stale.
+The authoritative memory-pins feature chains are corrected below.
+
 ## Script Registry
 
 Each script's unique contribution and canonical function.
@@ -60,27 +70,27 @@ These scripts may serve duplicate purposes within the domain.
 
 #### DELETE /pins/{key}
 ```
-L2:memory_pins.delete_pin → L4:account_handler → L6:accounts_facade_driver.AccountsFacadeDriver.count_tenants
+L2:account/memory_pins.delete_pin → L4:account.memory_pins (AccountMemoryPinsHandler) → L5:MemoryPinsEngine.delete_pin → L6:MemoryPinsDriver.delete_pin
 ```
 
 #### GET /pins
 ```
-L2:memory_pins.list_pins → L4:account_handler → L6:accounts_facade_driver.AccountsFacadeDriver.count_tenants
+L2:account/memory_pins.list_pins → L4:account.memory_pins (AccountMemoryPinsHandler) → L5:MemoryPinsEngine.list_pins → L6:MemoryPinsDriver.list_pins
 ```
 
 #### GET /pins/{key}
 ```
-L2:memory_pins.get_pin → L4:account_handler → L6:accounts_facade_driver.AccountsFacadeDriver.count_tenants
+L2:account/memory_pins.get_pin → L4:account.memory_pins (AccountMemoryPinsHandler) → L5:MemoryPinsEngine.get_pin → L6:MemoryPinsDriver.get_pin
 ```
 
 #### POST /pins
 ```
-L2:memory_pins.create_or_upsert_pin → L4:account_handler → L6:accounts_facade_driver.AccountsFacadeDriver.count_tenants
+L2:account/memory_pins.create_or_upsert_pin → L4:account.memory_pins (AccountMemoryPinsHandler) → L5:MemoryPinsEngine.upsert_pin → L6:MemoryPinsDriver.upsert_pin
 ```
 
 #### POST /pins/cleanup
 ```
-L2:memory_pins.cleanup_expired_pins → L4:account_handler → L6:accounts_facade_driver.AccountsFacadeDriver.count_tenants
+L2:account/memory_pins.cleanup_expired_pins → L4:account.memory_pins (AccountMemoryPinsHandler) → L5:MemoryPinsEngine.cleanup_expired → L6:MemoryPinsDriver.cleanup_expired
 ```
 
 ## Canonical Algorithm Inventory

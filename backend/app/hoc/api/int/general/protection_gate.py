@@ -49,7 +49,6 @@ logger = logging.getLogger(__name__)
 EXEMPT_PREFIXES: tuple[str, ...] = (
     "/health",
     "/metrics",
-    "/api/v1/auth/",
     "/fdr/",
     "/docs",
     "/openapi.json",

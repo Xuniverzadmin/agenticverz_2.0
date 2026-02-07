@@ -210,9 +210,13 @@ class ActivityDiscoveryHandler:
 
     Discovery Ledger records curiosity, not decisions. Signals are
     aggregated: same (artifact, field, signal_type) updates seen_count.
+
+    L4 handler owns transaction boundaries — creates connection, passes
+    to driver, commits writes.
     """
 
     async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.db import get_engine
         from app.hoc.cus.hoc_spine.drivers import emit_signal, get_signals
 
         method_name = ctx.params.get("method")
@@ -223,6 +227,8 @@ class ActivityDiscoveryHandler:
 
         kwargs = dict(ctx.params)
         kwargs.pop("method", None)
+
+        engine = get_engine()
 
         if method_name == "emit_signal":
             # Required: artifact, signal_type, evidence, detected_by
@@ -240,26 +246,33 @@ class ActivityDiscoveryHandler:
             if not detected_by:
                 return OperationResult.fail("Missing 'detected_by'", "MISSING_DETECTED_BY")
 
-            signal_id = emit_signal(
-                artifact=artifact,
-                signal_type=signal_type,
-                evidence=evidence,
-                detected_by=detected_by,
-                field=kwargs.get("field"),
-                confidence=kwargs.get("confidence"),
-                notes=kwargs.get("notes"),
-                phase=kwargs.get("phase"),
-                environment=kwargs.get("environment"),
-            )
+            # L4 owns connection lifecycle and commit
+            with engine.connect() as conn:
+                signal_id = emit_signal(
+                    conn,
+                    artifact=artifact,
+                    signal_type=signal_type,
+                    evidence=evidence,
+                    detected_by=detected_by,
+                    field=kwargs.get("field"),
+                    confidence=kwargs.get("confidence"),
+                    notes=kwargs.get("notes"),
+                    phase=kwargs.get("phase"),
+                    environment=kwargs.get("environment"),
+                )
+                conn.commit()
             return OperationResult.ok({"signal_id": str(signal_id) if signal_id else None})
 
         elif method_name == "get_signals":
-            signals = get_signals(
-                artifact=kwargs.get("artifact"),
-                signal_type=kwargs.get("signal_type"),
-                status=kwargs.get("status"),
-                limit=kwargs.get("limit", 100),
-            )
+            # Read-only — no commit needed
+            with engine.connect() as conn:
+                signals = get_signals(
+                    conn,
+                    artifact=kwargs.get("artifact"),
+                    signal_type=kwargs.get("signal_type"),
+                    status=kwargs.get("status"),
+                    limit=kwargs.get("limit", 100),
+                )
             return OperationResult.ok({"signals": signals, "count": len(signals)})
 
         else:

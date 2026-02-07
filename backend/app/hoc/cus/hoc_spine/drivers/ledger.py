@@ -13,25 +13,31 @@
 # Database:
 #   Scope: hoc_spine
 #   Models: discovery_ledger (via raw SQL)
-# Role: Discovery ledger for artifact tracking
-# Callers: API routes, workers
+# Role: Discovery ledger for artifact tracking — pure driver (no transaction ownership)
+# Callers: L4 handlers (ActivityDiscoveryHandler)
 # Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
 # Reference: PIN-470, Discovery System
+# Transaction: Driver NEVER commits/rollbacks — L4 handler owns transaction boundaries.
 
 """
-Discovery Ledger - signal recording helpers.
+Discovery Ledger - signal recording helpers (pure driver).
 
 Core principle: Discovery Ledger records curiosity, not decisions.
 
 This module provides:
 - emit_signal(): Record a discovery signal (aggregating duplicates)
+- get_signals(): Query discovery signals from the ledger
 - DiscoverySignal: Pydantic model for signal data
 
 Signals are aggregated: same (artifact, field, signal_type) updates seen_count.
 Nothing in the system depends on this table - it's pure observation.
+
+Transaction ownership: L4 handler creates and commits the connection.
+This driver only executes SQL on a caller-provided connection.
 """
 
+import json
 import logging
 import os
 from decimal import Decimal
@@ -58,6 +64,7 @@ class DiscoverySignal(BaseModel):
 
 
 def emit_signal(
+    connection: Any,
     artifact: str,
     signal_type: str,
     evidence: dict[str, Any],
@@ -67,8 +74,6 @@ def emit_signal(
     notes: Optional[str] = None,
     phase: Optional[str] = None,
     environment: Optional[str] = None,
-    *,
-    session: Optional[Any] = None,
 ) -> Optional[UUID]:
     """
     Record a discovery signal to the ledger.
@@ -77,6 +82,7 @@ def emit_signal(
     This is non-blocking and safe to call frequently.
 
     Args:
+        connection: SQLAlchemy Connection (caller owns lifecycle and commit)
         artifact: Artifact name (e.g. "prediction_events")
         signal_type: Signal type (e.g. "high_operator_access")
         evidence: Evidence data as dict
@@ -86,46 +92,20 @@ def emit_signal(
         notes: Optional notes
         phase: Current phase (defaults to env var or "C")
         environment: Environment (defaults to env var or "local")
-        session: Optional SQLModel session. If provided, caller owns commit.
-                 If None, creates standalone connection and commits.
 
     Returns:
         UUID of the signal record, or None if recording failed
 
     Transaction Semantics:
-        - If session is provided: Uses session, does NOT commit (caller owns transaction)
-        - If session is None: Creates connection and commits (standalone operation)
-
-    Example:
-        # Standalone (commits immediately)
-        emit_signal(
-            artifact="prediction_events",
-            signal_type="high_operator_access",
-            evidence={"count_7d": 21, "distinct_sessions": 5},
-            detected_by="api_access_monitor",
-            confidence=0.8
-        )
-
-        # Within transaction (caller commits)
-        with Session(engine) as session:
-            emit_signal(..., session=session)
-            # other operations
-            session.commit()  # Caller owns commit
+        Driver does NOT commit. Caller (L4 handler) owns the transaction.
     """
-    # Get phase and environment from env if not provided
     if phase is None:
         phase = os.environ.get("AOS_PHASE", "C")
     if environment is None:
         environment = os.environ.get("AOS_ENVIRONMENT", "local")
 
     try:
-        # Import here to avoid circular imports and allow module to load without DB
-        from app.db import get_engine
-
-        engine = get_engine()
-
         # Use upsert pattern: ON CONFLICT update seen_count and last_seen_at
-        # For signals with field
         if field is not None:
             upsert_sql = text(
                 """
@@ -148,7 +128,6 @@ def emit_signal(
             """
             )
         else:
-            # For signals without field (artifact-level)
             upsert_sql = text(
                 """
                 INSERT INTO discovery_ledger (
@@ -170,8 +149,6 @@ def emit_signal(
             """
             )
 
-        import json
-
         params = {
             "artifact": artifact,
             "field": field,
@@ -184,36 +161,19 @@ def emit_signal(
             "notes": notes,
         }
 
-        # If session provided, use it (caller owns commit)
-        # Otherwise, create connection and commit (standalone)
-        if session is not None:
-            result = session.execute(upsert_sql, params)
-            session.flush()  # Flush to get RETURNING value, but don't commit
-            row = result.fetchone()
-            if row:
-                return row[0]
-            return None
-        else:
-            # Standalone operation - create connection and commit
-            with engine.connect() as conn:
-                result = conn.execute(upsert_sql, params)
-                conn.commit()
-                row = result.fetchone()
-                if row:
-                    return row[0]
-                return None
+        result = connection.execute(upsert_sql, params)
+        row = result.fetchone()
+        if row:
+            return row[0]
+        return None
 
     except SQLAlchemyError as e:
-        # Non-blocking: log and continue
         logger.warning(f"Failed to emit discovery signal: {e}")
-        return None
-    except ImportError:
-        # DB not available - that's fine, signals are optional
-        logger.debug("Discovery ledger: DB not available, skipping signal")
         return None
 
 
 def get_signals(
+    connection: Any,
     artifact: Optional[str] = None,
     signal_type: Optional[str] = None,
     status: Optional[str] = None,
@@ -223,6 +183,7 @@ def get_signals(
     Query discovery signals from the ledger.
 
     Args:
+        connection: SQLAlchemy Connection (caller owns lifecycle)
         artifact: Filter by artifact name
         signal_type: Filter by signal type
         status: Filter by status (observed/ignored/promoted)
@@ -232,13 +193,8 @@ def get_signals(
         List of signal records as dicts
     """
     try:
-        from app.db import get_engine
-
-        engine = get_engine()
-
-        # Build query with filters
         where_clauses = []
-        params = {"limit": limit}
+        params: dict[str, Any] = {"limit": limit}
 
         if artifact:
             where_clauses.append("artifact = :artifact")
@@ -265,31 +221,30 @@ def get_signals(
         """
         )
 
-        with engine.connect() as conn:
-            result = conn.execute(query, params)
-            rows = result.fetchall()
+        result = connection.execute(query, params)
+        rows = result.fetchall()
 
-            signals = []
-            for row in rows:
-                signals.append(
-                    {
-                        "id": str(row.id),
-                        "artifact": row.artifact,
-                        "field": row.field,
-                        "signal_type": row.signal_type,
-                        "evidence": row.evidence,
-                        "confidence": float(row.confidence) if row.confidence else None,
-                        "detected_by": row.detected_by,
-                        "phase": row.phase,
-                        "environment": row.environment,
-                        "first_seen_at": row.first_seen_at.isoformat() if row.first_seen_at else None,
-                        "last_seen_at": row.last_seen_at.isoformat() if row.last_seen_at else None,
-                        "seen_count": row.seen_count,
-                        "status": row.status,
-                        "notes": row.notes,
-                    }
-                )
-            return signals
+        signals = []
+        for row in rows:
+            signals.append(
+                {
+                    "id": str(row.id),
+                    "artifact": row.artifact,
+                    "field": row.field,
+                    "signal_type": row.signal_type,
+                    "evidence": row.evidence,
+                    "confidence": float(row.confidence) if row.confidence else None,
+                    "detected_by": row.detected_by,
+                    "phase": row.phase,
+                    "environment": row.environment,
+                    "first_seen_at": row.first_seen_at.isoformat() if row.first_seen_at else None,
+                    "last_seen_at": row.last_seen_at.isoformat() if row.last_seen_at else None,
+                    "seen_count": row.seen_count,
+                    "status": row.status,
+                    "notes": row.notes,
+                }
+            )
+        return signals
 
     except Exception as e:
         logger.warning(f"Failed to query discovery signals: {e}")

@@ -22,14 +22,13 @@ No business logic - only persistence and mutations.
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import UUID
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.hoc.cus.hoc_spine.services.time import utc_now
 from app.models.policy import PolicyProposal, PolicyVersion
 
 
@@ -61,7 +60,7 @@ class PolicyProposalWriteDriver:
             proposed_rule=proposed_rule,
             triggering_feedback_ids=triggering_feedback_ids,
             status="draft",
-            created_at=utc_now(),
+            created_at=datetime.now(timezone.utc),
         )
 
         self._session.add(record)
@@ -117,7 +116,7 @@ class PolicyProposalWriteDriver:
             proposal_id=proposal_id,
             version=version_number,
             rule_snapshot=rule_snapshot,
-            created_at=utc_now(),
+            created_at=datetime.now(timezone.utc),
             created_by=created_by,
             change_reason=change_reason,
         )
@@ -146,7 +145,7 @@ class PolicyProposalWriteDriver:
         Idempotent - uses ON CONFLICT DO NOTHING pattern.
         Returns the rule ID.
         """
-        now = utc_now()
+        now = datetime.now(timezone.utc)
 
         await self._session.execute(
             text("""

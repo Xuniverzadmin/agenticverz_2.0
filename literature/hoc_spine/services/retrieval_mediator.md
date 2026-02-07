@@ -38,7 +38,7 @@ Exports (Provides):
     - get_retrieval_mediator(): Factory to get singleton
 
 Wiring Points:
-    - Called from: L2 API route /api/v1/mediation/access
+    - Called from: L2 API route /retrieval/access
     - Calls: PolicyEngine (injected), ConnectorRegistry (injected)
 
 Invariant: Deny-by-default. All access blocked unless explicitly allowed.
@@ -238,4 +238,3 @@ pairing:
   expected_l5_consumers: []
   orchestrator_operations: []
 ```
-

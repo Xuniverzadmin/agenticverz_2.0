@@ -19,14 +19,14 @@
 Monitors API (L2)
 
 Provides monitoring operations:
-- POST /api/v1/monitors (create monitor)
-- GET /api/v1/monitors (list monitors)
-- GET /api/v1/monitors/{id} (get monitor)
-- PUT /api/v1/monitors/{id} (update monitor)
-- DELETE /api/v1/monitors/{id} (delete monitor)
-- POST /api/v1/monitors/{id}/check (run health check)
-- GET /api/v1/monitors/{id}/history (check history)
-- GET /api/v1/monitors/status (overall status)
+- POST /monitors (create monitor)
+- GET /monitors (list monitors)
+- GET /monitors/{id} (get monitor)
+- PUT /monitors/{id} (update monitor)
+- DELETE /monitors/{id} (delete monitor)
+- POST /monitors/{id}/check (run health check)
+- GET /monitors/{id}/history (check history)
+- GET /monitors/status (overall status)
 
 This is the ONLY facade for monitoring operations.
 All monitor APIs flow through this router.

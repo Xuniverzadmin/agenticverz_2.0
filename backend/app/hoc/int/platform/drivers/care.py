@@ -1199,7 +1199,7 @@ class CAREEngine:
                 task_description=request.task_description,
                 routed=False,
                 error="No agents available",
-                actionable_fix="Register agents with SBA schema using POST /api/v1/sba/register",
+                actionable_fix="Register agents with SBA schema using POST /sba/register",
                 total_latency_ms=(time.time() - start) * 1000,
                 decided_at=datetime.now(timezone.utc),
             )

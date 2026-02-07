@@ -27,11 +27,16 @@ Registers twelve operations:
   - policies.simulate → LimitsSimulationEngine (simulate)
 """
 
+import logging
+from typing import Any, Dict, Optional
+
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     OperationRegistry,
     OperationResult,
 )
+
+logger = logging.getLogger("nova.hoc.policies.handler")
 
 
 class PoliciesQueryHandler:
@@ -1537,3 +1542,91 @@ def register(registry: OperationRegistry) -> None:
     registry.register("rbac.audit", RbacAuditHandler())
     # Enforcement write operations (L4 owns commit for L6 driver purity)
     registry.register("policies.enforcement_write", PoliciesEnforcementWriteHandler())
+
+
+# =============================================================================
+# L4 Standalone Dispatch (ITER3.8 P1: moved from L6 to fix L6→L4 inversion)
+# =============================================================================
+
+
+async def record_enforcement_standalone(
+    tenant_id: str,
+    rule_id: str,
+    action_taken: str,
+    run_id: Optional[str] = None,
+    incident_id: Optional[str] = None,
+    details: Optional[Dict[str, Any]] = None,
+) -> Optional[str]:
+    """
+    Record a policy enforcement event via L4 handler (L4 owns commit).
+
+    Dispatches to PoliciesEnforcementWriteHandler, which creates its own
+    session and commits. Fail-safe: recording failures are logged but don't
+    raise exceptions.
+
+    Args:
+        tenant_id: Tenant owning the run
+        rule_id: Policy rule that triggered
+        action_taken: Action taken (BLOCKED, WARNED, AUDITED, STOPPED, KILLED)
+        run_id: Optional run ID that was affected
+        incident_id: Optional incident ID if one was created
+        details: Optional enforcement details
+
+    Returns:
+        Enforcement record ID, or None if recording failed
+    """
+    try:
+        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+            OperationContext,
+            get_operation_registry,
+        )
+
+        registry = get_operation_registry()
+        result = await registry.execute(
+            "policies.enforcement_write",
+            OperationContext(
+                session=None,  # L4 handler creates its own session
+                tenant_id=tenant_id,
+                params={
+                    "method": "record_enforcement",
+                    "tenant_id": tenant_id,
+                    "rule_id": rule_id,
+                    "action_taken": action_taken,
+                    "run_id": run_id,
+                    "incident_id": incident_id,
+                    "details": details,
+                },
+            ),
+        )
+
+        if result.success:
+            return result.data.get("enforcement_id")
+        else:
+            logger.error(
+                "policy_enforcement.record_failed",
+                extra={
+                    "error": result.error,
+                    "tenant_id": tenant_id,
+                    "rule_id": rule_id,
+                    "action_taken": action_taken,
+                },
+            )
+            return None
+
+    except ImportError:
+        logger.warning(
+            "policy_enforcement.registry_unavailable",
+            extra={"action": "record_enforcement_standalone"},
+        )
+        return None
+    except Exception as e:
+        logger.error(
+            "policy_enforcement.record_failed",
+            extra={
+                "error": str(e),
+                "tenant_id": tenant_id,
+                "rule_id": rule_id,
+                "action_taken": action_taken,
+            },
+        )
+        return None

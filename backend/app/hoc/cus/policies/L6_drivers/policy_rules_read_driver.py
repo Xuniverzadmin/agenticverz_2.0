@@ -21,14 +21,13 @@ Pure data access layer for policy rules read operations.
 All SQLAlchemy queries live here. No business logic.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, Optional
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.hoc.cus.hoc_spine.services.time import utc_now
 from app.models.policy_control_plane import (
     PolicyEnforcement,
     PolicyRule,
@@ -61,7 +60,7 @@ class PolicyRulesReadDriver:
 
         Returns (items, total_count).
         """
-        thirty_days_ago = utc_now() - timedelta(days=30)
+        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
 
         # Subquery: enforcement aggregation
         enforcement_stats_subq = (
@@ -166,7 +165,7 @@ class PolicyRulesReadDriver:
         rule_id: str,
     ) -> Optional[dict]:
         """Fetch policy rule detail. Returns None if not found."""
-        thirty_days_ago = utc_now() - timedelta(days=30)
+        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
 
         # Subquery for trigger stats
         enforcement_stats_subq = (

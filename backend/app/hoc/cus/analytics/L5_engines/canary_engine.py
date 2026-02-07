@@ -50,8 +50,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import get_circuit_breaker
-from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import (
+from app.hoc.cus.hoc_spine.services.cross_domain_gateway import get_circuit_breaker
+from app.hoc.cus.hoc_spine.services.cross_domain_gateway import (
     report_drift as report_drift_async,
 )
 from app.hoc.cus.analytics.L5_engines.config_engine import get_config

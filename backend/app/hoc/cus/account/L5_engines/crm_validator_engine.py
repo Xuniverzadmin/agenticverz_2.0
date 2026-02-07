@@ -83,149 +83,16 @@ from uuid import UUID
 VALIDATOR_VERSION = "1.0.0"
 
 
-# ==============================================================================
-# ISSUE TYPE ENUM (Closed Set)
-# ==============================================================================
-
-
-class IssueType(str, Enum):
-    """
-    Issue type classification.
-
-    Reference: VALIDATOR_LOGIC.md Issue Type Classification
-    """
-
-    CAPABILITY_REQUEST = "capability_request"  # Enable/disable/modify capability
-    BUG_REPORT = "bug_report"  # Report of incorrect behavior
-    CONFIGURATION_CHANGE = "configuration_change"  # Modify system configuration
-    ESCALATION = "escalation"  # Requires immediate human attention
-    UNKNOWN = "unknown"  # Cannot classify with sufficient confidence
-
-
-# ==============================================================================
-# SEVERITY ENUM (Closed Set)
-# ==============================================================================
-
-
-class Severity(str, Enum):
-    """
-    Issue severity classification.
-
-    Reference: VALIDATOR_LOGIC.md Severity Classification
-    """
-
-    CRITICAL = "critical"  # System-wide impact, immediate action
-    HIGH = "high"  # Significant impact, prompt action
-    MEDIUM = "medium"  # Noticeable impact, standard timeline
-    LOW = "low"  # Minor impact, can be deferred
-
-
-# ==============================================================================
-# RECOMMENDED ACTION ENUM (Closed Set)
-# ==============================================================================
-
-
-class RecommendedAction(str, Enum):
-    """
-    Recommended action from validator.
-
-    Reference: VALIDATOR_LOGIC.md Recommended Action Logic
-    """
-
-    CREATE_CONTRACT = "create_contract"  # Proceed to eligibility
-    DEFER = "defer"  # Needs more information
-    REJECT = "reject"  # Should not proceed
-    ESCALATE = "escalate"  # Requires immediate human attention
-
-
-# ==============================================================================
-# SOURCE ENUM (For Confidence Weighting)
-# ==============================================================================
-
-
-class IssueSource(str, Enum):
-    """Issue source for confidence weighting."""
-
-    OPS_ALERT = "ops_alert"  # Highest trust (0.2)
-    SUPPORT_TICKET = "support_ticket"  # Medium trust (0.1)
-    CRM_FEEDBACK = "crm_feedback"  # Low trust (0.05)
-    MANUAL = "manual"  # Neutral (0.0)
-    INTEGRATION = "integration"  # Variable
-
-
-# ==============================================================================
-# VALIDATOR INPUT
-# ==============================================================================
-
-
-@dataclass(frozen=True)
-class ValidatorInput:
-    """
-    Input to the validator.
-
-    Reference: VALIDATOR_LOGIC.md Validator Input
-    """
-
-    issue_id: UUID
-    source: str  # IssueSource value
-    raw_payload: dict[str, Any]
-    received_at: datetime
-    tenant_id: Optional[UUID] = None
-    affected_capabilities_hint: Optional[list[str]] = None
-    priority_hint: Optional[str] = None
-
-
-# ==============================================================================
-# VALIDATOR VERDICT
-# ==============================================================================
-
-
-@dataclass(frozen=True)
-class ValidatorVerdict:
-    """
-    Output from the validator.
-
-    Reference: VALIDATOR_LOGIC.md Validator Output (Verdict)
-
-    Invariant VAL-002: Verdicts include version (required field)
-    """
-
-    issue_type: IssueType
-    severity: Severity
-    affected_capabilities: tuple[str, ...]  # Immutable
-    recommended_action: RecommendedAction
-    confidence_score: Decimal  # 0.00 - 1.00 (VAL-003)
-    reason: str
-    evidence: dict[str, Any]
-    analyzed_at: datetime
-    validator_version: str  # VAL-002: Required
-
-
-# ==============================================================================
-# VALIDATOR ERROR
-# ==============================================================================
-
-
-class ValidatorErrorType(str, Enum):
-    """Error types for validator failures."""
-
-    PARSE_ERROR = "parse_error"
-    REGISTRY_UNAVAILABLE = "registry_unavailable"
-    TIMEOUT = "timeout"
-    UNKNOWN = "unknown"
-
-
-@dataclass(frozen=True)
-class ValidatorError:
-    """
-    Error from validator with fallback verdict.
-
-    Reference: VALIDATOR_LOGIC.md Error Handling
-    """
-
-    error_type: ValidatorErrorType
-    message: str
-    fallback_verdict: ValidatorVerdict
+from app.hoc.cus.account.L5_schemas.crm_validator_types import (
+    IssueSource,
+    IssueType,
+    RecommendedAction,
+    Severity,
+    ValidatorError,
+    ValidatorErrorType,
+    ValidatorInput,
+    ValidatorVerdict,
+)
 
 
 # ==============================================================================

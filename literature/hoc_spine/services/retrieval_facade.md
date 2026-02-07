@@ -38,9 +38,9 @@ Wrapped Services:
 - RetrievalMediator: Central choke point for data access (GAP-065)
 
 L2 API Routes (GAP-094):
-- POST /api/v1/retrieval/access (mediated data access)
-- GET /api/v1/retrieval/planes (list available planes)
-- GET /api/v1/retrieval/evidence (retrieve evidence records)
+- POST /retrieval/access (mediated data access)
+- GET /retrieval/planes (list available planes)
+- GET /retrieval/evidence (retrieve evidence records)
 
 Usage:
     from app.services.retrieval.facade import get_retrieval_facade
@@ -196,4 +196,3 @@ pairing:
   expected_l5_consumers: []
   orchestrator_operations: []
 ```
-

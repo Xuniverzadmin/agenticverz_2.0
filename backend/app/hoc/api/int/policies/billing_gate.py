@@ -63,7 +63,6 @@ def _get_billing_provider():
 EXEMPT_PREFIXES: tuple[str, ...] = (
     "/health",
     "/metrics",
-    "/api/v1/auth/",
     "/fdr/",
     "/docs",
     "/openapi.json",

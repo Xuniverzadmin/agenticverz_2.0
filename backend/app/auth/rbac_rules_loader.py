@@ -23,7 +23,7 @@ Usage:
     rules = load_rbac_rules()
 
     # Resolve a specific request (raises RBACSchemaViolation if no rule)
-    rule = resolve_rbac_rule("/api/v1/incidents/", "GET", "customer", "preflight")
+    rule = resolve_rbac_rule("/incidents/", "GET", "customer", "preflight")
 
     # Get PUBLIC paths for backward compatibility
     public_paths = get_public_paths()
@@ -281,7 +281,7 @@ def resolve_rbac_rule(
     Find the RBAC rule that matches the given request context.
 
     Args:
-        path: Request path (e.g., "/api/v1/incidents/")
+        path: Request path (e.g., "/incidents/")
         method: HTTP method (e.g., "GET")
         console_kind: Console type ("customer" or "founder")
         environment: Environment ("preflight" or "production")
@@ -304,10 +304,10 @@ def resolve_rbac_rule(
 
     Example:
         # Default behavior (raises exception if no rule)
-        rule = resolve_rbac_rule("/api/v1/foo/", "GET", "customer", "preflight")
+        rule = resolve_rbac_rule("/foo/", "GET", "customer", "preflight")
 
         # Legacy behavior (returns None for backward compatibility)
-        rule = resolve_rbac_rule("/api/v1/foo/", "GET", "customer", "preflight", strict=False)
+        rule = resolve_rbac_rule("/foo/", "GET", "customer", "preflight", strict=False)
     """
     rules = load_rbac_rules()
     method_upper = method.upper()

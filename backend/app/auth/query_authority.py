@@ -100,7 +100,7 @@ def enforce_query_authority(
         QueryAuthorityViolation: If any constraint is exceeded
 
     Example:
-        rule = resolve_rbac_rule("/api/v1/incidents/", "GET", "customer", "preflight", strict=True)
+        rule = resolve_rbac_rule("/incidents/", "GET", "customer", "preflight", strict=True)
         enforce_query_authority(
             rule.query_authority,
             include_synthetic=True,

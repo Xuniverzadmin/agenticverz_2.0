@@ -17,8 +17,8 @@ Mutating endpoints for policy rules.
 Extends the read-only policies.py facade with write operations.
 
 Endpoints:
-    POST /api/v1/policies/rules              → Create rule
-    PUT  /api/v1/policies/rules/{rule_id}    → Update rule
+    POST /policies/rules              → Create rule
+    PUT  /policies/rules/{rule_id}    → Update rule
 
 Rules are never deleted - they are retired with reason.
 """

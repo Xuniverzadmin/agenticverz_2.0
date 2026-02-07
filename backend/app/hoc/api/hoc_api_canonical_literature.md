@@ -8,17 +8,18 @@
 
 ## Executive Summary
 
-This document captures the canonical structure of the HOC (Hierarchical Operations Console) API layer following the successful migration from legacy `app/api/*` to `app/hoc/api/*`. The migration consolidated 68+ legacy routers into the HOC structure while maintaining backward-compatible route paths.
+This document captures the canonical structure of the HOC (Hierarchical Operations Console) API layer following the successful migration from legacy `app/api/*` to `app/hoc/api/*`.
 
-### Migration Stats
+**Reality update (2026-02-07):** The legacy URL prefix `/api/v1/*` is now considered legacy and is served only via `410 Gone` handlers in `app/hoc/api/int/general/legacy_routes.py`. Canonical HOC routes no longer use `/api/v1`.
 
-| Metric | Count |
+### Reality Metrics (2026-02-06, Evidence-Backed)
+
+| Metric | Value |
 |--------|-------|
-| Legacy routers migrated | 68 |
-| New HOC-only routers wired | 4 |
-| Total API routes | 688 |
-| Broken imports fixed | 25+ |
-| Dead code deleted | 1 file (85KB) |
+| Total FastAPI routes (app.main) | 684 |
+| Total HOC routes (app.hoc.api.*) | 661 |
+| `/api/v1/*` routes | 4 (all legacy `410 Gone`) |
+| `/health` routes | 1 (owned by `app.hoc.api.int.general.health`) |
 
 ---
 
@@ -26,16 +27,15 @@ This document captures the canonical structure of the HOC (Hierarchical Operatio
 
 ```
 app/hoc/api/
+├── facades/                  # L2.1 surface map (router bundles by domain)
+│   ├── cus/                  # Canonical 10 customer domains (non-optional)
+│   ├── fdr/                  # Founder surfaces (bundled)
+│   └── int/                  # Internal/system surfaces (health/legacy/etc.)
 ├── cus/                      # Customer-facing APIs (CUSTOMER audience)
 │   ├── account/              # Account management
 │   │   └── memory_pins.py    # Memory pin management
 │   ├── activity/             # Activity domain
 │   │   └── activity.py       # Activity unified facade
-│   ├── agent/                # Agent domain
-│   │   ├── authz_status.py   # Authorization status
-│   │   ├── discovery.py      # Discovery ledger
-│   │   ├── onboarding.py     # Customer onboarding
-│   │   └── platform.py       # Platform health
 │   ├── analytics/            # Analytics domain
 │   │   ├── costsim.py        # Cost simulation
 │   │   ├── feedback.py       # Pattern feedback
@@ -44,12 +44,8 @@ app/hoc/api/
 │   ├── api_keys/             # API key management
 │   │   ├── auth_helpers.py   # Auth dependencies (not router)
 │   │   └── embedding.py      # Embedding quota
-│   ├── general/              # General utilities
-│   │   ├── agents.py         # Multi-agent jobs
-│   │   ├── debug_auth.py     # Auth debugging
-│   │   ├── health.py         # Health check
-│   │   ├── legacy_routes.py  # 410 Gone handlers
-│   │   └── sdk.py            # SDK endpoints
+│   ├── controls/             # Controls domain
+│   │   └── controls.py       # Controls facade
 │   ├── incidents/            # Incident domain
 │   │   ├── cost_guard.py     # Cost visibility
 │   │   └── incidents.py      # Incidents facade
@@ -64,8 +60,6 @@ app/hoc/api/
 │   │   ├── guard_logs.py     # Customer logs
 │   │   ├── tenants.py        # Tenant management
 │   │   └── traces.py         # Trace viewing
-│   ├── ops/                  # Operations domain
-│   │   └── cost_ops.py       # Cost operations
 │   ├── overview/             # Overview domain
 │   │   └── overview.py       # Overview facade
 │   ├── policies/             # Policy domain (largest)
@@ -78,7 +72,6 @@ app/hoc/api/
 │   │   ├── billing_dependencies.py  # Dependencies (not router)
 │   │   ├── compliance.py     # Compliance management
 │   │   ├── connectors.py     # Connector management (NEW)
-│   │   ├── controls.py       # Control management
 │   │   ├── cus_enforcement.py  # Enforcement checks
 │   │   ├── customer_visibility.py  # Customer visibility
 │   │   ├── datasources.py    # Datasource management
@@ -108,9 +101,6 @@ app/hoc/api/
 │   │   ├── status_history.py # Status history
 │   │   ├── v1_killswitch.py  # KillSwitch MVP
 │   │   └── workers.py        # Worker management
-│   └── recovery/             # Recovery domain
-│       ├── recovery.py       # Recovery suggestions
-│       └── recovery_ingest.py  # Recovery ingestion
 ├── fdr/                      # Founder-facing APIs (FOUNDER audience)
 │   ├── account/              # Founder account
 │   │   ├── founder_explorer.py  # Cross-tenant explorer
@@ -124,10 +114,28 @@ app/hoc/api/
 │   │   ├── founder_review.py  # Evidence review
 │   │   └── founder_timeline.py  # Decision timeline
 │   └── ops/                  # Founder ops
+│       ├── cost_ops.py         # Cost operations (founder-only)
 │       └── founder_actions.py  # Freeze/throttle actions
 └── int/                      # Internal APIs (INTERNAL audience)
-    └── logs/                 # Internal logs
-        └── __init__.py       # Middleware re-exports
+    ├── agent/                # Internal agent surfaces
+    │   ├── agents.py         # Multi-agent jobs
+    │   ├── authz_status.py   # Authorization status
+    │   ├── discovery.py      # Discovery ledger
+    │   ├── onboarding.py     # Customer onboarding
+    │   └── platform.py       # Platform health
+    ├── general/              # System-wide internal surfaces
+    │   ├── debug_auth.py     # Auth debugging
+    │   ├── founder_auth.py   # Founder auth dependencies
+    │   ├── health.py         # Health check (single owner)
+    │   ├── legacy_routes.py  # 410 Gone handlers (only /api/v1 owner)
+    │   └── sdk.py            # SDK endpoints
+    ├── recovery/             # Recovery internal surfaces
+    │   ├── recovery.py
+    │   └── recovery_ingest.py
+    ├── logs/                 # Internal logs (middleware re-exports)
+    │   └── __init__.py
+    └── policies/             # Internal policy gates
+        └── billing_gate.py
 ```
 
 ---
@@ -138,19 +146,26 @@ app/hoc/api/
 
 | Domain | Path | Purpose |
 |--------|------|---------|
-| account | `/api/v1/accounts/*` | Account management, memory pins |
-| activity | `/api/v1/activity/*` | Activity tracking |
-| agent | `/api/v1/agents/*`, `/api/v1/discovery/*` | Agent coordination, discovery |
-| analytics | `/api/v1/analytics/*`, `/cost/*` | Cost simulation, predictions |
-| api_keys | `/api/v1/api-keys/*`, `/embedding/*` | API key management, embedding |
-| general | `/health`, `/api/v1/sdk/*` | Health, SDK, debug |
-| incidents | `/api/v1/incidents/*`, `/guard/costs/*` | Incident management |
-| integrations | `/api/v1/integrations/*`, `/v1/*` | LLM integrations, proxy |
-| logs | `/api/v1/logs/*`, `/guard/logs/*` | Log viewing, traces |
-| ops | `/ops/cost/*` | Cost operations |
-| overview | `/api/v1/overview/*` | Dashboard overview |
-| policies | `/api/v1/policies/*`, `/guard/*`, `/v1/killswitch/*` | Policy management (largest) |
-| recovery | `/api/v1/recovery/*` | Recovery suggestions |
+| account | `/accounts/*`, `/memory/*`, `/tenant/*` | Account management, memory pins, tenant tools |
+| activity | `/activity/*` | Activity tracking |
+| analytics | `/analytics/*`, `/cost/*`, `/feedback/*`, `/predictions/*` | Cost simulation, predictions, feedback |
+| api_keys | `/api-keys/*`, `/embedding/*` | API key management, embedding |
+| controls | `/controls/*` | Control configuration and control state |
+| incidents | `/incidents/*`, `/guard/costs/*` | Incident management |
+| integrations | `/integrations/*`, `/v1/*` | LLM integrations, proxy |
+| logs | `/logs/*`, `/traces/*`, `/guard/logs/*` | Log viewing, traces |
+| overview | `/overview/*` | Dashboard overview |
+| policies | `/policies/*`, `/policy/*`, `/policy-layer/*`, `/policy-proposals/*`, `/runtime/*`, `/rbac/*`, `/workers/*`, `/guard/*`, `/v1/killswitch/*` | Policy management (largest) |
+
+### Internal (INT) Surfaces
+
+INT is the system/internal audience. These routes may exist at public paths (e.g., `/health`) but are owned by the internal surface.
+
+| Surface | Path | Notes |
+|---------|------|------|
+| general | `/health`, `/sdk/*`, `/debug/*`, legacy 410 | System utilities and legacy routing |
+| agent | `/discovery/*`, internal agent surfaces | System/ops agent surfaces |
+| recovery | `/recovery/*` | Recovery system surfaces |
 
 ### Founder (FDR) Domains
 
@@ -168,20 +183,22 @@ app/hoc/api/
 
 The following table shows the complete mapping from legacy imports to HOC imports:
 
+**Phase 5 note:** entrypoints should not import routers directly; they should import `app.hoc.app:include_hoc` (L2.1 wiring) and let L2.1 facades define the surface.
+
 | Legacy Import | HOC Import |
 |---------------|------------|
 | `.api.aos_accounts` | `.hoc.api.cus.policies.aos_accounts` |
 | `.api.activity` | `.hoc.api.cus.activity.activity` |
-| `.api.agents` | `.hoc.api.cus.general.agents` |
+| `.api.agents` | `.hoc.api.int.agent.agents` |
 | `.api.alerts` | `.hoc.api.cus.policies.alerts` |
 | `.api.analytics` | `.hoc.api.cus.policies.analytics` |
-| `.api.authz_status` | `.hoc.api.cus.agent.authz_status` |
+| `.api.authz_status` | `.hoc.api.int.agent.authz_status` |
 | `.api.compliance` | `.hoc.api.cus.policies.compliance` |
 | `.api.cost_guard` | `.hoc.api.cus.incidents.cost_guard` |
 | `.api.cost_intelligence` | `.hoc.api.cus.logs.cost_intelligence` |
-| `.api.cost_ops` | `.hoc.api.cus.ops.cost_ops` |
+| `.api.cost_ops` | `.hoc.api.fdr.ops.cost_ops` |
 | `.api.costsim` | `.hoc.api.cus.analytics.costsim` |
-| `.api.discovery` | `.hoc.api.cus.agent.discovery` |
+| `.api.discovery` | `.hoc.api.int.agent.discovery` |
 | `.api.embedding` | `.hoc.api.cus.api_keys.embedding` |
 | `.api.feedback` | `.hoc.api.cus.analytics.feedback` |
 | `.api.founder_actions` | `.hoc.api.fdr.ops.founder_actions` |
@@ -193,24 +210,24 @@ The following table shows the complete mapping from legacy imports to HOC import
 | `.api.guard` | `.hoc.api.cus.policies.guard` |
 | `.api.guard_logs` | `.hoc.api.cus.logs.guard_logs` |
 | `.api.guard_policies` | `.hoc.api.cus.policies.guard_policies` |
-| `.api.health` | `.hoc.api.cus.general.health` |
+| `.api.health` | `.hoc.api.int.general.health` |
 | `.api.incidents` | `.hoc.api.cus.incidents.incidents` |
-| `.api.legacy_routes` | `.hoc.api.cus.general.legacy_routes` |
+| `.api.legacy_routes` | `.hoc.api.int.general.legacy_routes` |
 | `.api.logs` | `.hoc.api.cus.policies.logs` |
 | `.api.memory_pins` | `.hoc.api.cus.account.memory_pins` |
-| `.api.onboarding` | `.hoc.api.cus.agent.onboarding` |
+| `.api.onboarding` | `.hoc.api.int.agent.onboarding` |
 | `.api.ops` | `.hoc.api.fdr.incidents.ops` |
 | `.api.overview` | `.hoc.api.cus.overview.overview` |
-| `.api.platform` | `.hoc.api.cus.agent.platform` |
+| `.api.platform` | `.hoc.api.int.agent.platform` |
 | `.api.policies` | `.hoc.api.cus.policies.policies` |
 | `.api.policy` | `.hoc.api.cus.policies.policy` |
 | `.api.predictions` | `.hoc.api.cus.analytics.predictions` |
 | `.api.rbac_api` | `.hoc.api.cus.policies.rbac_api` |
-| `.api.recovery` | `.hoc.api.cus.recovery.recovery` |
+| `.api.recovery` | `.hoc.api.int.recovery.recovery` |
 | `.api.replay` | `.hoc.api.cus.policies.replay` |
 | `.api.runtime` | `.hoc.api.cus.policies.runtime` |
 | `.api.scenarios` | `.hoc.api.cus.analytics.scenarios` |
-| `.api.sdk` | `.hoc.api.cus.general.sdk` |
+| `.api.sdk` | `.hoc.api.int.general.sdk` |
 | `.api.session_context` | `.hoc.api.cus.integrations.session_context` |
 | `.api.tenants` | `.hoc.api.cus.logs.tenants` |
 | `.api.traces` | `.hoc.api.cus.logs.traces` |
@@ -227,6 +244,8 @@ The following files in HOC API directories are NOT routers (they are dependency 
 |------|---------|
 | `cus/api_keys/auth_helpers.py` | FastAPI auth dependencies |
 | `cus/integrations/protection_dependencies.py` | Protection gate dependencies |
+
+Additional non-router dependency modules exist under `int/` and `infrastructure/` for middleware/dependency wiring.
 | `cus/policies/billing_dependencies.py` | Billing gate dependencies |
 
 These files should NOT be included in router registration.

@@ -35,15 +35,15 @@ Why This Facade Exists:
 - Single point for audit emission
 
 L2 API Routes (GAP-112):
-- POST /api/v1/scheduler/jobs (create job)
-- GET /api/v1/scheduler/jobs (list jobs)
-- GET /api/v1/scheduler/jobs/{id} (get job)
-- PUT /api/v1/scheduler/jobs/{id} (update job)
-- DELETE /api/v1/scheduler/jobs/{id} (delete job)
-- POST /api/v1/scheduler/jobs/{id}/trigger (trigger job)
-- POST /api/v1/scheduler/jobs/{id}/pause (pause job)
-- POST /api/v1/scheduler/jobs/{id}/resume (resume job)
-- GET /api/v1/scheduler/jobs/{id}/runs (job run history)
+- POST /scheduler/jobs (create job)
+- GET /scheduler/jobs (list jobs)
+- GET /scheduler/jobs/{id} (get job)
+- PUT /scheduler/jobs/{id} (update job)
+- DELETE /scheduler/jobs/{id} (delete job)
+- POST /scheduler/jobs/{id}/trigger (trigger job)
+- POST /scheduler/jobs/{id}/pause (pause job)
+- POST /scheduler/jobs/{id}/resume (resume job)
+- GET /scheduler/jobs/{id}/runs (job run history)
 
 Usage:
     # L5 engine import (V2.0.0 - hoc_spine)
@@ -202,4 +202,3 @@ pairing:
   expected_l5_consumers: []
   orchestrator_operations: []
 ```
-

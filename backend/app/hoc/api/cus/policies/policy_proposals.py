@@ -49,7 +49,7 @@ from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.policy_proposals")
 
-router = APIRouter(prefix="/api/v1/policy-proposals", tags=["policy-proposals", "pb-s4"])
+router = APIRouter(prefix="/policy-proposals", tags=["policy-proposals", "pb-s4"])
 
 
 # =============================================================================

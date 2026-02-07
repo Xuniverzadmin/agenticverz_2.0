@@ -98,7 +98,7 @@ def _run_via_api(
 
     try:
         response = client.post(
-            "/api/v1/workers/business-builder/run",
+            "/workers/business-builder/run",
             json=payload,
         )
         response.raise_for_status()
@@ -112,7 +112,7 @@ def _run_via_api(
 
             for _ in range(120):  # Max 10 minutes
                 time.sleep(5)
-                poll_response = client.get(f"/api/v1/workers/business-builder/runs/{run_id}")
+                poll_response = client.get(f"/workers/business-builder/runs/{run_id}")
                 poll_response.raise_for_status()
                 result = poll_response.json()
 
@@ -135,7 +135,7 @@ def _replay_via_api(api_url: str, api_key: str, token: dict) -> dict:
 
     try:
         response = client.post(
-            "/api/v1/workers/business-builder/replay",
+            "/workers/business-builder/replay",
             json={"replay_token": token},
         )
         response.raise_for_status()
@@ -151,7 +151,7 @@ def _inspect_via_api(api_url: str, api_key: str, run_id: str) -> dict:
     client = _get_api_client(api_url, api_key)
 
     try:
-        response = client.get(f"/api/v1/workers/business-builder/runs/{run_id}")
+        response = client.get(f"/workers/business-builder/runs/{run_id}")
         response.raise_for_status()
         return response.json()
     except httpx.HTTPStatusError as e:
@@ -166,7 +166,7 @@ def _list_runs_via_api(api_url: str, api_key: str, limit: int) -> dict:
 
     try:
         response = client.get(
-            "/api/v1/workers/business-builder/runs",
+            "/workers/business-builder/runs",
             params={"limit": limit},
         )
         response.raise_for_status()

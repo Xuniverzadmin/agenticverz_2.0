@@ -19,19 +19,19 @@
 Lifecycle API (L2)
 
 Provides lifecycle operations:
-- POST /api/v1/lifecycle/agents (create agent)
-- GET /api/v1/lifecycle/agents (list agents)
-- GET /api/v1/lifecycle/agents/{id} (get agent)
-- POST /api/v1/lifecycle/agents/{id}/start (start agent)
-- POST /api/v1/lifecycle/agents/{id}/stop (stop agent)
-- POST /api/v1/lifecycle/agents/{id}/terminate (terminate agent)
-- POST /api/v1/lifecycle/runs (create run)
-- GET /api/v1/lifecycle/runs (list runs)
-- GET /api/v1/lifecycle/runs/{id} (get run)
-- POST /api/v1/lifecycle/runs/{id}/pause (pause run)
-- POST /api/v1/lifecycle/runs/{id}/resume (resume run)
-- POST /api/v1/lifecycle/runs/{id}/cancel (cancel run)
-- GET /api/v1/lifecycle/summary (lifecycle summary)
+- POST /lifecycle/agents (create agent)
+- GET /lifecycle/agents (list agents)
+- GET /lifecycle/agents/{id} (get agent)
+- POST /lifecycle/agents/{id}/start (start agent)
+- POST /lifecycle/agents/{id}/stop (stop agent)
+- POST /lifecycle/agents/{id}/terminate (terminate agent)
+- POST /lifecycle/runs (create run)
+- GET /lifecycle/runs (list runs)
+- GET /lifecycle/runs/{id} (get run)
+- POST /lifecycle/runs/{id}/pause (pause run)
+- POST /lifecycle/runs/{id}/resume (resume run)
+- POST /lifecycle/runs/{id}/cancel (cancel run)
+- GET /lifecycle/summary (lifecycle summary)
 
 This is the ONLY facade for lifecycle operations.
 All lifecycle APIs flow through this router.

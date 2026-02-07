@@ -23,8 +23,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
-from .auth import verify_api_key
-from .auth.rbac_middleware import RBACMiddleware
+from app.hoc.cus.hoc_spine.auth_wiring import RBACMiddleware, verify_api_key
 from .contracts.decisions import backfill_run_id_for_request
 from .db import Agent, Memory, Provenance, Run, engine, init_db
 from .logging_config import log_provenance, log_request, setup_logging
@@ -527,7 +526,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize M7 services - FAIL-FAST if memory features are enabled but modules unavailable
     try:
-        from .auth.rbac_engine import init_rbac_engine
+        from app.hoc.cus.account.auth import init_rbac_engine
         from .db import get_session
         from .memory.memory_service import init_memory_service
         from .memory.update_rules import init_update_rules_engine
@@ -660,7 +659,7 @@ async def lifespan(app: FastAPI):
     # =========================================================================
     # Initialize the auth gateway with dependencies (session store, API key service)
     try:
-        from .auth.gateway_config import AUTH_GATEWAY_ENABLED, configure_auth_gateway
+        from app.hoc.cus.hoc_spine.auth_wiring import AUTH_GATEWAY_ENABLED, configure_auth_gateway
 
         if AUTH_GATEWAY_ENABLED:
             gateway = await configure_auth_gateway()
@@ -744,11 +743,14 @@ async def lifespan(app: FastAPI):
 
 
 # ---------- FastAPI App ----------
+from app.hoc.cus.hoc_spine.authority.veil_policy import fastapi_schema_urls
+
 app = FastAPI(
     title="NOVA Agent Manager",
     description="AOS MVA - Agent Manager + Planner with async execution",
     version="0.2.0",
     lifespan=lifespan,
+    **fastapi_schema_urls(),
 )
 
 
@@ -903,234 +905,10 @@ async def openapi_inspect():
     }
 
 
-# Include API routers
-from .hoc.api.cus.policies.aos_accounts import router as accounts_router  # ACCOUNTS: Unified facade (/api/v1/accounts/*)
-from .hoc.api.cus.activity.activity import router as activity_router  # ACTIVITY Domain: Unified facade (/api/v1/activity/*)
-from .hoc.api.cus.policies.analytics import router as analytics_router  # ANALYTICS Domain: Unified facade (/api/v1/analytics/*)
-from .hoc.api.cus.general.agents import router as agents_router  # M12 Multi-Agent System
-from .hoc.api.cus.agent.authz_status import router as authz_status_router  # T5: Internal authz status
-from .hoc.api.cus.policies.aos_cus_integrations import router as aos_cus_integrations_router  # CONNECTIVITY: Customer LLM Integrations BYOK (/api/v1/integrations/*)
-from .hoc.api.cus.integrations.mcp_servers import router as mcp_servers_router  # PIN-516: MCP Servers (/api/v1/integrations/mcp-servers/*)
-from .hoc.api.cus.policies.aos_api_key import router as aos_api_key_router  # CONNECTIVITY: API Keys facade (/api/v1/api-keys/*)
-from .hoc.api.cus.integrations.cus_telemetry import router as cus_telemetry_router  # Customer LLM telemetry ingestion
-from .hoc.api.cus.policies.cus_enforcement import router as cus_enforcement_router  # Customer LLM enforcement checks
-from .hoc.api.cus.incidents.cost_guard import router as cost_guard_router  # /guard/costs/* - Customer cost visibility
+# Include HOC API surface via L2.1 facades (Phase 5)
+from app.hoc.app import include_hoc
 
-# M26 Cost Intelligence - Token attribution, anomaly detection, budget enforcement
-from .hoc.api.cus.logs.cost_intelligence import router as cost_intelligence_router
-
-# M29 Category 4: Cost Intelligence Completion
-from .hoc.api.cus.ops.cost_ops import router as cost_ops_router  # /ops/cost/* - Founder cost visibility
-from .hoc.api.cus.analytics.costsim import router as costsim_router
-from .hoc.api.cus.policies.customer_visibility import router as customer_visibility_router  # Phase 4C-2 Customer Visibility
-from .hoc.api.cus.api_keys.embedding import router as embedding_router  # PIN-047 Embedding Quota API
-
-# M29 Category 6: Founder Action Paths
-from .hoc.api.fdr.ops.founder_actions import router as founder_actions_router  # /ops/actions/* - Founder actions
-
-# CRM Contract Review (approve/reject workflow)
-from .hoc.api.fdr.agent.founder_contract_review import (
-    router as founder_contract_review_router,  # /fdr/contracts/* - Contract review
-)
-from .hoc.api.fdr.account.founder_explorer import router as explorer_router  # H3 Founder Explorer (cross-tenant READ-ONLY)
-
-# PIN-399 Phase-4: Founder onboarding recovery (force-complete)
-from .hoc.api.fdr.incidents.founder_onboarding import router as founder_onboarding_router
-
-# PIN-333: Founder AUTO_EXECUTE Review (evidence-only, read-only)
-from .hoc.api.fdr.logs.founder_review import router as founder_review_router  # /fdr/review/* - Evidence review
-from .hoc.api.fdr.logs.founder_timeline import router as founder_timeline_router  # Phase 4C-1 Founder Timeline
-
-# M22.1 UI Console - Dual-console architecture (Customer + Operator)
-from .hoc.api.cus.policies.guard import router as guard_router  # Customer Console (/guard/*)
-from .hoc.api.cus.logs.guard_logs import router as guard_logs_router  # PIN-281: Customer Logs (/guard/logs/*)
-from .hoc.api.cus.policies.guard_policies import router as guard_policies_router  # PIN-281: Customer Policies (/guard/policies/*)
-from .hoc.api.cus.general.health import router as health_router
-from .hoc.api.cus.incidents.incidents import router as incidents_router  # INCIDENTS Domain: Unified facade (/api/v1/incidents/*)
-
-# M28: failures_router removed (PIN-145) - duplicates /ops/incidents/patterns
-from .hoc.api.cus.policies.M25_integrations import router as m25_integration_router  # M25 Pillar Integration Loop (INTERNAL)
-
-# M29 Category 7: Legacy Route Handlers (410 Gone)
-from .hoc.api.cus.general.legacy_routes import router as legacy_routes_router  # 410 Gone for deprecated paths
-from .hoc.api.cus.policies.logs import router as logs_router  # LOGS Domain: Unified facade (/api/v1/logs/*)
-from .hoc.api.cus.account.memory_pins import router as memory_pins_router
-from .hoc.api.cus.agent.onboarding import router as onboarding_router  # M24 Customer Onboarding
-
-# M28: operator_router removed (PIN-145) - redundant with /ops/*
-from .hoc.api.fdr.incidents.ops import router as ops_router  # M24 Ops Console (founder intelligence)
-from .hoc.api.cus.overview.overview import router as overview_router  # OVERVIEW Domain: Unified facade (/api/v1/overview/*)
-from .hoc.api.cus.agent.platform import router as platform_router  # PIN-284 Platform Health (founder-only)
-from .hoc.api.cus.policies.policies import router as policies_router  # POLICIES Domain: Unified facade (/api/v1/policies/*)
-from .hoc.api.cus.policies.policy import router as policy_router
-from .hoc.api.cus.policies.policy_layer import router as policy_layer_router  # M19 Policy Layer
-
-# PIN-LIM: Limits Management Domain
-from .hoc.api.cus.policies.policy_limits_crud import router as policy_limits_crud_router  # PIN-LIM-01: Policy limits CRUD
-from .hoc.api.cus.policies.policy_rules_crud import router as policy_rules_crud_router  # PIN-LIM-02: Policy rules CRUD
-from .hoc.api.cus.policies.simulate import router as limits_simulate_router  # PIN-LIM-04: Limit simulation
-from .hoc.api.cus.policies.override import router as limits_override_router  # PIN-LIM-05: Limit overrides
-from .hoc.api.cus.policies.rbac_api import router as rbac_router
-from .hoc.api.cus.recovery.recovery import router as recovery_router
-from .hoc.api.cus.recovery.recovery_ingest import router as recovery_ingest_router
-from .hoc.api.cus.policies.replay import router as replay_router  # H1 Replay UX (READ-ONLY slice/timeline)
-from .hoc.api.cus.policies.runtime import router as runtime_router
-from .hoc.api.cus.analytics.scenarios import router as scenarios_router  # H2 Scenario-based Cost Simulation (advisory)
-
-# PIN-399: SDK handshake and registration endpoints
-from .hoc.api.cus.general.sdk import router as sdk_router
-
-# PIN-409: Session context for frontend auth state
-from .hoc.api.cus.integrations.session_context import router as session_context_router
-
-# Debug: Auth context visibility endpoint (AUTHORITY_CONTRACT.md)
-from .hoc.api.cus.general.debug_auth import router as debug_auth_router
-from .hoc.api.cus.policies.status_history import router as status_history_router
-from .hoc.api.cus.logs.tenants import router as tenants_router  # M21 - RE-ENABLED: PIN-399 Onboarding State Machine
-from .hoc.api.cus.logs.traces import router as traces_router
-from .hoc.api.cus.policies.v1_killswitch import router as v1_killswitch_router  # Kill switch, incidents, replay
-
-# M22 KillSwitch MVP - OpenAI-compatible proxy with safety controls
-from .hoc.api.cus.integrations.v1_proxy import router as v1_proxy_router  # Drop-in OpenAI replacement
-from .hoc.api.cus.policies.workers import router as workers_router  # Business Builder Worker v0.2
-from .predictions.api import router as c2_predictions_router  # C2 Predictions (advisory only)
-
-# W4 Phase: L2 API Facades (GAP-090 to GAP-136)
-from .hoc.api.cus.policies.retrieval import router as retrieval_router  # RETRIEVAL: /api/v1/retrieval/* (GAP-094)
-from .hoc.api.cus.policies.detection import router as detection_router  # DETECTION: /api/v1/detection/* (GAP-102)
-from .hoc.api.cus.policies.compliance import router as compliance_router  # COMPLIANCE: /api/v1/compliance/* (GAP-103)
-from .hoc.api.cus.policies.evidence import router as evidence_router  # EVIDENCE: /api/v1/evidence/* (GAP-104, GAP-105)
-from .hoc.api.cus.policies.notifications import router as notifications_router  # NOTIFICATIONS: /api/v1/notifications/* (GAP-109)
-from .hoc.api.cus.policies.alerts import router as alerts_router  # ALERTS: /api/v1/alerts/* (GAP-110, GAP-111, GAP-124)
-from .hoc.api.cus.policies.scheduler import router as scheduler_router  # SCHEDULER: /api/v1/scheduler/* (GAP-112)
-from .hoc.api.cus.policies.datasources import router as datasources_router  # DATASOURCES: /api/v1/datasources/* (GAP-113)
-from .hoc.api.cus.policies.monitors import router as monitors_router  # MONITORS: /api/v1/monitors/* (GAP-120, GAP-121)
-from .hoc.api.cus.policies.rate_limits import router as rate_limits_router  # RATE_LIMITS: /api/v1/rate-limits/* (GAP-122)
-from .hoc.api.cus.policies.controls import router as controls_router  # CONTROLS: /api/v1/controls/* (GAP-123)
-from .hoc.api.cus.policies.lifecycle import router as lifecycle_router  # LIFECYCLE: /api/v1/lifecycle/* (GAP-131-136)
-
-# PIN-411: Aurora Runtime Projections - REMOVED (all domains now have unified facades)
-# Activity → /api/v1/activity/*, Incidents → /api/v1/incidents/*, Overview → /api/v1/overview/*
-# Policies → /api/v1/policies/*, Logs → /api/v1/logs/*
-
-app.include_router(health_router)
-app.include_router(policy_router)
-app.include_router(runtime_router)
-app.include_router(status_history_router)
-app.include_router(costsim_router)
-app.include_router(memory_pins_router)
-app.include_router(rbac_router)
-app.include_router(traces_router, prefix="/api/v1")
-app.include_router(replay_router, prefix="/api/v1")  # H1 Replay UX (READ-ONLY)
-app.include_router(scenarios_router, prefix="/api/v1")  # H2 Scenarios (advisory simulation)
-app.include_router(explorer_router, prefix="/api/v1")  # H3 Explorer (founder cross-tenant READ-ONLY)
-# M28: failures_router removed (PIN-145)
-app.include_router(recovery_router)  # M10 Recovery Suggestion Engine
-app.include_router(recovery_ingest_router)  # M10 Recovery Ingest (idempotent)
-app.include_router(agents_router)  # M12 Multi-Agent System
-app.include_router(policy_layer_router, prefix="/api/v1")  # M19 Policy Layer
-app.include_router(embedding_router, prefix="/api/v1")  # PIN-047 Embedding Quota
-app.include_router(workers_router)  # Business Builder Worker v0.2
-app.include_router(tenants_router)  # M21 - RE-ENABLED: PIN-399 Onboarding State Machine
-app.include_router(sdk_router)  # PIN-399: SDK handshake and registration
-app.include_router(session_context_router)  # PIN-409: Session context for frontend auth
-app.include_router(debug_auth_router)  # Debug: Auth context visibility (AUTHORITY_CONTRACT.md)
-
-# M22 KillSwitch MVP - OpenAI-compatible proxy (THE FRONT DOOR)
-app.include_router(v1_proxy_router)  # /v1/chat/completions, /v1/embeddings, /v1/status
-app.include_router(v1_killswitch_router)  # /v1/killswitch/*, /v1/policies/*, /v1/incidents/*, /v1/replay/*, /v1/demo/*
-
-# M22.1 UI Console - Dual-console architecture
-app.include_router(guard_router)  # /guard/* - Customer Console (trust + control)
-app.include_router(guard_logs_router)  # PIN-281: /guard/logs/* - Customer Logs (L4→L3→L2)
-app.include_router(guard_policies_router)  # PIN-281: /guard/policies/* - Customer Policy Constraints
-app.include_router(activity_router)  # ACTIVITY Domain: /api/v1/activity/* (unified facade)
-app.include_router(incidents_router)  # INCIDENTS Domain: /api/v1/incidents/* (unified facade)
-app.include_router(overview_router)  # OVERVIEW Domain: /api/v1/overview/* (unified facade)
-app.include_router(policies_router)  # POLICIES Domain: /api/v1/policies/* (unified facade)
-app.include_router(analytics_router, prefix="/api/v1")  # ANALYTICS Domain: /api/v1/analytics/* (unified facade)
-
-# PIN-LIM: Limits Management Domain routers
-app.include_router(policy_limits_crud_router, prefix="/api/v1")  # PIN-LIM-01: Policy limits CRUD
-app.include_router(policy_rules_crud_router, prefix="/api/v1")  # PIN-LIM-02: Policy rules CRUD
-app.include_router(limits_simulate_router, prefix="/api/v1")  # PIN-LIM-04: Limit simulation
-app.include_router(limits_override_router, prefix="/api/v1")  # PIN-LIM-05: Limit overrides
-
-app.include_router(logs_router)  # LOGS Domain: /api/v1/logs/* (unified facade)
-app.include_router(aos_cus_integrations_router)  # CONNECTIVITY: /api/v1/integrations/* (Customer LLM BYOK)
-app.include_router(mcp_servers_router)  # PIN-516: /api/v1/integrations/mcp-servers/* (MCP Server Management)
-app.include_router(aos_api_key_router)  # CONNECTIVITY: /api/v1/api-keys/* (API keys facade)
-app.include_router(cus_telemetry_router, prefix="/api/v1")  # Customer LLM telemetry ingestion
-app.include_router(cus_enforcement_router, prefix="/api/v1")  # Customer LLM enforcement checks
-app.include_router(accounts_router)  # ACCOUNTS: /api/v1/accounts/* (unified facade)
-# M28: operator_router removed (PIN-145) - merged into /ops/*
-app.include_router(ops_router)  # /ops/* - M24 Founder Intelligence Console
-app.include_router(platform_router)  # /platform/* - PIN-284 Platform Health (founder-only)
-app.include_router(founder_timeline_router)  # Phase 4C-1 Founder Timeline (decision records)
-app.include_router(founder_review_router)  # PIN-333: /fdr/review/* - AUTO_EXECUTE evidence review (FOPS auth)
-app.include_router(
-    founder_contract_review_router
-)  # CRM: /fdr/contracts/* - Contract approval/rejection (FOPS auth)
-app.include_router(founder_onboarding_router)  # PIN-399 Phase-4: /fdr/onboarding/* - Force-complete (FOPS auth)
-app.include_router(customer_visibility_router)  # Phase 4C-2 Customer Visibility (predictability)
-app.include_router(onboarding_router)  # /api/v1/auth/* - M24 Customer Onboarding
-app.include_router(m25_integration_router)  # /integration/* - M25 Pillar Integration Loop (INTERNAL)
-app.include_router(cost_intelligence_router)  # /cost/* - M26 Cost Intelligence
-
-# M29 Category 4: Cost Intelligence Completion - Domain-separated cost visibility
-app.include_router(cost_ops_router)  # /ops/cost/* - Founder cost overview (FOPS auth)
-app.include_router(cost_guard_router)  # /guard/costs/* - Customer cost summary (Console auth)
-
-# T5: Authorization Status (internal visibility)
-app.include_router(authz_status_router)  # /int/authz/* - M28/M7 status
-
-# C2 Prediction Plane (advisory only, no control influence)
-app.include_router(c2_predictions_router)  # /api/v1/c2/predictions - C2 Prediction Plane
-# M29 Category 6: Founder Action Paths
-app.include_router(founder_actions_router)  # /ops/actions/* - Freeze, throttle, override (FOPS auth)
-# M29 Category 7: Legacy Route Handlers (410 Gone for deprecated paths)
-app.include_router(legacy_routes_router)  # /dashboard, /operator/*, /demo/*, /simulation/*
-
-# Phase B Observability APIs (READ-ONLY) - PB-S3, PB-S4, PB-S5
-from .hoc.api.cus.analytics.feedback import router as feedback_router  # PB-S3 pattern_feedback
-from .hoc.api.cus.policies.policy_proposals import router as policy_proposals_router  # PB-S4 policy_proposals
-from .hoc.api.cus.analytics.predictions import router as predictions_router  # PB-S5 prediction_events
-
-app.include_router(feedback_router)  # /api/v1/feedback - Pattern feedback (read-only)
-app.include_router(policy_proposals_router)  # /api/v1/policy-proposals - Policy proposals (read-only)
-app.include_router(predictions_router)  # /api/v1/predictions - Predictions (read-only)
-
-# Phase C Discovery Ledger (internal, founder/dev only)
-from .hoc.api.cus.agent.discovery import router as discovery_router
-
-app.include_router(discovery_router)  # /api/v1/discovery - Discovery Ledger (read-only)
-
-# W4 Phase: L2 API Facades (GAP-090 to GAP-136) - Domain-unified facades
-app.include_router(retrieval_router, prefix="/api/v1")  # RETRIEVAL: /api/v1/retrieval/* (GAP-094)
-app.include_router(detection_router, prefix="/api/v1")  # DETECTION: /api/v1/detection/* (GAP-102)
-app.include_router(compliance_router, prefix="/api/v1")  # COMPLIANCE: /api/v1/compliance/* (GAP-103)
-app.include_router(evidence_router, prefix="/api/v1")  # EVIDENCE: /api/v1/evidence/* (GAP-104, GAP-105)
-app.include_router(notifications_router, prefix="/api/v1")  # NOTIFICATIONS: /api/v1/notifications/* (GAP-109)
-app.include_router(alerts_router, prefix="/api/v1")  # ALERTS: /api/v1/alerts/* (GAP-110, GAP-111, GAP-124)
-app.include_router(scheduler_router, prefix="/api/v1")  # SCHEDULER: /api/v1/scheduler/* (GAP-112)
-app.include_router(datasources_router, prefix="/api/v1")  # DATASOURCES: /api/v1/datasources/* (GAP-113)
-app.include_router(monitors_router, prefix="/api/v1")  # MONITORS: /api/v1/monitors/* (GAP-120, GAP-121)
-app.include_router(rate_limits_router, prefix="/api/v1")  # RATE_LIMITS: /api/v1/rate-limits/* (GAP-122)
-app.include_router(controls_router, prefix="/api/v1")  # CONTROLS: /api/v1/controls/* (GAP-123)
-app.include_router(lifecycle_router, prefix="/api/v1")  # LIFECYCLE: /api/v1/lifecycle/* (GAP-131-136)
-
-# Phase 3: New HOC-only routers (PIN-526 migration)
-from .hoc.api.fdr.account.founder_lifecycle import router as founder_lifecycle_router
-from .hoc.api.cus.policies.connectors import router as connectors_router
-from .hoc.api.cus.policies.governance import router as governance_router
-
-app.include_router(founder_lifecycle_router)  # /fdr/lifecycle/* - Founder lifecycle management
-app.include_router(connectors_router, prefix="/api/v1")  # /api/v1/connectors/* - Connector management
-app.include_router(governance_router, prefix="/api/v1")  # /api/v1/governance/* - Governance endpoints
-
-# PIN-411: Aurora Runtime Projections - REMOVED (all domains now have unified facades)
-# See unified facades: /api/v1/activity/*, /api/v1/incidents/*, /api/v1/overview/*,
-# /api/v1/policies/*, /api/v1/logs/*, /api/v1/integrations/*, /api/v1/api-keys/*, /api/v1/accounts/*
+include_hoc(app)
 
 # CORS middleware
 app.add_middleware(
@@ -1152,12 +930,12 @@ app.add_middleware(RBACMiddleware)
 # Auth Gateway middleware (CAP-006)
 # Central authentication entry point - JWT XOR API Key, session revocation
 # Must run BEFORE RBAC so auth context is available
-from .auth.gateway_config import AUTH_GATEWAY_ENABLED, setup_auth_middleware
+from app.hoc.cus.hoc_spine.auth_wiring import AUTH_GATEWAY_ENABLED, setup_auth_middleware
 
 # Onboarding Gate middleware (PIN-399)
 # Enforces onboarding state requirements per endpoint
 # Must run AFTER Auth (needs tenant_id) but BEFORE RBAC
-from .auth.onboarding_gate import OnboardingGateMiddleware
+from app.hoc.cus.hoc_spine.auth_wiring import OnboardingGateMiddleware
 
 # Middleware execution order (Starlette runs in reverse of add order):
 # 1. AuthGateway (authenticates, sets auth_context)
@@ -1416,45 +1194,6 @@ async def _execute_run_inner(run_id: str):
         else:
             nova_runs_total.labels(status="failed", planner=planner_backend).inc()
             nova_runs_failed_total.inc()
-
-
-# ---------- Endpoints ----------
-@app.get("/health")
-async def health_check():
-    """Health check with DB validation."""
-    try:
-        with Session(engine) as session:
-            session.exec(select(Agent).limit(1))
-        db_status = "connected"
-    except Exception as e:
-        db_status = f"error: {str(e)[:100]}"
-
-    api_key_set = bool(os.getenv("AOS_API_KEY"))
-
-    # GAP-046: Include EventReactor status in health check
-    from .events.reactor_initializer import get_reactor_status
-    reactor_status = get_reactor_status()
-    reactor_healthy = reactor_status.get("healthy", False)
-
-    # GAP-069: Include governance state in health check
-    from .services.governance.runtime_switch import get_governance_state
-    governance_state = get_governance_state()
-
-    all_healthy = (
-        db_status == "connected"
-        and api_key_set
-        and reactor_healthy
-        and governance_state.get("governance_active", True)
-    )
-
-    return {
-        "status": "healthy" if all_healthy else "degraded",
-        "service": "nova_agent_manager",
-        "database": db_status,
-        "api_key_configured": api_key_set,
-        "event_reactor": reactor_status,  # GAP-046
-        "governance": governance_state,   # GAP-069
-    }
 
 
 @app.get("/version")

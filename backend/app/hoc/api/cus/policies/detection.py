@@ -17,12 +17,12 @@
 Detection API (L2)
 
 Provides anomaly detection operations:
-- POST /api/v1/detection/run (run detection on demand)
-- GET /api/v1/detection/anomalies (list anomalies)
-- GET /api/v1/detection/anomalies/{id} (get anomaly)
-- POST /api/v1/detection/anomalies/{id}/resolve (resolve anomaly)
-- POST /api/v1/detection/anomalies/{id}/acknowledge (acknowledge anomaly)
-- GET /api/v1/detection/status (detection engine status)
+- POST /detection/run (run detection on demand)
+- GET /detection/anomalies (list anomalies)
+- GET /detection/anomalies/{id} (get anomaly)
+- POST /detection/anomalies/{id}/resolve (resolve anomaly)
+- POST /detection/anomalies/{id}/acknowledge (acknowledge anomaly)
+- GET /detection/status (detection engine status)
 
 This is the ONLY facade for anomaly detection operations.
 All detection APIs flow through this router.

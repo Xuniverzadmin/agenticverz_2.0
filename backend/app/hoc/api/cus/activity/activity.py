@@ -23,23 +23,23 @@ Customer-facing endpoints for viewing execution activity.
 All requests are tenant-scoped via auth_context.
 
 V2 Endpoints (Topic-Scoped - PREFERRED):
-- GET /api/v1/activity/live              → LIVE runs with policy context
-- GET /api/v1/activity/completed         → COMPLETED runs with policy context
-- GET /api/v1/activity/signals           → Synthesized attention signals
-- GET /api/v1/activity/metrics           → Aggregated activity metrics
-- GET /api/v1/activity/threshold-signals → Threshold proximity tracking
+- GET /activity/live              → LIVE runs with policy context
+- GET /activity/completed         → COMPLETED runs with policy context
+- GET /activity/signals           → Synthesized attention signals
+- GET /activity/metrics           → Aggregated activity metrics
+- GET /activity/threshold-signals → Threshold proximity tracking
 
 V1 Endpoints (Legacy):
-- GET /api/v1/activity/runs              → [DEPRECATED] O2 list with filters
-- GET /api/v1/activity/runs/{run_id}     → O3 detail
-- GET /api/v1/activity/runs/{run_id}/evidence → O4 context (preflight)
-- GET /api/v1/activity/runs/{run_id}/proof    → O5 raw (preflight)
-- GET /api/v1/activity/summary/by-status → COMP-O3 status summary
-- GET /api/v1/activity/runs/by-dimension → [DEPRECATED] dimension grouping
-- GET /api/v1/activity/patterns          → SIG-O3 pattern detection
-- GET /api/v1/activity/cost-analysis     → SIG-O4 cost anomalies
-- GET /api/v1/activity/attention-queue   → SIG-O5 attention ranking
-- GET /api/v1/activity/risk-signals      → Risk signal aggregates
+- GET /activity/runs              → [DEPRECATED] O2 list with filters
+- GET /activity/runs/{run_id}     → O3 detail
+- GET /activity/runs/{run_id}/evidence → O4 context (preflight)
+- GET /activity/runs/{run_id}/proof    → O5 raw (preflight)
+- GET /activity/summary/by-status → COMP-O3 status summary
+- GET /activity/runs/by-dimension → [DEPRECATED] dimension grouping
+- GET /activity/patterns          → SIG-O3 pattern detection
+- GET /activity/cost-analysis     → SIG-O4 cost anomalies
+- GET /activity/attention-queue   → SIG-O5 attention ranking
+- GET /activity/risk-signals      → Risk signal aggregates
 
 Architecture:
 - ONE facade for all ACTIVITY needs
@@ -733,7 +733,7 @@ class AttentionQueueResponse(BaseModel):
 
 
 router = APIRouter(
-    prefix="/api/v1/activity",
+    prefix="/activity",
     tags=["activity"],
 )
 
@@ -834,7 +834,7 @@ async def list_runs(
     # DEPRECATION: Use /activity/live or /activity/completed instead
     user_agent = request.headers.get("user-agent", "unknown")
     logger.warning(
-        "DEPRECATED_ENDPOINT_CALLED: /api/v1/activity/runs | "
+        "DEPRECATED_ENDPOINT_CALLED: /activity/runs | "
         f"tenant_id={tenant_id} | "
         f"state={state.value if state else 'none'} | "
         f"user_agent={user_agent[:100]} | "

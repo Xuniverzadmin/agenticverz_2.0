@@ -23,8 +23,8 @@
 Policy API Endpoints (M5)
 
 Provides:
-1. Policy sandbox evaluation (/api/v1/policy/eval)
-2. Approval workflow endpoints (/api/v1/policy/requests/*)
+1. Policy sandbox evaluation (/policy/eval)
+2. Approval workflow endpoints (/policy/requests/*)
 3. Webhook callbacks for async approvals
 
 Integrates with:
@@ -70,7 +70,7 @@ from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.policy")
 
-router = APIRouter(prefix="/api/v1/policy", tags=["policy"])
+router = APIRouter(prefix="/policy", tags=["policy"])
 
 
 # =============================================================================

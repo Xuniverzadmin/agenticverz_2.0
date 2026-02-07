@@ -40,11 +40,11 @@ Responsibilities:
 Reference: PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
 """
 
+from datetime import datetime, timezone
 from typing import Dict, Optional
 
 from sqlmodel import Session
 
-from app.hoc.cus.hoc_spine.services.time import utc_now
 from app.models.tenant import User
 
 
@@ -101,7 +101,7 @@ class UserWriteDriver:
         Returns:
             Updated User instance
         """
-        now = utc_now()
+        now = datetime.now(timezone.utc)
         user.last_login_at = now
         user.updated_at = now
         self._session.add(user)

@@ -32,6 +32,7 @@ INVARIANTS:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import re
@@ -59,22 +60,17 @@ def _get_default_public_paths() -> list[str]:
     Get default public paths from RBAC_RULES.yaml schema (PIN-391).
 
     Returns paths marked as PUBLIC tier for the current environment.
-    Falls back to hardcoded list if schema loading fails.
+    Falls back to hoc_spine authority policy if schema loading fails.
     """
     try:
         return get_public_paths(environment=_CURRENT_ENVIRONMENT)
     except Exception as e:
-        logger.warning("Failed to load public paths from schema, using fallback: %s", e)
-        # Fallback for resilience (remove after Phase 2B validation)
-        return [
-            "/health",
-            "/metrics",
-            "/docs",
-            "/redoc",
-            "/openapi.json",
-            "/api/v1/auth/",
-            "/api/v1/c2/predictions/",
-        ]
+        logger.warning("Failed to load public paths from schema, using authority fallback: %s", e)
+        try:
+            from app.hoc.cus.hoc_spine.authority.gateway_policy import get_public_paths as authority_paths
+            return authority_paths()
+        except Exception:
+            return ["/health", "/metrics", "/docs", "/redoc", "/openapi.json"]
 
 
 # PIN-391: Schema-driven public paths (loaded at module import)
@@ -165,6 +161,33 @@ class AuthGatewayMiddleware(BaseHTTPMiddleware):
         # Log auth attempt at debug level
         logger.debug(f"Auth check: path={path}, has_auth={bool(authorization)}, has_key={bool(api_key)}")
 
+        # Veil posture: if no credentials are presented, avoid revealing that a protected surface exists.
+        # This is intentionally scoped to unauthenticated probes (not invalid credentials).
+        if not authorization and not api_key:
+            try:
+                from app.hoc.cus.hoc_spine.authority.veil_policy import (
+                    deny_as_404_enabled,
+                    probe_rate_limit_enabled,
+                    probe_rate_per_minute,
+                    unauthenticated_http_status_code,
+                )
+
+                if deny_as_404_enabled():
+                    if probe_rate_limit_enabled():
+                        from app.hoc.cus.hoc_spine.services.rate_limiter import get_rate_limiter
+
+                        client_ip = self._get_client_ip(request)
+                        key = f"probe:no-cred:{client_ip}"
+                        allowed = get_rate_limiter().allow(key, probe_rate_per_minute())
+                        if not allowed:
+                            # Slow brute-force enumeration without disclosing a distinct status code.
+                            await asyncio.sleep(0.5)
+
+                    return JSONResponse(status_code=unauthenticated_http_status_code(), content={"error": "not_found"})
+            except Exception:
+                # Veil policy must never break auth.
+                pass
+
         # Authenticate through gateway (lookup at request time for proper init order)
         gateway = self._get_gateway()
         result = await gateway.authenticate(
@@ -211,6 +234,15 @@ class AuthGatewayMiddleware(BaseHTTPMiddleware):
 
     def _error_response(self, error: GatewayAuthError) -> JSONResponse:
         """Convert gateway error to HTTP response."""
+        try:
+            from app.hoc.cus.hoc_spine.authority.veil_policy import deny_as_404_enabled, unauthenticated_http_status_code
+
+            if deny_as_404_enabled():
+                return JSONResponse(status_code=unauthenticated_http_status_code(), content={"error": "not_found"})
+        except Exception:
+            # Veil policy must never break auth.
+            pass
+
         return JSONResponse(
             status_code=error.http_status,
             content={
@@ -314,7 +346,7 @@ def get_auth_context(request: Request) -> Optional[GatewayContext]:
     Usage in route handlers:
         from app.auth.gateway_middleware import get_auth_context
 
-        @app.get("/api/v1/resource")
+        @app.get("/resource")
         async def get_resource(request: Request):
             context = get_auth_context(request)
             if context is None:
@@ -330,7 +362,7 @@ def require_auth_context(request: Request) -> GatewayContext:
     Usage in route handlers:
         from app.auth.gateway_middleware import require_auth_context
 
-        @app.get("/api/v1/resource")
+        @app.get("/resource")
         async def get_resource(request: Request):
             context = require_auth_context(request)
             # context is guaranteed to be present

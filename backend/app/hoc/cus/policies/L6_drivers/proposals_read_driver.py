@@ -32,7 +32,6 @@ from typing import Any, Optional
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.hoc.cus.hoc_spine.services.time import utc_now
 from app.models.policy import PolicyProposal
 
 

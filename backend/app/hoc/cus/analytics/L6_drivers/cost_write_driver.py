@@ -47,7 +47,6 @@ from typing import Optional
 from sqlmodel import Session
 
 from app.db import CostBudget, CostRecord, FeatureTag
-from app.hoc.cus.hoc_spine.services.time import utc_now
 
 
 class CostWriteDriver:
@@ -127,7 +126,7 @@ class CostWriteDriver:
         if is_active is not None:
             feature_tag.is_active = is_active
 
-        feature_tag.updated_at = utc_now()
+        feature_tag.updated_at = datetime.now(timezone.utc)
 
         self._session.add(feature_tag)
         self._session.flush()  # Get updated data, NO COMMIT — L4 owns transaction
@@ -221,7 +220,7 @@ class CostWriteDriver:
             existing_budget.monthly_limit_cents = monthly_limit_cents
             existing_budget.warn_threshold_pct = warn_threshold_pct
             existing_budget.hard_limit_enabled = hard_limit_enabled
-            existing_budget.updated_at = utc_now()
+            existing_budget.updated_at = datetime.now(timezone.utc)
             budget = existing_budget
         else:
             budget = CostBudget(

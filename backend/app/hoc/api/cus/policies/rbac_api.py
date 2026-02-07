@@ -13,10 +13,10 @@
 RBAC Management API
 
 Provides endpoints for managing RBAC policies:
-- GET /api/v1/rbac/info - Get current policy info
-- POST /api/v1/rbac/reload - Hot-reload policies from file
-- GET /api/v1/rbac/matrix - Get current permission matrix
-- GET /api/v1/rbac/audit - Query audit logs
+- GET /rbac/info - Get current policy info
+- POST /rbac/reload - Hot-reload policies from file
+- GET /rbac/matrix - Get current permission matrix
+- GET /rbac/audit - Query audit logs
 
 Requires RBAC permission: rbac:read or rbac:reload
 
@@ -53,7 +53,7 @@ def _get_rbac_engine():
 
 logger = logging.getLogger("nova.api.rbac")
 
-router = APIRouter(prefix="/api/v1/rbac", tags=["rbac"])
+router = APIRouter(prefix="/rbac", tags=["rbac"])
 
 
 # =============================================================================

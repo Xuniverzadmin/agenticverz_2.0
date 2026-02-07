@@ -17,12 +17,12 @@
 Retrieval API (L2)
 
 Provides mediated data retrieval operations:
-- POST /api/v1/retrieval/access (mediated data access)
-- GET /api/v1/retrieval/planes (list available planes)
-- POST /api/v1/retrieval/planes (register plane)
-- GET /api/v1/retrieval/planes/{id} (get plane)
-- GET /api/v1/retrieval/evidence (list evidence records)
-- GET /api/v1/retrieval/evidence/{id} (get evidence)
+- POST /retrieval/access (mediated data access)
+- GET /retrieval/planes (list available planes)
+- POST /retrieval/planes (register plane)
+- GET /retrieval/planes/{id} (get plane)
+- GET /retrieval/evidence (list evidence records)
+- GET /retrieval/evidence/{id} (get evidence)
 
 This is the ONLY facade for mediated data retrieval.
 All data access from LLM-controlled code MUST flow through this router.

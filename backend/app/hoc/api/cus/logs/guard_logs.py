@@ -6,9 +6,9 @@
 #
 # GOVERNANCE NOTE (LOGS Domain V2):
 # This adapter is DEPRECATED in favor of the unified LOGS facade.
-# The canonical facade is /api/v1/logs/* (logs.py).
+# The canonical facade is /logs/* (logs.py).
 # This adapter remains for backward compatibility with /guard/logs/* routes.
-# New console features should use /api/v1/logs/llm-runs/* instead.
+# New console features should use /logs/llm-runs/* instead.
 # Migration path: PIN-TBD (consolidate to unified facade)
 
 """Guard Logs API - Customer Console Logs Endpoint

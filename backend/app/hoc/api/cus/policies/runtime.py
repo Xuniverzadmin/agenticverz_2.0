@@ -19,11 +19,11 @@
 Machine-Native Runtime API Endpoints (M5.5)
 
 Provides REST API exposure for machine-native runtime primitives:
-1. POST /api/v1/runtime/simulate - Pre-execution plan simulation
-2. POST /api/v1/runtime/query - Runtime state queries
-3. GET /api/v1/runtime/skills - List available skills
-4. GET /api/v1/runtime/skills/{skill_id} - Describe a skill
-5. GET /api/v1/runtime/capabilities - Get capabilities for an agent
+1. POST /runtime/simulate - Pre-execution plan simulation
+2. POST /runtime/query - Runtime state queries
+3. GET /runtime/skills - List available skills
+4. GET /runtime/skills/{skill_id} - Describe a skill
+5. GET /runtime/capabilities - Get capabilities for an agent
 
 Design Principles (from PIN-005):
 - Queryable state: Agent asks questions, gets structured answers
@@ -56,7 +56,7 @@ logger = logging.getLogger("nova.api.runtime")
 # Use AOS_WORKSPACE_ROOT environment variable to override
 AOS_WORKSPACE_ROOT = os.environ.get("AOS_WORKSPACE_ROOT", "/var/lib/aos/workspace")
 
-router = APIRouter(prefix="/api/v1/runtime", tags=["runtime"])
+router = APIRouter(prefix="/runtime", tags=["runtime"])
 
 
 # =============================================================================

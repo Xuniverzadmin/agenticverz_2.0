@@ -27,11 +27,11 @@ Customer-facing endpoints for system overview and health.
 All requests are tenant-scoped via auth_context.
 
 Endpoints:
-- GET /api/v1/overview/highlights      → O1 system pulse & domain counts (Activity, Incidents, Policies)
-- GET /api/v1/overview/decisions       → O2 pending decisions queue
-- GET /api/v1/overview/decisions/count → O2 decisions count summary
-- GET /api/v1/overview/costs           → O2 cost intelligence summary
-- GET /api/v1/overview/recovery-stats  → O3 recovery statistics
+- GET /overview/highlights      → O1 system pulse & domain counts (Activity, Incidents, Policies)
+- GET /overview/decisions       → O2 pending decisions queue
+- GET /overview/decisions/count → O2 decisions count summary
+- GET /overview/costs           → O2 cost intelligence summary
+- GET /overview/recovery-stats  → O3 recovery statistics
 
 This is the ONLY facade for overview operations.
 All overview APIs flow through this router.
@@ -209,7 +209,7 @@ class RecoveryStatsResponse(BaseModel):
 # =============================================================================
 
 router = APIRouter(
-    prefix="/api/v1/overview",
+    prefix="/overview",
     tags=["overview"],
 )
 

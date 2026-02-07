@@ -22,15 +22,15 @@ Customer-facing endpoints for viewing incidents.
 All requests are tenant-scoped via auth_context.
 
 Endpoints:
-- GET /api/v1/incidents                        → O2 list with filters
-- GET /api/v1/incidents/{incident_id}          → O3 detail
-- GET /api/v1/incidents/{incident_id}/evidence → O4 context (preflight)
-- GET /api/v1/incidents/{incident_id}/proof    → O5 raw (preflight)
-- GET /api/v1/incidents/{incident_id}/learnings → O4 post-mortem learnings
-- GET /api/v1/incidents/by-run/{run_id}        → Incidents linked to run
-- GET /api/v1/incidents/patterns               → ACT-O5 pattern detection
-- GET /api/v1/incidents/recurring              → HIST-O3 recurrence analysis
-- GET /api/v1/incidents/cost-impact            → RES-O3 cost impact analysis
+- GET /incidents                        → O2 list with filters
+- GET /incidents/{incident_id}          → O3 detail
+- GET /incidents/{incident_id}/evidence → O4 context (preflight)
+- GET /incidents/{incident_id}/proof    → O5 raw (preflight)
+- GET /incidents/{incident_id}/learnings → O4 post-mortem learnings
+- GET /incidents/by-run/{run_id}        → Incidents linked to run
+- GET /incidents/patterns               → ACT-O5 pattern detection
+- GET /incidents/recurring              → HIST-O3 recurrence analysis
+- GET /incidents/cost-impact            → RES-O3 cost impact analysis
 
 Architecture:
 - ONE facade for all INCIDENTS needs
@@ -439,7 +439,7 @@ class LearningsResponse(BaseModel):
 
 
 router = APIRouter(
-    prefix="/api/v1/incidents",
+    prefix="/incidents",
     tags=["incidents"],
 )
 
@@ -479,9 +479,9 @@ def get_tenant_id_from_auth(request: Request) -> str:
 # WARNING: This endpoint is DEPRECATED and should NOT be used by UI panels.
 #
 # Use topic-scoped endpoints instead:
-#   - /api/v1/incidents/active     (ACTIVE topic)
-#   - /api/v1/incidents/resolved   (RESOLVED topic)
-#   - /api/v1/incidents/historical (HISTORICAL topic)
+#   - /incidents/active     (ACTIVE topic)
+#   - /incidents/resolved   (RESOLVED topic)
+#   - /incidents/historical (HISTORICAL topic)
 #
 # Reference: INCIDENTS_DOMAIN_MIGRATION_PLAN.md Phase 5
 # =============================================================================
@@ -498,9 +498,9 @@ def get_tenant_id_from_auth(request: Request) -> str:
     This endpoint is maintained for backward compatibility only.
     New code MUST use topic-scoped endpoints:
 
-    - **ACTIVE incidents**: `/api/v1/incidents/active`
-    - **RESOLVED incidents**: `/api/v1/incidents/resolved`
-    - **HISTORICAL incidents**: `/api/v1/incidents/historical`
+    - **ACTIVE incidents**: `/incidents/active`
+    - **RESOLVED incidents**: `/incidents/resolved`
+    - **HISTORICAL incidents**: `/incidents/historical`
 
     Topic-scoped endpoints enforce semantics at the boundary,
     eliminating caller-controlled topic filtering.
@@ -538,7 +538,7 @@ async def list_incidents(
     user_agent = request.headers.get("user-agent", "unknown")
     referer = request.headers.get("referer", "unknown")
     logger.warning(
-        "DEPRECATED ENDPOINT ACCESS: /api/v1/incidents called directly. "
+        "DEPRECATED ENDPOINT ACCESS: /incidents called directly. "
         "Migrate to topic-scoped endpoints (/incidents/active, /incidents/resolved). "
         "User-Agent: %s, Referer: %s",
         user_agent[:100] if user_agent else "unknown",

@@ -31,7 +31,8 @@ L6 contract:
 - Returns domain objects (LimitOverrideResponse) or raises typed errors
 """
 
-from datetime import timedelta
+import uuid
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Optional
 
@@ -39,8 +40,6 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.policy_control_plane import Limit, LimitOverride
-from app.hoc.cus.hoc_spine.services.time import utc_now
-from app.hoc.cus.hoc_spine.drivers.cross_domain import generate_uuid
 from app.hoc.cus.controls.L5_schemas.overrides import (
     LimitOverrideRequest,
     LimitOverrideResponse,
@@ -142,7 +141,7 @@ class LimitOverrideService:
             )
 
         # Calculate timing
-        now = utc_now()
+        now = datetime.now(timezone.utc)
         starts_at = now if request.start_immediately else request.scheduled_start
         expires_at = starts_at + timedelta(hours=request.duration_hours) if starts_at else None
 
@@ -151,7 +150,7 @@ class LimitOverrideService:
 
         # Create override record
         override = LimitOverride(
-            id=generate_uuid(),
+            id=str(uuid.uuid4()),
             tenant_id=tenant_id,
             limit_id=request.limit_id,
             original_value=limit.max_value,
@@ -252,7 +251,7 @@ class LimitOverrideService:
             raise OverrideValidationError("Only pending/active overrides can be cancelled")
 
         override.status = OverrideStatus.CANCELLED.value
-        override.cancelled_at = utc_now()
+        override.cancelled_at = datetime.now(timezone.utc)
         override.cancelled_by = cancelled_by
         await self.session.flush()
 

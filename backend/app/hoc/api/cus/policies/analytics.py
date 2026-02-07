@@ -26,10 +26,10 @@ Subdomain: Statistics
 Topic v1: Usage
 
 Endpoints:
-- GET /api/v1/analytics/statistics/usage             → Usage statistics
-- GET /api/v1/analytics/statistics/usage/export.csv  → CSV export
-- GET /api/v1/analytics/statistics/usage/export.json → JSON export
-- GET /api/v1/analytics/_status                      → Capability probe
+- GET /analytics/statistics/usage             → Usage statistics
+- GET /analytics/statistics/usage/export.csv  → CSV export
+- GET /analytics/statistics/usage/export.json → JSON export
+- GET /analytics/_status                      → Capability probe
 
 Architecture:
 - ONE facade for all ANALYTICS needs
@@ -135,7 +135,7 @@ class UsageSignals(BaseModel):
 
 
 class UsageStatisticsResponse(BaseModel):
-    """GET /api/v1/analytics/statistics/usage response (contracted)."""
+    """GET /analytics/statistics/usage response (contracted)."""
     window: UsageWindow
     totals: UsageTotals
     series: List[UsageDataPoint]
@@ -190,7 +190,7 @@ class CostSignals(BaseModel):
 
 
 class CostStatisticsResponse(BaseModel):
-    """GET /api/v1/analytics/statistics/cost response (contracted)."""
+    """GET /analytics/statistics/cost response (contracted)."""
     window: TimeWindow
     totals: CostTotals
     series: List[CostDataPoint]
@@ -207,7 +207,7 @@ class TopicStatus(BaseModel):
 
 
 class AnalyticsStatusResponse(BaseModel):
-    """GET /api/v1/analytics/_status response."""
+    """GET /analytics/_status response."""
     domain: str = "analytics"
     subdomains: List[str]
     topics: Dict[str, TopicStatus]

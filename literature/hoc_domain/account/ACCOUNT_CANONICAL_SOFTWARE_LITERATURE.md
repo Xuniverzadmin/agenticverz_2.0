@@ -58,7 +58,13 @@ Zero active `app.services` imports. Clean.
 
 ### L4 Handler — None
 
-No `account_handler.py` exists in `hoc_spine/orchestrator/handlers/`. Account domain has no L4 orchestrator wiring. Candidate for construction during L2-L4-L5 wiring phase.
+**Reality update (2026-02-06):** Account domain IS wired into hoc_spine via `backend/app/hoc/cus/hoc_spine/orchestrator/handlers/account_handler.py` (L4).
+Registered operations include:
+- `account.query`
+- `account.notifications`
+- `account.billing.provider`
+- `account.memory_pins`
+- `account.tenant`
 
 ---
 
@@ -71,10 +77,10 @@ Account domain handles identity and billing:
 
 ---
 
-## L5_engines (10 files)
+## L5_engines (9 files)
 
 ### __init__.py
-- **Role:** Package init, re-exports EmailVerificationService, TenantEngine, UserWriteService, AccountsFacade, NotificationsFacade
+- **Role:** Package init, re-exports `EmailVerificationService`, `TenantEngine`, `UserWriteService`, `AccountsFacade`, `NotificationsFacade`
 
 ### accounts_facade.py
 - **Role:** Unified entry point for account management
@@ -87,25 +93,21 @@ Account domain handles identity and billing:
 
 ### crm_validator_engine.py *(relocated from L5_support/CRM/engines/)*
 - **Role:** Issue Validator — pure analysis, advisory verdicts
-- **Note:** Duplicate `validator_engine.py` deleted (header-only diff)
+- **Schema split:** Validator enums/dataclasses live in `account/L5_schemas/crm_validator_types.py` to avoid cross-domain L5 engine imports.
 
 ### email_verification_engine.py *(renamed from email_verification.py)*
 - **Role:** Email OTP verification engine for customer onboarding
 - **Classes:** EmailVerificationService
 - **Callers:** onboarding.py (auth flow)
 
-### identity_resolver_engine.py *(renamed from identity_resolver.py)*
-- **Role:** Identity resolution from various providers
-- **Callers:** IAMService, Auth middleware
+### memory_pins_engine.py
+- **Role:** Memory pins business logic (feature flag, metrics, audit) — consumes an injected L6 driver port (no Session in L5).
+- **Wiring:** L4 `AccountMemoryPinsHandler` owns commit/rollback and injects a session-bound L6 driver.
 
 ### notifications_facade.py
 - **Role:** Centralized access to notification operations
 - **Classes:** NotificationsFacade
 - **Factory:** `get_notifications_facade()`
-
-### profile_engine.py *(renamed from profile.py)*
-- **Role:** Governance Profile configuration and validation
-- **Callers:** main.py (L2), workers (L5)
 
 ### tenant_engine.py
 - **Role:** Tenant domain engine — business logic for tenant operations
@@ -118,22 +120,31 @@ Account domain handles identity and billing:
 
 ---
 
-## L5_schemas (1 file)
+## L5_schemas (3 files)
 
 ### __init__.py
-- **Role:** Schemas package init (empty, awaiting schema files)
+- **Role:** Schemas package init
+
+### result_types.py
+- **Role:** Shared result types safe for L2 import
+
+### crm_validator_types.py
+- **Role:** CRM validator schema types shared across domains (enums + dataclasses)
 
 ---
 
-## L6_drivers (4 files)
+## L6_drivers (5 files)
 
 ### __init__.py
-- **Role:** Package init, re-exports AccountsFacadeDriver, TenantDriver, UserWriteDriver, WorkerRegistryService (cross-domain)
+- **Role:** Package init, re-exports `AccountsFacadeDriver`, `TenantDriver`, `UserWriteDriver`
 
 ### accounts_facade_driver.py
 - **Role:** Accounts domain facade driver — pure data access
 - **Classes:** AccountsFacadeDriver
 - **Factory:** `get_accounts_facade_driver()`
+
+### memory_pins_driver.py
+- **Role:** Memory pins data access (raw SQL). Driver is session-bound; never commits.
 
 ### tenant_driver.py
 - **Role:** Tenant domain driver — pure data access for tenant operations

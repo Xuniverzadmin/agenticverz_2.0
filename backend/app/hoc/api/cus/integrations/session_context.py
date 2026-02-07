@@ -18,7 +18,7 @@ This endpoint replaces frontend-derived authorization facts (isFounder, audience
 with backend-verified context. The frontend reads, never infers.
 
 Endpoint:
-    GET /api/v1/session/context - Get current session context
+    GET /session/context - Get current session context
 
 Response:
     {
@@ -47,7 +47,7 @@ from app.auth.lifecycle_provider import get_lifecycle_provider
 from app.auth.onboarding_state import OnboardingState
 from app.schemas.response import wrap_dict
 
-router = APIRouter(prefix="/api/v1/session", tags=["Session"])
+router = APIRouter(prefix="/session", tags=["Session"])
 
 
 @router.get("/context")

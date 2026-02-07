@@ -18,10 +18,10 @@ Allows authorized users to request temporary increases to limits,
 with approval workflow and automatic expiry.
 
 Endpoints:
-    POST /api/v1/limits/overrides         → Request new override
-    GET  /api/v1/limits/overrides         → List overrides for tenant
-    GET  /api/v1/limits/overrides/{id}    → Get specific override
-    DELETE /api/v1/limits/overrides/{id}  → Cancel override
+    POST /limits/overrides         → Request new override
+    GET  /limits/overrides         → List overrides for tenant
+    GET  /limits/overrides/{id}    → Get specific override
+    DELETE /limits/overrides/{id}  → Cancel override
 """
 
 from datetime import datetime

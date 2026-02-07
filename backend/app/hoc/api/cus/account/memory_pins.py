@@ -23,11 +23,11 @@ Features:
 - Prometheus metrics (via L5 engine)
 
 Endpoints:
-- POST /api/v1/memory/pins - Create or upsert a pin
-- GET /api/v1/memory/pins/{key} - Get a pin by key
-- GET /api/v1/memory/pins - List pins for tenant
-- DELETE /api/v1/memory/pins/{key} - Delete a pin
-- POST /api/v1/memory/pins/cleanup - Clean up expired pins
+- POST /memory/pins - Create or upsert a pin
+- GET /memory/pins/{key} - Get a pin by key
+- GET /memory/pins - List pins for tenant
+- DELETE /memory/pins/{key} - Delete a pin
+- POST /memory/pins/cleanup - Clean up expired pins
 
 All DB access routed through L4 operation registry → L5 engine → L6 driver.
 """
@@ -47,7 +47,7 @@ from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.memory_pins")
 
-router = APIRouter(prefix="/api/v1/memory", tags=["memory"])
+router = APIRouter(prefix="/memory", tags=["memory"])
 
 
 # ============================================================================

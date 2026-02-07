@@ -488,7 +488,7 @@ class EvidenceFacade:
             status=ExportStatus.COMPLETED.value,
             created_at=now.isoformat(),
             completed_at=now.isoformat(),
-            download_url=f"/api/v1/evidence/exports/{export_id}/download",
+            download_url=f"/evidence/exports/{export_id}/download",
         )
 
         self._exports[export_id] = export

@@ -17,16 +17,16 @@
 Scheduler API (L2)
 
 Provides scheduled job operations:
-- POST /api/v1/scheduler/jobs (create job)
-- GET /api/v1/scheduler/jobs (list jobs)
-- GET /api/v1/scheduler/jobs/{id} (get job)
-- PUT /api/v1/scheduler/jobs/{id} (update job)
-- DELETE /api/v1/scheduler/jobs/{id} (delete job)
-- POST /api/v1/scheduler/jobs/{id}/trigger (trigger job)
-- POST /api/v1/scheduler/jobs/{id}/pause (pause job)
-- POST /api/v1/scheduler/jobs/{id}/resume (resume job)
-- GET /api/v1/scheduler/jobs/{id}/runs (job runs)
-- GET /api/v1/scheduler/runs/{id} (get run)
+- POST /scheduler/jobs (create job)
+- GET /scheduler/jobs (list jobs)
+- GET /scheduler/jobs/{id} (get job)
+- PUT /scheduler/jobs/{id} (update job)
+- DELETE /scheduler/jobs/{id} (delete job)
+- POST /scheduler/jobs/{id}/trigger (trigger job)
+- POST /scheduler/jobs/{id}/pause (pause job)
+- POST /scheduler/jobs/{id}/resume (resume job)
+- GET /scheduler/jobs/{id}/runs (job runs)
+- GET /scheduler/runs/{id} (get run)
 
 This is the ONLY facade for scheduler operations.
 All scheduler APIs flow through this router.

@@ -106,7 +106,7 @@ def _record_enforcement_outcome(
         return
 
     try:
-        from app.hoc.cus.policies.L6_drivers.policy_enforcement_write_driver import (
+        from app.hoc.cus.hoc_spine.orchestrator.handlers.policies_handler import (
             record_enforcement_standalone,
         )
 

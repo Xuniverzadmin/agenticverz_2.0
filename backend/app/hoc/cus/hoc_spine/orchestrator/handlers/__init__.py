@@ -115,6 +115,11 @@ def register_all_handlers(registry: "OperationRegistry") -> None:
 
     killswitch_handler.register(registry)  # killswitch.read, killswitch.write
 
+    # System runtime — health + diagnostics (no L2 ownership beyond translation)
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import system_handler
+
+    system_handler.register(registry)  # system.health
+
 
 def bootstrap_hoc_spine() -> None:
     """
@@ -174,7 +179,27 @@ def bootstrap_hoc_spine() -> None:
         extra={"operation_count": len(registry._handlers)},
     )
 
-    # Step 3: Freeze the registry to prevent runtime registration
+    # Step 3: Wire RunGovernanceFacade with real L5 engines (G1 gap closure)
+    from app.hoc.cus.hoc_spine.orchestrator.run_governance_facade import wire_run_governance_facade
+
+    wire_run_governance_facade()
+    logger.info("hoc_spine.bootstrap: RunGovernanceFacade wired")
+
+    # Step 4: Wire consequence pipeline with adapters (G4 consequences expansion)
+    from app.hoc.cus.hoc_spine.consequences.pipeline import get_consequence_pipeline
+    from app.hoc.cus.hoc_spine.consequences.adapters.dispatch_metrics_adapter import (
+        get_dispatch_metrics_adapter,
+    )
+
+    pipeline = get_consequence_pipeline()
+    pipeline.register(get_dispatch_metrics_adapter())
+    pipeline.freeze()
+    logger.info(
+        "hoc_spine.bootstrap: consequence pipeline wired",
+        extra={"adapter_count": pipeline.adapter_count},
+    )
+
+    # Step 5: Freeze the registry to prevent runtime registration
     registry.freeze()
 
     logger.info("hoc_spine.bootstrap: registry frozen — HOC Spine runtime ready")

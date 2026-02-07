@@ -56,7 +56,6 @@ from app.hoc.cus.policies.L6_drivers.proposals_read_driver import (
 from app.hoc.cus.policies.L6_drivers.policy_enforcement_write_driver import (
     PolicyEnforcementWriteDriver,
     get_policy_enforcement_write_driver,
-    record_enforcement_standalone,
 )
 from app.hoc.cus.policies.L6_drivers.replay_read_driver import (
     ReplayReadDriver,
@@ -128,7 +127,6 @@ __all__ = [
     # Policy Enforcement write driver (PIN-524)
     "PolicyEnforcementWriteDriver",
     "get_policy_enforcement_write_driver",
-    "record_enforcement_standalone",
     # Replay read driver (Replay UX H1)
     "ReplayReadDriver",
     "get_replay_read_driver",

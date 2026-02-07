@@ -55,7 +55,8 @@ logger = logging.getLogger(__name__)
 EXEMPT_PREFIXES = (
     "/health",
     "/metrics",
-    "/api/v1/auth/",
+    # Canonical onboarding endpoints (Phase-7 design invariant: protection exempt).
+    "/onboarding",
     "/fdr/",
     "/docs",
     "/openapi.json",

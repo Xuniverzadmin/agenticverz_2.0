@@ -49,6 +49,7 @@ from app.hoc.cus.hoc_spine.schemas.rac_models import (
     AuditStatus,
     DomainAck,
 )
+from app.hoc.cus.hoc_spine.services.dispatch_audit import DispatchRecord
 
 logger = logging.getLogger("nova.hoc.cus.hoc_spine.services.audit_store")
 
@@ -139,6 +140,7 @@ class AuditStore:
         self._durability_mode = _determine_durability_mode(redis_client)
         self._expectations: Dict[str, List[AuditExpectation]] = {}
         self._acks: Dict[str, List[DomainAck]] = {}
+        self._dispatches: List[DispatchRecord] = []
         self._lock = Lock()
         self._redis = redis_client
 
@@ -301,6 +303,82 @@ class AuditStore:
 
         with self._lock:
             return list(self._acks.get(run_key, []))
+
+    # =========================================================================
+    # Dispatch Audit Operations (Phase A.6 — G4)
+    # =========================================================================
+
+    def record_dispatch(self, record: DispatchRecord) -> None:
+        """
+        Record a dispatch audit entry.
+
+        Called by OperationRegistry._audit_dispatch() AFTER the operation
+        completes. Post-commit only — never participates in the operation's
+        transaction (Constitution §2.3).
+
+        Args:
+            record: Frozen DispatchRecord from build_dispatch_record()
+        """
+        with self._lock:
+            self._dispatches.append(record)
+
+        logger.debug(
+            "audit_store.record_dispatch",
+            extra={
+                "operation": record.operation,
+                "tenant_id": record.tenant_id,
+                "success": record.success,
+                "duration_ms": record.duration_ms,
+            },
+        )
+
+        # Sync to Redis if enabled (append to list)
+        if self._redis and AUDIT_REDIS_ENABLED:
+            self._sync_dispatch_to_redis(record)
+
+    def get_dispatch_records(
+        self,
+        operation: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+        limit: int = 100,
+    ) -> List[DispatchRecord]:
+        """
+        Get dispatch records with optional filtering.
+
+        Args:
+            operation: Filter by operation name
+            tenant_id: Filter by tenant ID
+            limit: Max records to return (most recent first)
+
+        Returns:
+            List of DispatchRecord (newest first, up to limit)
+        """
+        with self._lock:
+            records = list(self._dispatches)
+
+        # Apply filters
+        if operation:
+            records = [r for r in records if r.operation == operation]
+        if tenant_id:
+            records = [r for r in records if r.tenant_id == tenant_id]
+
+        # Most recent first, capped at limit
+        return records[-limit:][::-1]
+
+    def _sync_dispatch_to_redis(self, record: DispatchRecord) -> None:
+        """Append a dispatch record to Redis list."""
+        if not self._redis:
+            return
+
+        try:
+            self._redis.rpush(
+                "rac:dispatches",
+                json.dumps(record.to_dict()),
+            )
+            # Cap list length (keep last 10000 records)
+            self._redis.ltrim("rac:dispatches", -10000, -1)
+        except Exception as e:
+            logger.warning(f"Failed to sync dispatch to Redis: {e}")
 
     # =========================================================================
     # Cleanup Operations

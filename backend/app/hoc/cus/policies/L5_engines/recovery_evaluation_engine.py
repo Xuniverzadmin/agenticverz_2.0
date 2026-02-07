@@ -59,8 +59,8 @@ from app.hoc.cus.hoc_spine.utilities.recovery_decisions import (
     should_auto_execute,
     should_select_action,
 )
-# PIN-507 Law 6: Import evaluate_rules directly from its engine (not via schemas proxy)
-from app.hoc.cus.incidents.L5_engines.recovery_rule_engine import (
+# Cross-domain access via hoc_spine gateway (E1 compliance)
+from app.hoc.cus.hoc_spine.services.cross_domain_gateway import (
     evaluate_rules,
 )
 

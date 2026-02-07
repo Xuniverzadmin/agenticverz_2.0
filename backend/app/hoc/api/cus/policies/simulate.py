@@ -18,7 +18,7 @@ Allows callers to test whether an execution would be permitted
 before actually running it.
 
 Endpoint:
-    POST /api/v1/limits/simulate
+    POST /limits/simulate
 
 Returns:
     - decision: ALLOW | BLOCK | WARN

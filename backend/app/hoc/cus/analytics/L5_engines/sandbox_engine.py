@@ -34,8 +34,8 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-# Use async circuit breaker for non-blocking DB operations
-from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import (
+# Use async circuit breaker via hoc_spine gateway (no direct cross-domain L6 import)
+from app.hoc.cus.hoc_spine.services.cross_domain_gateway import (
     is_v2_disabled,
     report_drift,
 )

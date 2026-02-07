@@ -17,11 +17,11 @@
 Governance API (L2)
 
 Provides governance control operations:
-- POST /api/v1/governance/kill-switch (GAP-090)
-- POST /api/v1/governance/mode (GAP-091)
-- POST /api/v1/governance/resolve-conflict (GAP-092)
-- GET /api/v1/governance/boot-status (GAP-095)
-- GET /api/v1/governance/state
+- POST /governance/kill-switch (GAP-090)
+- POST /governance/mode (GAP-091)
+- POST /governance/resolve-conflict (GAP-092)
+- GET /governance/boot-status (GAP-095)
+- GET /governance/state
 
 This is the ONLY facade for governance control operations.
 All governance APIs flow through this router.

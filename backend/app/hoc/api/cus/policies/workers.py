@@ -21,12 +21,12 @@
 API endpoints for Business Builder Worker.
 
 Endpoints:
-- POST /api/v1/workers/business-builder/run - Execute the worker
-- POST /api/v1/workers/business-builder/replay - Replay a previous execution
-- GET /api/v1/workers/business-builder/runs/{run_id} - Get run details
-- GET /api/v1/workers/business-builder/runs - List recent runs
-- POST /api/v1/workers/business-builder/validate-brand - Validate brand schema
-- GET /api/v1/workers/business-builder/stream/{run_id} - SSE stream for real-time updates
+- POST /workers/business-builder/run - Execute the worker
+- POST /workers/business-builder/replay - Replay a previous execution
+- GET /workers/business-builder/runs/{run_id} - Get run details
+- GET /workers/business-builder/runs - List recent runs
+- POST /workers/business-builder/validate-brand - Validate brand schema
+- GET /workers/business-builder/stream/{run_id} - SSE stream for real-time updates
 
 All endpoints require authentication via API key or Bearer token.
 """
@@ -95,7 +95,7 @@ def _calculate_cost_cents(model: str, input_tokens: int, output_tokens: int) -> 
     return adapter.calculate_cost_cents(model, input_tokens, output_tokens)
 
 
-router = APIRouter(prefix="/api/v1/workers/business-builder", tags=["Workers"])
+router = APIRouter(prefix="/workers/business-builder", tags=["Workers"])
 
 
 # =============================================================================
@@ -1401,7 +1401,7 @@ async def stream_run_events(
 
     Usage (JavaScript):
     ```js
-    const sse = new EventSource('/api/v1/workers/business-builder/stream/{run_id}');
+    const sse = new EventSource('/workers/business-builder/stream/{run_id}');
     sse.onmessage = (event) => console.log(JSON.parse(event.data));
     sse.addEventListener('stage_completed', (event) => { ... });
     ```

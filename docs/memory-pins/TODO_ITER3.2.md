@@ -25,15 +25,15 @@ Canonical live classification is in `docs/architecture/hoc/P2_STEP4_1_L2_CLASSIF
 
 **Results (Live - Evidence Scan Verified):**
 - 69 total L2 APIRouter files (string-scan: `APIRouter(`)
-- 47 files dispatch via registry (`registry.execute(`)
-- 22 files do not dispatch via registry (all classified + justified in the supplement)
+- 50 files dispatch via registry (`registry.execute(`)
+- 19 files do not dispatch via registry (all classified + justified in the supplement)
 
 **Compliance:** 100% (all 69 files compliant or have justified exceptions)
 
 **Approved Patterns:**
 Counts by pattern were tracked in earlier snapshots; use `docs/architecture/hoc/P2_STEP4_1_L2_CLASSIFICATION_SUPPLEMENT.md` for canonical live classification lists.
 1. `registry.execute(...)` dispatch — Registry pattern (canonical)
-2. hoc_spine bridges — `get_*_bridge()` capability access (non-registry justified)
+2. hoc_spine bridges — `get_*_bridge()` capability access (allowed pattern; currently 0 non-registry files match this)
 3. hoc_spine services facades — `app.hoc.cus.hoc_spine.services.*` delegation (non-registry justified)
 4. Console/runtime adapters — `app.adapters.*` boundary pattern (non-registry justified)
 5. Stateless/local endpoints — no DB access needed (non-registry justified)
@@ -269,4 +269,4 @@ This is tracked separately from the commit/rollback authority rule and requires 
 
 - `docs/memory-pins/TODO_ITER3.2.md` references `docs/architecture/hoc/P2_STEP4_1_L2_DB_EXECUTION_REMOVAL_EVIDENCE.md`, but the evidence artifact currently exists at `backend/docs/architecture/hoc/P2_STEP4_1_L2_DB_EXECUTION_REMOVAL_EVIDENCE.md` (canonical copy still missing).
 - Live scan (string heuristic: `APIRouter` + `get_operation_registry`) currently shows 41/69 L2 router files using `get_operation_registry()`. The READ-ONLY audit artifacts still reflect the earlier 32/69 snapshot.
-- Live scan (stronger heuristic: `APIRouter` + `registry.execute(`) currently shows 47/69 L2 router files dispatch via the registry. `docs/architecture/hoc/P2_STEP4_1_L2_CLASSIFICATION_SUPPLEMENT.md` is the canonical live classification; `docs/architecture/hoc/P2_STEP4_1_L2_NON_REGISTRY_AUDIT.md` is a READ-ONLY snapshot.
+- Live scan (stronger heuristic: `APIRouter` + `registry.execute(`) currently shows 50/69 L2 router files dispatch via the registry. `docs/architecture/hoc/P2_STEP4_1_L2_CLASSIFICATION_SUPPLEMENT.md` is the canonical live classification; `docs/architecture/hoc/P2_STEP4_1_L2_NON_REGISTRY_AUDIT.md` is a READ-ONLY snapshot.

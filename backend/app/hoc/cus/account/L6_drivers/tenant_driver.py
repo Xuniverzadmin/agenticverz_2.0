@@ -46,12 +46,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, List, Optional, cast
 
 from sqlmodel import Session, func, select
 
-from app.hoc.cus.hoc_spine.services.time import utc_now
 from app.models.tenant import (
     APIKey,
     AuditLog,
@@ -238,7 +237,7 @@ class TenantDriver:
         tenant.max_concurrent_runs = max_concurrent_runs
         tenant.max_tokens_per_month = max_tokens_per_month
         tenant.max_api_keys = max_api_keys
-        tenant.updated_at = utc_now()
+        tenant.updated_at = datetime.now(timezone.utc)
         self.session.add(tenant)
         # NO COMMIT — L4 coordinator owns transaction boundary
         return tenant
@@ -253,7 +252,7 @@ class TenantDriver:
         tenant.status = status
         if suspended_reason:
             tenant.suspended_reason = suspended_reason
-        tenant.updated_at = utc_now()
+        tenant.updated_at = datetime.now(timezone.utc)
         self.session.add(tenant)
         # NO COMMIT — L4 coordinator owns transaction boundary
         return tenant
@@ -376,7 +375,7 @@ class TenantDriver:
     ) -> APIKey:
         """Mark API key as revoked."""
         api_key.status = "revoked"
-        api_key.revoked_at = utc_now()
+        api_key.revoked_at = datetime.now(timezone.utc)
         api_key.revoked_reason = reason
         self.session.add(api_key)
         # NO COMMIT — L4 coordinator owns transaction boundary
@@ -450,7 +449,7 @@ class TenantDriver:
         run.policy_violations = policy_violations
         run.cost_cents = cost_cents
         run.error = error
-        run.completed_at = utc_now()
+        run.completed_at = datetime.now(timezone.utc)
         self.session.add(run)
         # NO COMMIT — L4 coordinator owns transaction boundary
         return run
@@ -485,7 +484,7 @@ class TenantDriver:
         metadata: Optional[dict] = None,
     ) -> UsageRecord:
         """Insert a usage record."""
-        now = utc_now()
+        now = datetime.now(timezone.utc)
         period_start = now.replace(minute=0, second=0, microsecond=0)
         period_end = period_start + timedelta(hours=1)
 

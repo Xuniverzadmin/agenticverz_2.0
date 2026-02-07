@@ -35,14 +35,14 @@ Why This Facade Exists:
 - Single point for audit emission
 
 L2 API Routes (GAP-110, GAP-111, GAP-124):
-- POST /api/v1/alerts/rules (create alert rule)
-- GET /api/v1/alerts/rules (list alert rules)
-- GET /api/v1/alerts/rules/{id} (get alert rule)
-- PUT /api/v1/alerts/rules/{id} (update alert rule)
-- DELETE /api/v1/alerts/rules/{id} (delete alert rule)
-- GET /api/v1/alerts/history (alert history)
-- GET /api/v1/alerts/routes (alert routes)
-- POST /api/v1/alerts/routes (create route)
+- POST /alerts/rules (create alert rule)
+- GET /alerts/rules (list alert rules)
+- GET /alerts/rules/{id} (get alert rule)
+- PUT /alerts/rules/{id} (update alert rule)
+- DELETE /alerts/rules/{id} (delete alert rule)
+- GET /alerts/history (alert history)
+- GET /alerts/routes (alert routes)
+- POST /alerts/routes (create route)
 
 Usage:
     from app.services.alerts.facade import get_alerts_facade
@@ -218,4 +218,3 @@ pairing:
   expected_l5_consumers: []
   orchestrator_operations: []
 ```
-

@@ -611,7 +611,7 @@ async def validate_scope_required(
     """
     raise ScopedExecutionRequired(
         f"Scoped execution required. "
-        f"Create a scope with POST /api/v1/recovery/scope first. "
+        f"Create a scope with POST /recovery/scope first. "
         f"Action: {action}, Incident: {incident_id}"
     )
 

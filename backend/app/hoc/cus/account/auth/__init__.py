@@ -18,7 +18,6 @@ from app.hoc.cus.account.auth.L5_engines.rbac_engine import (
     PolicyObject,
     RBACEngine,
     check_permission,
-    get_policy_for_path,
     get_rbac_engine,
     init_rbac_engine,
     require_permission,
@@ -47,7 +46,6 @@ __all__ = [
     "init_rbac_engine",
     "check_permission",
     "require_permission",
-    "get_policy_for_path",
     # Role mapping
     "get_role_approval_level",
     "get_max_approval_level",

@@ -23,7 +23,7 @@
 Memory Pins Driver (L6)
 
 Pure data access layer for memory pin operations.
-All methods accept an AsyncSession and return raw data.
+Driver instances are session-bound and return raw data.
 No business logic — validation, feature flags, and metrics belong in L5.
 """
 
@@ -59,9 +59,11 @@ class MemoryPinRow:
 class MemoryPinsDriver:
     """Pure data access for system.memory_pins table."""
 
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
     async def upsert_pin(
         self,
-        session: AsyncSession,
         *,
         tenant_id: str,
         key: str,
@@ -71,7 +73,7 @@ class MemoryPinsDriver:
     ) -> MemoryPinRow:
         """Insert or update a memory pin. Returns the resulting row."""
         value_json = json.dumps(value)
-        result = await session.execute(
+        result = await self._session.execute(
             text(
                 """
                 INSERT INTO system.memory_pins (tenant_id, key, value, source, ttl_seconds)
@@ -100,13 +102,12 @@ class MemoryPinsDriver:
 
     async def get_pin(
         self,
-        session: AsyncSession,
         *,
         tenant_id: str,
         key: str,
     ) -> Optional[MemoryPinRow]:
         """Get a single pin by (tenant_id, key). Returns None if not found or expired."""
-        result = await session.execute(
+        result = await self._session.execute(
             text(
                 """
                 SELECT id, tenant_id, key, value, source, created_at, updated_at, ttl_seconds, expires_at
@@ -125,7 +126,6 @@ class MemoryPinsDriver:
 
     async def list_pins(
         self,
-        session: AsyncSession,
         *,
         tenant_id: str,
         prefix: Optional[str] = None,
@@ -150,13 +150,13 @@ class MemoryPinsDriver:
 
         where_sql = " AND ".join(where_clauses)
 
-        count_result = await session.execute(
+        count_result = await self._session.execute(
             text(f"SELECT COUNT(*) FROM system.memory_pins WHERE {where_sql}"),
             params,
         )
         total = count_result.scalar() or 0
 
-        result = await session.execute(
+        result = await self._session.execute(
             text(
                 f"""
                 SELECT id, tenant_id, key, value, source, created_at, updated_at, ttl_seconds, expires_at
@@ -174,13 +174,12 @@ class MemoryPinsDriver:
 
     async def delete_pin(
         self,
-        session: AsyncSession,
         *,
         tenant_id: str,
         key: str,
     ) -> bool:
         """Delete a pin. Returns True if deleted, False if not found."""
-        result = await session.execute(
+        result = await self._session.execute(
             text(
                 """
                 DELETE FROM system.memory_pins
@@ -195,13 +194,12 @@ class MemoryPinsDriver:
 
     async def cleanup_expired(
         self,
-        session: AsyncSession,
         *,
         tenant_id: Optional[str] = None,
     ) -> int:
         """Delete expired pins. Returns count of deleted rows."""
         if tenant_id:
-            result = await session.execute(
+            result = await self._session.execute(
                 text(
                     """
                     DELETE FROM system.memory_pins
@@ -214,7 +212,7 @@ class MemoryPinsDriver:
                 {"tenant_id": tenant_id},
             )
         else:
-            result = await session.execute(
+            result = await self._session.execute(
                 text(
                     """
                     DELETE FROM system.memory_pins
@@ -228,7 +226,6 @@ class MemoryPinsDriver:
 
     async def write_audit(
         self,
-        session: AsyncSession,
         *,
         operation: str,
         tenant_id: str,
@@ -245,7 +242,7 @@ class MemoryPinsDriver:
     ) -> None:
         """Write an audit entry to system.memory_audit."""
         try:
-            await session.execute(
+            await self._session.execute(
                 text(
                     """
                     INSERT INTO system.memory_audit
@@ -292,13 +289,6 @@ class MemoryPinsDriver:
             expires_at=row.expires_at,
         )
 
-
-_instance: Optional[MemoryPinsDriver] = None
-
-
-def get_memory_pins_driver() -> MemoryPinsDriver:
-    """Get or create the singleton MemoryPinsDriver."""
-    global _instance
-    if _instance is None:
-        _instance = MemoryPinsDriver()
-    return _instance
+def get_memory_pins_driver(session: AsyncSession) -> MemoryPinsDriver:
+    """Create a session-bound MemoryPinsDriver instance."""
+    return MemoryPinsDriver(session)

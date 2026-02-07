@@ -17,13 +17,13 @@
 Notifications API (L2)
 
 Provides notification operations:
-- POST /api/v1/notifications (send notification)
-- GET /api/v1/notifications (list notifications)
-- GET /api/v1/notifications/{id} (get notification)
-- POST /api/v1/notifications/{id}/read (mark as read)
-- GET /api/v1/notifications/channels (list channels)
-- GET /api/v1/notifications/preferences (get preferences)
-- PUT /api/v1/notifications/preferences (update preferences)
+- POST /notifications (send notification)
+- GET /notifications (list notifications)
+- GET /notifications/{id} (get notification)
+- POST /notifications/{id}/read (mark as read)
+- GET /notifications/channels (list channels)
+- GET /notifications/preferences (get preferences)
+- PUT /notifications/preferences (update preferences)
 
 This is the ONLY facade for notification operations.
 All notification APIs flow through this router.

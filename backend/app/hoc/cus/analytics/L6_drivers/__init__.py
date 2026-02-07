@@ -15,10 +15,6 @@ Drivers:
 - PredictionDriver: Prediction event DB operations
 """
 
-from app.hoc.cus.hoc_spine.drivers.alert_driver import (
-    AlertDriver,
-    get_alert_driver,
-)
 from app.hoc.cus.analytics.L6_drivers.cost_anomaly_driver import (
     CostAnomalyDriver,
     get_cost_anomaly_driver,
@@ -34,8 +30,6 @@ from app.hoc.cus.analytics.L6_drivers.canary_report_driver import (
 )
 
 __all__ = [
-    "AlertDriver",
-    "get_alert_driver",
     "CostAnomalyDriver",
     "get_cost_anomaly_driver",
     "PredictionDriver",

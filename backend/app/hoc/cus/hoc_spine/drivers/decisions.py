@@ -13,11 +13,12 @@
 # Database:
 #   Scope: hoc_spine
 #   Models: decision_records (via raw SQL)
-# Role: Decision contract enforcement
-# Callers: API routes, workers
+# Role: Decision contract enforcement — pure driver (no transaction ownership)
+# Callers: L4 handlers, L5 engines (via app.contracts.decisions bridge)
 # Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
 # Reference: PIN-470, Contract System
+# Transaction: Driver NEVER commits/rollbacks — L4 caller owns transaction boundaries.
 
 """Phase 4B: Decision Record Models and Service
 
@@ -28,6 +29,9 @@ Contract-mandated fields:
 - decision_trigger: explicit | autonomous | reactive
 
 Rule: Emit records where decisions already happen. No logic changes.
+
+Transaction ownership: All functions accept a connection parameter.
+The caller (L4 handler) owns the connection lifecycle and commits.
 """
 
 import json
@@ -39,8 +43,7 @@ from enum import Enum
 from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger("nova.contracts.decisions")
@@ -174,7 +177,7 @@ class DecisionRecord(BaseModel):
 
 
 # =============================================================================
-# Decision Record Service (Append-Only Sink)
+# Decision Record Service (Append-Only Sink) — Pure Driver
 # =============================================================================
 
 
@@ -186,20 +189,16 @@ class DecisionRecordService:
     Non-blocking - failures are logged but don't affect callers.
 
     Evidence Architecture v1.0: Also bridges to governance.policy_decisions for taxonomy evidence.
+
+    Transaction ownership: All methods accept a connection parameter.
+    The service NEVER creates engines, connections, or commits.
+    L4 caller owns the transaction lifecycle.
     """
 
-    def __init__(self, db_url: Optional[str] = None, engine: Optional[Engine] = None):
-        self._db_url = db_url or os.environ.get("DATABASE_URL")
-        self._enabled = self._db_url is not None
-        self._engine = engine
+    def __init__(self) -> None:
+        self._enabled = os.environ.get("DATABASE_URL") is not None
 
-    def _get_engine(self) -> Engine:
-        """Get or lazily create a shared engine."""
-        if self._engine is None:
-            self._engine = create_engine(self._db_url)
-        return self._engine
-
-    def _bridge_to_taxonomy(self, record: DecisionRecord) -> None:
+    def _bridge_to_taxonomy(self, connection: Any, record: DecisionRecord) -> None:
         """
         Evidence Architecture v1.0: Bridge decision to governance taxonomy.
 
@@ -220,39 +219,37 @@ class DecisionRecordService:
             return
 
         try:
-            engine = self._get_engine()
-            with engine.begin() as conn:
-                # Map operational decision to taxonomy format
-                policy_type = record.decision_type.value
-                decision = "allowed" if record.decision_outcome in {
-                    DecisionOutcome.SELECTED,
-                    DecisionOutcome.NONE,
-                } else "denied"
+            # Map operational decision to taxonomy format
+            policy_type = record.decision_type.value
+            decision = "allowed" if record.decision_outcome in {
+                DecisionOutcome.SELECTED,
+                DecisionOutcome.NONE,
+            } else "denied"
 
-                conn.execute(
-                    text(
-                        """
-                        INSERT INTO governance.policy_decisions (
-                            id, run_id, policy_type, decision, rationale,
-                            is_synthetic, synthetic_scenario_id, capture_confidence_score, created_at
-                        ) VALUES (
-                            :id, :run_id, :policy_type, :decision, :rationale,
-                            :is_synthetic, :synthetic_scenario_id, :capture_confidence_score, :created_at
-                        ) ON CONFLICT (id) DO NOTHING
-                        """
-                    ),
-                    {
-                        "id": record.decision_id,
-                        "run_id": record.run_id,
-                        "policy_type": policy_type,
-                        "decision": decision,
-                        "rationale": record.decision_reason or "",
-                        "is_synthetic": False,  # Operational decisions are never synthetic
-                        "synthetic_scenario_id": None,
-                        "capture_confidence_score": 1.0,
-                        "created_at": record.decided_at,
-                    },
-                )
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO governance.policy_decisions (
+                        id, run_id, policy_type, decision, rationale,
+                        is_synthetic, synthetic_scenario_id, capture_confidence_score, created_at
+                    ) VALUES (
+                        :id, :run_id, :policy_type, :decision, :rationale,
+                        :is_synthetic, :synthetic_scenario_id, :capture_confidence_score, :created_at
+                    ) ON CONFLICT (id) DO NOTHING
+                    """
+                ),
+                {
+                    "id": record.decision_id,
+                    "run_id": record.run_id,
+                    "policy_type": policy_type,
+                    "decision": decision,
+                    "rationale": record.decision_reason or "",
+                    "is_synthetic": False,  # Operational decisions are never synthetic
+                    "synthetic_scenario_id": None,
+                    "capture_confidence_score": 1.0,
+                    "created_at": record.decided_at,
+                },
+            )
             logger.debug(
                 "decision_bridged_to_taxonomy",
                 extra={"decision_id": record.decision_id, "policy_type": policy_type},
@@ -264,53 +261,55 @@ class DecisionRecordService:
                 extra={"decision_id": record.decision_id, "error": str(e)},
             )
 
-    async def emit(self, record: DecisionRecord) -> bool:
+    def emit(self, connection: Any, record: DecisionRecord) -> bool:
         """
         Emit a decision record to the sink.
 
         Returns True if emission succeeded, False otherwise.
         Non-blocking - failures don't propagate.
+
+        Args:
+            connection: SQLAlchemy Connection (caller owns lifecycle and commit)
+            record: DecisionRecord to emit
         """
         if not self._enabled:
             logger.debug(f"Decision record emission disabled: {record.decision_id}")
             return False
 
         try:
-            engine = self._get_engine()
-            with engine.begin() as conn:
-                conn.execute(
-                    text(
-                        """
-                        INSERT INTO contracts.decision_records (
-                            decision_id, decision_type, decision_source, decision_trigger,
-                            decision_inputs, decision_outcome, decision_reason,
-                            run_id, workflow_id, tenant_id, request_id, causal_role,
-                            decided_at, details
-                        ) VALUES (
-                            :decision_id, :decision_type, :decision_source, :decision_trigger,
-                            :decision_inputs, :decision_outcome, :decision_reason,
-                            :run_id, :workflow_id, :tenant_id, :request_id, :causal_role,
-                            :decided_at, :details
-                        )
+            connection.execute(
+                text(
                     """
-                    ),
-                    {
-                        "decision_id": record.decision_id,
-                        "decision_type": record.decision_type.value,
-                        "decision_source": record.decision_source.value,
-                        "decision_trigger": record.decision_trigger.value,
-                        "decision_inputs": json.dumps(record.decision_inputs),
-                        "decision_outcome": record.decision_outcome.value,
-                        "decision_reason": record.decision_reason,
-                        "run_id": record.run_id,
-                        "workflow_id": record.workflow_id,
-                        "tenant_id": record.tenant_id,
-                        "request_id": record.request_id,
-                        "causal_role": record.causal_role.value,
-                        "decided_at": record.decided_at,
-                        "details": json.dumps(record.details),
-                    },
-                )
+                    INSERT INTO contracts.decision_records (
+                        decision_id, decision_type, decision_source, decision_trigger,
+                        decision_inputs, decision_outcome, decision_reason,
+                        run_id, workflow_id, tenant_id, request_id, causal_role,
+                        decided_at, details
+                    ) VALUES (
+                        :decision_id, :decision_type, :decision_source, :decision_trigger,
+                        :decision_inputs, :decision_outcome, :decision_reason,
+                        :run_id, :workflow_id, :tenant_id, :request_id, :causal_role,
+                        :decided_at, :details
+                    )
+                """
+                ),
+                {
+                    "decision_id": record.decision_id,
+                    "decision_type": record.decision_type.value,
+                    "decision_source": record.decision_source.value,
+                    "decision_trigger": record.decision_trigger.value,
+                    "decision_inputs": json.dumps(record.decision_inputs),
+                    "decision_outcome": record.decision_outcome.value,
+                    "decision_reason": record.decision_reason,
+                    "run_id": record.run_id,
+                    "workflow_id": record.workflow_id,
+                    "tenant_id": record.tenant_id,
+                    "request_id": record.request_id,
+                    "causal_role": record.causal_role.value,
+                    "decided_at": record.decided_at,
+                    "details": json.dumps(record.details),
+                },
+            )
 
             logger.debug(
                 "decision_record_emitted",
@@ -323,7 +322,7 @@ class DecisionRecordService:
             )
 
             # Evidence Architecture v1.0: Bridge to governance taxonomy
-            self._bridge_to_taxonomy(record)
+            self._bridge_to_taxonomy(connection, record)
 
             return True
 
@@ -332,70 +331,6 @@ class DecisionRecordService:
             return False
         except Exception as e:
             logger.warning(f"Unexpected error emitting decision record: {e}")
-            return False
-
-    def emit_sync(self, record: DecisionRecord) -> bool:
-        """Synchronous version of emit for non-async contexts."""
-        import asyncio
-
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # Already in async context - can't use run_until_complete
-                # Fall back to sync implementation
-                return self._emit_sync_impl(record)
-            return loop.run_until_complete(self.emit(record))
-        except RuntimeError:
-            return self._emit_sync_impl(record)
-
-    def _emit_sync_impl(self, record: DecisionRecord) -> bool:
-        """Synchronous implementation of emit."""
-        if not self._enabled:
-            return False
-
-        try:
-            engine = self._get_engine()
-            with engine.begin() as conn:
-                conn.execute(
-                    text(
-                        """
-                        INSERT INTO contracts.decision_records (
-                            decision_id, decision_type, decision_source, decision_trigger,
-                            decision_inputs, decision_outcome, decision_reason,
-                            run_id, workflow_id, tenant_id, request_id, causal_role,
-                            decided_at, details
-                        ) VALUES (
-                            :decision_id, :decision_type, :decision_source, :decision_trigger,
-                            :decision_inputs, :decision_outcome, :decision_reason,
-                            :run_id, :workflow_id, :tenant_id, :request_id, :causal_role,
-                            :decided_at, :details
-                        )
-                    """
-                    ),
-                    {
-                        "decision_id": record.decision_id,
-                        "decision_type": record.decision_type.value,
-                        "decision_source": record.decision_source.value,
-                        "decision_trigger": record.decision_trigger.value,
-                        "decision_inputs": json.dumps(record.decision_inputs),
-                        "decision_outcome": record.decision_outcome.value,
-                        "decision_reason": record.decision_reason,
-                        "run_id": record.run_id,
-                        "workflow_id": record.workflow_id,
-                        "tenant_id": record.tenant_id,
-                        "request_id": record.request_id,
-                        "causal_role": record.causal_role.value,
-                        "decided_at": record.decided_at,
-                        "details": json.dumps(record.details),
-                    },
-                )
-
-            # Evidence Architecture v1.0: Bridge to governance taxonomy
-            self._bridge_to_taxonomy(record)
-
-            return True
-        except Exception as e:
-            logger.warning(f"Failed to emit decision record (sync): {e}")
             return False
 
 
@@ -416,10 +351,15 @@ def get_decision_service() -> DecisionRecordService:
 
 # =============================================================================
 # Helper Functions for Common Decision Patterns
+#
+# These are pure driver functions — they accept a connection, build a record,
+# emit via the service, and return the record. They NEVER commit.
+# The caller (L4 handler) owns the transaction lifecycle.
 # =============================================================================
 
 
 def emit_routing_decision(
+    connection: Any,
     run_id: Optional[str],
     routed: bool,
     selected_agent: Optional[str],
@@ -459,11 +399,12 @@ def emit_routing_decision(
         details=details or {},
     )
 
-    get_decision_service().emit_sync(record)
+    get_decision_service().emit(connection, record)
     return record
 
 
 def emit_recovery_decision(
+    connection: Any,
     run_id: Optional[str],
     evaluated: bool,
     triggered: bool,
@@ -507,11 +448,12 @@ def emit_recovery_decision(
         details={"action": action} if action else {},
     )
 
-    get_decision_service().emit_sync(record)
+    get_decision_service().emit(connection, record)
     return record
 
 
 def emit_memory_decision(
+    connection: Any,
     run_id: Optional[str],
     queried: bool,
     matched: bool,
@@ -559,11 +501,12 @@ def emit_memory_decision(
         details={"sources": sources} if sources else {},
     )
 
-    get_decision_service().emit_sync(record)
+    get_decision_service().emit(connection, record)
     return record
 
 
 def emit_policy_decision(
+    connection: Any,
     run_id: Optional[str],
     policy_id: str,
     evaluated: bool,
@@ -606,11 +549,12 @@ def emit_policy_decision(
         details={"violated": violated, "severity": severity},
     )
 
-    get_decision_service().emit_sync(record)
+    get_decision_service().emit(connection, record)
     return record
 
 
 def emit_budget_decision(
+    connection: Any,
     run_id: Optional[str],
     budget_requested: int,
     budget_available: int,
@@ -665,11 +609,11 @@ def emit_budget_decision(
         },
     )
 
-    get_decision_service().emit_sync(record)
+    get_decision_service().emit(connection, record)
     return record
 
 
-def _check_budget_enforcement_exists(run_id: str) -> bool:
+def _check_budget_enforcement_exists(connection: Any, run_id: str) -> bool:
     """
     Check if a budget_enforcement decision already exists for this run.
 
@@ -680,30 +624,28 @@ def _check_budget_enforcement_exists(run_id: str) -> bool:
         return False  # Can't check, allow emission
 
     try:
-        engine = svc._get_engine()
-        with engine.connect() as conn:
-            result = conn.execute(
-                text(
-                    """
-                    SELECT 1 FROM contracts.decision_records
-                    WHERE run_id = :run_id
-                      AND decision_type = :decision_type
-                    LIMIT 1
+        result = connection.execute(
+            text(
                 """
-                ),
-                {
-                    "run_id": run_id,
-                    "decision_type": DecisionType.BUDGET_ENFORCEMENT.value,
-                },
-            )
-            exists = result.fetchone() is not None
-        return exists
+                SELECT 1 FROM contracts.decision_records
+                WHERE run_id = :run_id
+                  AND decision_type = :decision_type
+                LIMIT 1
+            """
+            ),
+            {
+                "run_id": run_id,
+                "decision_type": DecisionType.BUDGET_ENFORCEMENT.value,
+            },
+        )
+        return result.fetchone() is not None
     except Exception as e:
         logger.warning(f"Failed to check budget_enforcement existence: {e}")
         return False  # On error, allow emission (fail-open for observability)
 
 
 def emit_budget_enforcement_decision(
+    connection: Any,
     run_id: str,
     budget_limit_cents: int,
     budget_consumed_cents: int,
@@ -727,7 +669,7 @@ def emit_budget_enforcement_decision(
     - decision_outcome: execution_halted
     """
     # Idempotency guard: check if already emitted for this run
-    if _check_budget_enforcement_exists(run_id):
+    if _check_budget_enforcement_exists(connection, run_id):
         logger.debug(
             "budget_enforcement_already_emitted",
             extra={"run_id": run_id},
@@ -757,7 +699,7 @@ def emit_budget_enforcement_decision(
         },
     )
 
-    get_decision_service().emit_sync(record)
+    get_decision_service().emit(connection, record)
     return record
 
 
@@ -766,7 +708,7 @@ def emit_budget_enforcement_decision(
 # =============================================================================
 
 
-def _check_policy_precheck_exists(request_id: str, outcome: str) -> bool:
+def _check_policy_precheck_exists(connection: Any, request_id: str, outcome: str) -> bool:
     """
     Check if a policy_pre_check decision already exists for this request+outcome.
 
@@ -777,32 +719,30 @@ def _check_policy_precheck_exists(request_id: str, outcome: str) -> bool:
         return False  # Can't check, allow emission
 
     try:
-        engine = svc._get_engine()
-        with engine.connect() as conn:
-            result = conn.execute(
-                text(
-                    """
-                    SELECT 1 FROM contracts.decision_records
-                    WHERE request_id = :request_id
-                      AND decision_type = :decision_type
-                      AND decision_outcome = :outcome
-                    LIMIT 1
+        result = connection.execute(
+            text(
                 """
-                ),
-                {
-                    "request_id": request_id,
-                    "decision_type": DecisionType.POLICY_PRE_CHECK.value,
-                    "outcome": outcome,
-                },
-            )
-            exists = result.fetchone() is not None
-        return exists
+                SELECT 1 FROM contracts.decision_records
+                WHERE request_id = :request_id
+                  AND decision_type = :decision_type
+                  AND decision_outcome = :outcome
+                LIMIT 1
+            """
+            ),
+            {
+                "request_id": request_id,
+                "decision_type": DecisionType.POLICY_PRE_CHECK.value,
+                "outcome": outcome,
+            },
+        )
+        return result.fetchone() is not None
     except Exception as e:
         logger.warning(f"Failed to check policy_pre_check existence: {e}")
         return False  # On error, allow emission (fail-open for observability)
 
 
 def emit_policy_precheck_decision(
+    connection: Any,
     request_id: str,
     posture: str,
     passed: bool,
@@ -853,7 +793,7 @@ def emit_policy_precheck_decision(
         reason = f"Policy pre-check failed: {', '.join(violations or ['Unknown violation'])}"
 
     # Idempotency guard
-    if _check_policy_precheck_exists(request_id, outcome.value):
+    if _check_policy_precheck_exists(connection, request_id, outcome.value):
         logger.debug(
             "policy_precheck_already_emitted",
             extra={"request_id": request_id, "outcome": outcome.value},
@@ -883,7 +823,7 @@ def emit_policy_precheck_decision(
         },
     )
 
-    get_decision_service().emit_sync(record)
+    get_decision_service().emit(connection, record)
 
     logger.info(
         "policy_precheck_decision_emitted",
@@ -903,7 +843,7 @@ def emit_policy_precheck_decision(
 # =============================================================================
 
 
-def _check_recovery_evaluation_exists(run_id: str, failure_type: str) -> bool:
+def _check_recovery_evaluation_exists(connection: Any, run_id: str, failure_type: str) -> bool:
     """
     Check if a recovery_evaluation decision already exists for this run+failure.
 
@@ -914,32 +854,30 @@ def _check_recovery_evaluation_exists(run_id: str, failure_type: str) -> bool:
         return False  # Can't check, allow emission
 
     try:
-        engine = svc._get_engine()
-        with engine.connect() as conn:
-            result = conn.execute(
-                text(
-                    """
-                    SELECT 1 FROM contracts.decision_records
-                    WHERE run_id = :run_id
-                      AND decision_type = :decision_type
-                      AND decision_inputs::text LIKE :failure_pattern
-                    LIMIT 1
+        result = connection.execute(
+            text(
                 """
-                ),
-                {
-                    "run_id": run_id,
-                    "decision_type": DecisionType.RECOVERY_EVALUATION.value,
-                    "failure_pattern": f'%"failure_type": "{failure_type}"%',
-                },
-            )
-            exists = result.fetchone() is not None
-        return exists
+                SELECT 1 FROM contracts.decision_records
+                WHERE run_id = :run_id
+                  AND decision_type = :decision_type
+                  AND decision_inputs::text LIKE :failure_pattern
+                LIMIT 1
+            """
+            ),
+            {
+                "run_id": run_id,
+                "decision_type": DecisionType.RECOVERY_EVALUATION.value,
+                "failure_pattern": f'%"failure_type": "{failure_type}"%',
+            },
+        )
+        return result.fetchone() is not None
     except Exception as e:
         logger.warning(f"Failed to check recovery_evaluation existence: {e}")
         return False  # On error, allow emission (fail-open for observability)
 
 
 def emit_recovery_evaluation_decision(
+    connection: Any,
     run_id: str,
     request_id: str,
     recovery_class: str,  # R1, R2, R3
@@ -972,7 +910,7 @@ def emit_recovery_evaluation_decision(
     IDEMPOTENT: If already emitted for this run_id+failure_type, returns None.
     """
     # Idempotency guard
-    if _check_recovery_evaluation_exists(run_id, failure_type):
+    if _check_recovery_evaluation_exists(connection, run_id, failure_type):
         logger.debug(
             "recovery_evaluation_already_emitted",
             extra={"run_id": run_id, "failure_type": failure_type},
@@ -1012,7 +950,7 @@ def emit_recovery_evaluation_decision(
         },
     )
 
-    get_decision_service().emit_sync(record)
+    get_decision_service().emit(connection, record)
 
     logger.info(
         "recovery_evaluation_decision_emitted",
@@ -1032,7 +970,7 @@ def emit_recovery_evaluation_decision(
 # =============================================================================
 
 
-def backfill_run_id_for_request(request_id: str, run_id: str) -> int:
+def backfill_run_id_for_request(connection: Any, request_id: str, run_id: str) -> int:
     """
     Backfill run_id for all decisions with matching request_id.
 
@@ -1050,21 +988,19 @@ def backfill_run_id_for_request(request_id: str, run_id: str) -> int:
         return 0
 
     try:
-        engine = svc._get_engine()
-        with engine.begin() as conn:
-            result = conn.execute(
-                text(
-                    """
-                    UPDATE contracts.decision_records
-                    SET run_id = :run_id
-                    WHERE request_id = :request_id
-                      AND run_id IS NULL
-                      AND causal_role = 'pre_run'
+        result = connection.execute(
+            text(
                 """
-                ),
-                {"request_id": request_id, "run_id": run_id},
-            )
-            updated = result.rowcount
+                UPDATE contracts.decision_records
+                SET run_id = :run_id
+                WHERE request_id = :request_id
+                  AND run_id IS NULL
+                  AND causal_role = 'pre_run'
+            """
+            ),
+            {"request_id": request_id, "run_id": run_id},
+        )
+        updated = result.rowcount
 
         if updated > 0:
             logger.debug(
@@ -1186,7 +1122,7 @@ def is_care_kill_switch_active() -> bool:
     return _care_optimization_kill_switch
 
 
-def _check_care_optimization_exists(request_id: str) -> bool:
+def _check_care_optimization_exists(connection: Any, request_id: str) -> bool:
     """
     Check if a care_routing_optimized decision already exists for this request.
 
@@ -1197,30 +1133,28 @@ def _check_care_optimization_exists(request_id: str) -> bool:
         return False
 
     try:
-        engine = svc._get_engine()
-        with engine.connect() as conn:
-            result = conn.execute(
-                text(
-                    """
-                    SELECT 1 FROM contracts.decision_records
-                    WHERE request_id = :request_id
-                      AND decision_type = :decision_type
-                    LIMIT 1
+        result = connection.execute(
+            text(
                 """
-                ),
-                {
-                    "request_id": request_id,
-                    "decision_type": DecisionType.CARE_ROUTING_OPTIMIZED.value,
-                },
-            )
-            exists = result.fetchone() is not None
-        return exists
+                SELECT 1 FROM contracts.decision_records
+                WHERE request_id = :request_id
+                  AND decision_type = :decision_type
+                LIMIT 1
+            """
+            ),
+            {
+                "request_id": request_id,
+                "decision_type": DecisionType.CARE_ROUTING_OPTIMIZED.value,
+            },
+        )
+        return result.fetchone() is not None
     except Exception as e:
         logger.warning(f"Failed to check care_routing_optimized existence: {e}")
         return False
 
 
 def emit_care_optimization_decision(
+    connection: Any,
     request_id: str,
     baseline_agent: str,
     optimized_agent: str,
@@ -1306,7 +1240,7 @@ def emit_care_optimization_decision(
         return None
 
     # Idempotency guard
-    if _check_care_optimization_exists(request_id):
+    if _check_care_optimization_exists(connection, request_id):
         logger.debug(
             "care_optimization_already_emitted",
             extra={"request_id": request_id},
@@ -1341,7 +1275,7 @@ def emit_care_optimization_decision(
         },
     )
 
-    get_decision_service().emit_sync(record)
+    get_decision_service().emit(connection, record)
 
     logger.info(
         "care_optimization_decision_emitted",

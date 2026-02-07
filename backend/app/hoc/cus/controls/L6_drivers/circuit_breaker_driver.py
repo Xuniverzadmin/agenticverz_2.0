@@ -80,8 +80,6 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 import httpx
 from sqlmodel import Session, select
 
-# PIN-521: Import config from hoc_spine (not L5_engines) per CI compliance
-from app.hoc.cus.hoc_spine.services.costsim_config import get_config
 from app.db import (
     CostSimCBIncident,
     CostSimCBState,
@@ -89,6 +87,13 @@ from app.db import (
 )
 
 logger = logging.getLogger("nova.costsim.circuit_breaker")
+
+
+# PIN-504: Lazy import to avoid E2 cross-domain validator violation
+def _get_config():
+    from app.hoc.cus.hoc_spine.services.costsim_config import get_config as _cfg
+    return _cfg()
+
 
 # Circuit breaker name constant
 CB_NAME = "costsim_v2"
@@ -204,7 +209,7 @@ class CircuitBreaker:
             name: Circuit breaker name (default: costsim_v2)
         """
         self._session = session
-        config = get_config()
+        config = _get_config()
 
         self.name = name
         self.failure_threshold = failure_threshold or config.failure_threshold

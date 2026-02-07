@@ -43,7 +43,7 @@ logger = logging.getLogger("nova.api.tenants")
 # L4 bridge provides exception types for except clauses (PIN-L2-PURITY)
 WorkerNotFoundError = get_integrations_driver_bridge().worker_registry_exceptions()["WorkerNotFoundError"]
 
-router = APIRouter(prefix="/api/v1", tags=["Tenants & API Keys"])
+router = APIRouter(prefix="", tags=["Tenants & API Keys"])
 
 
 # ============== Dependency Injection ==============
@@ -395,7 +395,7 @@ async def check_token_quota(
 # ============== API Key Endpoints ==============
 
 
-@router.get("/api-keys", response_model=List[APIKeyResponse])
+@router.get("/tenant/api-keys", response_model=List[APIKeyResponse])
 async def list_api_keys(
     include_revoked: bool = False,
     ctx: TenantContext = Depends(get_tenant_context),
@@ -434,7 +434,7 @@ async def list_api_keys(
     ]
 
 
-@router.post("/api-keys", response_model=APIKeyCreatedResponse, status_code=201)
+@router.post("/tenant/api-keys", response_model=APIKeyCreatedResponse, status_code=201)
 async def create_api_key(
     request: APIKeyCreateRequest,
     ctx: TenantContext = Depends(get_tenant_context),
@@ -486,7 +486,7 @@ async def create_api_key(
     )
 
 
-@router.delete("/api-keys/{key_id}")
+@router.delete("/tenant/api-keys/{key_id}")
 async def revoke_api_key(
     key_id: str,
     reason: str = Query(default="Manual revocation"),

@@ -36,6 +36,7 @@
 #  30. Zero-logic facade detection — advisory (PIN-513)
 #  31. Single Activity Facade — only one activity_facade.py allowed in HOC (PIN-519)
 #  32. No legacy app.services imports in HOC/worker/startup (PIN-520 ITER3.5)
+#  33. Main entrypoint HOC router directory ban (Phase 5 severance guard)
 #
 # Usage:
 #   python3 scripts/ci/check_init_hygiene.py [--ci]
@@ -1545,6 +1546,46 @@ def check_no_legacy_services_imports(violations: list[Violation]) -> None:
                     ))
 
 
+def check_main_hoc_router_directory(violations: list[Violation]) -> None:
+    """
+    Check 33: main.py must not import HOC routers directly or call app.include_router().
+
+    Phase 5 severance guard: all HOC router inclusion must go through
+    app.hoc.app.include_hoc(app), not via direct imports in main.py.
+
+    Forbidden patterns in backend/app/main.py:
+      - ^from \\.hoc\\.api  (relative hoc.api router imports)
+      - ^from app\\.hoc\\.api  (absolute hoc.api router imports)
+      - \\bapp\\.include_router\\(  (direct include_router calls)
+    """
+    main_py = BACKEND_ROOT / "app" / "main.py"
+    if not main_py.exists():
+        return
+
+    FORBIDDEN = [
+        (re.compile(r"^from \.hoc\.api"), "Direct relative HOC router import"),
+        (re.compile(r"^from app\.hoc\.api"), "Direct absolute HOC router import"),
+        (re.compile(r"\bapp\.include_router\("), "Direct app.include_router() call"),
+    ]
+
+    try:
+        source = main_py.read_text()
+    except (UnicodeDecodeError, OSError):
+        return
+
+    for i, line in enumerate(source.splitlines(), 1):
+        stripped = line.lstrip()
+        if stripped.startswith("#"):
+            continue
+        for pat, desc in FORBIDDEN:
+            if pat.search(stripped):
+                violations.append(Violation(
+                    str(main_py), i,
+                    f"{desc}: {stripped[:80]}",
+                    "MAIN_HOC_ROUTER_DIRECTORY",
+                ))
+
+
 def main():
     ci_mode = "--ci" in sys.argv
     violations: list[Violation] = []
@@ -1601,6 +1642,9 @@ def main():
 
     # PIN-520 ITER3.5 checks (32)
     check_no_legacy_services_imports(violations)
+
+    # Phase 5 severance guard (33)
+    check_main_hoc_router_directory(violations)
 
     blocking = [v for v in violations if not v.is_known_exception]
     warnings = [v for v in violations if v.is_known_exception]

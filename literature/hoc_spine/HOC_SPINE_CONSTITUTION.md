@@ -94,7 +94,7 @@ It answers:
 
 When auditing files in `orchestrator/`, verify:
 - [ ] File does not contain domain-specific business logic
-- [ ] File does not perform direct DB persistence (no session.commit)
+- [ ] Transaction boundary is owned by L4 handlers/coordinators (commit/rollback may exist there; drivers never commit)
 - [ ] File does not import L5 engines directly (use protocols)
 - [ ] File does not make permission decisions (that's authority/)
 - [ ] All cross-domain data access goes through drivers or coordinator
@@ -121,6 +121,9 @@ and **with what constraints**. It is the system's **decision brain**, not its ex
 3. **Contract Enforcement** — Validates execution contracts (limits, concurrency,
    invariants).
 4. **Guard Decisions** — Produces allow / deny / conditional outcomes.
+5. **Attack-Surface Posture** — Centralizes “veil” posture decisions (docs/OpenAPI gating,
+   deny-as-404, probe rate limiting). Canonical policy owner:
+   `backend/app/hoc/cus/hoc_spine/authority/veil_policy.py`.
 
 #### How Domains Access It
 
@@ -304,8 +307,7 @@ Drivers are the **only sanctioned mechanism** for accessing or mutating persiste
 1. **Cross-Domain Reads** — Fetch data spanning multiple domain tables.
 2. **Cross-Domain Writes** — Persist results produced by orchestrated operations.
 3. **Transaction Participation** — Operate within a transaction opened by the orchestrator.
-4. **Transaction Coordination** — `transaction_coordinator.py` is the **sole commit
-   authority** (only file allowed to call `session.commit()`).
+4. **Transaction Coordination** — Transaction boundaries (commit/rollback) are owned by L4 handlers/coordinators. Drivers never commit.
 
 #### How Domains Access It
 
@@ -316,14 +318,14 @@ Drivers are the **only sanctioned mechanism** for accessing or mutating persiste
 
 #### Non-Negotiable Invariants
 
-- No commits (except `transaction_coordinator`)
+- No commits/rollbacks
 - No orchestration
 - No L5 engine imports
 
 #### Evaluation Criteria
 
 When auditing files in `drivers/`, verify:
-- [ ] File does not call `session.commit()` (unless it IS transaction_coordinator)
+- [ ] File does not call `session.commit()` / `session.rollback()`
 - [ ] File does not orchestrate execution
 - [ ] File does not import L5 engines
 - [ ] File operates within orchestrator-owned transactions

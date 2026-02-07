@@ -35,14 +35,14 @@ Why This Facade Exists:
 - Single point for audit emission
 
 L2 API Routes (GAP-120, GAP-121):
-- POST /api/v1/monitors (create monitor)
-- GET /api/v1/monitors (list monitors)
-- GET /api/v1/monitors/{id} (get monitor)
-- PUT /api/v1/monitors/{id} (update monitor)
-- DELETE /api/v1/monitors/{id} (delete monitor)
-- POST /api/v1/monitors/{id}/check (run health check)
-- GET /api/v1/monitors/{id}/history (check history)
-- GET /api/v1/monitors/status (overall status)
+- POST /monitors (create monitor)
+- GET /monitors (list monitors)
+- GET /monitors/{id} (get monitor)
+- PUT /monitors/{id} (update monitor)
+- DELETE /monitors/{id} (delete monitor)
+- POST /monitors/{id}/check (run health check)
+- GET /monitors/{id}/history (check history)
+- GET /monitors/status (overall status)
 
 Usage:
     from app.services.monitors.facade import get_monitors_facade
@@ -213,4 +213,3 @@ pairing:
   expected_l5_consumers: []
   orchestrator_operations: []
 ```
-

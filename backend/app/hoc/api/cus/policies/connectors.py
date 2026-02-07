@@ -17,12 +17,12 @@
 Connectors API (L2)
 
 Provides connector management operations:
-- GET /api/v1/connectors (list connectors)
-- POST /api/v1/connectors (register connector)
-- GET /api/v1/connectors/{id} (get connector)
-- PUT /api/v1/connectors/{id} (update connector)
-- DELETE /api/v1/connectors/{id} (delete connector)
-- POST /api/v1/connectors/{id}/test (test connector)
+- GET /connectors (list connectors)
+- POST /connectors (register connector)
+- GET /connectors/{id} (get connector)
+- PUT /connectors/{id} (update connector)
+- DELETE /connectors/{id} (delete connector)
+- POST /connectors/{id}/test (test connector)
 
 This is the ONLY facade for connector operations.
 All connector APIs flow through this router.

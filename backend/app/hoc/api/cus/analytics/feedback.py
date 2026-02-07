@@ -43,7 +43,7 @@ from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.feedback")
 
-router = APIRouter(prefix="/api/v1/feedback", tags=["feedback", "pb-s3", "read-only"])
+router = APIRouter(prefix="/feedback", tags=["feedback", "pb-s3", "read-only"])
 
 
 # =============================================================================

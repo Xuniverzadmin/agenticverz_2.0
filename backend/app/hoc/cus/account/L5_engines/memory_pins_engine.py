@@ -32,13 +32,10 @@ import os
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
-
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any, Dict, List, Optional, Protocol
 
 from app.hoc.cus.account.L6_drivers.memory_pins_driver import (
     MemoryPinRow,
-    get_memory_pins_driver,
 )
 from app.utils.metrics_helpers import get_or_create_counter, get_or_create_histogram
 
@@ -79,6 +76,73 @@ class MemoryPinResult:
     timestamp: Optional[str] = None
 
 
+class MemoryPinsDriverPort(Protocol):
+    """Port for L6 driver methods used by MemoryPinsEngine."""
+
+    async def upsert_pin(
+        self,
+        *,
+        tenant_id: str,
+        key: str,
+        value: Dict[str, Any],
+        source: str,
+        ttl_seconds: Optional[int],
+    ) -> MemoryPinRow:
+        ...
+
+    async def get_pin(
+        self,
+        *,
+        tenant_id: str,
+        key: str,
+    ) -> Optional[MemoryPinRow]:
+        ...
+
+    async def list_pins(
+        self,
+        *,
+        tenant_id: str,
+        prefix: Optional[str] = None,
+        include_expired: bool = False,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> tuple[List[MemoryPinRow], int]:
+        ...
+
+    async def delete_pin(
+        self,
+        *,
+        tenant_id: str,
+        key: str,
+    ) -> bool:
+        ...
+
+    async def cleanup_expired(
+        self,
+        *,
+        tenant_id: Optional[str] = None,
+    ) -> int:
+        ...
+
+    async def write_audit(
+        self,
+        *,
+        operation: str,
+        tenant_id: str,
+        key: str,
+        success: bool,
+        latency_ms: float,
+        agent_id: Optional[str] = None,
+        source: Optional[str] = None,
+        cache_hit: bool = False,
+        error_message: Optional[str] = None,
+        old_value_hash: Optional[str] = None,
+        new_value_hash: Optional[str] = None,
+        extra: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        ...
+
+
 class MemoryPinsEngine:
     """Business logic for memory pin operations."""
 
@@ -88,7 +152,7 @@ class MemoryPinsEngine:
 
     async def upsert_pin(
         self,
-        session: AsyncSession,
+        driver: MemoryPinsDriverPort,
         *,
         tenant_id: str,
         key: str,
@@ -99,10 +163,8 @@ class MemoryPinsEngine:
         """Create or update a memory pin."""
         self._check_enabled()
         start = time.time()
-        driver = get_memory_pins_driver()
 
         pin = await driver.upsert_pin(
-            session,
             tenant_id=tenant_id,
             key=key,
             value=value,
@@ -117,7 +179,6 @@ class MemoryPinsEngine:
         import json
         value_hash = hashlib.sha256(json.dumps(value).encode()).hexdigest()[:16]
         await driver.write_audit(
-            session,
             operation="upsert",
             tenant_id=tenant_id,
             key=key,
@@ -136,7 +197,7 @@ class MemoryPinsEngine:
 
     async def get_pin(
         self,
-        session: AsyncSession,
+        driver: MemoryPinsDriverPort,
         *,
         tenant_id: str,
         key: str,
@@ -144,9 +205,8 @@ class MemoryPinsEngine:
         """Get a memory pin by key."""
         self._check_enabled()
         start = time.time()
-        driver = get_memory_pins_driver()
 
-        pin = await driver.get_pin(session, tenant_id=tenant_id, key=key)
+        pin = await driver.get_pin(tenant_id=tenant_id, key=key)
         latency_ms = (time.time() - start) * 1000
 
         if pin is None:
@@ -157,7 +217,6 @@ class MemoryPinsEngine:
         MEMORY_PINS_LATENCY.labels(operation="get").observe(latency_ms / 1000)
 
         await driver.write_audit(
-            session,
             operation="get",
             tenant_id=tenant_id,
             key=key,
@@ -169,7 +228,7 @@ class MemoryPinsEngine:
 
     async def list_pins(
         self,
-        session: AsyncSession,
+        driver: MemoryPinsDriverPort,
         *,
         tenant_id: str,
         prefix: Optional[str] = None,
@@ -180,10 +239,8 @@ class MemoryPinsEngine:
         """List pins for a tenant."""
         self._check_enabled()
         start = time.time()
-        driver = get_memory_pins_driver()
 
         pins, total = await driver.list_pins(
-            session,
             tenant_id=tenant_id,
             prefix=prefix,
             include_expired=include_expired,
@@ -198,7 +255,7 @@ class MemoryPinsEngine:
 
     async def delete_pin(
         self,
-        session: AsyncSession,
+        driver: MemoryPinsDriverPort,
         *,
         tenant_id: str,
         key: str,
@@ -206,9 +263,8 @@ class MemoryPinsEngine:
         """Delete a memory pin."""
         self._check_enabled()
         start = time.time()
-        driver = get_memory_pins_driver()
 
-        deleted = await driver.delete_pin(session, tenant_id=tenant_id, key=key)
+        deleted = await driver.delete_pin(tenant_id=tenant_id, key=key)
         latency_ms = (time.time() - start) * 1000
 
         if not deleted:
@@ -219,7 +275,6 @@ class MemoryPinsEngine:
         MEMORY_PINS_LATENCY.labels(operation="delete").observe(latency_ms / 1000)
 
         await driver.write_audit(
-            session,
             operation="delete",
             tenant_id=tenant_id,
             key=key,
@@ -233,16 +288,15 @@ class MemoryPinsEngine:
 
     async def cleanup_expired(
         self,
-        session: AsyncSession,
+        driver: MemoryPinsDriverPort,
         *,
         tenant_id: Optional[str] = None,
     ) -> MemoryPinResult:
         """Clean up expired pins."""
         self._check_enabled()
         start = time.time()
-        driver = get_memory_pins_driver()
 
-        deleted_count = await driver.cleanup_expired(session, tenant_id=tenant_id)
+        deleted_count = await driver.cleanup_expired(tenant_id=tenant_id)
 
         MEMORY_PINS_OPERATIONS.labels(operation="cleanup", status="success").inc()
         MEMORY_PINS_LATENCY.labels(operation="cleanup").observe(time.time() - start)

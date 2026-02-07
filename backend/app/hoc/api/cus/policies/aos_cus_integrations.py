@@ -73,7 +73,7 @@ from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/integrations", tags=["integrations"])
+router = APIRouter(prefix="/integrations", tags=["integrations"])
 
 
 # =============================================================================

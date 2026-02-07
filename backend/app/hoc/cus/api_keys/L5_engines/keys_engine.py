@@ -49,9 +49,10 @@ Responsibilities:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
+from app.hoc.cus.hoc_spine.services.time import utc_now
 from app.hoc.cus.api_keys.L6_drivers.keys_driver import (
     KeysDriver,
     KeySnapshot,
@@ -169,7 +170,7 @@ class KeysWriteEngine:
             return None
 
         # Business logic: set freeze timestamp
-        frozen_at = datetime.now(timezone.utc)
+        frozen_at = utc_now()
 
         # Delegate persistence to driver
         return self._driver.update_key_frozen(key, frozen_at)

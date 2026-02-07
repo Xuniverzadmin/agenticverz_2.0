@@ -16,7 +16,7 @@ Overview Engine - Centralized access to overview domain operations
 
 **Role:** Overview Engine - Centralized access to overview domain operations
 **Reference:** PIN-470
-**Callers:** L2 API routes (/api/v1/overview/*)
+**Callers:** L2 API routes (/overview/*)
 
 ## Purpose
 
@@ -104,7 +104,7 @@ Overview Engine (L5 Domain Logic)
 
 ## Callers
 
-L2 API routes (/api/v1/overview/*)
+L2 API routes (/overview/*)
 
 ## Export Contract
 

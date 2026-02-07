@@ -21,10 +21,10 @@ Customer-facing endpoints for viewing policy rules and limits.
 All requests are tenant-scoped via auth_context.
 
 Endpoints:
-- GET /api/v1/policies/rules           → O2 list of policy rules
-- GET /api/v1/policies/rules/{rule_id} → O3 rule detail
-- GET /api/v1/policies/limits          → O2 list of limits
-- GET /api/v1/policies/limits/{limit_id} → O3 limit detail
+- GET /policies/rules           → O2 list of policy rules
+- GET /policies/rules/{rule_id} → O3 rule detail
+- GET /policies/limits          → O2 list of limits
+- GET /policies/limits/{limit_id} → O3 limit detail
 
 Architecture:
 - ONE facade for all POLICIES needs (rules + limits)
@@ -189,7 +189,7 @@ class LimitDetailResponse(BaseModel):
 
 
 router = APIRouter(
-    prefix="/api/v1/policies",
+    prefix="/policies",
     tags=["policies"],
 )
 

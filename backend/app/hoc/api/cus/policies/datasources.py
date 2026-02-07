@@ -17,15 +17,15 @@
 DataSources API (L2)
 
 Provides data source operations:
-- POST /api/v1/datasources (create source)
-- GET /api/v1/datasources (list sources)
-- GET /api/v1/datasources/{id} (get source)
-- PUT /api/v1/datasources/{id} (update source)
-- DELETE /api/v1/datasources/{id} (delete source)
-- POST /api/v1/datasources/{id}/test (test connection)
-- POST /api/v1/datasources/{id}/activate (activate source)
-- POST /api/v1/datasources/{id}/deactivate (deactivate source)
-- GET /api/v1/datasources/stats (statistics)
+- POST /datasources (create source)
+- GET /datasources (list sources)
+- GET /datasources/{id} (get source)
+- PUT /datasources/{id} (update source)
+- DELETE /datasources/{id} (delete source)
+- POST /datasources/{id}/test (test connection)
+- POST /datasources/{id}/activate (activate source)
+- POST /datasources/{id}/deactivate (deactivate source)
+- GET /datasources/stats (statistics)
 
 This is the ONLY facade for data source operations.
 All data source APIs flow through this router.

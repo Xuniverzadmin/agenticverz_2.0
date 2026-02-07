@@ -36,14 +36,14 @@ It does NOT manage or display:
 - Logs
 
 Endpoints:
-- GET /api/v1/accounts/projects            → O2 list projects
-- GET /api/v1/accounts/projects/{id}       → O3 project detail
-- GET /api/v1/accounts/users               → O2 list users
-- GET /api/v1/accounts/users/{id}          → O3 user detail
-- GET /api/v1/accounts/profile             → Current user profile
-- PUT /api/v1/accounts/profile             → Update profile
-- GET /api/v1/accounts/billing             → Billing summary
-- GET /api/v1/accounts/billing/invoices    → Invoice history
+- GET /accounts/projects            → O2 list projects
+- GET /accounts/projects/{id}       → O3 project detail
+- GET /accounts/users               → O2 list users
+- GET /accounts/users/{id}          → O3 user detail
+- GET /accounts/profile             → Current user profile
+- PUT /accounts/profile             → Update profile
+- GET /accounts/billing             → Billing summary
+- GET /accounts/billing/invoices    → Invoice history
 
 Architecture:
 - ONE facade for all ACCOUNTS needs
@@ -79,7 +79,7 @@ from app.models.tenant import (
 
 
 router = APIRouter(
-    prefix="/api/v1/accounts",
+    prefix="/accounts",
     tags=["accounts"],
 )
 
@@ -1307,7 +1307,7 @@ async def accept_invitation(
         )
 
 
-@router.get("/users", response_model=TenantUserListResponse)
+@router.get("/tenant/users", response_model=TenantUserListResponse)
 async def list_tenant_users(
     request: Request,
     session = Depends(get_session_dep),

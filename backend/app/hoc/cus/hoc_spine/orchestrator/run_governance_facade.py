@@ -332,6 +332,35 @@ class RunGovernanceFacade:
 _facade_instance: Optional[RunGovernanceFacade] = None
 
 
+def wire_run_governance_facade() -> RunGovernanceFacade:
+    """
+    Wire the RunGovernanceFacade singleton with real L5 engines.
+
+    Called once from bootstrap_hoc_spine() at application startup.
+    After this call, get_run_governance_facade() returns a facade
+    with live lessons_engine and policy_evaluator — no silent no-ops.
+
+    Engines injected:
+        - lessons_engine: LessonsLearnedEngine (policies/L5_engines)
+        - policy_evaluator: create_policy_evaluation_sync (incidents/L5_engines)
+
+    Returns:
+        The wired RunGovernanceFacade singleton
+    """
+    global _facade_instance
+
+    from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
+    from app.hoc.cus.incidents.L5_engines.policy_violation_engine import create_policy_evaluation_sync
+
+    _facade_instance = RunGovernanceFacade(
+        lessons_engine=get_lessons_learned_engine(),
+        policy_evaluator=create_policy_evaluation_sync,
+    )
+
+    logger.info("run_governance_facade wired with real engines")
+    return _facade_instance
+
+
 def get_run_governance_facade() -> RunGovernanceFacade:
     """
     Get the run governance facade instance.
@@ -340,9 +369,15 @@ def get_run_governance_facade() -> RunGovernanceFacade:
     the L5 worker runtime.
 
     Returns:
-        RunGovernanceFacade instance
+        RunGovernanceFacade instance (wired at startup via wire_run_governance_facade)
+
+    Raises:
+        RuntimeError: If called before wire_run_governance_facade() at startup
     """
     global _facade_instance
     if _facade_instance is None:
-        _facade_instance = RunGovernanceFacade()
+        raise RuntimeError(
+            "RunGovernanceFacade not wired. "
+            "bootstrap_hoc_spine() must run before get_run_governance_facade() is called."
+        )
     return _facade_instance

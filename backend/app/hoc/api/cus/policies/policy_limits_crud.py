@@ -17,9 +17,9 @@ Mutating endpoints for policy limits.
 Extends the read-only policies.py facade with write operations.
 
 Endpoints:
-    POST   /api/v1/policies/limits              → Create limit
-    PUT    /api/v1/policies/limits/{limit_id}   → Update limit
-    DELETE /api/v1/policies/limits/{limit_id}   → Soft-delete limit
+    POST   /policies/limits              → Create limit
+    PUT    /policies/limits/{limit_id}   → Update limit
+    DELETE /policies/limits/{limit_id}   → Soft-delete limit
 """
 
 from datetime import datetime

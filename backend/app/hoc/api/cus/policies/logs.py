@@ -76,7 +76,7 @@ from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
 
 
 router = APIRouter(
-    prefix="/api/v1/logs",
+    prefix="/logs",
     tags=["logs"],
 )
 

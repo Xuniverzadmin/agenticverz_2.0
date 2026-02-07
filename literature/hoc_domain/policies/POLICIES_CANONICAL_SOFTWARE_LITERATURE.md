@@ -1120,7 +1120,7 @@ L5 engines in the policies domain no longer import from `hoc_spine.orchestrator`
 |------|-------------------|-----------------|
 | `governance_facade.py` | runtime_switch imports (5 locations) | Constructor injection via ModuleType |
 | `failure_mode_handler.py` | profile_policy_mode import | Module-level setter injection |
-| `eligibility_engine.py` | orchestrator type imports | Imports from account/L5_engines |
+| `eligibility_engine.py` | cross-domain type coupling | Imports from account/L5_schemas (schema-only types) |
 
 ### L4 Bridge Capabilities Added (policies_bridge.py)
 

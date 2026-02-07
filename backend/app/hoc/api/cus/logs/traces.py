@@ -12,12 +12,12 @@
 #
 # GOVERNANCE NOTE (LOGS Domain V2):
 # This is NOT the canonical LOGS domain facade.
-# The canonical facade is /api/v1/logs/* (logs.py).
+# The canonical facade is /logs/* (logs.py).
 # This file provides SDK-facing trace APIs for:
 # - Trace ingestion from SDK
 # - Replay verification
 # - Determinism validation
-# Console users should use /api/v1/logs/llm-runs/* for log viewing.
+# Console users should use /logs/llm-runs/* for log viewing.
 
 """
 Trace Query API

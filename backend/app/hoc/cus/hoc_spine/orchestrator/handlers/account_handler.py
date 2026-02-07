@@ -173,6 +173,9 @@ class AccountMemoryPinsHandler:
             MemoryPinsDisabledError,
             get_memory_pins_engine,
         )
+        from app.hoc.cus.account.L6_drivers.memory_pins_driver import (
+            get_memory_pins_driver,
+        )
 
         method_name = ctx.params.get("method")
         if not method_name:
@@ -180,7 +183,13 @@ class AccountMemoryPinsHandler:
                 "Missing 'method' in params", "MISSING_METHOD"
             )
 
+        if ctx.session is None:
+            return OperationResult.fail(
+                "Missing session in context", "MISSING_SESSION"
+            )
+
         engine = get_memory_pins_engine()
+        driver = get_memory_pins_driver(ctx.session)
 
         try:
             kwargs = dict(ctx.params)
@@ -198,11 +207,16 @@ class AccountMemoryPinsHandler:
                     f"Unknown memory pins method: {method_name}", "UNKNOWN_METHOD"
                 )
 
-            data = await method(session=ctx.session, tenant_id=ctx.tenant_id, **kwargs)
+            data = await method(driver=driver, tenant_id=ctx.tenant_id, **kwargs)
+            await ctx.session.commit()
             return OperationResult.ok(data)
         except MemoryPinsDisabledError as e:
             return OperationResult.fail(str(e), "FEATURE_DISABLED")
         except Exception as e:
+            try:
+                await ctx.session.rollback()
+            except Exception:
+                pass
             return OperationResult.fail(str(e), "MEMORY_PINS_ERROR")
 
 

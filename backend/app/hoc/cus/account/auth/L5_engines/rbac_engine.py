@@ -608,61 +608,6 @@ class RBACEngine:
 
 
 # =============================================================================
-# Path to Policy Mapping
-# =============================================================================
-
-
-def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
-    """
-    Map request path and method to a PolicyObject.
-
-    Returns None for paths that don't require RBAC.
-    """
-    # Memory pins
-    if path.startswith("/api/v1/memory/pins"):
-        if path.endswith("/cleanup"):
-            return PolicyObject(resource="memory_pin", action="admin")
-        elif method == "GET":
-            return PolicyObject(resource="memory_pin", action="read")
-        elif method in ("POST", "PUT", "PATCH"):
-            return PolicyObject(resource="memory_pin", action="write")
-        elif method == "DELETE":
-            return PolicyObject(resource="memory_pin", action="delete")
-
-    # RBAC management
-    if path.startswith("/api/v1/rbac"):
-        if "/reload" in path:
-            return PolicyObject(resource="rbac", action="reload")
-        return PolicyObject(resource="rbac", action="read")
-
-    # Prometheus reload
-    if path.startswith("/-/reload") or path.startswith("/api/observability/prom-reload"):
-        return PolicyObject(resource="prometheus", action="reload")
-
-    # Prometheus query
-    if path.startswith("/api/v1/query") or path.startswith("/api/prometheus"):
-        return PolicyObject(resource="prometheus", action="query")
-
-    # CostSim
-    if path.startswith("/api/v1/costsim"):
-        if method == "GET":
-            return PolicyObject(resource="costsim", action="read")
-        else:
-            return PolicyObject(resource="costsim", action="write")
-
-    # Policy API
-    if path.startswith("/api/v1/policy"):
-        if "/approve" in path or "/reject" in path:
-            return PolicyObject(resource="policy", action="approve")
-        elif method == "GET":
-            return PolicyObject(resource="policy", action="read")
-        else:
-            return PolicyObject(resource="policy", action="write")
-
-    return None
-
-
-# =============================================================================
 # Global Engine Instance
 # =============================================================================
 

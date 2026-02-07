@@ -71,9 +71,8 @@ from enum import Enum
 from typing import Any, Optional, Protocol
 from uuid import UUID
 
-# PIN-520: Import validator types from canonical location (not orchestrator)
-# These are schema types, not orchestration logic
-from app.hoc.cus.account.L5_engines.crm_validator_engine import (
+# PIN-520: Import validator types as schema-only types (avoid cross-domain L5 engine imports)
+from app.hoc.cus.account.L5_schemas.crm_validator_types import (
     IssueType,
     RecommendedAction,
     Severity,

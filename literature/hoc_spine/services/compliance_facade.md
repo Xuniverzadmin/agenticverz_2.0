@@ -35,11 +35,11 @@ Why This Facade Exists:
 - Single point for audit emission
 
 L2 API Routes (GAP-103):
-- POST /api/v1/compliance/verify (run compliance verification)
-- GET /api/v1/compliance/reports (list compliance reports)
-- GET /api/v1/compliance/reports/{id} (get compliance report)
-- GET /api/v1/compliance/rules (list compliance rules)
-- GET /api/v1/compliance/status (compliance status)
+- POST /compliance/verify (run compliance verification)
+- GET /compliance/reports (list compliance reports)
+- GET /compliance/reports/{id} (get compliance report)
+- GET /compliance/rules (list compliance rules)
+- GET /compliance/status (compliance status)
 
 Usage:
     from app.services.compliance.facade import get_compliance_facade
@@ -212,4 +212,3 @@ pairing:
   expected_l5_consumers: []
   orchestrator_operations: []
 ```
-

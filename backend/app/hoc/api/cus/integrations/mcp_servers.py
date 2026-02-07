@@ -18,14 +18,14 @@ Customer-facing endpoints for MCP server lifecycle management.
 Enables customers to register MCP servers, discover tools, and monitor health.
 
 Endpoints:
-- POST   /api/v1/integrations/mcp-servers              → Register a new MCP server
-- GET    /api/v1/integrations/mcp-servers              → List MCP servers for tenant
-- GET    /api/v1/integrations/mcp-servers/{server_id}  → Get server details
-- POST   /api/v1/integrations/mcp-servers/{server_id}/discover → Discover tools
-- GET    /api/v1/integrations/mcp-servers/{server_id}/health   → Health check
-- DELETE /api/v1/integrations/mcp-servers/{server_id}  → Soft-delete server
-- GET    /api/v1/integrations/mcp-servers/{server_id}/tools    → List server tools
-- GET    /api/v1/integrations/mcp-servers/{server_id}/invocations → List invocations
+- POST   /integrations/mcp-servers              → Register a new MCP server
+- GET    /integrations/mcp-servers              → List MCP servers for tenant
+- GET    /integrations/mcp-servers/{server_id}  → Get server details
+- POST   /integrations/mcp-servers/{server_id}/discover → Discover tools
+- GET    /integrations/mcp-servers/{server_id}/health   → Health check
+- DELETE /integrations/mcp-servers/{server_id}  → Soft-delete server
+- GET    /integrations/mcp-servers/{server_id}/tools    → List server tools
+- GET    /integrations/mcp-servers/{server_id}/invocations → List invocations
 """
 
 import logging
@@ -179,7 +179,7 @@ class McpInvokeResponse(BaseModel):
 # =============================================================================
 
 router = APIRouter(
-    prefix="/api/v1/integrations/mcp-servers",
+    prefix="/integrations/mcp-servers",
     tags=["mcp-servers"],
 )
 

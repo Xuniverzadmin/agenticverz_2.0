@@ -21,7 +21,7 @@ Usage:
     emit_signal(
         artifact="prediction_events",
         signal_type="high_operator_access",
-        evidence={"count_7d": 21, "route": "/api/v1/predictions"},
+        evidence={"count_7d": 21, "route": "/predictions"},
         confidence=0.8,
         detected_by="api_access_monitor"
     )

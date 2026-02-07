@@ -498,14 +498,14 @@ Tables exist with proper constraints, indexes, and immutability trigger on mcp_t
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/v1/integrations/mcp-servers` | Register a new MCP server |
-| GET | `/api/v1/integrations/mcp-servers` | List MCP servers for tenant |
-| GET | `/api/v1/integrations/mcp-servers/{server_id}` | Get server details |
-| POST | `/api/v1/integrations/mcp-servers/{server_id}/discover` | Discover tools |
-| GET | `/api/v1/integrations/mcp-servers/{server_id}/health` | Health check |
-| DELETE | `/api/v1/integrations/mcp-servers/{server_id}` | Soft-delete server |
-| GET | `/api/v1/integrations/mcp-servers/{server_id}/tools` | List server tools |
-| GET | `/api/v1/integrations/mcp-servers/{server_id}/invocations` | List invocations |
+| POST | `/integrations/mcp-servers` | Register a new MCP server |
+| GET | `/integrations/mcp-servers` | List MCP servers for tenant |
+| GET | `/integrations/mcp-servers/{server_id}` | Get server details |
+| POST | `/integrations/mcp-servers/{server_id}/discover` | Discover tools |
+| GET | `/integrations/mcp-servers/{server_id}/health` | Health check |
+| DELETE | `/integrations/mcp-servers/{server_id}` | Soft-delete server |
+| GET | `/integrations/mcp-servers/{server_id}/tools` | List server tools |
+| GET | `/integrations/mcp-servers/{server_id}/invocations` | List invocations |
 
 **Registration:**
 - Handler registered in `handlers/__init__.py` under `register_all_handlers()`
@@ -531,7 +531,7 @@ Tables exist with proper constraints, indexes, and immutability trigger on mcp_t
 
 **L4 Handler Method Added:** `invoke_tool`
 
-**L2 API Endpoint Added:** `POST /api/v1/integrations/mcp-servers/{server_id}/tools/{tool_id}/invoke`
+**L2 API Endpoint Added:** `POST /integrations/mcp-servers/{server_id}/tools/{tool_id}/invoke`
 
 **Monitoring Integration Points:**
 

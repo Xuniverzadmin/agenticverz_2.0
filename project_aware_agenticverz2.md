@@ -107,3 +107,12 @@ Ask before:
 
 ## Canonical CUS Domains (Do Not Miss)
 overview, activity, incidents, policies, controls, logs, analytics, integrations, api_keys, account
+
+## Canonical Audiences (Do Not Add New)
+Within `backend/app/hoc/api/`, the only canonical audience roots are:
+- `cus/`
+- `int/`
+- `fdr/`
+
+### Known Misalignments (Track as TODO, Not Exemptions)
+- `backend/app/hoc/api/int/**` now includes real L2 routers (re-homed from `cus/`) as part of the audience cleansing workstream. The remaining gap is to design the **canonical** internal surface and ensure it is intentionally shaped (not just moved).

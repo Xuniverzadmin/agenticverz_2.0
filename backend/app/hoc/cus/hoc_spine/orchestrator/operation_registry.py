@@ -208,10 +208,10 @@ class OperationRegistry:
         but are tagged as unguarded in audit.
         If degraded mode is active, a warning is logged.
 
-    Audit:
+    Audit & Consequences:
         Every dispatch logs: operation name, tenant, duration, outcome.
-        Structured logging — no external audit store dependency in v1.
-        AuditStore integration deferred to Phase A.6.
+        V3: Structured logging + AuditStore persistence + Consequences pipeline.
+        Dispatch records and consequences are post-commit only (Constitution §2.3).
     """
 
     def __init__(self) -> None:
@@ -417,9 +417,11 @@ class OperationRegistry:
         authority_decision: Any,  # AuthorityDecision (avoid import cycle)
     ) -> None:
         """
-        Emit structured audit log for every dispatch (ITER3.4 — includes authority decision).
+        Emit structured audit log, persist dispatch record, and run consequences.
 
-        V1: structured logging only. AuditStore integration planned for Phase A.6.
+        V3: Structured logging + AuditStore persistence + Consequences pipeline.
+        Post-commit only — dispatch recording and consequences never participate
+        in the operation's transaction (Constitution §2.3).
 
         ITER3.4: authority_decision is now AuthorityDecision, providing:
         - allowed: bool
@@ -452,6 +454,37 @@ class OperationRegistry:
             logger.info("operation.dispatched", extra=log_data)
         else:
             logger.warning("operation.failed", extra=log_data)
+
+        # Phase A.6 (G4): Persist dispatch record to AuditStore
+        # Post-commit only — never participates in the operation's transaction
+        try:
+            from app.hoc.cus.hoc_spine.services.dispatch_audit import (
+                build_dispatch_record,
+            )
+            from app.hoc.cus.hoc_spine.services.audit_store import get_audit_store
+
+            record = build_dispatch_record(
+                operation=operation,
+                tenant_id=ctx.tenant_id,
+                success=result.success,
+                duration_ms=duration_ms,
+                authority_allowed=authority_decision.allowed,
+                authority_degraded=authority_decision.degraded,
+                authority_reason=authority_decision.reason,
+                authority_code=authority_decision.code,
+                error=result.error,
+                error_code=result.error_code,
+            )
+            get_audit_store().record_dispatch(record)
+
+            # Consequences pipeline: run post-dispatch adapters
+            from app.hoc.cus.hoc_spine.consequences.pipeline import (
+                get_consequence_pipeline,
+            )
+            get_consequence_pipeline().run(record)
+        except Exception:
+            # Non-blocking: audit persistence and consequences must never break dispatch
+            logger.debug("audit_store.dispatch_record_failed", exc_info=True)
 
     # =========================================================================
     # Introspection

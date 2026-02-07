@@ -12,27 +12,18 @@
 """
 RBAC Middleware with PolicyObject - M7/M8 Implementation
 
-Provides request-level authorization using PolicyObject pattern.
-Integrates with JWT claims, machine tokens, and Keycloak OIDC.
-
-Features:
-- PolicyObject-based authorization
-- Machine token support
-- JWT role extraction with JWKS validation (Keycloak)
-- Feature flag toggle (RBAC_ENFORCE)
-- Prometheus metrics
+Policy data (RBAC_MATRIX, PolicyObject, Decision, get_policy_for_path) is
+defined in app.hoc.cus.hoc_spine.authority.rbac_policy and re-exported here.
+This module provides the enforcement logic (enforce()) and middleware class.
 
 Usage:
-    # In FastAPI app startup
     from app.auth.rbac_middleware import RBACMiddleware
-
     app.add_middleware(RBACMiddleware)
 """
 
 import logging
 import os
 import time
-from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 import jwt
@@ -57,11 +48,18 @@ from .oidc_provider import (
     map_keycloak_roles_to_aos,
     validate_token,
 )
-from .rbac_rules_loader import get_public_paths
 from .shadow_audit import (
     record_shadow_audit_metric,
     shadow_aggregator,
     shadow_audit,
+)
+
+# Policy data from hoc_spine authority (canonical source)
+from app.hoc.cus.hoc_spine.authority.rbac_policy import (  # noqa: F401
+    Decision,
+    PolicyObject,
+    RBAC_MATRIX,
+    get_policy_for_path,
 )
 
 # =============================================================================
@@ -97,10 +95,6 @@ MACHINE_SECRET_TOKEN = os.getenv("MACHINE_SECRET_TOKEN", "")
 JWT_SECRET = os.getenv("JWT_SECRET", "")  # For signature verification (optional)
 JWT_VERIFY_SIGNATURE = os.getenv("JWT_VERIFY_SIGNATURE", "false").lower() == "true"
 
-# PIN-391: Environment detection for schema-driven RBAC
-# RBAC_RULES.yaml has different rules for preflight vs production
-CURRENT_ENVIRONMENT = os.getenv("AOS_ENVIRONMENT", "preflight")
-
 # Prometheus metrics - using idempotent registration (PIN-120 PREV-1)
 RBAC_DECISIONS = get_or_create_counter(
     "rbac_decisions_total", "RBAC authorization decisions", ["resource", "action", "decision", "reason"]
@@ -125,592 +119,9 @@ AUTH_COMPARISON = RBAC_V1_V2_COMPARISON
 NEW_AUTH_LATENCY = RBAC_V2_LATENCY
 
 
-# ============================================================================
-# Policy Objects
-# ============================================================================
-
-
-@dataclass
-class PolicyObject:
-    """
-    Represents an authorization policy for a resource action.
-
-    Attributes:
-        resource: Resource type (e.g., "memory_pin", "prometheus")
-        action: Action type (e.g., "read", "write", "delete", "admin")
-        attrs: Optional additional attributes for context-aware decisions
-    """
-
-    resource: str
-    action: str
-    attrs: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class Decision:
-    """
-    Result of an authorization decision.
-
-    Attributes:
-        allowed: Whether the action is permitted
-        reason: Human-readable reason for the decision
-        roles: Roles that contributed to the decision
-        policy: The policy that was evaluated
-    """
-
-    allowed: bool
-    reason: Optional[str] = None
-    roles: List[str] = field(default_factory=list)
-    policy: Optional[PolicyObject] = None
-
-
-# ============================================================================
-# RBAC Matrix
-# ============================================================================
-
-# Role -> Resource -> Actions mapping
-# PIN-169: Expanded to 14 resources with founder/operator roles
-# Replace with dynamic loader from DB or config if needed
-RBAC_MATRIX: Dict[str, Dict[str, List[str]]] = {
-    # =========================================================================
-    # FOUNDER-SCOPED ROLES (Isolated - never flow through tenant RBAC)
-    # =========================================================================
-    "founder": {
-        # Full global access - nuclear privilege
-        "memory_pin": ["read", "write", "delete", "admin"],
-        "prometheus": ["reload", "query"],
-        "costsim": ["read", "write", "admin"],
-        "policy": ["read", "write", "approve"],
-        "agent": ["read", "write", "register", "heartbeat", "delete"],
-        "runtime": ["simulate", "query", "capabilities"],
-        "recovery": ["read", "write", "execute", "suggest"],
-        "worker": ["read", "run", "stream", "cancel"],
-        "trace": ["read", "write", "delete", "export"],
-        "embedding": ["read", "embed", "query"],
-        "killswitch": ["read", "activate", "reset"],
-        "integration": ["read", "checkpoint", "resolve"],
-        "cost": ["read", "simulate", "forecast"],
-        "checkpoint": ["read", "write", "restore"],
-        "event": ["read", "subscribe", "publish"],
-        "incident": ["read", "write", "resolve"],
-        # Founder-only resources
-        "tenant": ["read", "write", "freeze", "delete"],
-        "rbac": ["read", "reload", "audit"],
-    },
-    "operator": {
-        # Scoped ops access
-        "memory_pin": ["read", "write"],
-        "prometheus": ["reload", "query"],
-        "costsim": ["read", "write"],
-        "policy": ["read", "write"],
-        "agent": ["read", "write", "register", "heartbeat"],
-        "runtime": ["simulate", "query", "capabilities"],
-        "recovery": ["read", "write", "execute"],
-        "worker": ["read", "run", "stream"],
-        "trace": ["read", "write", "export"],
-        "embedding": ["read", "embed", "query"],
-        "killswitch": ["read", "activate"],
-        "integration": ["read", "checkpoint", "resolve"],
-        "cost": ["read", "simulate"],
-        "checkpoint": ["read", "write", "restore"],
-        "event": ["read", "subscribe"],
-        "incident": ["read", "write", "resolve"],
-        # Operator can read tenants but not modify
-        "tenant": ["read"],
-        "rbac": ["read"],
-    },
-    # =========================================================================
-    # TENANT-SCOPED ROLES
-    # =========================================================================
-    "infra": {
-        "memory_pin": ["read", "write", "delete", "admin"],
-        "prometheus": ["reload", "query"],
-        "costsim": ["read", "write", "admin"],
-        "policy": ["read", "write", "approve"],
-        "agent": ["read", "write", "register", "heartbeat", "delete"],
-        "runtime": ["simulate", "query", "capabilities"],
-        "recovery": ["read", "write", "execute", "suggest"],
-        "worker": ["read", "run", "stream", "cancel"],
-        "trace": ["read", "write", "delete", "export"],
-        "embedding": ["read", "embed", "query"],
-        "killswitch": ["read", "activate", "reset"],
-        "integration": ["read", "checkpoint", "resolve"],
-        "cost": ["read", "simulate", "forecast"],
-        "checkpoint": ["read", "write", "restore"],
-        "event": ["read", "subscribe", "publish"],
-        "incident": ["read", "write", "resolve"],
-        "rbac": ["read"],
-    },
-    "admin": {
-        "memory_pin": ["read", "write", "delete", "admin"],
-        "prometheus": ["reload", "query"],
-        "costsim": ["read", "write", "admin"],
-        "policy": ["read", "write", "approve"],
-        "agent": ["read", "write", "register", "heartbeat"],
-        "runtime": ["simulate", "query", "capabilities"],
-        "recovery": ["read", "write", "execute"],
-        "worker": ["read", "run", "stream"],
-        "trace": ["read", "write", "export"],
-        "embedding": ["read", "embed", "query"],
-        "killswitch": ["read", "activate"],
-        "integration": ["read", "checkpoint", "resolve"],
-        "cost": ["read", "simulate"],
-        "checkpoint": ["read", "write", "restore"],
-        "event": ["read", "subscribe"],
-        "incident": ["read", "write"],
-        "rbac": ["read"],
-    },
-    # MACHINE: Strictly scoped for integration/automation tokens
-    # INVARIANT: Machine keys are escape risks. Lock down tightly.
-    # NEVER: tenant, rbac, policy (mutations), killswitch (mutations)
-    "machine": {
-        "memory_pin": ["read"],  # Read only - no write for machine keys
-        "prometheus": ["query"],  # Query only - no reload
-        "costsim": ["read"],
-        "policy": [],  # DENIED - policy mutation is admin-only
-        "agent": ["read", "heartbeat"],  # No register/write - that's console action
-        "runtime": ["simulate", "query", "capabilities"],  # Core machine use case
-        "recovery": ["read"],  # Read only - execute requires human
-        "worker": ["read", "run", "stream"],  # Run jobs - core use case
-        "trace": ["read", "write"],  # Tracing is allowed
-        "embedding": ["read", "embed"],  # Embedding is allowed
-        "killswitch": [],  # DENIED - killswitch is human-only
-        "integration": ["read"],  # Read only
-        "cost": ["read"],
-        "checkpoint": ["read"],  # Read only - write requires human
-        "event": ["read", "subscribe"],  # No publish - that's system action
-        "incident": ["read"],
-        # EXPLICIT DENIALS (for clarity):
-        "tenant": [],  # NEVER - tenant mutation is founder/admin only
-        "rbac": [],  # NEVER - RBAC mutation is admin only
-    },
-    "dev": {
-        "memory_pin": ["read"],
-        "prometheus": ["query"],
-        "costsim": ["read"],
-        "policy": ["read"],
-        "agent": ["read", "register", "heartbeat"],
-        "runtime": ["simulate", "query", "capabilities"],
-        "recovery": ["read"],
-        "worker": ["read", "run", "stream"],
-        "trace": ["read"],
-        "embedding": ["read", "embed"],
-        "killswitch": ["read"],
-        "integration": ["read"],
-        "cost": ["read"],
-        "checkpoint": ["read"],
-        "event": ["read", "subscribe"],
-        "incident": ["read"],
-    },
-    "readonly": {
-        "memory_pin": ["read"],
-        "prometheus": ["query"],
-        "costsim": ["read"],
-        "policy": ["read"],
-        "agent": ["read"],
-        "runtime": ["query", "capabilities"],
-        "recovery": ["read"],
-        "worker": ["read"],
-        "trace": ["read"],
-        "embedding": ["read"],
-        "killswitch": ["read"],
-        "integration": ["read"],
-        "cost": ["read"],
-        "checkpoint": ["read"],
-        "event": ["read"],
-        "incident": ["read"],
-    },
-}
-
-
-# ============================================================================
-# Path to Policy Mapping
-# ============================================================================
-
-
-def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
-    """
-    Map request path and method to a PolicyObject.
-
-    PIN-169: Expanded to cover all 14+ resources.
-    Returns None ONLY for explicitly public paths.
-    """
-    # =========================================================================
-    # PIN-391 PHASE 2: SCHEMA-DRIVEN PUBLIC PATHS
-    # =========================================================================
-    #
-    # STATUS: ACTIVE (Phase 2 - schema-driven with shadow comparison)
-    # AUTHORITY: design/auth/RBAC_RULES.yaml is the SINGLE SOURCE OF TRUTH
-    #
-    # PUBLIC_PATHS is now loaded from RBAC_RULES.yaml via get_public_paths().
-    # The legacy hardcoded list is kept for shadow comparison only.
-    #
-    # SECURITY INVARIANTS:
-    # - /health: No sensitive data, system status only
-    # - /metrics: GLOBAL metrics, NO tenant_id in labels
-    # - /api/v1/auth/: Login flow, unauthenticated by definition
-    # - /docs: OpenAPI spec, no sensitive data
-    # =========================================================================
-
-    # Schema-driven public paths (PIN-391)
-    PUBLIC_PATHS = get_public_paths(environment=CURRENT_ENVIRONMENT)
-
-    # Legacy list for shadow comparison (remove after Phase 2B validation)
-    _LEGACY_PUBLIC_PATHS = [
-        "/health",
-        "/metrics",
-        "/api/v1/auth/",
-        "/api/v1/c2/predictions/",
-        # REMOVED: "/api/v1/activity/" - now requires auth via unified facade
-        "/api/v1/policy-proposals/",
-        # REMOVED: "/api/v1/incidents/" - now requires auth via unified facade
-        "/docs",
-        "/openapi.json",
-        "/redoc",
-        "/fdr/",
-        "/platform/",
-    ]
-
-    # Check if path matches schema-driven public paths
-    is_public_schema = any(
-        path.startswith(public_path) or path == public_path.rstrip("/") for public_path in PUBLIC_PATHS
-    )
-
-    # Shadow comparison: detect discrepancies between legacy and schema
-    is_public_legacy = any(
-        path.startswith(public_path) or path == public_path.rstrip("/") for public_path in _LEGACY_PUBLIC_PATHS
-    )
-
-    if is_public_schema != is_public_legacy:
-        # Log discrepancy for monitoring (PIN-391 shadow mode)
-        logger.warning(
-            "RBAC_PUBLIC_PATH_DISCREPANCY: path=%s schema=%s legacy=%s env=%s",
-            path,
-            is_public_schema,
-            is_public_legacy,
-            CURRENT_ENVIRONMENT,
-        )
-
-    if is_public_schema:
-        return None
-
-    # =========================================================================
-    # MEMORY PINS (/api/v1/memory/pins)
-    # =========================================================================
-    if path.startswith("/api/v1/memory/pins"):
-        if path.endswith("/cleanup"):
-            return PolicyObject(resource="memory_pin", action="admin")
-        elif method == "GET":
-            return PolicyObject(resource="memory_pin", action="read")
-        elif method in ("POST", "PUT", "PATCH"):
-            return PolicyObject(resource="memory_pin", action="write")
-        elif method == "DELETE":
-            return PolicyObject(resource="memory_pin", action="delete")
-
-    # =========================================================================
-    # PROMETHEUS & METRICS
-    #
-    # SECURITY POSTURE:
-    # 1. /metrics endpoint is PUBLIC (no auth) - standard Prometheus scrape
-    # 2. Metrics are GLOBAL - no tenant-scoped data in labels
-    # 3. /-/reload requires "prometheus:reload" permission (infra+)
-    # 4. Query endpoints require "prometheus:query" permission
-    #
-    # TENANT LEAKAGE: Metrics MUST NOT contain tenant_id in labels.
-    # If metrics become tenant-aware, they MUST move behind RBAC.
-    # =========================================================================
-    if path.startswith("/-/reload") or path.startswith("/api/observability/prom-reload"):
-        return PolicyObject(resource="prometheus", action="reload")
-
-    if path.startswith("/api/v1/query") or path.startswith("/api/prometheus"):
-        return PolicyObject(resource="prometheus", action="query")
-
-    # =========================================================================
-    # COSTSIM (/api/v1/costsim)
-    # =========================================================================
-    if path.startswith("/api/v1/costsim"):
-        if method == "GET":
-            return PolicyObject(resource="costsim", action="read")
-        else:
-            return PolicyObject(resource="costsim", action="write")
-
-    # =========================================================================
-    # POLICY (/api/v1/policy)
-    # =========================================================================
-    if path.startswith("/api/v1/policy"):
-        if "/approve" in path or "/reject" in path:
-            return PolicyObject(resource="policy", action="approve")
-        elif method == "GET":
-            return PolicyObject(resource="policy", action="read")
-        else:
-            return PolicyObject(resource="policy", action="write")
-
-    # =========================================================================
-    # AGENTS (/api/v1/agents)
-    # =========================================================================
-    if path.startswith("/api/v1/agents"):
-        if "/heartbeat" in path:
-            return PolicyObject(resource="agent", action="heartbeat")
-        elif "/register" in path:
-            return PolicyObject(resource="agent", action="register")
-        elif method == "GET":
-            return PolicyObject(resource="agent", action="read")
-        elif method == "POST":
-            return PolicyObject(resource="agent", action="write")
-        elif method in ("PUT", "PATCH"):
-            return PolicyObject(resource="agent", action="write")
-        elif method == "DELETE":
-            return PolicyObject(resource="agent", action="delete")
-
-    # =========================================================================
-    # RUNTIME (/api/v1/runtime)
-    # =========================================================================
-    if path.startswith("/api/v1/runtime"):
-        if "/simulate" in path:
-            return PolicyObject(resource="runtime", action="simulate")
-        elif "/capabilities" in path:
-            return PolicyObject(resource="runtime", action="capabilities")
-        elif "/query" in path or method == "GET":
-            return PolicyObject(resource="runtime", action="query")
-        else:
-            return PolicyObject(resource="runtime", action="query")
-
-    # =========================================================================
-    # RECOVERY (/api/v1/recovery)
-    # =========================================================================
-    if path.startswith("/api/v1/recovery"):
-        if "/execute" in path or "/apply" in path:
-            return PolicyObject(resource="recovery", action="execute")
-        elif "/suggest" in path:
-            return PolicyObject(resource="recovery", action="suggest")
-        elif method == "GET":
-            return PolicyObject(resource="recovery", action="read")
-        elif method in ("POST", "PUT", "PATCH"):
-            return PolicyObject(resource="recovery", action="write")
-
-    # =========================================================================
-    # WORKERS (/api/v1/workers)
-    # =========================================================================
-    if path.startswith("/api/v1/workers"):
-        if "/run" in path or "/execute" in path:
-            return PolicyObject(resource="worker", action="run")
-        elif "/stream" in path:
-            return PolicyObject(resource="worker", action="stream")
-        elif "/cancel" in path or "/stop" in path:
-            return PolicyObject(resource="worker", action="cancel")
-        elif method == "GET":
-            return PolicyObject(resource="worker", action="read")
-
-    # =========================================================================
-    # TRACES (/api/v1/traces)
-    # =========================================================================
-    if path.startswith("/api/v1/traces"):
-        if "/export" in path:
-            return PolicyObject(resource="trace", action="export")
-        elif method == "GET":
-            return PolicyObject(resource="trace", action="read")
-        elif method in ("POST", "PUT", "PATCH"):
-            return PolicyObject(resource="trace", action="write")
-        elif method == "DELETE":
-            return PolicyObject(resource="trace", action="delete")
-
-    # =========================================================================
-    # EMBEDDING (/api/v1/embedding)
-    # =========================================================================
-    if path.startswith("/api/v1/embedding"):
-        # Check /query and /search FIRST (more specific than base /embedding)
-        if "/query" in path or "/search" in path:
-            return PolicyObject(resource="embedding", action="query")
-        # Then check /embed endpoint (POST only) - use path.endswith to avoid matching /embedding
-        elif path.endswith("/embed") and method == "POST":
-            return PolicyObject(resource="embedding", action="embed")
-        elif method == "GET":
-            return PolicyObject(resource="embedding", action="read")
-        # POST to base /embedding for embed
-        elif method == "POST":
-            return PolicyObject(resource="embedding", action="embed")
-
-    # =========================================================================
-    # KILLSWITCH (/v1/killswitch, /api/v1/killswitch)
-    # =========================================================================
-    if "/killswitch" in path:
-        if "/activate" in path or "/engage" in path:
-            return PolicyObject(resource="killswitch", action="activate")
-        elif "/reset" in path or "/disengage" in path:
-            return PolicyObject(resource="killswitch", action="reset")
-        else:
-            return PolicyObject(resource="killswitch", action="read")
-
-    # =========================================================================
-    # INTEGRATION (/integration, /api/v1/integration)
-    # =========================================================================
-    if "/integration" in path:
-        # Check /resolve FIRST (more specific - appears in /checkpoints/123/resolve)
-        if "/resolve" in path:
-            return PolicyObject(resource="integration", action="resolve")
-        elif "/checkpoint" in path:
-            return PolicyObject(resource="integration", action="checkpoint")
-        elif method == "GET":
-            return PolicyObject(resource="integration", action="read")
-
-    # =========================================================================
-    # COST (/cost, /api/v1/cost)
-    # =========================================================================
-    if "/cost" in path and "/costsim" not in path:
-        if "/simulate" in path:
-            return PolicyObject(resource="cost", action="simulate")
-        elif "/forecast" in path:
-            return PolicyObject(resource="cost", action="forecast")
-        else:
-            return PolicyObject(resource="cost", action="read")
-
-    # =========================================================================
-    # CHECKPOINTS (/api/v1/checkpoints)
-    # =========================================================================
-    if path.startswith("/api/v1/checkpoints"):
-        if "/restore" in path:
-            return PolicyObject(resource="checkpoint", action="restore")
-        elif method == "GET":
-            return PolicyObject(resource="checkpoint", action="read")
-        elif method in ("POST", "PUT", "PATCH"):
-            return PolicyObject(resource="checkpoint", action="write")
-
-    # =========================================================================
-    # EVENTS (/api/v1/events)
-    # =========================================================================
-    if path.startswith("/api/v1/events"):
-        if "/subscribe" in path:
-            return PolicyObject(resource="event", action="subscribe")
-        elif "/publish" in path and method == "POST":
-            return PolicyObject(resource="event", action="publish")
-        else:
-            return PolicyObject(resource="event", action="read")
-
-    # =========================================================================
-    # INCIDENTS (/api/v1/incidents)
-    # =========================================================================
-    if path.startswith("/api/v1/incidents") or "/incidents" in path:
-        if "/resolve" in path:
-            return PolicyObject(resource="incident", action="resolve")
-        elif method == "GET":
-            return PolicyObject(resource="incident", action="read")
-        elif method in ("POST", "PUT", "PATCH"):
-            return PolicyObject(resource="incident", action="write")
-
-    # =========================================================================
-    # RBAC (/api/v1/rbac)
-    # =========================================================================
-    if path.startswith("/api/v1/rbac"):
-        if "/reload" in path:
-            return PolicyObject(resource="rbac", action="reload")
-        elif "/audit" in path:
-            return PolicyObject(resource="rbac", action="audit")
-        else:
-            return PolicyObject(resource="rbac", action="read")
-
-    # =========================================================================
-    # TENANTS (/api/v1/tenants)
-    # =========================================================================
-    if path.startswith("/api/v1/tenants"):
-        if "/freeze" in path:
-            return PolicyObject(resource="tenant", action="freeze")
-        elif method == "GET":
-            return PolicyObject(resource="tenant", action="read")
-        elif method == "POST":
-            return PolicyObject(resource="tenant", action="write")
-        elif method == "DELETE":
-            return PolicyObject(resource="tenant", action="delete")
-
-    # =========================================================================
-    # RUNS (/api/v1/runs) - Maps to worker resource
-    # =========================================================================
-    if path.startswith("/api/v1/runs"):
-        if method == "GET":
-            return PolicyObject(resource="worker", action="read")
-        elif method == "POST":
-            return PolicyObject(resource="worker", action="run")
-
-    # =========================================================================
-    # V1 PROXY ROUTES (/v1/chat, /v1/embeddings, /v1/status)
-    # =========================================================================
-    if path.startswith("/v1/"):
-        # Chat/completions
-        if "/chat" in path or "/completions" in path:
-            return PolicyObject(resource="runtime", action="simulate")
-        # Embeddings
-        if "/embeddings" in path:
-            return PolicyObject(resource="embedding", action="embed")
-        # Status
-        if "/status" in path:
-            return PolicyObject(resource="runtime", action="query")
-        # Policies
-        if "/policies" in path:
-            return PolicyObject(resource="policy", action="read")
-        # Demo/replay
-        if "/demo" in path or "/replay" in path:
-            return PolicyObject(resource="trace", action="read")
-
-    # =========================================================================
-    # CUSTOMER ROUTES (/cus/*) - Phase 4C-2 Customer Visibility
-    # PRE-RUN declarations and outcome reconciliation
-    # =========================================================================
-    if path.startswith("/cus/"):
-        if "/pre-run" in path:
-            return PolicyObject(resource="runtime", action="query")
-        elif "/acknowledge" in path:
-            return PolicyObject(resource="runtime", action="query")
-        elif "/outcome" in path:
-            return PolicyObject(resource="runtime", action="query")
-        elif "/declaration" in path:
-            return PolicyObject(resource="runtime", action="query")
-        else:
-            return PolicyObject(resource="runtime", action="query")
-
-    # =========================================================================
-    # GUARD ROUTES (/guard/*) - Customer Console
-    # These are handled by console_auth, but we still map them for shadow audit
-    # =========================================================================
-    if path.startswith("/guard/"):
-        if "/costs" in path:
-            return PolicyObject(resource="cost", action="read")
-        elif "/incidents" in path:
-            return PolicyObject(resource="incident", action="read")
-        else:
-            # Default guard access
-            return PolicyObject(resource="runtime", action="query")
-
-    # =========================================================================
-    # OPS ROUTES (/ops/*) - Founder Console
-    # These are handled by fops_auth, but we still map them for shadow audit
-    # =========================================================================
-    if path.startswith("/ops/"):
-        if "/cost" in path:
-            return PolicyObject(resource="cost", action="read")
-        elif "/customers" in path or "/tenants" in path:
-            return PolicyObject(resource="tenant", action="read")
-        elif "/incidents" in path:
-            return PolicyObject(resource="incident", action="read")
-        elif "/actions" in path:
-            return PolicyObject(resource="tenant", action="write")
-        else:
-            # Default ops access
-            return PolicyObject(resource="runtime", action="query")
-
-    # =========================================================================
-    # FOUNDER TIMELINE (/fdr/timeline/*) - Phase 5E-1
-    # Decision records visibility for founder forensics
-    # =========================================================================
-    if path.startswith("/fdr/timeline"):
-        # Read-only timeline access - maps to runtime:query
-        return PolicyObject(resource="runtime", action="query")
-
-    # =========================================================================
-    # CATCH-ALL: Unknown paths default to runtime:query
-    # This ensures no path returns None for protected routes
-    # =========================================================================
-    # Log unknown paths for visibility
-    logger.debug(f"rbac_unknown_path: {path} {method} - defaulting to runtime:query")
-    return PolicyObject(resource="runtime", action="query")
+# RBAC_MATRIX, PolicyObject, Decision, get_policy_for_path are imported
+# from app.hoc.cus.hoc_spine.authority.rbac_policy (see import block above).
+# Middleware is enforcement-only — no path→resource mapping logic lives here.
 
 
 # ============================================================================
@@ -1269,6 +680,16 @@ class RBACMiddleware(BaseHTTPMiddleware):
                     "roles": decision.roles,
                 },
             )
+            try:
+                from app.hoc.cus.hoc_spine.authority.veil_policy import unauthorized_http_status_code
+
+                status_code = unauthorized_http_status_code()
+                if status_code == 404:
+                    return JSONResponse(status_code=404, content={"error": "not_found"})
+            except Exception:
+                # Veil policy must never break RBAC enforcement.
+                pass
+
             return JSONResponse(
                 status_code=403,
                 content={

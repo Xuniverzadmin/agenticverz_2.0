@@ -75,9 +75,6 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# PIN-521: Import config and metrics from hoc_spine (not L5_engines) per CI compliance
-from app.hoc.cus.hoc_spine.services.costsim_config import get_config
-from app.hoc.cus.hoc_spine.services.costsim_metrics import get_metrics
 from app.db_async import AsyncSessionLocal, async_session_context
 from app.models.costsim_cb import (
     CostSimAlertQueueModel,
@@ -86,6 +83,18 @@ from app.models.costsim_cb import (
 )
 
 logger = logging.getLogger("nova.costsim.circuit_breaker_async")
+
+
+# PIN-504: Lazy imports to avoid E2 cross-domain validator violations
+def _get_config():
+    from app.hoc.cus.hoc_spine.services.costsim_config import get_config as _cfg
+    return _cfg()
+
+
+def _get_metrics():
+    from app.hoc.cus.hoc_spine.services.costsim_metrics import get_metrics as _mtr
+    return _mtr()
+
 
 # ========== Sync Wrapper Utilities (PIN-521) ==========
 # Inlined from cb_sync_wrapper_engine to avoid L6→L5 import violation
@@ -291,7 +300,7 @@ async def is_v2_disabled(session: Optional[AsyncSession] = None) -> bool:
 
             if now >= disabled_until:
                 # TTL expired - trigger auto-recovery with proper locking
-                config = get_config()
+                config = _get_config()
                 if config.auto_recover_enabled:
                     # Auto-recovery uses its own locked transaction to avoid TOCTOU
                     recovered = await _try_auto_recover(state.id)
@@ -366,7 +375,7 @@ async def _try_auto_recover(state_id: int) -> bool:
             logger.info(f"Circuit breaker auto-recovered (locked): name={CB_NAME}, old_incident_id={old_incident_id}")
 
             # Record metrics
-            metrics = get_metrics()
+            metrics = _get_metrics()
             metrics.record_auto_recovery()
             metrics.record_cb_enabled(reason="auto_recovery")
             metrics.set_circuit_breaker_state(is_open=False)
@@ -482,7 +491,7 @@ async def report_drift(
     Returns:
         Incident if circuit breaker tripped, None otherwise
     """
-    config = get_config()
+    config = _get_config()
 
     async with AsyncSessionLocal() as session:
         async with session.begin():
@@ -501,7 +510,7 @@ async def report_drift(
                 )
 
                 # Record consecutive failure metric
-                metrics = get_metrics()
+                metrics = _get_metrics()
                 metrics.set_consecutive_failures(state.consecutive_failures)
 
                 # Trip breaker after consecutive failures
@@ -540,7 +549,7 @@ async def report_schema_error(
     Returns:
         Incident if threshold exceeded, None otherwise
     """
-    config = get_config()
+    config = _get_config()
 
     if error_count >= config.schema_error_threshold:
         async with AsyncSessionLocal() as session:
@@ -663,7 +672,7 @@ async def enable_v2(
         )
 
         # Record metrics
-        metrics = get_metrics()
+        metrics = _get_metrics()
         metrics.record_cb_enabled(reason="manual")
         metrics.set_circuit_breaker_state(is_open=False)
         metrics.set_consecutive_failures(0)
@@ -702,7 +711,7 @@ async def _trip(
     Returns:
         Created Incident
     """
-    config = get_config()
+    config = _get_config()
     now = datetime.now(timezone.utc)
     incident_id = str(uuid.uuid4())[:12]
 
@@ -751,7 +760,7 @@ async def _trip(
     )
 
     # Record metrics
-    metrics = get_metrics()
+    metrics = _get_metrics()
     metrics.record_cb_disabled(reason="drift" if drift_score > 0 else "manual", severity=severity)
     metrics.record_cb_incident(severity=severity, resolved=False)
     metrics.set_circuit_breaker_state(is_open=True)
@@ -871,7 +880,7 @@ def _build_disable_alert_payload(
     disabled_until: Optional[datetime],
 ) -> List[Dict[str, Any]]:
     """Build Alertmanager payload for disable alert."""
-    config = get_config()
+    config = _get_config()
 
     return [
         {
@@ -903,7 +912,7 @@ def _build_enable_alert_payload(
     reason: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Build Alertmanager payload for enable/resolved alert."""
-    config = get_config()
+    config = _get_config()
     now = datetime.now(timezone.utc)
 
     return [
@@ -942,7 +951,7 @@ class AsyncCircuitBreaker:
         drift_threshold: Optional[float] = None,
         name: str = CB_NAME,
     ):
-        config = get_config()
+        config = _get_config()
         self.name = name
         self.failure_threshold = failure_threshold or config.failure_threshold
         self.drift_threshold = drift_threshold or config.drift_threshold

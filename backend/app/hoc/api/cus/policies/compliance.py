@@ -17,12 +17,12 @@
 Compliance API (L2)
 
 Provides compliance verification operations:
-- POST /api/v1/compliance/verify (run verification)
-- GET /api/v1/compliance/reports (list reports)
-- GET /api/v1/compliance/reports/{id} (get report)
-- GET /api/v1/compliance/rules (list rules)
-- GET /api/v1/compliance/rules/{id} (get rule)
-- GET /api/v1/compliance/status (overall status)
+- POST /compliance/verify (run verification)
+- GET /compliance/reports (list reports)
+- GET /compliance/reports/{id} (get report)
+- GET /compliance/rules (list rules)
+- GET /compliance/rules/{id} (get rule)
+- GET /compliance/status (overall status)
 
 This is the ONLY facade for compliance verification.
 All compliance APIs flow through this router.

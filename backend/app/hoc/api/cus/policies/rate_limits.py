@@ -19,12 +19,12 @@
 Rate Limits API (L2) - GAP-122
 
 Provides rate limit and quota operations:
-- GET /api/v1/rate-limits (list rate limits)
-- GET /api/v1/rate-limits/usage (current usage)
-- GET /api/v1/rate-limits/{id} (get rate limit)
-- PUT /api/v1/rate-limits/{id} (update rate limit)
-- POST /api/v1/rate-limits/check (check rate limit)
-- POST /api/v1/rate-limits/{id}/reset (reset usage)
+- GET /rate-limits (list rate limits)
+- GET /rate-limits/usage (current usage)
+- GET /rate-limits/{id} (get rate limit)
+- PUT /rate-limits/{id} (update rate limit)
+- POST /rate-limits/check (check rate limit)
+- POST /rate-limits/{id}/reset (reset usage)
 
 This is the ONLY facade for rate limit/quota operations.
 Distinct from PIN-LIM policy limits (app/api/limits/).

@@ -44,7 +44,7 @@ from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.predictions")
 
-router = APIRouter(prefix="/api/v1/predictions", tags=["predictions", "pb-s5", "read-only"])
+router = APIRouter(prefix="/predictions", tags=["predictions", "pb-s5", "read-only"])
 
 
 # =============================================================================

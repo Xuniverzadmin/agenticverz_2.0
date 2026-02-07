@@ -187,100 +187,6 @@ class PolicyEnforcementWriteDriver:
 
 
 # =============================================================================
-# Standalone Functions (for use without session management)
-# =============================================================================
-
-
-async def record_enforcement_standalone(
-    tenant_id: str,
-    rule_id: str,
-    action_taken: str,
-    run_id: Optional[str] = None,
-    incident_id: Optional[str] = None,
-    details: Optional[Dict[str, Any]] = None,
-) -> Optional[str]:
-    """
-    Record a policy enforcement event via L4 handler (L4 owns commit).
-
-    This function dispatches to the L4 PoliciesEnforcementWriteHandler,
-    which creates its own session and commits. L6 driver does NOT commit.
-
-    Args:
-        tenant_id: Tenant owning the run
-        rule_id: Policy rule that triggered
-        action_taken: Action taken (BLOCKED, WARNED, AUDITED, STOPPED, KILLED)
-        run_id: Optional run ID that was affected
-        incident_id: Optional incident ID if one was created
-        details: Optional enforcement details
-
-    Returns:
-        Enforcement record ID, or None if recording failed
-
-    Note:
-        This function is fail-safe: recording failures are logged but don't
-        raise exceptions. Enforcement continues regardless of recording success.
-    """
-    try:
-        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
-            OperationContext,
-            get_operation_registry,
-        )
-
-        registry = get_operation_registry()
-        result = await registry.execute(
-            "policies.enforcement_write",
-            OperationContext(
-                session=None,  # L4 handler creates its own session
-                tenant_id=tenant_id,
-                params={
-                    "method": "record_enforcement",
-                    "tenant_id": tenant_id,
-                    "rule_id": rule_id,
-                    "action_taken": action_taken,
-                    "run_id": run_id,
-                    "incident_id": incident_id,
-                    "details": details,
-                },
-            ),
-        )
-
-        if result.success:
-            return result.data.get("enforcement_id")
-        else:
-            logger.error(
-                "policy_enforcement.record_failed",
-                extra={
-                    "error": result.error,
-                    "tenant_id": tenant_id,
-                    "rule_id": rule_id,
-                    "action_taken": action_taken,
-                },
-            )
-            return None
-
-    except ImportError:
-        # Registry not available - log and continue
-        logger.warning(
-            "policy_enforcement.registry_unavailable",
-            extra={"action": "record_enforcement_standalone"},
-        )
-        return None
-    except Exception as e:
-        # Recording failed - log but don't raise
-        # Enforcement must continue even if recording fails
-        logger.error(
-            "policy_enforcement.record_failed",
-            extra={
-                "error": str(e),
-                "tenant_id": tenant_id,
-                "rule_id": rule_id,
-                "action_taken": action_taken,
-            },
-        )
-        return None
-
-
-# =============================================================================
 # Factory
 # =============================================================================
 
@@ -307,5 +213,4 @@ def get_policy_enforcement_write_driver(
 __all__ = [
     "PolicyEnforcementWriteDriver",
     "get_policy_enforcement_write_driver",
-    "record_enforcement_standalone",
 ]

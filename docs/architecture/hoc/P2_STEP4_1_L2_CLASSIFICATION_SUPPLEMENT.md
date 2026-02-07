@@ -1,6 +1,7 @@
 # P2-Step4-1: L2 Non-Registry Classification Supplement (Live)
 
-**Date:** 2026-02-06
+**Created:** 2026-02-06  
+**Last verified:** 2026-02-07
 **Scope:** `backend/app/hoc/api/cus/**`
 **Reference:** `docs/architecture/hoc/P2_STEP4_1_L2_NON_REGISTRY_AUDIT.md` (READ-ONLY snapshot)
 **Guard:** Update only with explicit user command.
@@ -16,19 +17,27 @@ The codebase has changed since that snapshot.
 
 | Metric | READ-ONLY snapshot | Current scan (this document) |
 |--------|---------------------|------------------------------|
-| Total L2 APIRouter string-scan files | 69 | 69 |
-| Using `operation_registry` | 32 | 47 |
-| Not using `operation_registry` | 37 | 22 |
+| Total L2 APIRouter string-scan files | 69 | 57 |
+| Using `operation_registry` | 32 | 43 |
+| Not using `operation_registry` | 37 | 14 |
 
-**Drift detail (evidence):** these 15 files were in the snapshot’s “not using operation_registry” list, but now contain `registry.execute(...)`.
+**Audience cleansing note (2026-02-07):** the CUS surface was cleansed to contain **only** the canonical 10 customer domains.
+Non-domain surfaces (`general/`, `agent/`, `recovery/`, `ops/`) were re-homed to `int/` or `fdr/`, shrinking the CUS scan scope.
+
+<details>
+<summary>Pre-audience-cleansing drift detail (historical)</summary>
+
+These files were in the snapshot’s “not using operation_registry” list, but later gained `registry.execute(...)` dispatch (before the audience re-home):
 
 - `agent/discovery.py`
 - `agent/platform.py`
 - `analytics/feedback.py`
 - `analytics/predictions.py`
 - `general/agents.py`
+- `general/health.py`
 - `incidents/cost_guard.py`
 - `integrations/v1_proxy.py`
+- `logs/tenants.py`
 - `logs/traces.py`
 - `policies/M25_integrations.py`
 - `policies/customer_visibility.py`
@@ -36,7 +45,10 @@ The codebase has changed since that snapshot.
 - `policies/rbac_api.py`
 - `policies/replay.py`
 - `policies/v1_killswitch.py`
+- `recovery/recovery.py`
 - `recovery/recovery_ingest.py`
+
+</details>
 
 ---
 
@@ -46,20 +58,31 @@ The codebase has changed since that snapshot.
 
 | Category | Count | Criteria (machine-checkable) |
 |----------|-------|-----------------------------|
-| Registry dispatch | 47 | Module contains `registry.execute(` |
+| Registry dispatch | 43 | Module contains `registry.execute(` |
 | Non-registry: Utility (no router) | 1 | `APIRouter(` appears only in docstring/example; no `APIRouter(...)` call and no `@router.<verb>` decorators (AST) |
 | Non-registry: Console adapter (PIN-281) | 2 | Module is a guarded console adapter surface (currently: `guard_logs.py`, `guard_policies.py`) |
 | Non-registry: Adapters boundary | 1 | Imports `app.adapters.*` and delegates into adapter (no registry) |
 | Non-registry: hoc_spine services facade | 7 | Imports `app.hoc.cus.hoc_spine.services.*` (no registry) |
-| Non-registry: hoc_spine bridge pattern | 2 | Uses `get_*_bridge` or imports `hoc_spine...bridges...` (no registry) |
-| Non-registry: Session helpers (no registry) | 1 | Uses `get_sync_session_dep` / `get_async_session_context` / `sql_text` without registry dispatch |
-| Non-registry: Stateless/local | 8 | None of the above markers |
+| Non-registry: hoc_spine bridge pattern | 0 | Uses `get_*_bridge` or imports `hoc_spine...bridges...` (no registry) |
+| Non-registry: Session helpers (no registry) | 0 | Uses `get_sync_session_dep` / `get_async_session_context` / `sql_text` without registry dispatch |
+| Non-registry: Stateless/local | 3 | None of the above markers |
 
-**Total (string-scan):** 69
+**Total (string-scan):** 57
 
 ---
 
-## Registry Dispatch (47)
+## Re-Verification (2026-02-07)
+
+Re-ran the reproducible scan scripts in this document against the live tree.
+
+| Check | Result |
+|-------|--------|
+| APIRouter token files | 57 |
+| Registry dispatch (`registry.execute`) | 43 |
+| Non-registry | 14 |
+| Category partition of non-registry set | PASS (0 missing, 0 extra, 0 duplicates) |
+
+## Registry Dispatch (43)
 
 These files currently contain `registry.execute(...)`.
 
@@ -68,19 +91,17 @@ These files currently contain `registry.execute(...)`.
 
 - `account/memory_pins.py`
 - `activity/activity.py`
-- `agent/discovery.py`
-- `agent/platform.py`
 - `analytics/costsim.py`
 - `analytics/feedback.py`
 - `analytics/predictions.py`
-- `general/agents.py`
+- `controls/controls.py`
 - `incidents/cost_guard.py`
 - `incidents/incidents.py`
 - `integrations/cus_telemetry.py`
 - `integrations/mcp_servers.py`
 - `integrations/v1_proxy.py`
+- `logs/tenants.py`
 - `logs/traces.py`
-- `ops/cost_ops.py`
 - `overview/overview.py`
 - `policies/M25_integrations.py`
 - `policies/analytics.py`
@@ -88,7 +109,6 @@ These files currently contain `registry.execute(...)`.
 - `policies/aos_api_key.py`
 - `policies/aos_cus_integrations.py`
 - `policies/connectors.py`
-- `policies/controls.py`
 - `policies/cus_enforcement.py`
 - `policies/customer_visibility.py`
 - `policies/datasources.py`
@@ -112,13 +132,12 @@ These files currently contain `registry.execute(...)`.
 - `policies/status_history.py`
 - `policies/v1_killswitch.py`
 - `policies/workers.py`
-- `recovery/recovery_ingest.py`
 
 </details>
 
 ---
 
-## Non-Registry (22)
+## Non-Registry (14)
 
 These files do **not** contain `registry.execute(...)` today.
 
@@ -126,7 +145,7 @@ These files do **not** contain `registry.execute(...)` today.
 
 - `api_keys/auth_helpers.py`
 
-**Why it appears in the 69-file set:** it contains an `APIRouter(...)` example inside a module docstring, but it does not define a router.
+**Why it appears in the 57-file set:** it contains an `APIRouter(...)` example inside a module docstring, but it does not define a router.
 
 ### Console Adapter (PIN-281) — 2
 
@@ -149,28 +168,18 @@ These import `app.hoc.cus.hoc_spine.services.*` and delegate to facade/services 
 - `policies/retrieval.py`
 - `policies/scheduler.py`
 
-### hoc_spine Bridge Pattern (No Registry) — 2
+### hoc_spine Bridge Pattern (No Registry) — 0
 
-These use bridges (`get_*_bridge`) without using registry dispatch.
+No files match this category in the current scan.
 
-- `logs/tenants.py`
-- `recovery/recovery.py`
+### Session Helpers (No Registry) — 0
 
-### Session Helpers (No Registry) — 1
-
-- `general/debug_auth.py`
-
-### Stateless/Local (No Registry) — 8
+### Stateless/Local (No Registry) — 3
 
 No registry dispatch, no hoc_spine services, no hoc_spine bridges, no session helper pattern.
 
-- `agent/authz_status.py`
-- `agent/onboarding.py`
 - `analytics/scenarios.py`
 - `api_keys/embedding.py`
-- `general/health.py`
-- `general/legacy_routes.py`
-- `general/sdk.py`
 - `integrations/session_context.py`
 
 ---
@@ -178,7 +187,7 @@ No registry dispatch, no hoc_spine services, no hoc_spine bridges, no session he
 ## Evidence Commands (Reproducible)
 
 ```bash
-# Current: list all 69 APIRouter string-scan files and split into
+# Current: list all 57 APIRouter string-scan files and split into
 # (a) registry dispatch (has registry.execute) vs (b) non-registry
 python3 - <<'PY'
 from __future__ import annotations

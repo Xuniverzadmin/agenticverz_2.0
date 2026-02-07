@@ -27,8 +27,8 @@ Customer-facing endpoints for managing API keys.
 All requests are tenant-scoped via auth_context.
 
 Endpoints:
-- GET /api/v1/api-keys           → O2 list API keys
-- GET /api/v1/api-keys/{id}      → O3 API key detail
+- GET /api-keys           → O2 list API keys
+- GET /api-keys/{id}      → O3 API key detail
 
 Architecture:
 - ONE facade for API KEYS in Connectivity domain
@@ -55,7 +55,7 @@ from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
 
 
 router = APIRouter(
-    prefix="/api/v1/api-keys",
+    prefix="/api-keys",
     tags=["api-keys"],
 )
 

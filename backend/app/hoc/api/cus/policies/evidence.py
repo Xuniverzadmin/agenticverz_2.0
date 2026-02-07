@@ -17,14 +17,14 @@
 Evidence API (L2)
 
 Provides evidence chain and export operations:
-- GET /api/v1/evidence/chains (list chains)
-- POST /api/v1/evidence/chains (create chain)
-- GET /api/v1/evidence/chains/{id} (get chain)
-- POST /api/v1/evidence/chains/{id}/evidence (add evidence)
-- GET /api/v1/evidence/chains/{id}/verify (verify chain)
-- POST /api/v1/evidence/export (create export)
-- GET /api/v1/evidence/exports (list exports)
-- GET /api/v1/evidence/exports/{id} (get export)
+- GET /evidence/chains (list chains)
+- POST /evidence/chains (create chain)
+- GET /evidence/chains/{id} (get chain)
+- POST /evidence/chains/{id}/evidence (add evidence)
+- GET /evidence/chains/{id}/verify (verify chain)
+- POST /evidence/export (create export)
+- GET /evidence/exports (list exports)
+- GET /evidence/exports/{id} (get export)
 
 This is the ONLY facade for evidence operations.
 All evidence APIs flow through this router.

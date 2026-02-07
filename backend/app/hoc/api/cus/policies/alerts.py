@@ -17,18 +17,18 @@
 Alerts API (L2)
 
 Provides alert operations:
-- POST /api/v1/alerts/rules (create rule)
-- GET /api/v1/alerts/rules (list rules)
-- GET /api/v1/alerts/rules/{id} (get rule)
-- PUT /api/v1/alerts/rules/{id} (update rule)
-- DELETE /api/v1/alerts/rules/{id} (delete rule)
-- GET /api/v1/alerts/history (alert history)
-- GET /api/v1/alerts/history/{id} (get event)
-- POST /api/v1/alerts/history/{id}/acknowledge (acknowledge)
-- POST /api/v1/alerts/history/{id}/resolve (resolve)
-- POST /api/v1/alerts/routes (create route)
-- GET /api/v1/alerts/routes (list routes)
-- DELETE /api/v1/alerts/routes/{id} (delete route)
+- POST /alerts/rules (create rule)
+- GET /alerts/rules (list rules)
+- GET /alerts/rules/{id} (get rule)
+- PUT /alerts/rules/{id} (update rule)
+- DELETE /alerts/rules/{id} (delete rule)
+- GET /alerts/history (alert history)
+- GET /alerts/history/{id} (get event)
+- POST /alerts/history/{id}/acknowledge (acknowledge)
+- POST /alerts/history/{id}/resolve (resolve)
+- POST /alerts/routes (create route)
+- GET /alerts/routes (list routes)
+- DELETE /alerts/routes/{id} (delete route)
 
 This is the ONLY facade for alert operations.
 All alert APIs flow through this router.
