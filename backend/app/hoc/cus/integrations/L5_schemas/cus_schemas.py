@@ -39,7 +39,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.models.cus_models import (
+from app.hoc.cus.integrations.L5_schemas.cus_enums import (
     CusHealthState,
     CusIntegrationStatus,
     CusPolicyResult,

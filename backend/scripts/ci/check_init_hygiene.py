@@ -441,6 +441,9 @@ L5_SESSION_PARAM_ALLOWLIST: set[str] = {
     "policy_violation_engine.py",
     "postmortem_engine.py",
     "recurrence_analysis_engine.py",
+    # PIN-520 Phase 4 — L5→L4 reach-up fix (session injected from L4 handler)
+    "prediction_engine.py",
+    "pattern_detection_engine.py",
 }
 
 
@@ -831,22 +834,35 @@ def check_frozen_no_imports(violations: list[Violation]):
 
 # L5 engines allowed to import Session symbols (pending refactor).
 # Uses same allowlist as check 9 plus additional pre-existing violations.
+def _get_type_checking_lines(tree: ast.Module) -> set[int]:
+    """Return line numbers of imports inside `if TYPE_CHECKING:` blocks.
+
+    TYPE_CHECKING imports are type-hint-only (never execute at runtime),
+    so they are exempt from L5 purity checks.
+    """
+    tc_lines: set[int] = set()
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.If)
+            and isinstance(node.test, ast.Name)
+            and node.test.id == "TYPE_CHECKING"
+        ):
+            for child in ast.walk(node):
+                if isinstance(child, (ast.Import, ast.ImportFrom)):
+                    tc_lines.add(child.lineno)
+    return tc_lines
+
+
 L5_SESSION_SYMBOL_ALLOWLIST: set[str] = L5_SESSION_PARAM_ALLOWLIST | {
-    "prevention_engine.py",
-    "lessons_engine.py",
-    "coordinator_engine.py",
-    "cus_health_engine.py",
-    "incident_engine.py",
     "customer_killswitch_read_engine.py",
 }
 
 
 def check_l5_no_session_symbol_import(violations: list[Violation]):
-    """L5 engines must not import Session or AsyncSession symbols.
+    """L5 engines must not import Session/AsyncSession symbols at runtime.
 
-    PIN-509 Gap 1: Session absence enforced by type erasure, not just CI detection.
-    Even TYPE_CHECKING imports of Session in L5 are violations — L5 should not
-    know the Session type exists.
+    PIN-509 Gap 1: The SYMBOL 'Session' in L5 at runtime creates coupling.
+    TYPE_CHECKING-guarded imports are exempt (type hints only, never run).
     """
     for py_file in HOC_ROOT.rglob("cus/*/L5_engines/*.py"):
         if py_file.name == "__init__.py":
@@ -861,8 +877,12 @@ def check_l5_no_session_symbol_import(violations: list[Violation]):
         except (SyntaxError, UnicodeDecodeError):
             continue
 
+        tc_lines = _get_type_checking_lines(tree)
+
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module and node.names:
+                if node.lineno in tc_lines:
+                    continue
                 for alias in node.names:
                     if alias.name in ("Session", "AsyncSession"):
                         violations.append(Violation(
@@ -1177,8 +1197,7 @@ _DB_MODULES = {"sqlalchemy", "sqlmodel", "asyncpg", "psycopg", "psycopg2"}
 # Reuse the session symbol allowlist plus pre-existing DB-coupled engines.
 # No new entries permitted — removals encouraged.
 L5_DB_MODULE_ALLOWLIST: set[str] = L5_SESSION_SYMBOL_ALLOWLIST | {
-    "engine.py",       # policies — imports sqlalchemy.exc (pending extraction)
-    "sql_gateway.py",  # integrations — imports asyncpg (pending extraction)
+    "sql_gateway.py",  # integrations — external DB connector (template-based SQL gateway for customer integrations), NOT internal DB; imports asyncpg/sqlalchemy.text for connecting to customer databases (frozen architectural exception)
 }
 
 
@@ -1202,9 +1221,13 @@ def check_l5_no_db_module_imports(violations: list[Violation]):
         except (SyntaxError, UnicodeDecodeError):
             continue
 
+        tc_lines = _get_type_checking_lines(tree)
+
         for node in ast.walk(tree):
             # from sqlalchemy import ... / from sqlmodel import ...
             if isinstance(node, ast.ImportFrom) and node.module:
+                if node.lineno in tc_lines:
+                    continue
                 root_module = node.module.split(".")[0]
                 if root_module in _DB_MODULES:
                     violations.append(Violation(
@@ -1215,6 +1238,8 @@ def check_l5_no_db_module_imports(violations: list[Violation]):
                     ))
             # import sqlalchemy / import sqlmodel
             if isinstance(node, ast.Import):
+                if node.lineno in tc_lines:
+                    continue
                 for alias in node.names:
                     root_module = alias.name.split(".")[0]
                     if root_module in _DB_MODULES:

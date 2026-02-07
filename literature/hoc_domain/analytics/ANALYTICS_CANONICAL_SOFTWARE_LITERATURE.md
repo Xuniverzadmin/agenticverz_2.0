@@ -7,6 +7,12 @@
 
 ---
 
+## Reality Delta (2026-02-07)
+
+- Execution topology: analytics L2 routes dispatch via L4 `OperationRegistry` (no direct L2→L5 gaps).
+- Remaining clean-arch debt (mechanical audit): `backend/app/hoc/cus/analytics/L5_engines/cost_write_engine.py` imports `sqlmodel`, and `prediction_engine.py` / `pattern_detection_engine.py` still import `app.models.*`.
+- Verification: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain analytics`.
+
 ## Consolidation Actions (2026-01-31)
 
 ### Naming Violations Fixed (18 renames)

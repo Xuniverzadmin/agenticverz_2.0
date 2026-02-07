@@ -53,8 +53,7 @@ from typing import Optional
 from uuid import UUID
 
 from app.hoc.cus.hoc_spine.services.time import utc_now
-from app.db import get_async_session
-from app.models.feedback import PatternFeedbackCreate
+from app.hoc.cus.analytics.L5_schemas.feedback_schemas import PatternFeedbackCreate
 
 # L6 driver import (allowed)
 from app.hoc.cus.analytics.L6_drivers.pattern_detection_driver import (
@@ -283,14 +282,22 @@ async def emit_feedback(
 
 async def run_pattern_detection(
     tenant_id: Optional[UUID] = None,
+    session: "AsyncSession | None" = None,
 ) -> dict:
     """
     Run full pattern detection cycle.
 
     PB-S3: Detects patterns and emits feedback. No execution modifications.
 
+    Args:
+        tenant_id: Optional tenant filter.
+        session: AsyncSession provided by L4 handler (PIN-520 Phase 4).
+
     Returns summary of detected patterns and emitted feedback.
     """
+    if session is None:
+        raise ValueError("session is required — L4 handler must provide it (PIN-520 Phase 4)")
+
     result = {
         "failure_patterns": [],
         "cost_spikes": [],
@@ -299,63 +306,62 @@ async def run_pattern_detection(
     }
 
     try:
-        async with get_async_session() as session:
-            # L6: Create driver from session
-            driver = get_pattern_detection_driver(session)
+        # L6: Create driver from session
+        driver = get_pattern_detection_driver(session)
 
-            # Detect failure patterns
-            failure_patterns = await detect_failure_patterns(driver, tenant_id)
-            result["failure_patterns"] = failure_patterns
+        # Detect failure patterns
+        failure_patterns = await detect_failure_patterns(driver, tenant_id)
+        result["failure_patterns"] = failure_patterns
 
-            # Emit feedback for each failure pattern
-            for pattern in failure_patterns:
-                try:
-                    feedback = PatternFeedbackCreate(
-                        tenant_id=pattern["tenant_id"],  # String, not UUID
-                        pattern_type="failure_pattern",
-                        severity="warning",
-                        description=f"Repeated failure detected: {pattern['count']} occurrences. Sample: {pattern['sample_error'][:200]}",
-                        signature=pattern["signature"],
-                        provenance=pattern["run_ids"],
-                        occurrence_count=pattern["count"],
-                        time_window_minutes=FAILURE_PATTERN_WINDOW_HOURS * 60,
-                        threshold_used=f"threshold={FAILURE_PATTERN_THRESHOLD}",
-                        metadata={"worker_id": pattern["worker_id"]},
-                    )
-                    await emit_feedback(driver, feedback)
-                    result["feedback_created"] += 1
-                except Exception as e:
-                    result["errors"].append(f"Failed to emit failure feedback: {e}")
+        # Emit feedback for each failure pattern
+        for pattern in failure_patterns:
+            try:
+                feedback = PatternFeedbackCreate(
+                    tenant_id=pattern["tenant_id"],  # String, not UUID
+                    pattern_type="failure_pattern",
+                    severity="warning",
+                    description=f"Repeated failure detected: {pattern['count']} occurrences. Sample: {pattern['sample_error'][:200]}",
+                    signature=pattern["signature"],
+                    provenance=pattern["run_ids"],
+                    occurrence_count=pattern["count"],
+                    time_window_minutes=FAILURE_PATTERN_WINDOW_HOURS * 60,
+                    threshold_used=f"threshold={FAILURE_PATTERN_THRESHOLD}",
+                    metadata={"worker_id": pattern["worker_id"]},
+                )
+                await emit_feedback(driver, feedback)
+                result["feedback_created"] += 1
+            except Exception as e:
+                result["errors"].append(f"Failed to emit failure feedback: {e}")
 
-            # Detect cost spikes
-            cost_spikes = await detect_cost_spikes(driver, tenant_id)
-            result["cost_spikes"] = cost_spikes
+        # Detect cost spikes
+        cost_spikes = await detect_cost_spikes(driver, tenant_id)
+        result["cost_spikes"] = cost_spikes
 
-            # Emit feedback for each cost spike
-            for spike in cost_spikes:
-                try:
-                    feedback = PatternFeedbackCreate(
-                        tenant_id=spike["tenant_id"],  # String, not UUID
-                        pattern_type="cost_spike",
-                        severity="warning",
-                        description=f"Cost spike detected: {spike['spike_percent']}% increase. Recent: {spike['recent_cost_cents']}¢, Avg: {spike['avg_cost_cents']}¢",
-                        signature=f"cost_spike_{spike['worker_id']}",
-                        provenance=spike["run_ids"],
-                        occurrence_count=1,
-                        threshold_used=f"spike_threshold={COST_SPIKE_THRESHOLD_PERCENT}%",
-                        metadata={
-                            "worker_id": spike["worker_id"],
-                            "avg_cost_cents": spike["avg_cost_cents"],
-                            "recent_cost_cents": spike["recent_cost_cents"],
-                            "baseline_run_count": spike["baseline_run_count"],
-                        },
-                    )
-                    await emit_feedback(driver, feedback)
-                    result["feedback_created"] += 1
-                except Exception as e:
-                    result["errors"].append(f"Failed to emit cost feedback: {e}")
+        # Emit feedback for each cost spike
+        for spike in cost_spikes:
+            try:
+                feedback = PatternFeedbackCreate(
+                    tenant_id=spike["tenant_id"],  # String, not UUID
+                    pattern_type="cost_spike",
+                    severity="warning",
+                    description=f"Cost spike detected: {spike['spike_percent']}% increase. Recent: {spike['recent_cost_cents']}¢, Avg: {spike['avg_cost_cents']}¢",
+                    signature=f"cost_spike_{spike['worker_id']}",
+                    provenance=spike["run_ids"],
+                    occurrence_count=1,
+                    threshold_used=f"spike_threshold={COST_SPIKE_THRESHOLD_PERCENT}%",
+                    metadata={
+                        "worker_id": spike["worker_id"],
+                        "avg_cost_cents": spike["avg_cost_cents"],
+                        "recent_cost_cents": spike["recent_cost_cents"],
+                        "baseline_run_count": spike["baseline_run_count"],
+                    },
+                )
+                await emit_feedback(driver, feedback)
+                result["feedback_created"] += 1
+            except Exception as e:
+                result["errors"].append(f"Failed to emit cost feedback: {e}")
 
-            # NO COMMIT — L4 coordinator owns transaction boundary
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
     except Exception as e:
         logger.error(f"pattern_detection_error: {e}", exc_info=True)
@@ -368,43 +374,49 @@ async def get_feedback_summary(
     tenant_id: Optional[UUID] = None,
     acknowledged: Optional[bool] = None,
     limit: int = 50,
+    session: "AsyncSession | None" = None,
 ) -> dict:
     """
     Get feedback summary for ops visibility.
 
     PB-S3: Read-only query of feedback table.
+
+    Args:
+        session: AsyncSession provided by L4 handler (PIN-520 Phase 4).
     """
-    async with get_async_session() as session:
-        # L6: Create driver from session
-        driver = get_pattern_detection_driver(session)
+    if session is None:
+        raise ValueError("session is required — L4 handler must provide it (PIN-520 Phase 4)")
 
-        # L6: Delegate query to driver
-        feedback_records = await driver.fetch_feedback_records(
-            tenant_id=tenant_id,
-            acknowledged=acknowledged,
-            limit=limit,
-        )
+    # L6: Create driver from session
+    driver = get_pattern_detection_driver(session)
 
-        # L5: Business logic - count by type (decision layer)
-        type_counts: dict[str, int] = {}
-        for record in feedback_records:
-            ptype = record.pattern_type
-            type_counts[ptype] = type_counts.get(ptype, 0) + 1
+    # L6: Delegate query to driver
+    feedback_records = await driver.fetch_feedback_records(
+        tenant_id=tenant_id,
+        acknowledged=acknowledged,
+        limit=limit,
+    )
 
-        return {
-            "total": len(feedback_records),
-            "by_type": type_counts,
-            "records": [
-                {
-                    "id": str(r.id),
-                    "pattern_type": r.pattern_type,
-                    "severity": r.severity,
-                    "description": r.description[:200] if r.description else "",
-                    "occurrence_count": r.occurrence_count,
-                    "detected_at": r.detected_at.isoformat() if r.detected_at else None,
-                    "acknowledged": r.acknowledged,
-                    "provenance_count": len(r.provenance) if r.provenance else 0,
-                }
-                for r in feedback_records
-            ],
-        }
+    # L5: Business logic - count by type (decision layer)
+    type_counts: dict[str, int] = {}
+    for record in feedback_records:
+        ptype = record.pattern_type
+        type_counts[ptype] = type_counts.get(ptype, 0) + 1
+
+    return {
+        "total": len(feedback_records),
+        "by_type": type_counts,
+        "records": [
+            {
+                "id": str(r.id),
+                "pattern_type": r.pattern_type,
+                "severity": r.severity,
+                "description": r.description[:200] if r.description else "",
+                "occurrence_count": r.occurrence_count,
+                "detected_at": r.detected_at.isoformat() if r.detected_at else None,
+                "acknowledged": r.acknowledged,
+                "provenance_count": len(r.provenance) if r.provenance else 0,
+            }
+            for r in feedback_records
+        ],
+    }

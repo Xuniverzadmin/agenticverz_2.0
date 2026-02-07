@@ -24,6 +24,12 @@ L6 Driver exports for the integrations domain.
 """
 
 from .bridges_driver import record_policy_activation
+from .cus_health_driver import (
+    CusHealthDriver,
+    HealthIntegrationRow,
+    cus_health_driver_session,
+    get_cus_health_driver,
+)
 from .mcp_driver import (
     McpDriver,
     McpInvocationRow,
@@ -46,6 +52,11 @@ from .proxy_driver import (
 __all__ = [
     # bridges_driver
     "record_policy_activation",
+    # cus_health_driver
+    "CusHealthDriver",
+    "HealthIntegrationRow",
+    "cus_health_driver_session",
+    "get_cus_health_driver",
     # mcp_driver (PIN-516)
     "McpDriver",
     "McpServerRow",

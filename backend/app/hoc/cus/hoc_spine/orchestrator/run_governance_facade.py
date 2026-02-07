@@ -352,9 +352,48 @@ def wire_run_governance_facade() -> RunGovernanceFacade:
     from app.hoc.cus.policies.L5_engines.lessons_engine import get_lessons_learned_engine
     from app.hoc.cus.incidents.L5_engines.policy_violation_engine import create_policy_evaluation_sync
 
+    def _l4_policy_evaluator(
+        run_id: str,
+        tenant_id: str,
+        run_status: str,
+        policies_checked: int = 0,
+        is_synthetic: bool = False,
+        synthetic_scenario_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """L4 transaction wrapper for policy evaluation.
+
+        Creates psycopg2 connection, delegates to L5 engine, commits.
+        L4 owns the transaction boundary (PIN-520).
+        """
+        import psycopg2
+
+        database_url = os.getenv("DATABASE_URL")
+        if not database_url:
+            logger.error("policy_eval_sync_no_database_url")
+            return None
+
+        conn = psycopg2.connect(database_url)
+        try:
+            result = create_policy_evaluation_sync(
+                run_id=run_id,
+                tenant_id=tenant_id,
+                run_status=run_status,
+                policies_checked=policies_checked,
+                is_synthetic=is_synthetic,
+                synthetic_scenario_id=synthetic_scenario_id,
+                conn=conn,
+            )
+            conn.commit()
+            return result
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
     _facade_instance = RunGovernanceFacade(
         lessons_engine=get_lessons_learned_engine(),
-        policy_evaluator=create_policy_evaluation_sync,
+        policy_evaluator=_l4_policy_evaluator,
     )
 
     logger.info("run_governance_facade wired with real engines")

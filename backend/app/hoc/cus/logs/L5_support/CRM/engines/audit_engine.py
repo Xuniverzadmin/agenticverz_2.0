@@ -61,7 +61,7 @@ from enum import Enum
 from typing import Any, Optional
 from uuid import UUID, uuid4
 
-from app.models.contract import AuditVerdict
+from app.hoc.cus.hoc_spine.schemas.domain_enums import AuditVerdict
 
 # Audit service version
 AUDIT_SERVICE_VERSION = "1.0.0"

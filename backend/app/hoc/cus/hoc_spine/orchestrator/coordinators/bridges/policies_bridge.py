@@ -10,6 +10,8 @@ Policies Bridge (PIN-510)
 Domain-scoped capability accessor for policies domain.
 """
 
+from contextlib import contextmanager
+
 
 class PoliciesBridge:
     """Capabilities for policies domain. Max 5 methods."""
@@ -117,6 +119,24 @@ class PoliciesEngineBridge:
         )
 
         return get_governance_config
+
+    @contextmanager
+    def policy_engine_write_context(self):
+        """L4 managed write context for PolicyEngine operations.
+
+        All writes within this context share a single connection.
+        Commits on clean exit. PIN-520: L4 owns transaction boundaries.
+
+        PIN-520 Phase 3 NOTE: Currently ZERO callers. PolicyEngine writes
+        use _write_conn() standalone mode (auto-commit per write).
+        Wiring all call-sites through this context is a future refactor.
+        """
+        from app.hoc.cus.policies.L5_engines.engine import get_policy_engine
+
+        engine = get_policy_engine()
+        with engine.driver.managed_connection() as conn:
+            yield engine
+            conn.commit()
 
 
 _engine_bridge_instance = None

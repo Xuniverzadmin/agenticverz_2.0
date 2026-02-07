@@ -49,10 +49,11 @@ from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
 from app.hoc.cus.hoc_spine.services.time import utc_now
 from app.hoc.cus.account.L6_drivers.tenant_driver import TenantDriver, get_tenant_driver
-from app.models.tenant import PLAN_QUOTAS, APIKey, Tenant, TenantMembership, WorkerRun
+from app.hoc.cus.account.L5_schemas.plan_quotas import PLAN_QUOTAS
 
 if TYPE_CHECKING:
     from sqlmodel import Session
+    from app.models.tenant import APIKey, Tenant, TenantMembership, WorkerRun
 
 logger = logging.getLogger("nova.engines.tenant")
 

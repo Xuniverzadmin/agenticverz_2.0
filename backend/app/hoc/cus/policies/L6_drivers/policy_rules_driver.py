@@ -107,6 +107,38 @@ class PolicyRulesDriver:
         """
         self._session.add(integrity)
 
+    def create_rule(self, **kwargs) -> "PolicyRule":
+        """
+        Construct a PolicyRule ORM object, add it to the session, and return it.
+
+        Args:
+            **kwargs: Fields forwarded to PolicyRule constructor.
+
+        Returns:
+            The newly created PolicyRule instance.
+        """
+        from app.models.policy_control_plane import PolicyRule
+
+        rule = PolicyRule(**kwargs)
+        self._session.add(rule)
+        return rule
+
+    def create_integrity(self, **kwargs) -> "PolicyRuleIntegrity":
+        """
+        Construct a PolicyRuleIntegrity ORM object, add it to the session, and return it.
+
+        Args:
+            **kwargs: Fields forwarded to PolicyRuleIntegrity constructor.
+
+        Returns:
+            The newly created PolicyRuleIntegrity instance.
+        """
+        from app.models.policy_control_plane import PolicyRuleIntegrity
+
+        integrity = PolicyRuleIntegrity(**kwargs)
+        self._session.add(integrity)
+        return integrity
+
     async def flush(self) -> None:
         """Flush pending changes without committing."""
         await self._session.flush()

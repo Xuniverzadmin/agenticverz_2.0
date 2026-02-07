@@ -53,8 +53,8 @@ from app.hoc.cus.incidents.L6_drivers.incident_write_driver import (
     get_incident_write_driver,
 )
 
-# ActorType is L7 model (legal import)
-from app.models.audit_ledger import ActorType
+# ActorType mirror (PIN-520 Phase 3: no runtime app.models imports in L5)
+from app.hoc.cus.hoc_spine.schemas.domain_enums import ActorType
 
 if TYPE_CHECKING:
     from sqlmodel import Session

@@ -6,6 +6,12 @@
 
 ---
 
+## Reality Delta (2026-02-07)
+
+- L2 purity preserved: logs L2 routes dispatch via L4 `OperationRegistry` (no direct L2→L5).
+- Remaining clean-arch debt (mechanical audit): several L5 engines still import `app.models.*` and should be pushed behind L6 drivers for strict driver/engine purity.
+- Verify now: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain logs`.
+
 ## 1. Domain Purpose
 
 Structured logging and log analysis — log ingestion, search, filtering, alerting, and retention management.

@@ -7,6 +7,12 @@
 
 ---
 
+## Reality Delta (2026-02-07)
+
+- Execution topology: logs L2 routes dispatch via L4 `OperationRegistry` (no direct L2→L5 gaps).
+- Clean-arch note: several L5 engines still import `app.models.*` (e.g. audit ledger + PDF rendering) and should be pushed behind L6 drivers to satisfy strict driver/engine purity.
+- Verify now: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain logs`.
+
 ## Script Registry
 
 Each script's unique contribution and canonical function.

@@ -192,10 +192,9 @@ class LessonsLearnedEngine:
 
     def _get_driver(self) -> Any:
         """
-        Get or create the lessons driver.
+        Get the lessons driver.
 
-        DECISION: Lazy initialization of driver with Session.
-        Creates Session from db_url if not injected.
+        Driver MUST be injected by L4 handler. No fallback creation.
         PIN-504: Uses lazy import to avoid cross-domain module-level import.
         """
         if self._driver is not None:
@@ -205,16 +204,10 @@ class LessonsLearnedEngine:
         from app.hoc.cus.incidents.L6_drivers.lessons_driver import get_lessons_driver
 
         if self._session is None:
-            # Create Session from db_url
-            from sqlalchemy import create_engine
-            from sqlalchemy.orm import sessionmaker
-
-            if not self._db_url:
-                raise RuntimeError("DATABASE_URL not configured")
-
-            engine = create_engine(self._db_url)
-            SessionLocal = sessionmaker(bind=engine)
-            self._session = SessionLocal()
+            raise RuntimeError(
+                "LessonsEngine requires a session — driver must be injected by L4 handler. "
+                "No sqlalchemy fallback allowed (L5 purity)."
+            )
 
         self._driver = get_lessons_driver(self._session)
         return self._driver

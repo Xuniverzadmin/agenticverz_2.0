@@ -7,6 +7,13 @@
 
 ---
 
+## Reality Delta (2026-02-07)
+
+- Execution topology: incidents L2 routes dispatch via L4 `OperationRegistry` (no direct L2→L5 gaps).
+- Policy-violation sync path: `policy_violation_engine.py` supports an L4-owned connection path, but a legacy L5-owned psycopg2 connection+commit path still exists and remains a purity exception until removed.
+- Remaining clean-arch debt (mechanical audit): L5 imports `app.models.*` in `incident_write_engine.py` / `severity_policy.py`, and `policy_violation_engine.py` still opens/commits on the legacy path.
+- Verify now: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain incidents` and `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain incidents`.
+
 ## Script Registry
 
 Each script's unique contribution and canonical function.

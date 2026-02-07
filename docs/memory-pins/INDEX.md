@@ -500,6 +500,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-525](PIN-525-policy-enforcement-write-driver.md) | **PolicyEnforcementWriteDriver Implementation** | HOC Migration / Enforcement Audit Trail | **✅ COMPLETE** | 2026-02-04 |
 | [PIN-526](PIN-526-hoc-api-wiring-migration.md) | **HOC API Wiring Migration** | Architecture Migration | **✅ COMPLETE** | 2026-02-04 |
 | [PIN-527](PIN-527-l2-purity-bridge-completion.md) | **L2 Purity Bridge Completion** | HOC Governance | **✅ COMPLETE** | 2026-02-06 |
+| [PIN-530](PIN-530-hoc-spine-runtime-consequences-closure.md) | **HOC Spine Runtime + Consequences Closure** | HOC Governance | **✅ COMPLETE** | 2026-02-07 |
 
 ---
 

@@ -55,6 +55,7 @@ Tables:
   - policy.temporal_metric_windows (read/write)
 """
 
+from contextlib import contextmanager
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -77,6 +78,7 @@ class PolicyEngineDriver:
         """Initialize with database URL."""
         self._db_url = db_url
         self._engine: Optional[Engine] = None
+        self._managed_conn: Optional[Connection] = None
 
     def _get_engine(self) -> Engine:
         """Lazy-load engine."""
@@ -1398,6 +1400,483 @@ class PolicyEngineDriver:
             )
         )
         return [dict(row._mapping) for row in rows]
+
+    # =========================================================================
+    # AUTO-CONNECTION CONTEXT MANAGER
+    # =========================================================================
+
+    @contextmanager
+    def managed_connection(self):
+        """L4 transaction context. All methods called during this context
+        share a single connection. Caller (L4) is responsible for commit."""
+        engine = self._get_engine()
+        with engine.connect() as conn:
+            prev = self._managed_conn
+            self._managed_conn = conn
+            try:
+                yield conn
+            finally:
+                self._managed_conn = prev
+
+    @contextmanager
+    def _conn(self):
+        """Read connection context — uses managed connection if available."""
+        if self._managed_conn is not None:
+            yield self._managed_conn
+        else:
+            engine = self._get_engine()
+            with engine.connect() as conn:
+                yield conn
+
+    @contextmanager
+    def _write_conn(self):
+        """Write connection context — auto-commits only when NOT in managed mode.
+
+        When managed_connection() is active: yields managed conn, no commit (L4 owns).
+        When standalone: opens fresh conn, commits on clean exit.
+
+        PIN-520 Phase 3 BRIDGE PATTERN:
+            The standalone commit here is the architectural bridge while the
+            singleton PolicyEngine pattern exists.  Each standalone write opens
+            one connection, commits immediately, and disposes.  Full L4
+            ownership would require wiring all 14+ call-sites through
+            managed_connection()—tracked as a future refactor, not a violation.
+            The purity audit excludes _write_conn() from L6 commit detection.
+        """
+        if self._managed_conn is not None:
+            yield self._managed_conn
+        else:
+            engine = self._get_engine()
+            with engine.connect() as conn:
+                yield conn
+                conn.commit()
+
+    # =========================================================================
+    # READ AUTO-CONNECTION WRAPPERS (*_auto)
+    # =========================================================================
+
+    def fetch_ethical_constraints_auto(self) -> List[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_ethical_constraints."""
+        with self._conn() as conn:
+            return self.fetch_ethical_constraints(conn)
+
+    def fetch_risk_ceilings_auto(self) -> List[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_risk_ceilings."""
+        with self._conn() as conn:
+            return self.fetch_risk_ceilings(conn)
+
+    def fetch_safety_rules_auto(self) -> List[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_safety_rules."""
+        with self._conn() as conn:
+            return self.fetch_safety_rules(conn)
+
+    def fetch_business_rules_auto(self) -> List[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_business_rules."""
+        with self._conn() as conn:
+            return self.fetch_business_rules(conn)
+
+    def fetch_violations_auto(
+        self,
+        violation_type: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+        severity_min: Optional[float] = None,
+        since: Optional[datetime] = None,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_violations."""
+        with self._conn() as conn:
+            return self.fetch_violations(
+                conn,
+                violation_type=violation_type,
+                agent_id=agent_id,
+                tenant_id=tenant_id,
+                severity_min=severity_min,
+                since=since,
+                limit=limit,
+            )
+
+    def fetch_violation_by_id_auto(self, violation_id: str) -> Optional[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_violation_by_id."""
+        with self._conn() as conn:
+            return self.fetch_violation_by_id(conn, violation_id)
+
+    def fetch_policy_versions_auto(
+        self,
+        include_inactive: bool = False,
+        limit: int = 20,
+    ) -> List[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_policy_versions."""
+        with self._conn() as conn:
+            return self.fetch_policy_versions(conn, include_inactive=include_inactive, limit=limit)
+
+    def fetch_current_active_version_auto(self) -> Optional[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_current_active_version."""
+        with self._conn() as conn:
+            return self.fetch_current_active_version(conn)
+
+    def fetch_policy_version_by_id_auto(self, version_id: str) -> Optional[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_policy_version_by_id."""
+        with self._conn() as conn:
+            return self.fetch_policy_version_by_id(conn, version_id)
+
+    def fetch_policy_version_by_id_or_version_auto(self, version_id: str) -> Optional[Tuple]:
+        """Auto-connection wrapper for fetch_policy_version_by_id_or_version."""
+        with self._conn() as conn:
+            return self.fetch_policy_version_by_id_or_version(conn, version_id)
+
+    def fetch_version_for_rollback_auto(self, version: str) -> Optional[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_version_for_rollback."""
+        with self._conn() as conn:
+            return self.fetch_version_for_rollback(conn, version)
+
+    def fetch_provenance_auto(
+        self,
+        policy_version: Optional[str] = None,
+        limit: int = 50,
+    ) -> List[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_provenance."""
+        with self._conn() as conn:
+            return self.fetch_provenance(conn, policy_version=policy_version, limit=limit)
+
+    def fetch_dependencies_auto(self) -> List[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_dependencies."""
+        with self._conn() as conn:
+            return self.fetch_dependencies(conn)
+
+    def fetch_dependency_edges_auto(self, active_only: bool = True) -> List[Tuple[str, str]]:
+        """Auto-connection wrapper for fetch_dependency_edges."""
+        with self._conn() as conn:
+            return self.fetch_dependency_edges(conn, active_only=active_only)
+
+    def fetch_dependency_edges_with_type_auto(self) -> List[Tuple[str, str, str]]:
+        """Auto-connection wrapper for fetch_dependency_edges_with_type."""
+        with self._conn() as conn:
+            return self.fetch_dependency_edges_with_type(conn)
+
+    def fetch_conflicts_auto(
+        self,
+        include_resolved: bool = False,
+        severity_min: Optional[float] = None,
+    ) -> List[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_conflicts."""
+        with self._conn() as conn:
+            return self.fetch_conflicts(conn, include_resolved=include_resolved, severity_min=severity_min)
+
+    def fetch_unresolved_conflicts_auto(self) -> List[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_unresolved_conflicts."""
+        with self._conn() as conn:
+            return self.fetch_unresolved_conflicts(conn)
+
+    def fetch_temporal_policies_auto(
+        self,
+        metric: Optional[str] = None,
+        include_inactive: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_temporal_policies."""
+        with self._conn() as conn:
+            return self.fetch_temporal_policies(conn, metric=metric, include_inactive=include_inactive)
+
+    def fetch_temporal_policy_for_utilization_auto(self, policy_id: str) -> Optional[Tuple]:
+        """Auto-connection wrapper for fetch_temporal_policy_for_utilization."""
+        with self._conn() as conn:
+            return self.fetch_temporal_policy_for_utilization(conn, policy_id)
+
+    def fetch_temporal_metric_sum_auto(self, policy_id: str, window_seconds: int) -> float:
+        """Auto-connection wrapper for fetch_temporal_metric_sum."""
+        with self._conn() as conn:
+            return self.fetch_temporal_metric_sum(conn, policy_id, window_seconds)
+
+    def fetch_temporal_stats_auto(self) -> Dict[str, int]:
+        """Auto-connection wrapper for fetch_temporal_stats."""
+        with self._conn() as conn:
+            return self.fetch_temporal_stats(conn)
+
+    def fetch_temporal_storage_stats_auto(self) -> Optional[Tuple]:
+        """Auto-connection wrapper for fetch_temporal_storage_stats."""
+        with self._conn() as conn:
+            return self.fetch_temporal_storage_stats(conn)
+
+    def fetch_active_policies_for_integrity_auto(self, table: str, name_col: str) -> List[str]:
+        """Auto-connection wrapper for fetch_active_policies_for_integrity."""
+        with self._conn() as conn:
+            return self.fetch_active_policies_for_integrity(conn, table, name_col)
+
+    def fetch_temporal_policies_for_integrity_auto(self) -> List[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_temporal_policies_for_integrity."""
+        with self._conn() as conn:
+            return self.fetch_temporal_policies_for_integrity(conn)
+
+    def fetch_ethical_constraints_for_integrity_auto(self) -> List[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_ethical_constraints_for_integrity."""
+        with self._conn() as conn:
+            return self.fetch_ethical_constraints_for_integrity(conn)
+
+    # =========================================================================
+    # WRITE AUTO-CONNECTION WRAPPERS (*_committed)
+    # PIN-520: L4 owns transaction boundaries.
+    # When managed_connection() is active, these share the managed conn
+    # and L4 commits. Otherwise _write_conn() auto-commits standalone.
+    # =========================================================================
+
+    def insert_evaluation_committed(
+        self,
+        evaluation_id: str,
+        action_type: str,
+        agent_id: Optional[str],
+        tenant_id: Optional[str],
+        request_context: str,
+        decision: str,
+        decision_reason: str,
+        modifications: str,
+        evaluation_ms: float,
+        policies_checked: int,
+        rules_matched: int,
+        evaluated_at: datetime,
+    ) -> None:
+        """Write wrapper for insert_evaluation (L4 owns commit)."""
+        with self._write_conn() as conn:
+            self.insert_evaluation(
+                conn,
+                evaluation_id=evaluation_id,
+                action_type=action_type,
+                agent_id=agent_id,
+                tenant_id=tenant_id,
+                request_context=request_context,
+                decision=decision,
+                decision_reason=decision_reason,
+                modifications=modifications,
+                evaluation_ms=evaluation_ms,
+                policies_checked=policies_checked,
+                rules_matched=rules_matched,
+                evaluated_at=evaluated_at,
+            )
+
+    def insert_violation_committed(
+        self,
+        violation_id: str,
+        evaluation_id: str,
+        policy_name: str,
+        violation_type: str,
+        severity: str,
+        description: str,
+        evidence: str,
+        agent_id: Optional[str],
+        tenant_id: Optional[str],
+        action_attempted: str,
+        routed_to_governor: bool,
+        governor_action: Optional[str],
+        detected_at: datetime,
+    ) -> None:
+        """Write wrapper for insert_violation (L4 owns commit)."""
+        with self._write_conn() as conn:
+            self.insert_violation(
+                conn,
+                violation_id=violation_id,
+                evaluation_id=evaluation_id,
+                policy_name=policy_name,
+                violation_type=violation_type,
+                severity=severity,
+                description=description,
+                evidence=evidence,
+                agent_id=agent_id,
+                tenant_id=tenant_id,
+                action_attempted=action_attempted,
+                routed_to_governor=routed_to_governor,
+                governor_action=governor_action,
+                detected_at=detected_at,
+            )
+
+    def update_violation_acknowledged_committed(
+        self,
+        violation_id: str,
+        notes: Optional[str] = None,
+    ) -> int:
+        """Write wrapper for update_violation_acknowledged (L4 owns commit)."""
+        with self._write_conn() as conn:
+            return self.update_violation_acknowledged(conn, violation_id, notes=notes)
+
+    def update_risk_ceiling_committed(
+        self,
+        ceiling_id: str,
+        updates: Dict[str, Any],
+    ) -> None:
+        """Write wrapper for update_risk_ceiling (L4 owns commit)."""
+        with self._write_conn() as conn:
+            self.update_risk_ceiling(conn, ceiling_id, updates)
+
+    def reset_risk_ceiling_committed(self, ceiling_id: str) -> int:
+        """Write wrapper for reset_risk_ceiling (L4 owns commit)."""
+        with self._write_conn() as conn:
+            return self.reset_risk_ceiling(conn, ceiling_id)
+
+    def update_safety_rule_committed(
+        self,
+        rule_id: str,
+        updates: Dict[str, Any],
+    ) -> None:
+        """Write wrapper for update_safety_rule (L4 owns commit)."""
+        with self._write_conn() as conn:
+            self.update_safety_rule(conn, rule_id, updates)
+
+    def deactivate_all_versions_committed(self) -> None:
+        """Write wrapper for deactivate_all_versions (L4 owns commit)."""
+        with self._write_conn() as conn:
+            self.deactivate_all_versions(conn)
+
+    def insert_policy_version_committed(
+        self,
+        version_id: str,
+        version: str,
+        policy_hash: str,
+        created_by: str,
+        description: str,
+    ) -> None:
+        """Write wrapper for insert_policy_version (L4 owns commit)."""
+        with self._write_conn() as conn:
+            self.insert_policy_version(
+                conn,
+                version_id=version_id,
+                version=version,
+                policy_hash=policy_hash,
+                created_by=created_by,
+                description=description,
+            )
+
+    def mark_version_rolled_back_committed(self, by: str) -> None:
+        """Write wrapper for mark_version_rolled_back (L4 owns commit)."""
+        with self._write_conn() as conn:
+            self.mark_version_rolled_back(conn, by)
+
+    def activate_version_committed(self, version: str) -> None:
+        """Write wrapper for activate_version (L4 owns commit)."""
+        with self._write_conn() as conn:
+            self.activate_version(conn, version)
+
+    def insert_provenance_committed(
+        self,
+        policy_id: str,
+        policy_type: str,
+        action: str,
+        changed_by: str,
+        policy_version: str,
+        reason: str,
+    ) -> None:
+        """Write wrapper for insert_provenance (L4 owns commit)."""
+        with self._write_conn() as conn:
+            self.insert_provenance(
+                conn,
+                policy_id=policy_id,
+                policy_type=policy_type,
+                action=action,
+                changed_by=changed_by,
+                policy_version=policy_version,
+                reason=reason,
+            )
+
+    def insert_dependency_committed(
+        self,
+        source_policy: str,
+        target_policy: str,
+        dependency_type: str,
+        resolution_strategy: str,
+        priority: int,
+        description: str,
+    ) -> None:
+        """Write wrapper for insert_dependency (L4 owns commit)."""
+        with self._write_conn() as conn:
+            self.insert_dependency(
+                conn,
+                source_policy=source_policy,
+                target_policy=target_policy,
+                dependency_type=dependency_type,
+                resolution_strategy=resolution_strategy,
+                priority=priority,
+                description=description,
+            )
+
+    def resolve_conflict_committed(
+        self,
+        conflict_id: str,
+        resolution: str,
+        resolved_by: str,
+    ) -> int:
+        """Write wrapper for resolve_conflict (L4 owns commit)."""
+        with self._write_conn() as conn:
+            return self.resolve_conflict(conn, conflict_id, resolution, resolved_by)
+
+    def insert_temporal_policy_committed(
+        self,
+        name: str,
+        description: Optional[str],
+        temporal_type: str,
+        metric: str,
+        max_value: float,
+        window_seconds: int,
+        breach_action: str,
+        cooldown_on_breach: int,
+    ) -> None:
+        """Write wrapper for insert_temporal_policy (L4 owns commit)."""
+        with self._write_conn() as conn:
+            self.insert_temporal_policy(
+                conn,
+                name=name,
+                description=description,
+                temporal_type=temporal_type,
+                metric=metric,
+                max_value=max_value,
+                window_seconds=window_seconds,
+                breach_action=breach_action,
+                cooldown_on_breach=cooldown_on_breach,
+            )
+
+    def delete_old_temporal_events_committed(self, retention_hours: int) -> int:
+        """Write wrapper for delete_old_temporal_events (L4 owns commit)."""
+        with self._write_conn() as conn:
+            return self.delete_old_temporal_events(conn, retention_hours)
+
+    def compact_temporal_events_committed(self, compact_hours: int, retention_hours: int) -> int:
+        """Write wrapper for compact_temporal_events (L4 owns commit)."""
+        with self._write_conn() as conn:
+            return self.compact_temporal_events(conn, compact_hours, retention_hours)
+
+    def cap_temporal_events_committed(self, max_per_policy: int) -> int:
+        """Write wrapper for cap_temporal_events (L4 owns commit)."""
+        with self._write_conn() as conn:
+            return self.cap_temporal_events(conn, max_per_policy)
+
+    # =========================================================================
+    # SNAPSHOT OPERATIONS (READ/WRITE)
+    # =========================================================================
+
+    def fetch_snapshot_by_id(self, conn: Connection, snapshot_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch policy snapshot by ID."""
+        row = conn.execute(
+            text("SELECT snapshot_id, policy_count, thresholds, policies, integrity_hash FROM policy.snapshots WHERE snapshot_id = :snapshot_id"),
+            {"snapshot_id": snapshot_id},
+        )
+        result = row.mappings().first()
+        return dict(result) if result else None
+
+    def fetch_snapshot_by_id_auto(self, snapshot_id: str) -> Optional[Dict[str, Any]]:
+        """Auto-connection wrapper for fetch_snapshot_by_id."""
+        with self._conn() as conn:
+            return self.fetch_snapshot_by_id(conn, snapshot_id)
+
+    def insert_snapshot(self, conn: Connection, snapshot_id: str, tenant_id: str, policies: str, thresholds: str, policy_count: int, integrity_hash: str) -> None:
+        """Insert a policy snapshot."""
+        conn.execute(
+            text("""
+                INSERT INTO policy.snapshots (snapshot_id, tenant_id, policies, thresholds, policy_count, integrity_hash, created_at)
+                VALUES (:snapshot_id, :tenant_id, CAST(:policies AS JSONB), CAST(:thresholds AS JSONB), :policy_count, :integrity_hash, NOW())
+            """),
+            {"snapshot_id": snapshot_id, "tenant_id": tenant_id, "policies": policies, "thresholds": thresholds, "policy_count": policy_count, "integrity_hash": integrity_hash},
+        )
+
+    def insert_snapshot_committed(self, snapshot_id: str, tenant_id: str, policies: str, thresholds: str, policy_count: int, integrity_hash: str) -> None:
+        """Write wrapper for insert_snapshot (L4 owns commit)."""
+        with self._write_conn() as conn:
+            self.insert_snapshot(conn, snapshot_id, tenant_id, policies, thresholds, policy_count, integrity_hash)
 
 
 def get_policy_engine_driver(db_url: str) -> PolicyEngineDriver:

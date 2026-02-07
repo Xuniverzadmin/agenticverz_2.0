@@ -2,11 +2,18 @@
 
 **Domain:** integrations
 **Generated:** 2026-01-31
-**Updated:** 2026-02-03 (PIN-521 MCPAuditEmitterPort Protocol)
+**Updated:** 2026-02-07 (CUS health driver extraction)
 **Reference:** PIN-498, PIN-516, PIN-517, PIN-521
 **Total Files:** 59 (18 L5_engines, 2 L5_engines/credentials, 2 L5_vault/engines, 1 L5_vault/drivers, 6 L6_drivers, 23 adapters, 5 L5_schemas, 1 hoc_spine/services, 1 __init__.py)
 
 ---
+
+## Reality Delta (2026-02-07)
+
+- New internal DB driver: `backend/app/hoc/cus/integrations/L6_drivers/cus_health_driver.py` introduced to move internal DB coupling out of `cus_health_engine.py`.
+- Known exception (intentional integration effect): `sql_gateway.py` opens external connections (e.g. `asyncpg.connect`) to customer systems; this is allowed for integrations but must remain isolated from internal DB/session patterns.
+- Remaining clean-arch debt (mechanical audit): `cus_schemas.py` still imports `app.models.*`, and `loop_events.py` still performs rollback.
+- Verification: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain integrations`.
 
 ## Consolidation Actions (2026-01-31)
 

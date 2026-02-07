@@ -36,18 +36,21 @@ INVARIANTS:
     - Events use canonical AuditEventType values
 """
 
+from __future__ import annotations
+
 import logging
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
-from app.models.audit_ledger import (
+from app.hoc.cus.hoc_spine.schemas.domain_enums import (
     ActorType,
     AuditEntityType,
     AuditEventType,
-    AuditLedger,
 )
 
 if TYPE_CHECKING:
     from sqlmodel import Session
+
+    from app.models.audit_ledger import AuditLedger
 
 logger = logging.getLogger("nova.hoc.logs.audit_ledger_service")
 
@@ -95,6 +98,13 @@ class AuditLedgerService:
         Returns:
             Created AuditLedger record
         """
+        # PIN-520 Phase 3: Lazy import of ORM model for construction.
+        # This is the architectural bridge — audit_ledger_engine is a thin
+        # writer that constructs AuditLedger rows. Delegating construction
+        # to an L6 driver would add indirection without value since this
+        # engine IS the audit write layer.
+        from app.models.audit_ledger import AuditLedger
+
         entry = AuditLedger(
             tenant_id=tenant_id,
             event_type=event_type.value,

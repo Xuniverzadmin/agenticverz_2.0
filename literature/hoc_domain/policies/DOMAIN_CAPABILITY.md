@@ -6,6 +6,13 @@
 
 ---
 
+## Reality Delta (2026-02-07)
+
+- L2 purity preserved: policies L2 routes dispatch via L4 `OperationRegistry` (no direct L2→L5).
+- Policy evaluation persistence has been shifted behind `backend/app/hoc/cus/policies/L6_drivers/policy_engine_driver.py`; `backend/app/hoc/cus/policies/L5_engines/engine.py` no longer owns connection/commit.
+- Known remaining exceptions (mechanical audit): some L5 engines still import `app.models.*`, and L6 `policy_engine_driver.py` still contains committed wrappers (`conn.commit()`); both must be eliminated for full driver/engine purity.
+- Verify now: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain policies`.
+
 ## 1. Domain Purpose
 
 Policy engine — DSL-based policy definition, compilation, evaluation, versioning, and enforcement across all operations.

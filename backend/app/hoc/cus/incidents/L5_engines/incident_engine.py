@@ -202,23 +202,16 @@ class IncidentEngine:
         """
         Get or create the write driver.
 
-        DECISION: Lazy initialization of driver with Session.
-        Creates Session from db_url if not injected.
+        Driver MUST be injected via session by L4 handler. No fallback creation.
         """
         if self._driver is not None:
             return self._driver
 
         if self._session is None:
-            # Create Session from db_url
-            from sqlalchemy import create_engine
-            from sqlalchemy.orm import sessionmaker
-
-            if not self._db_url:
-                raise RuntimeError("DATABASE_URL not configured")
-
-            engine = create_engine(self._db_url)
-            SessionLocal = sessionmaker(bind=engine)
-            self._session = SessionLocal()
+            raise RuntimeError(
+                "IncidentEngine requires a session — driver must be injected by L4 handler. "
+                "No sqlalchemy fallback allowed (L5 purity)."
+            )
 
         self._driver = get_incident_write_driver(self._session)
         return self._driver

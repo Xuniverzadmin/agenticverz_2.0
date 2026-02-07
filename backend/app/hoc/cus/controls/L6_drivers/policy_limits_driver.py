@@ -107,6 +107,20 @@ class PolicyLimitsDriver:
         """
         self._session.add(integrity)
 
+    def create_limit(self, **kwargs) -> "Limit":
+        """Create and add a Limit ORM object to the session."""
+        from app.models.policy_control_plane import Limit
+        limit = Limit(**kwargs)
+        self._session.add(limit)
+        return limit
+
+    def create_integrity(self, **kwargs) -> "LimitIntegrity":
+        """Create and add a LimitIntegrity ORM object to the session."""
+        from app.models.policy_control_plane import LimitIntegrity
+        integrity = LimitIntegrity(**kwargs)
+        self._session.add(integrity)
+        return integrity
+
     async def flush(self) -> None:
         """Flush pending changes without committing."""
         await self._session.flush()

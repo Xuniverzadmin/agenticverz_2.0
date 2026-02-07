@@ -308,7 +308,12 @@ class RBACEngine:
                     cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, db_session_factory: Optional[Callable] = None, policy_file: Optional[str] = None):
+    def __init__(
+        self,
+        db_session_factory: Optional[Callable] = None,
+        policy_file: Optional[str] = None,
+        audit_writer: Optional[Callable] = None,
+    ):
         # Only initialize once
         if hasattr(self, "_initialized") and self._initialized:
             return
@@ -316,6 +321,7 @@ class RBACEngine:
         self._initialized = True
         self._policy_lock = threading.RLock()
         self._db_session_factory = db_session_factory
+        self._audit_writer = audit_writer
         self._policy_file = policy_file or POLICY_FILE
         self._policy: Optional[PolicyConfig] = None
         self._default_matrix = self._get_default_matrix()
@@ -541,8 +547,10 @@ class RBACEngine:
         RBAC_ENGINE_LATENCY.observe(latency)
 
     def _audit(self, decision: Decision, request: Request, tenant_id: Optional[str] = None) -> None:
-        """Write audit log to database (async-safe)."""
-        if not RBAC_AUDIT_ENABLED or not self._db_session_factory:
+        """Write audit log via injected audit_writer (L5 purity — no sqlalchemy)."""
+        if not RBAC_AUDIT_ENABLED:
+            return
+        if not self._audit_writer and not self._db_session_factory:
             return
 
         try:
@@ -556,55 +564,32 @@ class RBACEngine:
             # Get request ID if available
             request_id = request.headers.get("X-Request-ID")
 
-            # Insert audit record (fire and forget for performance)
-            # Handle both generator-based and regular session factories
-            session_gen = self._db_session_factory()
-            if hasattr(session_gen, "__next__"):
-                # Generator-based factory (e.g., FastAPI dependency)
-                session = next(session_gen)
-            else:
-                # Regular factory that returns session directly
-                session = session_gen
+            audit_data = {
+                "subject": subject,
+                "resource": decision.policy.resource if decision.policy else "unknown",
+                "action": decision.policy.action if decision.policy else "unknown",
+                "allowed": decision.allowed,
+                "reason": decision.reason,
+                "roles": decision.roles,
+                "path": str(request.url.path),
+                "method": request.method,
+                "tenant_id": tenant_id,
+                "request_id": request_id,
+                "latency_ms": decision.latency_ms,
+            }
 
-            try:
-                from sqlalchemy import text
-
-                session.execute(
-                    text(
-                        """
-                        INSERT INTO system.rbac_audit
-                        (subject, resource, action, allowed, reason, roles, path, method, tenant_id, request_id, latency_ms)
-                        VALUES (:subject, :resource, :action, :allowed, :reason, :roles, :path, :method, :tenant_id, :request_id, :latency_ms)
-                    """
-                    ),
-                    {
-                        "subject": subject,
-                        "resource": decision.policy.resource if decision.policy else "unknown",
-                        "action": decision.policy.action if decision.policy else "unknown",
-                        "allowed": decision.allowed,
-                        "reason": decision.reason,
-                        "roles": decision.roles,
-                        "path": str(request.url.path),
-                        "method": request.method,
-                        "tenant_id": tenant_id,
-                        "request_id": request_id,
-                        "latency_ms": decision.latency_ms,
-                    },
-                )
-                session.commit()
+            if self._audit_writer:
+                # L4-injected audit writer (fire-and-forget)
+                self._audit_writer(audit_data)
                 RBAC_AUDIT_WRITES.labels(status="success").inc()
-            finally:
-                session.close()
-                # Clean up generator if applicable
-                if hasattr(session_gen, "__next__"):
-                    try:
-                        next(session_gen)
-                    except StopIteration:
-                        pass
+            else:
+                # No audit writer injected — skip audit (fire-and-forget)
+                logger.debug("rbac_audit_skipped: no audit_writer injected")
 
         except Exception as e:
             RBAC_AUDIT_WRITES.labels(status="error").inc()
             logger.warning(f"Failed to write audit log: {e}")
+
 
 
 # =============================================================================

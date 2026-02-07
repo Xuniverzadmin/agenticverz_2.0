@@ -20,7 +20,7 @@
 # - PolicyEngineDriver contains all DB operations
 # - Engine initialized with _driver reference
 # - All 24 methods extracted to use _driver
-# - Transitional sqlalchemy imports removed (only SQLAlchemyError retained)
+# - All sqlalchemy imports removed (PIN-520: _auto/_committed wrappers)
 #
 # EXTRACTION ORDER (Execute strictly in sequence):
 #   M1. [DONE] _load_policies()         - Authority: POLICY_CONFIG_READ
@@ -59,9 +59,10 @@
 # ============================================================================
 # L4 ENGINE INVARIANT — POLICY ENGINE (LOCKED)
 # ============================================================================
-# This file MUST NOT import sqlalchemy at runtime (except SQLAlchemyError).
+# This file MUST NOT import sqlalchemy at runtime.
 # All persistence IS delegated to policy_engine_driver.py.
 # Phase-2.5A extraction COMPLETE - L4/L6 separation achieved.
+# PIN-520: connect()/commit() eliminated — driver _auto/_committed wrappers.
 # ============================================================================
 
 # M19 Policy Engine
@@ -99,8 +100,7 @@ from app.hoc.cus.policies.L6_drivers.policy_engine_driver import (
 )
 
 # Phase-2.5A COMPLETE: All persistence delegated to _driver
-# Only SQLAlchemyError retained for exception handling
-from sqlalchemy.exc import SQLAlchemyError
+# PIN-520: SQLAlchemyError removed — driver _auto/_committed wrappers own connections
 
 from app.policy.models import (
     ActionType,
@@ -201,6 +201,13 @@ class PolicyEngine:
 
         # Cooldown tracking
         self._cooldowns: Dict[str, datetime] = {}  # agent_id -> cooldown_until
+
+    @property
+    def driver(self) -> PolicyEngineDriver:
+        """Expose L6 driver for L4 managed_connection usage."""
+        if self._driver is None:
+            raise RuntimeError("PolicyEngine has no driver — database_url not set")
+        return self._driver
 
     # =========================================================================
     # Core Evaluation
@@ -1044,98 +1051,95 @@ class PolicyEngine:
             return result
 
         try:
-            # Get connection from driver's engine
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # Load ethical constraints via driver
-                rows = self._driver.fetch_ethical_constraints(conn)
-                self._ethical_constraints = []
-                for row in rows:
-                    self._ethical_constraints.append(
-                        EthicalConstraint(
-                            id=str(row.get("id", "")),
-                            name=row.get("name", ""),
-                            description=row.get("description") or "",
-                            constraint_type=EthicalConstraintType(row.get("constraint_type", "NO_COERCION")),
-                            forbidden_patterns=row.get("forbidden_patterns"),
-                            required_disclosures=row.get("required_disclosures"),
-                            transparency_threshold=row.get("transparency_threshold"),
-                            enforcement_level=row.get("enforcement_level"),
-                            violation_action=row.get("violation_action"),
-                            is_active=row.get("is_active", True),
-                            violated_count=row.get("violated_count", 0),
-                        )
+            # Load ethical constraints via driver (_auto wrapper)
+            rows = self._driver.fetch_ethical_constraints_auto()
+            self._ethical_constraints = []
+            for row in rows:
+                self._ethical_constraints.append(
+                    EthicalConstraint(
+                        id=str(row.get("id", "")),
+                        name=row.get("name", ""),
+                        description=row.get("description") or "",
+                        constraint_type=EthicalConstraintType(row.get("constraint_type", "NO_COERCION")),
+                        forbidden_patterns=row.get("forbidden_patterns"),
+                        required_disclosures=row.get("required_disclosures"),
+                        transparency_threshold=row.get("transparency_threshold"),
+                        enforcement_level=row.get("enforcement_level"),
+                        violation_action=row.get("violation_action"),
+                        is_active=row.get("is_active", True),
+                        violated_count=row.get("violated_count", 0),
                     )
-                result.ethical_constraints_loaded = len(self._ethical_constraints)
+                )
+            result.ethical_constraints_loaded = len(self._ethical_constraints)
 
-                # Load risk ceilings via driver
-                rows = self._driver.fetch_risk_ceilings(conn)
-                self._risk_ceilings = []
-                for row in rows:
-                    self._risk_ceilings.append(
-                        RiskCeiling(
-                            id=str(row.get("id", "")),
-                            name=row.get("name", ""),
-                            description=row.get("description"),
-                            metric=row.get("metric"),
-                            max_value=row.get("max_value"),
-                            current_value=row.get("current_value"),
-                            window_seconds=row.get("window_seconds"),
-                            applies_to=row.get("applies_to"),
-                            tenant_id=row.get("tenant_id"),
-                            breach_action=row.get("breach_action"),
-                            breach_count=row.get("breach_count", 0),
-                            is_active=row.get("is_active", True),
-                        )
+            # Load risk ceilings via driver (_auto wrapper)
+            rows = self._driver.fetch_risk_ceilings_auto()
+            self._risk_ceilings = []
+            for row in rows:
+                self._risk_ceilings.append(
+                    RiskCeiling(
+                        id=str(row.get("id", "")),
+                        name=row.get("name", ""),
+                        description=row.get("description"),
+                        metric=row.get("metric"),
+                        max_value=row.get("max_value"),
+                        current_value=row.get("current_value"),
+                        window_seconds=row.get("window_seconds"),
+                        applies_to=row.get("applies_to"),
+                        tenant_id=row.get("tenant_id"),
+                        breach_action=row.get("breach_action"),
+                        breach_count=row.get("breach_count", 0),
+                        is_active=row.get("is_active", True),
                     )
-                result.risk_ceilings_loaded = len(self._risk_ceilings)
+                )
+            result.risk_ceilings_loaded = len(self._risk_ceilings)
 
-                # Load safety rules via driver
-                rows = self._driver.fetch_safety_rules(conn)
-                self._safety_rules = []
-                for row in rows:
-                    condition = row.get("condition")
-                    self._safety_rules.append(
-                        SafetyRule(
-                            id=str(row.get("id", "")),
-                            name=row.get("name", ""),
-                            description=row.get("description"),
-                            rule_type=SafetyRuleType(row.get("rule_type", "RATE_LIMIT")),
-                            condition=condition if isinstance(condition, dict) else json.loads(condition or "{}"),
-                            action=row.get("action"),
-                            cooldown_seconds=row.get("cooldown_seconds"),
-                            applies_to=row.get("applies_to"),
-                            tenant_id=row.get("tenant_id"),
-                            priority=row.get("priority"),
-                            is_active=row.get("is_active", True),
-                            triggered_count=row.get("triggered_count", 0),
-                        )
+            # Load safety rules via driver (_auto wrapper)
+            rows = self._driver.fetch_safety_rules_auto()
+            self._safety_rules = []
+            for row in rows:
+                condition = row.get("condition")
+                self._safety_rules.append(
+                    SafetyRule(
+                        id=str(row.get("id", "")),
+                        name=row.get("name", ""),
+                        description=row.get("description"),
+                        rule_type=SafetyRuleType(row.get("rule_type", "RATE_LIMIT")),
+                        condition=condition if isinstance(condition, dict) else json.loads(condition or "{}"),
+                        action=row.get("action"),
+                        cooldown_seconds=row.get("cooldown_seconds"),
+                        applies_to=row.get("applies_to"),
+                        tenant_id=row.get("tenant_id"),
+                        priority=row.get("priority"),
+                        is_active=row.get("is_active", True),
+                        triggered_count=row.get("triggered_count", 0),
                     )
-                result.safety_rules_loaded = len(self._safety_rules)
+                )
+            result.safety_rules_loaded = len(self._safety_rules)
 
-                # Load business rules via driver
-                rows = self._driver.fetch_business_rules(conn)
-                self._business_rules = []
-                for row in rows:
-                    condition = row.get("condition")
-                    constraint = row.get("constraint")
-                    self._business_rules.append(
-                        BusinessRule(
-                            id=str(row.get("id", "")),
-                            name=row.get("name", ""),
-                            description=row.get("description"),
-                            rule_type=BusinessRuleType(row.get("rule_type", "PRICING")),
-                            condition=condition if isinstance(condition, dict) else json.loads(condition or "{}"),
-                            constraint=constraint if isinstance(constraint, dict) else json.loads(constraint or "{}"),
-                            tenant_id=row.get("tenant_id"),
-                            customer_tier=row.get("customer_tier"),
-                            priority=row.get("priority"),
-                            is_active=row.get("is_active", True),
-                        )
+            # Load business rules via driver (_auto wrapper)
+            rows = self._driver.fetch_business_rules_auto()
+            self._business_rules = []
+            for row in rows:
+                condition = row.get("condition")
+                constraint = row.get("constraint")
+                self._business_rules.append(
+                    BusinessRule(
+                        id=str(row.get("id", "")),
+                        name=row.get("name", ""),
+                        description=row.get("description"),
+                        rule_type=BusinessRuleType(row.get("rule_type", "PRICING")),
+                        condition=condition if isinstance(condition, dict) else json.loads(condition or "{}"),
+                        constraint=constraint if isinstance(constraint, dict) else json.loads(constraint or "{}"),
+                        tenant_id=row.get("tenant_id"),
+                        customer_tier=row.get("customer_tier"),
+                        priority=row.get("priority"),
+                        is_active=row.get("is_active", True),
                     )
-                result.business_rules_loaded = len(self._business_rules)
+                )
+            result.business_rules_loaded = len(self._business_rules)
 
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Failed to load policies: {e}")
             result.errors.append(str(e))
             self._load_default_policies()
@@ -1229,49 +1233,41 @@ class PolicyEngine:
             return
 
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # Insert evaluation via driver
-                self._driver.insert_evaluation(
-                    conn=conn,
+            # Insert evaluation via driver (_committed wrapper)
+            self._driver.insert_evaluation_committed(
+                evaluation_id=result.request_id,
+                action_type=request.action_type.value,
+                agent_id=request.agent_id,
+                tenant_id=request.tenant_id,
+                request_context=json.dumps(request.context),
+                decision=result.decision.value,
+                decision_reason=result.decision_reason,
+                modifications=json.dumps([m.model_dump() for m in result.modifications]),
+                evaluation_ms=result.evaluation_ms,
+                policies_checked=result.policies_evaluated,
+                rules_matched=result.rules_matched,
+                evaluated_at=result.evaluated_at,
+            )
+
+            # Insert violations via driver (_committed wrapper)
+            for violation in result.violations:
+                self._driver.insert_violation_committed(
+                    violation_id=violation.id,
                     evaluation_id=result.request_id,
-                    action_type=request.action_type.value,
-                    agent_id=request.agent_id,
-                    tenant_id=request.tenant_id,
-                    request_context=json.dumps(request.context),
-                    decision=result.decision.value,
-                    decision_reason=result.decision_reason,
-                    modifications=json.dumps([m.model_dump() for m in result.modifications]),
-                    evaluation_ms=result.evaluation_ms,
-                    policies_checked=result.policies_evaluated,
-                    rules_matched=result.rules_matched,
-                    evaluated_at=result.evaluated_at,
+                    policy_name=violation.policy_name,
+                    violation_type=violation.violation_type.value,
+                    severity=violation.severity,
+                    description=violation.description,
+                    evidence=json.dumps(violation.evidence),
+                    agent_id=violation.agent_id,
+                    tenant_id=violation.tenant_id,
+                    action_attempted=violation.action_attempted,
+                    routed_to_governor=violation.routed_to_governor,
+                    governor_action=violation.governor_action,
+                    detected_at=violation.detected_at,
                 )
-                conn.commit()
 
-                # Insert violations via driver
-                for violation in result.violations:
-                    self._driver.insert_violation(
-                        conn=conn,
-                        violation_id=violation.id,
-                        evaluation_id=result.request_id,
-                        policy_name=violation.policy_name,
-                        violation_type=violation.violation_type.value,
-                        severity=violation.severity,
-                        description=violation.description,
-                        evidence=json.dumps(violation.evidence),
-                        agent_id=violation.agent_id,
-                        tenant_id=violation.tenant_id,
-                        action_attempted=violation.action_attempted,
-                        routed_to_governor=violation.routed_to_governor,
-                        governor_action=violation.governor_action,
-                        detected_at=violation.detected_at,
-                    )
-                conn.commit()
-
-            driver_engine.dispose()
-
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.debug(f"Failed to persist evaluation: {e}")
 
     # =========================================================================
@@ -1329,41 +1325,37 @@ class PolicyEngine:
 
         violations = []
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # Fetch violations via driver
-                rows = self._driver.fetch_violations(
-                    conn=conn,
-                    violation_type=violation_type.value if violation_type else None,
-                    agent_id=agent_id,
-                    tenant_id=tenant_id,
-                    severity_min=severity_min,
-                    since=since,
-                    limit=limit,
-                )
-                # Transform raw dicts to domain objects
-                for row in rows:
-                    evidence = row.get("evidence")
-                    if isinstance(evidence, str):
-                        evidence = json.loads(evidence or "{}")
-                    violations.append(
-                        PolicyViolation(
-                            id=str(row.get("id", "")),
-                            policy_name=row.get("policy_name", ""),
-                            violation_type=ViolationType(row.get("violation_type", "UNKNOWN")),
-                            severity=row.get("severity", 0.0),
-                            description=row.get("description", ""),
-                            evidence=evidence if isinstance(evidence, dict) else {},
-                            agent_id=row.get("agent_id"),
-                            tenant_id=row.get("tenant_id"),
-                            action_attempted=row.get("action_attempted", ""),
-                            routed_to_governor=row.get("routed_to_governor", False),
-                            governor_action=row.get("governor_action"),
-                            detected_at=row.get("detected_at"),
-                        )
+            # Fetch violations via driver (_auto wrapper)
+            rows = self._driver.fetch_violations_auto(
+                violation_type=violation_type.value if violation_type else None,
+                agent_id=agent_id,
+                tenant_id=tenant_id,
+                severity_min=severity_min,
+                since=since,
+                limit=limit,
+            )
+            # Transform raw dicts to domain objects
+            for row in rows:
+                evidence = row.get("evidence")
+                if isinstance(evidence, str):
+                    evidence = json.loads(evidence or "{}")
+                violations.append(
+                    PolicyViolation(
+                        id=str(row.get("id", "")),
+                        policy_name=row.get("policy_name", ""),
+                        violation_type=ViolationType(row.get("violation_type", "UNKNOWN")),
+                        severity=row.get("severity", 0.0),
+                        description=row.get("description", ""),
+                        evidence=evidence if isinstance(evidence, dict) else {},
+                        agent_id=row.get("agent_id"),
+                        tenant_id=row.get("tenant_id"),
+                        action_attempted=row.get("action_attempted", ""),
+                        routed_to_governor=row.get("routed_to_governor", False),
+                        governor_action=row.get("governor_action"),
+                        detected_at=row.get("detected_at"),
                     )
-            driver_engine.dispose()
-        except SQLAlchemyError as e:
+                )
+        except Exception as e:
             logger.debug(f"Failed to get violations: {e}")
 
         return violations
@@ -1378,30 +1370,27 @@ class PolicyEngine:
             return None
 
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # Fetch violation via driver
-                row = self._driver.fetch_violation_by_id(conn, violation_id)
-                if row:
-                    evidence = row.get("evidence")
-                    if isinstance(evidence, str):
-                        evidence = json.loads(evidence or "{}")
-                    return PolicyViolation(
-                        id=str(row.get("id", "")),
-                        policy_name=row.get("policy_name", ""),
-                        violation_type=ViolationType(row.get("violation_type", "UNKNOWN")),
-                        severity=row.get("severity", 0.0),
-                        description=row.get("description", ""),
-                        evidence=evidence if isinstance(evidence, dict) else {},
-                        agent_id=row.get("agent_id"),
-                        tenant_id=row.get("tenant_id"),
-                        action_attempted=row.get("action_attempted", ""),
-                        routed_to_governor=row.get("routed_to_governor", False),
-                        governor_action=row.get("governor_action"),
-                        detected_at=row.get("detected_at"),
-                    )
-            driver_engine.dispose()
-        except SQLAlchemyError as e:
+            # Fetch violation via driver (_auto wrapper)
+            row = self._driver.fetch_violation_by_id_auto(violation_id)
+            if row:
+                evidence = row.get("evidence")
+                if isinstance(evidence, str):
+                    evidence = json.loads(evidence or "{}")
+                return PolicyViolation(
+                    id=str(row.get("id", "")),
+                    policy_name=row.get("policy_name", ""),
+                    violation_type=ViolationType(row.get("violation_type", "UNKNOWN")),
+                    severity=row.get("severity", 0.0),
+                    description=row.get("description", ""),
+                    evidence=evidence if isinstance(evidence, dict) else {},
+                    agent_id=row.get("agent_id"),
+                    tenant_id=row.get("tenant_id"),
+                    action_attempted=row.get("action_attempted", ""),
+                    routed_to_governor=row.get("routed_to_governor", False),
+                    governor_action=row.get("governor_action"),
+                    detected_at=row.get("detected_at"),
+                )
+        except Exception as e:
             logger.debug(f"Failed to get violation: {e}")
 
         return None
@@ -1415,17 +1404,13 @@ class PolicyEngine:
             return False
 
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # Update violation via driver
-                rowcount = self._driver.update_violation_acknowledged(
-                    conn=conn,
-                    violation_id=violation_id,
-                    notes=notes,
-                )
-                conn.commit()
-                return rowcount > 0
-        except SQLAlchemyError as e:
+            # Update violation via driver (_committed wrapper)
+            rowcount = self._driver.update_violation_acknowledged_committed(
+                violation_id=violation_id,
+                notes=notes,
+            )
+            return rowcount > 0
+        except Exception as e:
             logger.debug(f"Failed to acknowledge violation: {e}")
         return False
 
@@ -1462,21 +1447,16 @@ class PolicyEngine:
             return None
 
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # Update ceiling via driver
-                self._driver.update_risk_ceiling(
-                    conn=conn,
-                    ceiling_id=ceiling_id,
-                    updates=updates,
-                )
-                conn.commit()
-            driver_engine.dispose()
+            # Update ceiling via driver (_committed wrapper)
+            self._driver.update_risk_ceiling_committed(
+                ceiling_id=ceiling_id,
+                updates=updates,
+            )
 
             # Reload and return
             await self.reload_policies()
             return await self.get_risk_ceiling(db, ceiling_id)
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.debug(f"Failed to update risk ceiling: {e}")
         return None
 
@@ -1489,16 +1469,12 @@ class PolicyEngine:
             return False
 
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # Reset ceiling via driver
-                rowcount = self._driver.reset_risk_ceiling(
-                    conn=conn,
-                    ceiling_id=ceiling_id,
-                )
-                conn.commit()
-                return rowcount > 0
-        except SQLAlchemyError as e:
+            # Reset ceiling via driver (_committed wrapper)
+            rowcount = self._driver.reset_risk_ceiling_committed(
+                ceiling_id=ceiling_id,
+            )
+            return rowcount > 0
+        except Exception as e:
             logger.debug(f"Failed to reset risk ceiling: {e}")
         return False
 
@@ -1536,23 +1512,18 @@ class PolicyEngine:
                 else:
                     driver_updates[key] = value
 
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # Update rule via driver
-                self._driver.update_safety_rule(
-                    conn=conn,
-                    rule_id=rule_id,
-                    updates=driver_updates,
-                )
-                conn.commit()
-            driver_engine.dispose()
+            # Update rule via driver (_committed wrapper)
+            self._driver.update_safety_rule_committed(
+                rule_id=rule_id,
+                updates=driver_updates,
+            )
 
             # Reload and return
             await self.reload_policies()
             for rule in self._safety_rules:
                 if rule.id == rule_id:
                     return rule
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.debug(f"Failed to update safety rule: {e}")
         return None
 
@@ -1635,28 +1606,25 @@ class PolicyEngine:
             return [{"version": self._policy_version, "is_active": True}]
 
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # Fetch versions via driver
-                rows = self._driver.fetch_policy_versions(
-                    conn=conn,
-                    include_inactive=include_inactive,
-                    limit=limit,
-                )
-                # Transform raw dicts to formatted response
-                return [
-                    {
-                        "id": str(row.get("id", "")),
-                        "version": row.get("version", ""),
-                        "policy_hash": row.get("policy_hash", ""),
-                        "created_by": row.get("created_by", ""),
-                        "created_at": row.get("created_at").isoformat() if row.get("created_at") else None,
-                        "description": row.get("description", ""),
-                        "is_active": row.get("is_active", False),
-                        "rolled_back_at": row.get("rolled_back_at").isoformat() if row.get("rolled_back_at") else None,
-                    }
-                    for row in rows
-                ]
+            # Fetch versions via driver (_auto wrapper)
+            rows = self._driver.fetch_policy_versions_auto(
+                include_inactive=include_inactive,
+                limit=limit,
+            )
+            # Transform raw dicts to formatted response
+            return [
+                {
+                    "id": str(row.get("id", "")),
+                    "version": row.get("version", ""),
+                    "policy_hash": row.get("policy_hash", ""),
+                    "created_by": row.get("created_by", ""),
+                    "created_at": row.get("created_at").isoformat() if row.get("created_at") else None,
+                    "description": row.get("description", ""),
+                    "is_active": row.get("is_active", False),
+                    "rolled_back_at": row.get("rolled_back_at").isoformat() if row.get("rolled_back_at") else None,
+                }
+                for row in rows
+            ]
         except Exception as e:
             logger.debug(f"Failed to get versions: {e}")
         return []
@@ -1670,20 +1638,18 @@ class PolicyEngine:
             return {"version": self._policy_version, "is_active": True}
 
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # Fetch current active version via driver
-                row = self._driver.fetch_current_active_version(conn)
-                if row:
-                    return {
-                        "id": str(row.get("id", "")),
-                        "version": row.get("version", ""),
-                        "policy_hash": row.get("policy_hash", ""),
-                        "created_by": row.get("created_by", ""),
-                        "created_at": row.get("created_at").isoformat() if row.get("created_at") else None,
-                        "description": row.get("description", ""),
-                        "is_active": True,
-                    }
+            # Fetch current active version via driver (_auto wrapper)
+            row = self._driver.fetch_current_active_version_auto()
+            if row:
+                return {
+                    "id": str(row.get("id", "")),
+                    "version": row.get("version", ""),
+                    "policy_hash": row.get("policy_hash", ""),
+                    "created_by": row.get("created_by", ""),
+                    "created_at": row.get("created_at").isoformat() if row.get("created_at") else None,
+                    "description": row.get("description", ""),
+                    "is_active": True,
+                }
         except Exception as e:
             logger.debug(f"Failed to get current version: {e}")
         return None
@@ -1731,23 +1697,18 @@ class PolicyEngine:
 
         if self._driver:
             try:
-                driver_engine = self._driver._get_engine()
-                with driver_engine.connect() as conn:
-                    # Deactivate previous versions via driver
-                    self._driver.deactivate_all_versions(conn)
+                # Deactivate previous versions via driver (_committed wrapper)
+                self._driver.deactivate_all_versions_committed()
 
-                    # Insert new version via driver
-                    version_id = str(uuid.uuid4())
-                    self._driver.insert_policy_version(
-                        conn=conn,
-                        version_id=version_id,
-                        version=new_version,
-                        policy_hash=policy_hash,
-                        created_by=created_by,
-                        description=description,
-                    )
-                    conn.commit()
-                driver_engine.dispose()
+                # Insert new version via driver (_committed wrapper)
+                version_id = str(uuid.uuid4())
+                self._driver.insert_policy_version_committed(
+                    version_id=version_id,
+                    version=new_version,
+                    policy_hash=policy_hash,
+                    created_by=created_by,
+                    description=description,
+                )
             except Exception as e:
                 logger.debug(f"Failed to create version: {e}")
 
@@ -1765,36 +1726,31 @@ class PolicyEngine:
             return {"success": False, "error": "No database configured"}
 
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # Find target version via driver
-                row = self._driver.fetch_version_for_rollback(conn, target_version)
-                if not row:
-                    return {"success": False, "error": f"Version {target_version} not found"}
+            # Find target version via driver (_auto wrapper)
+            row = self._driver.fetch_version_for_rollback_auto(target_version)
+            if not row:
+                return {"success": False, "error": f"Version {target_version} not found"}
 
-                # Mark current as rolled back via driver
-                self._driver.mark_version_rolled_back(conn, rolled_back_by)
+            # Mark current as rolled back via driver (_committed wrapper)
+            self._driver.mark_version_rolled_back_committed(rolled_back_by)
 
-                # Activate target version via driver
-                self._driver.activate_version(conn, target_version)
+            # Activate target version via driver (_committed wrapper)
+            self._driver.activate_version_committed(target_version)
 
-                # Record provenance via driver
-                self._driver.insert_provenance(
-                    conn=conn,
-                    policy_id=str(uuid.uuid4()),
-                    policy_type="version",
-                    action="rollback",
-                    changed_by=rolled_back_by,
-                    policy_version=target_version,
-                    reason=reason,
-                )
+            # Record provenance via driver (_committed wrapper)
+            self._driver.insert_provenance_committed(
+                policy_id=str(uuid.uuid4()),
+                policy_type="version",
+                action="rollback",
+                changed_by=rolled_back_by,
+                policy_version=target_version,
+                reason=reason,
+            )
 
-                conn.commit()
+            self._policy_version = target_version
+            await self.reload_policies(db)
 
-                self._policy_version = target_version
-                await self.reload_policies(db)
-
-                return {"success": True, "rolled_back_to": target_version}
+            return {"success": True, "rolled_back_to": target_version}
         except Exception as e:
             logger.error(f"Rollback failed: {e}")
             return {"success": False, "error": str(e)}
@@ -1808,20 +1764,18 @@ class PolicyEngine:
             return []
 
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # Fetch provenance via driver
-                rows = self._driver.fetch_provenance(conn, policy_version=version_id)
-                return [
-                    {
-                        "policy_type": row.get("policy_type", ""),
-                        "action": row.get("action", ""),
-                        "changed_by": row.get("changed_by", ""),
-                        "changed_at": row.get("changed_at").isoformat() if row.get("changed_at") else None,
-                        "reason": row.get("reason", ""),
-                    }
-                    for row in rows
-                ]
+            # Fetch provenance via driver (_auto wrapper)
+            rows = self._driver.fetch_provenance_auto(policy_version=version_id)
+            return [
+                {
+                    "policy_type": row.get("policy_type", ""),
+                    "action": row.get("action", ""),
+                    "changed_by": row.get("changed_by", ""),
+                    "changed_at": row.get("changed_at").isoformat() if row.get("changed_at") else None,
+                    "reason": row.get("reason", ""),
+                }
+                for row in rows
+            ]
         except Exception as e:
             logger.debug(f"Failed to get provenance: {e}")
         return []
@@ -1843,40 +1797,37 @@ class PolicyEngine:
 
         if self._driver:
             try:
-                driver_engine = self._driver._get_engine()
-                with driver_engine.connect() as conn:
-                    # Get dependencies via driver
-                    dep_rows = self._driver.fetch_dependencies(conn)
-                    for row in dep_rows:
-                        dependencies.append(
-                            PolicyDependency(
-                                id=str(row.get("id", "")),
-                                source_policy=row.get("source_policy", ""),
-                                target_policy=row.get("target_policy", ""),
-                                dependency_type=row.get("dependency_type", ""),
-                                resolution_strategy=row.get("resolution_strategy", ""),
-                                priority=row.get("priority", 0),
-                                description=row.get("description", ""),
-                            )
+                # Get dependencies via driver (_auto wrapper)
+                dep_rows = self._driver.fetch_dependencies_auto()
+                for row in dep_rows:
+                    dependencies.append(
+                        PolicyDependency(
+                            id=str(row.get("id", "")),
+                            source_policy=row.get("source_policy", ""),
+                            target_policy=row.get("target_policy", ""),
+                            dependency_type=row.get("dependency_type", ""),
+                            resolution_strategy=row.get("resolution_strategy", ""),
+                            priority=row.get("priority", 0),
+                            description=row.get("description", ""),
                         )
+                    )
 
-                    # Get conflicts via driver
-                    conflict_rows = self._driver.fetch_conflicts(conn)
-                    for row in conflict_rows:
-                        conflicts.append(
-                            PolicyConflict(
-                                id=str(row.get("id", "")),
-                                policy_a=row.get("policy_a", ""),
-                                policy_b=row.get("policy_b", ""),
-                                conflict_type=row.get("conflict_type", ""),
-                                severity=row.get("severity", 0.0),
-                                description=row.get("description", ""),
-                                affected_action_types=row.get("affected_action_types") or [],
-                                resolved=row.get("resolved", False),
-                                resolution=row.get("resolution"),
-                            )
+                # Get conflicts via driver (_auto wrapper)
+                conflict_rows = self._driver.fetch_conflicts_auto()
+                for row in conflict_rows:
+                    conflicts.append(
+                        PolicyConflict(
+                            id=str(row.get("id", "")),
+                            policy_a=row.get("policy_a", ""),
+                            policy_b=row.get("policy_b", ""),
+                            conflict_type=row.get("conflict_type", ""),
+                            severity=row.get("severity", 0.0),
+                            description=row.get("description", ""),
+                            affected_action_types=row.get("affected_action_types") or [],
+                            resolved=row.get("resolved", False),
+                            resolution=row.get("resolution"),
                         )
-                driver_engine.dispose()
+                    )
             except Exception as e:
                 logger.debug(f"Failed to get dependency graph: {e}")
 
@@ -1905,22 +1856,19 @@ class PolicyEngine:
         conflicts = []
         if self._driver:
             try:
-                driver_engine = self._driver._get_engine()
-                with driver_engine.connect() as conn:
-                    # Fetch conflicts via driver
-                    rows = self._driver.fetch_conflicts(conn, include_resolved=include_resolved)
-                    for row in rows:
-                        conflicts.append(
-                            PolicyConflict(
-                                id=str(row.get("id", "")),
-                                policy_a=row.get("policy_a", ""),
-                                policy_b=row.get("policy_b", ""),
-                                conflict_type=row.get("conflict_type", ""),
-                                severity=row.get("severity", 0.0),
-                                description=row.get("description", ""),
-                            )
+                # Fetch conflicts via driver (_auto wrapper)
+                rows = self._driver.fetch_conflicts_auto(include_resolved=include_resolved)
+                for row in rows:
+                    conflicts.append(
+                        PolicyConflict(
+                            id=str(row.get("id", "")),
+                            policy_a=row.get("policy_a", ""),
+                            policy_b=row.get("policy_b", ""),
+                            conflict_type=row.get("conflict_type", ""),
+                            severity=row.get("severity", 0.0),
+                            description=row.get("description", ""),
                         )
-                driver_engine.dispose()
+                    )
             except Exception as e:
                 logger.debug(f"Failed to get conflicts: {e}")
         return conflicts
@@ -1934,17 +1882,13 @@ class PolicyEngine:
             return False
 
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # Resolve conflict via driver
-                rowcount = self._driver.resolve_conflict(
-                    conn=conn,
-                    conflict_id=conflict_id,
-                    resolution=resolution,
-                    resolved_by=resolved_by,
-                )
-                conn.commit()
-                return rowcount > 0
+            # Resolve conflict via driver (_committed wrapper)
+            rowcount = self._driver.resolve_conflict_committed(
+                conflict_id=conflict_id,
+                resolution=resolution,
+                resolved_by=resolved_by,
+            )
+            return rowcount > 0
         except Exception as e:
             logger.debug(f"Failed to resolve conflict: {e}")
         return False
@@ -1965,28 +1909,25 @@ class PolicyEngine:
         policies = []
         if self._driver:
             try:
-                driver_engine = self._driver._get_engine()
-                with driver_engine.connect() as conn:
-                    # Fetch temporal policies via driver
-                    rows = self._driver.fetch_temporal_policies(
-                        conn, metric=metric, include_inactive=include_inactive
-                    )
-                    for row in rows:
-                        policies.append(
-                            TemporalPolicy(
-                                id=str(row.get("id", "")),
-                                name=row.get("name", ""),
-                                description=row.get("description", ""),
-                                temporal_type=row.get("temporal_type", ""),
-                                metric=row.get("metric", ""),
-                                max_value=row.get("max_value", 0.0),
-                                window_seconds=row.get("window_seconds", 0),
-                                breach_action=row.get("breach_action", "block"),
-                                breach_count=row.get("breach_count", 0),
-                                is_active=row.get("is_active", False),
-                            )
+                # Fetch temporal policies via driver (_auto wrapper)
+                rows = self._driver.fetch_temporal_policies_auto(
+                    metric=metric, include_inactive=include_inactive
+                )
+                for row in rows:
+                    policies.append(
+                        TemporalPolicy(
+                            id=str(row.get("id", "")),
+                            name=row.get("name", ""),
+                            description=row.get("description", ""),
+                            temporal_type=row.get("temporal_type", ""),
+                            metric=row.get("metric", ""),
+                            max_value=row.get("max_value", 0.0),
+                            window_seconds=row.get("window_seconds", 0),
+                            breach_action=row.get("breach_action", "block"),
+                            breach_count=row.get("breach_count", 0),
+                            is_active=row.get("is_active", False),
                         )
-                driver_engine.dispose()
+                    )
             except Exception as e:
                 logger.debug(f"Failed to get temporal policies: {e}")
         return policies
@@ -2002,21 +1943,17 @@ class PolicyEngine:
 
         if self._driver:
             try:
-                driver_engine = self._driver._get_engine()
-                with driver_engine.connect() as conn:
-                    self._driver.insert_temporal_policy(
-                        conn,
-                        name=data["name"],
-                        description=data.get("description"),
-                        temporal_type=data["temporal_type"],
-                        metric=data["metric"],
-                        max_value=data["max_value"],
-                        window_seconds=data["window_seconds"],
-                        breach_action=data.get("breach_action", "block"),
-                        cooldown_on_breach=data.get("cooldown_on_breach", 0),
-                    )
-                    conn.commit()
-                driver_engine.dispose()
+                # Insert temporal policy via driver (_committed wrapper)
+                self._driver.insert_temporal_policy_committed(
+                    name=data["name"],
+                    description=data.get("description"),
+                    temporal_type=data["temporal_type"],
+                    metric=data["metric"],
+                    max_value=data["max_value"],
+                    window_seconds=data["window_seconds"],
+                    breach_action=data.get("breach_action", "block"),
+                    cooldown_on_breach=data.get("cooldown_on_breach", 0),
+                )
             except Exception as e:
                 logger.debug(f"Failed to create temporal policy: {e}")
 
@@ -2031,33 +1968,30 @@ class PolicyEngine:
             return {"utilization": 0.0}
 
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # Get policy max_value and window_seconds
-                policy_data = self._driver.fetch_temporal_policy_for_utilization(
-                    conn, policy_id
-                )
+            # Get policy max_value and window_seconds via driver (_auto wrapper)
+            policy_data = self._driver.fetch_temporal_policy_for_utilization_auto(
+                policy_id
+            )
 
-                if not policy_data:
-                    return {"error": "Policy not found"}
+            if not policy_data:
+                return {"error": "Policy not found"}
 
-                max_value, window_seconds = policy_data
+            max_value, window_seconds = policy_data
 
-                # Get current window sum
-                current = self._driver.fetch_temporal_metric_sum(
-                    conn, policy_id, window_seconds
-                )
+            # Get current window sum via driver (_auto wrapper)
+            current = self._driver.fetch_temporal_metric_sum_auto(
+                policy_id, window_seconds
+            )
 
-                utilization = current / max_value if max_value > 0 else 0
+            utilization = current / max_value if max_value > 0 else 0
 
-                return {
-                    "policy_id": policy_id,
-                    "current_value": current,
-                    "max_value": max_value,
-                    "utilization": utilization,
-                    "window_seconds": window_seconds,
-                }
-            driver_engine.dispose()
+            return {
+                "policy_id": policy_id,
+                "current_value": current,
+                "max_value": max_value,
+                "utilization": utilization,
+                "window_seconds": window_seconds,
+            }
         except Exception as e:
             logger.debug(f"Failed to get utilization: {e}")
         return {"utilization": 0.0}
@@ -2298,17 +2232,15 @@ class PolicyEngine:
 
         if self._driver:
             try:
-                driver_engine = self._driver._get_engine()
-                with driver_engine.connect() as conn:
-                    edges = self._driver.fetch_dependency_edges_with_type(conn)
-                    for source, target, dep_type in edges:
-                        all_nodes.add(source)
-                        all_nodes.add(target)
+                # Fetch dependency edges via driver (_auto wrapper)
+                edges = self._driver.fetch_dependency_edges_with_type_auto()
+                for source, target, dep_type in edges:
+                    all_nodes.add(source)
+                    all_nodes.add(target)
 
-                        if source not in graph:
-                            graph[source] = []
-                        graph[source].append((target, dep_type))
-                driver_engine.dispose()
+                    if source not in graph:
+                        graph[source] = []
+                    graph[source].append((target, dep_type))
             except Exception as e:
                 logger.error(f"Failed to load dependencies for DAG validation: {e}")
                 return {"is_dag": False, "error": str(e)}
@@ -2389,73 +2321,67 @@ class PolicyEngine:
             return {"success": False, "error": "No driver configured"}
 
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # First, simulate adding the edge and check for cycles
-                # Get existing dependencies
-                edges = self._driver.fetch_dependency_edges(conn, active_only=True)
+            # Get existing dependencies via driver (_auto wrapper)
+            edges = self._driver.fetch_dependency_edges_auto(active_only=True)
 
-                graph: Dict[str, List[str]] = {}
-                all_nodes: set = set()
-                for src, tgt in edges:
-                    all_nodes.add(src)
-                    all_nodes.add(tgt)
-                    if src not in graph:
-                        graph[src] = []
-                    graph[src].append(tgt)
+            graph: Dict[str, List[str]] = {}
+            all_nodes: set = set()
+            for src, tgt in edges:
+                all_nodes.add(src)
+                all_nodes.add(tgt)
+                if src not in graph:
+                    graph[src] = []
+                graph[src].append(tgt)
 
-                # Add proposed edge
-                all_nodes.add(source_policy)
-                all_nodes.add(target_policy)
-                if source_policy not in graph:
-                    graph[source_policy] = []
-                graph[source_policy].append(target_policy)
+            # Add proposed edge
+            all_nodes.add(source_policy)
+            all_nodes.add(target_policy)
+            if source_policy not in graph:
+                graph[source_policy] = []
+            graph[source_policy].append(target_policy)
 
-                # Check for cycle using BFS reachability (can we reach source from target?)
-                # If target can reach source, adding source->target creates cycle
-                def can_reach(start: str, end: str) -> bool:
-                    if start == end:
+            # Check for cycle using BFS reachability (can we reach source from target?)
+            # If target can reach source, adding source->target creates cycle
+            def can_reach(start: str, end: str) -> bool:
+                if start == end:
+                    return True
+                visited: set = set()
+                queue = [start]
+                while queue:
+                    node = queue.pop(0)
+                    if node == end:
                         return True
-                    visited: set = set()
-                    queue = [start]
-                    while queue:
-                        node = queue.pop(0)
-                        if node == end:
-                            return True
-                        if node in visited:
-                            continue
-                        visited.add(node)
-                        queue.extend(graph.get(node, []))
-                    return False
+                    if node in visited:
+                        continue
+                    visited.add(node)
+                    queue.extend(graph.get(node, []))
+                return False
 
-                # Check if target can reach source (would create cycle)
-                if can_reach(target_policy, source_policy):
-                    return {
-                        "success": False,
-                        "error": "Adding this dependency would create a cycle",
-                        "cycle_path": f"{target_policy} -> ... -> {source_policy} -> {target_policy}",
-                        "blocked": True,
-                    }
-
-                # Safe to add - insert the dependency
-                self._driver.insert_dependency(
-                    conn,
-                    source_policy=source_policy,
-                    target_policy=target_policy,
-                    dependency_type=dependency_type,
-                    resolution_strategy=resolution_strategy,
-                    priority=priority,
-                    description=description or "",
-                )
-                conn.commit()
-
+            # Check if target can reach source (would create cycle)
+            if can_reach(target_policy, source_policy):
                 return {
-                    "success": True,
-                    "source_policy": source_policy,
-                    "target_policy": target_policy,
-                    "dependency_type": dependency_type,
+                    "success": False,
+                    "error": "Adding this dependency would create a cycle",
+                    "cycle_path": f"{target_policy} -> ... -> {source_policy} -> {target_policy}",
+                    "blocked": True,
                 }
-            driver_engine.dispose()
+
+            # Safe to add - insert the dependency via driver (_committed wrapper)
+            self._driver.insert_dependency_committed(
+                source_policy=source_policy,
+                target_policy=target_policy,
+                dependency_type=dependency_type,
+                resolution_strategy=resolution_strategy,
+                priority=priority,
+                description=description or "",
+            )
+
+            return {
+                "success": True,
+                "source_policy": source_policy,
+                "target_policy": target_policy,
+                "dependency_type": dependency_type,
+            }
         except Exception as e:
             logger.error(f"Failed to add dependency: {e}")
             return {"success": False, "error": str(e)}
@@ -2541,32 +2467,27 @@ class PolicyEngine:
         }
 
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # 1. Delete events older than retention period
-                stats["deleted_expired"] = self._driver.delete_old_temporal_events(
-                    conn, retention_hours
-                )
+            # 1. Delete events older than retention period (_committed wrapper)
+            stats["deleted_expired"] = self._driver.delete_old_temporal_events_committed(
+                retention_hours
+            )
 
-                # 2. Compact events older than threshold to hourly aggregates
-                stats["compacted_hourly"] = self._driver.compact_temporal_events(
-                    conn, compact_older_than_hours, retention_hours
-                )
+            # 2. Compact events older than threshold to hourly aggregates (_committed wrapper)
+            stats["compacted_hourly"] = self._driver.compact_temporal_events_committed(
+                compact_older_than_hours, retention_hours
+            )
 
-                # 3. Cap events per policy (keep newest)
-                stats["capped_overflow"] = self._driver.cap_temporal_events(
-                    conn, max_events_per_policy
-                )
+            # 3. Cap events per policy (keep newest) (_committed wrapper)
+            stats["capped_overflow"] = self._driver.cap_temporal_events_committed(
+                max_events_per_policy
+            )
 
-                conn.commit()
+            # Get current counts for reporting (_auto wrapper)
+            counts = self._driver.fetch_temporal_stats_auto()
+            stats["remaining_events"] = counts.get("event_count", 0)
+            stats["total_windows"] = counts.get("window_count", 0)
+            stats["success"] = True
 
-                # Get current counts for reporting
-                counts = self._driver.fetch_temporal_stats(conn)
-                stats["remaining_events"] = counts.get("event_count", 0)
-                stats["total_windows"] = counts.get("window_count", 0)
-                stats["success"] = True
-
-            driver_engine.dispose()
         except Exception as e:
             logger.error(f"Temporal metric pruning failed: {e}")
             stats["success"] = False
@@ -2583,23 +2504,21 @@ class PolicyEngine:
             return {"error": "No driver configured"}
 
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                stats = self._driver.fetch_temporal_storage_stats(conn)
+            # Fetch temporal storage stats via driver (_auto wrapper)
+            stats = self._driver.fetch_temporal_storage_stats_auto()
 
-                if not stats:
-                    return {"error": "No stats available"}
+            if not stats:
+                return {"error": "No stats available"}
 
-                return {
-                    "event_count": stats[0],
-                    "window_count": stats[1],
-                    "oldest_event": stats[2].isoformat() if stats[2] else None,
-                    "newest_event": stats[3].isoformat() if stats[3] else None,
-                    "policies_with_events": stats[4],
-                    "events_table_size": stats[5],
-                    "windows_table_size": stats[6],
-                }
-            driver_engine.dispose()
+            return {
+                "event_count": stats[0],
+                "window_count": stats[1],
+                "oldest_event": stats[2].isoformat() if stats[2] else None,
+                "newest_event": stats[3].isoformat() if stats[3] else None,
+                "policies_with_events": stats[4],
+                "events_table_size": stats[5],
+                "windows_table_size": stats[6],
+            }
         except Exception as e:
             logger.error(f"Failed to get storage stats: {e}")
             return {"error": str(e)}
@@ -2650,189 +2569,183 @@ class PolicyEngine:
             return {"success": False, "error": "No driver configured"}
 
         try:
-            driver_engine = self._driver._get_engine()
-            with driver_engine.connect() as conn:
-                # Get version info
-                version = self._driver.fetch_policy_version_by_id_or_version(conn, version_id)
+            # Get version info via driver (_auto wrapper)
+            version = self._driver.fetch_policy_version_by_id_or_version_auto(version_id)
 
-                if not version:
-                    return {"success": False, "error": f"Version {version_id} not found"}
+            if not version:
+                return {"success": False, "error": f"Version {version_id} not found"}
 
-                # CHECK 1: Dependency Closure
-                deps = self._driver.fetch_dependency_edges(conn, active_only=True)
+            # CHECK 1: Dependency Closure
+            deps = self._driver.fetch_dependency_edges_auto(active_only=True)
 
-                # Collect all referenced policies
-                referenced: set = set()
-                for src, tgt in deps:
-                    referenced.add(src)
-                    referenced.add(tgt)
+            # Collect all referenced policies
+            referenced: set = set()
+            for src, tgt in deps:
+                referenced.add(src)
+                referenced.add(tgt)
 
-                # Check if all referenced policies exist
-                existing: set = set()
-                for cat_table, name_col in [
-                    ("ethical_constraints", "name"),
-                    ("safety_rules", "name"),
-                    ("risk_ceilings", "name"),
-                    ("business_rules", "name"),
-                ]:
-                    names = self._driver.fetch_active_policies_for_integrity(conn, cat_table, name_col)
-                    for name in names:
-                        existing.add(name)
-                        # Also add category-prefixed version
-                        existing.add(f"{cat_table.rstrip('s').replace('_', '.')}.{name}")
+            # Check if all referenced policies exist
+            existing: set = set()
+            for cat_table, name_col in [
+                ("ethical_constraints", "name"),
+                ("safety_rules", "name"),
+                ("risk_ceilings", "name"),
+                ("business_rules", "name"),
+            ]:
+                names = self._driver.fetch_active_policies_for_integrity_auto(cat_table, name_col)
+                for name in names:
+                    existing.add(name)
+                    # Also add category-prefixed version
+                    existing.add(f"{cat_table.rstrip('s').replace('_', '.')}.{name}")
 
-                missing = referenced - existing
-                if missing:
-                    checks["dependency_closure"]["issues"].append(
-                        f"Missing policies referenced in dependencies: {list(missing)}"
-                    )
-                    all_passed = False
-                else:
-                    checks["dependency_closure"]["passed"] = True
-
-                # CHECK 2: Conflict Scan
-                unresolved = self._driver.fetch_conflicts(conn, include_resolved=False, severity_min=0.7)
-
-                if unresolved:
-                    for conflict in unresolved:
-                        checks["conflict_scan"]["issues"].append(
-                            f"Unresolved conflict: {conflict.get('policy_a')} vs {conflict.get('policy_b')} "
-                            f"(severity {conflict.get('severity')}): {conflict.get('description')}"
-                        )
-                    all_passed = False
-                else:
-                    checks["conflict_scan"]["passed"] = True
-
-                # CHECK 3: DAG Validation
-                dag_result = await self.validate_dependency_dag(db)
-                if not dag_result.get("is_dag", False):
-                    checks["dag_validation"]["issues"].extend(
-                        [f"Cycle detected: {c['edge']}" for c in dag_result.get("cycles", [])]
-                    )
-                    all_passed = False
-                else:
-                    checks["dag_validation"]["passed"] = True
-
-                # CHECK 4: Temporal Policy Integrity
-                temporal = self._driver.fetch_temporal_policies_for_integrity(conn)
-
-                temporal_issues = []
-                for tp in temporal:
-                    if tp.get("max_value", 0) <= 0:
-                        temporal_issues.append(f"{tp.get('name')}: max_value must be positive (got {tp.get('max_value')})")
-                    if tp.get("window_seconds", 0) <= 0:
-                        temporal_issues.append(f"{tp.get('name')}: window_seconds must be positive (got {tp.get('window_seconds')})")
-                    if tp.get("breach_action") not in ["block", "throttle", "alert", "escalate"]:
-                        temporal_issues.append(f"{tp.get('name')}: invalid breach_action '{tp.get('breach_action')}'")
-
-                if temporal_issues:
-                    checks["temporal_integrity"]["issues"] = temporal_issues
-                    all_passed = False
-                else:
-                    checks["temporal_integrity"]["passed"] = True
-
-                # CHECK 5: Severity Compatibility
-                # Ensure ethical and compliance constraints have proper escalation paths
-                ethical = self._driver.fetch_ethical_constraints_for_integrity(conn)
-
-                severity_issues = []
-                for ec in ethical:
-                    if ec.get("enforcement_level") == "strict" and ec.get("violation_action") not in ["block", "escalate"]:
-                        severity_issues.append(
-                            f"Ethical constraint '{ec.get('name')}' has strict enforcement but action is '{ec.get('violation_action')}' (should be block/escalate)"
-                        )
-
-                if severity_issues:
-                    checks["severity_compatibility"]["issues"] = severity_issues
-                    # This is a warning, not a blocker
-                    checks["severity_compatibility"]["passed"] = True
-                    checks["severity_compatibility"]["warnings"] = severity_issues
-                else:
-                    checks["severity_compatibility"]["passed"] = True
-
-                # CHECK 6: Simulation (basic test cases)
-                simulation_passed = True
-                test_cases = [
-                    # Test that blocking patterns are blocked
-                    {"action": "rm -rf /", "expected_block": True},
-                    {"action": "send_email", "expected_block": False},
-                ]
-
-                sim_issues: List[str] = []
-                for tc in test_cases:
-                    try:
-                        test_req = PolicyEvaluationRequest(
-                            action_type=ActionType.EXECUTE,
-                            proposed_action=tc["action"],
-                            agent_id="test-agent",
-                        )
-                        result = await self.evaluate(test_req, db, dry_run=True)
-                        was_blocked = result.decision == PolicyDecision.BLOCK
-
-                        if tc["expected_block"] and not was_blocked:
-                            sim_issues.append(f"Action '{tc['action']}' should be blocked but wasn't")
-                            simulation_passed = False
-                        elif not tc["expected_block"] and was_blocked:
-                            sim_issues.append(f"Action '{tc['action']}' should not be blocked but was")
-                            simulation_passed = False
-                    except Exception as e:
-                        sim_issues.append(f"Simulation error for '{tc['action']}': {e}")
-                        simulation_passed = False
-
-                checks["simulation"]["passed"] = simulation_passed
-                if sim_issues:
-                    checks["simulation"]["issues"] = sim_issues
-                    all_passed = False
-
-                # If dry_run or checks failed, don't activate
-                if dry_run:
-                    return {
-                        "success": True,
-                        "dry_run": True,
-                        "all_checks_passed": all_passed,
-                        "checks": checks,
-                        "version": version[1],
-                    }
-
-                if not all_passed:
-                    return {
-                        "success": False,
-                        "error": "Pre-activation checks failed",
-                        "checks": checks,
-                    }
-
-                # All checks passed - activate the version
-                # Deactivate current version
-                self._driver.deactivate_all_versions(conn)
-
-                # Activate new version
-                self._driver.activate_version(conn, str(version[0]))
-
-                # Record provenance
-                self._driver.insert_provenance(
-                    conn,
-                    policy_id=str(version[0]),
-                    policy_type="version",
-                    action="activate",
-                    changed_by=activated_by,
-                    policy_version=version[1],
-                    reason="Pre-activation checks passed",
+            missing = referenced - existing
+            if missing:
+                checks["dependency_closure"]["issues"].append(
+                    f"Missing policies referenced in dependencies: {list(missing)}"
                 )
+                all_passed = False
+            else:
+                checks["dependency_closure"]["passed"] = True
 
-                conn.commit()
+            # CHECK 2: Conflict Scan
+            unresolved = self._driver.fetch_conflicts_auto(include_resolved=False, severity_min=0.7)
 
-                # Update internal state
-                self._policy_version = version[1]
-                await self.reload_policies(db)
+            if unresolved:
+                for conflict in unresolved:
+                    checks["conflict_scan"]["issues"].append(
+                        f"Unresolved conflict: {conflict.get('policy_a')} vs {conflict.get('policy_b')} "
+                        f"(severity {conflict.get('severity')}): {conflict.get('description')}"
+                    )
+                all_passed = False
+            else:
+                checks["conflict_scan"]["passed"] = True
 
+            # CHECK 3: DAG Validation
+            dag_result = await self.validate_dependency_dag(db)
+            if not dag_result.get("is_dag", False):
+                checks["dag_validation"]["issues"].extend(
+                    [f"Cycle detected: {c['edge']}" for c in dag_result.get("cycles", [])]
+                )
+                all_passed = False
+            else:
+                checks["dag_validation"]["passed"] = True
+
+            # CHECK 4: Temporal Policy Integrity
+            temporal = self._driver.fetch_temporal_policies_for_integrity_auto()
+
+            temporal_issues = []
+            for tp in temporal:
+                if tp.get("max_value", 0) <= 0:
+                    temporal_issues.append(f"{tp.get('name')}: max_value must be positive (got {tp.get('max_value')})")
+                if tp.get("window_seconds", 0) <= 0:
+                    temporal_issues.append(f"{tp.get('name')}: window_seconds must be positive (got {tp.get('window_seconds')})")
+                if tp.get("breach_action") not in ["block", "throttle", "alert", "escalate"]:
+                    temporal_issues.append(f"{tp.get('name')}: invalid breach_action '{tp.get('breach_action')}'")
+
+            if temporal_issues:
+                checks["temporal_integrity"]["issues"] = temporal_issues
+                all_passed = False
+            else:
+                checks["temporal_integrity"]["passed"] = True
+
+            # CHECK 5: Severity Compatibility
+            # Ensure ethical and compliance constraints have proper escalation paths
+            ethical = self._driver.fetch_ethical_constraints_for_integrity_auto()
+
+            severity_issues = []
+            for ec in ethical:
+                if ec.get("enforcement_level") == "strict" and ec.get("violation_action") not in ["block", "escalate"]:
+                    severity_issues.append(
+                        f"Ethical constraint '{ec.get('name')}' has strict enforcement but action is '{ec.get('violation_action')}' (should be block/escalate)"
+                    )
+
+            if severity_issues:
+                checks["severity_compatibility"]["issues"] = severity_issues
+                # This is a warning, not a blocker
+                checks["severity_compatibility"]["passed"] = True
+                checks["severity_compatibility"]["warnings"] = severity_issues
+            else:
+                checks["severity_compatibility"]["passed"] = True
+
+            # CHECK 6: Simulation (basic test cases)
+            simulation_passed = True
+            test_cases = [
+                # Test that blocking patterns are blocked
+                {"action": "rm -rf /", "expected_block": True},
+                {"action": "send_email", "expected_block": False},
+            ]
+
+            sim_issues: List[str] = []
+            for tc in test_cases:
+                try:
+                    test_req = PolicyEvaluationRequest(
+                        action_type=ActionType.EXECUTE,
+                        proposed_action=tc["action"],
+                        agent_id="test-agent",
+                    )
+                    result = await self.evaluate(test_req, db, dry_run=True)
+                    was_blocked = result.decision == PolicyDecision.BLOCK
+
+                    if tc["expected_block"] and not was_blocked:
+                        sim_issues.append(f"Action '{tc['action']}' should be blocked but wasn't")
+                        simulation_passed = False
+                    elif not tc["expected_block"] and was_blocked:
+                        sim_issues.append(f"Action '{tc['action']}' should not be blocked but was")
+                        simulation_passed = False
+                except Exception as e:
+                    sim_issues.append(f"Simulation error for '{tc['action']}': {e}")
+                    simulation_passed = False
+
+            checks["simulation"]["passed"] = simulation_passed
+            if sim_issues:
+                checks["simulation"]["issues"] = sim_issues
+                all_passed = False
+
+            # If dry_run or checks failed, don't activate
+            if dry_run:
                 return {
                     "success": True,
-                    "activated_version": version[1],
+                    "dry_run": True,
                     "all_checks_passed": all_passed,
+                    "checks": checks,
+                    "version": version[1],
+                }
+
+            if not all_passed:
+                return {
+                    "success": False,
+                    "error": "Pre-activation checks failed",
                     "checks": checks,
                 }
 
-            driver_engine.dispose()
+            # All checks passed - activate the version
+            # Deactivate current version (_committed wrapper)
+            self._driver.deactivate_all_versions_committed()
+
+            # Activate new version (_committed wrapper)
+            self._driver.activate_version_committed(str(version[0]))
+
+            # Record provenance (_committed wrapper)
+            self._driver.insert_provenance_committed(
+                policy_id=str(version[0]),
+                policy_type="version",
+                action="activate",
+                changed_by=activated_by,
+                policy_version=version[1],
+                reason="Pre-activation checks passed",
+            )
+
+            # Update internal state
+            self._policy_version = version[1]
+            await self.reload_policies(db)
+
+            return {
+                "success": True,
+                "activated_version": version[1],
+                "all_checks_passed": all_passed,
+                "checks": checks,
+            }
+
         except Exception as e:
             logger.error(f"Version activation failed: {e}")
             return {"success": False, "error": str(e)}

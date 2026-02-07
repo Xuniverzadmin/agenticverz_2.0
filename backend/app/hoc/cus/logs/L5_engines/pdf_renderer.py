@@ -24,10 +24,12 @@ Key Responsibilities:
 Uses reportlab for PDF generation (same library as evidence_report.py).
 """
 
+from __future__ import annotations
+
 import io
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
@@ -44,11 +46,12 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-from app.models.export_bundles import (
-    EvidenceBundle,
-    ExecutiveDebriefBundle,
-    SOC2Bundle,
-)
+if TYPE_CHECKING:
+    from app.models.export_bundles import (
+        EvidenceBundle,
+        ExecutiveDebriefBundle,
+        SOC2Bundle,
+    )
 
 logger = logging.getLogger("nova.hoc.logs.pdf_renderer")
 

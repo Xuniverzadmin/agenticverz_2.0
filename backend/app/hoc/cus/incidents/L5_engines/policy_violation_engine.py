@@ -248,6 +248,7 @@ class PolicyViolationService:
         self,
         violation: ViolationFact,
         auto_action: Optional[str] = None,
+        sync_session=None,
     ) -> str:
         """
         Create an incident from a persisted violation.
@@ -255,6 +256,11 @@ class PolicyViolationService:
         Preconditions (enforced in VERIFICATION_MODE):
         - Violation must be persisted first
         - Policy must be enabled for tenant
+
+        Args:
+            violation: The violation fact to create an incident from.
+            auto_action: Optional auto-action string.
+            sync_session: Sync session provided by L4 handler. Required (L5 purity).
         """
         # INVARIANT 1: Violation must be persisted
         if VERIFICATION_MODE:
@@ -266,46 +272,44 @@ class PolicyViolationService:
                         f"Attempted to create incident without persisted violation {violation.id}"
                     )
 
-        # INVARIANT #10: Explicit Dependency Injection
-        # Use create_incident_aggregator() NOT get_incident_aggregator()
-        # This ensures verification scripts and production use the same dependency graph
-        from sqlmodel import Session
+        if sync_session is None:
+            raise RuntimeError(
+                "create_incident_from_violation requires a sync_session from L4 handler. "
+                "No sqlmodel/app.db fallback allowed (L5 purity)."
+            )
 
-        from app.db import engine
         # L6 driver import (migrated to HOC per SWEEP-38)
         from app.hoc.cus.incidents.L6_drivers.incident_aggregator import create_incident_aggregator
 
-        # Need sync session for IncidentAggregator
-        with Session(engine) as sync_session:
-            aggregator = create_incident_aggregator()
+        aggregator = create_incident_aggregator()
 
-            # Build trigger value with structured data for querying
-            trigger_value = (
-                f"run_id={violation.run_id}|"
-                f"policy_id={violation.policy_id}|"
-                f"rule={violation.violated_rule}|"
-                f"reason={violation.reason[:100]}"
-            )
+        # Build trigger value with structured data for querying
+        trigger_value = (
+            f"run_id={violation.run_id}|"
+            f"policy_id={violation.policy_id}|"
+            f"rule={violation.violated_rule}|"
+            f"reason={violation.reason[:100]}"
+        )
 
-            incident, is_new = aggregator.get_or_create_incident(
-                session=sync_session,
-                tenant_id=violation.tenant_id,
-                trigger_type="policy_violation",
-                trigger_value=trigger_value,
-                call_id=violation.run_id,
-                cost_delta_cents=Decimal("0"),
-                auto_action=auto_action,
-                metadata={
-                    "violation_id": violation.id,
-                    "policy_type": violation.policy_type,
-                    "violated_rule": violation.violated_rule,
-                    "severity": violation.severity,
-                    "evidence_snapshot": {k: str(v)[:100] for k, v in list(violation.evidence.items())[:5]},
-                },
-            )
+        incident, is_new = aggregator.get_or_create_incident(
+            session=sync_session,
+            tenant_id=violation.tenant_id,
+            trigger_type="policy_violation",
+            trigger_value=trigger_value,
+            call_id=violation.run_id,
+            cost_delta_cents=Decimal("0"),
+            auto_action=auto_action,
+            metadata={
+                "violation_id": violation.id,
+                "policy_type": violation.policy_type,
+                "violated_rule": violation.violated_rule,
+                "severity": violation.severity,
+                "evidence_snapshot": {k: str(v)[:100] for k, v in list(violation.evidence.items())[:5]},
+            },
+        )
 
-            # NO COMMIT — L4 coordinator owns transaction boundary
-            incident_id = incident.id
+        # NO COMMIT — L4 coordinator owns transaction boundary
+        incident_id = incident.id
 
         logger.info(
             f"Created incident from violation: incident={incident_id}, violation={violation.id}, is_new={is_new}"
@@ -637,6 +641,8 @@ def create_policy_evaluation_sync(
     policies_checked: int = 0,
     is_synthetic: bool = False,
     synthetic_scenario_id: Optional[str] = None,
+    *,
+    conn,
 ) -> Optional[str]:
     """
     Create a policy evaluation record for ANY run (PIN-407) - SYNC VERSION.
@@ -651,26 +657,18 @@ def create_policy_evaluation_sync(
         policies_checked: Number of policies evaluated
         is_synthetic: True if from SDSR scenario
         synthetic_scenario_id: Scenario ID for traceability
+        conn: Pre-created psycopg2 connection from L4 handler.
+            L4 owns the connection lifecycle and commit. Required.
 
     Returns:
         policy_evaluation_id if created, None if failed
 
     DECISION: Map run status to policy outcome (business rule).
-    PERSISTENCE: L5 owns connection lifecycle for sync path, L6 driver executes.
-
-    Note: L5 creating connection is a deviation from strict L4 ownership,
-    but this sync worker path has no L4 handler. The L6 driver does NOT commit.
+    PERSISTENCE: Delegated to L6 driver. Transaction owned by L4 when conn provided.
     """
-    import psycopg2
-
     from app.hoc.cus.incidents.L6_drivers.policy_violation_driver import (
         insert_policy_evaluation_sync_with_cursor,
     )
-
-    database_url = os.getenv("DATABASE_URL")
-    if not database_url:
-        logger.error("policy_eval_sync_no_database_url")
-        return None
 
     # DECISION: Map run status to policy outcome
     status_lower = run_status.lower()
@@ -689,28 +687,22 @@ def create_policy_evaluation_sync(
     # DECISION: Calculate confidence based on outcome
     confidence = 1.0 if outcome == POLICY_OUTCOME_NO_VIOLATION else 0.0
 
+    # L4-owned connection path: use provided conn, do NOT commit (L4 owns transaction)
     try:
-        # L5 owns connection lifecycle for this sync path (no L4 handler)
-        conn = psycopg2.connect(database_url)
-        try:
-            with conn.cursor() as cursor:
-                # PERSISTENCE: L6 driver executes, L5 commits
-                result = insert_policy_evaluation_sync_with_cursor(
-                    cursor=cursor,
-                    evaluation_id=evaluation_id,
-                    run_id=run_id,
-                    tenant_id=tenant_id,
-                    outcome=outcome,
-                    policies_checked=policies_checked,
-                    confidence=confidence,
-                    created_at=now,
-                    is_synthetic=is_synthetic,
-                    synthetic_scenario_id=synthetic_scenario_id,
-                )
-                # L5 commits (L6 does NOT commit)
-                conn.commit()
-        finally:
-            conn.close()
+        with conn.cursor() as cursor:
+            result = insert_policy_evaluation_sync_with_cursor(
+                cursor=cursor,
+                evaluation_id=evaluation_id,
+                run_id=run_id,
+                tenant_id=tenant_id,
+                outcome=outcome,
+                policies_checked=policies_checked,
+                confidence=confidence,
+                created_at=now,
+                is_synthetic=is_synthetic,
+                synthetic_scenario_id=synthetic_scenario_id,
+            )
+            # NO COMMIT — L4 handler owns transaction boundary
     except Exception as e:
         logger.error(f"policy_eval_sync_error: {e}")
         return None

@@ -42,7 +42,14 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 HOC_ROOT = PROJECT_ROOT / "backend" / "app" / "hoc"
 L2_API_ROOT = HOC_ROOT / "api" / "cus"
-L4_SPINE_ROOT = HOC_ROOT / "hoc_spine"
+
+# V2.0.0 topology *spec* places hoc_spine at backend/app/hoc/hoc_spine.
+# This repo currently implements hoc_spine at backend/app/hoc/cus/hoc_spine.
+# Prefer the implemented path when present, but keep a fallback for future
+# physical moves so the audit stays stable across refactors.
+_L4_SPINE_ROOT_IMPLEMENTED = HOC_ROOT / "cus" / "hoc_spine"
+_L4_SPINE_ROOT_SPEC = HOC_ROOT / "hoc_spine"
+L4_SPINE_ROOT = _L4_SPINE_ROOT_IMPLEMENTED if _L4_SPINE_ROOT_IMPLEMENTED.exists() else _L4_SPINE_ROOT_SPEC
 CUS_ROOT = HOC_ROOT / "cus"
 LITERATURE_ROOT = PROJECT_ROOT / "literature" / "hoc_spine"
 

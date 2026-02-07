@@ -17,6 +17,12 @@ This domain has been refactored under PIN-520 / strict HOC topology:
 As a result, any generated call chains that show `L2 → L6` directly are stale.
 The authoritative memory-pins feature chains are corrected below.
 
+## Reality Delta (2026-02-07)
+
+- RBAC audit path: `rbac_engine.py` now prefers an injected audit writer callable (L5 purity), but a legacy path still performs a direct DB write+commit and remains a known exception until removed.
+- Tenant engine: `tenant_engine.py` still imports `app.models.*` and must be pushed behind L6 drivers for full L5 purity.
+- Verify now: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain account`.
+
 ## Script Registry
 
 Each script's unique contribution and canonical function.

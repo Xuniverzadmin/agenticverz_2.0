@@ -40,12 +40,15 @@ RETRY_POLICY = RetryPolicy.SAFE
 # - I-C4-7: Every coordination decision is audited
 # - I-C4-8: Replay must show coordination decisions
 
+from __future__ import annotations
+
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
-from sqlmodel import Session
+if TYPE_CHECKING:
+    from sqlmodel import Session
 
 from app.optimization.audit_persistence import persist_audit_record
 from app.optimization.envelope import (

@@ -7,8 +7,8 @@
 #   Emits: none
 #   Subscribes: none
 # Data Access:
-#   Reads: Integration (via session)
-#   Writes: Integration (session.add, session.commit)
+#   Reads: Integration (via L6 CusHealthDriver)
+#   Writes: Integration (via L6 CusHealthDriver)
 # Role: Health checking engine for customer LLM integrations
 # Product: system-wide
 # Callers: cus_integration_service.py, scheduled health checks
@@ -52,16 +52,19 @@ RATE LIMITING:
 
 import asyncio
 import logging
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
-from uuid import UUID
 
 import httpx
-from sqlmodel import Session, select
 
-from app.db import get_engine
-from app.models.cus_models import CusHealthState, CusIntegration
+from app.hoc.cus.integrations.L5_schemas.cus_enums import CusHealthState
 from app.hoc.cus.hoc_spine.services.cus_credential_engine import CusCredentialService
+from app.hoc.cus.integrations.L6_drivers.cus_health_driver import (
+    CusHealthDriver,
+    HealthIntegrationRow,
+    cus_health_driver_session,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -118,14 +121,37 @@ class CusHealthService:
         },
     }
 
-    def __init__(self, credential_service: Optional[CusCredentialService] = None):
+    def __init__(
+        self,
+        credential_service: Optional[CusCredentialService] = None,
+        driver: Optional[CusHealthDriver] = None,
+    ):
         """Initialize health service.
 
         Args:
             credential_service: Credential service for decrypting API keys.
                                If None, creates a new instance.
+            driver: L6 health driver for DB access. If None, methods will
+                    create a session-scoped driver via cus_health_driver_session().
         """
         self._credential_service = credential_service or CusCredentialService()
+        self._driver = driver
+
+    def _get_driver(self):
+        """Return a context manager yielding a CusHealthDriver.
+
+        If a driver was injected via constructor (L4 session path),
+        yields that driver directly. Otherwise creates a session-scoped
+        driver via cus_health_driver_session() (CLI / scheduler path).
+        """
+        if self._driver is not None:
+            @contextmanager
+            def _injected():
+                yield self._driver
+
+            return _injected()
+
+        return cus_health_driver_session()
 
     # =========================================================================
     # SINGLE INTEGRATION CHECK
@@ -152,17 +178,13 @@ class CusHealthService:
                 - checked_at: Timestamp
                 - error: Error details (if failed)
         """
-        engine = get_engine()
+        with self._get_driver() as driver:
+            row = driver.fetch_integration_for_health_check(
+                tenant_id=tenant_id,
+                integration_id=integration_id,
+            )
 
-        with Session(engine) as session:
-            integration = session.exec(
-                select(CusIntegration).where(
-                    CusIntegration.id == UUID(integration_id),
-                    CusIntegration.tenant_id == UUID(tenant_id),
-                )
-            ).first()
-
-            if not integration:
+            if not row:
                 return {
                     "health_state": CusHealthState.UNKNOWN,
                     "message": "Integration not found",
@@ -171,48 +193,49 @@ class CusHealthService:
                 }
 
             # Rate limiting check
-            if not force and integration.health_checked_at:
-                elapsed = datetime.now(timezone.utc) - integration.health_checked_at
+            if not force and row.health_checked_at:
+                elapsed = datetime.now(timezone.utc) - row.health_checked_at
                 if elapsed.total_seconds() < self.MIN_CHECK_INTERVAL_SECONDS:
                     return {
-                        "health_state": integration.health_state,
+                        "health_state": row.health_state,
                         "message": "Rate limited - using cached result",
                         "latency_ms": None,
-                        "checked_at": integration.health_checked_at,
+                        "checked_at": row.health_checked_at,
                         "cached": True,
                     }
 
             # Perform the health check
             result = await self._perform_health_check(
-                integration=integration,
+                integration=row,
                 tenant_id=tenant_id,
             )
 
-            # Update integration health state
-            integration.health_state = result["health_state"]
-            integration.health_checked_at = result["checked_at"]
-            integration.health_message = result["message"]
-            integration.updated_at = datetime.now(timezone.utc)
-
-            session.add(integration)
-            # NO COMMIT — L4 coordinator owns transaction boundary
+            # Update integration health state via driver
+            health_state = result["health_state"]
+            driver.update_health_state(
+                tenant_id=tenant_id,
+                integration_id=integration_id,
+                health_state=health_state.value if isinstance(health_state, CusHealthState) else str(health_state),
+                health_message=result["message"],
+                health_checked_at=result["checked_at"],
+            )
 
             logger.info(
                 f"Health check for integration {integration_id}: "
-                f"{result['health_state'].value}"
+                f"{health_state.value if isinstance(health_state, CusHealthState) else health_state}"
             )
 
             return result
 
     async def _perform_health_check(
         self,
-        integration: CusIntegration,
+        integration: HealthIntegrationRow,
         tenant_id: str,
     ) -> Dict[str, Any]:
         """Perform the actual health check call.
 
         Args:
-            integration: The integration to check
+            integration: HealthIntegrationRow from L6 driver
             tenant_id: Tenant ID for credential decryption
 
         Returns:
@@ -252,9 +275,10 @@ class CusHealthService:
 
         # Handle Azure special case (needs deployment URL from config)
         if provider == "azure":
-            base_url = integration.config.get("azure_endpoint", "")
-            deployment = integration.config.get("deployment_name", "")
-            api_version = integration.config.get("api_version", "2024-02-15-preview")
+            config = integration.config or {}
+            base_url = config.get("azure_endpoint", "")
+            deployment = config.get("deployment_name", "")
+            api_version = config.get("api_version", "2024-02-15-preview")
             if not base_url or not deployment:
                 return {
                     "health_state": CusHealthState.UNKNOWN,
@@ -410,38 +434,28 @@ class CusHealthService:
         Returns:
             List of health check results
         """
-        engine = get_engine()
         results: List[Dict[str, Any]] = []
 
-        with Session(engine) as session:
-            # Find integrations needing checks
-            stale_threshold = datetime.now(timezone.utc) - timedelta(
-                minutes=stale_threshold_minutes
-            )
+        # Fetch stale integrations via driver
+        stale_threshold = datetime.now(timezone.utc) - timedelta(
+            minutes=stale_threshold_minutes
+        )
 
-            query = (
-                select(CusIntegration)
-                .where(
-                    CusIntegration.tenant_id == UUID(tenant_id),
-                    CusIntegration.status == "enabled",
-                )
-                .where(
-                    (CusIntegration.health_checked_at.is_(None))
-                    | (CusIntegration.health_checked_at < stale_threshold)
-                )
+        with self._get_driver() as driver:
+            stale_rows = driver.fetch_stale_enabled_integrations(
+                tenant_id=tenant_id,
+                stale_threshold=stale_threshold,
             )
-
-            integrations = list(session.exec(query).all())
 
         # Check each integration with small delays to avoid rate limits
-        for integration in integrations:
+        for row in stale_rows:
             result = await self.check_health(
                 tenant_id=tenant_id,
-                integration_id=str(integration.id),
+                integration_id=row.id,
                 force=True,
             )
-            result["integration_id"] = str(integration.id)
-            result["integration_name"] = integration.name
+            result["integration_id"] = row.id
+            result["integration_name"] = row.name
             results.append(result)
 
             # Small delay between checks
@@ -470,45 +484,39 @@ class CusHealthService:
         Returns:
             Summary with counts by health state
         """
-        engine = get_engine()
-
-        with Session(engine) as session:
-            integrations = list(
-                session.exec(
-                    select(CusIntegration).where(
-                        CusIntegration.tenant_id == UUID(tenant_id),
-                    )
-                ).all()
+        with self._get_driver() as driver:
+            rows = driver.fetch_all_integrations_for_tenant(
+                tenant_id=tenant_id,
             )
 
-            counts = {
-                "healthy": 0,
-                "degraded": 0,
-                "unhealthy": 0,
-                "unknown": 0,
-                "total": len(integrations),
-            }
+        counts = {
+            "healthy": 0,
+            "degraded": 0,
+            "unhealthy": 0,
+            "unknown": 0,
+            "total": len(rows),
+        }
 
-            stale_count = 0
-            stale_threshold = datetime.now(timezone.utc) - timedelta(minutes=5)
+        stale_count = 0
+        stale_threshold = datetime.now(timezone.utc) - timedelta(minutes=5)
 
-            for integration in integrations:
-                state = integration.health_state.value.lower()
-                if state in counts:
-                    counts[state] += 1
+        for row in rows:
+            state = row.health_state.lower()
+            if state in counts:
+                counts[state] += 1
 
-                if (
-                    integration.health_checked_at is None
-                    or integration.health_checked_at < stale_threshold
-                ):
-                    stale_count += 1
+            if (
+                row.health_checked_at is None
+                or row.health_checked_at < stale_threshold
+            ):
+                stale_count += 1
 
-            return {
-                "counts": counts,
-                "stale_count": stale_count,
-                "overall_health": self._calculate_overall_health(counts),
-                "checked_at": datetime.now(timezone.utc),
-            }
+        return {
+            "counts": counts,
+            "stale_count": stale_count,
+            "overall_health": self._calculate_overall_health(counts),
+            "checked_at": datetime.now(timezone.utc),
+        }
 
     def _calculate_overall_health(self, counts: Dict[str, int]) -> str:
         """Calculate overall health status from counts.

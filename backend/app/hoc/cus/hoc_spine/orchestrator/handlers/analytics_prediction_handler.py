@@ -23,7 +23,7 @@ Operations:
 
 Note: predict_failure_likelihood and predict_cost_overrun require a
 PredictionDriver (L6) instance. run_prediction_cycle and get_prediction_summary
-manage their own sessions internally.
+receive their session from the L4 handler (PIN-520 Phase 4).
 """
 
 import logging
@@ -103,7 +103,7 @@ class AnalyticsPredictionHandler:
             run_prediction_cycle,
         )
 
-        result = await run_prediction_cycle(tenant_id=ctx.tenant_id)
+        result = await run_prediction_cycle(tenant_id=ctx.tenant_id, session=ctx.session)
         return OperationResult.ok(result)
 
     async def _get_summary(self, ctx: OperationContext) -> OperationResult:
@@ -112,7 +112,7 @@ class AnalyticsPredictionHandler:
             get_prediction_summary,
         )
 
-        result = await get_prediction_summary(tenant_id=ctx.tenant_id)
+        result = await get_prediction_summary(tenant_id=ctx.tenant_id, session=ctx.session)
         return OperationResult.ok(result)
 
 

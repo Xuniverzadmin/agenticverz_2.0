@@ -183,45 +183,47 @@ class PreventionEngine:
             True if loaded successfully, False otherwise
         """
         try:
-            from sqlmodel import Session
+            import hashlib
+            import json
+            import os
 
-            from app.db import engine
-            from app.models.policy_snapshot import PolicySnapshot
+            from app.hoc.cus.policies.L6_drivers.policy_engine_driver import get_policy_engine_driver
 
-            with Session(engine) as session:
-                # Query by snapshot_id
-                from sqlmodel import select
-                stmt = select(PolicySnapshot).where(PolicySnapshot.snapshot_id == snapshot_id)
-                result = session.exec(stmt)
-                snapshot = result.first()
+            db_url = os.getenv("DATABASE_URL", "")
+            driver = get_policy_engine_driver(db_url)
+            row = driver.fetch_snapshot_by_id_auto(snapshot_id)
 
-                if not snapshot:
-                    logger.warning(
-                        "policy_snapshot_not_found",
-                        extra={"snapshot_id": snapshot_id},
-                    )
-                    return False
+            if not row:
+                logger.warning(
+                    "policy_snapshot_not_found",
+                    extra={"snapshot_id": snapshot_id},
+                )
+                return False
 
-                # Verify integrity
-                if not snapshot.verify_integrity():
+            # Verify integrity using the hash from the row
+            expected_hash = row.get("integrity_hash", "")
+            if expected_hash:
+                data = json.dumps({"policies": row.get("policies", []), "thresholds": row.get("thresholds", {})}, sort_keys=True)
+                actual_hash = hashlib.sha256(data.encode()).hexdigest()
+                if actual_hash != expected_hash:
                     logger.error(
                         "policy_snapshot_integrity_failed",
                         extra={"snapshot_id": snapshot_id},
                     )
                     return False
 
-                self._thresholds = snapshot.get_thresholds()
-                self._policies = snapshot.get_policies()
-                self.policy_snapshot_id = snapshot_id
+            self._thresholds = row.get("thresholds", {})
+            self._policies = row.get("policies", [])
+            self.policy_snapshot_id = snapshot_id
 
-                logger.info(
-                    "policy_snapshot_loaded",
-                    extra={
-                        "snapshot_id": snapshot_id,
-                        "policy_count": snapshot.policy_count,
-                    },
-                )
-                return True
+            logger.info(
+                "policy_snapshot_loaded",
+                extra={
+                    "snapshot_id": snapshot_id,
+                    "policy_count": row.get("policy_count", 0),
+                },
+            )
+            return True
 
         except Exception as e:
             logger.error(
@@ -477,10 +479,12 @@ def create_policy_snapshot_for_run(
         snapshot_id if created, None on failure
     """
     try:
-        from sqlmodel import Session
+        import hashlib
+        import json
+        import os
+        import uuid
 
-        from app.db import engine
-        from app.models.policy_snapshot import PolicySnapshot
+        from app.hoc.cus.policies.L6_drivers.policy_engine_driver import get_policy_engine_driver
 
         # Load actual policies from PolicyDriver (GAP-001)
         policies: list[dict[str, Any]] = []
@@ -572,26 +576,31 @@ def create_policy_snapshot_for_run(
             )
             # Use default thresholds on error
 
-        snapshot = PolicySnapshot.create_snapshot(
+        # Build snapshot via L6 driver (no ORM/Session)
+        data = json.dumps({"policies": policies, "thresholds": thresholds}, sort_keys=True)
+        integrity_hash = hashlib.sha256(data.encode()).hexdigest()
+        snapshot_id = str(uuid.uuid4())
+
+        db_url = os.getenv("DATABASE_URL", "")
+        pe_driver = get_policy_engine_driver(db_url)
+        pe_driver.insert_snapshot_committed(
+            snapshot_id=snapshot_id,
             tenant_id=tenant_id,
-            policies=policies,
-            thresholds=thresholds,
+            policies=json.dumps(policies),
+            thresholds=json.dumps(thresholds),
+            policy_count=len(policies),
+            integrity_hash=integrity_hash,
         )
 
-        with Session(engine) as session:
-            session.add(snapshot)
-            session.flush()  # Get generated data, NO COMMIT — L4 owns transaction
-            session.refresh(snapshot)
-
-            logger.info(
-                "policy_snapshot_created",
-                extra={
-                    "snapshot_id": snapshot.snapshot_id,
-                    "run_id": run_id,
-                    "tenant_id": tenant_id,
-                },
-            )
-            return snapshot.snapshot_id
+        logger.info(
+            "policy_snapshot_created",
+            extra={
+                "snapshot_id": snapshot_id,
+                "run_id": run_id,
+                "tenant_id": tenant_id,
+            },
+        )
+        return snapshot_id
 
     except Exception as e:
         logger.error(

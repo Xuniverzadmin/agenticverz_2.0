@@ -35,11 +35,11 @@ def _scan_hoc_spine_modules() -> Tuple[List[str], List[Tuple[str, str, str]]]:
     passed = []
     failed = []
 
-    package_path = "app/hoc/cus/hoc_spine"
     package_name = "app.hoc.cus.hoc_spine"
+    package = importlib.import_module(package_name)
 
     for importer, modname, ispkg in pkgutil.walk_packages(
-        path=[package_path], prefix=package_name + "."
+        path=list(package.__path__), prefix=package_name + "."
     ):
         # Skip test files and __pycache__
         if "__pycache__" in modname or modname.endswith("_test"):
@@ -83,10 +83,12 @@ class TestHocSpineImportGuard:
                 f"Fix these import errors before merging."
             )
 
-        # Sanity check: we should have a significant number of modules
+        # Sanity check: ensure the scan actually walked the package.
+        # The exact module count changes as hoc_spine evolves, but "0" indicates
+        # path/import issues and makes the guard meaningless.
         assert len(passed) >= 100, (
             f"Expected at least 100 modules in hoc_spine, found {len(passed)}. "
-            f"Package structure may have changed."
+            "Package resolution may have changed."
         )
 
     def test_critical_modules_import(self):

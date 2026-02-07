@@ -64,7 +64,6 @@ from typing import Optional
 from uuid import UUID
 
 from app.hoc.cus.hoc_spine.services.time import utc_now
-from app.db import get_async_session
 
 logger = logging.getLogger("nova.services.prediction")
 
@@ -292,9 +291,6 @@ async def emit_prediction(
     PB-S5: This creates a NEW record in prediction_events.
     It does NOT modify any execution data. Predictions are advisory only.
     """
-    from datetime import datetime
-    from app.models.prediction import PredictionEvent
-
     now = utc_now()
     valid_until_ts = valid_until or (now + timedelta(hours=PREDICTION_VALIDITY_HOURS))
 
@@ -329,6 +325,7 @@ async def emit_prediction(
 
 async def run_prediction_cycle(
     tenant_id: Optional[UUID] = None,
+    session: "AsyncSession | None" = None,
 ) -> dict:
     """
     Run full prediction cycle.
@@ -338,11 +335,18 @@ async def run_prediction_cycle(
 
     PB-S5: Generates predictions. No execution modifications.
 
+    Args:
+        tenant_id: Optional tenant filter.
+        session: AsyncSession provided by L4 handler (PIN-520 Phase 4).
+
     Returns summary of generated predictions.
     """
     from app.hoc.cus.analytics.L6_drivers.prediction_driver import (
         get_prediction_driver,
     )
+
+    if session is None:
+        raise ValueError("session is required — L4 handler must provide it (PIN-520 Phase 4)")
 
     result = {
         "failure_predictions": [],
@@ -352,54 +356,53 @@ async def run_prediction_cycle(
     }
 
     try:
-        async with get_async_session() as session:
-            driver = get_prediction_driver(session)
+        driver = get_prediction_driver(session)
 
-            # L4 DECISION: Generate failure predictions
-            failure_predictions = await predict_failure_likelihood(driver, tenant_id)
-            result["failure_predictions"] = failure_predictions
+        # L4 DECISION: Generate failure predictions
+        failure_predictions = await predict_failure_likelihood(driver, tenant_id)
+        result["failure_predictions"] = failure_predictions
 
-            # L4 DECISION: Emit failure predictions via driver
-            for pred in failure_predictions:
-                try:
-                    await emit_prediction(
-                        driver=driver,
-                        tenant_id=pred["tenant_id"],
-                        prediction_type="failure_likelihood",
-                        subject_type=pred["subject_type"],
-                        subject_id=pred["subject_id"],
-                        confidence_score=pred["confidence_score"],
-                        prediction_value=pred["prediction_value"],
-                        contributing_factors=pred["contributing_factors"],
-                        notes="ADVISORY: This is a prediction, not a fact.",
-                    )
-                    result["predictions_created"] += 1
-                except Exception as e:
-                    result["errors"].append(f"Failed to emit failure prediction: {e}")
+        # L4 DECISION: Emit failure predictions via driver
+        for pred in failure_predictions:
+            try:
+                await emit_prediction(
+                    driver=driver,
+                    tenant_id=pred["tenant_id"],
+                    prediction_type="failure_likelihood",
+                    subject_type=pred["subject_type"],
+                    subject_id=pred["subject_id"],
+                    confidence_score=pred["confidence_score"],
+                    prediction_value=pred["prediction_value"],
+                    contributing_factors=pred["contributing_factors"],
+                    notes="ADVISORY: This is a prediction, not a fact.",
+                )
+                result["predictions_created"] += 1
+            except Exception as e:
+                result["errors"].append(f"Failed to emit failure prediction: {e}")
 
-            # L4 DECISION: Generate cost predictions
-            cost_predictions = await predict_cost_overrun(driver, tenant_id)
-            result["cost_predictions"] = cost_predictions
+        # L4 DECISION: Generate cost predictions
+        cost_predictions = await predict_cost_overrun(driver, tenant_id)
+        result["cost_predictions"] = cost_predictions
 
-            # L4 DECISION: Emit cost predictions via driver
-            for pred in cost_predictions:
-                try:
-                    await emit_prediction(
-                        driver=driver,
-                        tenant_id=pred["tenant_id"],
-                        prediction_type="cost_overrun",
-                        subject_type=pred["subject_type"],
-                        subject_id=pred["subject_id"],
-                        confidence_score=pred["confidence_score"],
-                        prediction_value=pred["prediction_value"],
-                        contributing_factors=pred["contributing_factors"],
-                        notes="ADVISORY: This is a projection based on trends.",
-                    )
-                    result["predictions_created"] += 1
-                except Exception as e:
-                    result["errors"].append(f"Failed to emit cost prediction: {e}")
+        # L4 DECISION: Emit cost predictions via driver
+        for pred in cost_predictions:
+            try:
+                await emit_prediction(
+                    driver=driver,
+                    tenant_id=pred["tenant_id"],
+                    prediction_type="cost_overrun",
+                    subject_type=pred["subject_type"],
+                    subject_id=pred["subject_id"],
+                    confidence_score=pred["confidence_score"],
+                    prediction_value=pred["prediction_value"],
+                    contributing_factors=pred["contributing_factors"],
+                    notes="ADVISORY: This is a projection based on trends.",
+                )
+                result["predictions_created"] += 1
+            except Exception as e:
+                result["errors"].append(f"Failed to emit cost prediction: {e}")
 
-            # NO COMMIT — L4 coordinator owns transaction boundary
+        # NO COMMIT — L4 coordinator owns transaction boundary
 
     except Exception as e:
         logger.error(f"prediction_cycle_error: {e}", exc_info=True)
@@ -413,6 +416,7 @@ async def get_prediction_summary(
     prediction_type: Optional[str] = None,
     include_expired: bool = False,
     limit: int = 50,
+    session: "AsyncSession | None" = None,
 ) -> dict:
     """
     Get prediction summary for ops visibility.
@@ -420,45 +424,50 @@ async def get_prediction_summary(
     Phase-2.5A: Data fetching delegated to driver (L6).
 
     PB-S5: Read-only query of predictions table.
+
+    Args:
+        session: AsyncSession provided by L4 handler (PIN-520 Phase 4).
     """
     from app.hoc.cus.analytics.L6_drivers.prediction_driver import (
         get_prediction_driver,
     )
 
-    async with get_async_session() as session:
-        driver = get_prediction_driver(session)
+    if session is None:
+        raise ValueError("session is required — L4 handler must provide it (PIN-520 Phase 4)")
 
-        # Phase-2.5A: Delegate fetch to driver
-        valid_after = None if include_expired else utc_now()
-        predictions = await driver.fetch_predictions(
-            tenant_id=tenant_id,
-            prediction_type=prediction_type,
-            valid_after=valid_after,
-            limit=limit,
-        )
+    driver = get_prediction_driver(session)
 
-        # L4 DECISION: Count by type (business logic)
-        type_counts: dict[str, int] = {}
-        for pred in predictions:
-            ptype = pred.prediction_type
-            type_counts[ptype] = type_counts.get(ptype, 0) + 1
+    # Phase-2.5A: Delegate fetch to driver
+    valid_after = None if include_expired else utc_now()
+    predictions = await driver.fetch_predictions(
+        tenant_id=tenant_id,
+        prediction_type=prediction_type,
+        valid_after=valid_after,
+        limit=limit,
+    )
 
-        # L4 DECISION: Format response (presentation logic)
-        return {
-            "total": len(predictions),
-            "by_type": type_counts,
-            "predictions": [
-                {
-                    "id": str(p.id),
-                    "prediction_type": p.prediction_type,
-                    "subject_type": p.subject_type,
-                    "subject_id": p.subject_id,
-                    "confidence_score": p.confidence_score,
-                    "prediction_value": p.prediction_value,
-                    "created_at": p.created_at.isoformat() if p.created_at else None,
-                    "valid_until": p.valid_until.isoformat() if p.valid_until else None,
-                    "is_advisory": p.is_advisory,
-                }
-                for p in predictions
-            ],
-        }
+    # L4 DECISION: Count by type (business logic)
+    type_counts: dict[str, int] = {}
+    for pred in predictions:
+        ptype = pred.prediction_type
+        type_counts[ptype] = type_counts.get(ptype, 0) + 1
+
+    # L4 DECISION: Format response (presentation logic)
+    return {
+        "total": len(predictions),
+        "by_type": type_counts,
+        "predictions": [
+            {
+                "id": str(p.id),
+                "prediction_type": p.prediction_type,
+                "subject_type": p.subject_type,
+                "subject_id": p.subject_id,
+                "confidence_score": p.confidence_score,
+                "prediction_value": p.prediction_value,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+                "valid_until": p.valid_until.isoformat() if p.valid_until else None,
+                "is_advisory": p.is_advisory,
+            }
+            for p in predictions
+        ],
+    }

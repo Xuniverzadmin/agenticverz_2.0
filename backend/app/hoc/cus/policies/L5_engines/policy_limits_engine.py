@@ -33,6 +33,8 @@
 # NOTE: Renamed policy_limits_service.py → policy_limits_engine.py (2026-01-24)
 #       Reclassified L4→L5 per HOC Topology V1 - BANNED_NAMING fix
 
+from __future__ import annotations
+
 """
 Policy Limits Service (PIN-LIM-01)
 
@@ -59,13 +61,9 @@ from app.hoc.cus.hoc_spine.drivers.cross_domain import generate_uuid
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+    from app.models.policy_control_plane import Limit, LimitIntegrity
 
-from app.models.policy_control_plane import (
-    Limit,
-    LimitIntegrity,
-    LimitStatus,
-)
-from app.models.audit_ledger import ActorType
+from app.hoc.cus.hoc_spine.schemas.domain_enums import ActorType
 from app.hoc.cus.controls.L5_schemas.policy_limits import (
     CreatePolicyLimitRequest,
     UpdatePolicyLimitRequest,
@@ -170,37 +168,34 @@ class PolicyLimitsService:
         limit_id = generate_uuid()
         now = utc_now()
 
-        limit = Limit(
-            id=limit_id,
-            tenant_id=tenant_id,
-            name=request.name,
-            description=request.description,
-            limit_category=request.limit_category.value,
-            limit_type=request.limit_type,
-            scope=request.scope.value,
-            scope_id=request.scope_id,
-            max_value=request.max_value,
-            enforcement=request.enforcement.value,
-            reset_period=request.reset_period.value if request.reset_period else None,
-            window_seconds=request.window_seconds,
-            status=LimitStatus.ACTIVE.value,
-            created_at=now,
-            updated_at=now,
-        )
-
         # ATOMIC BLOCK: state change + audit must succeed together
         async with self._session.begin():
-            self._driver.add_limit(limit)
+            limit = self._driver.create_limit(
+                id=limit_id,
+                tenant_id=tenant_id,
+                name=request.name,
+                description=request.description,
+                limit_category=request.limit_category.value,
+                limit_type=request.limit_type,
+                scope=request.scope.value,
+                scope_id=request.scope_id,
+                max_value=request.max_value,
+                enforcement=request.enforcement.value,
+                reset_period=request.reset_period.value if request.reset_period else None,
+                window_seconds=request.window_seconds,
+                status="ACTIVE",
+                created_at=now,
+                updated_at=now,
+            )
 
             # Create integrity record (INVARIANT: every active limit needs one)
-            integrity = LimitIntegrity(
+            integrity = self._driver.create_integrity(
                 id=generate_uuid(),
                 limit_id=limit_id,
                 integrity_status="VERIFIED",
                 integrity_score=Decimal("1.0000"),
                 computed_at=now,
             )
-            self._driver.add_integrity(integrity)
 
             # Build limit state for audit
             limit_state = {
@@ -331,7 +326,7 @@ class PolicyLimitsService:
             LimitNotFoundError: If limit not found
         """
         limit = await self._get_limit(tenant_id, limit_id)
-        limit.status = LimitStatus.DISABLED.value
+        limit.status = "DISABLED"
         limit.updated_at = utc_now()
         await self._driver.flush()
 

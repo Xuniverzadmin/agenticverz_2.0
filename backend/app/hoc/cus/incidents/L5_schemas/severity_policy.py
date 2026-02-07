@@ -21,7 +21,7 @@ per PIN-507 Law 6 domain-level convention.
 from dataclasses import dataclass
 from typing import Dict, Tuple
 
-from app.models.killswitch import IncidentSeverity
+from app.hoc.cus.hoc_spine.schemas.domain_enums import IncidentSeverity
 
 
 # =============================================================================

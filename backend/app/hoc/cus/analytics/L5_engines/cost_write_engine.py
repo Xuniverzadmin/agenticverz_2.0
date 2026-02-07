@@ -21,7 +21,12 @@ PIN-520 Phase 1: This file enables the migration path for cost_intelligence.py
 to eventually route through L4 registry.
 """
 
-from sqlmodel import Session
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sqlmodel import Session
 
 # Re-export CostWriteDriver as CostWriteService for backwards compatibility
 from app.hoc.cus.analytics.L6_drivers.cost_write_driver import (

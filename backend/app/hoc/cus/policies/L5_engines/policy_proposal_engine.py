@@ -33,6 +33,8 @@ State Machine:
             ACTIVE (on activation)
 """
 
+from __future__ import annotations
+
 import logging
 from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
@@ -46,8 +48,7 @@ from app.hoc.cus.policies.L6_drivers.policy_proposal_write_driver import (
     PolicyProposalWriteDriver,
     get_policy_proposal_write_driver,
 )
-from app.models.audit_ledger import ActorType
-from app.models.policy import PolicyApprovalRequest, PolicyProposalCreate
+from app.hoc.cus.hoc_spine.schemas.domain_enums import ActorType
 from app.hoc.cus.policies.L5_engines.policy_graph_engine import (
     ConflictSeverity,
     get_conflict_engine,
@@ -56,6 +57,8 @@ from app.hoc.cus.policies.L5_engines.policy_graph_engine import (
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.models.policy import PolicyApprovalRequest, PolicyProposalCreate
 
 logger = logging.getLogger("nova.services.policy_proposal")
 

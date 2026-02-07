@@ -6,6 +6,14 @@
 
 ---
 
+## Reality Delta (2026-02-07)
+
+- L2 purity preserved: integrations L2 routes dispatch via L4 `OperationRegistry` (no direct L2→L5).
+- New internal DB driver: `backend/app/hoc/cus/integrations/L6_drivers/cus_health_driver.py` introduced to move internal DB coupling out of `cus_health_engine.py`.
+- Known exception (intentional integration effect): `sql_gateway.py` opens external connections (e.g. `asyncpg.connect`) to customer systems; this is allowed for integrations but must remain isolated from internal DB/session patterns.
+- Remaining clean-arch debt (mechanical audit): `cus_schemas.py` still imports `app.models.*`, and `loop_events.py` still performs rollback.
+- Verify now: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain integrations`.
+
 ## 1. Domain Purpose
 
 External system integrations — webhook management, third-party connectors, event routing, and integration health monitoring.

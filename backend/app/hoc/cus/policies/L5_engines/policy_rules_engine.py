@@ -33,6 +33,8 @@
 # NOTE: Renamed policy_rules_service.py → policy_rules_engine.py (2026-01-24)
 #       Reclassified L4→L5 per HOC Topology V1 - BANNED_NAMING fix
 
+from __future__ import annotations
+
 """
 Policy Rules Service (PIN-LIM-02)
 
@@ -61,15 +63,12 @@ from app.hoc.cus.policies.L6_drivers.policy_rules_driver import (
     get_policy_rules_driver,
 )
 
+from app.hoc.cus.hoc_spine.schemas.domain_enums import ActorType
+
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+    from app.models.policy_control_plane import PolicyRule, PolicyRuleIntegrity
 
-from app.models.policy_control_plane import (
-    PolicyRule,
-    PolicyRuleIntegrity,
-    PolicyRuleStatus,
-)
-from app.models.audit_ledger import ActorType
 from app.hoc.cus.policies.L5_schemas.policy_rules import (
     CreatePolicyRuleRequest,
     UpdatePolicyRuleRequest,
@@ -146,30 +145,28 @@ class PolicyRulesService:
         rule_id = generate_uuid()
         now = utc_now()
 
-        rule = PolicyRule(
-            id=rule_id,
-            tenant_id=tenant_id,
-            name=request.name,
-            description=request.description,
-            enforcement_mode=request.enforcement_mode,
-            scope=request.scope,
-            scope_id=request.scope_id,
-            conditions=request.conditions,
-            status=PolicyRuleStatus.ACTIVE.value,
-            source=request.source,
-            source_proposal_id=request.source_proposal_id,
-            parent_rule_id=request.parent_rule_id,
-            created_by=created_by,
-            created_at=now,
-            updated_at=now,
-        )
-
         # ATOMIC BLOCK: state change + audit must succeed together
         async with self._session.begin():
-            self._driver.add_rule(rule)
+            rule = self._driver.create_rule(
+                id=rule_id,
+                tenant_id=tenant_id,
+                name=request.name,
+                description=request.description,
+                enforcement_mode=request.enforcement_mode,
+                scope=request.scope,
+                scope_id=request.scope_id,
+                conditions=request.conditions,
+                status="ACTIVE",
+                source=request.source,
+                source_proposal_id=request.source_proposal_id,
+                parent_rule_id=request.parent_rule_id,
+                created_by=created_by,
+                created_at=now,
+                updated_at=now,
+            )
 
             # Create integrity record (INVARIANT: every active rule needs one)
-            integrity = PolicyRuleIntegrity(
+            integrity = self._driver.create_integrity(
                 id=generate_uuid(),
                 rule_id=rule_id,
                 integrity_status="VERIFIED",
@@ -177,7 +174,6 @@ class PolicyRulesService:
                 hash_root=self._compute_hash(rule),
                 computed_at=now,
             )
-            self._driver.add_integrity(integrity)
 
             # Build rule state for audit
             rule_state = {
