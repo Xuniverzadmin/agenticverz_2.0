@@ -49,6 +49,11 @@
 - Plane management and evidence query surfaces must be explicitly scoped to an audience runtime (CUS/INT/FDR).
 - Current placement includes a CUS router at `backend/app/hoc/api/cus/policies/retrieval.py` exposing plane list/register and evidence endpoints.
 
+### 1.4 Phase 0 Artifacts (This Workstream)
+
+- Intent + inventory: `docs/architecture/hoc/KNOWLEDGE_PLANE_PHASE0_INTENT_AND_INVENTORY_V1.md`
+- Contracts (freeze): `docs/architecture/hoc/KNOWLEDGE_PLANE_CONTRACTS_V1.md`
+
 ---
 
 ## 2) First-Principles Target (What The System Should Be)
@@ -61,6 +66,19 @@ Invariants:
 - **Deny-by-default** access (policy must explicitly allow a plane).
 - The **runtime** resolves `plane → connector/retriever → store/API`; the LLM never chooses DBs.
 - Every retrieval emits **evidence** with `plane_id`, `run_id`, `policy_snapshot_id`, `doc_ids`, and redaction-safe query hashes.
+
+### 2.1a Tenant Lifecycle (Transitive Gate, Separate SSOT)
+
+Tenant lifecycle is not part of knowledge plane lifecycle, but it is a **transitive prerequisite**:
+- Tenant lifecycle SSOT remains in the **account domain** (Tenant.status), with domain-owned rules and persistence:
+  - L5: `backend/app/hoc/cus/account/L5_engines/tenant_lifecycle_engine.py`
+  - L6: `backend/app/hoc/cus/account/L6_drivers/tenant_lifecycle_driver.py`
+- hoc_spine exposes tenant lifecycle operations for audiences via registry handlers:
+  - `account.lifecycle.query`, `account.lifecycle.transition` in `backend/app/hoc/cus/hoc_spine/orchestrator/handlers/lifecycle_handler.py`
+- Audience boundary gates can enforce tenant state at request/runtime boundaries:
+  - `backend/app/hoc/api/int/general/lifecycle_gate.py`
+
+**Invariant:** Knowledge plane operations (register/transition/access/evidence) MUST be blocked when the tenant lifecycle forbids execution (e.g. suspended/terminated), regardless of plane readiness.
 
 ### 2.2 Separation Of Concerns (Template + Harness)
 
@@ -115,6 +133,7 @@ The canonical plane registry and lifecycle state must be **persisted to Postgres
 1. Inventory all plane-related call paths:
    - lifecycle (knowledge_lifecycle_manager / knowledge_sdk)
    - mediation (retrieval_mediator / retrieval_hook / retrieval_facade)
+   - tenant lifecycle gate surfaces that must be consulted (account tenant lifecycle + audience lifecycle gates)
 2. Decide which “plane” meaning is canonical:
    - **access plane** (mediation) is canonical for governance/RAG
    - **graph plane** (`lifecycle/drivers/knowledge_plane.py`) is either:
@@ -123,6 +142,9 @@ The canonical plane registry and lifecycle state must be **persisted to Postgres
 3. Make audience scoping explicit for plane operations:
    - decide which audience runtime(s) own plane registration/listing and evidence query,
    - keep `retrieval/access` as the external retrieval choke point only if intentionally productized for CUS (deny-by-default remains mandatory).
+4. Freeze ID semantics:
+   - `plane_id` is owned by the governed plane registry and is immutable.
+   - runtime/index identifiers must be derived from `plane_id` (never reusing `plane_id` as a free-form namespace key).
 
 **Exit criteria:** written decision on plane meaning + updated routing map.
 
