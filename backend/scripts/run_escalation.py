@@ -43,7 +43,7 @@ from datetime import datetime, timezone
 
 def main():
     """Run escalation check."""
-    from app.api.policy import run_escalation_task
+    from app.hoc.api.cus.policies.policy import run_escalation_task
 
     print(f"[{datetime.now(timezone.utc).isoformat()}] Starting escalation check...")
 

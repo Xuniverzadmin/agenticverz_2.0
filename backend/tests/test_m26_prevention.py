@@ -77,7 +77,7 @@ class TestRouteInventory:
 
     def test_cost_router_not_empty(self):
         """Verify cost_intelligence router has routes."""
-        from app.api.cost_intelligence import router
+        from app.hoc.api.cus.logs.cost_intelligence import router
 
         assert len(router.routes) > 0, "cost_intelligence router has no routes"
         assert len(router.routes) >= 10, f"Expected 10+ cost routes, got {len(router.routes)}"
@@ -194,7 +194,7 @@ class TestNoSilentFailure:
         """Recording cost with invalid data must raise, not silently ignore."""
         from pydantic import ValidationError
 
-        from app.api.cost_intelligence import CostRecordCreate
+        from app.hoc.api.cus.logs.cost_intelligence import CostRecordCreate
 
         # Missing required field should raise
         with pytest.raises(ValidationError):

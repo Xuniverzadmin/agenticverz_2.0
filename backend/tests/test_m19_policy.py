@@ -689,7 +689,7 @@ class TestAsyncSessionGuardrail:
         """
         import inspect
 
-        from app.api.policy import evaluate_policy, get_approval_request
+        from app.hoc.api.cus.policies.policy import evaluate_policy, get_approval_request
 
         # Check evaluate_policy signature
         sig = inspect.signature(evaluate_policy)

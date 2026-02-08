@@ -5,7 +5,7 @@
 # NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
 #
 capability_id: policies.state
-status: ASSUMED
+status: DECLARED
 source_panels:
 - POL-GOV-ACT-O4
 domain: POLICIES

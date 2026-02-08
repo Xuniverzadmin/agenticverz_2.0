@@ -86,7 +86,7 @@ class TestPolicyEvaluation:
 
     def test_eval_request_model_validation(self, sample_eval_request):
         """Request model should validate correctly."""
-        from app.api.policy import PolicyEvalRequest
+        from app.hoc.api.cus.policies.policy import PolicyEvalRequest
 
         request = PolicyEvalRequest(**sample_eval_request)
         assert request.skill_id == "http_call"
@@ -95,7 +95,7 @@ class TestPolicyEvaluation:
 
     def test_eval_response_model(self):
         """Response model should construct correctly."""
-        from app.api.policy import PolicyEvalResponse
+        from app.hoc.api.cus.policies.policy import PolicyEvalResponse
 
         response = PolicyEvalResponse(
             decision="allow",
@@ -112,7 +112,7 @@ class TestPolicyEvaluation:
     @pytest.mark.asyncio
     async def test_simulate_cost_fallback(self):
         """Cost simulation should fallback to default."""
-        from app.api.policy import _simulate_cost
+        from app.hoc.api.cus.policies.policy import _simulate_cost
 
         # Without CostSim available, should return fallback
         cost = await _simulate_cost("http_call", "tenant-001", {})
@@ -121,7 +121,7 @@ class TestPolicyEvaluation:
     @pytest.mark.asyncio
     async def test_check_policy_violations_empty_when_no_enforcer(self):
         """Should return empty violations when PolicyEnforcer not available."""
-        from app.api.policy import _check_policy_violations
+        from app.hoc.api.cus.policies.policy import _check_policy_violations
 
         with patch.dict("sys.modules", {"app.workflow.policies": None}):
             violations = await _check_policy_violations(
@@ -141,7 +141,7 @@ class TestApprovalWorkflow:
 
     def test_approval_request_create_model(self, sample_approval_request):
         """ApprovalRequestCreate model should validate correctly."""
-        from app.api.policy import ApprovalRequestCreate
+        from app.hoc.api.cus.policies.policy import ApprovalRequestCreate
 
         request = ApprovalRequestCreate(**sample_approval_request)
         assert request.policy_type.value == "cost"
@@ -149,7 +149,7 @@ class TestApprovalWorkflow:
 
     def test_approval_action_model(self, sample_approval_action):
         """ApprovalAction model should validate correctly."""
-        from app.api.policy import ApprovalAction
+        from app.hoc.api.cus.policies.policy import ApprovalAction
 
         action = ApprovalAction(**sample_approval_action)
         assert action.approver_id == "approver-001"
@@ -159,7 +159,7 @@ class TestApprovalWorkflow:
         """ApprovalAction should reject invalid levels."""
         from pydantic import ValidationError
 
-        from app.api.policy import ApprovalAction
+        from app.hoc.api.cus.policies.policy import ApprovalAction
 
         with pytest.raises(ValidationError):
             ApprovalAction(approver_id="test", level=0)  # Too low
@@ -169,7 +169,7 @@ class TestApprovalWorkflow:
 
     def test_approval_status_enum(self):
         """ApprovalStatus enum should have correct values."""
-        from app.api.policy import ApprovalStatus
+        from app.hoc.api.cus.policies.policy import ApprovalStatus
 
         assert ApprovalStatus.PENDING.value == "pending"
         assert ApprovalStatus.APPROVED.value == "approved"
@@ -243,7 +243,7 @@ class TestWebhooks:
 
     def test_webhook_signature_computation(self):
         """Webhook signature should be computed correctly."""
-        from app.api.policy import _compute_webhook_signature
+        from app.hoc.api.cus.policies.policy import _compute_webhook_signature
 
         payload = '{"event": "test"}'
         secret = "my-secret"
@@ -256,7 +256,7 @@ class TestWebhooks:
 
     def test_webhook_secret_hashing(self):
         """Webhook secret should be hashed for storage."""
-        from app.api.policy import _hash_webhook_secret
+        from app.hoc.api.cus.policies.policy import _hash_webhook_secret
 
         secret = "my-webhook-secret"
         hashed = _hash_webhook_secret(secret)
@@ -268,9 +268,9 @@ class TestWebhooks:
     @pytest.mark.asyncio
     async def test_send_webhook_success(self):
         """Successful webhook should return True."""
-        from app.api.policy import _send_webhook
+        from app.hoc.api.cus.policies.policy import _send_webhook
 
-        with patch("app.api.policy.httpx.AsyncClient") as mock_client:
+        with patch("app.hoc.api.cus.policies.policy.httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
             mock_response.status_code = 200
             mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
@@ -284,11 +284,11 @@ class TestWebhooks:
     @pytest.mark.asyncio
     async def test_send_webhook_includes_signature_header(self):
         """Webhook with secret should include signature header."""
-        from app.api.policy import _send_webhook
+        from app.hoc.api.cus.policies.policy import _send_webhook
 
         captured_headers = {}
 
-        with patch("app.api.policy.httpx.AsyncClient") as mock_client:
+        with patch("app.hoc.api.cus.policies.policy.httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
             mock_response.status_code = 200
 
@@ -314,14 +314,14 @@ class TestEscalation:
 
     def test_escalation_task_entry_point_exists(self):
         """Escalation task entry point should exist."""
-        from app.api.policy import run_escalation_task
+        from app.hoc.api.cus.policies.policy import run_escalation_task
 
         assert callable(run_escalation_task)
 
     @pytest.mark.asyncio
     async def test_run_escalation_check_function(self, mock_db_session):
         """Escalation check should process pending requests."""
-        from app.api.policy import run_escalation_check
+        from app.hoc.api.cus.policies.policy import run_escalation_check
 
         # Mock returns empty results (no pending requests)
         mock_db_session.exec.return_value.all.return_value = []
@@ -341,21 +341,21 @@ class TestMetrics:
 
     def test_record_policy_decision_safe(self):
         """Policy decision recording should not raise on failure."""
-        from app.api.policy import _record_policy_decision
+        from app.hoc.api.cus.policies.policy import _record_policy_decision
 
         # Should not raise even if metrics module fails
         _record_policy_decision("allow", "cost")
 
     def test_record_capability_violation_safe(self):
         """Capability violation recording should not raise on failure."""
-        from app.api.policy import _record_capability_violation
+        from app.hoc.api.cus.policies.policy import _record_capability_violation
 
         # Should not raise
         _record_capability_violation("budget", "llm_invoke", "tenant-001")
 
     def test_record_budget_rejection_safe(self):
         """Budget rejection recording should not raise on failure."""
-        from app.api.policy import _record_budget_rejection
+        from app.hoc.api.cus.policies.policy import _record_budget_rejection
 
         # Should not raise
         _record_budget_rejection("cost", "llm_invoke")
@@ -371,7 +371,7 @@ class TestPolicyTypes:
 
     def test_policy_type_enum_values(self):
         """PolicyType enum should have expected values."""
-        from app.api.policy import PolicyType
+        from app.hoc.api.cus.policies.policy import PolicyType
 
         assert PolicyType.COST.value == "cost"
         assert PolicyType.CAPABILITY.value == "capability"
@@ -380,7 +380,7 @@ class TestPolicyTypes:
 
     def test_config_to_dict_handles_string_approval_level(self):
         """Config conversion should handle string approval levels."""
-        from app.api.policy import _config_to_dict
+        from app.hoc.api.cus.policies.policy import _config_to_dict
 
         class MockConfig:
             approval_level = "3"
@@ -396,7 +396,7 @@ class TestPolicyTypes:
 
     def test_config_to_dict_handles_non_numeric_approval_level(self):
         """Config conversion should default non-numeric approval levels."""
-        from app.api.policy import _config_to_dict
+        from app.hoc.api.cus.policies.policy import _config_to_dict
 
         class MockConfig:
             approval_level = "auto_approve"  # Not numeric
@@ -427,7 +427,7 @@ class TestIntegration:
             from fastapi import FastAPI
             from fastapi.testclient import TestClient
 
-            from app.api.policy import router
+            from app.hoc.api.cus.policies.policy import router
 
             app = FastAPI()
             app.include_router(router)
@@ -455,7 +455,7 @@ class TestDeterminism:
     @pytest.mark.asyncio
     async def test_same_input_same_output(self):
         """Same policy input should produce same decision."""
-        from app.api.policy import _check_policy_violations
+        from app.hoc.api.cus.policies.policy import _check_policy_violations
 
         # Run twice with same input
         v1 = await _check_policy_violations("http_call", "t1", None, {}, 10)

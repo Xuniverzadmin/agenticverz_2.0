@@ -8,9 +8,9 @@ status: DECLARED
 
 # Implementation details
 implementation:
-  endpoint: /api/v1/activity/summary
+  endpoint: /api/v1/activity/summary/by-status
   method: GET
-  handler: app.api.activity.get_activity_summary
+  handler: app.hoc.api.cus.activity.activity.get_summary_by_status
 
 # Auth requirements
 auth:

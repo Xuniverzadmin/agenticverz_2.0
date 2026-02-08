@@ -5,7 +5,7 @@
 # NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
 #
 capability_id: incidents.historical_cost
-status: ASSUMED
+status: DECLARED
 source_panels:
 - INC-EV-HIST-O4
 domain: INCIDENTS

@@ -17,7 +17,6 @@ Adapters must:
 - Be thin (<200 LOC typically)
 """
 
-# TOMBSTONE_EXPIRY: 2026-03-04
 # customer_incidents_adapter import disabled - broken dependency chain via app.services
 # Import directly when needed: from app.adapters.customer_incidents_adapter import ...
 from app.adapters.customer_keys_adapter import (

@@ -99,7 +99,7 @@ class TestDomainSeparation:
 
     def test_no_cross_import_in_ops_router(self):
         """cost_ops.py must not import from guard contracts."""
-        import app.api.cost_ops as cost_ops_module
+        import app.hoc.api.fdr.ops.cost_ops as cost_ops_module
 
         source_file = inspect.getfile(cost_ops_module)
         with open(source_file, "r") as f:
@@ -117,7 +117,7 @@ class TestDomainSeparation:
 
     def test_no_cross_import_in_guard_router(self):
         """cost_guard.py must not import from ops contracts."""
-        import app.api.cost_guard as cost_guard_module
+        import app.hoc.api.cus.incidents.cost_guard as cost_guard_module
 
         source_file = inspect.getfile(cost_guard_module)
         with open(source_file, "r") as f:
@@ -448,7 +448,7 @@ class TestAuthBoundaryStructure:
 
     def test_cost_ops_uses_fops_auth(self):
         """cost_ops router must use verify_fops_token dependency."""
-        import app.api.cost_ops as cost_ops_module
+        import app.hoc.api.fdr.ops.cost_ops as cost_ops_module
 
         source_file = inspect.getfile(cost_ops_module)
         with open(source_file, "r") as f:
@@ -461,7 +461,7 @@ class TestAuthBoundaryStructure:
 
     def test_cost_guard_uses_console_auth(self):
         """cost_guard router must use verify_console_token dependency."""
-        import app.api.cost_guard as cost_guard_module
+        import app.hoc.api.cus.incidents.cost_guard as cost_guard_module
 
         source_file = inspect.getfile(cost_guard_module)
         with open(source_file, "r") as f:
@@ -891,7 +891,7 @@ class TestCustomerCostDrilldown:
 
     def test_drilldown_endpoint_registered(self):
         """Verify /ops/cost/customers/{tenant_id} endpoint is registered."""
-        import app.api.cost_ops as cost_ops_module
+        import app.hoc.api.fdr.ops.cost_ops as cost_ops_module
 
         source_file = inspect.getfile(cost_ops_module)
         with open(source_file, "r") as f:

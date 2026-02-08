@@ -1,5 +1,5 @@
 # AURORA_L2 Capability Status Model
-# Status: LOCKED
+# Status: TRUSTED
 # Version: 2.0
 # Purpose: Defines capability lifecycle states (4-state model)
 #
@@ -8,7 +8,7 @@
 #   They are real only when the system demonstrates them.
 
 version: "2.0.0"
-status: LOCKED
+status: TRUSTED
 
 # =============================================================================
 # CAPABILITY LIFECYCLE (4-State Model)

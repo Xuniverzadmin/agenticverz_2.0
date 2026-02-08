@@ -462,7 +462,7 @@ class TestRecoveryAPIEnhanced:
 
     def test_evaluate_request_model(self):
         """Test EvaluateRequest model validation."""
-        from app.api.recovery import EvaluateRequest
+        from app.hoc.api.int.recovery.recovery import EvaluateRequest
 
         request = EvaluateRequest(
             error_code="TIMEOUT",
@@ -476,7 +476,7 @@ class TestRecoveryAPIEnhanced:
 
     def test_candidate_update_request_model(self):
         """Test CandidateUpdateRequest model validation."""
-        from app.api.recovery import CandidateUpdateRequest
+        from app.hoc.api.int.recovery.recovery import CandidateUpdateRequest
 
         request = CandidateUpdateRequest(
             execution_status="executing",
@@ -490,7 +490,7 @@ class TestRecoveryAPIEnhanced:
 
     def test_action_response_model(self):
         """Test ActionResponse model."""
-        from app.api.recovery import ActionResponse
+        from app.hoc.api.int.recovery.recovery import ActionResponse
 
         action = ActionResponse(
             id=1,
@@ -1152,7 +1152,7 @@ class TestRedisFailureFallback:
             mock_enqueue.return_value = None  # Simulate Redis failure
 
             # Import after patching
-            from app.api.recovery_ingest import _enqueue_evaluation_async
+            from app.hoc.api.int.recovery.recovery_ingest import _enqueue_evaluation_async
 
             candidate_id = 999999  # Non-existent but valid for test
             failure_match_id = str(uuid4())

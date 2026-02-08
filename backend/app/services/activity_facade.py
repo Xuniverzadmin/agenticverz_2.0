@@ -5,7 +5,7 @@
 #   Trigger: internal (called by L2 API)
 #   Execution: async
 # Role: Activity Facade - Centralized access to activity domain operations
-# Callers: app.api.activity (L2)
+# Callers: app.hoc.api.cus.activity.* (L2)
 # Allowed Imports: L6, services within L4
 # Forbidden Imports: L1, L2, L5
 # Reference: Activity Domain - One Facade Architecture, W4 Pattern

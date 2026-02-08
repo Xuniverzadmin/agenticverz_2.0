@@ -34,9 +34,9 @@ from app.hoc.cus.account.L5_engines.billing_provider_engine import (
 from app.protection.provider import MockAbuseProtectionProvider, set_protection_provider
 from app.protection.decisions import Decision
 
-import app.api.middleware.lifecycle_gate as lifecycle_gate_mod
+import app.hoc.api.int.general.lifecycle_gate as lifecycle_gate_mod
 
-from app.api.middleware.lifecycle_gate import (
+from app.hoc.api.int.general.lifecycle_gate import (
     LifecycleContext,
     check_lifecycle,
     require_active_lifecycle,
@@ -46,12 +46,12 @@ from app.api.middleware.lifecycle_gate import (
     EXEMPT_PREFIXES,
     SDK_PATHS,
 )
-from app.api.middleware.protection_gate import (
+from app.hoc.api.int.general.protection_gate import (
     ProtectionContext,
     check_protection,
     require_protection_allow,
 )
-from app.api.middleware.billing_gate import (
+from app.hoc.api.int.policies.billing_gate import (
     BillingContext,
     check_billing,
     require_billing_active,

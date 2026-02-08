@@ -33,7 +33,7 @@ v0.3 Changes:
 - No more simulated metrics
 
 Usage:
-    from app.api.workers import get_event_bus
+    from app.hoc.api.cus.policies.workers import get_event_bus
     worker = BusinessBuilderWorker(event_bus=get_event_bus())
     result = await worker.run(
         run_id="uuid",

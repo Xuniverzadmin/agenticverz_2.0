@@ -17,9 +17,6 @@ Provides endpoints for:
 - Limit overrides (temporary increases)
 """
 
-# Legacy imports removed - routers now imported directly in main.py
-# TOMBSTONE_EXPIRY: 2026-03-04
-# This __init__.py previously re-exported legacy routers
-# Now each router module exports its own router directly
+# Package marker only (no router re-exports). Routers are wired via `app.hoc.app`.
 
 __all__: list[str] = []

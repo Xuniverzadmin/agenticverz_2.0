@@ -329,7 +329,7 @@ class TestRedisFailoverToDb:
         if not db_url:
             pytest.skip("DATABASE_URL not configured")
 
-        from app.api.recovery_ingest import _enqueue_evaluation_async
+        from app.hoc.api.int.recovery.recovery_ingest import _enqueue_evaluation_async
 
         # Mock Redis to fail
         with patch("app.tasks.recovery_queue_stream.get_redis") as mock_redis:

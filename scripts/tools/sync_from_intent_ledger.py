@@ -362,7 +362,7 @@ def parse_capabilities_section(section: str) -> List[CapabilityEntry]:
             CapabilityEntry(
                 capability_id=cap_id,
                 panel=fields.get("panel", "UNKNOWN"),
-                status=fields.get("status", "ASSUMED"),
+                status=fields.get("status", "DECLARED"),
                 scenario=scenario,
                 acceptance=acceptance
                 if acceptance
@@ -798,8 +798,8 @@ def generate_intent_yaml(
     if panel.capability:
         intent["capability"] = {
             "id": panel.capability,
-            # Initial status is ASSUMED (human assumption), SDSR elevates to OBSERVED
-            "status": cap_entry.status if cap_entry else "ASSUMED",
+            # Initial status is DECLARED, SDSR elevates to OBSERVED
+            "status": cap_entry.status if cap_entry else "DECLARED",
             # Human assumption from ledger Implementation block
             "assumed_endpoint": cap_entry.assumed_endpoint if cap_entry else None,
             "assumed_method": cap_entry.assumed_method if cap_entry else "GET",

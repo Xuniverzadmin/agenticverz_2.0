@@ -208,14 +208,14 @@ class TestIterationsAPIModel:
 
     def test_planstep_accepts_iterations(self):
         """PlanStep should accept valid iterations."""
-        from app.api.runtime import PlanStep
+        from app.hoc.api.cus.policies.runtime import PlanStep
 
         step = PlanStep(skill="llm_invoke", params={}, iterations=50)
         assert step.iterations == 50
 
     def test_planstep_default_iterations(self):
         """PlanStep should default iterations to 1."""
-        from app.api.runtime import PlanStep
+        from app.hoc.api.cus.policies.runtime import PlanStep
 
         step = PlanStep(skill="llm_invoke", params={})
         assert step.iterations == 1
@@ -224,7 +224,7 @@ class TestIterationsAPIModel:
         """PlanStep should reject iterations < 1."""
         from pydantic import ValidationError
 
-        from app.api.runtime import PlanStep
+        from app.hoc.api.cus.policies.runtime import PlanStep
 
         with pytest.raises(ValidationError):
             PlanStep(skill="llm_invoke", params={}, iterations=0)
@@ -233,7 +233,7 @@ class TestIterationsAPIModel:
         """PlanStep should reject negative iterations."""
         from pydantic import ValidationError
 
-        from app.api.runtime import PlanStep
+        from app.hoc.api.cus.policies.runtime import PlanStep
 
         with pytest.raises(ValidationError):
             PlanStep(skill="llm_invoke", params={}, iterations=-5)
@@ -242,14 +242,14 @@ class TestIterationsAPIModel:
         """PlanStep should reject iterations > 100."""
         from pydantic import ValidationError
 
-        from app.api.runtime import PlanStep
+        from app.hoc.api.cus.policies.runtime import PlanStep
 
         with pytest.raises(ValidationError):
             PlanStep(skill="llm_invoke", params={}, iterations=101)
 
     def test_planstep_accepts_max_iterations(self):
         """PlanStep should accept iterations = 100."""
-        from app.api.runtime import PlanStep
+        from app.hoc.api.cus.policies.runtime import PlanStep
 
         step = PlanStep(skill="llm_invoke", params={}, iterations=100)
         assert step.iterations == 100
@@ -317,7 +317,7 @@ class TestM13AcceptanceCriteria:
         """AC7: Backend rejects negative or zero iterations."""
         from pydantic import ValidationError
 
-        from app.api.runtime import PlanStep
+        from app.hoc.api.cus.policies.runtime import PlanStep
 
         with pytest.raises(ValidationError):
             PlanStep(skill="test", params={}, iterations=0)

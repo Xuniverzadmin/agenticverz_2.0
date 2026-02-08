@@ -5,7 +5,7 @@
 # NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
 #
 capability_id: incidents.list
-status: ASSUMED
+status: DECLARED
 source_panels:
 - INC-EV-HIST-O5
 domain: INCIDENTS

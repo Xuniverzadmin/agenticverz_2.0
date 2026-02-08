@@ -30,7 +30,6 @@ from .tenant_service import (
     TenantServiceError,
     get_tenant_service,
 )
-# TOMBSTONE_EXPIRY: 2026-03-04
 # Removed: worker_registry_service (file does not exist, PIN-511 legacy cleanup)
 # Functionality moved to app.hoc.cus.integrations.L6_drivers.worker_registry_driver
 

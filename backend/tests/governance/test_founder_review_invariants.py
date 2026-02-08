@@ -752,7 +752,7 @@ class TestL2APIThinLayer:
 
     def test_api_module_imports_from_correct_layers(self):
         """L2 API only imports from L3, L4, L6 (not L1, L5)."""
-        from app.api import founder_contract_review
+        from app.hoc.api.fdr.agent import founder_contract_review
 
         # Check that the module exists and has the router
         assert hasattr(founder_contract_review, "router")
@@ -762,14 +762,14 @@ class TestL2APIThinLayer:
 
     def test_api_uses_adapter_for_translation(self):
         """L2 API uses L3 adapter for response translation."""
-        from app.api.founder_contract_review import get_adapter
+        from app.hoc.api.fdr.agent.founder_contract_review import get_adapter
 
         adapter = get_adapter()
         assert isinstance(adapter, FounderReviewAdapter)
 
     def test_api_uses_service_for_business_logic(self):
         """L2 API uses L4 service for business logic."""
-        from app.api.founder_contract_review import get_contract_service
+        from app.hoc.api.fdr.agent.founder_contract_review import get_contract_service
 
         service = get_contract_service()
         assert isinstance(service, ContractService)

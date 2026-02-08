@@ -232,7 +232,7 @@ class TestMemoryPostUpdateEffects:
         workflow_id = "wf-subsequent-1"
 
         # Seed some memory data (simulating what a previous run would have stored)
-        with patch("app.api.costsim.get_memory_service", return_value=mock_memory_service):
+        with patch("app.hoc.api.cus.analytics.costsim.get_memory_service", return_value=mock_memory_service):
             # Pre-seed memory
             import asyncio
 
@@ -408,7 +408,7 @@ class TestFeatureFlagBehavior:
         monkeypatch.setenv("DRIFT_DETECTION_ENABLED", "false")
 
         # Import with flags disabled
-        import app.api.costsim as costsim_module
+        import app.hoc.api.cus.analytics.costsim as costsim_module
 
         # Check that stubs are used
         service = costsim_module.get_memory_service()
@@ -427,7 +427,7 @@ class TestFeatureFlagBehavior:
         The flag _memory_features_enabled is computed at module import time,
         so monkeypatch.setenv() after import cannot affect its value.
         """
-        from app.api.costsim import (
+        from app.hoc.api.cus.analytics.costsim import (
             DRIFT_DETECTION_ENABLED,
             MEMORY_CONTEXT_INJECTION,
             MEMORY_POST_UPDATE,
@@ -455,7 +455,7 @@ class TestCostSimEndpointMemoryFields:
 
     def test_simulate_request_has_memory_fields(self):
         """Verify SimulateRequest model has memory-related fields."""
-        from app.api.costsim import SimulateRequest
+        from app.hoc.api.cus.analytics.costsim import SimulateRequest
 
         # Create request with memory fields
         request = SimulateRequest(
@@ -473,7 +473,7 @@ class TestCostSimEndpointMemoryFields:
 
     def test_simulate_response_has_memory_fields(self):
         """Verify SandboxSimulateResponse model has memory-related fields."""
-        from app.api.costsim import SandboxSimulateResponse
+        from app.hoc.api.cus.analytics.costsim import SandboxSimulateResponse
 
         # Create response with memory fields
         response = SandboxSimulateResponse(

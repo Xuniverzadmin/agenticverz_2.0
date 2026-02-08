@@ -27,7 +27,7 @@ acceptance_criteria:
 implementation:
   endpoint: /api/v1/logs/llm-runs
   method: GET
-  handler: app.api.logs.list_llm_run_records
+  handler: app.hoc.api.cus.policies.logs.list_llm_run_records
   service: null  # Direct SQL query
 auth:
   roles: [admin, member]

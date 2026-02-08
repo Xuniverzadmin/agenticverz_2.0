@@ -197,10 +197,10 @@ Main application imports successfully with all routes registered:
 - `app/services/lifecycle/__init__.py`
 
 **L2 API Routers:**
-- `app/api/monitors.py` - Monitors API
-- `app/api/rate_limits.py` - Rate Limits API (renamed from limits.py)
-- `app/api/controls.py` - Controls API
-- `app/api/lifecycle.py` - Lifecycle API
+- `app/hoc/api/cus/policies/monitors.py` - Monitors API
+- `app/hoc/api/cus/policies/rate_limits.py` - Rate Limits API (renamed from limits.py)
+- `app/hoc/api/cus/controls/controls.py` - Controls API
+- `app/hoc/api/cus/policies/lifecycle.py` - Lifecycle API
 
 **Modified:**
 - `app/main.py` - Added router imports and registrations
@@ -211,8 +211,8 @@ The rate limits API uses `/api/v1/rate-limits` (not `/api/v1/limits`) because `a
 
 | API | Purpose | Location |
 |-----|---------|----------|
-| Rate Limits (GAP-122) | Usage quotas, API call limits, token usage | `app/api/rate_limits.py` |
-| Policy Limits (PIN-LIM) | Policy rule limits, simulation, overrides | `app/api/limits/` |
+| Rate Limits (GAP-122) | Usage quotas, API call limits, token usage | `app/hoc/api/cus/policies/rate_limits.py` |
+| Policy Limits (PIN-LIM) | Policy rule limits, simulation, overrides | `app/hoc/api/cus/policies/limits/` |
 
 ### Test Commands
 
@@ -232,10 +232,10 @@ print('All facade imports OK')
 
 # Test API imports
 python3 -c "
-from app.api.monitors import router as monitors_router
-from app.api.rate_limits import router as rate_limits_router
-from app.api.controls import router as controls_router
-from app.api.lifecycle import router as lifecycle_router
+from app.hoc.api.cus.policies.monitors import router as monitors_router
+from app.hoc.api.cus.policies.rate_limits import router as rate_limits_router
+from app.hoc.api.cus.controls.controls import router as controls_router
+from app.hoc.api.cus.policies.lifecycle import router as lifecycle_router
 print('All API imports OK')
 "
 

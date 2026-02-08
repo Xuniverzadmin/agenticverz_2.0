@@ -5,7 +5,7 @@
 #   Trigger: internal (called by L2 API)
 #   Execution: async
 # Role: Analytics Facade - Centralized access to analytics domain operations
-# Callers: app.api.analytics (L2)
+# Callers: app.hoc.api.cus.analytics.* (L2)
 # Allowed Imports: L6
 # Forbidden Imports: L1, L2, L5
 # Reference: Analytics Domain Declaration v1, PIN-411, W4 Pattern

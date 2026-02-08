@@ -69,7 +69,7 @@ status: DECLARED                 # ← Change from DISCOVERED
 implementation:
   endpoint: /api/v1/policy-proposals/{id}/approve
   method: POST
-  handler: app.api.policies.approve_proposal
+  handler: app.hoc.api.cus.policies.policy_proposals.approve_proposal
 
 auth:
   roles: [admin, policy_approver]

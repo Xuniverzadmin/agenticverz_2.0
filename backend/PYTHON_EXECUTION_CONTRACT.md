@@ -40,7 +40,7 @@ from backend.app.db import get_async_session
 
 ```bash
 # Import-safe (works without DATABASE_URL)
-python3 -c "from app.api.workers import router"
+python3 -c "from app.hoc.api.cus.policies.workers import router"
 
 # Execution requires DATABASE_URL
 DATABASE_URL=... python3 -c "from app.db import get_engine; get_engine()"
@@ -64,7 +64,7 @@ All such operations must be lazy (on first use).
 
 ```bash
 cd backend
-python3 -c "from app.api.workers import router; print('OK')"
+python3 -c "from app.hoc.api.cus.policies.workers import router; print('OK')"
 ```
 
 ### Check database connection (requires DATABASE_URL):
@@ -124,7 +124,7 @@ CI job must include:
 ```bash
 cd backend
 python3 -m py_compile app/api/workers.py
-python3 -c "from app.api.workers import router"
+python3 -c "from app.hoc.api.cus.policies.workers import router"
 ```
 
 Without DATABASE_URL set.

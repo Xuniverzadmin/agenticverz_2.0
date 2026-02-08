@@ -220,7 +220,7 @@ def check_circular():
     # Try to import main modules - circular deps would cause ImportError
     try:
         import app.main
-        import app.api
+        import app.hoc.api
         import app.services
         print('CIRCULAR_CHECK_PASS')
     except ImportError as e:

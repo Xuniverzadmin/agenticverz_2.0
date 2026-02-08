@@ -26,7 +26,7 @@ acceptance_criteria:
 implementation:
   endpoint: /api/v1/logs/audit
   method: GET
-  handler: app.api.logs.list_audit_entries
+  handler: app.hoc.api.cus.policies.logs.list_audit_entries
   service: null  # Direct SQL query
 auth:
   roles: [admin, member]

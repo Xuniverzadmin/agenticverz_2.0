@@ -12,7 +12,7 @@
 #   Reads: WorkerRun, AuditLedger (via driver)
 #   Writes: none (read-only facade)
 # Role: Activity Facade - Centralized access to activity domain operations
-# Callers: app.api.activity (L2)
+# Callers: app.hoc.api.cus.activity.* (L2)
 # Allowed Imports: L5, L6
 # Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
 # Reference: PIN-470, PHASE3_DIRECTORY_RESTRUCTURE_PLAN.md

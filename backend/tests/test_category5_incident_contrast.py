@@ -383,7 +383,7 @@ class TestEndpointRegistration:
 
     def test_founder_incident_endpoint_in_ops(self):
         """Verify /ops/incidents/{id} endpoint is in ops.py."""
-        import app.api.ops as ops_module
+        import app.hoc.api.fdr.incidents.ops as ops_module
 
         source_file = inspect.getfile(ops_module)
         with open(source_file, "r") as f:
@@ -395,7 +395,7 @@ class TestEndpointRegistration:
 
     def test_customer_narrative_endpoint_in_guard(self):
         """Verify /guard/incidents/{id}/narrative endpoint is in guard.py."""
-        import app.api.guard as guard_module
+        import app.hoc.api.cus.policies.guard as guard_module
 
         source_file = inspect.getfile(guard_module)
         with open(source_file, "r") as f:

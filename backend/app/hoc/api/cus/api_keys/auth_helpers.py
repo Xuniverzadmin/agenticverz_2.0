@@ -19,7 +19,7 @@ Provides API key verification for Guard and Ops console endpoints.
 These endpoints previously had frontend-only auth which could be bypassed.
 
 Usage:
-    from app.api.auth_helpers import verify_console_api_key
+    from app.hoc.api.cus.api_keys.auth_helpers import verify_console_api_key
 
     router = APIRouter(dependencies=[Depends(verify_console_api_key)])
 

@@ -5,7 +5,7 @@
 # NOTE: OBSERVED/TRUSTED status is preserved during sync (PIN-432)
 #
 capability_id: policies.versions_list
-status: ASSUMED
+status: DECLARED
 source_panels:
 - POL-GOV-DFT-O2
 domain: POLICIES

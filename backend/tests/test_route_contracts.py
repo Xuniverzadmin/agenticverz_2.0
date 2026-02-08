@@ -340,7 +340,7 @@ class TestOpsAPIHygiene:
         """
         from typing import Literal, get_args, get_origin
 
-        from app.api.ops import OpsJobResult
+        from app.hoc.api.fdr.incidents.ops import OpsJobResult
 
         # Check that status field uses Literal
         status_annotation = OpsJobResult.__annotations__.get("status")
@@ -359,7 +359,7 @@ class TestOpsAPIHygiene:
         """
         /ops/events must return OpsEventListResponse, not bare dict.
         """
-        from app.api.ops import OpsEventListResponse
+        from app.hoc.api.fdr.incidents.ops import OpsEventListResponse
         from app.main import app
 
         events_route = None
@@ -377,7 +377,7 @@ class TestOpsAPIHygiene:
         """
         All /ops/jobs/* endpoints must use OpsJobResult.
         """
-        from app.api.ops import OpsJobResult
+        from app.hoc.api.fdr.incidents.ops import OpsJobResult
         from app.main import app
 
         job_routes_without_model = []

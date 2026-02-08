@@ -7,10 +7,10 @@
 #   Execution: sync
 # Role: API Wiring Check - Verify Endpoint Routes Are Properly Connected
 # artifact_class: CODE
-"""API Wiring Check - Verify Endpoint Routes Are Properly Connected
+"""HOC API Wiring Check - Verify Endpoint Routes Are Properly Connected
 
 Checks:
-1. All routers in app/api/ are included in main.py
+1. All L2 routers in app/hoc/api/** are imported by an L2.1 facade
 2. All endpoint functions have proper response_model or return type
 3. Detects orphaned routers (defined but not mounted)
 4. Validates route prefixes match file names
@@ -37,11 +37,13 @@ class WiringIssue(NamedTuple):
 
 
 def find_routers_in_api(api_dir: Path) -> Dict[str, Set[str]]:
-    """Find all router definitions in api/ directory."""
+    """Find all router definitions in api/ directory (recursive)."""
     routers = {}
 
-    for filepath in api_dir.glob("*.py"):
+    for filepath in api_dir.rglob("*.py"):
         if filepath.name.startswith("__"):
+            continue
+        if "facades" in filepath.parts:
             continue
 
         content = filepath.read_text()
@@ -50,27 +52,33 @@ def find_routers_in_api(api_dir: Path) -> Dict[str, Set[str]]:
         router_matches = re.findall(r"(\w+)\s*=\s*APIRouter\s*\(", content)
 
         if router_matches:
-            routers[filepath.name] = set(router_matches)
+            routers[str(filepath)] = set(router_matches)
 
     return routers
 
 
-def find_mounted_routers(main_file: Path) -> Set[str]:
-    """Find all routers mounted in main.py."""
-    content = main_file.read_text()
+def find_mounted_routers(facades_dir: Path) -> Set[str]:
+    """
+    Find all L2 router modules mounted via L2.1 facades.
 
-    # Find app.include_router patterns
-    mounted = set()
+    HOC canonical wiring: `backend/app/hoc/app.py` imports facade router lists;
+    facades import individual L2 routers via `from app.hoc.api.<...> import router ...`.
+    """
+    mounted: Set[str] = set()
 
-    # Pattern: app.include_router(xxx_router) or app.include_router(router)
-    matches = re.findall(r"app\.include_router\s*\(\s*(\w+)", content)
-    mounted.update(matches)
+    if not facades_dir.exists():
+        return mounted
 
-    # Pattern: from app.api.xxx import router
-    import_matches = re.findall(r"from\s+app\.api\.(\w+)\s+import\s+(\w+)", content)
-    for module, name in import_matches:
-        if "router" in name.lower():
-            mounted.add(f"{module}.{name}")
+    for filepath in facades_dir.rglob("*.py"):
+        if filepath.name.startswith("__"):
+            continue
+
+        content = filepath.read_text()
+        import_matches = re.findall(
+            r"from\s+app\.hoc\.api\.(?P<module>[\w\.]+)\s+import\s+router\b",
+            content,
+        )
+        mounted.update(import_matches)
 
     return mounted
 
@@ -79,8 +87,10 @@ def check_response_models(api_dir: Path) -> List[WiringIssue]:
     """Check that endpoints have proper response models."""
     issues = []
 
-    for filepath in api_dir.glob("*.py"):
+    for filepath in api_dir.rglob("*.py"):
         if filepath.name.startswith("__"):
+            continue
+        if "facades" in filepath.parts:
             continue
 
         content = filepath.read_text()
@@ -116,8 +126,10 @@ def check_route_consistency(api_dir: Path) -> List[WiringIssue]:
     """Check route prefixes match file naming conventions."""
     issues = []
 
-    for filepath in api_dir.glob("*.py"):
+    for filepath in api_dir.rglob("*.py"):
         if filepath.name.startswith("__"):
+            continue
+        if "facades" in filepath.parts:
             continue
 
         content = filepath.read_text()
@@ -178,8 +190,10 @@ def check_duplicate_routes(api_dir: Path) -> List[WiringIssue]:
     issues = []
     routes = {}  # full_path -> file
 
-    for filepath in api_dir.glob("*.py"):
+    for filepath in api_dir.rglob("*.py"):
         if filepath.name.startswith("__"):
+            continue
+        if "facades" in filepath.parts:
             continue
 
         content = filepath.read_text()
@@ -220,31 +234,66 @@ def check_duplicate_routes(api_dir: Path) -> List[WiringIssue]:
 
 
 def main():
-    api_dir = Path("backend/app/api")
-    main_file = Path("backend/app/main.py")
+    api_dir = Path("backend/app/hoc/api")
+    facades_dir = Path("backend/app/hoc/api/facades")
+    hoc_entrypoint = Path("backend/app/hoc/app.py")
 
     print("=" * 70)
-    print("API Wiring Check - Verifying Endpoint Configuration")
+    print("HOC API Wiring Check - Verifying Endpoint Configuration")
     print("=" * 70)
     print()
 
     all_issues = []
 
-    # Check 1: Router mounting
-    print("🔍 Checking router mounting...")
-    if api_dir.exists() and main_file.exists():
-        routers = find_routers_in_api(api_dir)
-        mounted = find_mounted_routers(main_file)
+    # Check 1: Router mounting via facades
+    print("🔍 Checking L2 routers are mounted via facades...")
+    if not api_dir.exists():
+        all_issues.append(
+            WiringIssue(
+                category="missing_root",
+                file=str(api_dir),
+                message="HOC API root missing (expected backend/app/hoc/api)",
+                severity="error",
+            )
+        )
+    if not hoc_entrypoint.exists():
+        all_issues.append(
+            WiringIssue(
+                category="missing_entrypoint",
+                file=str(hoc_entrypoint),
+                message="HOC entrypoint missing (expected backend/app/hoc/app.py)",
+                severity="error",
+            )
+        )
+    if api_dir.exists() and facades_dir.exists():
+        routers = find_routers_in_api(api_dir)  # path -> {router var names}
+        mounted_modules = find_mounted_routers(facades_dir)  # dotted module paths
 
-        for filename, router_names in routers.items():
-            for router_name in router_names:
-                if (
-                    router_name not in mounted
-                    and f"{filename.replace('.py', '')}.{router_name}"
-                    not in str(mounted)
-                ):
-                    # This is a heuristic check, may have false positives
-                    pass  # Skip for now, too many false positives
+        for filepath_str, router_names in routers.items():
+            path = Path(filepath_str)
+            try:
+                rel = path.relative_to("backend/app")
+            except ValueError:
+                continue
+
+            # Only enforce for L2 router modules under hoc/api/{cus,int,fdr}
+            if rel.parts[:3] != ("hoc", "api", "cus") and rel.parts[:3] != ("hoc", "api", "int") and rel.parts[:3] != ("hoc", "api", "fdr"):
+                continue
+
+            # mounted_modules are captured as "cus.policies.monitors" etc (after app.hoc.api.)
+            mounted_key = ".".join(rel.with_suffix("").parts[2:])  # cus....
+
+            if not router_names:
+                continue
+            if mounted_key not in mounted_modules:
+                all_issues.append(
+                    WiringIssue(
+                        category="orphan_router",
+                        file=str(rel),
+                        message="Defines APIRouter but is not imported by any facade (not mounted)",
+                        severity="error",
+                    )
+                )
 
     # Check 2: Response models
     print("🔍 Checking response models...")

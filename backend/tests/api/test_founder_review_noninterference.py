@@ -87,7 +87,7 @@ class TestReadOnlyNonInterference:
         PIN-333 NON-INTERFERENCE: List endpoint must be GET only.
         No POST, PUT, PATCH, DELETE methods on review endpoints.
         """
-        from app.api.founder_review import router
+        from app.hoc.api.fdr.logs.founder_review import router
 
         # Collect all routes
         routes = []
@@ -113,7 +113,7 @@ class TestReadOnlyNonInterference:
         import ast
         import inspect
 
-        from app.api import founder_review
+        from app.hoc.api.fdr.logs import founder_review
 
         source = inspect.getsource(founder_review)
         tree = ast.parse(source)
@@ -230,7 +230,7 @@ class TestAutoExecuteBehaviorPreservation:
         """
         import inspect
 
-        from app.api import founder_review
+        from app.hoc.api.fdr.logs import founder_review
 
         source = inspect.getsource(founder_review)
 
@@ -296,7 +296,7 @@ class TestRBACEnforcement:
         """
         PIN-333 RBAC: All endpoints must use verify_fops_token dependency.
         """
-        from app.api.founder_review import router
+        from app.hoc.api.fdr.logs.founder_review import router
 
         # Verify all routes have dependencies
         for route in router.routes:
@@ -315,7 +315,7 @@ class TestRBACEnforcement:
         """
         import inspect
 
-        from app.api import founder_review
+        from app.hoc.api.fdr.logs import founder_review
         from app.auth.console_auth import verify_fops_token
 
         # Verify the function exists
@@ -331,7 +331,7 @@ class TestRBACEnforcement:
         """
         PIN-333 RBAC: No routes exposed to customer console.
         """
-        from app.api.founder_review import router
+        from app.hoc.api.fdr.logs.founder_review import router
 
         # All routes must be under /fdr/review prefix
         for route in router.routes:
@@ -353,7 +353,7 @@ class TestAuditTrailNonInterference:
         """
         PIN-333 AUDIT: Audit event emission must not block query operations.
         """
-        from app.api.founder_review import emit_review_audit_event
+        from app.hoc.api.fdr.logs.founder_review import emit_review_audit_event
 
         # Mock session
         mock_session = MagicMock()
@@ -376,7 +376,7 @@ class TestAuditTrailNonInterference:
         """
         PIN-333 AUDIT: Audit failures must not break queries.
         """
-        from app.api.founder_review import emit_review_audit_event
+        from app.hoc.api.fdr.logs.founder_review import emit_review_audit_event
 
         # Mock session that fails
         mock_session = MagicMock()
@@ -489,7 +489,7 @@ class TestNoSideEffects:
         """
         import inspect
 
-        from app.api import founder_review
+        from app.hoc.api.fdr.logs import founder_review
 
         source = inspect.getsource(founder_review)
 
@@ -524,7 +524,7 @@ class TestNoSideEffects:
         """
         import inspect
 
-        from app.api import founder_review
+        from app.hoc.api.fdr.logs import founder_review
 
         source = inspect.getsource(founder_review)
 

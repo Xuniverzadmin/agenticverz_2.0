@@ -274,7 +274,7 @@ no_implicit_reexport = true
 
 [[tool.mypy.overrides]]
 module = [
-    "app.api.*",
+    "app.hoc.api.*",
     "app.skills.*",
     "app.agents.sba.*",
     "app.services.replay_determinism",

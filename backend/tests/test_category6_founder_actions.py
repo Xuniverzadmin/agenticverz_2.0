@@ -233,7 +233,7 @@ class TestEndpointRegistration:
 
     def test_action_endpoints_exist(self):
         """Verify all 4 action endpoints are defined."""
-        import app.api.founder_actions as actions_module
+        import app.hoc.api.fdr.ops.founder_actions as actions_module
 
         source_file = inspect.getfile(actions_module)
         with open(source_file, "r") as f:
@@ -247,7 +247,7 @@ class TestEndpointRegistration:
 
     def test_reversal_endpoints_exist(self):
         """Verify all 3 reversal endpoints are defined."""
-        import app.api.founder_actions as actions_module
+        import app.hoc.api.fdr.ops.founder_actions as actions_module
 
         source_file = inspect.getfile(actions_module)
         with open(source_file, "r") as f:
@@ -260,7 +260,7 @@ class TestEndpointRegistration:
 
     def test_audit_endpoints_exist(self):
         """Verify audit trail endpoints are defined."""
-        import app.api.founder_actions as actions_module
+        import app.hoc.api.fdr.ops.founder_actions as actions_module
 
         source_file = inspect.getfile(actions_module)
         with open(source_file, "r") as f:
@@ -271,7 +271,7 @@ class TestEndpointRegistration:
 
     def test_uses_fops_auth(self):
         """All endpoints must use verify_fops_token."""
-        import app.api.founder_actions as actions_module
+        import app.hoc.api.fdr.ops.founder_actions as actions_module
 
         source_file = inspect.getfile(actions_module)
         with open(source_file, "r") as f:
@@ -291,14 +291,14 @@ class TestSafetyRails:
 
     def test_rate_limit_configured(self):
         """Rate limit must be configured."""
-        import app.api.founder_actions as actions_module
+        import app.hoc.api.fdr.ops.founder_actions as actions_module
 
         assert hasattr(actions_module, "MAX_ACTIONS_PER_HOUR"), "Rate limit not configured"
         assert actions_module.MAX_ACTIONS_PER_HOUR > 0, "Rate limit must be positive"
 
     def test_reversal_map_configured(self):
         """Reversal map must be configured."""
-        import app.api.founder_actions as actions_module
+        import app.hoc.api.fdr.ops.founder_actions as actions_module
 
         assert hasattr(actions_module, "REVERSAL_MAP"), "Reversal map not configured"
         reversal_map = actions_module.REVERSAL_MAP
@@ -312,7 +312,7 @@ class TestSafetyRails:
 
     def test_reversible_actions_configured(self):
         """Reversible actions must be configured correctly."""
-        import app.api.founder_actions as actions_module
+        import app.hoc.api.fdr.ops.founder_actions as actions_module
 
         assert hasattr(actions_module, "REVERSIBLE_ACTIONS"), "Reversible actions not configured"
         reversible = actions_module.REVERSIBLE_ACTIONS
@@ -322,14 +322,14 @@ class TestSafetyRails:
 
     def test_override_incident_not_reversible(self):
         """OVERRIDE_INCIDENT must NOT be in reversible actions."""
-        import app.api.founder_actions as actions_module
+        import app.hoc.api.fdr.ops.founder_actions as actions_module
 
         reversible = actions_module.REVERSIBLE_ACTIONS
         assert "OVERRIDE_INCIDENT" not in reversible, "OVERRIDE_INCIDENT should NOT be reversible"
 
     def test_mutual_exclusion_configured(self):
         """Mutual exclusion must be configured for freeze and throttle."""
-        import app.api.founder_actions as actions_module
+        import app.hoc.api.fdr.ops.founder_actions as actions_module
 
         assert hasattr(actions_module, "MUTUALLY_EXCLUSIVE"), "Mutual exclusion not configured"
         exclusive = actions_module.MUTUALLY_EXCLUSIVE
@@ -439,7 +439,7 @@ class TestInvariants:
 
     def test_invariant_2_mutual_exclusion(self):
         """Freeze and throttle must be mutually exclusive."""
-        import app.api.founder_actions as actions_module
+        import app.hoc.api.fdr.ops.founder_actions as actions_module
 
         exclusive = actions_module.MUTUALLY_EXCLUSIVE
         pairs = [set(p) for p in exclusive]
@@ -449,7 +449,7 @@ class TestInvariants:
 
     def test_invariant_3_override_not_reversible(self):
         """OVERRIDE_INCIDENT must NOT be reversible."""
-        import app.api.founder_actions as actions_module
+        import app.hoc.api.fdr.ops.founder_actions as actions_module
 
         reversible = actions_module.REVERSIBLE_ACTIONS
         reversal_map = actions_module.REVERSAL_MAP
@@ -459,7 +459,7 @@ class TestInvariants:
 
     def test_invariant_4_fops_auth_only(self):
         """Actions must require FOPS auth, not console auth."""
-        import app.api.founder_actions as actions_module
+        import app.hoc.api.fdr.ops.founder_actions as actions_module
 
         source_file = inspect.getfile(actions_module)
         with open(source_file, "r") as f:
@@ -472,7 +472,7 @@ class TestInvariants:
 
     def test_invariant_5_rate_limited(self):
         """Actions must be rate limited."""
-        import app.api.founder_actions as actions_module
+        import app.hoc.api.fdr.ops.founder_actions as actions_module
 
         assert hasattr(actions_module, "MAX_ACTIONS_PER_HOUR"), "Rate limit must be configured"
         assert hasattr(actions_module, "check_rate_limit"), "Rate limit check function must exist"

@@ -336,7 +336,7 @@ class TestCostCalculation:
 
     def test_calculate_cost_gpt4o(self):
         """Test cost calculation for GPT-4o."""
-        from app.api.v1_proxy import calculate_cost
+        from app.hoc.api.cus.integrations.v1_proxy import calculate_cost
 
         # GPT-4o: 250 cents/M input, 1000 cents/M output
         cost = calculate_cost("gpt-4o", 1000, 500)
@@ -349,7 +349,7 @@ class TestCostCalculation:
 
     def test_calculate_cost_gpt4o_mini(self):
         """Test cost calculation for GPT-4o-mini (cheapest)."""
-        from app.api.v1_proxy import calculate_cost
+        from app.hoc.api.cus.integrations.v1_proxy import calculate_cost
 
         # GPT-4o-mini: 15 cents/M input, 60 cents/M output
         cost = calculate_cost("gpt-4o-mini", 10000, 5000)
@@ -362,7 +362,7 @@ class TestCostCalculation:
 
     def test_estimate_tokens(self):
         """Test token estimation."""
-        from app.api.v1_proxy import estimate_tokens
+        from app.hoc.api.cus.integrations.v1_proxy import estimate_tokens
 
         text = "Hello world"  # 11 chars
         tokens = estimate_tokens(text)
@@ -417,7 +417,7 @@ class TestEndpointSchemas:
 
     def test_chat_completion_request_schema(self):
         """Test ChatCompletionRequest validation."""
-        from app.api.v1_proxy import ChatCompletionRequest, ChatMessage
+        from app.hoc.api.cus.integrations.v1_proxy import ChatCompletionRequest, ChatMessage
 
         request = ChatCompletionRequest(
             model="gpt-4o",
@@ -431,7 +431,7 @@ class TestEndpointSchemas:
 
     def test_chat_completion_response_schema(self):
         """Test ChatCompletionResponse validation."""
-        from app.api.v1_proxy import ChatCompletionChoice, ChatCompletionResponse, ChatMessage, Usage
+        from app.hoc.api.cus.integrations.v1_proxy import ChatCompletionChoice, ChatCompletionResponse, ChatMessage, Usage
 
         response = ChatCompletionResponse(
             id="chatcmpl-test123",
@@ -449,7 +449,7 @@ class TestEndpointSchemas:
 
     def test_embedding_request_schema(self):
         """Test EmbeddingRequest validation."""
-        from app.api.v1_proxy import EmbeddingRequest
+        from app.hoc.api.cus.integrations.v1_proxy import EmbeddingRequest
 
         request = EmbeddingRequest(
             model="text-embedding-3-small",

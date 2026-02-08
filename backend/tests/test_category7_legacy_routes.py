@@ -230,6 +230,6 @@ class TestLegacyRouterRegistration:
 
     def test_legacy_routes_have_correct_tags(self):
         """Legacy routes should be tagged for documentation."""
-        from app.api.legacy_routes import router
+        from app.hoc.api.int.general.legacy_routes import router
 
         assert router.tags == ["Legacy (Deprecated)"]
