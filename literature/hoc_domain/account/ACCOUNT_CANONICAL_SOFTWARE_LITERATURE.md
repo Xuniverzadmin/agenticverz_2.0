@@ -11,7 +11,9 @@
 
 - Execution topology: account L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5 gaps).
 - L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain account --json --advisory` reports 0 blocking, 0 advisory.
-- Execution boundary (pairing): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain account --json` reports 0 orphaned L5 entry modules (`total_l5_engines: 5`, `wired_via_l4: 5`, `direct_l2_to_l5: 0`).
+- Execution boundary (pairing): `PYTHONPATH=. python3 backend/scripts/ops/l5_spine_pairing_gap_detector.py --json` reports `total_l5_engines: 69`, `wired_via_l4: 69`, `direct_l2_to_l5: 0`, `orphaned: 0`.
+
+**Tenant Lifecycle SSOT (Phase A1):** persisted lifecycle state is `Tenant.status` and is read/written via account-owned L5/L6 wrapped by L4 operations (`account.lifecycle.query`, `account.lifecycle.transition`).
 
 **Note (Scope):** `backend/app/hoc/cus/account/logs/CRM/audit/audit_engine.py` is CRM governance-job audit (contract/job evidence → verdict), executed via L4 operation `governance.audit_job`.
 

@@ -100,7 +100,7 @@ Observed results (ran from `backend/` unless noted):
 - Repo root: `PYTHONPATH=backend python3 backend/scripts/ci/check_init_hygiene.py --ci` → `0 blocking violations`
 - Repo root: `PYTHONPATH=backend python3 backend/scripts/ci/check_layer_boundaries.py --ci` → `CLEAN`
 - Repo root: `PYTHONPATH=backend python3 backend/scripts/ops/hoc_cross_domain_validator.py` → `CLEAN`
-- Repo root: `PYTHONPATH=backend python3 backend/scripts/ops/l5_spine_pairing_gap_detector.py --json` → `68 wired, 0 orphaned, 0 direct`
+- Repo root: `PYTHONPATH=backend python3 backend/scripts/ops/l5_spine_pairing_gap_detector.py --json` → `69 wired, 0 orphaned, 0 direct`
 
 Strict Option B applied: no `L6_drivers` under the canonical 10 CUS domains import `app.hoc.cus.hoc_spine.*` (no exceptions).
 

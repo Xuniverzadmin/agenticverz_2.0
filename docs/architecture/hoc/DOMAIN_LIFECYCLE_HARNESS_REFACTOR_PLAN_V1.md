@@ -6,10 +6,10 @@
 
 ## Status (2026-02-08)
 
-- Phase A (Account / Tenant lifecycle SSOT): implemented using `Tenant.status` as the canonical persisted lifecycle field.
+- Phase A1 (Account / Tenant lifecycle SSOT): implemented using `Tenant.status` as the canonical persisted lifecycle field.
 - Production call sites rewired to DB-backed lifecycle reads and L4-owned lifecycle operations (`account.lifecycle.query`, `account.lifecycle.transition`).
-- Governance proof gates: `tests/governance/t4` passing; `tests/e2e/test_phase9_lifecycle_e2e.py` passing; and `tests/governance/t0` green in strict mode.
-- Remaining work (this plan): Onboarding SSOT + domain-by-domain lifecycle harnessing (Integrations → Policies → API Keys).
+- Governance proof gates (current): `tests/governance/t0` green in strict mode; layer boundaries/cross-domain/purity/pairing all CLEAN.
+- Remaining work (this plan): Onboarding SSOT (Phase A2) + domain-by-domain lifecycle harnessing (Integrations → Policies → API Keys).
 
 ---
 
@@ -19,14 +19,12 @@
 
 - Persisted tenant status exists: `Tenant.status` in `backend/app/models/tenant.py`.
 - Account domain writes it via L5/L6: `backend/app/hoc/cus/account/L5_engines/tenant_engine.py`, `backend/app/hoc/cus/account/L6_drivers/tenant_driver.py`.
-- Separately, Phase-9 tenant lifecycle exists in auth as enum+provider:
+- Legacy Phase-9 tenant lifecycle rules still exist in auth but are DEPRECATED (kept for compatibility):
   - `backend/app/auth/tenant_lifecycle.py`
   - `backend/app/auth/lifecycle_provider.py`
-- Request gates and founder endpoints consume the auth provider, not the account domain state:
-  - `backend/app/api/middleware/lifecycle_gate.py`
-  - `backend/app/hoc/api/fdr/account/founder_lifecycle.py`
+- Request gates and founder endpoints now read the canonical lifecycle state through L4 (`account.lifecycle.query`) backed by account L5/L6.
 
-**Outcome:** two “ACTIVE/SUSPENDED/TERMINATED/ARCHIVED” systems that can drift.
+**Outcome:** tenant lifecycle duplication is resolved (SSOT = `Tenant.status`). Remaining split is onboarding (next section).
 
 ### 1.2 Onboarding State Ownership (Split)
 
@@ -71,15 +69,11 @@ For each stateful entity (tenant, integration, policy rule, api key):
 
 ## 3) hoc_spine Deliverable: Lifecycle Harness Kit
 
-### 3.1 New Contracts (schemas) and Behaviors (utilities)
+### 3.1 Contracts (schemas) and Wiring Surface
 
-- `hoc_spine/schemas/` (types/protocols only, no standalone functions beyond allowed Law-6 patterns):
-  - `LifecycleActor`, `LifecycleTransitionRequest`, `LifecycleTransitionResult`
-  - `LifecycleStateReader` / `LifecycleStateWriter` Protocols
-- `hoc_spine/utilities/` (behavior):
-  - transition validation helpers (monotonic where needed, allowed transitions table)
-  - idempotency key constructors
-  - audit payload constructors
+- L4 contracts live in `backend/app/hoc/cus/hoc_spine/schemas/lifecycle_harness.py`:
+  - `LifecycleReaderPort`, `LifecycleWriterPort`, `LifecycleGateDecision` Protocols
+  - (Intentionally generic; domain-specific enums/state live in the domain)
 
 ### 3.2 L4 Handler Pattern (Harness Wrapper)
 
@@ -96,26 +90,47 @@ Domains never import hoc_spine L4; they implement logic and are called by L4.
 
 ## 4) Domain Rollout Plan (Phased)
 
-### Phase A: Account (Tenant Lifecycle + Onboarding)
+### Phase A1: Account (Tenant Lifecycle SSOT) — COMPLETE
 
-1. Choose persistence for tenant runtime lifecycle:
-   - Option A: normalize `Tenant.status` to represent lifecycle states.
-   - Option B: add a dedicated persisted field `Tenant.lifecycle_state` (recommended if `status` is overloaded).
-2. Move Phase-9 lifecycle rules into account-owned engine:
-   - `backend/app/hoc/cus/account/auth/L5_engines/tenant_lifecycle_engine.py`
-3. Rewire consumers to account-owned reader/writer:
-   - `backend/app/api/middleware/lifecycle_gate.py`
-   - `backend/app/hoc/api/fdr/account/founder_lifecycle.py`
-4. Onboarding transitions:
-   - move mutation ownership to account domain (engine+driver), keep hoc_spine policy table canonical.
+- Canonical persisted field: `Tenant.status` (`backend/app/models/tenant.py`).
+- Domain-owned rules + transitions:
+  - `backend/app/hoc/cus/account/L5_engines/tenant_lifecycle_engine.py`
+  - `backend/app/hoc/cus/account/L5_schemas/tenant_lifecycle_enums.py`
+  - `backend/app/hoc/cus/account/L5_schemas/lifecycle_dtos.py`
+  - `backend/app/hoc/cus/account/L6_drivers/tenant_lifecycle_driver.py`
+- L4-owned operations:
+  - `backend/app/hoc/cus/hoc_spine/orchestrator/handlers/lifecycle_handler.py`
+- Consumers rewired to canonical read surface (no mock/provider authority):
+  - `backend/app/api/middleware/lifecycle_gate.py`
+  - `backend/app/hoc/api/fdr/account/founder_lifecycle.py`
 
-### Phase B: Integrations (Integration + MCP Server Lifecycle)
+**Invariant:** L4 owns the transaction boundary; L6 contains no commit/begin semantics; domain engines decide transitions.
 
-1. Add L5 engines for status transitions:
-   - `CusIntegrationStatus` and `McpServerStatus`
-2. Provide L4 handler operations for:
-   - state query (read-only)
-   - controlled mutations (enable/disable/error)
+### Phase A2: Account (Onboarding SSOT) — COMPLETE (2026-02-08)
+
+Moved onboarding mutation ownership behind account L5/L6 + L4 operations.
+All 6 HOC call sites rewired to `async_advance_onboarding()` / `async_get_onboarding_state()`.
+Session context files now do real async DB reads (replaced COMPLETE stub).
+
+New files:
+- `backend/app/hoc/cus/account/L5_schemas/onboarding_enums.py` — OnboardingStatus enum mirror
+- `backend/app/hoc/cus/account/L5_schemas/onboarding_dtos.py` — DTOs
+- `backend/app/hoc/cus/account/L6_drivers/onboarding_driver.py` — pure data access (NO COMMIT)
+- `backend/app/hoc/cus/account/L5_engines/onboarding_engine.py` — monotonic state machine
+- `backend/app/hoc/cus/hoc_spine/orchestrator/handlers/onboarding_handler.py` — L4 handlers + async helpers
+
+Tombstoned (2026-03-15):
+- `backend/app/auth/onboarding_transitions.py` (retained for `detect_stalled_onboarding` ops)
+- `backend/app/hoc/int/api_keys/engines/onboarding_transitions.py`
+
+Pairing gap: 69 wired, 0 orphaned, 0 direct.
+CI: 0 blocking purity, 0 advisory, all 30 init checks pass, 599 t0, 429 t4.
+
+### Phase B: Integrations (Integration + MCP Server Lifecycle) — NO-OP (2026-02-08)
+
+Already architecturally compliant. L5 engines own transitions, L6 drivers persist,
+L4 handlers (`integrations_handler.py`, `mcp_handler.py`) are registered. Zero cross-domain violations.
+No changes needed.
 
 ### Phase C: Policies (Rule/Proposal Lifecycle)
 
@@ -134,4 +149,6 @@ Domains never import hoc_spine L4; they implement logic and are called by L4.
 - `PYTHONPATH=. python3 scripts/ci/check_layer_boundaries.py --ci`
 - `PYTHONPATH=. python3 scripts/ops/hoc_cross_domain_validator.py`
 - `pytest backend/tests/governance/t0 -q`
-- `pytest backend/tests/e2e/test_phase9_lifecycle_e2e.py -q`
+  - Current evidence (2026-02-08): `594 passed, 18 xfailed, 1 xpassed`
+- `PYTHONPATH=. python3 scripts/ops/hoc_l5_l6_purity_audit.py --all-domains --advisory`
+- `PYTHONPATH=. python3 scripts/ops/l5_spine_pairing_gap_detector.py`

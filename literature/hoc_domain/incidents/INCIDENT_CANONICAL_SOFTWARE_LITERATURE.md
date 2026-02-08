@@ -10,11 +10,13 @@
 
 ---
 
-## Reality Delta (2026-02-07)
+## Reality Delta (2026-02-08)
 
 - L2 purity preserved: incidents L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5).
 - L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain incidents --json --advisory` reports 0 blocking, 0 advisory.
-- Remaining coherence debt (execution boundary): 5 orphaned L5 entry modules remain in `backend/app/hoc/cus/incidents/L5_engines/` (see `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`).
+- Execution boundary (pairing): `PYTHONPATH=. python3 backend/scripts/ops/l5_spine_pairing_gap_detector.py --json` reports `total_l5_engines: 69`, `wired_via_l4: 69`, `direct_l2_to_l5: 0`, `orphaned: 0` (incidents entry modules are no longer orphaned).
+
+**Strict T0 invariant:** incidents `L6_drivers/` contain no `hoc_spine` imports; any cross-domain coordination is wired at L4.
 
 ## Table of Contents
 

@@ -11,8 +11,10 @@
 
 - Execution topology: L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5 gaps).
 - L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain policies --json --advisory` reports 0 blocking, 0 advisory.
-- Execution boundary (pairing): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain policies --json` reports 0 orphaned L5 entry modules (`total_l5_engines: 17`, `wired_via_l4: 17`, `direct_l2_to_l5: 0`).
+- Execution boundary (pairing): `PYTHONPATH=. python3 backend/scripts/ops/l5_spine_pairing_gap_detector.py --json` reports `total_l5_engines: 69`, `wired_via_l4: 69`, `direct_l2_to_l5: 0`, `orphaned: 0`.
 - Plan: `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`.
+
+**Strict T0 wiring fix:** policy plan generation now imports `get_planner` from `app.planners` (not `hoc.int.platform` facades) to preserve authority boundaries.
 
 **Runtime Call Path Added:** `SandboxService.execute` is now exercised via L4 operation `policies.sandbox_execute` (handler: `hoc_spine/orchestrator/handlers/policies_sandbox_handler.py`).
 

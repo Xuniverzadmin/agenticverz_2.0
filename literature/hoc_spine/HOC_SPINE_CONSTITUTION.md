@@ -263,12 +263,16 @@ language** of execution.
 2. **Execution Context** — Represents runtime state passed across layers.
 3. **Authority Decisions** — Encodes allow / deny / conditional outcomes.
 4. **API Response Envelopes** — Standard response shapes for external consumers.
+5. **Domain Lifecycle Harness Ports** — Read/write port Protocols that let L4 wrap
+   domain-owned lifecycle transitions without domains importing hoc_spine orchestration
+   (see `backend/app/hoc/cus/hoc_spine/schemas/lifecycle_harness.py`).
 
 #### How Domains Access It
 
 - Domains may:
   - Consume schema types
   - Return schema-conformant results
+  - Implement Protocol ports (domain-owned logic behind L4)
 - They must not modify or extend schemas locally
 
 #### Absolute Rule
@@ -455,6 +459,10 @@ Governs **system lifecycle phases** that surround execution. Lifecycle is about
 - Not user workflow logic
 
 Lifecycle answers **"is the system in a state where this execution makes sense?"**
+
+**Clarification (avoid template conflation):** “Domain entity lifecycle” (tenant/integration/policy/api key status)
+is domain-owned and is wrapped by L4 operations (using `schemas/lifecycle_harness.py`). It is intentionally
+separate from `orchestrator/lifecycle/`, which governs system lifecycle phases and the knowledge plane.
 
 #### Canonical Import Surfaces (No Split-Brain)
 

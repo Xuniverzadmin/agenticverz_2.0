@@ -7,6 +7,12 @@
 
 ---
 
+## Reality Delta (2026-02-08)
+
+- L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain controls --json --advisory` reports 0 blocking, 0 advisory.
+- Execution boundary (pairing): `PYTHONPATH=. python3 backend/scripts/ops/l5_spine_pairing_gap_detector.py --json` reports `total_l5_engines: 69`, `wired_via_l4: 69`, `direct_l2_to_l5: 0`, `orphaned: 0`.
+- Strict T0 invariant: controls `L6_drivers/` contain no `hoc_spine` imports.
+
 ## Script Registry
 
 Each script's unique contribution and canonical function.
