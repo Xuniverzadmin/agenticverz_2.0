@@ -476,6 +476,7 @@ separate from `orchestrator/lifecycle/`, which governs system lifecycle phases a
 #### Canonical Literature + Plan (This Workstream)
 
 - Literature (first principles): `literature/hoc_spine/KNOWLEDGE_PLANE_LITERATURE.md`
+- Literature (template + harness): `literature/hoc_spine/KNOWLEDGE_PLANE_LIFECYCLE_HARNESS_LITERATURE.md`
 - Implementation plan (template + harness + durability): `docs/architecture/hoc/KNOWLEDGE_PLANE_LIFECYCLE_HARNESS_PLAN_V2.md`
 
 ---

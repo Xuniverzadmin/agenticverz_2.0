@@ -40,6 +40,9 @@ Without a canonical contract and a single owner (hoc_spine), the codebase drifts
   - First-principles model: knowledge access is authorization, deny-by-default.
   - Asset vs Plane distinction.
   - Runtime enforcement + evidence requirements.
+- `literature/hoc_spine/KNOWLEDGE_PLANE_LIFECYCLE_HARNESS_LITERATURE.md`
+  - Canonical harness template: authority, identity, audience surfaces, and ports.
+  - Explicitly separates tenant lifecycle SSOT vs knowledge plane lifecycle SSOT.
 
 ### Cross-References Added
 

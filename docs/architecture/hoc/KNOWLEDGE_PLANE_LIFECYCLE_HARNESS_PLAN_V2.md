@@ -162,6 +162,10 @@ The canonical plane registry and lifecycle state must be **persisted to Postgres
    - `KnowledgePolicyGatePort` (deny-by-default access checks)
    - `KnowledgeConnectorRegistryPort` (resolve connector for plane)
 
+**Phase 1 implementation (2026-02-08):**
+- Harness kit (stdlib-only) added: `backend/app/hoc/cus/hoc_spine/schemas/knowledge_plane_harness.py`
+- Canonical harness literature: `literature/hoc_spine/KNOWLEDGE_PLANE_LIFECYCLE_HARNESS_LITERATURE.md`
+
 **Exit criteria:** hoc_spine template compiles with Protocol-only dependencies.
 
 ### Phase 2 — Persistence + Alembic Migration
