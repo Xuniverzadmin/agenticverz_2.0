@@ -277,19 +277,21 @@ async def get_stalled_tenants(
 
     Use the force-complete endpoint to resolve if needed.
     """
-    from app.auth.onboarding_transitions import detect_stalled_onboarding
+    from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
+        async_detect_stalled_onboarding,
+    )
 
-    stalled = await detect_stalled_onboarding(threshold_hours=threshold_hours)
+    stalled = await async_detect_stalled_onboarding(threshold_hours=threshold_hours)
 
     return wrap_dict({
         "stalled_count": len(stalled),
         "threshold_hours": threshold_hours,
         "tenants": [
             {
-                "tenant_id": t.tenant_id,
-                "current_state": t.current_state.name,
-                "hours_stalled": round(t.hours_in_state, 1),
-                "created_at": t.created_at.isoformat(),
+                "tenant_id": t.get("tenant_id"),
+                "current_state": t.get("state_name"),
+                "hours_stalled": round(float(t.get("hours_stalled", 0.0)), 1),
+                "created_at": t.get("created_at"),
             }
             for t in stalled
         ],

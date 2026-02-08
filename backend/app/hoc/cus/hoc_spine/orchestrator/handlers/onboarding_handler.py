@@ -240,6 +240,77 @@ async def async_get_onboarding_state(tenant_id: str) -> Optional[int]:
         return None
 
 
+async def async_detect_stalled_onboarding(threshold_hours: int = 24) -> list[dict]:
+    """
+    L4-owned stalled onboarding detection.
+
+    Ops/founder visibility helper: returns tenants that are not COMPLETE and were
+    created more than `threshold_hours` ago.
+
+    Returns:
+      [
+        {
+          "tenant_id": "...",
+          "state_value": 1,
+          "state_name": "IDENTITY_VERIFIED",
+          "created_at": "2026-02-08T00:00:00",
+          "hours_stalled": 25.0,
+        },
+        ...
+      ]
+
+    Uses raw SQL via get_async_session_context() — no ORM dependency.
+    """
+    from datetime import datetime, timedelta
+
+    from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+        get_async_session_context,
+        sql_text,
+    )
+    from app.hoc.cus.account.L5_schemas.onboarding_enums import (
+        OnboardingStatus,
+        ONBOARDING_STATUS_NAMES,
+    )
+
+    now = datetime.utcnow()
+    threshold_time = now - timedelta(hours=threshold_hours)
+
+    async with get_async_session_context() as session:
+        rows = (await session.execute(
+            sql_text(
+                "SELECT id, onboarding_state, created_at "
+                "FROM tenants "
+                "WHERE onboarding_state < :complete AND created_at < :threshold"
+            ),
+            {
+                "complete": OnboardingStatus.COMPLETE.value,
+                "threshold": threshold_time,
+            },
+        )).mappings().all()
+
+        stalled: list[dict] = []
+        for row in rows:
+            created_at = row.get("created_at")
+            if not created_at:
+                continue
+
+            state_value = row.get("onboarding_state", 0)
+            state_name = ONBOARDING_STATUS_NAMES.get(state_value, f"UNKNOWN_{state_value}")
+            hours_stalled = (now - created_at).total_seconds() / 3600
+
+            stalled.append(
+                {
+                    "tenant_id": row.get("id"),
+                    "state_value": state_value,
+                    "state_name": state_name,
+                    "created_at": created_at.isoformat(),
+                    "hours_stalled": hours_stalled,
+                }
+            )
+
+        return stalled
+
+
 def register(registry: OperationRegistry) -> None:
     """Register onboarding operations with the registry."""
     registry.register("account.onboarding.query", AccountOnboardingQueryHandler())
