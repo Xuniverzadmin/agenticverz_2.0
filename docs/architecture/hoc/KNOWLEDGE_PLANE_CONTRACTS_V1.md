@@ -61,6 +61,10 @@ This document exists to prevent ontology drift by making authority, identity, an
 - CUS exposes only `POST /retrieval/access` in `backend/app/hoc/api/cus/policies/retrieval.py`.
 - Plane registry + evidence query are founder-only (guarded by `verify_fops_token`) in `backend/app/hoc/api/fdr/ops/retrieval_admin.py`.
 
+**Phase 3 wiring (2026-02-08):**
+- Founder retrieval admin routes dispatch through `OperationRegistry` to L4 operations:
+  - `knowledge.planes.*`, `knowledge.evidence.*`
+
 ---
 
 ## Mechanical Checks (Phase 0)

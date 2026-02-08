@@ -98,7 +98,9 @@ This document exists to make the existing engine blocks mechanically explicit be
 - Wiring:
   - CUS: included via `backend/app/hoc/api/facades/cus/policies.py`
   - FDR: included via `backend/app/hoc/api/facades/fdr/ops.py`
-- Both routes currently import the L4 service facade directly (no `OperationRegistry` dispatch yet).
+- Dispatch:
+  - CUS route still calls `RetrievalFacade` directly (Phase 4 will route retrieval through L4 ops).
+  - FDR retrieval admin routes now dispatch through `OperationRegistry` to `knowledge.planes.*` and `knowledge.evidence.*` (Phase 3 complete).
 
 **Implication:** plane registration is currently possible without knowledge lifecycle authority.
 

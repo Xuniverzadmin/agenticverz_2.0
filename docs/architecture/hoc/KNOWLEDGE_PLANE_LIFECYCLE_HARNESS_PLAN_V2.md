@@ -198,6 +198,13 @@ The canonical plane registry and lifecycle state must be **persisted to Postgres
    - hoc_spine authority gate on transitions (protected actions)
    - transaction boundaries owned by orchestrator context
 
+**Phase 3 implementation (2026-02-08):**
+- L4 operations registered:
+  - `knowledge.planes.register|get|list`
+  - `knowledge.evidence.get|list`
+- Founder retrieval admin surface routes through L4 operations:
+  - `backend/app/hoc/api/fdr/ops/retrieval_admin.py`
+
 **Exit criteria:** no direct “manager singleton” usage from routes/workers.
 
 ### Phase 4 — Unify Retrieval With Persisted Planes

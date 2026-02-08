@@ -78,6 +78,10 @@ Canonical exposure rules (Phase 0 enforced):
 
 These are surface contracts, not implementation details.
 
+Phase 3 wiring note:
+- Founder plane registry + evidence query now dispatch via L4 `OperationRegistry` operations
+  (`knowledge.planes.*`, `knowledge.evidence.*`).
+
 ---
 
 ## 5) What “Harnessable Template” Means
@@ -130,4 +134,3 @@ Nothing is “replaced”.
 
 This avoids semantic duplication of “active/suspended/terminated”:
 those are tenant-global, not plane-local.
-
