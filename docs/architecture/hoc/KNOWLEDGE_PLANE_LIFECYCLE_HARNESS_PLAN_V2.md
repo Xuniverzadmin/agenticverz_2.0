@@ -11,7 +11,7 @@
 ## 0) Fixed Decisions (Recorded)
 
 1. **Plane cardinality:** many planes per tenant, keyed by `(tenant_id, plane_type, plane_name)` (not “1 plane per tenant”).
-2. **Exposure surface:** **internal system runtime component** (INT/founder only; not a public CUS surface).
+2. **Exposure surface:** hoc_spine is **system runtime** for customer-domain components (policies, account, integrations, logs). Audience surfaces (**CUS / INT / FDR**) are separate and must be wired intentionally; do not assume “internal-only” or “customer-only” for knowledge plane operations.
 3. **Transition authority:** hoc_spine authority gates transitions; do not delegate transition authority to CUS domain engines.
 
 ---
@@ -44,10 +44,10 @@
   - `backend/app/hoc/int/general/engines/retrieval_hook.py` (mandatory worker hook)
 - The “planes” used by mediation are not persisted (in-memory in RetrievalFacade).
 
-### 1.3 Surface Placement Conflict (Needs Resolution)
+### 1.3 Audience Scoping Is Not Explicit (Needs Resolution)
 
-- There is a CUS router at `backend/app/hoc/api/cus/policies/retrieval.py` exposing plane list/register and evidence endpoints.
-- This conflicts with the recorded decision: **knowledge lifecycle is an internal runtime component**.
+- Plane management and evidence query surfaces must be explicitly scoped to an audience runtime (CUS/INT/FDR).
+- Current placement includes a CUS router at `backend/app/hoc/api/cus/policies/retrieval.py` exposing plane list/register and evidence endpoints.
 
 ---
 
@@ -68,7 +68,7 @@ Invariants:
    - stage ordering
    - transition gating (authority)
    - audit/evidence requirements
-   - operation surfaces (INT/founder)
+   - audience-scoped operation surfaces (CUS/INT/FDR) wired via entrypoints (L2.1) and orchestrator registry
 
 2. **Domains “harness” the template by providing capabilities, not authority:**
    - integrations: connector registry + ingestion/index workers
@@ -120,9 +120,9 @@ The canonical plane registry and lifecycle state must be **persisted to Postgres
    - **graph plane** (`lifecycle/drivers/knowledge_plane.py`) is either:
      - retired, or
      - renamed and explicitly separated as “knowledge graph” (not access plane)
-3. Re-home the L2 router surface:
-   - move plane registration/listing out of `hoc/api/cus/` into **INT/founder** surface,
-   - keep `retrieval/access` as the external retrieval choke point only if intended.
+3. Make audience scoping explicit for plane operations:
+   - decide which audience runtime(s) own plane registration/listing and evidence query,
+   - keep `retrieval/access` as the external retrieval choke point only if intentionally productized for CUS (deny-by-default remains mandatory).
 
 **Exit criteria:** written decision on plane meaning + updated routing map.
 
@@ -201,4 +201,3 @@ The canonical plane registry and lifecycle state must be **persisted to Postgres
 - `PYTHONPATH=. python3 scripts/ci/check_layer_boundaries.py --ci`
 - `PYTHONPATH=. python3 scripts/ops/hoc_cross_domain_validator.py`
 - `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --json --advisory`
-

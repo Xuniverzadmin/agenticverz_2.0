@@ -20,7 +20,7 @@ Without a canonical contract and a single owner (hoc_spine), the codebase drifts
 ## Locked Decisions (Recorded)
 
 1. **Plane cardinality:** many planes per tenant, keyed by `(tenant_id, plane_type, plane_name)`.
-2. **Exposure:** knowledge lifecycle is an **internal runtime component** (INT/founder only; not a public CUS surface).
+2. **Exposure:** hoc_spine is **system runtime** for customer-domain components. Audience surfaces (**CUS / INT / FDR**) are separate and must be wired intentionally; knowledge plane surfaces must not be assumed “internal-only” or “customer-only”.
 3. **Authority:** hoc_spine is the transition authority; CUS domain engines provide capabilities but must not own lifecycle authority.
 
 ---
@@ -59,4 +59,3 @@ This PIN records the plan and literature only. The next execution phases are:
 - register L4 operations for knowledge plane management (INT surface),
 - unify retrieval plane registry with lifecycle plane registry,
 - delete duplicate plane registries after importers are zero.
-

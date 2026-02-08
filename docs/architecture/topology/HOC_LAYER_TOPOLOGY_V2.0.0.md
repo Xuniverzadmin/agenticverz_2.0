@@ -78,13 +78,26 @@ L6 Driver(s)
 L7 Models
 ```
 
+### Audience Surfaces (CUS / INT / FDR)
+
+HOC has **multiple audience surfaces** at L2.1/L2:
+- `cus/` (customer console)
+- `int/` (internal operators / system runtime operators)
+- `fdr/` (founder ops)
+
+These audiences are **separate L2.1/L2 surfaces** that may expose different operations and contracts.
+They all dispatch into the **same** L4 execution authority (hoc_spine).
+
+**Invariant:** hoc_spine is the system runtime and execution authority; it is not an audience surface.
+Audience runtimes must be wired intentionally via L2.1 facades and explicit handler registration.
+
 ### Layer Definitions
 
 ---
 
 ### L2.1 — FACADE (Organizer)
 
-**Location:** `hoc/api/facades/cus/{domain}.py`
+**Location:** `hoc/api/facades/{audience}/{domain}.py` where `{audience}` ∈ `{cus,int,fdr}`
 
 **Responsibility:** Groups L2 routers by audience and domain. Conceals API structure from outside world.
 
@@ -111,7 +124,7 @@ routers = [
 
 ### L2 — API (HTTP Boundary)
 
-**Location:** `hoc/api/cus/{domain}/*.py`
+**Location:** `hoc/api/{audience}/{domain}/*.py` where `{audience}` ∈ `{cus,int,fdr}`
 
 **Responsibility:** HTTP request/response handling. Thin. Translates HTTP to domain operation.
 

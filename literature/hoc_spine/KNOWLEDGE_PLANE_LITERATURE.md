@@ -103,7 +103,8 @@ The point of evidence is to support the question:
 ## 8) Authority Boundaries (System Rule)
 
 Recorded decisions:
-- Knowledge lifecycle is an **internal runtime component**.
+- hoc_spine is **system runtime** for customer-domain components (policies, account, integrations, logs).
+- Audience surfaces (**CUS / INT / FDR**) are separate and must be wired intentionally; hoc_spine is not an “audience” surface.
 - hoc_spine is the authority for lifecycle transitions.
 - CUS domains may provide capabilities (connectors, ingestion jobs) but must not own the authority.
 
@@ -118,4 +119,3 @@ The refactor plan (V2) moves this to Postgres and unifies the plane contract und
 
 Reference plan:
 - `docs/architecture/hoc/KNOWLEDGE_PLANE_LIFECYCLE_HARNESS_PLAN_V2.md`
-
