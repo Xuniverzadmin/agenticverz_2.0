@@ -312,25 +312,25 @@ class AuthGatewayMiddleware(BaseHTTPMiddleware):
             if not tenant_id:
                 return
 
-            # Import here to avoid circular dependency
-            from .onboarding_transitions import (
-                TransitionTrigger,
-                get_onboarding_service,
+            # L4-owned async onboarding advance (Phase A2: Onboarding SSOT)
+            from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
+                async_advance_onboarding,
+            )
+            from app.hoc.cus.account.L5_schemas.onboarding_enums import OnboardingStatus
+
+            result = await async_advance_onboarding(
+                tenant_id,
+                OnboardingStatus.IDENTITY_VERIFIED.value,
+                "first_human_auth",
             )
 
-            service = get_onboarding_service()
-            result = await service.advance_to_identity_verified(
-                tenant_id=tenant_id,
-                trigger=TransitionTrigger.FIRST_HUMAN_AUTH,
-            )
-
-            if result.success and not result.was_no_op:
+            if result["success"] and not result.get("was_no_op"):
                 logger.info(
                     "onboarding_advanced_on_first_human_auth",
                     extra={
                         "tenant_id": tenant_id,
-                        "from_state": result.from_state.name,
-                        "to_state": result.to_state.name,
+                        "from_state": result.get("from_state"),
+                        "to_state": result.get("to_state"),
                     },
                 )
 

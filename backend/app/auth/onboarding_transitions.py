@@ -1,10 +1,13 @@
+# TOMBSTONE_EXPIRY: 2026-03-15
+# DEPRECATED: Production callers use account L5/L6 via onboarding_handler.py
+# Retained for: detect_stalled_onboarding (ops), test compatibility
 # Layer: L4 — Domain Engine
 # Product: system-wide
 # Temporal:
 #   Trigger: api, worker
 #   Execution: async
-# Role: Central service for onboarding state transitions
-# Callers: gateway_middleware, api_keys router, sdk handshake
+# Role: Central service for onboarding state transitions (DEPRECATED — see onboarding_handler.py)
+# Callers: detect_stalled_onboarding (ops only), legacy tests
 # Allowed Imports: L6
 # Forbidden Imports: L1, L2, L3, L5
 # Reference: PIN-399 (Onboarding State Machine v1)

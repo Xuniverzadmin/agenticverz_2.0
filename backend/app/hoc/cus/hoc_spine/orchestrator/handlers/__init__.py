@@ -135,6 +135,11 @@ def register_all_handlers(registry: "OperationRegistry") -> None:
 
     lifecycle_handler.register(registry)  # account.lifecycle.query, account.lifecycle.transition
 
+    # Onboarding SSOT — DB-backed onboarding state (Phase A2: Onboarding SSOT)
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import onboarding_handler
+
+    onboarding_handler.register(registry)  # account.onboarding.query, account.onboarding.advance
+
 
 def bootstrap_hoc_spine() -> None:
     """

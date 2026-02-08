@@ -48,7 +48,6 @@ from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     sql_text,
 )
 from app.hoc.cus.account.L5_schemas.tenant_lifecycle_enums import normalize_status
-from app.auth.onboarding_state import OnboardingState
 from app.schemas.response import wrap_dict
 
 router = APIRouter(prefix="/session", tags=["Session"])
@@ -102,7 +101,7 @@ async def get_session_context(request: Request) -> Dict[str, Any]:
         # Get lifecycle and onboarding state if tenant_id is present
         if tenant_id:
             lifecycle_state = await _fetch_lifecycle_state_name(tenant_id)
-            onboarding_state = _get_onboarding_state(tenant_id)
+            onboarding_state = await _get_onboarding_state(tenant_id)
 
     elif isinstance(context, MachineCapabilityContext):
         # Machine: API key client with scopes
@@ -143,23 +142,14 @@ async def _fetch_lifecycle_state_name(tenant_id: str) -> str:
         return status.value.upper()
 
 
-def _get_onboarding_state(tenant_id: str) -> str:
-    """
-    Get onboarding state for a tenant.
+async def _get_onboarding_state(tenant_id: str) -> str:
+    """Fetch onboarding state name from DB (Tenant.onboarding_state)."""
+    from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
+        async_get_onboarding_state,
+    )
+    from app.hoc.cus.account.L5_schemas.onboarding_enums import OnboardingStatus
 
-    This is a simplified implementation. In production, this would query
-    the tenant model from the database.
-
-    For now, we assume COMPLETE if the tenant exists and has authenticated.
-
-    Args:
-        tenant_id: The tenant ID to look up
-    """
-    # TODO: Query actual tenant onboarding_state from database
-    # Implementation: db.query(Tenant).filter(Tenant.id == tenant_id).first().onboarding_state
-    # For MVP, assume COMPLETE for authenticated tenants
-    # The middleware only allows authenticated requests, which means
-    # the tenant has at least reached IDENTITY_VERIFIED
-    if not tenant_id:
-        return OnboardingState.CREATED.name
-    return OnboardingState.COMPLETE.name
+    state = await async_get_onboarding_state(tenant_id)
+    if state is None:
+        return "CREATED"
+    return OnboardingStatus(state).name

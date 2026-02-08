@@ -254,15 +254,16 @@ async def get_onboarding_status(request: Request):
             detail="Tenant context required",
         )
 
-    # Get current state from database
-    from app.auth.onboarding_transitions import get_onboarding_service
+    # Get current state from database (Phase A2: Onboarding SSOT)
+    from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
+        async_get_onboarding_state,
+    )
 
-    service = get_onboarding_service()
-    current_state = await service.get_current_state(tenant_id)
-
-    if current_state is None:
-        # Tenant not found - default to CREATED
+    state_val = await async_get_onboarding_state(tenant_id)
+    if state_val is None:
         current_state = OnboardingState.CREATED
+    else:
+        current_state = OnboardingState(state_val)
 
     # Get next action (action_id and action_type only)
     action_data = STATE_ACTIONS.get(current_state, STATE_ACTIONS[OnboardingState.CREATED])
@@ -317,31 +318,31 @@ async def verify_identity(request: Request):
             detail="Tenant context required",
         )
 
-    # Trigger transition
-    from app.auth.onboarding_transitions import (
-        TransitionTrigger,
-        get_onboarding_service,
+    # Trigger transition (Phase A2: Onboarding SSOT)
+    from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
+        async_advance_onboarding,
+    )
+    from app.hoc.cus.account.L5_schemas.onboarding_enums import OnboardingStatus
+
+    result = await async_advance_onboarding(
+        tenant_id,
+        OnboardingStatus.IDENTITY_VERIFIED.value,
+        "first_human_auth",
     )
 
-    service = get_onboarding_service()
-    result = await service.advance_to_identity_verified(
-        tenant_id=tenant_id,
-        trigger=TransitionTrigger.FIRST_HUMAN_AUTH,
-    )
-
-    if result.success:
+    if result["success"]:
         return OnboardingVerifyResponse(
             verified=True,
             tenant_id=tenant_id,
-            current_state=result.to_state.name,
+            current_state=result.get("to_state", "UNKNOWN"),
             message="Identity verified successfully",
         )
     else:
         return OnboardingVerifyResponse(
             verified=False,
             tenant_id=tenant_id,
-            current_state=result.from_state.name,
-            message=result.message,
+            current_state=result.get("from_state", "UNKNOWN"),
+            message=result.get("message", "Transition failed"),
         )
 
 
@@ -369,20 +370,21 @@ async def advance_api_key_created(request: Request):
             detail="Tenant context required",
         )
 
-    from app.auth.onboarding_transitions import (
-        TransitionTrigger,
-        get_onboarding_service,
+    # Phase A2: Onboarding SSOT
+    from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
+        async_advance_onboarding,
     )
+    from app.hoc.cus.account.L5_schemas.onboarding_enums import OnboardingStatus
 
-    service = get_onboarding_service()
-    result = await service.advance_to_api_key_created(
-        tenant_id=tenant_id,
-        trigger=TransitionTrigger.FIRST_API_KEY_CREATED,
+    result = await async_advance_onboarding(
+        tenant_id,
+        OnboardingStatus.API_KEY_CREATED.value,
+        "first_api_key_created",
     )
 
     return wrap_dict({
-        "success": result.success,
-        "from_state": result.from_state.name,
-        "to_state": result.to_state.name,
-        "was_no_op": result.was_no_op,
+        "success": result["success"],
+        "from_state": result.get("from_state", "UNKNOWN"),
+        "to_state": result.get("to_state", "UNKNOWN"),
+        "was_no_op": result.get("was_no_op", False),
     })
