@@ -176,7 +176,7 @@ The canonical plane registry and lifecycle state must be **persisted to Postgres
    - `hoc_spine/drivers/retrieval_evidence_driver.py`
 3. Provide a migration to backfill any existing in-memory usage expectations (minimal seed).
 
-**Phase 2 implementation (in progress, 2026-02-08):**
+**Phase 2 implementation (DONE 2026-02-08):**
 - Canonical governed plane SSOT table + model:
   - Model: `backend/app/models/knowledge_plane_registry.py`
   - Migration: `backend/alembic/versions/122_knowledge_plane_registry.py`
@@ -214,7 +214,19 @@ The canonical plane registry and lifecycle state must be **persisted to Postgres
    - only `ACTIVE` planes can be accessed.
 3. Persist evidence (no in-memory `_evidence`).
 
+**Phase 4 implementation (DONE 2026-02-08):**
+- RetrievalMediator default wiring now uses DB-backed connector registry + evidence writer:
+  - `backend/app/hoc/cus/hoc_spine/services/retrieval_mediator.py`
+  - `backend/app/hoc/cus/hoc_spine/services/knowledge_plane_connector_registry_engine.py`
+  - `backend/app/hoc/cus/hoc_spine/services/retrieval_evidence_engine.py`
+- RetrievalFacade plane/evidence methods now read/write via Postgres drivers (no in-memory `_planes`/`_evidence`):
+  - `backend/app/hoc/cus/hoc_spine/services/retrieval_facade.py`
+
 **Exit criteria:** retrieval path is durable + provable.
+
+**Notes / Remaining Work (post-Phase 4):**
+- A real `PolicyChecker` implementation must be injected to allow access (deny-by-default remains invariant).
+- A real runtime connector factory must be implemented for `(connector_type, connector_id)` bindings; Phase 4 resolves the binding and enforces ACTIVE, but uses a placeholder connector for now.
 
 ### Phase 5 — Delete Duplicates / Shims
 

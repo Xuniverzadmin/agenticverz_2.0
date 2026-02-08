@@ -58,7 +58,6 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-import uuid
 
 logger = logging.getLogger("nova.services.retrieval.facade")
 
@@ -159,10 +158,6 @@ class RetrievalFacade:
     def __init__(self):
         """Initialize facade with lazy-loaded services."""
         self._mediator = None
-
-        # In-memory store for demo (would be database in production)
-        self._planes: Dict[str, PlaneInfo] = {}
-        self._evidence: Dict[str, EvidenceInfo] = {}
 
     @property
     def mediator(self):
@@ -300,13 +295,33 @@ class RetrievalFacade:
             extra={"tenant_id": tenant_id, "connector_type": connector_type}
         )
 
-        # Filter planes
-        results = []
-        for plane in self._planes.values():
-            if plane.tenant_id != tenant_id:
-                continue
-            if connector_type and plane.connector_type != connector_type:
-                continue
+        from app.hoc.cus.hoc_spine.drivers.knowledge_plane_registry_driver import (
+            KnowledgePlaneRegistryDriver,
+        )
+        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+            get_async_session_context,
+        )
+        from app.models.knowledge_lifecycle import KnowledgePlaneLifecycleState
+
+        driver = KnowledgePlaneRegistryDriver()
+        async with get_async_session_context() as session:
+            records = await driver.list_by_tenant(
+                session,
+                tenant_id=tenant_id,
+                plane_type=str(connector_type) if connector_type else None,
+            )
+
+        results: List[PlaneInfo] = []
+        for record in records:
+            state = KnowledgePlaneLifecycleState(record.lifecycle_state_value).name.lower()
+            plane = PlaneInfo(
+                id=record.plane_id,
+                name=record.plane_name,
+                connector_type=record.connector_type,
+                status=state,
+                tenant_id=record.tenant_id,
+                capabilities=list(record.config.get("capabilities", [])) if isinstance(record.config, dict) else [],
+            )
             if status and plane.status != status:
                 continue
             results.append(plane)
@@ -343,19 +358,38 @@ class RetrievalFacade:
             }
         )
 
-        plane_id = str(uuid.uuid4())
-
-        plane = PlaneInfo(
-            id=plane_id,
-            name=name,
-            connector_type=connector_type,
-            status="active",
-            tenant_id=tenant_id,
-            capabilities=capabilities or ["query", "retrieve"],
+        from app.hoc.cus.hoc_spine.drivers.knowledge_plane_registry_driver import (
+            KnowledgePlaneRegistryDriver,
         )
+        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+            get_async_session_context,
+        )
+        from app.models.knowledge_lifecycle import KnowledgePlaneLifecycleState
 
-        self._planes[plane_id] = plane
-        return plane
+        driver = KnowledgePlaneRegistryDriver()
+        config = {"capabilities": capabilities or ["query", "retrieve"]}
+
+        async with get_async_session_context() as session:
+            async with session.begin():
+                record = await driver.create(
+                    session,
+                    tenant_id=tenant_id,
+                    plane_type=str(connector_type),
+                    plane_name=str(name),
+                    connector_type=str(connector_type),
+                    connector_id=str(connector_id),
+                    config=config,
+                    created_by=None,
+                )
+
+        return PlaneInfo(
+            id=record.plane_id,
+            name=record.plane_name,
+            connector_type=record.connector_type,
+            status=KnowledgePlaneLifecycleState(record.lifecycle_state_value).name.lower(),
+            tenant_id=record.tenant_id,
+            capabilities=list(config.get("capabilities", [])),
+        )
 
     async def get_plane(
         self,
@@ -372,10 +406,31 @@ class RetrievalFacade:
         Returns:
             PlaneInfo or None if not found
         """
-        plane = self._planes.get(plane_id)
-        if plane and plane.tenant_id == tenant_id:
-            return plane
-        return None
+        from app.hoc.cus.hoc_spine.drivers.knowledge_plane_registry_driver import (
+            KnowledgePlaneRegistryDriver,
+        )
+        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+            get_async_session_context,
+        )
+        from app.models.knowledge_lifecycle import KnowledgePlaneLifecycleState
+
+        driver = KnowledgePlaneRegistryDriver()
+        async with get_async_session_context() as session:
+            record = await driver.get_by_id(session, tenant_id=tenant_id, plane_id=str(plane_id))
+
+        if record is None:
+            return None
+
+        state = KnowledgePlaneLifecycleState(record.lifecycle_state_value).name.lower()
+        capabilities = list(record.config.get("capabilities", [])) if isinstance(record.config, dict) else []
+        return PlaneInfo(
+            id=record.plane_id,
+            name=record.plane_name,
+            connector_type=record.connector_type,
+            status=state,
+            tenant_id=record.tenant_id,
+            capabilities=capabilities,
+        )
 
     # =========================================================================
     # Evidence Operations (GAP-094)
@@ -407,22 +462,41 @@ class RetrievalFacade:
             extra={"tenant_id": tenant_id, "run_id": run_id}
         )
 
-        # Filter evidence
-        results = []
-        for evidence in self._evidence.values():
-            if evidence.tenant_id != tenant_id:
-                continue
-            if run_id and evidence.run_id != run_id:
-                continue
-            if plane_id and evidence.plane_id != plane_id:
-                continue
-            results.append(evidence)
+        from app.hoc.cus.hoc_spine.drivers.retrieval_evidence_driver import (
+            RetrievalEvidenceDriver,
+        )
+        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+            get_async_session_context,
+        )
 
-        # Sort by timestamp descending
-        results.sort(key=lambda e: e.timestamp, reverse=True)
+        driver = RetrievalEvidenceDriver()
+        async with get_async_session_context() as session:
+            records = await driver.list(
+                session,
+                tenant_id=tenant_id,
+                run_id=str(run_id) if run_id else None,
+                plane_id=str(plane_id) if plane_id else None,
+                limit=limit,
+                offset=offset,
+            )
 
-        # Apply pagination
-        return results[offset:offset + limit]
+        results: List[EvidenceInfo] = []
+        for record in records:
+            results.append(
+                EvidenceInfo(
+                    id=record.id,
+                    tenant_id=record.tenant_id,
+                    run_id=record.run_id,
+                    plane_id=record.plane_id,
+                    connector_id=record.connector_id,
+                    query_hash=record.query_hash,
+                    doc_ids=record.doc_ids,
+                    token_count=record.token_count,
+                    policy_snapshot_id=record.policy_snapshot_id,
+                    timestamp=record.requested_at.isoformat(),
+                )
+            )
+        return results
 
     async def get_evidence(
         self,
@@ -439,10 +513,32 @@ class RetrievalFacade:
         Returns:
             EvidenceInfo or None if not found
         """
-        evidence = self._evidence.get(evidence_id)
-        if evidence and evidence.tenant_id == tenant_id:
-            return evidence
-        return None
+        from app.hoc.cus.hoc_spine.drivers.retrieval_evidence_driver import (
+            RetrievalEvidenceDriver,
+        )
+        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+            get_async_session_context,
+        )
+
+        driver = RetrievalEvidenceDriver()
+        async with get_async_session_context() as session:
+            record = await driver.get_by_id(session, tenant_id=tenant_id, evidence_id=str(evidence_id))
+
+        if record is None:
+            return None
+
+        return EvidenceInfo(
+            id=record.id,
+            tenant_id=record.tenant_id,
+            run_id=record.run_id,
+            plane_id=record.plane_id,
+            connector_id=record.connector_id,
+            query_hash=record.query_hash,
+            doc_ids=record.doc_ids,
+            token_count=record.token_count,
+            policy_snapshot_id=record.policy_snapshot_id,
+            timestamp=record.requested_at.isoformat(),
+        )
 
     async def record_evidence(
         self,
@@ -450,6 +546,7 @@ class RetrievalFacade:
         run_id: str,
         plane_id: str,
         connector_id: str,
+        action: str,
         query_hash: str,
         doc_ids: List[str],
         token_count: int,
@@ -471,28 +568,47 @@ class RetrievalFacade:
         Returns:
             EvidenceInfo for the recorded evidence
         """
-        evidence_id = str(uuid.uuid4())
+        from app.hoc.cus.hoc_spine.drivers.retrieval_evidence_driver import (
+            RetrievalEvidenceDriver,
+        )
+        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+            get_async_session_context,
+        )
+
         now = datetime.now(timezone.utc)
+        driver = RetrievalEvidenceDriver()
 
-        evidence = EvidenceInfo(
-            id=evidence_id,
-            tenant_id=tenant_id,
-            run_id=run_id,
-            plane_id=plane_id,
-            connector_id=connector_id,
-            query_hash=query_hash,
-            doc_ids=doc_ids,
-            token_count=token_count,
-            policy_snapshot_id=policy_snapshot_id,
-            timestamp=now.isoformat(),
-        )
+        async with get_async_session_context() as session:
+            async with session.begin():
+                record = await driver.append(
+                    session,
+                    tenant_id=tenant_id,
+                    run_id=run_id,
+                    plane_id=plane_id,
+                    connector_id=connector_id,
+                    action=action,
+                    query_hash=query_hash,
+                    doc_ids=doc_ids,
+                    token_count=token_count,
+                    policy_snapshot_id=policy_snapshot_id,
+                    requested_at=now,
+                    completed_at=now,
+                    duration_ms=0,
+                )
 
-        self._evidence[evidence_id] = evidence
-        logger.info(
-            "facade.evidence_recorded",
-            extra={"evidence_id": evidence_id, "run_id": run_id}
+        logger.info("facade.evidence_recorded", extra={"evidence_id": record.id, "run_id": run_id})
+        return EvidenceInfo(
+            id=record.id,
+            tenant_id=record.tenant_id,
+            run_id=record.run_id,
+            plane_id=record.plane_id,
+            connector_id=record.connector_id,
+            query_hash=record.query_hash,
+            doc_ids=record.doc_ids,
+            token_count=record.token_count,
+            policy_snapshot_id=record.policy_snapshot_id,
+            timestamp=record.requested_at.isoformat(),
         )
-        return evidence
 
 
 # =============================================================================

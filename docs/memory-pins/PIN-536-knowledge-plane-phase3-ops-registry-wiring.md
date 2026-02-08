@@ -64,8 +64,7 @@ This prevents split-brain plane registries from leaking through audience surface
 
 ## What’s Still Missing (Next Phase)
 
-Phase 4/5 in the plan is still required to fully eliminate split-brain:
-- Replace in-memory retrieval plane registry/evidence in `RetrievalFacade` with the persisted SSOT + DB evidence.
+Phase 5 in the plan is still required to fully eliminate split-brain:
+- Phase 4 is now complete (see `PIN-537-knowledge-plane-phase4-retrieval-unification.md`): retrieval plane/evidence no longer use in-memory registries.
 - Replace `KnowledgeLifecycleManager._planes` in-memory with DB-backed store and wire failure propagation.
 - Rename/demote the legacy index-runtime “knowledge_plane” runtime module and statuses.
-

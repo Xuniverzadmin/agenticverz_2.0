@@ -95,11 +95,14 @@ class EvidenceRecord:
     run_id: str
     plane_id: str
     connector_id: str
+    action: str
     query_hash: str
     doc_ids: List[str]
     token_count: int
     policy_snapshot_id: Optional[str]
-    timestamp: str
+    requested_at: str
+    completed_at: Optional[str]
+    duration_ms: Optional[int]
 
 
 class MediationDeniedError(Exception):
@@ -167,11 +170,14 @@ class EvidenceService(Protocol):
         run_id: str,
         plane_id: str,
         connector_id: str,
+        action: str,
         query_hash: str,
         doc_ids: List[str],
         token_count: int,
         policy_snapshot_id: Optional[str],
-        timestamp: datetime,
+        requested_at: datetime,
+        completed_at: datetime,
+        duration_ms: Optional[int],
     ) -> EvidenceRecord:
         """Record evidence of data access."""
         ...
@@ -301,17 +307,23 @@ class RetrievalMediator:
                 run_id=run_id,
             )
 
+        completed_at = datetime.now(timezone.utc)
+        duration_ms = int((completed_at - request_time).total_seconds() * 1000)
+
         # Step 4: Emit evidence
         evidence = await self._record_evidence(
             tenant_id=tenant_id,
             run_id=run_id,
             plane_id=plane_id,
             connector_id=connector.id,
+            action=action,
             query_hash=query_hash,
             doc_ids=result.get("doc_ids", []),
             token_count=result.get("token_count", 0),
             policy_snapshot_id=policy_result.snapshot_id,
-            timestamp=request_time,
+            requested_at=request_time,
+            completed_at=completed_at,
+            duration_ms=duration_ms,
         )
 
         logger.info("mediation.success", extra={
@@ -392,11 +404,14 @@ class RetrievalMediator:
         run_id: str,
         plane_id: str,
         connector_id: str,
+        action: str,
         query_hash: str,
         doc_ids: List[str],
         token_count: int,
         policy_snapshot_id: Optional[str],
-        timestamp: datetime,
+        requested_at: datetime,
+        completed_at: datetime,
+        duration_ms: Optional[int],
     ) -> Optional[EvidenceRecord]:
         """Record evidence of data access."""
         if self.evidence_service is None:
@@ -411,11 +426,14 @@ class RetrievalMediator:
             run_id=run_id,
             plane_id=plane_id,
             connector_id=connector_id,
+            action=action,
             query_hash=query_hash,
             doc_ids=doc_ids,
             token_count=token_count,
             policy_snapshot_id=policy_snapshot_id,
-            timestamp=timestamp,
+            requested_at=requested_at,
+            completed_at=completed_at,
+            duration_ms=duration_ms,
         )
 
     def _hash_payload(self, payload: Dict[str, Any]) -> str:
@@ -432,14 +450,34 @@ def get_retrieval_mediator() -> RetrievalMediator:
     """
     Get or create the singleton RetrievalMediator.
 
-    In production, this should be configured with real implementations
-    of PolicyChecker, ConnectorRegistry, and EvidenceService.
+    Default wiring (Phase 4):
+    - Connector resolution is backed by the persisted knowledge plane registry (SSOT).
+    - Evidence recording is backed by the retrieval_evidence table (append-only).
+    - Policy checking remains deny-by-default until a real policy gate is injected.
     """
     global _retrieval_mediator
 
     if _retrieval_mediator is None:
-        _retrieval_mediator = RetrievalMediator()
-        logger.info("retrieval_mediator.created")
+        from app.hoc.cus.hoc_spine.services.knowledge_plane_connector_registry_engine import (
+            get_db_knowledge_plane_connector_registry,
+        )
+        from app.hoc.cus.hoc_spine.services.retrieval_evidence_engine import (
+            get_db_retrieval_evidence_service,
+        )
+
+        _retrieval_mediator = RetrievalMediator(
+            policy_checker=None,  # deny-by-default
+            connector_registry=get_db_knowledge_plane_connector_registry(),
+            evidence_service=get_db_retrieval_evidence_service(),
+        )
+        logger.info(
+            "retrieval_mediator.created",
+            extra={
+                "has_policy_checker": False,
+                "has_connector_registry": True,
+                "has_evidence_service": True,
+            },
+        )
 
     return _retrieval_mediator
 

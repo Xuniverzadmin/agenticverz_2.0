@@ -122,6 +122,11 @@ At runtime:
 3. the mediator emits evidence (allow/deny + provenance),
 4. the system can prove later what was and wasn’t accessible.
 
+Phase 4 (implemented 2026-02-08):
+- Retrieval mediation now resolves planes against the persisted SSOT (`knowledge_plane_registry`) and only resolves governed planes in lifecycle `ACTIVE`.
+- Retrieval evidence is persisted to `retrieval_evidence` (append-only) with `requested_at`, `completed_at`, and `duration_ms`.
+- The mediator remains deny-by-default until a concrete policy gate is injected; connector runtime factories are still pending beyond the registry binding.
+
 ---
 
 ## 8) What Happens to Tenant Lifecycle Manager
