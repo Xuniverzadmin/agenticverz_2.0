@@ -33,8 +33,8 @@ Wrapped Services:
 
 L2 API Routes (GAP-094):
 - POST /api/v1/retrieval/access (mediated data access)
-- GET /api/v1/retrieval/planes (list available planes)
-- GET /api/v1/retrieval/evidence (retrieve evidence records)
+Plane registry + evidence administration is founder-scoped and routed through
+L4 operations (see `app.hoc.api.fdr.ops.retrieval_admin`).
 
 Usage:
     from app.hoc.cus.hoc_spine.services.retrieval_facade import get_retrieval_facade
@@ -336,59 +336,9 @@ class RetrievalFacade:
         connector_id: str,
         capabilities: Optional[List[str]] = None,
     ) -> PlaneInfo:
-        """
-        Register a knowledge plane for a tenant.
-
-        Args:
-            tenant_id: Tenant ID
-            name: Plane name
-            connector_type: Type of connector (http, sql, vector, etc.)
-            connector_id: ID of the associated connector
-            capabilities: Optional list of capabilities
-
-        Returns:
-            PlaneInfo for the new plane
-        """
-        logger.info(
-            "facade.register_plane",
-            extra={
-                "tenant_id": tenant_id,
-                "name": name,
-                "connector_type": connector_type,
-            }
-        )
-
-        from app.hoc.cus.hoc_spine.drivers.knowledge_plane_registry_driver import (
-            KnowledgePlaneRegistryDriver,
-        )
-        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
-            get_async_session_context,
-        )
-        from app.models.knowledge_lifecycle import KnowledgePlaneLifecycleState
-
-        driver = KnowledgePlaneRegistryDriver()
-        config = {"capabilities": capabilities or ["query", "retrieve"]}
-
-        async with get_async_session_context() as session:
-            async with session.begin():
-                record = await driver.create(
-                    session,
-                    tenant_id=tenant_id,
-                    plane_type=str(connector_type),
-                    plane_name=str(name),
-                    connector_type=str(connector_type),
-                    connector_id=str(connector_id),
-                    config=config,
-                    created_by=None,
-                )
-
-        return PlaneInfo(
-            id=record.plane_id,
-            name=record.plane_name,
-            connector_type=record.connector_type,
-            status=KnowledgePlaneLifecycleState(record.lifecycle_state_value).name.lower(),
-            tenant_id=record.tenant_id,
-            capabilities=list(config.get("capabilities", [])),
+        raise NotImplementedError(
+            "Plane registration is a governance/admin operation. Use hoc_spine operations via "
+            "app.hoc.api.fdr.ops.retrieval_admin (knowledge.planes.register)."
         )
 
     async def get_plane(

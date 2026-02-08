@@ -18,7 +18,9 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Optional
+from typing import Any, AsyncContextManager, Callable, Optional
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlmodel import select
 
@@ -65,6 +67,14 @@ class DbPolicySnapshotPolicyChecker:
     the policies domain provides a richer KnowledgePolicyGatePort implementation.
     """
 
+    def __init__(
+        self,
+        *,
+        session_provider: Optional[Callable[[], AsyncContextManager[AsyncSession]]] = None,
+    ) -> None:
+        # Default to canonical hoc_spine session context.
+        self._session_provider = session_provider or get_async_session_context
+
     async def check_access(
         self,
         tenant_id: str,
@@ -74,7 +84,7 @@ class DbPolicySnapshotPolicyChecker:
     ):
         from app.hoc.cus.hoc_spine.services.retrieval_mediator import PolicyCheckResult
 
-        async with get_async_session_context() as session:
+        async with self._session_provider() as session:
             run_stmt = select(Run).where(Run.id == run_id, Run.tenant_id == tenant_id)
             run_result = await session.execute(run_stmt)
             run = run_result.scalars().first()
@@ -147,4 +157,3 @@ __all__ = [
     "DbPolicySnapshotPolicyChecker",
     "get_db_policy_snapshot_policy_checker",
 ]
-

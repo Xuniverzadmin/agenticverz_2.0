@@ -119,5 +119,22 @@ class KnowledgePlaneRegistryDriver:
         await session.flush()
         return record
 
+    async def set_config(
+        self,
+        session: AsyncSession,
+        *,
+        tenant_id: str,
+        plane_id: str,
+        config: Dict[str, Any],
+    ) -> KnowledgePlaneRegistry:
+        record = await self.get_by_id(session, tenant_id=tenant_id, plane_id=plane_id)
+        if record is None:
+            raise ValueError("Plane not found")
+        record.config = config
+        record.updated_at = utc_now()
+        session.add(record)
+        await session.flush()
+        return record
+
 
 __all__ = ["KnowledgePlaneRegistryDriver"]

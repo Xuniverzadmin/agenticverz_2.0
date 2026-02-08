@@ -18,7 +18,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, AsyncContextManager, Callable, Dict, Optional
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.hoc.cus.hoc_spine.drivers.knowledge_plane_registry_driver import KnowledgePlaneRegistryDriver
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import get_async_session_context
@@ -157,11 +159,17 @@ class DbKnowledgePlaneConnectorRegistry:
     - Connector identity is derived from the registry binding.
     """
 
-    def __init__(self, driver: Optional[KnowledgePlaneRegistryDriver] = None) -> None:
+    def __init__(
+        self,
+        driver: Optional[KnowledgePlaneRegistryDriver] = None,
+        *,
+        session_provider: Optional[Callable[[], AsyncContextManager[AsyncSession]]] = None,
+    ) -> None:
         self._driver = driver or KnowledgePlaneRegistryDriver()
+        self._session_provider = session_provider or get_async_session_context
 
     async def resolve(self, tenant_id: str, plane_id: str):
-        async with get_async_session_context() as session:
+        async with self._session_provider() as session:
             record = await self._driver.get_by_id(session, tenant_id=tenant_id, plane_id=plane_id)
 
         if record is None:

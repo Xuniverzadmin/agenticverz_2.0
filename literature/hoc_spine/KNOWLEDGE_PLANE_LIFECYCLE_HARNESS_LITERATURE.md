@@ -83,6 +83,8 @@ Phase 3 wiring note:
   (`knowledge.planes.*`, `knowledge.evidence.*`).
  - Plane lifecycle transitions also dispatch via L4 operations:
    `knowledge.planes.transition` (founder surface).
+ - Protected-transition intent is persisted explicitly via config mutation ops:
+   `knowledge.planes.bind_policy`, `knowledge.planes.unbind_policy`, `knowledge.planes.approve_purge`.
 
 ---
 
@@ -132,6 +134,20 @@ Phase 4 (implemented 2026-02-08):
 Phase 6 (implemented 2026-02-08):
 - Retrieval mediation now injects a DB-backed policy gate that enforces an explicit `plane_id` allowlist from the run’s persisted `policy_snapshot_id`.
 - Connector runtime now supports `connector_type in {"sql","sql_gateway"}` by constructing `SqlGatewayService` from the governed plane `config` (connection ref + template registry).
+
+---
+
+## 8) Removal of Legacy In-Memory SSOT (Why It Matters)
+
+The previous in-memory `KnowledgeLifecycleManager` / `KnowledgeSDK` scaffolds are intentionally removed.
+
+Reason:
+- They were a split-brain lifecycle authority (state lived in-memory, not in the persisted SSOT).
+- They reintroduced caller-controlled identity (`plane_id == "new"`) patterns.
+- They were not wired into the canonical CUS/INT/FDR audience surfaces.
+
+Canonical rule:
+- Lifecycle state authority is persisted in `knowledge_plane_registry.lifecycle_state_value` and mutated only via hoc_spine L4 operations.
 
 ---
 

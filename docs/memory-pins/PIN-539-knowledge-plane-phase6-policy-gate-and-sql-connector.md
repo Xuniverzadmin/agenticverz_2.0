@@ -42,13 +42,12 @@ The RetrievalMediator singleton now injects this policy checker by default:
 ## Mechanical Proof (Post-Change)
 
 - `cd backend && PYTHONPATH=. pytest tests/governance/t0 -q`:
-  - `610 passed, 18 xfailed, 1 xpassed`
+  - `608 passed, 1 skipped, 18 xfailed, 1 xpassed`
 - `cd backend && PYTHONPATH=. pytest tests/governance/t4 -q`:
-  - `429 passed`
+  - `240 passed, 3 skipped`
 - `cd backend && PYTHONPATH=. python3 scripts/ci/check_init_hygiene.py --ci`:
   - `0 blocking violations`
 - `cd backend && PYTHONPATH=. python3 scripts/ci/check_layer_boundaries.py --ci`:
   - `CLEAN`
 - `cd backend && PYTHONPATH=. python3 scripts/ops/hoc_cross_domain_validator.py`:
   - `CLEAN`
-

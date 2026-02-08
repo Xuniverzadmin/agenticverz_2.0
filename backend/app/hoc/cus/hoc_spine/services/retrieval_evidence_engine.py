@@ -18,10 +18,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
+from typing import AsyncContextManager, Callable, List, Optional
 
 from app.hoc.cus.hoc_spine.drivers.retrieval_evidence_driver import RetrievalEvidenceDriver
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import get_async_session_context
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class DbRetrievalEvidenceService:
@@ -33,8 +34,14 @@ class DbRetrievalEvidenceService:
     - single write contains requested_at/completed_at/duration_ms
     """
 
-    def __init__(self, driver: Optional[RetrievalEvidenceDriver] = None) -> None:
+    def __init__(
+        self,
+        driver: Optional[RetrievalEvidenceDriver] = None,
+        *,
+        session_provider: Optional[Callable[[], AsyncContextManager[AsyncSession]]] = None,
+    ) -> None:
         self._driver = driver or RetrievalEvidenceDriver()
+        self._session_provider = session_provider or get_async_session_context
 
     async def record(
         self,
@@ -53,7 +60,7 @@ class DbRetrievalEvidenceService:
     ):
         from app.hoc.cus.hoc_spine.services.retrieval_mediator import EvidenceRecord
 
-        async with get_async_session_context() as session:
+        async with self._session_provider() as session:
             async with session.begin():
                 record = await self._driver.append(
                     session,
@@ -99,4 +106,3 @@ def get_db_retrieval_evidence_service() -> DbRetrievalEvidenceService:
 
 
 __all__ = ["DbRetrievalEvidenceService", "get_db_retrieval_evidence_service"]
-

@@ -10,7 +10,7 @@ Tests for T4 gaps (GAP-071 to GAP-089):
 - Section 7.15: Lifecycle Orchestration Framework (GAP-086 to GAP-089)
 - Section 7.16: Customer Lifecycle - Onboarding (GAP-071 to GAP-077)
 - Section 7.17: Customer Lifecycle - Offboarding (GAP-078 to GAP-082)
-- Section 7.18: SDK Coverage (GAP-083 to GAP-085)
+- Section 7.18: SDK Coverage (GAP-083 to GAP-085) (legacy; removed from canonical runtime)
 
 T4 FRAMEWORK TESTS (Step 1 - Complete Before Stages):
 ==========================================
@@ -23,35 +23,13 @@ T4 FRAMEWORK TESTS (Step 1 - Complete Before Stages):
    - State category helpers
    - Capability helpers
 
-2. test_single_entry_enforcement.py (~60 tests)
-   - GAP-086: KnowledgeLifecycleManager (Orchestrator)
-   - All transitions through handle_transition()
-   - No backdoor state mutation
-   - Tenant isolation
-   - Failed transitions preserve state
+2. test_knowledge_plane_ops.py (DB-backed; may skip if tables missing)
+   - Persisted SSOT lifecycle transitions via L4 operations
+   - Tenant lifecycle gate enforced (tenant.status must be active)
+   - Policy/config gates enforced (bind_policy, approve_purge)
 
-3. test_policy_gate_dominance.py (~80 tests)
-   - GAP-087: Lifecycle-Policy Gates
-   - ACTIVATE blocked without policy
-   - PURGE blocked without approval
-   - Custom gate integration
-   - Policy binding management
-
-4. test_audit_completeness.py (~100 tests)
-   - GAP-088: Lifecycle Audit Events
-   - Every transition emits exactly one event
-   - Every block emits exactly one event
-   - Audit history is immutable (append-only)
-   - Custom audit sink integration
-
-5. test_async_job_coordination.py (~80 tests)
-   - GAP-086: Async Job Handling
-   - PENDING states trigger jobs
-   - Job completion advances state once
-   - Job failure handling
-   - Job ID association
-
-TOTAL: 265 framework tests (Step 1 COMPLETE)
+TOTAL: Framework coverage is split into pure-state-machine tests and
+DB-backed authority tests (skip if schema not present).
 
 T4 ONBOARDING STAGE TESTS (Step 2a - Onboarding):
 ==========================================
@@ -85,34 +63,14 @@ T4 OFFBOARDING STAGE TESTS (Step 2b - Offboarding):
 
 TOTAL: 366 tests (265 framework + 54 onboarding + 47 offboarding)
 
-T4 SDK FAÇADE TESTS (Step 3 - SDK Coverage):
-==========================================
-
-8. test_sdk_facade.py (63 tests)
-   - GAP-083: Onboarding SDK methods
-     - register, verify, ingest, index, classify, activate
-   - GAP-084: Offboarding SDK methods
-     - deregister, cancel_deregister, deactivate, archive, purge
-   - GAP-085: Wait semantics and state queries
-     - get_state, get_plane, get_history, get_audit_log
-     - wait_until (async), wait_until_sync
-     - can_transition_to, get_next_action
-   - SDKResult tests
-   - PlaneInfo tests
-   - Policy management tests
-   - Error handling tests
-   - Integration tests
-
-TOTAL: 429 tests (265 framework + 54 onboarding + 47 offboarding + 63 SDK)
-
 RUN TESTS:
     cd backend && pytest tests/governance/t4/ -v --tb=short
 
 IMPLEMENTATION STATUS:
-- Step 1 (Framework): COMPLETE (265 tests pass)
+- Step 1 (Framework): COMPLETE (state machine + persisted authority)
 - Step 2a (Onboarding): COMPLETE (54 tests pass)
 - Step 2b (Offboarding): COMPLETE (47 tests pass)
-- Step 3 (SDK Facade): COMPLETE (63 tests pass)
+- Step 3 (SDK Facade): DEPRECATED (removed from canonical runtime)
 
 ALL T4 GAPS IMPLEMENTED (GAP-071 to GAP-089)
 ALL TIERS COMPLETE (T0-T4): 2,007 governance tests

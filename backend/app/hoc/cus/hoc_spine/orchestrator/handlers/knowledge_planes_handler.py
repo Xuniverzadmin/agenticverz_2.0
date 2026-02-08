@@ -22,6 +22,9 @@ Operations registered:
 - knowledge.planes.get
 - knowledge.planes.list
 - knowledge.planes.transition
+- knowledge.planes.bind_policy
+- knowledge.planes.unbind_policy
+- knowledge.planes.approve_purge
 - knowledge.evidence.get
 - knowledge.evidence.list
 
@@ -42,6 +45,9 @@ from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
 )
 
 logger = logging.getLogger("nova.hoc_spine.knowledge_planes_handler")
+
+_BOUND_POLICY_IDS_KEY = "bound_policy_ids"
+_PURGE_APPROVED_KEY = "purge_approved"
 
 
 class KnowledgePlanesRegisterHandler:
@@ -251,11 +257,11 @@ class KnowledgePlanesTransitionHandler:
 
         config = record.config if isinstance(record.config, dict) else {}
         if target_state == KnowledgePlaneLifecycleState.ACTIVE:
-            bound = config.get("bound_policy_ids") or []
+            bound = config.get(_BOUND_POLICY_IDS_KEY) or []
             if not isinstance(bound, list) or len(bound) == 0:
                 return OperationResult.fail("No policy bound (bind_policy required)", "POLICY_GATE_BLOCKED")
         if target_state == KnowledgePlaneLifecycleState.PURGED:
-            if config.get("purge_approved") is not True:
+            if config.get(_PURGE_APPROVED_KEY) is not True:
                 return OperationResult.fail("Purge not approved (approve_purge required)", "POLICY_GATE_PENDING")
 
         try:
@@ -278,6 +284,176 @@ class KnowledgePlanesTransitionHandler:
                 "to_state_value": int(target_state.value),
                 "action": str(action) if action else None,
                 "lifecycle_state_value": record.lifecycle_state_value,
+                "updated_at": record.updated_at.isoformat(),
+            }
+        )
+
+
+class KnowledgePlanesBindPolicyHandler:
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        """
+        Mutate governed plane config to bind a policy ID (config-only; no state change).
+
+        Inputs (ctx.params):
+        - plane_id: str (required)
+        - policy_id: str (required)
+        """
+        from app.hoc.cus.hoc_spine.drivers.knowledge_plane_registry_driver import (
+            KnowledgePlaneRegistryDriver,
+        )
+
+        if ctx.session is None:
+            return OperationResult.fail("Missing async session", "MISSING_SESSION")
+
+        plane_id = ctx.params.get("plane_id")
+        policy_id = ctx.params.get("policy_id")
+        if not plane_id:
+            return OperationResult.fail("Missing plane_id", "MISSING_PLANE_ID")
+        if not policy_id:
+            return OperationResult.fail("Missing policy_id", "MISSING_POLICY_ID")
+
+        driver = KnowledgePlaneRegistryDriver()
+        record = await driver.get_by_id(ctx.session, tenant_id=ctx.tenant_id, plane_id=str(plane_id))
+        if record is None:
+            return OperationResult.fail("Plane not found", "NOT_FOUND")
+
+        config = record.config if isinstance(record.config, dict) else {}
+        bound = config.get(_BOUND_POLICY_IDS_KEY)
+        if bound is None:
+            bound = []
+        if not isinstance(bound, list):
+            return OperationResult.fail("Invalid bound_policy_ids (expected list)", "INVALID_CONFIG")
+
+        policy_id_str = str(policy_id)
+        if policy_id_str not in bound:
+            bound.append(policy_id_str)
+        config[_BOUND_POLICY_IDS_KEY] = bound
+
+        try:
+            record = await driver.set_config(
+                ctx.session,
+                tenant_id=ctx.tenant_id,
+                plane_id=str(plane_id),
+                config=config,
+            )
+            await ctx.session.commit()
+        except Exception as e:
+            await ctx.session.rollback()
+            return OperationResult.fail(f"Failed to bind policy: {e}", "BIND_POLICY_FAILED")
+
+        return OperationResult.ok(
+            {
+                "plane_id": record.plane_id,
+                "tenant_id": record.tenant_id,
+                "bound_policy_ids": record.config.get(_BOUND_POLICY_IDS_KEY, []),
+                "updated_at": record.updated_at.isoformat(),
+            }
+        )
+
+
+class KnowledgePlanesUnbindPolicyHandler:
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        """
+        Mutate governed plane config to unbind a policy ID (config-only; no state change).
+
+        Inputs (ctx.params):
+        - plane_id: str (required)
+        - policy_id: str (required)
+        """
+        from app.hoc.cus.hoc_spine.drivers.knowledge_plane_registry_driver import (
+            KnowledgePlaneRegistryDriver,
+        )
+
+        if ctx.session is None:
+            return OperationResult.fail("Missing async session", "MISSING_SESSION")
+
+        plane_id = ctx.params.get("plane_id")
+        policy_id = ctx.params.get("policy_id")
+        if not plane_id:
+            return OperationResult.fail("Missing plane_id", "MISSING_PLANE_ID")
+        if not policy_id:
+            return OperationResult.fail("Missing policy_id", "MISSING_POLICY_ID")
+
+        driver = KnowledgePlaneRegistryDriver()
+        record = await driver.get_by_id(ctx.session, tenant_id=ctx.tenant_id, plane_id=str(plane_id))
+        if record is None:
+            return OperationResult.fail("Plane not found", "NOT_FOUND")
+
+        config = record.config if isinstance(record.config, dict) else {}
+        bound = config.get(_BOUND_POLICY_IDS_KEY) or []
+        if not isinstance(bound, list):
+            return OperationResult.fail("Invalid bound_policy_ids (expected list)", "INVALID_CONFIG")
+
+        policy_id_str = str(policy_id)
+        bound = [p for p in bound if str(p) != policy_id_str]
+        config[_BOUND_POLICY_IDS_KEY] = bound
+
+        try:
+            record = await driver.set_config(
+                ctx.session,
+                tenant_id=ctx.tenant_id,
+                plane_id=str(plane_id),
+                config=config,
+            )
+            await ctx.session.commit()
+        except Exception as e:
+            await ctx.session.rollback()
+            return OperationResult.fail(f"Failed to unbind policy: {e}", "UNBIND_POLICY_FAILED")
+
+        return OperationResult.ok(
+            {
+                "plane_id": record.plane_id,
+                "tenant_id": record.tenant_id,
+                "bound_policy_ids": record.config.get(_BOUND_POLICY_IDS_KEY, []),
+                "updated_at": record.updated_at.isoformat(),
+            }
+        )
+
+
+class KnowledgePlanesApprovePurgeHandler:
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        """
+        Mutate governed plane config to approve purge (config-only; no state change).
+
+        Inputs (ctx.params):
+        - plane_id: str (required)
+        """
+        from app.hoc.cus.hoc_spine.drivers.knowledge_plane_registry_driver import (
+            KnowledgePlaneRegistryDriver,
+        )
+
+        if ctx.session is None:
+            return OperationResult.fail("Missing async session", "MISSING_SESSION")
+
+        plane_id = ctx.params.get("plane_id")
+        if not plane_id:
+            return OperationResult.fail("Missing plane_id", "MISSING_PLANE_ID")
+
+        driver = KnowledgePlaneRegistryDriver()
+        record = await driver.get_by_id(ctx.session, tenant_id=ctx.tenant_id, plane_id=str(plane_id))
+        if record is None:
+            return OperationResult.fail("Plane not found", "NOT_FOUND")
+
+        config = record.config if isinstance(record.config, dict) else {}
+        config[_PURGE_APPROVED_KEY] = True
+
+        try:
+            record = await driver.set_config(
+                ctx.session,
+                tenant_id=ctx.tenant_id,
+                plane_id=str(plane_id),
+                config=config,
+            )
+            await ctx.session.commit()
+        except Exception as e:
+            await ctx.session.rollback()
+            return OperationResult.fail(f"Failed to approve purge: {e}", "APPROVE_PURGE_FAILED")
+
+        return OperationResult.ok(
+            {
+                "plane_id": record.plane_id,
+                "tenant_id": record.tenant_id,
+                "purge_approved": True,
                 "updated_at": record.updated_at.isoformat(),
             }
         )
@@ -378,6 +554,9 @@ def register(registry: OperationRegistry) -> None:
     registry.register("knowledge.planes.get", KnowledgePlanesGetHandler())
     registry.register("knowledge.planes.list", KnowledgePlanesListHandler())
     registry.register("knowledge.planes.transition", KnowledgePlanesTransitionHandler())
+    registry.register("knowledge.planes.bind_policy", KnowledgePlanesBindPolicyHandler())
+    registry.register("knowledge.planes.unbind_policy", KnowledgePlanesUnbindPolicyHandler())
+    registry.register("knowledge.planes.approve_purge", KnowledgePlanesApprovePurgeHandler())
     registry.register("knowledge.evidence.get", KnowledgeEvidenceGetHandler())
     registry.register("knowledge.evidence.list", KnowledgeEvidenceListHandler())
 

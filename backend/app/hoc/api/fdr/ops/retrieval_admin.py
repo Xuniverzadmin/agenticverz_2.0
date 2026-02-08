@@ -22,6 +22,9 @@ Endpoints:
 - POST /retrieval/planes
 - GET /retrieval/planes/{plane_id}
 - POST /retrieval/planes/{plane_id}/transition
+- POST /retrieval/planes/{plane_id}/bind_policy
+- POST /retrieval/planes/{plane_id}/unbind_policy
+- POST /retrieval/planes/{plane_id}/approve_purge
 - GET /retrieval/evidence
 - GET /retrieval/evidence/{evidence_id}
 """
@@ -69,6 +72,26 @@ class TransitionPlaneRequest(BaseModel):
     tenant_id: str = Field(..., description="Target tenant")
     action: Optional[str] = Field(None, description="LifecycleAction string (e.g., activate_knowledge_plane)")
     to_state: Optional[str] = Field(None, description="Target KnowledgePlaneLifecycleState name (e.g., ACTIVE)")
+
+
+class BindPolicyRequest(BaseModel):
+    """Request to bind a policy to a plane (founder-only; config mutation)."""
+
+    tenant_id: str = Field(..., description="Target tenant")
+    policy_id: str = Field(..., description="Policy ID to bind")
+
+
+class UnbindPolicyRequest(BaseModel):
+    """Request to unbind a policy from a plane (founder-only; config mutation)."""
+
+    tenant_id: str = Field(..., description="Target tenant")
+    policy_id: str = Field(..., description="Policy ID to unbind")
+
+
+class ApprovePurgeRequest(BaseModel):
+    """Request to approve purge for a plane (founder-only; config mutation)."""
+
+    tenant_id: str = Field(..., description="Target tenant")
 
 
 @router.get("/planes", response_model=Dict[str, Any])
@@ -164,6 +187,66 @@ async def transition_plane(
                 "action": request.action,
                 "to_state": request.to_state,
             },
+        ),
+    )
+    if not result.success:
+        raise HTTPException(status_code=400, detail=result.error)
+    return wrap_dict(result.data)
+
+
+@router.post("/planes/{plane_id}/bind_policy", response_model=Dict[str, Any])
+async def bind_policy(
+    plane_id: str,
+    request: BindPolicyRequest,
+    session: AsyncSession = Depends(get_session_dep),
+):
+    registry = get_operation_registry()
+    result = await registry.execute(
+        "knowledge.planes.bind_policy",
+        OperationContext(
+            session=session,
+            tenant_id=request.tenant_id,
+            params={"plane_id": plane_id, "policy_id": request.policy_id},
+        ),
+    )
+    if not result.success:
+        raise HTTPException(status_code=400, detail=result.error)
+    return wrap_dict(result.data)
+
+
+@router.post("/planes/{plane_id}/unbind_policy", response_model=Dict[str, Any])
+async def unbind_policy(
+    plane_id: str,
+    request: UnbindPolicyRequest,
+    session: AsyncSession = Depends(get_session_dep),
+):
+    registry = get_operation_registry()
+    result = await registry.execute(
+        "knowledge.planes.unbind_policy",
+        OperationContext(
+            session=session,
+            tenant_id=request.tenant_id,
+            params={"plane_id": plane_id, "policy_id": request.policy_id},
+        ),
+    )
+    if not result.success:
+        raise HTTPException(status_code=400, detail=result.error)
+    return wrap_dict(result.data)
+
+
+@router.post("/planes/{plane_id}/approve_purge", response_model=Dict[str, Any])
+async def approve_purge(
+    plane_id: str,
+    request: ApprovePurgeRequest,
+    session: AsyncSession = Depends(get_session_dep),
+):
+    registry = get_operation_registry()
+    result = await registry.execute(
+        "knowledge.planes.approve_purge",
+        OperationContext(
+            session=session,
+            tenant_id=request.tenant_id,
+            params={"plane_id": plane_id},
         ),
     )
     if not result.success:

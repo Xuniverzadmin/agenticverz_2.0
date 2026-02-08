@@ -67,6 +67,22 @@ This document exists to prevent ontology drift by making authority, identity, an
 
 ---
 
+## Contract 6 — Protected Transition Intent Must Be Persisted
+
+**Rule:** protected lifecycle transitions require explicit, persisted intent in `knowledge_plane_registry.config`.
+
+Reserved config keys (no secrets):
+- `bound_policy_ids: list[str]` (required before lifecycle can transition `→ ACTIVE`)
+- `purge_approved: bool` (required before lifecycle can transition `→ PURGED`)
+
+Mutation rule:
+- These keys must be mutated only via founder/admin ops (config-only; no state change):
+  - `knowledge.planes.bind_policy`
+  - `knowledge.planes.unbind_policy`
+  - `knowledge.planes.approve_purge`
+
+---
+
 ## Mechanical Checks (Phase 0)
 
 Phase 0 should add mechanical checks that fail fast when the contracts are violated:

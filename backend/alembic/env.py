@@ -4,6 +4,7 @@ import os
 import sys
 from logging.config import fileConfig
 
+from sqlalchemy import text
 from sqlalchemy import engine_from_config, pool
 
 # Import SQLModel metadata
@@ -168,6 +169,27 @@ if config.config_file_name is not None:
 target_metadata = SQLModel.metadata
 
 
+def _ensure_alembic_version_column_width(connection) -> None:
+    """
+    Alembic's default version table uses String(32). This repo uses descriptive
+    revision identifiers (e.g. '093_llm_run_records_system_records') that can
+    exceed 32 characters, which will hard-fail on version updates.
+
+    Fix: ensure the version table exists and widen `version_num` to a safe size
+    before Alembic attempts to update it.
+    """
+    connection.execute(
+        text(
+            "CREATE TABLE IF NOT EXISTS alembic_version (version_num VARCHAR(128) NOT NULL)"
+        )
+    )
+    connection.execute(
+        text(
+            "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(128)"
+        )
+    )
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -205,6 +227,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        _ensure_alembic_version_column_width(connection)
         context.configure(
             connection=connection,
             target_metadata=target_metadata,

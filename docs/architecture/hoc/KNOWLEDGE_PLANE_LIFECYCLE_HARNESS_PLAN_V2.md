@@ -23,19 +23,14 @@
 1. **Lifecycle state machine (pure):**
    - `backend/app/models/knowledge_lifecycle.py` (GAP-089) defines ordered states + valid transitions.
 
-2. **Knowledge lifecycle orchestrator (in-memory):**
-   - `backend/app/hoc/cus/hoc_spine/orchestrator/lifecycle/knowledge_lifecycle_manager.py`
-   - Holds `_planes` + `_audit_log` in memory; uses `KnowledgePlane` dataclass (id, tenant_id, name, state, config…).
-
-3. **Knowledge plane registry (in-memory “graph”):**
+2. **Knowledge plane registry (in-memory “graph” / runtime substrate):**
    - `backend/app/hoc/cus/hoc_spine/orchestrator/lifecycle/drivers/knowledge_plane.py`
    - Separate registry + `KnowledgePlaneRegistry` oriented around nodes/sources and “knowledge graph” semantics.
 
-4. **Retrieval plane registry + evidence (in-memory):**
-   - `backend/app/hoc/cus/hoc_spine/services/retrieval_facade.py`
-   - Stores `_planes` and `_evidence` in memory “for demo”.
+3. **Retrieval plane registry + evidence (legacy in-memory):**
+   - Prior in-memory plane/evidence stores in `RetrievalFacade` are removed; planes and evidence are persisted (Phase 4).
 
-**Net:** the system has *multiple* plane registries with different meanings, all in-memory, and not unified under a single persisted contract.
+**Net:** remaining “plane-like” runtimes (graph/index substrates) must remain non-authoritative; the governed plane SSOT is persisted.
 
 ### 1.2 Mediation Exists, But Plane Registration Is Not Canonical
 
@@ -191,17 +186,21 @@ The canonical plane registry and lifecycle state must be **persisted to Postgres
 1. Create L4 handler(s) that register operations such as:
    - `knowledge.planes.register`
    - `knowledge.planes.transition`
+   - `knowledge.planes.bind_policy`
+   - `knowledge.planes.unbind_policy`
+   - `knowledge.planes.approve_purge`
    - `knowledge.planes.get`
    - `knowledge.planes.list`
    - `knowledge.evidence.list` / `knowledge.evidence.get`
 2. Enforce:
    - hoc_spine authority gate on transitions (protected actions)
-   - transaction boundaries owned by orchestrator context
+    - transaction boundaries owned by orchestrator context
 
 **Phase 3 implementation (2026-02-08):**
 - L4 operations registered:
   - `knowledge.planes.register|get|list`
   - `knowledge.planes.transition`
+  - `knowledge.planes.bind_policy|unbind_policy|approve_purge` (config mutations; no state change)
   - `knowledge.evidence.get|list`
 - Founder retrieval admin surface routes through L4 operations:
   - `backend/app/hoc/api/fdr/ops/retrieval_admin.py`
@@ -250,6 +249,14 @@ The canonical plane registry and lifecycle state must be **persisted to Postgres
   - `backend/tests/governance/t0/test_retrieval_mediator.py`
   - `backend/tests/governance/t2/test_knowledge_plane.py`
   - `backend/tests/governance/t3/test_knowledge_domain.py`
+
+**Phase 5.1 implementation (DONE 2026-02-08):**
+- Deleted legacy in-memory lifecycle SSOT surfaces:
+  - `backend/app/hoc/cus/hoc_spine/orchestrator/lifecycle/knowledge_lifecycle_manager.py`
+  - `backend/app/hoc/cus/hoc_spine/orchestrator/lifecycle/knowledge_sdk.py`
+  - `backend/app/services/knowledge_sdk.py` (shim)
+- Disabled plane creation bypass in RetrievalFacade:
+  - `backend/app/hoc/cus/hoc_spine/services/retrieval_facade.py` (`register_plane()` now hard-errors)
 
 **Exit criteria:** one canonical plane SSOT; no duplicate managers.
 
