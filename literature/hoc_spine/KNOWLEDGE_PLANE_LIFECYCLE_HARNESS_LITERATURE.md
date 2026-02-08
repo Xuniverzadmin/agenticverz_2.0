@@ -127,6 +127,10 @@ Phase 4 (implemented 2026-02-08):
 - Retrieval evidence is persisted to `retrieval_evidence` (append-only) with `requested_at`, `completed_at`, and `duration_ms`.
 - The mediator remains deny-by-default until a concrete policy gate is injected; connector runtime factories are still pending beyond the registry binding.
 
+Phase 6 (implemented 2026-02-08):
+- Retrieval mediation now injects a DB-backed policy gate that enforces an explicit `plane_id` allowlist from the run’s persisted `policy_snapshot_id`.
+- Connector runtime now supports `connector_type in {"sql","sql_gateway"}` by constructing `SqlGatewayService` from the governed plane `config` (connection ref + template registry).
+
 ---
 
 ## 8) What Happens to Tenant Lifecycle Manager

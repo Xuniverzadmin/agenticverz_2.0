@@ -509,6 +509,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-536](PIN-536-knowledge-plane-phase3-ops-registry-wiring.md) | **Knowledge Planes Phase 3 — L4 Operations + FDR Surface Rewire** | HOC Governance / Wiring | **✅ COMPLETE** | 2026-02-08 |
 | [PIN-537](PIN-537-knowledge-plane-phase4-retrieval-unification.md) | **Knowledge Planes Phase 4 — Retrieval Uses Persisted Planes + DB Evidence** | HOC Governance / Retrieval Durability | **✅ COMPLETE** | 2026-02-08 |
 | [PIN-538](PIN-538-knowledge-plane-phase5-delete-app-services-shims.md) | **Knowledge Planes Phase 5 — Delete Legacy `app.services.*` Shims** | HOC Governance / Canonicalization | **✅ COMPLETE** | 2026-02-08 |
+| [PIN-539](PIN-539-knowledge-plane-phase6-policy-gate-and-sql-connector.md) | **Knowledge Planes Phase 6 — Policy Snapshot Gate + SQL Connector Runtime** | HOC Governance / Retrieval Enablement | **✅ COMPLETE** | 2026-02-08 |
 
 ---
 
@@ -1278,6 +1279,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-08 | **PIN-539 Knowledge Planes Phase 6 — Policy Snapshot Gate + SQL Connector Runtime** - Created. |
 | 2026-02-08 | **PIN-538 Knowledge Planes Phase 5 — Delete Legacy `app.services.*` Shims** - Created. |
 | 2026-02-08 | **PIN-537 Knowledge Planes Phase 4 — Retrieval Uses Persisted Planes + DB Evidence** - Created. |
 | 2026-02-08 | **PIN-536 Knowledge Planes Phase 3 — L4 Operations + FDR Surface Rewire** - Created. |

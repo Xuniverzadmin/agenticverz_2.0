@@ -453,7 +453,8 @@ def get_retrieval_mediator() -> RetrievalMediator:
     Default wiring (Phase 4):
     - Connector resolution is backed by the persisted knowledge plane registry (SSOT).
     - Evidence recording is backed by the retrieval_evidence table (append-only).
-    - Policy checking remains deny-by-default until a real policy gate is injected.
+    - Policy checking is deny-by-default and allows only when the run's persisted
+      policy snapshot includes an explicit plane allowlist (Phase 6).
     """
     global _retrieval_mediator
 
@@ -464,16 +465,19 @@ def get_retrieval_mediator() -> RetrievalMediator:
         from app.hoc.cus.hoc_spine.services.retrieval_evidence_engine import (
             get_db_retrieval_evidence_service,
         )
+        from app.hoc.cus.hoc_spine.services.retrieval_policy_checker_engine import (
+            get_db_policy_snapshot_policy_checker,
+        )
 
         _retrieval_mediator = RetrievalMediator(
-            policy_checker=None,  # deny-by-default
+            policy_checker=get_db_policy_snapshot_policy_checker(),
             connector_registry=get_db_knowledge_plane_connector_registry(),
             evidence_service=get_db_retrieval_evidence_service(),
         )
         logger.info(
             "retrieval_mediator.created",
             extra={
-                "has_policy_checker": False,
+                "has_policy_checker": True,
                 "has_connector_registry": True,
                 "has_evidence_service": True,
             },

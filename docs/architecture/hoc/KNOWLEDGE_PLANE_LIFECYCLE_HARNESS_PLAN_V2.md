@@ -228,6 +228,12 @@ The canonical plane registry and lifecycle state must be **persisted to Postgres
 - A real `PolicyChecker` implementation must be injected to allow access (deny-by-default remains invariant).
 - A real runtime connector factory must be implemented for `(connector_type, connector_id)` bindings; Phase 4 resolves the binding and enforces ACTIVE, but uses a placeholder connector for now.
 
+**Phase 6 implementation (DONE 2026-02-08):**
+- Retrieval policy gate now reads `Run.policy_snapshot_id` and enforces an explicit allowlist from persisted `policy_snapshots.thresholds_json`:
+  - `backend/app/hoc/cus/hoc_spine/services/retrieval_policy_checker_engine.py`
+- Connector runtime factory now constructs a real connector for `connector_type in {"sql","sql_gateway"}` from plane `config`:
+  - `backend/app/hoc/cus/hoc_spine/services/knowledge_plane_connector_registry_engine.py`
+
 ### Phase 5 — Delete Duplicates / Shims
 
 1. Remove `app.services.knowledge.*` plane registry if unused after repointing.
