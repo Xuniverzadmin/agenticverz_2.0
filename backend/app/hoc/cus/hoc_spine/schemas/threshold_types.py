@@ -1,9 +1,8 @@
 # Layer: L4 — HOC Spine (Schemas)
 # AUDIENCE: SHARED
 # Product: system-wide
-# Consumers: controls, activity
-# Role: Shared threshold types — cross-domain data contracts for controls/activity
-# Callers: controls/L6_drivers/threshold_driver.py, activity/L6_drivers/__init__.py
+# Consumers: legacy (docs), optional ports
+# Role: Legacy threshold types — historical cross-domain contract
 # Reference: PIN-504 (Cross-Domain Violation Resolution)
 # artifact_class: CODE
 
@@ -11,8 +10,11 @@
 Threshold Types (Spine Schemas)
 
 Shared data types for threshold limit operations.
-Extracted from controls/L6_drivers/threshold_driver.py so activity domain
-can import types without cross-domain L6 dependency.
+Historical extraction point for `LimitSnapshot`.
+
+As of 2026-02-08 (T0 strict mode), L6 drivers under `hoc/cus/*/L6_drivers`
+must not import `hoc_spine`. Domain-local DTOs are preferred (e.g.
+`controls/L6_drivers/threshold_driver.py` defines its own `LimitSnapshot`).
 """
 
 from dataclasses import dataclass

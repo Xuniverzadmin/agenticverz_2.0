@@ -1,7 +1,7 @@
 # W*/T* Application Plan v1 (HOC) — Targeted, Evidence-Driven
 
 **Date:** 2026-02-08  
-**Status:** ACTIVE (implementation plan)  
+**Status:** COMPLETE (implemented)  
 **Scope:** `backend/app/hoc/cus/**` + `backend/tests/governance/t0/**`  
 
 > Note: this filename contains `*`. When using shell commands, quote the path.
@@ -83,6 +83,27 @@ These failures are not cosmetic; they indicate:
 
 ## Implementation Plan (Domain-Grouped)
 
+### Sequencing (Activities)
+
+1. Fix the import surface sentinel first (policies `plan_generation.py`).
+2. Remove all `L6_drivers -> app.hoc.cus.hoc_spine.*` imports (strict Option B).
+3. Re-run `pytest tests/governance/t0 -q` from `backend/` and keep it mechanically green.
+4. Re-run safety gates (purity audit, init hygiene, layer boundaries, cross-domain validator).
+
+### Implementation Evidence (2026-02-08)
+
+Observed results (ran from `backend/` unless noted):
+
+- `PYTHONPATH=. python3 -m pytest tests/governance/t0 -q` → `594 passed, 18 xfailed, 1 xpassed`
+- `PYTHONPATH=. python3 -m pytest tests/governance/t4 -q` → `429 passed`
+- Repo root: `PYTHONPATH=backend python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py` → `0 blocking, 0 advisory`
+- Repo root: `PYTHONPATH=backend python3 backend/scripts/ci/check_init_hygiene.py --ci` → `0 blocking violations`
+- Repo root: `PYTHONPATH=backend python3 backend/scripts/ci/check_layer_boundaries.py --ci` → `CLEAN`
+- Repo root: `PYTHONPATH=backend python3 backend/scripts/ops/hoc_cross_domain_validator.py` → `CLEAN`
+- Repo root: `PYTHONPATH=backend python3 backend/scripts/ops/l5_spine_pairing_gap_detector.py --json` → `68 wired, 0 orphaned, 0 direct`
+
+Strict Option B applied: no `L6_drivers` under the canonical 10 CUS domains import `app.hoc.cus.hoc_spine.*` (no exceptions).
+
 ### A) policies — Repair Import Surface Sentinel
 
 **Problem:** `backend/app/hoc/cus/policies/L5_engines/plan_generation.py` imports
@@ -90,9 +111,9 @@ These failures are not cosmetic; they indicate:
 export it.
 
 **Fix strategy:**
-- Provide a canonical `get_planner()` in `backend/app/hoc/int/platform/facades/` (likely
-  `backend/app/hoc/int/platform/facades/__init__.py`) *or*
-- Repoint the import to an existing canonical planner accessor if one already exists.
+- Repoint the import to an existing canonical planner accessor (preferred), *or*
+- Provide a canonical `get_planner()` in `backend/app/hoc/int/platform/facades/`
+  (e.g. `backend/app/hoc/int/platform/facades/__init__.py`) that forwards to the canonical accessor.
 
 **Acceptance:** importing `app.hoc.cus.policies.L5_engines.plan_generation` succeeds and
 `pytest tests/governance/t0/test_import_surface_sentinels.py -q` passes.
@@ -103,8 +124,9 @@ export it.
 importing `hoc_spine.schemas.*` + `hoc_spine.services.*`.
 
 **Fix strategy:**
-- L6 returns facts only: `incident_id`, `error` (and any other raw outputs).
-- L4 emits RAC ack (hoc_spine owns audit semantics). Do not import hoc_spine from L6.
+- Replace hoc_spine imports with dependency injection:
+  - `IncidentDriver` accepts an injected ack emitter callable/port (wired by L4), or
+  - `IncidentDriver` returns ack facts to L4 and L4 emits the ack.
 - If a shared DTO/Protocol is needed by both L4 and L6, move it to a neutral location:
   - domain-local `incidents/L5_schemas/**` (preferred), or
   - a dedicated shared schemas package intended for L6 use.
@@ -119,8 +141,10 @@ importing `hoc_spine.schemas.*` + `hoc_spine.services.*`.
 - `circuit_breaker_driver.py` and `circuit_breaker_async_driver.py` lazily import hoc_spine services.
 
 **Fix strategy:**
-- Move DTO(s) like `LimitSnapshot` into `controls/L5_schemas/**`.
-- Inject config/metrics “ports” (Protocol or callables) from L4 into L6 drivers.
+- Inline/move DTO(s) like `LimitSnapshot` into `controls/L6_drivers/threshold_driver.py`
+  or `controls/L5_schemas/**` so L6 no longer imports hoc_spine.
+- Repoint `circuit_breaker_driver.py` and `circuit_breaker_async_driver.py` to import config/metrics
+  from a neutral non-HOC-spine module (e.g. `app.costsim.config`, `app.costsim.metrics`) or inject ports.
 
 **Acceptance:** `rg "hoc_spine" backend/app/hoc/cus/controls/L6_drivers -n` returns no results;
 T0 law tests pass.
@@ -153,4 +177,3 @@ python3 scripts/ops/l5_spine_pairing_gap_detector.py --check
 - Do not add W*/T* headers “everywhere”.
 - Do not weaken the T0 law tests to make them pass.
 - Do not introduce hoc_spine imports into L6 under any “exception” regime.
-

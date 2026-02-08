@@ -12,7 +12,7 @@
 #   Writes: Incident (via decision port)
 # Role: Incident Domain Driver — delegates to IncidentDecisionPort (L5 contract)
 # Callers: worker runtime, governance services, transaction coordinator
-# Allowed Imports: L5_schemas, hoc_spine
+# Allowed Imports: L5_schemas
 # Forbidden Imports: L1, L2, L3, L5_engines, sqlalchemy (runtime)
 # Reference: PIN-470, FACADE_CONSOLIDATION_PLAN.md, PIN-454 (RAC), PIN-511 Option B
 # Location: hoc/cus/incidents/L6_drivers/incident_driver.py
@@ -52,9 +52,7 @@ Usage:
 
 import logging
 import os
-from typing import Any, Dict, List, Optional
-from uuid import UUID
-
+from typing import Any, Callable, Dict, List, Optional
 from app.hoc.cus.incidents.L5_schemas.incident_decision_port import (
     IncidentDecisionPort,
 )
@@ -78,15 +76,22 @@ class IncidentDriver:
     imports L5_engines directly. L4 wires the engine at construction time.
     """
 
-    def __init__(self, decision_port: IncidentDecisionPort):
+    def __init__(
+        self,
+        decision_port: IncidentDecisionPort,
+        ack_emitter: Optional[Callable[[str, Optional[str], Optional[str]], None]] = None,
+    ):
         """
         Initialize driver with a decision port.
 
         Args:
             decision_port: L5 engine implementing IncidentDecisionPort.
                           Wired by L4 (bridge/coordinator).
+            ack_emitter: Optional callback for emitting post-operation acknowledgements.
+                         Wired by L4. This driver must not import hoc_spine.
         """
         self._decision = decision_port
+        self._ack_emitter = ack_emitter
 
     # =========================================================================
     # Run Lifecycle Operations (for worker/runner.py)
@@ -192,8 +197,8 @@ class IncidentDriver:
                 extra={"run_id": run_id, "error": error}
             )
 
-        # PIN-454: Emit RAC acknowledgment
-        if RAC_ENABLED:
+        # PIN-454: Emit RAC acknowledgment (wired by L4; no hoc_spine imports in L6)
+        if RAC_ENABLED and self._ack_emitter is not None:
             self._emit_ack(run_id, incident_id, error)
 
         return incident_id
@@ -205,25 +210,15 @@ class IncidentDriver:
         error: Optional[str],
     ) -> None:
         """
-        Emit RAC acknowledgment for incident creation.
+        Emit RAC acknowledgment for incident creation (injected).
 
         PIN-454: Drivers emit acks after domain operations.
+        Contract: This driver must not import hoc_spine; L4 wires the emitter.
         """
         try:
-            # hoc_spine imports (legal for L6)
-            from app.hoc.cus.hoc_spine.schemas.rac_models import AuditAction, AuditDomain, DomainAck
-            from app.hoc.cus.hoc_spine.services.audit_store import get_audit_store
-
-            ack = DomainAck(
-                run_id=UUID(run_id),
-                domain=AuditDomain.INCIDENTS,
-                action=AuditAction.CREATE_INCIDENT,
-                result_id=result_id,
-                error=error,
-            )
-
-            store = get_audit_store()
-            store.add_ack(UUID(run_id), ack)
+            if self._ack_emitter is None:
+                return
+            self._ack_emitter(run_id, result_id, error)
 
             logger.debug(
                 "driver.emit_ack",

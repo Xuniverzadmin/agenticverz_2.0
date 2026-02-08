@@ -7,6 +7,8 @@
 
 ---
 
+**Addendum (2026-02-08):** In strict T0 mode, canonical CUS `L6_drivers` no longer import `app.hoc.cus.hoc_spine.*`. This document remains a Phase-2 snapshot (2026-02-06). For current line-level evidence, use `docs/architecture/hoc/HOC_SPINE_IMPORT_MATRIX_CUS.md`.
+
 ## 1. Summary Statistics
 
 | Metric | Count |

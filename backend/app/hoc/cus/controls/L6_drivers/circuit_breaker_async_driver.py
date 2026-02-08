@@ -87,12 +87,12 @@ logger = logging.getLogger("nova.costsim.circuit_breaker_async")
 
 # PIN-504: Lazy imports to avoid E2 cross-domain validator violations
 def _get_config():
-    from app.hoc.cus.hoc_spine.services.costsim_config import get_config as _cfg
+    from app.costsim.config import get_config as _cfg
     return _cfg()
 
 
 def _get_metrics():
-    from app.hoc.cus.hoc_spine.services.costsim_metrics import get_metrics as _mtr
+    from app.costsim.metrics import get_metrics as _mtr
     return _mtr()
 
 

@@ -88,8 +88,31 @@ def get_incident_driver(db_url=None):
     if _driver_instance is None:
         from app.hoc.cus.incidents.L5_engines.incident_engine import IncidentEngine
         from app.hoc.cus.incidents.L6_drivers.incident_driver import IncidentDriver
+
+        def _emit_incident_ack(run_id: str, result_id: str | None, error: str | None) -> None:
+            # L4 owns hoc_spine dependencies; L6 drivers must not import hoc_spine.
+            from uuid import UUID
+
+            from app.hoc.cus.hoc_spine.schemas.rac_models import (
+                AuditAction,
+                AuditDomain,
+                DomainAck,
+            )
+            from app.hoc.cus.hoc_spine.services.audit_store import get_audit_store
+
+            ack = DomainAck(
+                run_id=UUID(run_id),
+                domain=AuditDomain.INCIDENTS,
+                action=AuditAction.CREATE_INCIDENT,
+                result_id=result_id,
+                error=error,
+            )
+
+            store = get_audit_store()
+            store.add_ack(UUID(run_id), ack)
+
         engine = IncidentEngine(db_url=db_url)
-        _driver_instance = IncidentDriver(decision_port=engine)
+        _driver_instance = IncidentDriver(decision_port=engine, ack_emitter=_emit_incident_ack)
     return _driver_instance
 
 

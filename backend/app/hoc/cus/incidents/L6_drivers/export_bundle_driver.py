@@ -38,7 +38,7 @@ import hashlib
 import json
 import logging
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import Any, Optional, Protocol, runtime_checkable
 
 from sqlmodel import Session, select
 
@@ -56,7 +56,12 @@ from app.models.export_bundles import (
 )
 
 # PIN-521: Use Protocol for cross-domain dependency injection (no direct L6→L6 import)
-from app.hoc.cus.hoc_spine.schemas.protocols import TraceStorePort
+# NOTE: T0 law tests require L6 drivers to avoid importing hoc_spine; keep the port local.
+@runtime_checkable
+class TraceStorePort(Protocol):
+    async def get_trace_summary(self, run_id: str, tenant_id: str) -> Optional[Any]: ...
+
+    async def get_trace_steps(self, trace_id: str, tenant_id: str) -> list: ...
 
 logger = logging.getLogger("nova.services.export_bundle")
 

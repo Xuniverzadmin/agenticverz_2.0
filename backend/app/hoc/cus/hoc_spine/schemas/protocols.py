@@ -164,7 +164,7 @@ class TraceStorePort(Protocol):
     """Behavioral contract for trace storage.
 
     Implemented by: SQLiteTraceStore, InMemoryTraceStore (logs/L6_drivers)
-    Consumed by: ExportBundleDriver (incidents/L6_drivers)
+    Consumed by: Export bundle orchestration (wired by L4 / L5)
     Wired by: L5 export_engine or L4 orchestrator
 
     PIN-521: Protocol enables cross-domain dependency injection without

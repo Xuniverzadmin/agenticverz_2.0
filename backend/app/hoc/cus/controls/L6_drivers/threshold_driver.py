@@ -47,6 +47,8 @@ Reference: ACTIVITY_PHASE2.5_IMPLEMENTATION_PLAN.md
 
 import logging
 import uuid as uuid_module
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Optional
 
 from sqlalchemy import text
@@ -63,8 +65,25 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
-# Re-export from spine schemas for backward compatibility (PIN-504)
-from app.hoc.cus.hoc_spine.schemas.threshold_types import LimitSnapshot  # noqa: F401
+@dataclass(frozen=True)
+class LimitSnapshot:
+    """
+    Immutable snapshot of a Limit record returned to engines.
+
+    This is the boundary contract between L6 (driver) and L5 (engine).
+    Engines receive snapshots, not ORM models.
+
+    NOTE: This DTO intentionally lives here to avoid L6 importing hoc_spine
+    (T0 law tests: no cross-domain imports from L6).
+    """
+
+    id: str
+    tenant_id: str
+    scope: str
+    scope_id: Optional[str]
+    params: dict
+    status: str
+    created_at: datetime
 
 
 # =============================================================================

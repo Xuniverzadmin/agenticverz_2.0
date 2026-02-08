@@ -4,6 +4,13 @@
 **Non-scope:** Knowledge plane lifecycle (handled separately).  
 **Goal:** Provide a **hoc_spine lifecycle harness template** that domains can reuse for stateful entities, without creating a second “source of truth” state machine outside the domain.
 
+## Status (2026-02-08)
+
+- Phase A (Account / Tenant lifecycle SSOT): implemented using `Tenant.status` as the canonical persisted lifecycle field.
+- Production call sites rewired to DB-backed lifecycle reads and L4-owned lifecycle operations (`account.lifecycle.query`, `account.lifecycle.transition`).
+- Governance proof gates: `tests/governance/t4` passing; `tests/e2e/test_phase9_lifecycle_e2e.py` passing; and `tests/governance/t0` green in strict mode.
+- Remaining work (this plan): Onboarding SSOT + domain-by-domain lifecycle harnessing (Integrations → Policies → API Keys).
+
 ---
 
 ## 1) Audit (Current Reality)
@@ -128,4 +135,3 @@ Domains never import hoc_spine L4; they implement logic and are called by L4.
 - `PYTHONPATH=. python3 scripts/ops/hoc_cross_domain_validator.py`
 - `pytest backend/tests/governance/t0 -q`
 - `pytest backend/tests/e2e/test_phase9_lifecycle_e2e.py -q`
-

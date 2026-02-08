@@ -44,8 +44,8 @@ Extracted cross-domain data types to neutral locations so multiple domains can i
 |------|--------|
 | `account/L5_engines/accounts_facade.py` | Re-exports `AccountsErrorResult` from `L5_schemas.result_types` |
 | `account/L5_schemas/__init__.py` | Added `AccountsErrorResult` export |
-| `controls/L6_drivers/threshold_driver.py` | Re-exports `LimitSnapshot` from `hoc_spine.schemas.threshold_types` |
-| `activity/L6_drivers/__init__.py` | Imports `LimitSnapshot` from spine (removed all controls re-exports) |
+| `controls/L6_drivers/threshold_driver.py` | Defines `LimitSnapshot` DTO as the L6→L5 contract (no hoc_spine import in L6) |
+| `activity/L6_drivers/__init__.py` | Removed all controls re-exports; no threshold type re-exports remain |
 
 ---
 
