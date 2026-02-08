@@ -9,7 +9,7 @@
 - Phase A1 (Account / Tenant lifecycle SSOT): implemented using `Tenant.status` as the canonical persisted lifecycle field.
 - Production call sites rewired to DB-backed lifecycle reads and L4-owned lifecycle operations (`account.lifecycle.query`, `account.lifecycle.transition`).
 - Governance proof gates (current): `tests/governance/t0` green in strict mode; layer boundaries/cross-domain/purity/pairing all CLEAN.
-- Remaining work (this plan): Policies + API Keys lifecycle harnessing (Phase C → Phase D).
+- All four domain lifecycle phases complete: Phase A1 (Tenant), Phase A2 (Onboarding), Phase B–D (Integrations, Policies, API Keys) confirmed architecturally compliant — no changes needed.
 
 ---
 
@@ -131,15 +131,28 @@ Already architecturally compliant. L5 engines own transitions, L6 drivers persis
 L4 handlers (`integrations_handler.py`, `mcp_handler.py`) are registered. Zero cross-domain violations.
 No changes needed.
 
-### Phase C: Policies (Rule/Proposal Lifecycle)
+### Phase C: Policies (Rule/Proposal Lifecycle) — NO-OP (2026-02-08)
 
-1. Ensure all rule/proposal transitions are domain-owned and L4-wrapped where cross-domain/human approvals apply.
-2. Use harness kit for audit/idempotency where transitions are externally triggered.
+Already architecturally compliant. All state mutations flow through L4 → L5 → L6:
 
-### Phase D: API Keys
+- **PolicyRule.status** (ACTIVE → RETIRED): `policy_rules_engine.py` (L5) → `policy_rules_driver.py` (L6) → `policies.rules` handler (L4) wraps in `begin()`
+- **PolicyProposal.status** (DRAFT → APPROVED/REJECTED): `policy_proposal_engine.py` (L5) → `policy_proposal_write_driver.py` (L6) → L4 handler wraps transactions
+- **Limit.status** (ACTIVE/DISABLED): `policy_limits_engine.py` (L5) → L6 driver → `policies.limits` handler (L4) wraps in `begin()`
+- **LimitOverride.status** (PENDING → APPROVED/ACTIVE/EXPIRED/REJECTED/CANCELLED): Complex workflow, all through L4
 
-1. Centralize API key status transitions in api_keys domain L5.
-2. Ensure tenant termination effects are coordinated at L4 when they touch multiple domains.
+Zero direct L2→DB writes. L4 owns all `begin()`/`commit()`. L5/L6 have zero explicit transaction calls.
+No changes needed.
+
+### Phase D: API Keys — NO-OP (2026-02-08)
+
+Already architecturally compliant in the HOC layer:
+
+- **APIKey creation/revocation**: `tenant_engine.py` (account L5) → `tenant_driver.py` (account L6) → `api_keys.write` handler (L4) commits
+- **APIKey freeze/unfreeze**: `keys_engine.py` (api_keys L5) → `keys_driver.py` (api_keys L6) → L4 wraps transaction
+- **APIKey reads**: `api_keys_facade.py` (L5) → `api_keys_facade_driver.py` (L6) → `api_keys.query` handler (L4)
+
+Legacy `app/auth/api_key_driver.py` commits directly but is outside HOC (PIN-511 boundary).
+No changes needed.
 
 ---
 
