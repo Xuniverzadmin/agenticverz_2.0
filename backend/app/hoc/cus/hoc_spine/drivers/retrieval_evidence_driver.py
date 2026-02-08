@@ -14,13 +14,47 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Optional
 
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
 from app.models.retrieval_evidence import RetrievalEvidence
 
 
 class RetrievalEvidenceDriver:
     """Append-only retrieval evidence writer."""
+
+    async def get_by_id(
+        self,
+        session: AsyncSession,
+        *,
+        tenant_id: str,
+        evidence_id: str,
+    ) -> Optional[RetrievalEvidence]:
+        stmt = select(RetrievalEvidence).where(
+            RetrievalEvidence.tenant_id == tenant_id,
+            RetrievalEvidence.id == evidence_id,
+        )
+        result = await session.execute(stmt)
+        return result.scalars().first()
+
+    async def list(
+        self,
+        session: AsyncSession,
+        *,
+        tenant_id: str,
+        run_id: Optional[str] = None,
+        plane_id: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> List[RetrievalEvidence]:
+        stmt = select(RetrievalEvidence).where(RetrievalEvidence.tenant_id == tenant_id)
+        if run_id is not None:
+            stmt = stmt.where(RetrievalEvidence.run_id == run_id)
+        if plane_id is not None:
+            stmt = stmt.where(RetrievalEvidence.plane_id == plane_id)
+        stmt = stmt.order_by(RetrievalEvidence.requested_at.desc()).limit(limit).offset(offset)
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
 
     async def append(
         self,
@@ -59,4 +93,3 @@ class RetrievalEvidenceDriver:
 
 
 __all__ = ["RetrievalEvidenceDriver"]
-

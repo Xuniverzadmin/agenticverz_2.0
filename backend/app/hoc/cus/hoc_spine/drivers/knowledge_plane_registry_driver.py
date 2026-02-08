@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.knowledge_plane_registry import KnowledgePlaneRegistry
 
@@ -39,8 +39,8 @@ class KnowledgePlaneRegistryDriver:
             KnowledgePlaneRegistry.tenant_id == tenant_id,
             KnowledgePlaneRegistry.plane_id == plane_id,
         )
-        result = await session.exec(stmt)
-        return result.first()
+        result = await session.execute(stmt)
+        return result.scalars().first()
 
     async def get_by_key(
         self,
@@ -55,8 +55,8 @@ class KnowledgePlaneRegistryDriver:
             KnowledgePlaneRegistry.plane_type == plane_type,
             KnowledgePlaneRegistry.plane_name == plane_name,
         )
-        result = await session.exec(stmt)
-        return result.first()
+        result = await session.execute(stmt)
+        return result.scalars().first()
 
     async def list_by_tenant(
         self,
@@ -68,8 +68,8 @@ class KnowledgePlaneRegistryDriver:
         stmt = select(KnowledgePlaneRegistry).where(KnowledgePlaneRegistry.tenant_id == tenant_id)
         if plane_type is not None:
             stmt = stmt.where(KnowledgePlaneRegistry.plane_type == plane_type)
-        result = await session.exec(stmt)
-        return list(result.all())
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
 
     async def create(
         self,
@@ -121,4 +121,3 @@ class KnowledgePlaneRegistryDriver:
 
 
 __all__ = ["KnowledgePlaneRegistryDriver"]
-

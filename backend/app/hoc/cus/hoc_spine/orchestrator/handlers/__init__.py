@@ -140,6 +140,11 @@ def register_all_handlers(registry: "OperationRegistry") -> None:
 
     onboarding_handler.register(registry)  # account.onboarding.query, account.onboarding.advance
 
+    # Knowledge planes — persisted SSOT + evidence query (Phase 3)
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import knowledge_planes_handler
+
+    knowledge_planes_handler.register(registry)  # knowledge.planes.*, knowledge.evidence.*
+
 
 def bootstrap_hoc_spine() -> None:
     """

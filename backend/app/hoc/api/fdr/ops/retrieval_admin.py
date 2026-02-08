@@ -33,11 +33,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.auth.console_auth import verify_fops_token
-from app.schemas.response import wrap_dict
-from app.hoc.cus.hoc_spine.services.retrieval_facade import (
-    RetrievalFacade,
-    get_retrieval_facade,
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+    get_session_dep,
 )
+from app.schemas.response import wrap_dict
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(
     prefix="/retrieval",
@@ -56,53 +58,77 @@ class RegisterPlaneRequest(BaseModel):
     capabilities: Optional[List[str]] = Field(None, description="Plane capabilities")
 
 
-def get_facade() -> RetrievalFacade:
-    return get_retrieval_facade()
-
-
 @router.get("/planes", response_model=Dict[str, Any])
 async def list_planes(
     tenant_id: str = Query(..., description="Target tenant"),
     connector_type: Optional[str] = Query(None, description="Filter by connector type"),
     status: Optional[str] = Query(None, description="Filter by status"),
-    facade: RetrievalFacade = Depends(get_facade),
+    session: AsyncSession = Depends(get_session_dep),
 ):
-    planes = await facade.list_planes(
-        tenant_id=tenant_id,
-        connector_type=connector_type,
-        status=status,
+    # Phase 3: planes are served from the persisted SSOT (knowledge_plane_registry),
+    # not RetrievalFacade's in-memory demo registry.
+    #
+    # NOTE: `status` filter is accepted for API compatibility but not yet applied
+    # until lifecycle state wiring is unified (Phase 4).
+    _ = status
+    registry = get_operation_registry()
+    result = await registry.execute(
+        "knowledge.planes.list",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"plane_type": connector_type},
+        ),
     )
-    return wrap_dict({"planes": [p.to_dict() for p in planes], "total": len(planes)})
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
+    return wrap_dict(result.data)
 
 
 @router.post("/planes", response_model=Dict[str, Any])
 async def register_plane(
     request: RegisterPlaneRequest,
-    facade: RetrievalFacade = Depends(get_facade),
+    session: AsyncSession = Depends(get_session_dep),
 ):
-    plane = await facade.register_plane(
-        tenant_id=request.tenant_id,
-        name=request.name,
-        connector_type=request.connector_type,
-        connector_id=request.connector_id,
-        capabilities=request.capabilities,
+    registry = get_operation_registry()
+    result = await registry.execute(
+        "knowledge.planes.register",
+        OperationContext(
+            session=session,
+            tenant_id=request.tenant_id,
+            params={
+                "plane_type": request.connector_type,
+                "plane_name": request.name,
+                "connector_type": request.connector_type,
+                "connector_id": request.connector_id,
+                "config": {"capabilities": request.capabilities or []},
+                "created_by": "founder",
+            },
+        ),
     )
-    return wrap_dict(plane.to_dict())
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
+    return wrap_dict(result.data)
 
 
 @router.get("/planes/{plane_id}", response_model=Dict[str, Any])
 async def get_plane(
     plane_id: str,
     tenant_id: str = Query(..., description="Target tenant"),
-    facade: RetrievalFacade = Depends(get_facade),
+    session: AsyncSession = Depends(get_session_dep),
 ):
-    plane = await facade.get_plane(
-        plane_id=plane_id,
-        tenant_id=tenant_id,
+    registry = get_operation_registry()
+    result = await registry.execute(
+        "knowledge.planes.get",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"plane_id": plane_id},
+        ),
     )
-    if not plane:
+    if not result.success:
         raise HTTPException(status_code=404, detail="Plane not found")
-    return wrap_dict(plane.to_dict())
+    return wrap_dict(result.data)
 
 
 @router.get("/evidence", response_model=Dict[str, Any])
@@ -112,36 +138,42 @@ async def list_evidence(
     plane_id: Optional[str] = Query(None, description="Filter by plane"),
     limit: int = Query(100, le=1000, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    facade: RetrievalFacade = Depends(get_facade),
+    session: AsyncSession = Depends(get_session_dep),
 ):
-    evidence = await facade.list_evidence(
-        tenant_id=tenant_id,
-        run_id=run_id,
-        plane_id=plane_id,
-        limit=limit,
-        offset=offset,
+    registry = get_operation_registry()
+    result = await registry.execute(
+        "knowledge.evidence.list",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={
+                "run_id": run_id,
+                "plane_id": plane_id,
+                "limit": limit,
+                "offset": offset,
+            },
+        ),
     )
-    return wrap_dict(
-        {
-            "evidence": [e.to_dict() for e in evidence],
-            "total": len(evidence),
-            "limit": limit,
-            "offset": offset,
-        }
-    )
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
+    return wrap_dict(result.data)
 
 
 @router.get("/evidence/{evidence_id}", response_model=Dict[str, Any])
 async def get_evidence(
     evidence_id: str,
     tenant_id: str = Query(..., description="Target tenant"),
-    facade: RetrievalFacade = Depends(get_facade),
+    session: AsyncSession = Depends(get_session_dep),
 ):
-    evidence = await facade.get_evidence(
-        evidence_id=evidence_id,
-        tenant_id=tenant_id,
+    registry = get_operation_registry()
+    result = await registry.execute(
+        "knowledge.evidence.get",
+        OperationContext(
+            session=session,
+            tenant_id=tenant_id,
+            params={"evidence_id": evidence_id},
+        ),
     )
-    if not evidence:
+    if not result.success:
         raise HTTPException(status_code=404, detail="Evidence not found")
-    return wrap_dict(evidence.to_dict())
-
+    return wrap_dict(result.data)
