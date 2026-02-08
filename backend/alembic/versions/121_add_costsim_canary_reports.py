@@ -1,7 +1,7 @@
 """Add costsim_canary_reports table
 
 Revision ID: 121_canary_reports
-Revises: 120_add_is_frozen_to_api_keys
+Revises: 120_is_frozen_api_keys
 Create Date: 2026-02-03
 
 This migration creates the costsim_canary_reports table for storing
@@ -17,7 +17,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "121_canary_reports"
-down_revision = "120_add_is_frozen_to_api_keys"
+down_revision = "120_is_frozen_api_keys"
 branch_labels = None
 depends_on = None
 

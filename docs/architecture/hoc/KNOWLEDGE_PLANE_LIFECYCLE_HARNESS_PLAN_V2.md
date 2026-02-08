@@ -176,6 +176,14 @@ The canonical plane registry and lifecycle state must be **persisted to Postgres
    - `hoc_spine/drivers/retrieval_evidence_driver.py`
 3. Provide a migration to backfill any existing in-memory usage expectations (minimal seed).
 
+**Phase 2 implementation (in progress, 2026-02-08):**
+- Canonical governed plane SSOT table + model:
+  - Model: `backend/app/models/knowledge_plane_registry.py`
+  - Migration: `backend/alembic/versions/122_knowledge_plane_registry.py`
+- L6 drivers (no commit/rollback):
+  - `backend/app/hoc/cus/hoc_spine/drivers/knowledge_plane_registry_driver.py`
+  - `backend/app/hoc/cus/hoc_spine/drivers/retrieval_evidence_driver.py`
+
 **Exit criteria:** planes and evidence durable; drivers covered by t4/governance tests.
 
 ### Phase 3 — L4 Operations (INT Runtime Surface)

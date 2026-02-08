@@ -505,6 +505,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-532](PIN-532-delete-legacy-backendappapi.md) | **Delete Legacy backend/app/api** | HOC Governance | **✅ COMPLETE** | 2026-02-08 |
 | [PIN-533](PIN-533-knowledge-plane-lifecycle-harness-plan-and-literature.md) | **Knowledge Plane Lifecycle Harness Plan + Canonical Literature** | HOC Governance / System Runtime | **✅ COMPLETE** | 2026-02-08 |
 | [PIN-534](PIN-534-knowledge-plane-phase0-audience-scoping.md) | **Knowledge Planes Phase 0 — Audience Scoping (CUS vs FDR)** | HOC Governance / Surface Contracts | **✅ COMPLETE** | 2026-02-08 |
+| [PIN-535](PIN-535-knowledge-plane-phase2-persistence-ssot.md) | **Knowledge Planes Phase 2 — Persisted SSOT (knowledge_plane_registry)** | HOC Governance / Durability | **✅ COMPLETE** | 2026-02-08 |
 
 ---
 
@@ -1274,6 +1275,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-08 | **PIN-535 Knowledge Planes Phase 2 — Persisted SSOT (knowledge_plane_registry)** - Created. |
 | 2026-02-08 | **PIN-534 Knowledge Planes Phase 0 — Audience Scoping (CUS vs FDR)** - Created. |
 | 2026-02-08 | **PIN-533 Knowledge Plane Lifecycle Harness Plan + Canonical Literature** - Created via memory_trail. |
 | 2026-02-08 | **PIN-532 Delete Legacy backend/app/api** - Created via memory_trail. |

@@ -79,6 +79,13 @@ This document exists to make the existing engine blocks mechanically explicit be
 - `KnowledgeLifecycleManager` stores `self._planes` in-memory: `backend/app/hoc/cus/hoc_spine/orchestrator/lifecycle/knowledge_lifecycle_manager.py`
 - Retrieval plane registry stores `self._planes` in-memory: `backend/app/hoc/cus/hoc_spine/services/retrieval_facade.py`
 
+### 2.3 Legacy / Non-Canonical Persistence (Exists But Unwired)
+
+- A legacy/index-runtime table exists:
+  - Alembic: `backend/alembic/versions/118_w2_knowledge_planes.py`
+  - Tables: `knowledge_planes`, `knowledge_sources` (and related)
+- This persistence is not currently the SSOT for hoc_spine `KnowledgeLifecycleManager` (which remains in-memory).
+
 ---
 
 ## 3) Surface Wiring Reality (Where the API Is Today)
