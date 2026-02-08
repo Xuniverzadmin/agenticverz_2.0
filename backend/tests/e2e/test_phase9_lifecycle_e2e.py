@@ -29,7 +29,7 @@ import pytest
 from datetime import datetime, timezone
 
 # Phase-4: Onboarding
-from app.auth.onboarding_state import OnboardingState
+from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingState
 
 # Phase-6: Billing
 from app.billing import (

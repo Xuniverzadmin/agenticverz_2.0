@@ -41,7 +41,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.auth.gateway_middleware import get_auth_context
-from app.auth.onboarding_state import OnboardingState
+from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingState
 from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.onboarding")
@@ -322,7 +322,7 @@ async def verify_identity(request: Request):
     from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
         async_advance_onboarding,
     )
-    from app.hoc.cus.account.L5_schemas.onboarding_enums import OnboardingStatus
+    from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingStatus
 
     result = await async_advance_onboarding(
         tenant_id,
@@ -374,7 +374,7 @@ async def advance_api_key_created(request: Request):
     from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
         async_advance_onboarding,
     )
-    from app.hoc.cus.account.L5_schemas.onboarding_enums import OnboardingStatus
+    from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingStatus
 
     result = await async_advance_onboarding(
         tenant_id,

@@ -147,7 +147,7 @@ async def _get_onboarding_state(tenant_id: str) -> str:
     from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
         async_get_onboarding_state,
     )
-    from app.hoc.cus.account.L5_schemas.onboarding_enums import OnboardingStatus
+    from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingStatus
 
     state = await async_get_onboarding_state(tenant_id)
     if state is None:

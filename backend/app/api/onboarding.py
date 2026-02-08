@@ -322,7 +322,7 @@ async def verify_identity(request: Request):
     from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
         async_advance_onboarding,
     )
-    from app.hoc.cus.account.L5_schemas.onboarding_enums import OnboardingStatus
+    from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingStatus
 
     result = await async_advance_onboarding(
         tenant_id,
@@ -373,7 +373,7 @@ async def advance_api_key_created(request: Request):
     from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
         async_advance_onboarding,
     )
-    from app.hoc.cus.account.L5_schemas.onboarding_enums import OnboardingStatus
+    from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingStatus
 
     result = await async_advance_onboarding(
         tenant_id,

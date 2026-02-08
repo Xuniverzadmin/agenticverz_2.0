@@ -65,9 +65,7 @@ from app.contracts.guard import (
     CustomerIncidentNarrativeDTO,
     CustomerIncidentResolutionDTO,
 )
-from app.models.killswitch import (
-    IncidentSeverity,
-)
+from app.hoc.cus.hoc_spine.schemas.domain_enums import IncidentSeverity
 
 # Phase 2B: Write service for DB operations
 # V2.0.0 - hoc_spine drivers

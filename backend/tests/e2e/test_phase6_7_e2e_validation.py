@@ -44,7 +44,7 @@ from app.protection import (
     get_protection_provider,
     set_protection_provider,
 )
-from app.auth.onboarding_state import OnboardingState
+from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingState
 from app.auth.tenant_roles import TenantRole
 
 
@@ -368,7 +368,7 @@ class TestCrossPhaseInvariants:
 
     def test_phase4_phase6_onboarding_no_billing_reference(self):
         """No onboarding path references billing."""
-        from app.auth.onboarding_state import STATE_TRANSITIONS
+        from app.hoc.cus.account.L5_schemas.onboarding_state import STATE_TRANSITIONS
 
         # STATE_TRANSITIONS contains only state progressions
         for state, transition in STATE_TRANSITIONS.items():

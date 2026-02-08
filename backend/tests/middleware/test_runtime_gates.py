@@ -58,7 +58,7 @@ from app.api.middleware.billing_gate import (
     check_billing_limit,
 )
 
-from app.auth.onboarding_state import OnboardingState
+from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingState
 
 
 # =============================================================================

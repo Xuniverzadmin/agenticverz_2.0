@@ -67,7 +67,7 @@ from app.protection import (
     get_protection_provider,
     set_protection_provider,
 )
-from app.auth.onboarding_state import OnboardingState
+from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingState
 
 
 class TestPhase8E2EValidation:

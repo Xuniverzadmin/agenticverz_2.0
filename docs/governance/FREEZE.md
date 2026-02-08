@@ -25,9 +25,8 @@ These files must not change without explicit PIN reference and design review:
 ### Onboarding (Phase-4)
 
 ```
-backend/app/auth/onboarding_state.py
 backend/app/auth/onboarding_gate.py
-backend/app/hoc/cus/account/L5_schemas/onboarding_enums.py
+backend/app/hoc/cus/account/L5_schemas/onboarding_state.py
 backend/app/hoc/cus/account/L5_engines/onboarding_engine.py
 backend/app/hoc/cus/account/L6_drivers/onboarding_driver.py
 backend/app/hoc/cus/hoc_spine/orchestrator/handlers/onboarding_handler.py

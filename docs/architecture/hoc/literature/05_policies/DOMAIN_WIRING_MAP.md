@@ -54,10 +54,3 @@ L2.1 Facade: `/root/agenticverz2.0/backend/app/hoc/api/facades/cus/policies.py` 
 |------|-------------|--------|
 | L3_adapter | No L3 adapters but 51 L5 engines exist — L2 cannot reach L5 | Build hoc/cus/policies/L3_adapters/ with domain adapter(s) |
 | L7_models | 14 L6 drivers but no domain-specific L7 models | FLAG: domain-localized data candidate (human decision) |
-
-## Violations
-
-| File | Import | Rule Broken | Fix |
-|------|--------|-------------|-----|
-| `aos_accounts.py` | `from app.models.tenant import Invitation, Subscription, Supp` | L2 MUST NOT import L7 models | Use L5 schemas or response models |
-| `guard.py` | `from app.models.killswitch import IncidentSeverity` | L2 MUST NOT import L7 models | Use L5 schemas or response models |

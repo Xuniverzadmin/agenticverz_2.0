@@ -62,16 +62,6 @@ from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     get_operation_registry,
     get_session_dep,
 )
-from app.models.tenant import (
-    Invitation,
-    Subscription,
-    SupportTicket,
-    Tenant,
-    TenantMembership,
-    User,
-    generate_uuid,
-    utc_now,
-)
 
 # =============================================================================
 # Router

@@ -46,7 +46,7 @@ from app.protection.decisions import (
     allow,
 )
 from app.protection.provider import get_protection_provider
-from app.auth.onboarding_state import OnboardingState
+from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingState
 
 logger = logging.getLogger(__name__)
 

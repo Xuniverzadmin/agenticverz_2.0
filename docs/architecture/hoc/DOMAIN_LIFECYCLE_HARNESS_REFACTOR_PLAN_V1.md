@@ -113,7 +113,7 @@ All 6 HOC call sites rewired to `async_advance_onboarding()` / `async_get_onboar
 Session context files now do real async DB reads (replaced COMPLETE stub).
 
 New files:
-- `backend/app/hoc/cus/account/L5_schemas/onboarding_enums.py` — OnboardingStatus enum mirror
+- `backend/app/hoc/cus/account/L5_schemas/onboarding_state.py` — canonical onboarding enum + transition metadata (HOC)
 - `backend/app/hoc/cus/account/L5_schemas/onboarding_dtos.py` — DTOs
 - `backend/app/hoc/cus/account/L6_drivers/onboarding_driver.py` — pure data access (NO COMMIT)
 - `backend/app/hoc/cus/account/L5_engines/onboarding_engine.py` — monotonic state machine
@@ -121,6 +121,7 @@ New files:
 
 Legacy duplicates removed:
 - Deleted `backend/app/auth/onboarding_transitions.py`
+- Deleted `backend/app/auth/onboarding_state.py`
 - Deleted `backend/app/hoc/int/api_keys/engines/onboarding_transitions.py`
 
 Pairing gap: 69 wired, 0 orphaned, 0 direct.

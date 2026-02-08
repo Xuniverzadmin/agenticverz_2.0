@@ -30,7 +30,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from app.hoc.cus.account.L5_schemas.onboarding_enums import (
+from app.hoc.cus.account.L5_schemas.onboarding_state import (
     ONBOARDING_STATUS_NAMES,
     is_complete,
 )

@@ -25,7 +25,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from app.auth.onboarding_state import OnboardingState
+from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingState
 from app.hoc.cus.hoc_spine.authority.onboarding_policy import get_required_state  # noqa: F401
 
 logger = logging.getLogger("nova.auth.onboarding_gate")

@@ -70,7 +70,7 @@
 | `logging` | logging | no |
 | `app.protection.decisions` | Decision, ProtectionResult, AnomalySignal, allow | no |
 | `app.protection.provider` | get_protection_provider | no |
-| `app.auth.onboarding_state` | OnboardingState | no |
+| `app.hoc.cus.account.L5_schemas.onboarding_state` | OnboardingState | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 

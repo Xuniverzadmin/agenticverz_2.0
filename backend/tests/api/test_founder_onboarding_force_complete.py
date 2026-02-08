@@ -33,7 +33,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.auth.onboarding_state import OnboardingState
+from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingState
 from app.hoc.cus.account.L5_schemas.onboarding_dtos import OnboardingTransitionResult
 
 
@@ -307,7 +307,7 @@ class TestPhase4Invariants:
 
     def test_complete_is_terminal(self):
         """COMPLETE should be the terminal state."""
-        from app.auth.onboarding_state import STATE_TRANSITIONS
+        from app.hoc.cus.account.L5_schemas.onboarding_state import STATE_TRANSITIONS
 
         complete_transition = STATE_TRANSITIONS[OnboardingState.COMPLETE]
         assert complete_transition["next"] is None, "COMPLETE should have no next state"

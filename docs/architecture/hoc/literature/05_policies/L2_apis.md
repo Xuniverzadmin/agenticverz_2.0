@@ -201,7 +201,7 @@
 
 ## aos_accounts.py
 **Path:** `backend/app/hoc/api/cus/policies/aos_accounts.py`  
-**Layer:** L2_api | **Domain:** policies | **Lines:** 1485
+**Layer:** L2_api | **Domain:** policies | **Lines:** 1475
 
 **Docstring:** Unified Accounts API (L2)
 
@@ -264,7 +264,6 @@
 | `pydantic` | BaseModel, Field | no |
 | `app.auth.gateway_middleware` | get_auth_context | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
-| `app.models.tenant` | Invitation, Subscription, SupportTicket, Tenant, TenantMembership (+3) | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -273,11 +272,6 @@
 **SHOULD call:** L3_adapters
 **MUST NOT call:** L5_engines, L6_drivers, L7_models
 **Called by:** L2.1_facade
-
-### Violations
-| Import | Rule Broken | Required Fix | Line |
-|--------|-------------|-------------|------|
-| `from app.models.tenant import Invitation, Subscription, SupportTicket, Tenant, TenantMembership, User, generate_uuid, utc_now` | L2 MUST NOT import L7 models | Use L5 schemas or response models | 65 |
 
 ---
 
@@ -393,7 +387,7 @@
 | `app.billing.plan` | Plan, DEFAULT_PLAN | no |
 | `app.billing.limits` | Limits, DEFAULT_LIMITS | no |
 | `app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.account_bridge` | get_account_bridge | no |
-| `app.auth.onboarding_state` | OnboardingState | no |
+| `app.hoc.cus.account.L5_schemas.onboarding_state` | OnboardingState | no |
 | `app.schemas.response` | wrap_dict | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
@@ -778,7 +772,7 @@
 
 ## guard.py
 **Path:** `backend/app/hoc/api/cus/policies/guard.py`  
-**Layer:** L2_api | **Domain:** policies | **Lines:** 2486
+**Layer:** L2_api | **Domain:** policies | **Lines:** 2484
 
 **Docstring:** Guard API - Customer Console Backend
 
@@ -855,7 +849,7 @@
 | `app.auth.console_auth` | CustomerToken, verify_console_token | no |
 | `app.schemas.response` | wrap_dict | no |
 | `app.contracts.guard` | CustomerIncidentActionDTO, CustomerIncidentImpactDTO, CustomerIncidentNarrativeDTO, CustomerIncidentResolutionDTO | no |
-| `app.models.killswitch` | IncidentSeverity | no |
+| `app.hoc.cus.hoc_spine.schemas.domain_enums` | IncidentSeverity | no |
 | `app.hoc.cus.hoc_spine.drivers.guard_write_driver` | GuardWriteDriver | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, OperationResult, get_operation_registry, get_sync_session_dep | no |
 | `app.hoc.cus.logs.L5_schemas.determinism_types` | DeterminismLevel | no |
@@ -870,11 +864,6 @@
 **SHOULD call:** L3_adapters
 **MUST NOT call:** L5_engines, L6_drivers, L7_models
 **Called by:** L2.1_facade
-
-### Violations
-| Import | Rule Broken | Required Fix | Line |
-|--------|-------------|-------------|------|
-| `from app.models.killswitch import IncidentSeverity` | L2 MUST NOT import L7 models | Use L5 schemas or response models | 68 |
 
 ---
 

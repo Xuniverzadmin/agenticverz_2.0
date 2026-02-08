@@ -83,7 +83,7 @@ async def _maybe_advance_to_sdk_connected(tenant_id: str) -> Optional[str]:
         from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
             async_advance_onboarding,
         )
-        from app.hoc.cus.account.L5_schemas.onboarding_enums import OnboardingStatus
+        from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingStatus
 
         result = await async_advance_onboarding(
             tenant_id,
@@ -161,7 +161,7 @@ async def sdk_handshake(
     from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
         async_get_onboarding_state,
     )
-    from app.hoc.cus.account.L5_schemas.onboarding_enums import OnboardingStatus
+    from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingStatus
 
     state_val = await async_get_onboarding_state(tenant_id)
     state_name = OnboardingStatus(state_val).name if state_val is not None else "UNKNOWN"

@@ -39,7 +39,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.auth.console_auth import FounderToken, verify_fops_token
-from app.auth.onboarding_state import OnboardingState
+from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingState
 from app.schemas.response import wrap_dict
 
 logger = logging.getLogger("nova.api.founder_onboarding")

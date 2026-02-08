@@ -5496,7 +5496,7 @@
         "file_path": "backend/app/hoc/api/cus/policies/aos_accounts.py",
         "layer": "L2_api",
         "domain": "policies",
-        "lines": 1485,
+        "lines": 1475,
         "module_docstring": "Unified Accounts API (L2)\n\nCustomer-facing endpoints for account management: projects, users, profile, billing.\nAll requests are tenant-scoped via auth_context.\n\nIMPORTANT: Account is NOT a domain. It manages:\n- WHO (users, profile)\n- WHAT (projects)\n- BILLING (subscription, invoices)\n\nIt does NOT manage or display:\n- Executions\n- Incidents\n- Policies\n- Logs\n\nEndpoints:\n- GET /accounts/projects            \u2192 O2 list projects\n- GET /accounts/projects/{id}       \u2192 O3 project detail\n- GET /accounts/users               \u2192 O2 list users\n- GET /accounts/users/{id}          \u2192 O3 user detail\n- GET /accounts/profile             \u2192 Current user profile\n- PUT /accounts/profile             \u2192 Update profile\n- GET /accounts/billing             \u2192 Billing summary\n- GET /accounts/billing/invoices    \u2192 Invoice history\n\nArchitecture:\n- ONE facade for all ACCOUNTS needs\n- Tenant isolation via auth_context (not header)\n- SDSR validates this same production API",
         "functions": [
           {
@@ -5504,133 +5504,133 @@
             "signature": "(request: Request) -> str",
             "docstring": "Extract tenant_id from auth_context. Raises 401/403 if missing.",
             "is_async": false,
-            "line": 92
+            "line": 82
           },
           {
             "name": "get_user_id_from_auth",
             "signature": "(request: Request) -> str | None",
             "docstring": "Extract user_id from auth_context. Returns None if not available.",
             "is_async": false,
-            "line": 116
+            "line": 106
           },
           {
             "name": "list_projects",
             "signature": "(request: Request, status: Annotated[Optional[str], Query(description='Filter by status: active, suspended', pattern='^(active|suspended)$')] = None, limit: Annotated[int, Query(ge=1, le=100, description='Max items to return')] = 50, offset: Annotated[int, Query(ge=0, description='Rows to skip')] = 0, session = Depends(get_session_dep)) -> ProjectsListResponse",
             "docstring": "READ-ONLY customer facade - delegates to L4 AccountsFacade.",
             "is_async": true,
-            "line": 286
+            "line": 276
           },
           {
             "name": "get_project_detail",
             "signature": "(request: Request, project_id: str, session = Depends(get_session_dep)) -> ProjectDetailResponse",
             "docstring": "READ-ONLY customer facade - delegates to L4 AccountsFacade.",
             "is_async": true,
-            "line": 366
+            "line": 356
           },
           {
             "name": "list_users",
             "signature": "(request: Request, role: Annotated[Optional[str], Query(description='Filter by role: owner, admin, member, viewer', pattern='^(owner|admin|member|viewer)$')] = None, status: Annotated[Optional[str], Query(description='Filter by status: active, suspended', pattern='^(active|suspended)$')] = None, limit: Annotated[int, Query(ge=1, le=100, description='Max items to return')] = 50, offset: Annotated[int, Query(ge=0, description='Rows to skip')] = 0, session = Depends(get_session_dep)) -> UsersListResponse",
             "docstring": "READ-ONLY customer facade - delegates to L4 AccountsFacade.",
             "is_async": true,
-            "line": 441
+            "line": 431
           },
           {
             "name": "get_user_detail",
             "signature": "(request: Request, user_id: str, session = Depends(get_session_dep)) -> UserDetailResponse",
             "docstring": "READ-ONLY customer facade - delegates to L4 AccountsFacade.",
             "is_async": true,
-            "line": 529
+            "line": 519
           },
           {
             "name": "get_profile",
             "signature": "(request: Request, session = Depends(get_session_dep)) -> ProfileResponse",
             "docstring": "READ-ONLY customer facade - delegates to L4 AccountsFacade.",
             "is_async": true,
-            "line": 599
+            "line": 589
           },
           {
             "name": "get_billing_summary",
             "signature": "(request: Request, session = Depends(get_session_dep)) -> BillingSummaryResponse",
             "docstring": "READ-ONLY customer facade - delegates to L4 AccountsFacade.",
             "is_async": true,
-            "line": 657
+            "line": 647
           },
           {
             "name": "update_profile",
             "signature": "(request: Request, update: ProfileUpdateRequest, session = Depends(get_session_dep)) -> ProfileUpdateResponse",
             "docstring": "WRITE customer facade - delegates to L4 AccountsFacade.",
             "is_async": true,
-            "line": 737
+            "line": 727
           },
           {
             "name": "get_billing_invoices",
             "signature": "(request: Request, session = Depends(get_session_dep)) -> InvoiceListResponse",
             "docstring": "READ-ONLY customer facade - delegates to L4 AccountsFacade.",
             "is_async": true,
-            "line": 818
+            "line": 808
           },
           {
             "name": "get_support_contact",
             "signature": "() -> SupportContactResponse",
             "docstring": "READ-ONLY customer facade - delegates to L4 AccountsFacade.",
             "is_async": false,
-            "line": 924
+            "line": 914
           },
           {
             "name": "create_support_ticket",
             "signature": "(request: Request, ticket: SupportTicketCreate, session = Depends(get_session_dep)) -> SupportTicketResponse",
             "docstring": "WRITE customer facade - delegates to L4 AccountsFacade.",
             "is_async": true,
-            "line": 952
+            "line": 942
           },
           {
             "name": "list_support_tickets",
             "signature": "(request: Request, status: Optional[str] = Query(None, description='Filter by status'), session = Depends(get_session_dep)) -> SupportTicketListResponse",
             "docstring": "READ-ONLY customer facade - delegates to L4 AccountsFacade.",
             "is_async": true,
-            "line": 1007
+            "line": 997
           },
           {
             "name": "invite_user",
             "signature": "(request: Request, invite: InviteUserRequest, session = Depends(get_session_dep)) -> InvitationResponse",
             "docstring": "WRITE customer facade - delegates to L4 AccountsFacade.",
             "is_async": true,
-            "line": 1127
+            "line": 1117
           },
           {
             "name": "list_invitations",
             "signature": "(request: Request, status: Optional[str] = Query(None, description='Filter by status'), session = Depends(get_session_dep)) -> InvitationListResponse",
             "docstring": "READ-ONLY customer facade - delegates to L4 AccountsFacade.",
             "is_async": true,
-            "line": 1183
+            "line": 1173
           },
           {
             "name": "accept_invitation",
             "signature": "(invitation_id: str, accept: AcceptInvitationRequest, session = Depends(get_session_dep)) -> dict",
             "docstring": "Accept an invitation to join a tenant.\n\nThis is a public endpoint (no auth required) as the user\nmay not have an account yet.\n\nLayer: L2 (Product APIs) \u2014 delegates to L4 AccountsFacade",
             "is_async": true,
-            "line": 1247
+            "line": 1237
           },
           {
             "name": "list_tenant_users",
             "signature": "(request: Request, session = Depends(get_session_dep)) -> TenantUserListResponse",
             "docstring": "List users in the current tenant.\n\nLayer: L2 (Product APIs) \u2014 delegates to L4 AccountsFacade",
             "is_async": true,
-            "line": 1311
+            "line": 1301
           },
           {
             "name": "update_user_role",
             "signature": "(request: Request, user_id: str, update: UpdateUserRoleRequest, session = Depends(get_session_dep)) -> TenantUserResponse",
             "docstring": "Update a user's role in the tenant.\n\nRequires: owner role.\n\nLayer: L2 (Product APIs) \u2014 delegates to L4 AccountsFacade",
             "is_async": true,
-            "line": 1366
+            "line": 1356
           },
           {
             "name": "remove_user",
             "signature": "(request: Request, user_id: str, session = Depends(get_session_dep)) -> dict",
             "docstring": "Remove a user from the tenant.\n\nRequires: owner or admin role.\n\nLayer: L2 (Product APIs) \u2014 delegates to L4 AccountsFacade",
             "is_async": true,
-            "line": 1432
+            "line": 1422
           }
         ],
         "classes": [
@@ -5638,139 +5638,139 @@
             "name": "ProjectSummary",
             "docstring": "O2 Result Shape for projects.",
             "methods": [],
-            "line": 131
+            "line": 121
           },
           {
             "name": "ProjectsListResponse",
             "docstring": "GET /projects response (O2).",
             "methods": [],
-            "line": 143
+            "line": 133
           },
           {
             "name": "ProjectDetailResponse",
             "docstring": "GET /projects/{id} response (O3).",
             "methods": [],
-            "line": 152
+            "line": 142
           },
           {
             "name": "UserSummary",
             "docstring": "O2 Result Shape for users.",
             "methods": [],
-            "line": 184
+            "line": 174
           },
           {
             "name": "UsersListResponse",
             "docstring": "GET /users response (O2).",
             "methods": [],
-            "line": 196
+            "line": 186
           },
           {
             "name": "UserDetailResponse",
             "docstring": "GET /users/{id} response (O3).",
             "methods": [],
-            "line": 205
+            "line": 195
           },
           {
             "name": "ProfileResponse",
             "docstring": "GET /profile response.",
             "methods": [],
-            "line": 234
+            "line": 224
           },
           {
             "name": "BillingSummaryResponse",
             "docstring": "GET /billing response.",
             "methods": [],
-            "line": 253
+            "line": 243
           },
           {
             "name": "ProfileUpdateRequest",
             "docstring": "Request to update user profile preferences.",
             "methods": [],
-            "line": 717
+            "line": 707
           },
           {
             "name": "ProfileUpdateResponse",
             "docstring": "Profile update response.",
             "methods": [],
-            "line": 725
+            "line": 715
           },
           {
             "name": "InvoiceSummary",
             "docstring": "Invoice summary for billing history.",
             "methods": [],
-            "line": 798
+            "line": 788
           },
           {
             "name": "InvoiceListResponse",
             "docstring": "List of invoices response.",
             "methods": [],
-            "line": 809
+            "line": 799
           },
           {
             "name": "SupportTicketCreate",
             "docstring": "Create a support ticket.",
             "methods": [],
-            "line": 884
+            "line": 874
           },
           {
             "name": "SupportTicketResponse",
             "docstring": "Support ticket response.",
             "methods": [],
-            "line": 893
+            "line": 883
           },
           {
             "name": "SupportTicketListResponse",
             "docstring": "List of support tickets.",
             "methods": [],
-            "line": 908
+            "line": 898
           },
           {
             "name": "SupportContactResponse",
             "docstring": "Support contact information.",
             "methods": [],
-            "line": 915
+            "line": 905
           },
           {
             "name": "InviteUserRequest",
             "docstring": "Request to invite a user to the tenant.",
             "methods": [],
-            "line": 1071
+            "line": 1061
           },
           {
             "name": "InvitationResponse",
             "docstring": "Invitation response.",
             "methods": [],
-            "line": 1078
+            "line": 1068
           },
           {
             "name": "InvitationListResponse",
             "docstring": "List of invitations.",
             "methods": [],
-            "line": 1090
+            "line": 1080
           },
           {
             "name": "AcceptInvitationRequest",
             "docstring": "Request to accept an invitation.",
             "methods": [],
-            "line": 1097
+            "line": 1087
           },
           {
             "name": "UpdateUserRoleRequest",
             "docstring": "Request to update a user's role.",
             "methods": [],
-            "line": 1103
+            "line": 1093
           },
           {
             "name": "TenantUserResponse",
             "docstring": "User in tenant response.",
             "methods": [],
-            "line": 1109
+            "line": 1099
           },
           {
             "name": "TenantUserListResponse",
             "docstring": "List of users in tenant.",
             "methods": [],
-            "line": 1119
+            "line": 1109
           }
         ],
         "imports": [
@@ -5832,21 +5832,6 @@
             ],
             "is_relative": false,
             "line": 60
-          },
-          {
-            "module": "app.models.tenant",
-            "names": [
-              "Invitation",
-              "Subscription",
-              "SupportTicket",
-              "Tenant",
-              "TenantMembership",
-              "User",
-              "generate_uuid",
-              "utc_now"
-            ],
-            "is_relative": false,
-            "line": 65
           }
         ],
         "constants": [],
@@ -6237,7 +6222,7 @@
             "line": 38
           },
           {
-            "module": "app.auth.onboarding_state",
+            "module": "app.hoc.cus.account.L5_schemas.onboarding_state",
             "names": [
               "OnboardingState"
             ],
@@ -7493,7 +7478,7 @@
         "file_path": "backend/app/hoc/api/cus/policies/guard.py",
         "layer": "L2_api",
         "domain": "policies",
-        "lines": 2486,
+        "lines": 2484,
         "module_docstring": "Guard API - Customer Console Backend\n\nThis router provides endpoints for the Customer Console (guard.agenticverz.com).\nFocused on TRUST and CONTROL - customers can see what's protecting them and stop it if needed.\n\nEndpoints:\n- GET  /guard/status          - Protection status (am I safe?)\n- GET  /guard/snapshot/today  - Today's metrics\n- POST /guard/killswitch/activate   - Stop all traffic\n- POST /guard/killswitch/deactivate - Resume traffic\n- GET  /guard/incidents       - List incidents\n- GET  /guard/incidents/{id}  - Incident detail with timeline\n- POST /guard/incidents/{id}/acknowledge - Acknowledge incident\n- POST /guard/incidents/{id}/resolve     - Resolve incident\n- POST /guard/replay/{call_id} - Replay a call\n- GET  /guard/keys            - List API keys\n- POST /guard/keys/{id}/freeze   - Freeze key\n- POST /guard/keys/{id}/unfreeze - Unfreeze key\n- GET  /guard/settings        - Read-only settings",
         "functions": [
           {
@@ -7501,175 +7486,175 @@
             "signature": "() -> datetime",
             "docstring": null,
             "is_async": false,
-            "line": 273
+            "line": 271
           },
           {
             "name": "get_tenant_from_auth",
             "signature": "(session, tenant_id: str) -> dict",
             "docstring": "Get tenant or raise 404. Uses L4 registry dispatch for L2 first-principles purity.",
             "is_async": true,
-            "line": 277
+            "line": 275
           },
           {
             "name": "get_guard_status",
             "signature": "(tenant_id: str = Query(..., description='Tenant ID'), session = Depends(get_sync_session_dep))",
             "docstring": "Get protection status - \"Am I safe right now?\"\n\nReturns:\n- Freeze state\n- Active guardrails\n- 24h incident count\n- Last incident time\n\nCached for 5 seconds to reduce cross-region DB latency.",
             "is_async": true,
-            "line": 302
+            "line": 300
           },
           {
             "name": "get_today_snapshot",
             "signature": "(tenant_id: str = Query(..., description='Tenant ID'), session = Depends(get_sync_session_dep))",
             "docstring": "Get today's metrics - \"What did it cost/save me?\"\n\nCached for 10 seconds to reduce cross-region DB latency.",
             "is_async": true,
-            "line": 395
+            "line": 393
           },
           {
             "name": "activate_killswitch",
             "signature": "(tenant_id: str = Query(..., description='Tenant ID'), session = Depends(get_sync_session_dep))",
             "docstring": "Stop all traffic - Emergency kill switch.\n\nImmediate. All requests blocked until manually resumed.\n\nPIN-281: Uses L3 CustomerKillswitchAdapter for tenant-scoped operations.",
             "is_async": true,
-            "line": 474
+            "line": 472
           },
           {
             "name": "deactivate_killswitch",
             "signature": "(tenant_id: str = Query(..., description='Tenant ID'), session = Depends(get_sync_session_dep))",
             "docstring": "Resume traffic - Deactivate kill switch.\n\nGuardrails will continue protecting.\n\nPIN-281: Uses L3 CustomerKillswitchAdapter for tenant-scoped operations.",
             "is_async": true,
-            "line": 503
+            "line": 501
           },
           {
             "name": "list_incidents",
             "signature": "(tenant_id: str = Query(..., description='Tenant ID'), limit: int = Query(default=50, le=100), offset: int = Query(default=0), session = Depends(get_sync_session_dep))",
             "docstring": "List incidents - \"What did you stop for me?\"\n\nHuman narrative, not logs.\n\nPIN-281: Uses L3 CustomerIncidentsAdapter for tenant-scoped operations.",
             "is_async": true,
-            "line": 534
+            "line": 532
           },
           {
             "name": "get_incident_detail",
             "signature": "(incident_id: str, tenant_id: str = Query(..., description='Tenant ID'), session = Depends(get_sync_session_dep))",
             "docstring": "Get incident detail with timeline.\n\nOne-screen explanation readable at 2am.\n\nPIN-281: Uses L3 CustomerIncidentsAdapter with tenant isolation.",
             "is_async": true,
-            "line": 580
+            "line": 578
           },
           {
             "name": "acknowledge_incident",
             "signature": "(incident_id: str, tenant_id: str = Query(..., description='Tenant ID'), session = Depends(get_sync_session_dep))",
             "docstring": "Acknowledge an incident.\n\nPIN-281: Uses L3 CustomerIncidentsAdapter with tenant isolation.",
             "is_async": true,
-            "line": 634
+            "line": 632
           },
           {
             "name": "resolve_incident",
             "signature": "(incident_id: str, tenant_id: str = Query(..., description='Tenant ID'), session = Depends(get_sync_session_dep))",
             "docstring": "Resolve an incident.\n\nPIN-281: Uses L3 CustomerIncidentsAdapter with tenant isolation.",
             "is_async": true,
-            "line": 655
+            "line": 653
           },
           {
             "name": "get_customer_incident_narrative",
             "signature": "(incident_id: str, token: CustomerToken = Depends(verify_console_token), session = Depends(get_sync_session_dep)) -> CustomerIncidentNarrativeDTO",
             "docstring": "GET /guard/incidents/{id}/narrative\n\nCustomer Incident Narrative - Calm, reassuring summary.\n\nM29 Category 5: Incident Console Contrast\n\nAnswers:\n- What happened? (plain language)\n- Did it affect me? (yes/no/some)\n- Is it fixed? (status + message)\n- Do I need to act? (only if necessary)\n\nIMPORTANT: Uses CALM vocabulary only.\n- No internal terminology (policy names, thresholds)\n- No cross-tenant data\n- No raw metrics that could cause panic",
             "is_async": true,
-            "line": 681
+            "line": 679
           },
           {
             "name": "_generate_plain_title",
             "signature": "(incident: dict) -> str",
             "docstring": "Generate plain language title - no internal terminology.",
             "is_async": false,
-            "line": 757
+            "line": 755
           },
           {
             "name": "_generate_calm_summary",
             "signature": "(incident: dict) -> str",
             "docstring": "Generate calm, reassuring summary - no internal terms.",
             "is_async": false,
-            "line": 774
+            "line": 772
           },
           {
             "name": "_build_customer_impact",
             "signature": "(incident: dict) -> CustomerIncidentImpactDTO",
             "docstring": "Build impact assessment with calm vocabulary.",
             "is_async": false,
-            "line": 798
+            "line": 796
           },
           {
             "name": "_build_customer_resolution",
             "signature": "(incident: dict) -> CustomerIncidentResolutionDTO",
             "docstring": "Build resolution status with reassuring message.",
             "is_async": false,
-            "line": 836
+            "line": 834
           },
           {
             "name": "_build_customer_actions",
             "signature": "(incident: dict) -> list",
             "docstring": "Build customer actions - only if necessary.",
             "is_async": false,
-            "line": 869
+            "line": 867
           },
           {
             "name": "replay_call",
             "signature": "(call_id: str, level: str = Query('logical', description='Determinism level: strict, logical, or semantic'), session = Depends(get_sync_session_dep), auth: AuthorityResult = Depends(require_replay_execute))",
             "docstring": "Replay a call - Trust builder.\n\nM23: Uses real ReplayValidator from replay_determinism.py\n\nDeterminism Levels:\n- strict: Byte-for-byte exact match (only works for cached/local)\n- logical: Policy decision equivalence (default - proves guardrails work)\n- semantic: Meaning-equivalent match (for content validation)\n\nShows:\n- Original outcome\n- Replay outcome\n- Policy decisions (same/different)\n- Model drift detection",
             "is_async": true,
-            "line": 923
+            "line": 921
           },
           {
             "name": "list_api_keys",
             "signature": "(tenant_id: str = Query(..., description='Tenant ID'), session = Depends(get_sync_session_dep))",
             "docstring": "List API keys with status.\n\nCustomer can freeze/unfreeze individual keys.\n\nPIN-281: Uses L3 CustomerKeysAdapter for tenant-scoped operations.",
             "is_async": true,
-            "line": 1249
+            "line": 1247
           },
           {
             "name": "freeze_api_key",
             "signature": "(key_id: str, tenant_id: str = Query(..., description='Tenant ID'), session = Depends(get_sync_session_dep))",
             "docstring": "Freeze an API key.\n\nPIN-281: Uses L3 CustomerKeysAdapter with tenant isolation.",
             "is_async": true,
-            "line": 1288
+            "line": 1286
           },
           {
             "name": "unfreeze_api_key",
             "signature": "(key_id: str, tenant_id: str = Query(..., description='Tenant ID'), session = Depends(get_sync_session_dep))",
             "docstring": "Unfreeze an API key.\n\nPIN-281: Uses L3 CustomerKeysAdapter with tenant isolation.",
             "is_async": true,
-            "line": 1309
+            "line": 1307
           },
           {
             "name": "get_settings",
             "signature": "(tenant_id: str = Query(..., description='Tenant ID'), session = Depends(get_sync_session_dep))",
             "docstring": "Get read-only settings.\n\nCustomers can see what's configured but can't change it.\nContact support to modify.\n\nIn demo mode (tenant_demo or non-existent tenant), returns demo defaults.",
             "is_async": true,
-            "line": 1335
+            "line": 1333
           },
           {
             "name": "search_incidents",
             "signature": "(request: IncidentSearchRequest, tenant_id: str = Query(..., description='Tenant ID'), session = Depends(get_sync_session_dep))",
             "docstring": "Search incidents with filters - M23 component map spec.\n\nSupports:\n- Free text search in title/description\n- Filter by user_id (from related calls)\n- Filter by policy status (passed/failed)\n- Filter by severity\n- Filter by time range\n- Filter by model",
             "is_async": true,
-            "line": 1526
+            "line": 1524
           },
           {
             "name": "get_decision_timeline",
             "signature": "(incident_id: str, session = Depends(get_sync_session_dep))",
             "docstring": "Get decision timeline - M23 component map spec.\n\nReturns step-by-step trace:\n1. INPUT_RECEIVED - What the user asked\n2. CONTEXT_RETRIEVED - What data was fetched\n3. POLICY_EVALUATED - Each policy check (PASS/FAIL/WARN)\n4. MODEL_CALLED - LLM invocation\n5. OUTPUT_GENERATED - Final response\n6. LOGGED - Audit trail\n\nPlus root cause identification if policy failed.",
             "is_async": true,
-            "line": 1665
+            "line": 1663
           },
           {
             "name": "export_incident_evidence",
             "signature": "(incident_id: str, tenant_id: str = Query(..., description='Tenant ID'), include_replay: bool = Query(True, description='Include replay verification'), include_prevention: bool = Query(True, description='Include prevention proof'), is_demo: bool = Query(True, description='Add demo watermark'), session = Depends(get_sync_session_dep))",
             "docstring": "Export incident as a legal-grade PDF evidence report.\n\nThis document is designed to survive:\n- Legal review\n- Audit compliance\n- Executive briefing\n- Hostile questioning\n\nSections included:\n1. Executive Summary (for lawyers/leadership)\n2. Factual Reconstruction (pure evidence)\n3. Policy Evaluation Record\n4. Decision Timeline (deterministic trace)\n5. Replay Verification (cryptographic proof)\n6. Prevention Proof (counterfactual)\n7. Remediation & Controls\n8. Legal Attestation\n\nReturns: PDF file with Content-Disposition header",
             "is_async": true,
-            "line": 2026
+            "line": 2024
           },
           {
             "name": "onboarding_verify",
             "signature": "(request: OnboardingVerifyRequest, tenant_id: str = Query(..., description='Tenant ID'), session = Depends(get_sync_session_dep))",
             "docstring": "REAL safety verification for onboarding.\n\nThis endpoint:\n1. Fires a REAL request through the proxy (not simulated)\n2. Uses a prompt designed to trigger a guardrail\n3. Creates a REAL incident if blocked\n4. Sends a REAL alert if configured\n\nThe user will see:\n- A real API call being made\n- Real tokens being consumed (minimal)\n- A real incident in their console\n- A real alert (if Slack/email configured)\n\nTest types:\n- guardrail_block: Triggers prompt injection guardrail (blocked, no cost)\n- killswitch_demo: Shows what happens when kill switch fires",
             "is_async": true,
-            "line": 2295
+            "line": 2293
           }
         ],
         "classes": [
@@ -7677,145 +7662,145 @@
             "name": "GuardStatus",
             "docstring": "Protection status response.",
             "methods": [],
-            "line": 116
+            "line": 114
           },
           {
             "name": "TodaySnapshot",
             "docstring": "Today's metrics snapshot.",
             "methods": [],
-            "line": 127
+            "line": 125
           },
           {
             "name": "IncidentSummary",
             "docstring": "Incident list item.",
             "methods": [],
-            "line": 137
+            "line": 135
           },
           {
             "name": "IncidentEventResponse",
             "docstring": "Timeline event.",
             "methods": [],
-            "line": 155
+            "line": 153
           },
           {
             "name": "IncidentDetailResponse",
             "docstring": "Full incident detail with timeline.",
             "methods": [],
-            "line": 165
+            "line": 163
           },
           {
             "name": "ApiKeyResponse",
             "docstring": "API key for customer console.",
             "methods": [],
-            "line": 172
+            "line": 170
           },
           {
             "name": "PaginatedResponse",
             "docstring": "Generic paginated response.",
             "methods": [],
-            "line": 185
+            "line": 183
           },
           {
             "name": "GuardrailConfig",
             "docstring": "Guardrail configuration for settings page.",
             "methods": [],
-            "line": 194
+            "line": 192
           },
           {
             "name": "TenantSettings",
             "docstring": "Read-only tenant settings.",
             "methods": [],
-            "line": 207
+            "line": 205
           },
           {
             "name": "PolicyDecision",
             "docstring": "Policy decision for replay.",
             "methods": [],
-            "line": 223
+            "line": 221
           },
           {
             "name": "ReplayCallSnapshot",
             "docstring": "Call snapshot for replay comparison.",
             "methods": [],
-            "line": 232
+            "line": 230
           },
           {
             "name": "ReplayCertificate",
             "docstring": "M23: Cryptographic certificate proving deterministic replay.",
             "methods": [],
-            "line": 243
+            "line": 241
           },
           {
             "name": "ReplayResult",
             "docstring": "Replay result response.",
             "methods": [],
-            "line": 255
+            "line": 253
           },
           {
             "name": "IncidentSearchRequest",
             "docstring": "Search incidents with filters.",
             "methods": [],
-            "line": 1422
+            "line": 1420
           },
           {
             "name": "IncidentSearchResult",
             "docstring": "Search result item matching component map spec.",
             "methods": [],
-            "line": 1436
+            "line": 1434
           },
           {
             "name": "IncidentSearchResponse",
             "docstring": "Search response.",
             "methods": [],
-            "line": 1450
+            "line": 1448
           },
           {
             "name": "TimelineEvent",
             "docstring": "Decision timeline event - step by step policy evaluation.",
             "methods": [],
-            "line": 1459
+            "line": 1457
           },
           {
             "name": "PolicyEvaluation",
             "docstring": "Individual policy evaluation result.",
             "methods": [],
-            "line": 1468
+            "line": 1466
           },
           {
             "name": "CARERoutingInfo",
             "docstring": "M17 CARE routing information for decision timeline.",
             "methods": [],
-            "line": 1478
+            "line": 1476
           },
           {
             "name": "FailureCatalogMatch",
             "docstring": "M9 Failure Catalog match information.",
             "methods": [],
-            "line": 1493
+            "line": 1491
           },
           {
             "name": "DecisionTimelineResponse",
             "docstring": "Full decision timeline for an incident/call.",
             "methods": [],
-            "line": 1505
+            "line": 1503
           },
           {
             "name": "EvidenceExportRequest",
             "docstring": "Request for evidence report export.",
             "methods": [],
-            "line": 2016
+            "line": 2014
           },
           {
             "name": "OnboardingVerifyRequest",
             "docstring": "Request for onboarding safety verification.",
             "methods": [],
-            "line": 2271
+            "line": 2269
           },
           {
             "name": "OnboardingVerifyResponse",
             "docstring": "Response from onboarding verification.",
             "methods": [],
-            "line": 2278
+            "line": 2276
           }
         ],
         "imports": [
@@ -7939,7 +7924,7 @@
             "line": 62
           },
           {
-            "module": "app.models.killswitch",
+            "module": "app.hoc.cus.hoc_spine.schemas.domain_enums",
             "names": [
               "IncidentSeverity"
             ],
@@ -7952,7 +7937,7 @@
               "GuardWriteDriver"
             ],
             "is_relative": false,
-            "line": 74
+            "line": 72
           },
           {
             "module": "app.hoc.cus.hoc_spine.orchestrator.operation_registry",
@@ -7963,7 +7948,7 @@
               "get_sync_session_dep"
             ],
             "is_relative": false,
-            "line": 77
+            "line": 75
           },
           {
             "module": "app.hoc.cus.logs.L5_schemas.determinism_types",
@@ -7971,7 +7956,7 @@
               "DeterminismLevel"
             ],
             "is_relative": false,
-            "line": 85
+            "line": 83
           },
           {
             "module": "app.utils.guard_cache",
@@ -7979,7 +7964,7 @@
               "get_guard_cache"
             ],
             "is_relative": false,
-            "line": 90
+            "line": 88
           },
           {
             "module": "json",
@@ -7987,7 +7972,7 @@
               "json"
             ],
             "is_relative": false,
-            "line": 2008
+            "line": 2006
           },
           {
             "module": "decimal",
@@ -7995,7 +7980,7 @@
               "Decimal"
             ],
             "is_relative": false,
-            "line": 2009
+            "line": 2007
           }
         ],
         "constants": [],
@@ -21347,7 +21332,7 @@
     ],
     "l7_models": [],
     "total_files": 103,
-    "violation_count": 2,
+    "violation_count": 0,
     "gap_count": 2
   },
   "controls": {
@@ -27866,7 +27851,7 @@
             "line": 48
           },
           {
-            "module": "app.auth.onboarding_state",
+            "module": "app.hoc.cus.account.L5_schemas.onboarding_state",
             "names": [
               "OnboardingState"
             ],

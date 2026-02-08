@@ -47,10 +47,12 @@ import sys
 # Files frozen per docs/governance/FREEZE.md
 FROZEN_FILES = [
     # Onboarding (Phase-4)
-    "app/auth/onboarding_state.py",
-    "app/auth/onboarding_transitions.py",
     "app/auth/onboarding_gate.py",
-    "app/api/founder_onboarding.py",
+    "app/hoc/cus/account/L5_schemas/onboarding_state.py",
+    "app/hoc/cus/account/L5_engines/onboarding_engine.py",
+    "app/hoc/cus/account/L6_drivers/onboarding_driver.py",
+    "app/hoc/cus/hoc_spine/orchestrator/handlers/onboarding_handler.py",
+    "app/hoc/api/fdr/incidents/founder_onboarding.py",
     # Roles (Phase-5)
     "app/auth/role_guard.py",
     "app/auth/tenant_roles.py",

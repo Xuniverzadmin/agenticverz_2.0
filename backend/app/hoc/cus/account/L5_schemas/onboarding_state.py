@@ -1,16 +1,18 @@
-# Layer: L4 — Domain Engine
+# Layer: L5 — Domain Schema
+# AUDIENCE: CUSTOMER
 # Product: system-wide
 # Temporal:
 #   Trigger: import-time
 #   Execution: sync
-# Role: Onboarding state enum and constants
-# Callers: OnboardingGateMiddleware, Tenant model, onboarding endpoints
-# Allowed Imports: None (foundational enum)
-# Forbidden Imports: L1, L2, L3, L5, L6
+# Role: Onboarding state enum + transition metadata (stdlib only)
+# Callers: onboarding_engine.py (L5), hoc_spine onboarding_policy (L4), middleware gates, onboarding endpoints
+# Allowed Imports: stdlib only
+# Forbidden Imports: sqlalchemy, sqlmodel, app.db, app.models, fastapi
 # Reference: PIN-399 (Onboarding State Machine v1)
+# artifact_class: CODE
 
 """
-Onboarding State Machine - Shared Enum
+Onboarding State Machine — Canonical (HOC)
 
 PIN-399: Linear, monotonic onboarding state machine.
 
@@ -24,25 +26,16 @@ Design Invariants (from ONBOARDING_STATE_MACHINE_V1.md):
 - ONBOARD-004: No endpoint may infer onboarding progress
 - ONBOARD-005: API keys are onboarding artifacts, not permissions
 
-This enum is the single source of truth for onboarding states.
-No duplicate definitions allowed elsewhere.
+This module is the single source of truth for onboarding states in HOC.
 """
+
+from __future__ import annotations
 
 from enum import IntEnum
 
 
 class OnboardingState(IntEnum):
-    """
-    Monotonic onboarding state machine.
-
-    States only increase, never decrease.
-    Comparison operators work naturally: CREATED < IDENTITY_VERIFIED
-
-    Integer values enable:
-    - Simple comparison: current_state >= required_state
-    - Database storage as integer
-    - Clear ordering semantics
-    """
+    """Monotonic onboarding state machine (forward-only)."""
 
     CREATED = 0
     IDENTITY_VERIFIED = 1
@@ -52,11 +45,6 @@ class OnboardingState(IntEnum):
 
     @classmethod
     def from_string(cls, value: str) -> "OnboardingState":
-        """
-        Parse state from string (case-insensitive).
-
-        Raises ValueError if unknown state.
-        """
         normalized = value.upper().strip()
         try:
             return cls[normalized]
@@ -66,12 +54,25 @@ class OnboardingState(IntEnum):
 
     @classmethod
     def default(cls) -> "OnboardingState":
-        """Return the default state for new tenants."""
         return cls.CREATED
 
 
-# State transition triggers (for documentation/reference)
-# These are the events that cause state advancement
+# Back-compat alias for modules that used the earlier "mirror" naming.
+OnboardingStatus = OnboardingState
+
+
+ONBOARDING_STATUS_NAMES: dict[int, str] = {s.value: s.name for s in OnboardingState}
+
+
+def is_at_or_past(current: int, target: int) -> bool:
+    return current >= target
+
+
+def is_complete(state: int) -> bool:
+    return state >= OnboardingState.COMPLETE.value
+
+
+# Transition triggers (documentation/reference only).
 STATE_TRANSITIONS = {
     OnboardingState.CREATED: {
         "next": OnboardingState.IDENTITY_VERIFIED,
@@ -94,3 +95,14 @@ STATE_TRANSITIONS = {
         "trigger": None,
     },
 }
+
+
+__all__ = [
+    "OnboardingState",
+    "OnboardingStatus",
+    "ONBOARDING_STATUS_NAMES",
+    "STATE_TRANSITIONS",
+    "is_at_or_past",
+    "is_complete",
+]
+

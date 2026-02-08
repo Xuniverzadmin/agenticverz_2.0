@@ -151,7 +151,7 @@ async def async_advance_onboarding(
         get_async_session_context,
         sql_text,
     )
-    from app.hoc.cus.account.L5_schemas.onboarding_enums import OnboardingStatus
+    from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingStatus
 
     try:
         async with get_async_session_context() as session:
@@ -267,7 +267,7 @@ async def async_detect_stalled_onboarding(threshold_hours: int = 24) -> list[dic
         get_async_session_context,
         sql_text,
     )
-    from app.hoc.cus.account.L5_schemas.onboarding_enums import (
+    from app.hoc.cus.account.L5_schemas.onboarding_state import (
         OnboardingStatus,
         ONBOARDING_STATUS_NAMES,
     )

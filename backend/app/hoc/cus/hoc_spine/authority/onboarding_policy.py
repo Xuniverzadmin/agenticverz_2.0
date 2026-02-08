@@ -36,7 +36,7 @@ from __future__ import annotations
 import re
 from typing import Optional, Tuple
 
-from app.auth.onboarding_state import OnboardingState
+from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingState
 
 
 # =============================================================================
