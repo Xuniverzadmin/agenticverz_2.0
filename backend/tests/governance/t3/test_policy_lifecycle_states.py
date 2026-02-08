@@ -150,7 +150,7 @@ class TestGAP021SuspendedState:
 
     def test_tenant_lifecycle_has_suspended(self) -> None:
         """TenantLifecycleState has SUSPENDED (reference pattern)."""
-        from app.auth.tenant_lifecycle import TenantLifecycleState
+        from app.hoc.cus.account.L5_schemas.tenant_lifecycle_state import TenantLifecycleState
 
         assert TenantLifecycleState.SUSPENDED is not None
         # Note: TenantLifecycleState is IntEnum

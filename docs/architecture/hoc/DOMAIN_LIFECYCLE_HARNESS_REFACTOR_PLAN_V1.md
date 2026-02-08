@@ -19,10 +19,11 @@
 
 - Persisted tenant status exists: `Tenant.status` in `backend/app/models/tenant.py`.
 - Account domain writes it via L5/L6: `backend/app/hoc/cus/account/L5_engines/tenant_engine.py`, `backend/app/hoc/cus/account/L6_drivers/tenant_driver.py`.
-- Legacy Phase-9 tenant lifecycle rules still exist in auth but are DEPRECATED (kept for compatibility):
-  - `backend/app/auth/tenant_lifecycle.py`
-  - `backend/app/auth/lifecycle_provider.py`
-- Request gates and founder endpoints now read the canonical lifecycle state through L4 (`account.lifecycle.query`) backed by account L5/L6.
+- Canonical Phase-9 tenant lifecycle state machine surface now lives in HOC:
+  - `backend/app/hoc/cus/account/L5_schemas/tenant_lifecycle_state.py` (IntEnum API surface)
+  - `backend/app/hoc/cus/hoc_spine/authority/lifecycle_provider.py` (invariant provider/test harness)
+- Legacy `backend/app/auth/{tenant_lifecycle,lifecycle_provider}.py` removed after rewiring.
+- Request gates and founder endpoints read canonical lifecycle state through L4 (`account.lifecycle.query`) backed by account L5/L6.
 
 **Outcome:** tenant lifecycle duplication is resolved (SSOT = `Tenant.status`). Remaining split is onboarding (next section).
 

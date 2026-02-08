@@ -37,7 +37,7 @@ from typing import Set
 from fastapi import Request, HTTPException
 import logging
 
-from app.auth.tenant_lifecycle import TenantLifecycleState
+from app.hoc.cus.account.L5_schemas.tenant_lifecycle_state import TenantLifecycleState
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     get_async_session_context,
     sql_text,

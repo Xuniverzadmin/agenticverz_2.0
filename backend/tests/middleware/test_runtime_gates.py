@@ -25,15 +25,16 @@ import pytest
 from unittest.mock import MagicMock, patch
 from dataclasses import dataclass
 
-from app.auth.tenant_lifecycle import TenantLifecycleState
-from app.auth.lifecycle_provider import (
-    MockTenantLifecycleProvider,
-    set_lifecycle_provider,
-)
+from app.hoc.cus.account.L5_schemas.tenant_lifecycle_state import TenantLifecycleState
 from app.billing.state import BillingState
-from app.billing.provider import MockBillingProvider, set_billing_provider
+from app.hoc.cus.account.L5_engines.billing_provider_engine import (
+    MockBillingProvider,
+    set_billing_provider,
+)
 from app.protection.provider import MockAbuseProtectionProvider, set_protection_provider
 from app.protection.decisions import Decision
+
+import app.api.middleware.lifecycle_gate as lifecycle_gate_mod
 
 from app.api.middleware.lifecycle_gate import (
     LifecycleContext,
@@ -68,9 +69,6 @@ from app.auth.onboarding_state import OnboardingState
 @pytest.fixture
 def fresh_providers():
     """Set up fresh mock providers."""
-    lifecycle = MockTenantLifecycleProvider()
-    set_lifecycle_provider(lifecycle)
-
     billing = MockBillingProvider()
     set_billing_provider(billing)
 
@@ -78,10 +76,24 @@ def fresh_providers():
     set_protection_provider(protection)
 
     return {
-        "lifecycle": lifecycle,
         "billing": billing,
         "protection": protection,
     }
+
+
+@pytest.fixture
+def lifecycle_states(monkeypatch):
+    """
+    Lifecycle gate is DB-backed (async). Patch the internal fetcher to keep
+    tests deterministic without depending on a real DB/session.
+    """
+    states = {"t_test": TenantLifecycleState.ACTIVE}
+
+    async def _fake_fetch(tenant_id: str) -> TenantLifecycleState:
+        return states.get(tenant_id, TenantLifecycleState.ACTIVE)
+
+    monkeypatch.setattr(lifecycle_gate_mod, "_fetch_lifecycle_state", _fake_fetch)
+    return states
 
 
 @pytest.fixture
@@ -147,50 +159,55 @@ class TestLifecycleGateExemptions:
 class TestLifecycleGateEnforcement:
     """Tests for lifecycle gate enforcement logic."""
 
-    def test_active_tenant_allowed(self, fresh_providers, mock_request):
+    @pytest.mark.anyio
+    async def test_active_tenant_allowed(self, fresh_providers, lifecycle_states, mock_request):
         """ACTIVE tenant passes lifecycle check."""
-        context = check_lifecycle(mock_request)
+        context = await check_lifecycle(mock_request)
 
         assert context.state == TenantLifecycleState.ACTIVE
         assert context.allows_sdk is True
         assert context.allows_writes is True
         assert context.allows_reads is True
 
-    def test_suspended_tenant_sdk_blocked(self, fresh_providers, mock_request):
+    @pytest.mark.anyio
+    async def test_suspended_tenant_sdk_blocked(self, fresh_providers, lifecycle_states, mock_request):
         """SUSPENDED tenant has SDK blocked."""
-        fresh_providers["lifecycle"].set_state("t_test", TenantLifecycleState.SUSPENDED)
+        lifecycle_states["t_test"] = TenantLifecycleState.SUSPENDED
 
-        context = check_lifecycle(mock_request)
+        context = await check_lifecycle(mock_request)
 
         assert context.state == TenantLifecycleState.SUSPENDED
         assert context.allows_sdk is False
         assert context.allows_writes is False
         assert context.allows_reads is True
 
-    def test_terminated_tenant_all_blocked(self, fresh_providers, mock_request):
+    @pytest.mark.anyio
+    async def test_terminated_tenant_all_blocked(self, fresh_providers, lifecycle_states, mock_request):
         """TERMINATED tenant has all operations blocked."""
-        fresh_providers["lifecycle"].set_state("t_test", TenantLifecycleState.TERMINATED)
+        lifecycle_states["t_test"] = TenantLifecycleState.TERMINATED
 
-        context = check_lifecycle(mock_request)
+        context = await check_lifecycle(mock_request)
 
         assert context.state == TenantLifecycleState.TERMINATED
         assert context.allows_sdk is False
         assert context.allows_writes is False
         assert context.allows_reads is False
 
-    def test_require_sdk_execution_active_passes(self, fresh_providers, mock_request):
+    @pytest.mark.anyio
+    async def test_require_sdk_execution_active_passes(self, fresh_providers, lifecycle_states, mock_request):
         """require_sdk_execution passes for ACTIVE tenant."""
-        context = require_sdk_execution(mock_request)
+        context = await require_sdk_execution(mock_request)
         assert context.allows_sdk is True
 
-    def test_require_sdk_execution_suspended_raises(self, fresh_providers, mock_request):
+    @pytest.mark.anyio
+    async def test_require_sdk_execution_suspended_raises(self, fresh_providers, lifecycle_states, mock_request):
         """require_sdk_execution raises for SUSPENDED tenant."""
         from fastapi import HTTPException
 
-        fresh_providers["lifecycle"].set_state("t_test", TenantLifecycleState.SUSPENDED)
+        lifecycle_states["t_test"] = TenantLifecycleState.SUSPENDED
 
         with pytest.raises(HTTPException) as exc_info:
-            require_sdk_execution(mock_request)
+            await require_sdk_execution(mock_request)
 
         assert exc_info.value.status_code == 403
         assert "sdk_execution_blocked" in str(exc_info.value.detail)
@@ -322,13 +339,14 @@ class TestBillingLimitChecks:
 class TestGateComposition:
     """Tests for gate ordering and composition."""
 
-    def test_lifecycle_checked_before_billing(self, fresh_providers, mock_request):
+    @pytest.mark.anyio
+    async def test_lifecycle_checked_before_billing(self, fresh_providers, lifecycle_states, mock_request):
         """Lifecycle is checked independently of billing."""
         # SUSPENDED lifecycle but ACTIVE billing
-        fresh_providers["lifecycle"].set_state("t_test", TenantLifecycleState.SUSPENDED)
+        lifecycle_states["t_test"] = TenantLifecycleState.SUSPENDED
         fresh_providers["billing"].set_billing_state("t_test", BillingState.ACTIVE)
 
-        lifecycle_ctx = check_lifecycle(mock_request)
+        lifecycle_ctx = await check_lifecycle(mock_request)
         billing_ctx = check_billing(mock_request)
 
         # Lifecycle blocks
@@ -336,12 +354,13 @@ class TestGateComposition:
         # Billing would allow (but lifecycle blocks first)
         assert billing_ctx.allows_usage is True
 
-    def test_all_gates_pass_for_active_tenant(self, fresh_providers, mock_request):
+    @pytest.mark.anyio
+    async def test_all_gates_pass_for_active_tenant(self, fresh_providers, lifecycle_states, mock_request):
         """All gates pass for fully active tenant."""
-        fresh_providers["lifecycle"].set_state("t_test", TenantLifecycleState.ACTIVE)
+        lifecycle_states["t_test"] = TenantLifecycleState.ACTIVE
         fresh_providers["billing"].set_billing_state("t_test", BillingState.ACTIVE)
 
-        lifecycle_ctx = check_lifecycle(mock_request)
+        lifecycle_ctx = await check_lifecycle(mock_request)
         protection_ctx = check_protection(mock_request)
         billing_ctx = check_billing(mock_request)
 
@@ -349,15 +368,16 @@ class TestGateComposition:
         assert protection_ctx.result.decision == Decision.ALLOW
         assert billing_ctx.allows_usage is True
 
-    def test_exempt_paths_skip_all_gates(self, fresh_providers, mock_request):
+    @pytest.mark.anyio
+    async def test_exempt_paths_skip_all_gates(self, fresh_providers, lifecycle_states, mock_request):
         """Exempt paths skip all gate enforcement."""
         mock_request.url.path = "/health"
 
         # Even with blocked states
-        fresh_providers["lifecycle"].set_state("t_test", TenantLifecycleState.TERMINATED)
+        lifecycle_states["t_test"] = TenantLifecycleState.TERMINATED
         fresh_providers["billing"].set_billing_state("t_test", BillingState.SUSPENDED)
 
-        lifecycle_ctx = check_lifecycle(mock_request)
+        lifecycle_ctx = await check_lifecycle(mock_request)
         billing_ctx = check_billing(mock_request)
 
         # Exempt paths return neutral contexts

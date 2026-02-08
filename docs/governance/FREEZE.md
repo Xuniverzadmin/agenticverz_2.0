@@ -62,9 +62,9 @@ docs/architecture/PHASE_8_OBSERVABILITY_UNIFICATION.md
 ### Lifecycle (Phase-9)
 
 ```
-backend/app/auth/tenant_lifecycle.py
-backend/app/auth/lifecycle_provider.py
-backend/app/api/founder_lifecycle.py
+backend/app/hoc/cus/account/L5_schemas/tenant_lifecycle_state.py
+backend/app/hoc/cus/hoc_spine/authority/lifecycle_provider.py
+backend/app/hoc/api/fdr/account/founder_lifecycle.py
 ```
 
 ---

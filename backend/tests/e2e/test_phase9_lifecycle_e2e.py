@@ -56,12 +56,12 @@ from app.observability.emitters import emit_event
 from app.observability.events import EventSource, Severity
 
 # Phase-9: Lifecycle
-from app.auth.tenant_lifecycle import (
+from app.hoc.cus.account.L5_schemas.tenant_lifecycle_state import (
     TenantLifecycleState,
     LifecycleAction,
     is_valid_transition,
 )
-from app.auth.lifecycle_provider import (
+from app.hoc.cus.hoc_spine.authority.lifecycle_provider import (
     ActorType,
     ActorContext,
     MockTenantLifecycleProvider,
