@@ -510,6 +510,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-537](PIN-537-knowledge-plane-phase4-retrieval-unification.md) | **Knowledge Planes Phase 4 — Retrieval Uses Persisted Planes + DB Evidence** | HOC Governance / Retrieval Durability | **✅ COMPLETE** | 2026-02-08 |
 | [PIN-538](PIN-538-knowledge-plane-phase5-delete-app-services-shims.md) | **Knowledge Planes Phase 5 — Delete Legacy `app.services.*` Shims** | HOC Governance / Canonicalization | **✅ COMPLETE** | 2026-02-08 |
 | [PIN-539](PIN-539-knowledge-plane-phase6-policy-gate-and-sql-connector.md) | **Knowledge Planes Phase 6 — Policy Snapshot Gate + SQL Connector Runtime** | HOC Governance / Retrieval Enablement | **✅ COMPLETE** | 2026-02-08 |
+| [PIN-540](PIN-540-knowledge-plane-transition-operation.md) | **Knowledge Planes — Persisted Lifecycle Transitions (`knowledge.planes.transition`)** | HOC Governance / Lifecycle Authority | **✅ COMPLETE** | 2026-02-08 |
 
 ---
 
@@ -1279,6 +1280,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-08 | **PIN-540 Knowledge Planes — Persisted Lifecycle Transitions (`knowledge.planes.transition`)** - Created. |
 | 2026-02-08 | **PIN-539 Knowledge Planes Phase 6 — Policy Snapshot Gate + SQL Connector Runtime** - Created. |
 | 2026-02-08 | **PIN-538 Knowledge Planes Phase 5 — Delete Legacy `app.services.*` Shims** - Created. |
 | 2026-02-08 | **PIN-537 Knowledge Planes Phase 4 — Retrieval Uses Persisted Planes + DB Evidence** - Created. |

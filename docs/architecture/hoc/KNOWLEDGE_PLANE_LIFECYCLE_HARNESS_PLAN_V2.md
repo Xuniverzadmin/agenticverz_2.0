@@ -201,6 +201,7 @@ The canonical plane registry and lifecycle state must be **persisted to Postgres
 **Phase 3 implementation (2026-02-08):**
 - L4 operations registered:
   - `knowledge.planes.register|get|list`
+  - `knowledge.planes.transition`
   - `knowledge.evidence.get|list`
 - Founder retrieval admin surface routes through L4 operations:
   - `backend/app/hoc/api/fdr/ops/retrieval_admin.py`

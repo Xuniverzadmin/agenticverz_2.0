@@ -81,6 +81,8 @@ These are surface contracts, not implementation details.
 Phase 3 wiring note:
 - Founder plane registry + evidence query now dispatch via L4 `OperationRegistry` operations
   (`knowledge.planes.*`, `knowledge.evidence.*`).
+ - Plane lifecycle transitions also dispatch via L4 operations:
+   `knowledge.planes.transition` (founder surface).
 
 ---
 

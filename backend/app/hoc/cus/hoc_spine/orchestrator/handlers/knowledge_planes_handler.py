@@ -21,6 +21,7 @@ Operations registered:
 - knowledge.planes.register
 - knowledge.planes.get
 - knowledge.planes.list
+- knowledge.planes.transition
 - knowledge.evidence.get
 - knowledge.evidence.list
 
@@ -31,6 +32,8 @@ from __future__ import annotations
 
 import logging
 from typing import Any, Dict, Optional
+
+from sqlmodel import select
 
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
@@ -174,6 +177,112 @@ class KnowledgePlanesListHandler:
         return OperationResult.ok({"planes": data, "total": len(data)})
 
 
+class KnowledgePlanesTransitionHandler:
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        """
+        Transition a governed knowledge plane's lifecycle state (persisted SSOT).
+
+        Inputs (ctx.params):
+        - plane_id: str (required)
+        - action: str (optional; GAP-089 LifecycleAction string)
+        - to_state: str (optional; KnowledgePlaneLifecycleState name)
+
+        Gates:
+        - Tenant must be ACTIVE (tenant.status == "active").
+        - GAP-089 transition matrix must allow the transition.
+        - Protected transitions require minimal persisted intent:
+          - → ACTIVE requires config.bound_policy_ids non-empty
+          - → PURGED requires config.purge_approved == True
+        """
+        from app.hoc.cus.hoc_spine.drivers.knowledge_plane_registry_driver import (
+            KnowledgePlaneRegistryDriver,
+        )
+        from app.models.knowledge_lifecycle import (
+            KnowledgePlaneLifecycleState,
+            get_transition_for_action,
+            validate_transition,
+        )
+        from app.models.tenant import Tenant
+
+        if ctx.session is None:
+            return OperationResult.fail("Missing async session", "MISSING_SESSION")
+
+        plane_id = ctx.params.get("plane_id")
+        action = ctx.params.get("action")
+        to_state = ctx.params.get("to_state")
+
+        if not plane_id:
+            return OperationResult.fail("Missing plane_id", "MISSING_PLANE_ID")
+        if not action and not to_state:
+            return OperationResult.fail("Missing action or to_state", "MISSING_TRANSITION_INTENT")
+
+        # Tenant lifecycle gate (transitive prerequisite).
+        tenant_stmt = select(Tenant).where(Tenant.id == ctx.tenant_id)
+        tenant_result = await ctx.session.execute(tenant_stmt)
+        tenant = tenant_result.scalars().first()
+        if tenant is None:
+            return OperationResult.fail("Tenant not found", "TENANT_NOT_FOUND")
+        if str(tenant.status).lower() != "active":
+            return OperationResult.fail(f"Tenant is {tenant.status}", "TENANT_INACTIVE")
+
+        driver = KnowledgePlaneRegistryDriver()
+        record = await driver.get_by_id(ctx.session, tenant_id=ctx.tenant_id, plane_id=str(plane_id))
+        if record is None:
+            return OperationResult.fail("Plane not found", "NOT_FOUND")
+
+        current_state = KnowledgePlaneLifecycleState(record.lifecycle_state_value)
+        if action:
+            target = get_transition_for_action(str(action), current_state)
+            if target is None:
+                return OperationResult.fail(
+                    f"Action '{action}' not valid from {current_state.name}",
+                    "INVALID_ACTION",
+                )
+            target_state = target
+        else:
+            try:
+                target_state = KnowledgePlaneLifecycleState[str(to_state).upper()]
+            except Exception:
+                return OperationResult.fail(f"Invalid to_state: {to_state}", "INVALID_TARGET_STATE")
+
+        validation = validate_transition(current_state, target_state)
+        if not validation.allowed:
+            return OperationResult.fail(validation.reason, "INVALID_TRANSITION")
+
+        config = record.config if isinstance(record.config, dict) else {}
+        if target_state == KnowledgePlaneLifecycleState.ACTIVE:
+            bound = config.get("bound_policy_ids") or []
+            if not isinstance(bound, list) or len(bound) == 0:
+                return OperationResult.fail("No policy bound (bind_policy required)", "POLICY_GATE_BLOCKED")
+        if target_state == KnowledgePlaneLifecycleState.PURGED:
+            if config.get("purge_approved") is not True:
+                return OperationResult.fail("Purge not approved (approve_purge required)", "POLICY_GATE_PENDING")
+
+        try:
+            record = await driver.set_lifecycle_state_value(
+                ctx.session,
+                tenant_id=ctx.tenant_id,
+                plane_id=str(plane_id),
+                lifecycle_state_value=int(target_state.value),
+            )
+            await ctx.session.commit()
+        except Exception as e:
+            await ctx.session.rollback()
+            return OperationResult.fail(f"Failed to transition plane: {e}", "PLANE_TRANSITION_FAILED")
+
+        return OperationResult.ok(
+            {
+                "plane_id": record.plane_id,
+                "tenant_id": record.tenant_id,
+                "from_state_value": int(current_state.value),
+                "to_state_value": int(target_state.value),
+                "action": str(action) if action else None,
+                "lifecycle_state_value": record.lifecycle_state_value,
+                "updated_at": record.updated_at.isoformat(),
+            }
+        )
+
+
 class KnowledgeEvidenceGetHandler:
     async def execute(self, ctx: OperationContext) -> OperationResult:
         from app.hoc.cus.hoc_spine.drivers.retrieval_evidence_driver import (
@@ -268,6 +377,7 @@ def register(registry: OperationRegistry) -> None:
     registry.register("knowledge.planes.register", KnowledgePlanesRegisterHandler())
     registry.register("knowledge.planes.get", KnowledgePlanesGetHandler())
     registry.register("knowledge.planes.list", KnowledgePlanesListHandler())
+    registry.register("knowledge.planes.transition", KnowledgePlanesTransitionHandler())
     registry.register("knowledge.evidence.get", KnowledgeEvidenceGetHandler())
     registry.register("knowledge.evidence.list", KnowledgeEvidenceListHandler())
 
@@ -275,4 +385,3 @@ def register(registry: OperationRegistry) -> None:
 
 
 __all__ = ["register"]
-
