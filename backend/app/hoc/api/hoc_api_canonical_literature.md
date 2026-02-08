@@ -115,7 +115,8 @@ app/hoc/api/
 │   │   └── founder_timeline.py  # Decision timeline
 │   └── ops/                  # Founder ops
 │       ├── cost_ops.py         # Cost operations (founder-only)
-│       └── founder_actions.py  # Freeze/throttle actions
+│       ├── founder_actions.py  # Freeze/throttle actions
+│       └── retrieval_admin.py  # Retrieval plane + evidence admin (founder-only)
 └── int/                      # Internal APIs (INTERNAL audience)
     ├── agent/                # Internal agent surfaces
     │   ├── agents.py         # Multi-agent jobs

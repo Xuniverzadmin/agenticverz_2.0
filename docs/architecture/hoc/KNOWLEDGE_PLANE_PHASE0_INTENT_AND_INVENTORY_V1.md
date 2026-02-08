@@ -83,9 +83,15 @@ This document exists to make the existing engine blocks mechanically explicit be
 
 ## 3) Surface Wiring Reality (Where the API Is Today)
 
-- CUS router for retrieval (includes plane list/register + evidence query): `backend/app/hoc/api/cus/policies/retrieval.py`
-- It is included in the CUS policies facade: `backend/app/hoc/api/facades/cus/policies.py`
-- It does **not** dispatch via `OperationRegistry`; it imports the L4 service facade directly.
+- CUS router for retrieval access (CUS-only): `backend/app/hoc/api/cus/policies/retrieval.py`
+  - Exposes `POST /retrieval/access` only.
+- Founder-only retrieval administration router:
+  - `backend/app/hoc/api/fdr/ops/retrieval_admin.py`
+  - Exposes plane list/register + evidence query behind `verify_fops_token`.
+- Wiring:
+  - CUS: included via `backend/app/hoc/api/facades/cus/policies.py`
+  - FDR: included via `backend/app/hoc/api/facades/fdr/ops.py`
+- Both routes currently import the L4 service facade directly (no `OperationRegistry` dispatch yet).
 
 **Implication:** plane registration is currently possible without knowledge lifecycle authority.
 
@@ -115,4 +121,3 @@ This document exists to make the existing engine blocks mechanically explicit be
    - failure propagation rules,
    - tenant lifecycle as transitive gate.
 3. A wiring map update is written (audience surfaces + operations).
-

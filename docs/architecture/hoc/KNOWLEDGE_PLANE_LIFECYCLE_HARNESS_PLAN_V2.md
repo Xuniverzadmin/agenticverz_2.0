@@ -47,7 +47,9 @@
 ### 1.3 Audience Scoping Is Not Explicit (Needs Resolution)
 
 - Plane management and evidence query surfaces must be explicitly scoped to an audience runtime (CUS/INT/FDR).
-- Current placement includes a CUS router at `backend/app/hoc/api/cus/policies/retrieval.py` exposing plane list/register and evidence endpoints.
+- Phase 0 wiring change (2026-02-08):
+  - CUS retrieval surface now exposes **only** `POST /retrieval/access` in `backend/app/hoc/api/cus/policies/retrieval.py`.
+  - Plane registry + evidence query are founder-only endpoints guarded by `verify_fops_token` in `backend/app/hoc/api/fdr/ops/retrieval_admin.py`.
 
 ### 1.4 Phase 0 Artifacts (This Workstream)
 
@@ -146,7 +148,7 @@ The canonical plane registry and lifecycle state must be **persisted to Postgres
    - `plane_id` is owned by the governed plane registry and is immutable.
    - runtime/index identifiers must be derived from `plane_id` (never reusing `plane_id` as a free-form namespace key).
 
-**Exit criteria:** written decision on plane meaning + updated routing map.
+**Exit criteria (DONE 2026-02-08):** written decision on plane meaning + routing map updated (CUS access only; founder-only plane/evidence surfaces).
 
 ### Phase 1 — Template Contracts In hoc_spine (Harnessable)
 

@@ -57,6 +57,10 @@ This document exists to prevent ontology drift by making authority, identity, an
 - hoc_spine is execution authority and system runtime; it is not an audience surface.
 - Any plane management exposure (register/transition/evidence query) must be explicitly assigned to one or more audience surfaces (CUS/INT/FDR) and wired through the HOC topology (L2.1 → L2 → L4 registry → L5 → L6 → L7).
 
+**Phase 0 wiring (2026-02-08):**
+- CUS exposes only `POST /retrieval/access` in `backend/app/hoc/api/cus/policies/retrieval.py`.
+- Plane registry + evidence query are founder-only (guarded by `verify_fops_token`) in `backend/app/hoc/api/fdr/ops/retrieval_admin.py`.
+
 ---
 
 ## Mechanical Checks (Phase 0)
@@ -66,4 +70,3 @@ Phase 0 should add mechanical checks that fail fast when the contracts are viola
 1. Multiple “active writers” (string/enum) outside lifecycle authority.
 2. `plane_id` reused as namespace outside knowledge plane/retrieval contexts.
 3. Evidence stored in-memory instead of `retrieval_evidence` persistence.
-

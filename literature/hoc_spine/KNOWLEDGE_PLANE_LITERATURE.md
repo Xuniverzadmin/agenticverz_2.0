@@ -117,5 +117,9 @@ This prevents split-brain state machines and ensures a single audit trail.
 Today, parts of the plane registry and evidence stores are in-memory (non-durable).
 The refactor plan (V2) moves this to Postgres and unifies the plane contract under hoc_spine.
 
+Phase 0 surface separation is already enforced:
+- CUS exposes only `POST /retrieval/access`.
+- Plane registry + evidence query are founder-only (guarded by `verify_fops_token`).
+
 Reference plan:
 - `docs/architecture/hoc/KNOWLEDGE_PLANE_LIFECYCLE_HARNESS_PLAN_V2.md`
