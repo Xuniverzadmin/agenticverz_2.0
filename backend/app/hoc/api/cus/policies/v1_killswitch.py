@@ -35,26 +35,16 @@ import uuid
 
 # NOTE: Removed 'import random' - Demo endpoint uses deterministic values
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from app.auth.authority import AuthorityResult, emit_authority_audit, require_replay_execute
 from app.schemas.response import wrap_dict
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
-from app.models.killswitch import (
-    # M28: DemoSimulationRequest, DemoSimulationResult removed (PIN-145)
-    GuardrailSummary,
-    IncidentDetail,
-    IncidentSummary,
-    KillSwitchAction,
-    KillSwitchStatus,
-    ProxyCallDetail,
-    ReplayRequest,
-    ReplayResult,
-    TriggerType,
-)
 
 # L4 registry dispatch (L2→L4 topology)
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
@@ -62,6 +52,106 @@ from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     get_sync_session_dep,
     OperationContext,
 )
+
+# =============================================================================
+# Local Request/Response Schemas (L2 must not import L7 models)
+# =============================================================================
+
+
+class TriggerType(str, Enum):
+    MANUAL = "manual"
+    BUDGET = "budget"
+    FAILURE_SPIKE = "failure_spike"
+    RATE_LIMIT = "rate_limit"
+    POLICY_VIOLATION = "policy_violation"
+
+
+class KillSwitchAction(BaseModel):
+    reason: str
+    actor: str | None = None
+
+
+class KillSwitchStatus(BaseModel):
+    entity_type: str
+    entity_id: str
+    is_frozen: bool
+    frozen_at: datetime | None = None
+    frozen_by: str | None = None
+    freeze_reason: str | None = None
+    auto_triggered: bool = False
+    trigger_type: str | None = None
+
+
+class GuardrailSummary(BaseModel):
+    id: str
+    name: str
+    description: str | None = None
+    category: str
+    action: str
+    is_enabled: bool
+    priority: int
+
+
+class IncidentSummary(BaseModel):
+    id: str
+    title: str
+    severity: str
+    status: str
+    trigger_type: str | None = None
+    calls_affected: int | None = None
+    cost_delta_cents: int | None = None
+    started_at: datetime | None = None
+    ended_at: datetime | None = None
+    duration_seconds: int | None = None
+
+
+class IncidentDetail(BaseModel):
+    id: str
+    title: str
+    severity: str
+    status: str
+    trigger_type: str | None = None
+    trigger_value: str | None = None
+    calls_affected: int | None = None
+    cost_delta_cents: int | None = None
+    error_rate: float | None = None
+    auto_action: str | None = None
+    started_at: datetime | None = None
+    ended_at: datetime | None = None
+    duration_seconds: int | None = None
+    timeline: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ReplayRequest(BaseModel):
+    dry_run: bool = False
+
+
+class ReplayResult(BaseModel):
+    original_call_id: str
+    replay_call_id: str | None = None
+    dry_run: bool
+    same_result: bool
+    diff: dict[str, Any] | None = None
+
+
+class ProxyCallDetail(BaseModel):
+    id: str
+    endpoint: str
+    model: str
+    request_hash: str
+    request_body: Any = None
+    response_body: Any = None
+    status_code: int | None = None
+    error_code: str | None = None
+    was_blocked: bool = False
+    block_reason: str | None = None
+    policy_decisions: list[Any] = Field(default_factory=list)
+    cost_cents: Any = None
+    input_tokens: int = 0
+    output_tokens: int = 0
+    latency_ms: int | None = None
+    replay_eligible: bool = False
+    created_at: datetime | None = None
 
 # =============================================================================
 # Router
