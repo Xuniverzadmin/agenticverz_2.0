@@ -6,7 +6,7 @@
 #   Trigger: request
 #   Execution: sync
 # Callers: API endpoints needing billing context
-# Allowed Imports: L4 (bridges, auth.onboarding_state)
+# Allowed Imports: L4 (bridges), HOC onboarding enum
 # Forbidden Imports: L1, L5, L6 (must route through L4)
 # Reference: PIN-399 Phase-6 (Billing, Plans & Limits), PIN-520 Phase 1
 

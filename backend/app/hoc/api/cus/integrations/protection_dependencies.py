@@ -6,7 +6,7 @@
 #   Trigger: request
 #   Execution: sync
 # Callers: API endpoints, middleware
-# Allowed Imports: L4 (protection, billing, auth.onboarding_state)
+# Allowed Imports: L4 (protection, billing), HOC onboarding enum
 # Forbidden Imports: L1, L5, L6
 # Reference: PIN-399 Phase-7 (Abuse & Protection Layer)
 

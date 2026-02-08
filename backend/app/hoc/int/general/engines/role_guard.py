@@ -45,7 +45,7 @@ from fastapi import Depends, HTTPException, Request, status
 from sqlmodel import Session, select
 
 from .gateway_middleware import get_auth_context
-from app.auth.onboarding_state import OnboardingState
+from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingState
 from .tenant_roles import TenantRole, get_permissions_for_role, role_has_permission
 
 logger = logging.getLogger("nova.auth.role_guard")

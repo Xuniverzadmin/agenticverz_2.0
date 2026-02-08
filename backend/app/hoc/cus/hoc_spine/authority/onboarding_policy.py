@@ -6,7 +6,7 @@
 #   Trigger: import
 #   Execution: sync
 # Callers: auth/onboarding_gate.py (shim), middleware
-# Allowed Imports: auth.onboarding_state (OnboardingState enum only)
+# Allowed Imports: HOC onboarding enum only
 # Forbidden Imports: FastAPI, Starlette, DB
 # Reference: PIN-399, ONBOARDING_ENDPOINT_MAP_V1.md
 

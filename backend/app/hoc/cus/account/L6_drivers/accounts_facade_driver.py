@@ -313,7 +313,8 @@ class AccountsFacadeDriver:
             runs_this_month=tenant.runs_this_month,
             tokens_this_month=tenant.tokens_this_month,
             onboarding_state=tenant.onboarding_state,
-            onboarding_complete=tenant.has_completed_onboarding(),
+            # PIN-399: onboarding COMPLETE is state >= 4 (int state machine persisted on Tenant.onboarding_state).
+            onboarding_complete=(tenant.onboarding_state or 0) >= 4,
             created_at=tenant.created_at,
             updated_at=tenant.updated_at,
         )
