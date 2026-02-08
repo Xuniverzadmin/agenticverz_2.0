@@ -10,6 +10,7 @@
 ## Reality Delta (2026-02-08)
 
 - Execution topology: L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5 gaps).
+- L2 purity: policies L2 routes do not import L7 ORM models (`app.models.*`); they use L4-safe enum mirrors where needed.
 - L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain policies --json --advisory` reports 0 blocking, 0 advisory.
 - Execution boundary (pairing): `PYTHONPATH=. python3 backend/scripts/ops/l5_spine_pairing_gap_detector.py --json` reports `total_l5_engines: 69`, `wired_via_l4: 69`, `direct_l2_to_l5: 0`, `orphaned: 0`.
 - Plan: `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`.

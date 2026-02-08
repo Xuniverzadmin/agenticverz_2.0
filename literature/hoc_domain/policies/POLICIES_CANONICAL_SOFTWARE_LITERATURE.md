@@ -11,7 +11,9 @@
 
 The **policies** domain is the largest and most complex domain in the HOC architecture, containing **77 files** across L5 and L6 layers. It implements the complete policy lifecycle: DSL compilation, runtime enforcement, conflict resolution, recovery evaluation, and lessons learned. This domain serves as the **governance control plane** for the entire system, enforcing customer-defined rules, limits, and protections across all operations.
 
-**L2 Purity Update (2026-02-06):** L2 policy APIs no longer import L5 engines directly. They use L4 bridge capabilities (`PoliciesEngineBridge`, `AccountBridge`) for policy engine and RBAC access (PIN-L2-PURITY).
+**L2 Purity Update (2026-02-08):**
+- L2 policy APIs no longer import L5 engines directly; they dispatch via hoc_spine (OperationRegistry / L4 bridges).
+- L2 policy APIs no longer import L7 models (`app.models.*`). Enum usage is via L4-safe mirrors (e.g. `hoc_spine/schemas/domain_enums.py`).
 
 ### Reality Delta (2026-02-08)
 

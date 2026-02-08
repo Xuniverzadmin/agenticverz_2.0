@@ -26,6 +26,8 @@ The authoritative memory-pins feature chains are corrected below.
 
 **Tenant Lifecycle SSOT (Phase A1):** persisted lifecycle state is `Tenant.status` and is read/written via account-owned L5/L6 wrapped by L4 operations (`account.lifecycle.query`, `account.lifecycle.transition`).
 
+**Onboarding SSOT (Phase A2):** persisted onboarding state is `Tenant.onboarding_state` and the canonical enum + transition metadata lives in `backend/app/hoc/cus/account/L5_schemas/onboarding_state.py` (legacy `backend/app/auth/onboarding_state.py` and the interim mirror `backend/app/hoc/cus/account/L5_schemas/onboarding_enums.py` were deleted after rewiring).
+
 **Note (Scope):** `backend/app/hoc/cus/account/logs/CRM/audit/audit_engine.py` is CRM governance-job audit (contract/job evidence → verdict), executed via L4 operation `governance.audit_job`.
 
 ## Script Registry

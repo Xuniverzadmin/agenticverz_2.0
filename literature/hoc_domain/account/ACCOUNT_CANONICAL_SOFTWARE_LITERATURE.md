@@ -15,6 +15,8 @@
 
 **Tenant Lifecycle SSOT (Phase A1):** persisted lifecycle state is `Tenant.status` and is read/written via account-owned L5/L6 wrapped by L4 operations (`account.lifecycle.query`, `account.lifecycle.transition`).
 
+**Onboarding SSOT (Phase A2):** persisted onboarding state is `Tenant.onboarding_state` and the canonical enum + transition metadata lives in `backend/app/hoc/cus/account/L5_schemas/onboarding_state.py` (legacy `backend/app/auth/onboarding_state.py` and the interim mirror `backend/app/hoc/cus/account/L5_schemas/onboarding_enums.py` were deleted after rewiring).
+
 **Note (Scope):** `backend/app/hoc/cus/account/logs/CRM/audit/audit_engine.py` is CRM governance-job audit (contract/job evidence → verdict), executed via L4 operation `governance.audit_job`.
 
 ## Consolidation Actions (2026-01-31)
@@ -174,13 +176,13 @@ Account domain handles identity and billing:
 
 Domain has zero `app.services` imports (active or docstring) and zero `cus.general` imports.
 
-### Cat D: L2→L5 Bypass Violations (7 — DOCUMENT ONLY)
+### Cat D: L2→L5 Bypass Violations (0 — RESOLVED)
 
-| L2 File | Import Target |
-|---------|--------------|
-| `policies/aos_accounts.py` | `account.L5_engines.*` (7 imports) |
+Previously, `policies/aos_accounts.py` imported account L5 engines directly.
+This is now resolved: the unified Accounts API is L2-pure and dispatches via L4
+(`OperationRegistry.execute("account.query", ...)`), with zero L2→L5 imports.
 
-**Deferred:** Requires Loop Model infrastructure (PIN-487 Part 2).
+**Outcome:** No Loop Model dependency required for this specific violation.
 
 ### Tally
 

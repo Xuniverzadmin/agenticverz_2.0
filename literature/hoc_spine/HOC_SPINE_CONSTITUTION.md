@@ -146,6 +146,7 @@ Authority produces **decisions**, not actions.
 When auditing files in `authority/`, verify:
 - [ ] File produces decisions/verdicts, not side effects
 - [ ] File does not call L5 engines
+- [ ] File only imports L5 schemas (stdlib-only) when needed for shared enums/state (e.g. `account/L5_schemas/onboarding_state.py`)
 - [ ] File does not touch DB drivers directly
 - [ ] File does not orchestrate execution sequences
 - [ ] File is consulted by orchestrator, not by domains
