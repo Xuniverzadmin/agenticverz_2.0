@@ -1,10 +1,82 @@
-# Incidents — L5 Engines (9 files)
+# Incidents — L5 Engines (14 files)
 
 **Domain:** incidents  
 **Layer:** L5_engines  
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 **Layer Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+---
+
+## anomaly_bridge.py
+**Path:** `backend/app/hoc/cus/incidents/L5_engines/anomaly_bridge.py`  
+**Layer:** L5_engines | **Domain:** incidents | **Lines:** 297
+
+**Docstring:** Anomaly-to-Incident Bridge
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `AnomalyIncidentBridge` | __init__, ingest, _meets_severity_threshold, _is_suppressed, _check_existing_incident, _create_incident | Bridge that accepts cost anomaly facts and creates incidents. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_anomaly_incident_bridge` | `(session) -> AnomalyIncidentBridge` | no | Factory function to get AnomalyIncidentBridge instance. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `logging` | logging | no |
+| `uuid` | uuid | no |
+| `datetime` | datetime, timezone | no |
+| `decimal` | Decimal | no |
+| `typing` | Optional | no |
+| `app.errors.governance` | GovernanceError | no |
+| `app.hoc.cus.incidents.L6_drivers.incident_write_driver` | IncidentWriteDriver, get_incident_write_driver | no |
+| `app.metrics` | governance_incidents_created_total | no |
+| `app.hoc.cus.hoc_spine.schemas.anomaly_types` | CostAnomalyFact | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+### Constants
+`INCIDENT_SEVERITY_THRESHOLD`, `ANOMALY_SEVERITY_MAP`, `ANOMALY_TRIGGER_TYPE_MAP`
+
+### __all__ Exports
+`AnomalyIncidentBridge`, `get_anomaly_incident_bridge`, `INCIDENT_SEVERITY_THRESHOLD`
+
+---
+
+## export_engine.py
+**Path:** `backend/app/hoc/cus/incidents/L5_engines/export_engine.py`  
+**Layer:** L5_engines | **Domain:** incidents | **Lines:** 225
+
+**Docstring:** Export Engine (PIN-511 Phase 2.1)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `ExportEngine` | __init__, export_evidence, export_soc2, export_executive_debrief, export_with_integrity | L5 engine for incident export operations. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `logging` | logging | no |
+| `typing` | Any, Dict, Optional | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -39,13 +111,13 @@
 | `enum` | Enum | no |
 | `typing` | Any, Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -76,16 +148,48 @@
 | `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
 | `app.hoc.cus.incidents.L6_drivers.incident_write_driver` | IncidentWriteDriver, get_incident_write_driver | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `INCIDENT_OUTCOME_SUCCESS`, `INCIDENT_OUTCOME_FAILURE`, `INCIDENT_OUTCOME_BLOCKED`, `INCIDENT_OUTCOME_ABORTED`, `SEVERITY_NONE`, `FAILURE_SEVERITY_MAP`, `FAILURE_CATEGORY_MAP`
+
+---
+
+## incident_pattern.py
+**Path:** `backend/app/hoc/cus/incidents/L5_engines/incident_pattern.py`  
+**Layer:** L5_engines | **Domain:** incidents | **Lines:** 281
+
+**Docstring:** Incident Pattern Engine - L4 Domain Logic
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `PatternMatch` |  | A detected incident pattern. |
+| `PatternResult` |  | Result of pattern detection. |
+| `IncidentPatternService` | __init__, detect_patterns, _detect_category_clusters, _detect_severity_spikes, _detect_cascade_failures | Detect structural patterns across incidents. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `dataclasses` | dataclass | no |
+| `datetime` | datetime, timedelta | no |
+| `typing` | TYPE_CHECKING, Optional | no |
+| `app.hoc.cus.incidents.L6_drivers.incident_pattern_driver` | IncidentPatternDriver, get_incident_pattern_driver | no |
+| `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -112,13 +216,13 @@
 | `typing` | TYPE_CHECKING, List, Optional, Tuple | no |
 | `app.hoc.cus.incidents.L6_drivers.incident_read_driver` | IncidentReadDriver, get_incident_read_driver | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `IncidentReadService`, `get_incident_read_service`
@@ -149,13 +253,13 @@
 | `app.hoc.cus.incidents.L6_drivers.incident_write_driver` | IncidentWriteDriver, get_incident_write_driver | no |
 | `app.hoc.cus.hoc_spine.schemas.domain_enums` | ActorType | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `IncidentWriteService`, `get_incident_write_service`
@@ -207,13 +311,13 @@
 | `typing` | TYPE_CHECKING, Any, Optional | no |
 | `app.hoc.cus.incidents.L6_drivers.incidents_facade_driver` | IncidentsFacadeDriver, IncidentSnapshot | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `IncidentsFacade`, `get_incidents_facade`, `IncidentSummaryResult`, `PaginationResult`, `IncidentListResult`, `IncidentDetailResult`, `IncidentsByRunResult`, `PatternMatchResult`, `PatternDetectionResult`, `RecurrenceGroupResult`, `RecurrenceAnalysisResult`, `CostImpactSummaryResult`, `CostImpactResult`, `IncidentMetricsResult`, `HistoricalTrendDataPointResult`, `HistoricalTrendResult`, `HistoricalDistributionEntryResult`, `HistoricalDistributionResult`, `CostTrendDataPointResult`, `CostTrendResult`, `LearningInsightResult`, `ResolutionSummaryResult`, `LearningsResult`
@@ -232,13 +336,13 @@
 | `datetime` | datetime | no |
 | `typing` | Callable | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `UuidFn`, `ClockFn`
@@ -279,16 +383,49 @@
 | `app.hoc.cus.incidents.L6_drivers.policy_violation_driver` | PolicyViolationDriver, get_policy_violation_driver | no |
 | `app.utils.runtime` | generate_uuid | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `VERIFICATION_MODE`, `POLICY_OUTCOME_NO_VIOLATION`, `POLICY_OUTCOME_VIOLATION`, `POLICY_OUTCOME_ADVISORY`, `POLICY_OUTCOME_NOT_APPLICABLE`
+
+---
+
+## postmortem.py
+**Path:** `backend/app/hoc/cus/incidents/L5_engines/postmortem.py`  
+**Layer:** L5_engines | **Domain:** incidents | **Lines:** 466
+
+**Docstring:** Post-Mortem Engine - L4 Domain Logic
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `ResolutionSummary` |  | Summary of how an incident was resolved. |
+| `LearningInsight` |  | A learning extracted from incident analysis. |
+| `PostMortemResult` |  | Result of post-mortem analysis for an incident. |
+| `CategoryLearnings` |  | Aggregated learnings for a category. |
+| `PostMortemService` | __init__, get_incident_learnings, get_category_learnings, _get_resolution_summary, _find_similar_incidents, _extract_insights, _generate_category_insights | Extract learnings and post-mortem insights from incidents. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `dataclasses` | dataclass | no |
+| `datetime` | datetime, timezone | no |
+| `typing` | TYPE_CHECKING, Optional | no |
+| `app.hoc.cus.incidents.L6_drivers.postmortem_driver` | PostMortemDriver, get_postmortem_driver | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -332,19 +469,51 @@
 | `datetime` | datetime, timezone | no |
 | `typing` | Any, Dict, List, Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `DEBUG_MODE`
 
 ### __all__ Exports
 `Rule`, `RuleContext`, `RuleResult`, `EvaluationResult`, `ErrorCodeRule`, `HistoricalPatternRule`, `SkillSpecificRule`, `OccurrenceThresholdRule`, `CompositeRule`, `RecoveryRuleEngine`, `evaluate_rules`, `DEFAULT_RULES`, `AUTO_EXECUTE_CONFIDENCE_THRESHOLD`, `should_auto_execute`, `ERROR_CATEGORY_RULES`, `classify_error_category`, `RECOVERY_MODE_RULES`, `suggest_recovery_mode`, `ACTION_SELECTION_THRESHOLD`, `combine_confidences`, `should_select_action`
+
+---
+
+## recurrence_analysis.py
+**Path:** `backend/app/hoc/cus/incidents/L5_engines/recurrence_analysis.py`  
+**Layer:** L5_engines | **Domain:** incidents | **Lines:** 191
+
+**Docstring:** Recurrence Analysis Service (L4 Engine)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `RecurrenceGroup` |  | A group of recurring incidents. |
+| `RecurrenceResult` |  | Result of recurrence analysis. |
+| `RecurrenceAnalysisService` | __init__, analyze_recurrence, get_recurrence_for_category, _snapshot_to_group | Analyze recurring incident patterns. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `dataclasses` | dataclass | no |
+| `datetime` | datetime | no |
+| `typing` | TYPE_CHECKING | no |
+| `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
+| `app.hoc.cus.incidents.L6_drivers.recurrence_analysis_driver` | RecurrenceAnalysisDriver, RecurrenceGroupSnapshot | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -369,13 +538,13 @@
 | `typing` | Any, Dict, Union | no |
 | `semantic_types` | FailureCode, IntentFailureCode, SemanticFailureCode, SemanticSeverity, ViolationClass | yes |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `SEMANTIC_FAILURE_TAXONOMY`, `INTENT_FAILURE_TAXONOMY`

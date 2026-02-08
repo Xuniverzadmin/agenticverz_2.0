@@ -1,8 +1,8 @@
-# Policies — L6 Drivers (14 files)
+# Policies — L6 Drivers (27 files)
 
 **Domain:** policies  
 **Layer:** L6_drivers  
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 **Layer Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
@@ -40,16 +40,215 @@
 | `app.db` | engine | no |
 | `app.models.policy_precedence` | ArbitrationResult, ConflictStrategy, PolicyPrecedence | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### Constants
 `ACTION_SEVERITY`
+
+---
+
+## cus_enforcement_driver.py
+**Path:** `backend/app/hoc/cus/policies/L6_drivers/cus_enforcement_driver.py`  
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 259
+
+**Docstring:** Customer Enforcement Driver
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `IntegrationRow` |  | Immutable integration data for enforcement. |
+| `UsageSnapshot` |  | Immutable usage snapshot for enforcement status. |
+| `CusEnforcementDriver` | fetch_integration, fetch_budget_usage, fetch_token_usage, fetch_rate_count, fetch_usage_snapshot | L6 driver for customer enforcement data access. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_cus_enforcement_driver` | `() -> CusEnforcementDriver` | no | Get driver instance. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `dataclasses` | dataclass | no |
+| `datetime` | date, datetime, timezone | no |
+| `typing` | Optional | no |
+| `sqlmodel` | Session, func, select | no |
+| `app.db` | get_engine | no |
+| `app.models.cus_models` | CusIntegration, CusLLMUsage | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+---
+
+## guard_read_driver.py
+**Path:** `backend/app/hoc/cus/policies/L6_drivers/guard_read_driver.py`  
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 1089
+
+**Docstring:** Guard Read Driver (L6)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `GuardReadDriver` | __init__, get_tenant, get_killswitch_state, get_key_states_for_tenant, get_active_guardrails, get_all_guardrails_ordered, get_enabled_guardrails_ordered, count_incidents_since (+30 more) | Async DB read operations for guard/killswitch domain. |
+| `SyncGuardReadDriver` | __init__, get_tenant_by_id, get_tenant_name, get_tenant_killswitch_state, get_active_guardrail_names, get_enabled_guardrails_raw, get_all_guardrails_raw, get_enabled_guardrail_id_names (+9 more) | Synchronous DB read operations for guard/killswitch domain. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_sync_guard_read_driver` | `(session: Any) -> SyncGuardReadDriver` | no | Factory function to get SyncGuardReadDriver instance. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `datetime` | datetime, timedelta, timezone | no |
+| `typing` | Any, Dict, List, Optional, Tuple | no |
+| `sqlalchemy` | and_, desc, func, select | no |
+| `sqlalchemy.ext.asyncio` | AsyncSession | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+---
+
+## limits_simulation_driver.py
+**Path:** `backend/app/hoc/cus/policies/L6_drivers/limits_simulation_driver.py`  
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 192
+
+**Docstring:** Limits Simulation Driver
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `TenantQuotaRow` |  | Immutable tenant quota data. |
+| `PolicyLimitRow` |  | Immutable policy limit data. |
+| `LimitsSimulationDriver` | __init__, fetch_tenant_quotas, fetch_policy_limits, fetch_cost_budgets, fetch_worker_limits, fetch_active_overrides | L6 driver for limits simulation data access. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_limits_simulation_driver` | `(session: AsyncSession) -> LimitsSimulationDriver` | no | Get driver instance with session. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `dataclasses` | dataclass | no |
+| `datetime` | datetime | no |
+| `decimal` | Decimal | no |
+| `typing` | List, Optional | no |
+| `sqlalchemy` | and_, select | no |
+| `sqlalchemy.ext.asyncio` | AsyncSession | no |
+| `app.models.policy_control_plane` | Limit, LimitStatus | no |
+| `app.models.tenant` | Tenant | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+---
+
+## m25_integration_read_driver.py
+**Path:** `backend/app/hoc/cus/policies/L6_drivers/m25_integration_read_driver.py`  
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 665
+
+**Docstring:** M25 Integration Read Driver - DB read operations for M25 Integration APIs.
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `LoopStageRow` |  | Row from loop_events for stage details. |
+| `CheckpointRow` |  | Row from human_checkpoints. |
+| `LoopStatsRow` |  | Aggregated loop statistics. |
+| `PatternStatsRow` |  | Aggregated pattern match statistics. |
+| `RecoveryStatsRow` |  | Aggregated recovery statistics. |
+| `PolicyStatsRow` |  | Aggregated policy statistics. |
+| `RoutingStatsRow` |  | Aggregated routing adjustment statistics. |
+| `CheckpointStatsRow` |  | Aggregated checkpoint statistics. |
+| `SimulationStateRow` |  | Simulation state for graduation gates. |
+| `IncidentRow` |  | Row from incidents table. |
+| `PreventionRow` |  | Row from prevention_records. |
+| `RegretRow` |  | Row from regret_events. |
+| `M25IntegrationReadDriver` | __init__, get_loop_stages, get_checkpoint, get_loop_stats, get_pattern_stats, get_recovery_stats, get_policy_stats, get_routing_stats (+6 more) | Async DB read operations for M25 Integration APIs. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_m25_integration_read_driver` | `(session: AsyncSession) -> M25IntegrationReadDriver` | no | Factory function for M25IntegrationReadDriver. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `dataclasses` | dataclass | no |
+| `datetime` | datetime | no |
+| `typing` | Any, Optional | no |
+| `sqlalchemy` | text | no |
+| `sqlalchemy.ext.asyncio` | AsyncSession | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+---
+
+## m25_integration_write_driver.py
+**Path:** `backend/app/hoc/cus/policies/L6_drivers/m25_integration_write_driver.py`  
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 344
+
+**Docstring:** M25 Integration Write Driver - DB write operations for M25 Integration APIs.
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `PreventionRecordInput` |  | Input for inserting a prevention record. |
+| `RegretEventInput` |  | Input for inserting a regret event. |
+| `TimelineViewInput` |  | Input for inserting a timeline view. |
+| `GraduationHistoryInput` |  | Input for inserting graduation history. |
+| `GraduationStatusUpdateInput` |  | Input for updating m25_graduation_status. |
+| `M25IntegrationWriteDriver` | __init__, insert_prevention_record, insert_regret_event, upsert_policy_regret_summary, insert_timeline_view, insert_graduation_history, update_graduation_status | Async DB write operations for M25 Integration APIs. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_m25_integration_write_driver` | `(session: AsyncSession) -> M25IntegrationWriteDriver` | no | Factory function for M25IntegrationWriteDriver. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `dataclasses` | dataclass | no |
+| `typing` | Optional | no |
+| `sqlalchemy` | text | no |
+| `sqlalchemy.ext.asyncio` | AsyncSession | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ---
 
@@ -75,13 +274,161 @@
 | `app.policy.compiler.grammar` | PLANG_GRAMMAR, ActionType, PolicyCategory | no |
 | `app.policy.ir.ir_nodes` | IRAction, IRBlock, IRFunction, IRModule | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+---
+
+## policies_facade_driver.py
+**Path:** `backend/app/hoc/cus/policies/L6_drivers/policies_facade_driver.py`  
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 478
+
+**Docstring:** PoliciesFacadeDriver (L6)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `PoliciesFacadeDriver` | fetch_policy_rules, fetch_policy_rule_detail, fetch_limits, fetch_limit_detail, fetch_policy_requests, fetch_budgets, count_pending_drafts | L6 driver for policies facade SQL operations. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `datetime` | datetime, timedelta, timezone | no |
+| `typing` | Any, Optional | no |
+| `sqlalchemy` | and_, func, select | no |
+| `sqlalchemy.ext.asyncio` | AsyncSession | no |
+| `app.models.policy_control_plane` | Limit, LimitBreach, LimitIntegrity, PolicyEnforcement, PolicyRule (+1) | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+---
+
+## policy_approval_driver.py
+**Path:** `backend/app/hoc/cus/policies/L6_drivers/policy_approval_driver.py`  
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 525
+
+**Docstring:** Policy Approval Driver (L6)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `PolicyApprovalDriver` | __init__, get_approval_level_config, _config_to_dict, create_approval_request, get_approval_request, get_approval_request_for_action, get_approval_request_for_reject, update_approval_request_status (+9 more) | Data access operations for policy approval workflow. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_policy_approval_driver` | `(session: AsyncSession) -> PolicyApprovalDriver` | no | Factory function for PolicyApprovalDriver. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `json` | json | no |
+| `logging` | logging | no |
+| `datetime` | datetime | no |
+| `typing` | Any, Optional | no |
+| `sqlalchemy` | text | no |
+| `sqlalchemy.ext.asyncio` | AsyncSession | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+### __all__ Exports
+`PolicyApprovalDriver`, `get_policy_approval_driver`
+
+---
+
+## policy_enforcement_driver.py
+**Path:** `backend/app/hoc/cus/policies/L6_drivers/policy_enforcement_driver.py`  
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 173
+
+**Docstring:** Policy Enforcement Read Driver (PIN-519)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `PolicyEnforcementReadDriver` | __init__, fetch_policy_evaluations_for_run, fetch_enforcement_by_id | Async driver for reading policy enforcement records. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_policy_enforcement_read_driver` | `(session: AsyncSession) -> PolicyEnforcementReadDriver` | no | Get a PolicyEnforcementReadDriver instance. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `logging` | logging | no |
+| `typing` | Optional | no |
+| `sqlalchemy` | and_, desc, select | no |
+| `sqlalchemy.ext.asyncio` | AsyncSession | no |
+| `app.models.policy_control_plane` | PolicyEnforcement, PolicyRule | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+### __all__ Exports
+`PolicyEnforcementReadDriver`, `get_policy_enforcement_read_driver`
+
+---
+
+## policy_enforcement_write_driver.py
+**Path:** `backend/app/hoc/cus/policies/L6_drivers/policy_enforcement_write_driver.py`  
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 216
+
+**Docstring:** Policy Enforcement Write Driver
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `PolicyEnforcementWriteDriver` | __init__, record_enforcement, record_enforcement_batch | Async driver for writing policy enforcement records. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `_generate_enforcement_id` | `() -> str` | no | Generate a unique enforcement ID. |
+| `_utc_now` | `() -> datetime` | no | Get current UTC timestamp. |
+| `get_policy_enforcement_write_driver` | `(session: AsyncSession) -> PolicyEnforcementWriteDriver` | no | Get a PolicyEnforcementWriteDriver instance. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `logging` | logging | no |
+| `datetime` | datetime, timezone | no |
+| `typing` | Any, Dict, Optional | no |
+| `uuid` | uuid4 | no |
+| `sqlalchemy.ext.asyncio` | AsyncSession | no |
+| `app.models.policy_control_plane` | PolicyEnforcement | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+### __all__ Exports
+`PolicyEnforcementWriteDriver`, `get_policy_enforcement_write_driver`
 
 ---
 
@@ -110,13 +457,13 @@
 | `sqlalchemy` | create_engine, text | no |
 | `sqlalchemy.engine` | Connection, Engine | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `PolicyEngineDriver`, `get_policy_engine_driver`
@@ -146,13 +493,13 @@
 | `sqlalchemy` | text | no |
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ---
 
@@ -182,13 +529,13 @@
 | `app.models.feedback` | PatternFeedback | no |
 | `app.models.policy` | PolicyProposal, PolicyVersion | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `PolicyProposalReadDriver`, `get_policy_proposal_read_driver`
@@ -222,13 +569,13 @@
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
 | `app.models.policy` | PolicyProposal, PolicyVersion | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `PolicyProposalWriteDriver`, `get_policy_proposal_write_driver`
@@ -265,13 +612,13 @@
 | `app.models.killswitch` | DefaultGuardrail, ProxyCall | no |
 | `app.models.tenant` | Tenant | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `PolicyReadDriver`, `get_policy_read_driver`, `TenantBudgetDataDTO`, `UsageSumDTO`, `GuardrailDTO`
@@ -301,13 +648,13 @@
 | `sqlalchemy` | select | no |
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ---
 
@@ -337,13 +684,13 @@
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
 | `app.models.policy_control_plane` | PolicyEnforcement, PolicyRule, PolicyRuleIntegrity | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `PolicyRulesReadDriver`, `get_policy_rules_read_driver`
@@ -375,16 +722,57 @@
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
 | `app.models.policy` | PolicyProposal | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `ProposalsReadDriver`, `get_proposals_read_driver`
+
+---
+
+## rbac_audit_driver.py
+**Path:** `backend/app/hoc/cus/policies/L6_drivers/rbac_audit_driver.py`  
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 252
+
+**Docstring:** RBAC Audit Driver (L6)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `AuditEntryDTO` |  | Raw audit entry data from database. |
+| `AuditQueryResultDTO` |  | Query result containing entries and total count. |
+| `AuditCleanupResultDTO` |  | Cleanup operation result. |
+| `RbacAuditDriver` | __init__, query_audit_logs, cleanup_audit_logs | L6 driver for RBAC audit log operations. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_rbac_audit_driver` | `(session: Session) -> RbacAuditDriver` | no | Get RbacAuditDriver instance. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `datetime` | datetime | no |
+| `typing` | Any, Dict, List, Optional, Tuple | no |
+| `pydantic` | BaseModel | no |
+| `sqlalchemy` | text | no |
+| `sqlmodel` | Session | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+### __all__ Exports
+`RbacAuditDriver`, `get_rbac_audit_driver`, `AuditEntryDTO`, `AuditQueryResultDTO`, `AuditCleanupResultDTO`
 
 ---
 
@@ -411,16 +799,45 @@
 | `typing` | TYPE_CHECKING, Any, Dict, List, Optional (+1) | no |
 | `app.security.sanitize` | sanitize_error_message | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### Constants
 `FEATURE_INTENT`, `RETRY_POLICY`, `HALF_LIFE_DAYS`, `EMBEDDING_SIMILARITY_THRESHOLD`, `LLM_ESCALATION_THRESHOLD`, `CACHE_TTL_SECONDS`, `LAMBDA`, `ALPHA`, `MIN_CONFIDENCE_THRESHOLD`, `NO_HISTORY_CONFIDENCE`, `EXACT_MATCH_CONFIDENCE`
+
+---
+
+## recovery_read_driver.py
+**Path:** `backend/app/hoc/cus/policies/L6_drivers/recovery_read_driver.py`  
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 329
+
+**Docstring:** Recovery Read Driver - DB read operations for Recovery APIs.
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `RecoveryReadDriver` | __init__, get_candidate_detail, get_selected_action, get_suggestion_inputs, get_suggestion_provenance, candidate_exists, list_actions | Sync DB read operations for Recovery APIs. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `json` | json | no |
+| `typing` | Any, Dict, List, Optional, Tuple | no |
+| `sqlalchemy` | text | no |
+| `sqlmodel` | Session | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ---
 
@@ -441,16 +858,53 @@
 | `sqlalchemy` | text | no |
 | `sqlmodel` | Session | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### Constants
 `FEATURE_INTENT`, `RETRY_POLICY`
+
+---
+
+## replay_read_driver.py
+**Path:** `backend/app/hoc/cus/policies/L6_drivers/replay_read_driver.py`  
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 277
+
+**Docstring:** Replay Read Driver (L6)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `ReplayReadDriver` | __init__, get_incident, get_incident_no_tenant_check, get_proxy_calls_in_window, get_incident_events_in_window, get_proxy_calls_for_timeline, get_all_incident_events, get_proxy_call_by_id (+1 more) | L6 driver for replay UX read operations. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_replay_read_driver` | `(session: Session) -> ReplayReadDriver` | no | Factory function to get ReplayReadDriver instance. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `datetime` | datetime | no |
+| `typing` | Any, Dict, List, Optional, Tuple | no |
+| `sqlalchemy` | text | no |
+| `sqlmodel` | Session | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+### __all__ Exports
+`ReplayReadDriver`, `get_replay_read_driver`
 
 ---
 
@@ -482,13 +936,13 @@
 | `app.db` | engine | no |
 | `app.models.policy_scope` | PolicyScope, ScopeType | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ---
 
@@ -514,12 +968,47 @@
 | `typing` | Any, Dict, List, Optional | no |
 | `app.policy.compiler.grammar` | PolicyCategory | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+---
+
+## workers_read_driver.py
+**Path:** `backend/app/hoc/cus/policies/L6_drivers/workers_read_driver.py`  
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 285
+
+**Docstring:** Workers Read Driver (L6)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `WorkersReadDriver` | __init__, verify_run_exists, get_run, list_runs, count_runs, get_active_tenant_budget, get_daily_spend, get_existing_advisory (+3 more) | Async DB read operations for workers domain. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_workers_read_driver` | `(session: AsyncSession) -> WorkersReadDriver` | no | Factory function to create a WorkersReadDriver instance. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `json` | json | no |
+| `datetime` | datetime | no |
+| `typing` | Any, Dict, List, Optional | no |
+| `sqlalchemy` | func, select, text | no |
+| `sqlalchemy.ext.asyncio` | AsyncSession | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ---

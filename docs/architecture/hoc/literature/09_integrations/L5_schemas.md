@@ -1,8 +1,8 @@
-# Integrations — L5 Schemas (4 files)
+# Integrations — L5 Schemas (6 files)
 
 **Domain:** integrations  
 **Layer:** L5_schemas  
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 **Layer Contract:** Data contracts — Pydantic models, dataclasses, type references only
 
@@ -26,12 +26,40 @@
 | `dataclasses` | dataclass | no |
 | `datetime` | datetime | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Data contracts — Pydantic models, dataclasses, type references only
 
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines, L6_drivers
-**Called by:** L5_engines, L3_adapters
+**MUST NOT call:** L2_api, L4_spine, L5_engines, L6_drivers
+**Called by:** L5_engines, L4_spine
+
+---
+
+## cus_enums.py
+**Path:** `backend/app/hoc/cus/integrations/L5_schemas/cus_enums.py`  
+**Layer:** L5_schemas | **Domain:** integrations | **Lines:** 72
+
+**Docstring:** Customer integration enum mirrors.
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `CusProviderType` |  | Supported LLM provider types. |
+| `CusIntegrationStatus` |  | Integration lifecycle status. |
+| `CusHealthState` |  | Integration health state. |
+| `CusPolicyResult` |  | Policy enforcement result for LLM calls. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `enum` | Enum | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Data contracts — Pydantic models, dataclasses, type references only
+
+**MUST NOT call:** L2_api, L4_spine, L5_engines, L6_drivers
+**Called by:** L5_engines, L4_spine
 
 ---
 
@@ -64,12 +92,12 @@
 | `pydantic` | BaseModel, Field, field_validator | no |
 | `app.hoc.cus.integrations.L5_schemas.cus_enums` | CusHealthState, CusIntegrationStatus, CusPolicyResult, CusProviderType | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Data contracts — Pydantic models, dataclasses, type references only
 
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines, L6_drivers
-**Called by:** L5_engines, L3_adapters
+**MUST NOT call:** L2_api, L4_spine, L5_engines, L6_drivers
+**Called by:** L5_engines, L4_spine
 
 ---
 
@@ -108,12 +136,12 @@
 | `typing` | Any, Optional | no |
 | `uuid` | uuid | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Data contracts — Pydantic models, dataclasses, type references only
 
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines, L6_drivers
-**Called by:** L5_engines, L3_adapters
+**MUST NOT call:** L2_api, L4_spine, L5_engines, L6_drivers
+**Called by:** L5_engines, L4_spine
 
 ---
 
@@ -155,14 +183,42 @@
 | `enum` | Enum | no |
 | `typing` | Any, Literal, Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Data contracts — Pydantic models, dataclasses, type references only
 
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines, L6_drivers
-**Called by:** L5_engines, L3_adapters
+**MUST NOT call:** L2_api, L4_spine, L5_engines, L6_drivers
+**Called by:** L5_engines, L4_spine
 
 ### Constants
 `LOOP_MECHANICS_VERSION`, `LOOP_MECHANICS_FROZEN_AT`
+
+---
+
+## sql_gateway_protocol.py
+**Path:** `backend/app/hoc/cus/integrations/L5_schemas/sql_gateway_protocol.py`  
+**Layer:** L5_schemas | **Domain:** integrations | **Lines:** 52
+
+**Docstring:** SQL Gateway Protocol & DTOs
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `SqlQueryRequest` |  | Immutable request DTO passed from L5 to L6. |
+| `SqlQueryResult` |  | Result DTO returned from L6 to L5. |
+| `SqlGatewayDriverProtocol` | execute_query | Protocol that L6 sql_gateway_driver must implement. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `dataclasses` | dataclass, field | no |
+| `typing` | Any, Dict, List, Protocol, runtime_checkable | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Data contracts — Pydantic models, dataclasses, type references only
+
+**MUST NOT call:** L2_api, L4_spine, L5_engines, L6_drivers
+**Called by:** L5_engines, L4_spine
 
 ---

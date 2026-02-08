@@ -2,7 +2,7 @@
 
 **Domain:** overview  
 **Layer:** L5_engines  
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 **Layer Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
@@ -45,13 +45,13 @@
 | `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
 | `app.hoc.cus.overview.L6_drivers.overview_facade_driver` | OverviewFacadeDriver | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `OverviewFacade`, `get_overview_facade`, `SystemPulse`, `DomainCount`, `HighlightsResult`, `DecisionItem`, `DecisionsResult`, `CostPeriod`, `LimitCostItem`, `CostsResult`, `DecisionsCountResult`, `RecoveryStatsResult`

@@ -1,8 +1,8 @@
-# Activity — L5 Engines (4 files)
+# Activity — L5 Engines (8 files)
 
 **Domain:** activity  
 **Layer:** L5_engines  
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 **Layer Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
@@ -28,13 +28,13 @@
 |--------|-------|----------|
 | `enum` | Enum | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `SignalType`, `SeverityLevel`, `RunState`, `RiskType`, `EvidenceHealth`
@@ -97,13 +97,143 @@
 | `app.hoc.cus.activity.L5_engines.cost_analysis` | CostAnalysisResult, CostAnomaly | no |
 | `app.hoc.cus.activity.L5_engines.attention_ranking` | AttentionQueueResult, AttentionSignal | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+---
+
+## attention_ranking.py
+**Path:** `backend/app/hoc/cus/activity/L5_engines/attention_ranking.py`  
+**Layer:** L5_engines | **Domain:** activity | **Lines:** 110
+
+**Docstring:** Attention ranking engine for prioritizing signals.
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `AttentionSignal` |  | A signal in the attention queue. |
+| `AttentionQueueResult` |  | Result of attention queue query. |
+| `AttentionRankingService` | __init__, get_attention_queue, compute_attention_score | Service for ranking and prioritizing activity signals. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `dataclasses` | dataclass | no |
+| `datetime` | datetime | no |
+| `typing` | Any, Optional | no |
+| `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+---
+
+## cost_analysis.py
+**Path:** `backend/app/hoc/cus/activity/L5_engines/cost_analysis.py`  
+**Layer:** L5_engines | **Domain:** activity | **Lines:** 95
+
+**Docstring:** Cost analysis engine for detecting cost anomalies.
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `CostAnomaly` |  | A detected cost anomaly. |
+| `CostAnalysisResult` |  | Result of cost analysis. |
+| `CostAnalysisService` | __init__, analyze_costs, get_cost_breakdown | Service for analyzing cost patterns and detecting anomalies. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `dataclasses` | dataclass | no |
+| `datetime` | datetime | no |
+| `typing` | Optional | no |
+| `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+---
+
+## cus_telemetry_engine.py
+**Path:** `backend/app/hoc/cus/activity/L5_engines/cus_telemetry_engine.py`  
+**Layer:** L5_engines | **Domain:** activity | **Lines:** 384
+
+**Docstring:** Customer Telemetry Engine
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `IngestResult` |  | Result of single usage ingestion. |
+| `BatchIngestResult` |  | Result of batch usage ingestion. |
+| `CusTelemetryEngine` | __init__, ingest_usage, ingest_batch, get_usage_summary, get_usage_history, get_daily_aggregates, compute_daily_aggregates | L4 engine for customer telemetry decisions. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_cus_telemetry_engine` | `() -> CusTelemetryEngine` | no | Get engine instance with default driver. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `dataclasses` | dataclass | no |
+| `datetime` | date | no |
+| `typing` | TYPE_CHECKING, Any, Dict, List, Optional (+1) | no |
+| `app.schemas.cus_schemas` | CusIntegrationUsage, CusLLMUsageIngest, CusLLMUsageResponse, CusUsageSummary | no |
+| `app.hoc.cus.activity.L6_drivers.cus_telemetry_driver` | CusTelemetryDriver, get_cus_telemetry_driver | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+---
+
+## pattern_detection.py
+**Path:** `backend/app/hoc/cus/activity/L5_engines/pattern_detection.py`  
+**Layer:** L5_engines | **Domain:** activity | **Lines:** 94
+
+**Docstring:** Pattern detection engine for identifying recurring patterns.
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `DetectedPattern` |  | A detected activity pattern. |
+| `PatternDetectionResult` |  | Result of pattern detection. |
+| `PatternDetectionService` | __init__, detect_patterns, get_pattern_detail | Service for detecting patterns in activity data. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `dataclasses` | dataclass | no |
+| `datetime` | datetime | no |
+| `typing` | Optional | no |
+| `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -129,13 +259,13 @@
 | `typing` | Optional | no |
 | `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -158,12 +288,12 @@
 | `json` | json | no |
 | `typing` | Any | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---

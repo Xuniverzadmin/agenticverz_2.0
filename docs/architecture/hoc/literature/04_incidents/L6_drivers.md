@@ -1,10 +1,52 @@
-# Incidents — L6 Drivers (11 files)
+# Incidents — L6 Drivers (13 files)
 
 **Domain:** incidents  
 **Layer:** L6_drivers  
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 **Layer Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+---
+
+## cost_guard_driver.py
+**Path:** `backend/app/hoc/cus/incidents/L6_drivers/cost_guard_driver.py`  
+**Layer:** L6_drivers | **Domain:** incidents | **Lines:** 485
+
+**Docstring:** Cost Guard Driver (L6)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `SpendTotals` |  | Spend totals for different periods. |
+| `BudgetLimits` |  | Budget configuration for a tenant. |
+| `BreakdownRow` |  | A row in a cost breakdown. |
+| `AnomalyRow` |  | A cost anomaly record. |
+| `CostGuardDriver` | __init__, get_spend_totals, get_budget, get_baseline, get_last_snapshot, get_total_spend, get_baselines, get_spend_by_feature (+3 more) | L6 driver for cost guard read operations. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_cost_guard_driver` | `(session: Session) -> CostGuardDriver` | no | Factory function to get CostGuardDriver instance. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `dataclasses` | dataclass | no |
+| `datetime` | datetime | no |
+| `typing` | Any, Dict, List, Optional, Tuple | no |
+| `sqlalchemy` | text | no |
+| `sqlmodel` | Session | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+### __all__ Exports
+`CostGuardDriver`, `get_cost_guard_driver`, `SpendTotals`, `BudgetLimits`, `BreakdownRow`, `AnomalyRow`
 
 ---
 
@@ -38,13 +80,13 @@
 | `app.models.killswitch` | Incident | no |
 | `app.models.export_bundles` | DEFAULT_SOC2_CONTROLS, EvidenceBundle, ExecutiveDebriefBundle, PolicyContext, SOC2Bundle (+1) | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ---
 
@@ -79,13 +121,45 @@
 | `app.models.killswitch` | Incident, IncidentEvent, IncidentSeverity, IncidentStatus | no |
 | `app.utils.runtime` | generate_uuid, utc_now | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+---
+
+## incident_driver.py
+**Path:** `backend/app/hoc/cus/incidents/L6_drivers/incident_driver.py`  
+**Layer:** L6_drivers | **Domain:** incidents | **Lines:** 250
+
+**Docstring:** Incident Domain Driver (INTERNAL)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `IncidentDriver` | __init__, check_and_create_incident, create_incident_for_run, _emit_ack, get_incidents_for_run | Driver for Incident domain operations (INTERNAL). |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `logging` | logging | no |
+| `os` | os | no |
+| `typing` | Any, Callable, Dict, List, Optional | no |
+| `app.hoc.cus.incidents.L5_schemas.incident_decision_port` | IncidentDecisionPort | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+### Constants
+`RAC_ENABLED`
 
 ---
 
@@ -114,13 +188,13 @@
 | `sqlalchemy` | text | no |
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `IncidentPatternDriver`, `get_incident_pattern_driver`
@@ -152,13 +226,13 @@
 | `sqlmodel` | Session | no |
 | `app.models.killswitch` | Incident, IncidentEvent | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `IncidentReadDriver`, `get_incident_read_driver`
@@ -191,13 +265,13 @@
 | `sqlmodel` | Session | no |
 | `app.models.killswitch` | Incident, IncidentEvent, IncidentStatus | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `IncidentWriteDriver`, `get_incident_write_driver`
@@ -232,13 +306,13 @@
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
 | `app.models.killswitch` | Incident | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `IncidentsFacadeDriver`, `IncidentSnapshot`, `IncidentListSnapshot`, `MetricsSnapshot`, `CostImpactRowSnapshot`, `HistoricalTrendRowSnapshot`, `HistoricalDistributionRowSnapshot`, `CostTrendRowSnapshot`
@@ -271,13 +345,13 @@
 | `sqlalchemy` | text | no |
 | `sqlmodel` | Session | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `LessonsDriver`, `get_lessons_driver`
@@ -310,13 +384,13 @@
 | `sqlalchemy` | text | no |
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `LLMFailureDriver`, `get_llm_failure_driver`
@@ -350,13 +424,13 @@
 | `sqlalchemy` | text | no |
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `PolicyViolationDriver`, `get_policy_violation_driver`, `insert_policy_evaluation_sync_with_cursor`
@@ -387,13 +461,13 @@
 | `sqlalchemy` | text | no |
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `PostMortemDriver`, `get_postmortem_driver`
@@ -421,13 +495,13 @@
 | `sqlalchemy` | text | no |
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `RecurrenceAnalysisDriver`, `RecurrenceGroupSnapshot`

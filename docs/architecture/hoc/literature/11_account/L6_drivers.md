@@ -1,8 +1,8 @@
-# Account — L6 Drivers (3 files)
+# Account — L6 Drivers (6 files)
 
 **Domain:** account  
 **Layer:** L6_drivers  
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 **Layer Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
@@ -44,16 +44,91 @@
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
 | `app.models.tenant` | Invitation, Subscription, SupportTicket, Tenant, TenantMembership (+3) | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `AccountsFacadeDriver`, `get_accounts_facade_driver`, `TenantSnapshot`, `TenantDetailSnapshot`, `UserSnapshot`, `UserDetailSnapshot`, `MembershipSnapshot`, `ProfileSnapshot`, `SubscriptionSnapshot`, `InvitationSnapshot`, `TicketSnapshot`
+
+---
+
+## memory_pins_driver.py
+**Path:** `backend/app/hoc/cus/account/L6_drivers/memory_pins_driver.py`  
+**Layer:** L6_drivers | **Domain:** account | **Lines:** 294
+
+**Docstring:** Memory Pins Driver (L6)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `MemoryPinRow` |  | Snapshot of a memory pin row. |
+| `MemoryPinsDriver` | __init__, upsert_pin, get_pin, list_pins, delete_pin, cleanup_expired, write_audit, _row_to_snapshot | Pure data access for system.memory_pins table. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_memory_pins_driver` | `(session: AsyncSession) -> MemoryPinsDriver` | no | Create a session-bound MemoryPinsDriver instance. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `__future__` | annotations | no |
+| `json` | json | no |
+| `logging` | logging | no |
+| `dataclasses` | dataclass | no |
+| `datetime` | datetime | no |
+| `typing` | Any, Dict, List, Optional | no |
+| `sqlalchemy` | text | no |
+| `sqlalchemy.ext.asyncio` | AsyncSession | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+---
+
+## onboarding_driver.py
+**Path:** `backend/app/hoc/cus/account/L6_drivers/onboarding_driver.py`  
+**Layer:** L6_drivers | **Domain:** account | **Lines:** 88
+
+**Docstring:** Onboarding Driver (L6)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `OnboardingDriver` | __init__, fetch_onboarding_state, write_onboarding_state | L6 Driver for tenant onboarding state operations. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_onboarding_driver` | `(session: Session) -> OnboardingDriver` | no | Get an OnboardingDriver instance. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `__future__` | annotations | no |
+| `typing` | Optional | no |
+| `sqlmodel` | Session | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+### __all__ Exports
+`OnboardingDriver`, `get_onboarding_driver`
 
 ---
 
@@ -89,16 +164,54 @@
 | `sqlmodel` | Session, func, select | no |
 | `app.models.tenant` | APIKey, AuditLog, Tenant, TenantMembership, UsageRecord (+2) | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `TenantDriver`, `get_tenant_driver`, `TenantCoreSnapshot`, `RunCountSnapshot`, `APIKeySnapshot`, `UsageRecordSnapshot`, `RunSnapshot`
+
+---
+
+## tenant_lifecycle_driver.py
+**Path:** `backend/app/hoc/cus/account/L6_drivers/tenant_lifecycle_driver.py`  
+**Layer:** L6_drivers | **Domain:** account | **Lines:** 98
+
+**Docstring:** Tenant Lifecycle Driver (L6)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `TenantLifecycleDriver` | __init__, fetch_tenant_status, update_lifecycle_status | L6 Driver for tenant lifecycle status operations. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_tenant_lifecycle_driver` | `(session: Session) -> TenantLifecycleDriver` | no | Get a TenantLifecycleDriver instance. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `__future__` | annotations | no |
+| `datetime` | datetime, timezone | no |
+| `typing` | Optional | no |
+| `sqlmodel` | Session | no |
+| `app.models.tenant` | Tenant | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
+
+**SHOULD call:** L7_models
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
+
+### __all__ Exports
+`TenantLifecycleDriver`, `get_tenant_lifecycle_driver`
 
 ---
 
@@ -126,13 +239,13 @@
 | `sqlmodel` | Session | no |
 | `app.models.tenant` | User | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
 
 **SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
+**MUST NOT call:** L2_api, L4_spine, L5_engines
+**Called by:** L5_engines, L4_spine
 
 ### __all__ Exports
 `UserWriteDriver`, `get_user_write_driver`

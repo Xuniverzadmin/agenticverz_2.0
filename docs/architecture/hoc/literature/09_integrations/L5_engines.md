@@ -1,8 +1,8 @@
-# Integrations — L5 Engines (8 files)
+# Integrations — L5 Engines (11 files)
 
 **Domain:** integrations  
 **Layer:** L5_engines  
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 **Layer Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
@@ -35,13 +35,13 @@
 | `typing` | Any, Dict, List, Optional | no |
 | `uuid` | uuid | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -69,13 +69,53 @@
 | `app.hoc.cus.hoc_spine.services.cus_credential_engine` | CusCredentialService | no |
 | `app.hoc.cus.integrations.L6_drivers.cus_health_driver` | CusHealthDriver, HealthIntegrationRow, cus_health_driver_session | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+---
+
+## cus_integration_engine.py
+**Path:** `backend/app/hoc/cus/integrations/L5_engines/cus_integration_engine.py`  
+**Layer:** L5_engines | **Domain:** integrations | **Lines:** 478
+
+**Docstring:** Customer Integration Engine
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `EnableResult` |  | Result of enable operation. |
+| `DeleteResult` |  | Result of delete operation. |
+| `HealthCheckResult` |  | Result of health check operation. |
+| `CusIntegrationEngine` | __init__, create_integration, get_integration, list_integrations, update_integration, delete_integration, enable_integration, disable_integration (+2 more) | L4 engine for customer integration decisions. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_cus_integration_engine` | `(session) -> CusIntegrationEngine` | no | Get engine instance with driver configured for session. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `logging` | logging | no |
+| `dataclasses` | dataclass | no |
+| `datetime` | date, datetime, timezone | no |
+| `typing` | TYPE_CHECKING, Any, Dict, List, Optional (+1) | no |
+| `uuid` | UUID | no |
+| `app.schemas.cus_schemas` | CusLimitsStatus | no |
+| `app.hoc.cus.integrations.L6_drivers.cus_integration_driver` | CusIntegrationDriver, get_cus_integration_driver | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -104,13 +144,13 @@
 | `typing` | Any, Dict, List, Optional | no |
 | `app.hoc.cus.integrations.L5_schemas.datasource_model` | CustomerDataSource, DataSourceConfig, DataSourceRegistry, DataSourceStats, DataSourceStatus (+2) | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -147,16 +187,98 @@
 | `uuid` | UUID | no |
 | `app.hoc.cus.integrations.L5_engines.cus_integration_engine` | CusIntegrationEngine, get_cus_integration_engine | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `IntegrationsFacade`, `get_integrations_facade`, `IntegrationSummaryResult`, `IntegrationListResult`, `IntegrationDetailResult`, `IntegrationLifecycleResult`, `IntegrationDeleteResult`, `HealthCheckResult`, `HealthStatusResult`, `LimitsStatusResult`
+
+---
+
+## mcp_server_engine.py
+**Path:** `backend/app/hoc/cus/integrations/L5_engines/mcp_server_engine.py`  
+**Layer:** L5_engines | **Domain:** integrations | **Lines:** 761
+
+**Docstring:** MCP Server Engine — Server lifecycle orchestration.
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `McpServerStatus` |  | Server status values. |
+| `McpDiscoveryResult` |  | Result of server discovery (capabilities + tools). |
+| `McpHealthResult` |  | Result of health check. |
+| `McpRegistrationResult` |  | Result of server registration. |
+| `McpServerEngine` | __init__, __aenter__, __aexit__, register_server, discover_tools, health_check, get_server, list_servers (+11 more) | L5 Engine for MCP server lifecycle management. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `hashlib` | hashlib | no |
+| `logging` | logging | no |
+| `dataclasses` | dataclass | no |
+| `datetime` | datetime, timezone | no |
+| `typing` | Any, Dict, List, Optional, Tuple | no |
+| `enum` | Enum | no |
+| `httpx` | httpx | no |
+| `app.hoc.cus.integrations.L5_engines.credentials` | Credential, CredentialService | no |
+| `app.hoc.cus.integrations.L6_drivers.mcp_driver` | McpDriver, McpServerRow, McpToolRow, compute_input_hash | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+### Constants
+`MCP_PROTOCOL_VERSION`, `DEFAULT_TIMEOUT_SECONDS`, `MAX_HEALTH_CHECK_FAILURES`
+
+---
+
+## mcp_tool_invocation_engine.py
+**Path:** `backend/app/hoc/cus/integrations/L5_engines/mcp_tool_invocation_engine.py`  
+**Layer:** L5_engines | **Domain:** integrations | **Lines:** 789
+
+**Docstring:** MCP Tool Invocation Engine — Governed tool execution.
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `McpPolicyChecker` | check_tool_invocation | Protocol for MCP tool invocation policy checking. |
+| `PolicyCheckResult` |  | Result of policy check for tool invocation. |
+| `McpInvocationResult` |  | Result of MCP tool invocation. |
+| `DefaultMcpPolicyChecker` | check_tool_invocation | Default policy checker that allows all invocations. |
+| `McpToolInvocationEngine` | __init__, _get_default_audit_emitter, __aenter__, __aexit__, invoke_tool, _record_error, _execute_tool, _create_incident | L5 Engine for governed MCP tool invocations. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `hashlib` | hashlib | no |
+| `logging` | logging | no |
+| `dataclasses` | dataclass | no |
+| `datetime` | datetime, timezone | no |
+| `typing` | Any, Dict, List, Optional, Protocol (+1) | no |
+| `httpx` | httpx | no |
+| `app.hoc.cus.integrations.L5_engines.credentials` | Credential, CredentialService | no |
+| `app.hoc.cus.integrations.L6_drivers.mcp_driver` | McpDriver, McpServerRow, McpToolRow, compute_input_hash, compute_output_hash | no |
+| `app.hoc.cus.hoc_spine.schemas.protocols` | MCPAuditEmitterPort | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+### Constants
+`DEFAULT_TIMEOUT_SECONDS`, `MCP_PROTOCOL_VERSION`
 
 ---
 
@@ -189,13 +311,13 @@
 | `datetime` | datetime, timezone | no |
 | `typing` | Any | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `PREVENTION_CONTRACT_VERSION`, `PREVENTION_CONTRACT_FROZEN_AT`
@@ -219,13 +341,13 @@
 | `typing` | Protocol, runtime_checkable | no |
 | `app.hoc.cus.integrations.L5_engines.types` | Credential | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -257,13 +379,13 @@
 | `app.hoc.cus.integrations.L5_engines.credentials` | Credential, CredentialService | no |
 | `app.hoc.cus.integrations.L5_schemas.sql_gateway_protocol` | SqlQueryRequest, SqlQueryResult | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `DEFAULT_MAX_ROWS`, `DEFAULT_MAX_RESULT_BYTES`, `DEFAULT_TIMEOUT_SECONDS`
@@ -288,12 +410,12 @@
 | `datetime` | datetime | no |
 | `typing` | Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---

@@ -2,15 +2,6 @@
   "gaps": [
     {
       "domain": "overview",
-      "gap_type": "L3_adapter",
-      "description": "No L3 adapters but 1 L5 engines exist \u2014 L2 cannot reach L5",
-      "action": "Build hoc/cus/overview/L3_adapters/ with domain adapter(s)",
-      "related_files": [
-        "backend/app/hoc/cus/overview/L5_engines/overview_facade.py"
-      ]
-    },
-    {
-      "domain": "overview",
       "gap_type": "L7_models",
       "description": "1 L6 drivers but no domain-specific L7 models",
       "action": "FLAG: domain-localized data candidate (human decision)",
@@ -20,50 +11,26 @@
     },
     {
       "domain": "activity",
-      "gap_type": "L3_adapter",
-      "description": "No L3 adapters but 4 L5 engines exist \u2014 L2 cannot reach L5",
-      "action": "Build hoc/cus/activity/L3_adapters/ with domain adapter(s)",
-      "related_files": [
-        "backend/app/hoc/cus/activity/L5_engines/activity_enums.py",
-        "backend/app/hoc/cus/activity/L5_engines/activity_facade.py",
-        "backend/app/hoc/cus/activity/L5_engines/signal_feedback_engine.py",
-        "backend/app/hoc/cus/activity/L5_engines/signal_identity.py"
-      ]
-    },
-    {
-      "domain": "activity",
       "gap_type": "L7_models",
-      "description": "1 L6 drivers but no domain-specific L7 models",
+      "description": "4 L6 drivers but no domain-specific L7 models",
       "action": "FLAG: domain-localized data candidate (human decision)",
       "related_files": [
-        "backend/app/hoc/cus/activity/L6_drivers/activity_read_driver.py"
-      ]
-    },
-    {
-      "domain": "incidents",
-      "gap_type": "L3_adapter",
-      "description": "No L3 adapters but 9 L5 engines exist \u2014 L2 cannot reach L5",
-      "action": "Build hoc/cus/incidents/L3_adapters/ with domain adapter(s)",
-      "related_files": [
-        "backend/app/hoc/cus/incidents/L5_engines/hallucination_detector.py",
-        "backend/app/hoc/cus/incidents/L5_engines/incident_engine.py",
-        "backend/app/hoc/cus/incidents/L5_engines/incident_read_engine.py",
-        "backend/app/hoc/cus/incidents/L5_engines/incident_write_engine.py",
-        "backend/app/hoc/cus/incidents/L5_engines/incidents_facade.py",
-        "backend/app/hoc/cus/incidents/L5_engines/incidents_types.py",
-        "backend/app/hoc/cus/incidents/L5_engines/policy_violation_engine.py",
-        "backend/app/hoc/cus/incidents/L5_engines/recovery_rule_engine.py",
-        "backend/app/hoc/cus/incidents/L5_engines/semantic_failures.py"
+        "backend/app/hoc/cus/activity/L6_drivers/activity_read_driver.py",
+        "backend/app/hoc/cus/activity/L6_drivers/cus_telemetry_driver.py",
+        "backend/app/hoc/cus/activity/L6_drivers/orphan_recovery_driver.py",
+        "backend/app/hoc/cus/activity/L6_drivers/run_signal_driver.py"
       ]
     },
     {
       "domain": "incidents",
       "gap_type": "L7_models",
-      "description": "11 L6 drivers but no domain-specific L7 models",
+      "description": "13 L6 drivers but no domain-specific L7 models",
       "action": "FLAG: domain-localized data candidate (human decision)",
       "related_files": [
+        "backend/app/hoc/cus/incidents/L6_drivers/cost_guard_driver.py",
         "backend/app/hoc/cus/incidents/L6_drivers/export_bundle_driver.py",
         "backend/app/hoc/cus/incidents/L6_drivers/incident_aggregator.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/incident_driver.py",
         "backend/app/hoc/cus/incidents/L6_drivers/incident_pattern_driver.py",
         "backend/app/hoc/cus/incidents/L6_drivers/incident_read_driver.py",
         "backend/app/hoc/cus/incidents/L6_drivers/incident_write_driver.py",
@@ -77,71 +44,21 @@
     },
     {
       "domain": "policies",
-      "gap_type": "L3_adapter",
-      "description": "No L3 adapters but 51 L5 engines exist \u2014 L2 cannot reach L5",
-      "action": "Build hoc/cus/policies/L3_adapters/ with domain adapter(s)",
-      "related_files": [
-        "backend/app/hoc/cus/policies/L5_engines/ast.py",
-        "backend/app/hoc/cus/policies/L5_engines/authority_checker.py",
-        "backend/app/hoc/cus/policies/L5_engines/binding_moment_enforcer.py",
-        "backend/app/hoc/cus/policies/L5_engines/compiler_parser.py",
-        "backend/app/hoc/cus/policies/L5_engines/content_accuracy.py",
-        "backend/app/hoc/cus/policies/L5_engines/customer_policy_read_engine.py",
-        "backend/app/hoc/cus/policies/L5_engines/decorator.py",
-        "backend/app/hoc/cus/policies/L5_engines/degraded_mode.py",
-        "backend/app/hoc/cus/policies/L5_engines/deterministic_engine.py",
-        "backend/app/hoc/cus/policies/L5_engines/dsl_parser.py",
-        "backend/app/hoc/cus/policies/L5_engines/engine.py",
-        "backend/app/hoc/cus/policies/L5_engines/failure_mode_handler.py",
-        "backend/app/hoc/cus/policies/L5_engines/folds.py",
-        "backend/app/hoc/cus/policies/L5_engines/governance_facade.py",
-        "backend/app/hoc/cus/policies/L5_engines/grammar.py",
-        "backend/app/hoc/cus/policies/L5_engines/intent.py",
-        "backend/app/hoc/cus/policies/L5_engines/interpreter.py",
-        "backend/app/hoc/cus/policies/L5_engines/ir_builder.py",
-        "backend/app/hoc/cus/policies/L5_engines/ir_compiler.py",
-        "backend/app/hoc/cus/policies/L5_engines/ir_nodes.py",
-        "backend/app/hoc/cus/policies/L5_engines/kernel.py",
-        "backend/app/hoc/cus/policies/L5_engines/kill_switch.py",
-        "backend/app/hoc/cus/policies/L5_engines/lessons_engine.py",
-        "backend/app/hoc/cus/policies/L5_engines/limits.py",
-        "backend/app/hoc/cus/policies/L5_engines/limits_facade.py",
-        "backend/app/hoc/cus/policies/L5_engines/nodes.py",
-        "backend/app/hoc/cus/policies/L5_engines/phase_status_invariants.py",
-        "backend/app/hoc/cus/policies/L5_engines/plan.py",
-        "backend/app/hoc/cus/policies/L5_engines/policies_facade.py",
-        "backend/app/hoc/cus/policies/L5_engines/policies_limits_query_engine.py",
-        "backend/app/hoc/cus/policies/L5_engines/policies_proposals_query_engine.py",
-        "backend/app/hoc/cus/policies/L5_engines/policies_rules_query_engine.py",
-        "backend/app/hoc/cus/policies/L5_engines/policy_command.py",
-        "backend/app/hoc/cus/policies/L5_engines/policy_conflict_resolver.py",
-        "backend/app/hoc/cus/policies/L5_engines/policy_driver.py",
-        "backend/app/hoc/cus/policies/L5_engines/policy_limits_engine.py",
-        "backend/app/hoc/cus/policies/L5_engines/policy_mapper.py",
-        "backend/app/hoc/cus/policies/L5_engines/policy_models.py",
-        "backend/app/hoc/cus/policies/L5_engines/policy_proposal_engine.py",
-        "backend/app/hoc/cus/policies/L5_engines/policy_rules_engine.py",
-        "backend/app/hoc/cus/policies/L5_engines/prevention_hook.py",
-        "backend/app/hoc/cus/policies/L5_engines/protection_provider.py",
-        "backend/app/hoc/cus/policies/L5_engines/recovery_evaluation_engine.py",
-        "backend/app/hoc/cus/policies/L5_engines/runtime_command.py",
-        "backend/app/hoc/cus/policies/L5_engines/sandbox_engine.py",
-        "backend/app/hoc/cus/policies/L5_engines/snapshot_engine.py",
-        "backend/app/hoc/cus/policies/L5_engines/state.py",
-        "backend/app/hoc/cus/policies/L5_engines/tokenizer.py",
-        "backend/app/hoc/cus/policies/L5_engines/validator.py",
-        "backend/app/hoc/cus/policies/L5_engines/visitors.py",
-        "backend/app/hoc/cus/policies/L5_engines/worker_execution_command.py"
-      ]
-    },
-    {
-      "domain": "policies",
       "gap_type": "L7_models",
-      "description": "14 L6 drivers but no domain-specific L7 models",
+      "description": "27 L6 drivers but no domain-specific L7 models",
       "action": "FLAG: domain-localized data candidate (human decision)",
       "related_files": [
         "backend/app/hoc/cus/policies/L6_drivers/arbitrator.py",
+        "backend/app/hoc/cus/policies/L6_drivers/cus_enforcement_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/guard_read_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/limits_simulation_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/m25_integration_read_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/m25_integration_write_driver.py",
         "backend/app/hoc/cus/policies/L6_drivers/optimizer_conflict_resolver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policies_facade_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_approval_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_enforcement_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_enforcement_write_driver.py",
         "backend/app/hoc/cus/policies/L6_drivers/policy_engine_driver.py",
         "backend/app/hoc/cus/policies/L6_drivers/policy_graph_driver.py",
         "backend/app/hoc/cus/policies/L6_drivers/policy_proposal_read_driver.py",
@@ -150,125 +67,92 @@
         "backend/app/hoc/cus/policies/L6_drivers/policy_rules_driver.py",
         "backend/app/hoc/cus/policies/L6_drivers/policy_rules_read_driver.py",
         "backend/app/hoc/cus/policies/L6_drivers/proposals_read_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/rbac_audit_driver.py",
         "backend/app/hoc/cus/policies/L6_drivers/recovery_matcher.py",
+        "backend/app/hoc/cus/policies/L6_drivers/recovery_read_driver.py",
         "backend/app/hoc/cus/policies/L6_drivers/recovery_write_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/replay_read_driver.py",
         "backend/app/hoc/cus/policies/L6_drivers/scope_resolver.py",
-        "backend/app/hoc/cus/policies/L6_drivers/symbol_table.py"
-      ]
-    },
-    {
-      "domain": "controls",
-      "gap_type": "L2_api",
-      "description": "No L2 API routes but 2 engines exist",
-      "action": "Build hoc/api/cus/controls/ with route handlers",
-      "related_files": [
-        "backend/app/hoc/cus/controls/L5_engines/controls_facade.py",
-        "backend/app/hoc/cus/controls/L5_engines/threshold_engine.py"
-      ]
-    },
-    {
-      "domain": "controls",
-      "gap_type": "L3_adapter",
-      "description": "No L3 adapters but 2 L5 engines exist \u2014 L2 cannot reach L5",
-      "action": "Build hoc/cus/controls/L3_adapters/ with domain adapter(s)",
-      "related_files": [
-        "backend/app/hoc/cus/controls/L5_engines/controls_facade.py",
-        "backend/app/hoc/cus/controls/L5_engines/threshold_engine.py"
+        "backend/app/hoc/cus/policies/L6_drivers/symbol_table.py",
+        "backend/app/hoc/cus/policies/L6_drivers/workers_read_driver.py"
       ]
     },
     {
       "domain": "controls",
       "gap_type": "L7_models",
-      "description": "5 L6 drivers but no domain-specific L7 models",
+      "description": "10 L6 drivers but no domain-specific L7 models",
       "action": "FLAG: domain-localized data candidate (human decision)",
       "related_files": [
         "backend/app/hoc/cus/controls/L6_drivers/budget_enforcement_driver.py",
+        "backend/app/hoc/cus/controls/L6_drivers/circuit_breaker_async_driver.py",
+        "backend/app/hoc/cus/controls/L6_drivers/circuit_breaker_driver.py",
+        "backend/app/hoc/cus/controls/L6_drivers/killswitch_ops_driver.py",
+        "backend/app/hoc/cus/controls/L6_drivers/killswitch_read_driver.py",
         "backend/app/hoc/cus/controls/L6_drivers/limits_read_driver.py",
         "backend/app/hoc/cus/controls/L6_drivers/override_driver.py",
         "backend/app/hoc/cus/controls/L6_drivers/policy_limits_driver.py",
+        "backend/app/hoc/cus/controls/L6_drivers/scoped_execution_driver.py",
         "backend/app/hoc/cus/controls/L6_drivers/threshold_driver.py"
       ]
     },
     {
       "domain": "logs",
-      "gap_type": "L3_adapter",
-      "description": "No L3 adapters but 13 L5 engines exist \u2014 L2 cannot reach L5",
-      "action": "Build hoc/cus/logs/L3_adapters/ with domain adapter(s)",
-      "related_files": [
-        "backend/app/hoc/cus/logs/L5_engines/audit_evidence.py",
-        "backend/app/hoc/cus/logs/L5_engines/audit_reconciler.py",
-        "backend/app/hoc/cus/logs/L5_engines/certificate.py",
-        "backend/app/hoc/cus/logs/L5_engines/completeness_checker.py",
-        "backend/app/hoc/cus/logs/L5_engines/evidence_facade.py",
-        "backend/app/hoc/cus/logs/L5_engines/evidence_report.py",
-        "backend/app/hoc/cus/logs/L5_engines/logs_facade.py",
-        "backend/app/hoc/cus/logs/L5_engines/logs_read_engine.py",
-        "backend/app/hoc/cus/logs/L5_engines/mapper.py",
-        "backend/app/hoc/cus/logs/L5_engines/pdf_renderer.py",
-        "backend/app/hoc/cus/logs/L5_engines/redact.py",
-        "backend/app/hoc/cus/logs/L5_engines/replay_determinism.py",
-        "backend/app/hoc/cus/logs/L5_engines/traces_models.py"
-      ]
-    },
-    {
-      "domain": "logs",
       "gap_type": "L7_models",
-      "description": "4 L6 drivers but no domain-specific L7 models",
+      "description": "16 L6 drivers but no domain-specific L7 models",
       "action": "FLAG: domain-localized data candidate (human decision)",
       "related_files": [
+        "backend/app/hoc/cus/logs/L6_drivers/audit_ledger_driver.py",
+        "backend/app/hoc/cus/logs/L6_drivers/audit_ledger_read_driver.py",
+        "backend/app/hoc/cus/logs/L6_drivers/audit_ledger_write_driver_sync.py",
         "backend/app/hoc/cus/logs/L6_drivers/bridges_driver.py",
+        "backend/app/hoc/cus/logs/L6_drivers/capture_driver.py",
+        "backend/app/hoc/cus/logs/L6_drivers/cost_intelligence_driver.py",
+        "backend/app/hoc/cus/logs/L6_drivers/cost_intelligence_sync_driver.py",
         "backend/app/hoc/cus/logs/L6_drivers/export_bundle_store.py",
+        "backend/app/hoc/cus/logs/L6_drivers/idempotency_driver.py",
+        "backend/app/hoc/cus/logs/L6_drivers/integrity_driver.py",
+        "backend/app/hoc/cus/logs/L6_drivers/job_execution_driver.py",
         "backend/app/hoc/cus/logs/L6_drivers/logs_domain_store.py",
-        "backend/app/hoc/cus/logs/L6_drivers/pg_store.py"
-      ]
-    },
-    {
-      "domain": "analytics",
-      "gap_type": "L3_adapter",
-      "description": "No L3 adapters but 4 L5 engines exist \u2014 L2 cannot reach L5",
-      "action": "Build hoc/cus/analytics/L3_adapters/ with domain adapter(s)",
-      "related_files": [
-        "backend/app/hoc/cus/analytics/L5_engines/analytics_facade.py",
-        "backend/app/hoc/cus/analytics/L5_engines/costsim_models.py",
-        "backend/app/hoc/cus/analytics/L5_engines/detection_facade.py",
-        "backend/app/hoc/cus/analytics/L5_engines/provenance.py"
+        "backend/app/hoc/cus/logs/L6_drivers/panel_consistency_driver.py",
+        "backend/app/hoc/cus/logs/L6_drivers/pg_store.py",
+        "backend/app/hoc/cus/logs/L6_drivers/replay_driver.py",
+        "backend/app/hoc/cus/logs/L6_drivers/trace_mismatch_driver.py"
       ]
     },
     {
       "domain": "analytics",
       "gap_type": "L7_models",
-      "description": "5 L6 drivers but no domain-specific L7 models",
+      "description": "13 L6 drivers but no domain-specific L7 models",
       "action": "FLAG: domain-localized data candidate (human decision)",
       "related_files": [
         "backend/app/hoc/cus/analytics/L6_drivers/analytics_read_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/canary_report_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/coordination_audit_driver.py",
         "backend/app/hoc/cus/analytics/L6_drivers/cost_anomaly_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/cost_anomaly_read_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/cost_snapshots_driver.py",
         "backend/app/hoc/cus/analytics/L6_drivers/cost_write_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/feedback_read_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/leader_driver.py",
         "backend/app/hoc/cus/analytics/L6_drivers/pattern_detection_driver.py",
-        "backend/app/hoc/cus/analytics/L6_drivers/prediction_driver.py"
-      ]
-    },
-    {
-      "domain": "integrations",
-      "gap_type": "L3_adapter",
-      "description": "No L3 adapters but 8 L5 engines exist \u2014 L2 cannot reach L5",
-      "action": "Build hoc/cus/integrations/L3_adapters/ with domain adapter(s)",
-      "related_files": [
-        "backend/app/hoc/cus/integrations/L5_engines/connectors_facade.py",
-        "backend/app/hoc/cus/integrations/L5_engines/credentials/protocol.py",
-        "backend/app/hoc/cus/integrations/L5_engines/cus_health_engine.py",
-        "backend/app/hoc/cus/integrations/L5_engines/datasources_facade.py",
-        "backend/app/hoc/cus/integrations/L5_engines/integrations_facade.py",
-        "backend/app/hoc/cus/integrations/L5_engines/prevention_contract.py",
-        "backend/app/hoc/cus/integrations/L5_engines/sql_gateway.py",
-        "backend/app/hoc/cus/integrations/L5_engines/types.py"
+        "backend/app/hoc/cus/analytics/L6_drivers/prediction_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/prediction_read_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/provenance_driver.py"
       ]
     },
     {
       "domain": "integrations",
       "gap_type": "L7_models",
-      "description": "1 L6 drivers but no domain-specific L7 models",
+      "description": "8 L6 drivers but no domain-specific L7 models",
       "action": "FLAG: domain-localized data candidate (human decision)",
       "related_files": [
+        "backend/app/hoc/cus/integrations/L6_drivers/bridges_driver.py",
+        "backend/app/hoc/cus/integrations/L6_drivers/connector_registry_driver.py",
+        "backend/app/hoc/cus/integrations/L6_drivers/cus_health_driver.py",
+        "backend/app/hoc/cus/integrations/L6_drivers/cus_integration_driver.py",
+        "backend/app/hoc/cus/integrations/L6_drivers/mcp_driver.py",
+        "backend/app/hoc/cus/integrations/L6_drivers/proxy_driver.py",
+        "backend/app/hoc/cus/integrations/L6_drivers/sql_gateway_driver.py",
         "backend/app/hoc/cus/integrations/L6_drivers/worker_registry_driver.py"
       ]
     },
@@ -290,26 +174,434 @@
     },
     {
       "domain": "account",
-      "gap_type": "L3_adapter",
-      "description": "No L3 adapters but 3 L5 engines exist \u2014 L2 cannot reach L5",
-      "action": "Build hoc/cus/account/L3_adapters/ with domain adapter(s)",
+      "gap_type": "L7_models",
+      "description": "6 L6 drivers but no domain-specific L7 models",
+      "action": "FLAG: domain-localized data candidate (human decision)",
       "related_files": [
-        "backend/app/hoc/cus/account/L5_engines/accounts_facade.py",
-        "backend/app/hoc/cus/account/L5_engines/notifications_facade.py",
-        "backend/app/hoc/cus/account/L5_engines/tenant_engine.py"
+        "backend/app/hoc/cus/account/L6_drivers/accounts_facade_driver.py",
+        "backend/app/hoc/cus/account/L6_drivers/memory_pins_driver.py",
+        "backend/app/hoc/cus/account/L6_drivers/onboarding_driver.py",
+        "backend/app/hoc/cus/account/L6_drivers/tenant_driver.py",
+        "backend/app/hoc/cus/account/L6_drivers/tenant_lifecycle_driver.py",
+        "backend/app/hoc/cus/account/L6_drivers/user_write_driver.py"
       ]
     },
     {
-      "domain": "account",
+      "domain": "agent",
+      "gap_type": "L2_api",
+      "description": "No L2 API routes but 0 engines exist",
+      "action": "Build hoc/api/cus/agent/ with route handlers",
+      "related_files": []
+    },
+    {
+      "domain": "agent",
       "gap_type": "L7_models",
       "description": "3 L6 drivers but no domain-specific L7 models",
       "action": "FLAG: domain-localized data candidate (human decision)",
       "related_files": [
-        "backend/app/hoc/cus/account/L6_drivers/accounts_facade_driver.py",
-        "backend/app/hoc/cus/account/L6_drivers/tenant_driver.py",
-        "backend/app/hoc/cus/account/L6_drivers/user_write_driver.py"
+        "backend/app/hoc/cus/agent/L6_drivers/discovery_stats_driver.py",
+        "backend/app/hoc/cus/agent/L6_drivers/platform_driver.py",
+        "backend/app/hoc/cus/agent/L6_drivers/routing_driver.py"
+      ]
+    },
+    {
+      "domain": "api_keys",
+      "gap_type": "L7_models",
+      "description": "2 L6 drivers but no domain-specific L7 models",
+      "action": "FLAG: domain-localized data candidate (human decision)",
+      "related_files": [
+        "backend/app/hoc/cus/api_keys/L6_drivers/api_keys_facade_driver.py",
+        "backend/app/hoc/cus/api_keys/L6_drivers/keys_driver.py"
+      ]
+    },
+    {
+      "domain": "ops",
+      "gap_type": "L2_api",
+      "description": "No L2 API routes but 1 engines exist",
+      "action": "Build hoc/api/cus/ops/ with route handlers",
+      "related_files": [
+        "backend/app/hoc/cus/ops/L5_engines/cost_ops_engine.py"
+      ]
+    },
+    {
+      "domain": "ops",
+      "gap_type": "L7_models",
+      "description": "1 L6 drivers but no domain-specific L7 models",
+      "action": "FLAG: domain-localized data candidate (human decision)",
+      "related_files": [
+        "backend/app/hoc/cus/ops/L6_drivers/cost_read_driver.py"
       ]
     }
   ],
-  "l7_model_classification": []
+  "l7_model_classification": [
+    {
+      "model_name": "alert_config",
+      "file_path": "backend/app/models/alert_config.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [],
+      "used_by_drivers": [],
+      "action": "FLAG: no L6 driver references found \u2014 verify usage (human decision)"
+    },
+    {
+      "model_name": "contract",
+      "file_path": "backend/app/models/contract.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [],
+      "used_by_drivers": [],
+      "action": "FLAG: no L6 driver references found \u2014 verify usage (human decision)"
+    },
+    {
+      "model_name": "export_bundles",
+      "file_path": "backend/app/models/export_bundles.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [
+        "incidents"
+      ],
+      "used_by_drivers": [
+        "backend/app/hoc/cus/incidents/L6_drivers/export_bundle_driver.py"
+      ],
+      "action": "FLAG: domain-localized data candidate (human decision)"
+    },
+    {
+      "model_name": "governance",
+      "file_path": "backend/app/models/governance.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [],
+      "used_by_drivers": [],
+      "action": "FLAG: no L6 driver references found \u2014 verify usage (human decision)"
+    },
+    {
+      "model_name": "governance_job",
+      "file_path": "backend/app/models/governance_job.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [],
+      "used_by_drivers": [],
+      "action": "FLAG: no L6 driver references found \u2014 verify usage (human decision)"
+    },
+    {
+      "model_name": "knowledge_lifecycle",
+      "file_path": "backend/app/models/knowledge_lifecycle.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [],
+      "used_by_drivers": [],
+      "action": "FLAG: no L6 driver references found \u2014 verify usage (human decision)"
+    },
+    {
+      "model_name": "policy",
+      "file_path": "backend/app/models/policy.py",
+      "bucket": "cross_domain_fact",
+      "used_by_domains": [
+        "overview",
+        "policies"
+      ],
+      "used_by_drivers": [
+        "backend/app/hoc/cus/overview/L6_drivers/overview_facade_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_proposal_read_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_proposal_write_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/proposals_read_driver.py"
+      ],
+      "action": "STAYS shared \u2014 cross-domain fact table"
+    },
+    {
+      "model_name": "threshold_signal",
+      "file_path": "backend/app/models/threshold_signal.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [],
+      "used_by_drivers": [],
+      "action": "FLAG: no L6 driver references found \u2014 verify usage (human decision)"
+    },
+    {
+      "model_name": "cus_models",
+      "file_path": "backend/app/models/cus_models.py",
+      "bucket": "cross_domain_fact",
+      "used_by_domains": [
+        "activity",
+        "integrations",
+        "policies"
+      ],
+      "used_by_drivers": [
+        "backend/app/hoc/cus/activity/L6_drivers/cus_telemetry_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/cus_enforcement_driver.py",
+        "backend/app/hoc/cus/integrations/L6_drivers/cus_health_driver.py",
+        "backend/app/hoc/cus/integrations/L6_drivers/cus_integration_driver.py"
+      ],
+      "action": "STAYS shared \u2014 cross-domain fact table"
+    },
+    {
+      "model_name": "policy_precedence",
+      "file_path": "backend/app/models/policy_precedence.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [
+        "policies"
+      ],
+      "used_by_drivers": [
+        "backend/app/hoc/cus/policies/L6_drivers/arbitrator.py"
+      ],
+      "action": "FLAG: domain-localized data candidate (human decision)"
+    },
+    {
+      "model_name": "policy_scope",
+      "file_path": "backend/app/models/policy_scope.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [
+        "policies"
+      ],
+      "used_by_drivers": [
+        "backend/app/hoc/cus/policies/L6_drivers/scope_resolver.py"
+      ],
+      "action": "FLAG: domain-localized data candidate (human decision)"
+    },
+    {
+      "model_name": "policy_control_plane",
+      "file_path": "backend/app/models/policy_control_plane.py",
+      "bucket": "cross_domain_fact",
+      "used_by_domains": [
+        "controls",
+        "overview",
+        "policies"
+      ],
+      "used_by_drivers": [
+        "backend/app/hoc/cus/overview/L6_drivers/overview_facade_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/limits_simulation_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policies_facade_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_enforcement_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_enforcement_write_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_rules_read_driver.py",
+        "backend/app/hoc/cus/controls/L6_drivers/limits_read_driver.py",
+        "backend/app/hoc/cus/controls/L6_drivers/override_driver.py",
+        "backend/app/hoc/cus/controls/L6_drivers/threshold_driver.py"
+      ],
+      "action": "STAYS shared \u2014 cross-domain fact table"
+    },
+    {
+      "model_name": "audit_ledger",
+      "file_path": "backend/app/models/audit_ledger.py",
+      "bucket": "system_invariant",
+      "used_by_domains": [
+        "logs",
+        "overview"
+      ],
+      "used_by_drivers": [
+        "backend/app/hoc/cus/overview/L6_drivers/overview_facade_driver.py",
+        "backend/app/hoc/cus/logs/L6_drivers/audit_ledger_driver.py",
+        "backend/app/hoc/cus/logs/L6_drivers/audit_ledger_read_driver.py",
+        "backend/app/hoc/cus/logs/L6_drivers/audit_ledger_write_driver_sync.py",
+        "backend/app/hoc/cus/logs/L6_drivers/logs_domain_store.py"
+      ],
+      "action": "STAYS in app/models/ \u2014 system invariant"
+    },
+    {
+      "model_name": "log_exports",
+      "file_path": "backend/app/models/log_exports.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [
+        "logs"
+      ],
+      "used_by_drivers": [
+        "backend/app/hoc/cus/logs/L6_drivers/logs_domain_store.py"
+      ],
+      "action": "FLAG: domain-localized data candidate (human decision)"
+    },
+    {
+      "model_name": "logs_records",
+      "file_path": "backend/app/models/logs_records.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [
+        "logs"
+      ],
+      "used_by_drivers": [
+        "backend/app/hoc/cus/logs/L6_drivers/logs_domain_store.py"
+      ],
+      "action": "FLAG: domain-localized data candidate (human decision)"
+    },
+    {
+      "model_name": "costsim_cb",
+      "file_path": "backend/app/models/costsim_cb.py",
+      "bucket": "cross_domain_fact",
+      "used_by_domains": [
+        "analytics",
+        "controls"
+      ],
+      "used_by_drivers": [
+        "backend/app/hoc/cus/controls/L6_drivers/circuit_breaker_async_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/canary_report_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/provenance_driver.py"
+      ],
+      "action": "STAYS shared \u2014 cross-domain fact table"
+    },
+    {
+      "model_name": "feedback",
+      "file_path": "backend/app/models/feedback.py",
+      "bucket": "cross_domain_fact",
+      "used_by_domains": [
+        "analytics",
+        "policies"
+      ],
+      "used_by_drivers": [
+        "backend/app/hoc/cus/policies/L6_drivers/policy_proposal_read_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/feedback_read_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/pattern_detection_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/prediction_driver.py"
+      ],
+      "action": "STAYS shared \u2014 cross-domain fact table"
+    },
+    {
+      "model_name": "prediction",
+      "file_path": "backend/app/models/prediction.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [
+        "analytics"
+      ],
+      "used_by_drivers": [
+        "backend/app/hoc/cus/analytics/L6_drivers/prediction_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/prediction_read_driver.py"
+      ],
+      "action": "FLAG: domain-localized data candidate (human decision)"
+    },
+    {
+      "model_name": "mcp_models",
+      "file_path": "backend/app/models/mcp_models.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [
+        "integrations"
+      ],
+      "used_by_drivers": [
+        "backend/app/hoc/cus/integrations/L6_drivers/mcp_driver.py"
+      ],
+      "action": "FLAG: domain-localized data candidate (human decision)"
+    },
+    {
+      "model_name": "tenant",
+      "file_path": "backend/app/models/tenant.py",
+      "bucket": "system_invariant",
+      "used_by_domains": [
+        "account",
+        "activity",
+        "analytics",
+        "api_keys",
+        "apis",
+        "integrations",
+        "overview",
+        "policies"
+      ],
+      "used_by_drivers": [
+        "backend/app/hoc/cus/overview/L6_drivers/overview_facade_driver.py",
+        "backend/app/hoc/cus/activity/L6_drivers/orphan_recovery_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/limits_simulation_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_read_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/pattern_detection_driver.py",
+        "backend/app/hoc/cus/analytics/L6_drivers/prediction_driver.py",
+        "backend/app/hoc/cus/integrations/L6_drivers/worker_registry_driver.py",
+        "backend/app/hoc/cus/apis/L6_drivers/keys_driver.py",
+        "backend/app/hoc/cus/account/L6_drivers/accounts_facade_driver.py",
+        "backend/app/hoc/cus/account/L6_drivers/tenant_driver.py",
+        "backend/app/hoc/cus/account/L6_drivers/tenant_lifecycle_driver.py",
+        "backend/app/hoc/cus/account/L6_drivers/user_write_driver.py",
+        "backend/app/hoc/cus/api_keys/L6_drivers/api_keys_facade_driver.py",
+        "backend/app/hoc/cus/api_keys/L6_drivers/keys_driver.py"
+      ],
+      "action": "STAYS in app/models/ \u2014 system invariant"
+    },
+    {
+      "model_name": "killswitch",
+      "file_path": "backend/app/models/killswitch.py",
+      "bucket": "cross_domain_fact",
+      "used_by_domains": [
+        "api_keys",
+        "apis",
+        "controls",
+        "incidents",
+        "logs",
+        "overview",
+        "policies"
+      ],
+      "used_by_drivers": [
+        "backend/app/hoc/cus/overview/L6_drivers/overview_facade_driver.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/export_bundle_driver.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/incident_aggregator.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/incident_read_driver.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/incident_write_driver.py",
+        "backend/app/hoc/cus/incidents/L6_drivers/incidents_facade_driver.py",
+        "backend/app/hoc/cus/policies/L6_drivers/policy_read_driver.py",
+        "backend/app/hoc/cus/controls/L6_drivers/killswitch_ops_driver.py",
+        "backend/app/hoc/cus/controls/L6_drivers/killswitch_read_driver.py",
+        "backend/app/hoc/cus/logs/L6_drivers/export_bundle_store.py",
+        "backend/app/hoc/cus/apis/L6_drivers/keys_driver.py",
+        "backend/app/hoc/cus/api_keys/L6_drivers/keys_driver.py"
+      ],
+      "action": "STAYS shared \u2014 cross-domain fact table"
+    },
+    {
+      "model_name": "execution_envelope",
+      "file_path": "backend/app/models/execution_envelope.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [],
+      "used_by_drivers": [],
+      "action": "FLAG: no L6 driver references found \u2014 verify usage (human decision)"
+    },
+    {
+      "model_name": "external_response",
+      "file_path": "backend/app/models/external_response.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [],
+      "used_by_drivers": [],
+      "action": "FLAG: no L6 driver references found \u2014 verify usage (human decision)"
+    },
+    {
+      "model_name": "lessons_learned",
+      "file_path": "backend/app/models/lessons_learned.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [],
+      "used_by_drivers": [],
+      "action": "FLAG: no L6 driver references found \u2014 verify usage (human decision)"
+    },
+    {
+      "model_name": "m10_recovery",
+      "file_path": "backend/app/models/m10_recovery.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [],
+      "used_by_drivers": [],
+      "action": "FLAG: no L6 driver references found \u2014 verify usage (human decision)"
+    },
+    {
+      "model_name": "monitor_config",
+      "file_path": "backend/app/models/monitor_config.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [],
+      "used_by_drivers": [],
+      "action": "FLAG: no L6 driver references found \u2014 verify usage (human decision)"
+    },
+    {
+      "model_name": "override_authority",
+      "file_path": "backend/app/models/override_authority.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [],
+      "used_by_drivers": [],
+      "action": "FLAG: no L6 driver references found \u2014 verify usage (human decision)"
+    },
+    {
+      "model_name": "policy_snapshot",
+      "file_path": "backend/app/models/policy_snapshot.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [],
+      "used_by_drivers": [],
+      "action": "FLAG: no L6 driver references found \u2014 verify usage (human decision)"
+    },
+    {
+      "model_name": "retrieval_evidence",
+      "file_path": "backend/app/models/retrieval_evidence.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [],
+      "used_by_drivers": [],
+      "action": "FLAG: no L6 driver references found \u2014 verify usage (human decision)"
+    },
+    {
+      "model_name": "run_lifecycle",
+      "file_path": "backend/app/models/run_lifecycle.py",
+      "bucket": "domain_owned",
+      "used_by_domains": [],
+      "used_by_drivers": [],
+      "action": "FLAG: no L6 driver references found \u2014 verify usage (human decision)"
+    }
+  ]
 }

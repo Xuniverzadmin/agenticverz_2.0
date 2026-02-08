@@ -1,6 +1,6 @@
 # Incidents — Prescriptive Wiring Map
 
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 ## Target State
 
@@ -10,31 +10,32 @@ L2.1 Facade: `/root/agenticverz2.0/backend/app/hoc/api/facades/cus/incidents.py`
          ├── cost_guard.py
          ├── incidents.py
          │
-         └──→ L3 Adapters — **GAP** (0 files, need domain adapter)
+         ├──→ L4 Spine (via hoc_spine/)
                 │
-                ├──→ L4 Runtime (via general/L4_runtime/)
-                │
-                └──→ L5 Engines (9 files)
+                └──→ L5 Engines (14 files)
+                       ├── anomaly_bridge.py → L6 ❌ (no matching driver)
+                       ├── export_engine.py → L6 ✅
                        ├── hallucination_detector.py → L6 ❌ (no matching driver)
                        ├── incident_engine.py → L6 ✅
+                       ├── incident_pattern.py → L6 ❌ (no matching driver)
                        ├── incident_read_engine.py → L6 ✅
                        ├── incident_write_engine.py → L6 ✅
                        ├── incidents_facade.py → L6 ✅
                        ├── incidents_types.py → L6 ❌ (no matching driver)
                        ├── policy_violation_engine.py → L6 ✅
-                       ├── recovery_rule_engine.py → L6 ❌ (no matching driver)
-                       ├── semantic_failures.py → L6 ❌ (no matching driver)
+                       └── ... (+4 more)
+                     L5 Schemas (3 files)
                        │
-                       └──→ L6 Drivers (11 files)
+                       └──→ L6 Drivers (13 files)
+                              ├── cost_guard_driver.py
                               ├── export_bundle_driver.py
                               ├── incident_aggregator.py
+                              ├── incident_driver.py
                               ├── incident_pattern_driver.py
                               ├── incident_read_driver.py
                               ├── incident_write_driver.py
                               ├── incidents_facade_driver.py
-                              ├── lessons_driver.py
-                              ├── llm_failure_driver.py
-                              └── ... (+3 more)
+                              └── ... (+5 more)
                               │
                               └──→ L7 Models — **GAP** (no domain models)
                                      FLAG: domain-localized data candidate (human decision)
@@ -45,5 +46,4 @@ L2.1 Facade: `/root/agenticverz2.0/backend/app/hoc/api/facades/cus/incidents.py`
 
 | Type | Description | Action |
 |------|-------------|--------|
-| L3_adapter | No L3 adapters but 9 L5 engines exist — L2 cannot reach L5 | Build hoc/cus/incidents/L3_adapters/ with domain adapter(s) |
-| L7_models | 11 L6 drivers but no domain-specific L7 models | FLAG: domain-localized data candidate (human decision) |
+| L7_models | 13 L6 drivers but no domain-specific L7 models | FLAG: domain-localized data candidate (human decision) |

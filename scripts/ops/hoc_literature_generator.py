@@ -12,13 +12,13 @@ HOC Literature Generator — Prescriptive Architecture Documentation
 
 Generates per-domain, per-layer literature documents describing:
 - What each file contains (AST-derived, zero interpretation)
-- How it SHOULD be wired (per HOC_LAYER_TOPOLOGY_V1.4.0)
+- How it SHOULD be wired (per HOC_LAYER_TOPOLOGY_V2.0.0)
 - What's missing (gaps) and what's broken (violations)
 
-Input: HOC_CUS_DOMAIN_AUDIT.csv (file inventory)
+Input: HOC_CUS_DOMAIN_AUDIT.csv (file inventory, V2.0.0 format)
 Output: Markdown + JSON in docs/architecture/hoc/literature/
 
-Reference: HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+Reference: HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 Usage:
     python scripts/ops/hoc_literature_generator.py
@@ -46,71 +46,59 @@ DEFAULT_CSV = REPO_ROOT / "docs" / "architecture" / "hoc" / "HOC_CUS_DOMAIN_AUDI
 OUTPUT_DIR = REPO_ROOT / "docs" / "architecture" / "hoc" / "literature"
 
 DOMAINS_ORDERED = [
-    "general", "overview", "activity", "incidents", "policies",
-    "controls", "logs", "analytics", "integrations", "apis", "account",
+    "hoc_spine", "overview", "activity", "incidents", "policies",
+    "controls", "logs", "analytics", "integrations", "apis",
+    "account", "agent", "api_keys", "ops",
 ]
 
 # ---------------------------------------------------------------------------
-# Layer Contract (from HOC_LAYER_TOPOLOGY_V1.4.0 — RATIFIED)
+# Layer Contract (from HOC_LAYER_TOPOLOGY_V2.0.0 — RATIFIED)
 # ---------------------------------------------------------------------------
 
 LAYER_CONTRACT = {
     "L2.1_facade": {
         "should_call": ["L2_api"],
-        "must_not_call": ["L3_adapters", "L4_runtime", "L5_engines",
+        "must_not_call": ["L4_spine", "L5_engines",
                           "L5_schemas", "L6_drivers", "L7_models"],
         "called_by": ["L1_frontend"],
         "contract": "ORGANIZER ONLY — no business logic, no validation, groups L2 routers",
     },
     "L2_api": {
-        "should_call": ["L3_adapters"],
-        "must_not_call": ["L5_engines", "L6_drivers", "L7_models"],
+        "should_call": ["L4_spine"],
+        "must_not_call": ["L6_drivers", "L7_models"],
         "called_by": ["L2.1_facade"],
-        "contract": "HTTP translation — request validation, auth, response formatting, delegates to L3",
+        "contract": "HTTP translation — request validation, auth, response formatting, delegates to L4 spine",
     },
-    "L3_adapters": {
-        "should_call": ["L4_runtime", "L5_engines"],
-        "must_not_call": ["L2_api", "L6_drivers", "L7_models"],
-        "called_by": ["L2_api"],
-        "cross_domain_allowed": True,
-        "contract": "Translation + aggregation ONLY — no state mutation, no retries, no policy decisions",
-        "archetypes": [
-            "Domain Adapter (same-domain L2→L5 bridge)",
-            "Cross-Domain Bridge (domain A facts → domain B actions)",
-            "Tenant Isolator (internal→customer-safe schema transform)",
-            "Integration Wrapper (external SDK → AOS interface)",
-        ],
-    },
-    "L4_runtime": {
+    "L4_spine": {
         "should_call": ["L5_engines", "L6_drivers"],
-        "must_not_call": ["L2_api", "L3_adapters", "L7_models"],
-        "called_by": ["L3_adapters"],
-        "domain_restriction": "general",
-        "contract": "Control plane — authority/execution/consequences, owns commit, all execution enters L4 once",
-        "parts": ["authority", "execution", "consequences", "contracts"],
+        "must_not_call": ["L2_api", "L7_models"],
+        "called_by": ["L2_api"],
+        "domain_restriction": "hoc_spine",
+        "contract": "Single orchestrator — authority/execution/consequences, owns commit/begin, cross-domain owner",
+        "parts": ["authority", "orchestrator", "consequences", "schemas", "services"],
     },
     "L5_engines": {
         "should_call": ["L6_drivers", "L5_schemas"],
-        "must_not_call": ["L2_api", "L3_adapters", "L7_models"],
-        "called_by": ["L3_adapters", "L4_runtime"],
+        "must_not_call": ["L2_api", "L7_models"],
+        "called_by": ["L4_spine"],
         "contract": "Business logic — pattern detection, decisions, calls L6 for DB ops",
         "forbidden_imports": ["sqlalchemy", "sqlmodel.Session", "select"],
     },
     "L5_schemas": {
         "should_call": [],
-        "must_not_call": ["L2_api", "L3_adapters", "L4_runtime", "L5_engines", "L6_drivers"],
-        "called_by": ["L5_engines", "L3_adapters"],
+        "must_not_call": ["L2_api", "L4_spine", "L5_engines", "L6_drivers"],
+        "called_by": ["L5_engines", "L4_spine"],
         "contract": "Data contracts — Pydantic models, dataclasses, type references only",
     },
     "L6_drivers": {
         "should_call": ["L7_models"],
-        "must_not_call": ["L2_api", "L3_adapters", "L4_runtime", "L5_engines"],
-        "called_by": ["L5_engines", "L4_runtime"],
+        "must_not_call": ["L2_api", "L4_spine", "L5_engines"],
+        "called_by": ["L5_engines", "L4_spine"],
         "contract": "DB operations — query building, data transformation, returns domain objects NOT ORM",
     },
     "L7_models": {
         "should_call": [],
-        "must_not_call": ["L2_api", "L3_adapters", "L4_runtime", "L5_engines", "L6_drivers"],
+        "must_not_call": ["L2_api", "L4_spine", "L5_engines", "L6_drivers"],
         "called_by": ["L6_drivers"],
         "contract": "ORM table definitions — leaf node, no HOC imports",
     },
@@ -208,7 +196,7 @@ class Violation:
 @dataclass
 class Gap:
     domain: str
-    gap_type: str  # "L2.1_facade", "L3_adapter", "L7_model", etc.
+    gap_type: str  # "L2.1_facade", "L2_api", "L6_driver", "L7_models"
     description: str
     action: str
     related_files: List[str] = field(default_factory=list)
@@ -229,8 +217,7 @@ class DomainWiring:
     domain: str
     l2_1_facade: Optional[str]  # file path or None (gap)
     l2_apis: List[FileIdentity] = field(default_factory=list)
-    l3_adapters: List[FileIdentity] = field(default_factory=list)
-    l4_runtime: List[FileIdentity] = field(default_factory=list)
+    l4_spine: List[FileIdentity] = field(default_factory=list)
     l5_engines: List[FileIdentity] = field(default_factory=list)
     l5_schemas: List[FileIdentity] = field(default_factory=list)
     l5_other: List[FileIdentity] = field(default_factory=list)
@@ -389,8 +376,7 @@ def _extract_signature(node: ast.FunctionDef) -> str:
 LAYER_PATTERNS = [
     (r"hoc/api/facades/", "L2.1_facade"),
     (r"hoc/api/cus/", "L2_api"),
-    (r"/L3_adapters/", "L3_adapters"),
-    (r"/L4_runtime/", "L4_runtime"),
+    (r"hoc/cus/hoc_spine/", "L4_spine"),
     (r"/L5_engines/", "L5_engines"),
     (r"/L5_schemas/", "L5_schemas"),
     (r"/L5_controls/", "L5_other"),
@@ -416,8 +402,11 @@ def classify_layer(file_path: str) -> str:
 
 def classify_domain(file_path: str) -> str:
     """Extract domain from file path."""
-    # hoc/cus/{domain}/ or hoc/api/cus/{domain}/
-    m = re.search(r"hoc/(?:api/)?cus/(\w+)/", file_path)
+    # hoc_spine is its own domain
+    if "hoc/cus/hoc_spine/" in file_path:
+        return "hoc_spine"
+    # hoc/cus/{domain}/ or hoc/api/cus/{domain}/ or hoc/api/facades/cus/{domain}
+    m = re.search(r"hoc/(?:api/)?(?:facades/)?cus/(\w+)", file_path)
     if m:
         return m.group(1)
     if "app/models/" in file_path:
@@ -442,15 +431,9 @@ VIOLATION_PATTERNS = {
         "sqlalchemy": ("L5 MUST NOT import sqlalchemy", "Move DB logic to L6 driver"),
         "app.models": ("L5 MUST NOT import L7 models directly", "Route through L6 driver"),
     },
-    "L3_adapters": {
-        "sqlmodel": ("L3 MUST NOT access DB", "Delegate to L5 engine or L6 driver"),
-        "sqlalchemy": ("L3 MUST NOT access DB", "Delegate to L5 engine or L6 driver"),
-        "app.models": ("L3 MUST NOT import L7 models", "Use L5 schemas for data contracts"),
-        "session.commit": ("L3 MUST NOT commit (L4 owns transactions)", "Remove commit, L4 handles"),
-    },
     "L2_api": {
-        "L5_engines": ("L2 MUST NOT import L5 directly", "Route through L3 adapter"),
-        "L6_drivers": ("L2 MUST NOT import L6", "Route through L3 → L5 → L6"),
+        "L5_engines": ("L2 MUST NOT import L5 directly", "Route through L4 spine"),
+        "L6_drivers": ("L2 MUST NOT import L6", "Route through L4 → L5 → L6"),
         "app.models": ("L2 MUST NOT import L7 models", "Use L5 schemas or response models"),
     },
 }
@@ -515,16 +498,6 @@ def detect_gaps(domain: str, wiring: DomainWiring) -> List[Gap]:
             gap_type="L2_api",
             description=f"No L2 API routes but {len(wiring.l5_engines)} engines exist",
             action=f"Build hoc/api/cus/{domain}/ with route handlers",
-            related_files=[f.file_path for f in wiring.l5_engines],
-        ))
-
-    # L3 Adapter gaps — check each L5 engine has an L3 bridge
-    if wiring.l5_engines and not wiring.l3_adapters:
-        gaps.append(Gap(
-            domain=domain,
-            gap_type="L3_adapter",
-            description=f"No L3 adapters but {len(wiring.l5_engines)} L5 engines exist — L2 cannot reach L5",
-            action=f"Build hoc/cus/{domain}/L3_adapters/ with domain adapter(s)",
             related_files=[f.file_path for f in wiring.l5_engines],
         ))
 
@@ -679,19 +652,29 @@ def find_callers(file_path: str, module_name: str) -> List[Tuple[str, str]]:
 
 
 def read_audit_csv(csv_path: Path) -> Dict[str, Dict[str, List[str]]]:
-    """Read the audit CSV and return {domain: {layer: [file_paths]}}."""
+    """Read the audit CSV and return {domain: {layer: [file_paths]}}.
+
+    V2.0.0 CSV format (no L1 frontend, no L3 adapters):
+    Col 0: S No
+    Col 1: Domain
+    Col 2-4: L2.1 (Count, Names, Paths)
+    Col 5-7: L2 (Count, Names, Paths)
+    Col 8-10: L4 (Count, Names, Paths)
+    Col 11-13: L5 (Count, Names, Paths)
+    Col 14-16: L6 (Count, Names, Paths)
+    Col 17-19: L7 (Count, Names, Paths)
+    Col 20: Total Files
+    """
     inventory: Dict[str, Dict[str, List[str]]] = {}
 
-    # Column mapping: CSV columns -> layer keys
-    # CSV has triplets: "LX Count", "LX File Names", "LX File Paths"
+    # Column mapping: CSV "File Paths" column index -> layer key
     layer_columns = {
         4: "L2.1_facade",   # L2.1 File Paths
         7: "L2_api",        # L2 File Paths
-        10: "L3_adapters",  # L3 File Paths
-        13: "L4_runtime",   # L4 File Paths
-        16: "L5",           # L5 File Paths (combined engines+schemas+other)
-        19: "L6_drivers",   # L6 File Paths
-        22: "L7_models",    # L7 File Paths
+        10: "L4_spine",     # L4 File Paths
+        13: "L5",           # L5 File Paths (combined engines+schemas+other)
+        16: "L6_drivers",   # L6 File Paths
+        19: "L7_models",    # L7 File Paths
     }
 
     with open(csv_path, "r", encoding="utf-8") as f:
@@ -710,6 +693,8 @@ def read_audit_csv(csv_path: Path) -> Dict[str, Dict[str, List[str]]]:
             for col_idx, layer_key in layer_columns.items():
                 if col_idx < len(row) and row[col_idx].strip():
                     paths = [p.strip() for p in row[col_idx].strip().split("\n") if p.strip()]
+                    # Filter to .py files only — skip .tsx, .json, etc.
+                    paths = [p for p in paths if p.endswith(".py")]
                     inventory[domain][layer_key] = paths
                 else:
                     inventory[domain][layer_key] = []
@@ -776,7 +761,7 @@ def generate_file_section(identity: FileIdentity, violations: List[Violation],
     # Prescriptive Wiring
     contract = LAYER_CONTRACT.get(identity.layer, {})
     if contract:
-        lines.append("### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)")
+        lines.append("### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)")
         lines.append("")
         lines.append(f"**Contract:** {contract.get('contract', 'N/A')}")
         lines.append("")
@@ -842,7 +827,7 @@ def generate_layer_md(domain: str, layer: str, identities: List[FileIdentity],
     lines.append("")
     lines.append(f"**Domain:** {domain}  ")
     lines.append(f"**Layer:** {layer}  ")
-    lines.append(f"**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)")
+    lines.append(f"**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)")
     lines.append("")
 
     contract = LAYER_CONTRACT.get(layer, {})
@@ -865,7 +850,7 @@ def generate_domain_wiring_map(domain: str, wiring: DomainWiring) -> str:
     lines = []
     lines.append(f"# {domain.title()} — Prescriptive Wiring Map")
     lines.append("")
-    lines.append("**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)")
+    lines.append("**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)")
     lines.append("")
     lines.append("## Target State")
     lines.append("")
@@ -889,27 +874,17 @@ def generate_domain_wiring_map(domain: str, wiring: DomainWiring) -> str:
         lines.append(f"  └──→ L2 API: `hoc/api/cus/{domain}/` — **GAP** (0 files)")
     lines.append("         │")
 
-    # L3 Adapters
-    l3_count = len(wiring.l3_adapters)
-    if l3_count:
-        lines.append(f"         └──→ L3 Adapters ({l3_count} files)")
-        for f in wiring.l3_adapters:
-            lines.append(f"                ├── {f.file_name} ✅")
-    else:
-        lines.append(f"         └──→ L3 Adapters — **GAP** (0 files, need domain adapter)")
-    lines.append("                │")
-
-    # L4 Runtime (general only)
-    if domain == "general":
-        l4_count = len(wiring.l4_runtime)
-        lines.append(f"                └──→ L4 Runtime ({l4_count} files)")
-        for f in wiring.l4_runtime[:5]:
-            lines.append(f"                       ├── {f.file_name}")
+    # L4 Spine (hoc_spine domain only)
+    if domain == "hoc_spine":
+        l4_count = len(wiring.l4_spine)
+        lines.append(f"         └──→ L4 Spine ({l4_count} files)")
+        for f in wiring.l4_spine[:5]:
+            lines.append(f"                ├── {f.file_name}")
         if l4_count > 5:
-            lines.append(f"                       └── ... (+{l4_count - 5} more)")
-        lines.append("                       │")
+            lines.append(f"                └── ... (+{l4_count - 5} more)")
+        lines.append("                │")
     else:
-        lines.append(f"                ├──→ L4 Runtime (via general/L4_runtime/)")
+        lines.append(f"         ├──→ L4 Spine (via hoc_spine/)")
 
     # L5 Engines
     l5_count = len(wiring.l5_engines)
@@ -994,7 +969,7 @@ def generate_gap_register(all_gaps: List[Gap], model_classifications: List[L7Mod
     lines.append("# GAP REGISTER")
     lines.append("")
     lines.append("**Generated by:** `scripts/ops/hoc_literature_generator.py`  ")
-    lines.append("**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)")
+    lines.append("**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)")
     lines.append("")
 
     # Group by gap type
@@ -1002,7 +977,7 @@ def generate_gap_register(all_gaps: List[Gap], model_classifications: List[L7Mod
     for gap in all_gaps:
         by_type.setdefault(gap.gap_type, []).append(gap)
 
-    for gap_type in ["L2.1_facade", "L2_api", "L3_adapter", "L6_driver", "L7_models"]:
+    for gap_type in ["L2.1_facade", "L2_api", "L6_driver", "L7_models"]:
         gaps = by_type.get(gap_type, [])
         lines.append(f"## {gap_type.replace('_', ' ').title()} Gaps ({len(gaps)})")
         lines.append("")
@@ -1049,7 +1024,7 @@ def generate_violations_md(all_violations: List[Violation]) -> str:
     lines.append("# WIRING VIOLATIONS")
     lines.append("")
     lines.append("**Generated by:** `scripts/ops/hoc_literature_generator.py`  ")
-    lines.append("**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)")
+    lines.append("**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)")
     lines.append("")
     lines.append(f"**Total violations:** {len(all_violations)}")
     lines.append("")
@@ -1087,7 +1062,7 @@ def generate_index(domain_wirings: Dict[str, DomainWiring],
     lines.append("# HOC LITERATURE INDEX")
     lines.append("")
     lines.append("**Generated by:** `scripts/ops/hoc_literature_generator.py`  ")
-    lines.append("**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)")
+    lines.append("**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)")
     lines.append("")
 
     # DISCLAIMER
@@ -1109,8 +1084,8 @@ def generate_index(domain_wirings: Dict[str, DomainWiring],
     # Summary table
     lines.append("## Domain Summary")
     lines.append("")
-    lines.append("| # | Domain | L2.1 | L2 | L3 | L4 | L5 | L6 | L7 | Violations | Gaps | Conformance |")
-    lines.append("|---|--------|------|----|----|----|----|----|----|-----------|------|-------------|")
+    lines.append("| # | Domain | L2.1 | L2 | L4 | L5 | L6 | L7 | Violations | Gaps | Conformance |")
+    lines.append("|---|--------|------|----|----|----|----|----|-----------|------|-------------|")
 
     for i, domain in enumerate(DOMAINS_ORDERED, 1):
         w = domain_wirings.get(domain)
@@ -1118,8 +1093,7 @@ def generate_index(domain_wirings: Dict[str, DomainWiring],
             continue
         l2_1 = "✅" if w.l2_1_facade else "❌"
         l2 = len(w.l2_apis)
-        l3 = len(w.l3_adapters)
-        l4 = len(w.l4_runtime) if domain == "general" else "—"
+        l4 = len(w.l4_spine) if domain == "hoc_spine" else "—"
         l5 = len(w.l5_engines) + len(w.l5_schemas) + len(w.l5_other)
         l6 = len(w.l6_drivers)
         l7 = len(w.l7_models)
@@ -1127,21 +1101,21 @@ def generate_index(domain_wirings: Dict[str, DomainWiring],
         g_count = len(w.gaps)
 
         # Conformance = (layers present without gaps) / (layers expected)
-        expected = 5  # L2.1, L2, L3, L5, L6 (L4 only for general, L7 separate)
-        if domain == "general":
-            expected = 6
+        # V2.0.0: L2.1, L2, L5, L6 (L4 only for hoc_spine, L7 separate)
+        expected = 4
+        if domain == "hoc_spine":
+            expected = 5
         present = sum([
             1 if w.l2_1_facade else 0,
             1 if w.l2_apis else 0,
-            1 if w.l3_adapters else 0,
-            1 if domain == "general" and w.l4_runtime else 0,
+            1 if domain == "hoc_spine" and w.l4_spine else 0,
             1 if w.l5_engines else 0,
             1 if w.l6_drivers else 0,
         ])
         conformance = f"{int(present / expected * 100)}%"
 
         lines.append(
-            f"| {i} | {domain} | {l2_1} | {l2} | {l3} | {l4} | {l5} | {l6} | {l7} "
+            f"| {i} | {domain} | {l2_1} | {l2} | {l4} | {l5} | {l6} | {l7} "
             f"| {v_count} | {g_count} | {conformance} |"
         )
 
@@ -1158,10 +1132,8 @@ def generate_index(domain_wirings: Dict[str, DomainWiring],
         if w:
             if w.l2_apis:
                 lines.append(f"- [{domain}/L2_apis.md]({prefix}_{domain}/L2_apis.md)")
-            if w.l3_adapters:
-                lines.append(f"- [{domain}/L3_adapters.md]({prefix}_{domain}/L3_adapters.md)")
-            if domain == "general" and w.l4_runtime:
-                lines.append(f"- [{domain}/L4_runtime.md]({prefix}_{domain}/L4_runtime.md)")
+            if domain == "hoc_spine" and w.l4_spine:
+                lines.append(f"- [{domain}/L4_spine.md]({prefix}_{domain}/L4_spine.md)")
             if w.l5_engines:
                 lines.append(f"- [{domain}/L5_engines.md]({prefix}_{domain}/L5_engines.md)")
             if w.l5_schemas:
@@ -1233,15 +1205,14 @@ def generate_json_outputs(
     index = {}
     for domain, w in domain_wirings.items():
         total_files = (
-            len(w.l2_apis) + len(w.l3_adapters) + len(w.l4_runtime)
+            len(w.l2_apis) + len(w.l4_spine)
             + len(w.l5_engines) + len(w.l5_schemas) + len(w.l5_other)
             + len(w.l6_drivers) + len(w.l7_models)
         )
         index[domain] = {
             "l2_1_facade": w.l2_1_facade,
             "l2_apis": [identity_to_dict(f) for f in w.l2_apis],
-            "l3_adapters": [identity_to_dict(f) for f in w.l3_adapters],
-            "l4_runtime": [identity_to_dict(f) for f in w.l4_runtime],
+            "l4_spine": [identity_to_dict(f) for f in w.l4_spine],
             "l5_engines": [identity_to_dict(f) for f in w.l5_engines],
             "l5_schemas": [identity_to_dict(f) for f in w.l5_schemas],
             "l5_other": [identity_to_dict(f) for f in w.l5_other],
@@ -1309,7 +1280,7 @@ def main():
 
     print("=" * 70)
     print("HOC LITERATURE GENERATOR")
-    print("Reference: HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)")
+    print("Reference: HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)")
     print("=" * 70)
     print()
 
@@ -1374,10 +1345,8 @@ def main():
                 continue
             if identity.layer == "L2_api":
                 wiring.l2_apis.append(identity)
-            elif identity.layer == "L3_adapters":
-                wiring.l3_adapters.append(identity)
-            elif identity.layer == "L4_runtime":
-                wiring.l4_runtime.append(identity)
+            elif identity.layer == "L4_spine":
+                wiring.l4_spine.append(identity)
             elif identity.layer == "L5_engines":
                 wiring.l5_engines.append(identity)
             elif identity.layer == "L5_schemas":
@@ -1396,7 +1365,7 @@ def main():
         wiring.gaps = detect_gaps(domain, wiring)
 
         domain_wirings[domain] = wiring
-        print(f"       {domain}: L2={len(wiring.l2_apis)} L3={len(wiring.l3_adapters)} "
+        print(f"       {domain}: L2={len(wiring.l2_apis)} L4={len(wiring.l4_spine)} "
               f"L5={len(wiring.l5_engines)} L6={len(wiring.l6_drivers)} "
               f"gaps={len(wiring.gaps)} violations={len(wiring.violations)}")
 
@@ -1448,8 +1417,7 @@ def main():
         # Per-layer markdown
         layer_groups = [
             ("L2_apis", wiring.l2_apis),
-            ("L3_adapters", wiring.l3_adapters),
-            ("L4_runtime", wiring.l4_runtime),
+            ("L4_spine", wiring.l4_spine),
             ("L5_engines", wiring.l5_engines),
             ("L5_schemas", wiring.l5_schemas),
             ("L5_other", wiring.l5_other),

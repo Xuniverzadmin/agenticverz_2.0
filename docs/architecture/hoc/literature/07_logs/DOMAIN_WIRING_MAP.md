@@ -1,6 +1,6 @@
 # Logs — Prescriptive Wiring Map
 
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 ## Target State
 
@@ -12,28 +12,32 @@ L2.1 Facade: `/root/agenticverz2.0/backend/app/hoc/api/facades/cus/logs.py` ✅
          ├── tenants.py
          ├── traces.py
          │
-         └──→ L3 Adapters — **GAP** (0 files, need domain adapter)
+         ├──→ L4 Spine (via hoc_spine/)
                 │
-                ├──→ L4 Runtime (via general/L4_runtime/)
-                │
-                └──→ L5 Engines (13 files)
+                └──→ L5 Engines (16 files)
                        ├── audit_evidence.py → L6 ❌ (no matching driver)
+                       ├── audit_ledger_engine.py → L6 ✅
                        ├── audit_reconciler.py → L6 ❌ (no matching driver)
                        ├── certificate.py → L6 ❌ (no matching driver)
                        ├── completeness_checker.py → L6 ❌ (no matching driver)
+                       ├── cost_intelligence_engine.py → L6 ✅
                        ├── evidence_facade.py → L6 ❌ (no matching driver)
                        ├── evidence_report.py → L6 ❌ (no matching driver)
                        ├── logs_facade.py → L6 ✅
                        ├── logs_read_engine.py → L6 ❌ (no matching driver)
-                       ├── mapper.py → L6 ❌ (no matching driver)
-                       ├── pdf_renderer.py → L6 ❌ (no matching driver)
-                       └── ... (+3 more)
+                       └── ... (+6 more)
+                     L5 Schemas (2 files)
                        │
-                       └──→ L6 Drivers (4 files)
+                       └──→ L6 Drivers (16 files)
+                              ├── audit_ledger_driver.py
+                              ├── audit_ledger_read_driver.py
+                              ├── audit_ledger_write_driver_sync.py
                               ├── bridges_driver.py
+                              ├── capture_driver.py
+                              ├── cost_intelligence_driver.py
+                              ├── cost_intelligence_sync_driver.py
                               ├── export_bundle_store.py
-                              ├── logs_domain_store.py
-                              ├── pg_store.py
+                              └── ... (+8 more)
                               │
                               └──→ L7 Models — **GAP** (no domain models)
                                      FLAG: domain-localized data candidate (human decision)
@@ -44,5 +48,4 @@ L2.1 Facade: `/root/agenticverz2.0/backend/app/hoc/api/facades/cus/logs.py` ✅
 
 | Type | Description | Action |
 |------|-------------|--------|
-| L3_adapter | No L3 adapters but 13 L5 engines exist — L2 cannot reach L5 | Build hoc/cus/logs/L3_adapters/ with domain adapter(s) |
-| L7_models | 4 L6 drivers but no domain-specific L7 models | FLAG: domain-localized data candidate (human decision) |
+| L7_models | 16 L6 drivers but no domain-specific L7 models | FLAG: domain-localized data candidate (human decision) |

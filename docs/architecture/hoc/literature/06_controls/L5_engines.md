@@ -1,10 +1,44 @@
-# Controls — L5 Engines (2 files)
+# Controls — L5 Engines (3 files)
 
 **Domain:** controls  
 **Layer:** L5_engines  
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 **Layer Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+---
+
+## cb_sync_wrapper_engine.py
+**Path:** `backend/app/hoc/cus/controls/L5_engines/cb_sync_wrapper_engine.py`  
+**Layer:** L5_engines | **Domain:** controls | **Lines:** 170
+
+**Docstring:** Thread-safe sync wrapper for async circuit breaker functions.
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `_get_executor` | `() -> concurrent.futures.ThreadPoolExecutor` | no | Get or create the shared thread pool executor. |
+| `_run_async_in_thread` | `(coro, timeout: float = 5.0)` | no | Run an async coroutine in a separate thread with its own event loop. |
+| `is_v2_disabled_sync` | `(timeout: float = 5.0) -> bool` | no | Sync wrapper for is_v2_disabled(). |
+| `get_state_sync` | `(timeout: float = 5.0)` | no | Sync wrapper for get_state(). |
+| `shutdown_executor` | `()` | no | Shutdown the thread pool executor gracefully. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `__future__` | annotations | no |
+| `asyncio` | asyncio | no |
+| `concurrent.futures` | concurrent.futures | no |
+| `logging` | logging | no |
+| `typing` | Optional | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -38,13 +72,13 @@
 | `typing` | Any, Dict, List, Optional | no |
 | `uuid` | uuid | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -84,13 +118,13 @@
 | `pydantic` | BaseModel, Field, field_validator | no |
 | `app.hoc.cus.controls.L5_schemas.threshold_signals` | ThresholdEvaluationResult, ThresholdSignal | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `DEFAULT_LLM_RUN_PARAMS`

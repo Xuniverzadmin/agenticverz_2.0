@@ -1,8 +1,8 @@
-# Policies — L5 Engines (51 files)
+# Policies — L5 Engines (58 files)
 
 **Domain:** policies  
 **Layer:** L5_engines  
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 **Layer Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
@@ -51,13 +51,13 @@
 | `enum` | Enum | no |
 | `typing` | Any, Literal, Union | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -87,13 +87,13 @@
 | `enum` | Enum | no |
 | `typing` | Any, Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -129,13 +129,13 @@
 | `datetime` | datetime, timezone | no |
 | `logging` | logging | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -159,13 +159,13 @@
 | `app.policy.compiler.grammar` | ActionType, PolicyCategory | no |
 | `app.policy.compiler.tokenizer` | Token, Tokenizer, TokenType | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -195,16 +195,55 @@
 | `enum` | Enum | no |
 | `typing` | Any, Dict, List, Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `DEFINITIVE_PATTERNS`, `UNCERTAINTY_PATTERNS`, `HEDGED_PATTERNS`, `CONTRACT_TERMS`
+
+---
+
+## cus_enforcement_engine.py
+**Path:** `backend/app/hoc/cus/policies/L5_engines/cus_enforcement_engine.py`  
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 559
+
+**Docstring:** Customer Enforcement Engine
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `EnforcementResult` |  | Enforcement decision result. |
+| `EnforcementReason` |  | Explanation for an enforcement decision. |
+| `EnforcementDecision` | to_dict | Complete enforcement decision with explainability. |
+| `CusEnforcementEngine` | __init__, evaluate, _check_budget, _check_tokens, _check_rate, evaluate_batch, get_enforcement_status | L4 engine for enforcement policy decisions. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_cus_enforcement_engine` | `() -> CusEnforcementEngine` | no | Get engine instance with default driver. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `logging` | logging | no |
+| `dataclasses` | dataclass, field | no |
+| `datetime` | date, datetime, timedelta, timezone | no |
+| `enum` | Enum | no |
+| `typing` | TYPE_CHECKING, Any, Dict, List, Optional | no |
+| `app.hoc.cus.policies.L6_drivers.cus_enforcement_driver` | CusEnforcementDriver, IntegrationRow, get_cus_enforcement_driver | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -236,13 +275,48 @@
 | `typing` | TYPE_CHECKING, List, Optional | no |
 | `app.hoc.cus.policies.L6_drivers.policy_read_driver` | PolicyReadDriver, get_policy_read_driver | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+---
+
+## dag_executor.py
+**Path:** `backend/app/hoc/cus/policies/L5_engines/dag_executor.py`  
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 322
+
+**Docstring:** DAG-based executor for PLang v2.0.
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `StageResult` | success, was_blocked | Result of executing a single stage. |
+| `ExecutionTrace` | to_dict | Full execution trace across all stages. |
+| `DAGExecutor` | __init__, execute, _execute_stage, _execute_policy, _is_more_restrictive, get_execution_plan, visualize_plan | Executes policies in DAG order. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `asyncio` | asyncio | no |
+| `dataclasses` | dataclass, field | no |
+| `typing` | Any, Dict, List, Optional | no |
+| `app.policy.compiler.grammar` | ActionType | no |
+| `app.policy.ir.ir_nodes` | IRModule | no |
+| `app.policy.optimizer.dag_sorter` | DAGSorter, ExecutionPlan | no |
+| `app.hoc.cus.policies.L5_engines.deterministic_engine` | DeterministicEngine, ExecutionContext, ExecutionResult | no |
+| `app.hoc.cus.policies.L5_engines.intent` | Intent | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -269,13 +343,13 @@
 | `typing` | Any, Callable, Optional, TypeVar | no |
 | `app.governance.kernel` | ExecutionKernel, InvocationContext | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `F`
@@ -313,13 +387,13 @@
 | `threading` | Lock | no |
 | `typing` | Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -355,13 +429,13 @@
 | `app.policy.ir.ir_nodes` | IRAction, IRBinaryOp, IRCall, IRCheckPolicy, IRCompare (+11) | no |
 | `app.hoc.cus.policies.L5_engines.intent` | Intent, IntentEmitter, IntentPayload, IntentType | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `MAX_PATTERN_LEN`, `MAX_INPUT_LEN`, `_REDOS_PATTERN`
@@ -398,13 +472,13 @@
 | `typing` | Any | no |
 | `app.dsl.ast` | Action, BlockAction, Clause, Comparator, Condition (+10) | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -439,13 +513,13 @@
 | `app.policy.models` | ActionType, BusinessRule, BusinessRuleType, EthicalConstraint, EthicalConstraintType (+14) | no |
 | `app.contracts.decisions` | emit_policy_decision | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `POLICY_SIGNING_SECRET`, `MAX_EVALUATION_TIME_MS`, `CACHE_TTL_SECONDS`, `DEFAULT_COST_CEILING_PER_HOUR`, `DEFAULT_RETRY_CEILING_PER_MINUTE`, `DEFAULT_CASCADE_DEPTH`, `DEFAULT_CONCURRENT_AGENTS`
@@ -484,13 +558,13 @@
 | `datetime` | datetime, timezone | no |
 | `logging` | logging | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `DEFAULT_FAILURE_MODE`
@@ -518,13 +592,13 @@
 | `typing` | Any, Dict, List, Optional, Set | no |
 | `app.policy.ir.ir_nodes` | IRAction, IRBinaryOp, IRBlock, IRCompare, IRFunction (+6) | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -559,13 +633,13 @@
 | `types` | ModuleType | no |
 | `typing` | Any, Dict, List, Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -591,13 +665,13 @@
 | `enum` | Enum, auto | no |
 | `typing` | Dict, List, Set | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `PLANG_GRAMMAR`
@@ -630,13 +704,13 @@
 | `typing` | Any, Awaitable, Callable, Dict, List (+1) | no |
 | `app.hoc.cus.policies.L5_schemas.intent_validation` | PolicyIntentValidationResult, PolicyIntentValidator | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `_ENFORCEMENT_INTENT_TYPES`
@@ -676,13 +750,13 @@
 | `typing` | Any | no |
 | `app.dsl.ir_compiler` | CompiledClause, Instruction, OpCode, PolicyIR | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `_MISSING_SENTINEL`
@@ -710,13 +784,13 @@
 | `app.policy.ir.ir_nodes` | IRAction, IRBinaryOp, IRBlock, IRCall, IRCompare (+12) | no |
 | `app.policy.ir.symbol_table` | Symbol, SymbolTable, SymbolType | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -753,13 +827,13 @@
 | `typing` | Any | no |
 | `app.dsl.ast` | Action, Clause, Condition, ExistsPredicate, LogicalCondition (+9) | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -802,13 +876,13 @@
 | `typing` | Any, Dict, List, Optional | no |
 | `app.policy.compiler.grammar` | ActionType, PolicyCategory | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -843,13 +917,13 @@
 | `enum` | Enum | no |
 | `typing` | Any, Callable, Optional, TypeVar | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `T`
@@ -886,13 +960,13 @@
 | `threading` | Lock | no |
 | `typing` | Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -925,13 +999,13 @@
 | `prometheus_client` | Counter | no |
 | `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `LESSONS_CREATION_FAILED`, `LESSON_TYPE_FAILURE`, `LESSON_TYPE_NEAR_THRESHOLD`, `LESSON_TYPE_CRITICAL_SUCCESS`, `LESSON_STATUS_PENDING`, `LESSON_STATUS_CONVERTED`, `LESSON_STATUS_DEFERRED`, `LESSON_STATUS_DISMISSED`, `SEVERITY_CRITICAL`, `SEVERITY_HIGH`, `SEVERITY_MEDIUM`, `SEVERITY_LOW`, `SEVERITY_NONE`, `NEAR_THRESHOLD_PERCENT`, `DEBOUNCE_WINDOW_HOURS`, `THRESHOLD_BANDS`
@@ -960,13 +1034,13 @@
 | `dataclasses` | dataclass | no |
 | `typing` | Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `DEFAULT_LIMITS`
@@ -1007,13 +1081,100 @@
 | `typing` | Any, Dict, List, Optional | no |
 | `uuid` | uuid | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+---
+
+## limits_simulation_engine.py
+**Path:** `backend/app/hoc/cus/policies/L5_engines/limits_simulation_engine.py`  
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 275
+
+**Docstring:** Limits Simulation Engine (PIN-LIM-04)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `LimitsSimulationServiceError` |  | Base exception for simulation engine. |
+| `TenantNotFoundError` |  | Raised when tenant is not found. |
+| `LimitsSimulationEngine` | __init__, simulate, _build_context, _estimate_cost, _load_tenant_quotas, _load_cost_budgets, _load_policy_limits, _load_worker_limits (+1 more) | L4 engine for pre-execution limit simulation. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_limits_simulation_engine` | `(session: 'AsyncSession') -> LimitsSimulationEngine` | no | Get engine instance with driver. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `decimal` | Decimal | no |
+| `typing` | TYPE_CHECKING, List, Optional | no |
+| `app.runtime.limits.evaluator` | ActiveOverride, CostBudget, EvaluationContext, ExecutionIntent, LimitsEvaluator (+3) | no |
+| `app.schemas.limits.simulation` | LimitSimulationRequest, LimitSimulationResponse | no |
+| `app.hoc.cus.policies.L6_drivers.limits_simulation_driver` | LimitsSimulationDriver, get_limits_simulation_driver | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+---
+
+## llm_policy.py
+**Path:** `backend/app/hoc/cus/policies/L5_engines/llm_policy.py`  
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 442
+
+**Docstring:** L4 LLM Policy Engine - Domain Authority for LLM Safety and Cost Controls
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `SafetyCheckResult` |  | Result of a safety limit check. |
+| `LLMRateLimiter` | get_instance, __init__, check_and_record, requests_remaining | Sliding window rate limiter for LLM requests (L4 policy enforcement). |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `estimate_tokens` | `(text: str) -> int` | no | Estimate token count for text (L4 domain function). |
+| `estimate_cost_cents` | `(model: str, input_tokens: int, output_tokens: int) -> float` | no | Estimate cost in cents (L4 domain function). |
+| `check_safety_limits` | `(model: str, max_tokens: int, estimated_input_tokens: int, provider: str = 'defa` | no | Check safety limits before making LLM API call (L4 domain function). |
+| `is_model_allowed` | `(model: str, tenant_allowed_models: Optional[List[str]] = None) -> bool` | no | Check if a model is allowed (L4 domain function). |
+| `is_expensive_model` | `(model: str) -> bool` | no | Check if a model is classified as expensive (L4 domain function). |
+| `get_model_for_task` | `(task_type: str, requested_model: Optional[str] = None, tenant_allowed_models: O` | no | Get appropriate model for a task type (L4 policy decision). |
+| `get_effective_model` | `(requested_model: Optional[str], preferred_model: str, fallback_model: str, allo` | no | Get effective model based on request and tenant config (L4 policy decision). |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `logging` | logging | no |
+| `os` | os | no |
+| `threading` | threading | no |
+| `time` | time | no |
+| `collections` | deque | no |
+| `dataclasses` | dataclass, field | no |
+| `typing` | Any, Dict, List, Optional | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+### Constants
+`LLM_MAX_TOKENS_PER_REQUEST`, `LLM_MAX_COST_CENTS_PER_REQUEST`, `LLM_REQUESTS_PER_MINUTE`, `DEFAULT_MODELS`, `FALLBACK_MODEL`
+
+### __all__ Exports
+`LLM_MAX_TOKENS_PER_REQUEST`, `LLM_MAX_COST_CENTS_PER_REQUEST`, `LLM_REQUESTS_PER_MINUTE`, `LLM_ALLOWED_MODELS`, `LLM_COST_MODEL`, `SYSTEM_ALLOWED_MODELS`, `EXPENSIVE_MODELS`, `TASK_MODEL_POLICY`, `SafetyCheckResult`, `LLMRateLimiter`, `estimate_tokens`, `estimate_cost_cents`, `check_safety_limits`, `is_model_allowed`, `is_expensive_model`, `get_model_for_task`, `get_effective_model`
 
 ---
 
@@ -1055,13 +1216,13 @@
 | `typing` | Any, List, Optional | no |
 | `app.policy.compiler.grammar` | ActionType, PolicyCategory | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -1092,13 +1253,13 @@
 | `enum` | Enum | no |
 | `typing` | Any, FrozenSet, Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -1121,19 +1282,63 @@
 | `enum` | Enum | no |
 | `typing` | Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `PLAN_FREE`, `PLAN_PRO`, `PLAN_ENTERPRISE`, `DEFAULT_PLAN`
 
 ### __all__ Exports
 `PlanTier`, `Plan`, `PLAN_FREE`, `PLAN_PRO`, `PLAN_ENTERPRISE`, `DEFAULT_PLAN`
+
+---
+
+## plan_generation.py
+**Path:** `backend/app/hoc/cus/policies/L5_engines/plan_generation.py`  
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 258
+
+**Docstring:** Domain engine for plan generation.
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `PlanGenerationContext` |  | Context for plan generation. |
+| `PlanGenerationResult` |  | Result of plan generation. |
+| `PlanGenerationEngine` | __init__, generate | L4 Domain Engine for plan generation. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `generate_plan_for_run` | `(agent_id: str, goal: str, run_id: str) -> PlanGenerationResult` | no | Convenience function to generate a plan for a run. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `json` | json | no |
+| `logging` | logging | no |
+| `dataclasses` | dataclass | no |
+| `typing` | Any, Dict, List, Optional | no |
+| `app.memory` | get_retriever | no |
+| `app.planners` | get_planner | no |
+| `app.skills` | get_skill_manifest | no |
+| `app.utils.budget_tracker` | get_budget_tracker | no |
+| `app.utils.plan_inspector` | validate_plan | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+### __all__ Exports
+`PlanGenerationContext`, `PlanGenerationResult`, `PlanGenerationEngine`, `generate_plan_for_run`
 
 ---
 
@@ -1186,13 +1391,13 @@
 | `typing` | Any, Optional | no |
 | `app.hoc.cus.policies.L6_drivers.policies_facade_driver` | PoliciesFacadeDriver | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `PoliciesFacade`, `get_policies_facade`, `PolicyRuleSummaryResult`, `PolicyRulesListResult`, `PolicyRuleDetailResult`, `LimitSummaryResult`, `LimitsListResult`, `LimitDetailResult`, `PolicyStateResult`, `PolicyMetricsResult`, `PolicyConflictResult`, `ConflictsListResult`, `PolicyDependencyRelation`, `PolicyNodeResult`, `PolicyDependencyEdge`, `DependencyGraphResult`, `PolicyViolationResult`, `ViolationsListResult`, `BudgetDefinitionResult`, `BudgetsListResult`, `PolicyRequestResult`, `PolicyRequestsListResult`, `LessonSummaryResult`, `LessonsListResult`, `LessonDetailResult`, `LessonStatsResult`
@@ -1228,13 +1433,13 @@
 | `decimal` | Decimal | no |
 | `typing` | TYPE_CHECKING, Any, Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `LimitsQueryEngine`, `get_limits_query_engine`, `LimitSummaryResult`, `LimitsListResult`, `LimitDetailResult`, `BudgetDefinitionResult`, `BudgetsListResult`
@@ -1268,13 +1473,13 @@
 | `typing` | TYPE_CHECKING, Any, Optional | no |
 | `app.hoc.cus.policies.L6_drivers.proposals_read_driver` | ProposalsReadDriver, get_proposals_read_driver | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `ProposalsQueryEngine`, `get_proposals_query_engine`, `PolicyRequestResult`, `PolicyRequestsListResult`, `PolicyRequestDetailResult`
@@ -1309,13 +1514,13 @@
 | `typing` | TYPE_CHECKING, Any, Optional | no |
 | `app.hoc.cus.policies.L6_drivers.policy_rules_read_driver` | PolicyRulesReadDriver, get_policy_rules_read_driver | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `PolicyRulesQueryEngine`, `get_policy_rules_query_engine`, `PolicyRuleSummaryResult`, `PolicyRulesListResult`, `PolicyRuleDetailResult`
@@ -1360,13 +1565,13 @@
 | `dataclasses` | dataclass, field | no |
 | `typing` | Any, Dict, List, Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `PolicyViolation`, `PolicyEvaluationResult`, `ApprovalConfig`, `simulate_cost`, `check_policy_violations`, `evaluate_policy`, `record_approval_created`, `record_approval_outcome`, `record_escalation`, `record_webhook_used`
@@ -1405,13 +1610,13 @@
 | `datetime` | datetime, timezone | no |
 | `logging` | logging | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `ACTION_SEVERITY`
@@ -1442,13 +1647,63 @@
 | `datetime` | datetime | no |
 | `typing` | Any, Dict, List, Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+---
+
+## policy_graph.py
+**Path:** `backend/app/hoc/cus/policies/L5_engines/policy_graph.py`  
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 824
+
+**Docstring:** Policy Graph Engine — Conflict Detection & Dependency Analysis
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `ConflictType` |  | Conflict taxonomy (LOCKED). |
+| `ConflictSeverity` |  | Conflict severity levels. |
+| `DependencyType` |  | Dependency types (LOCKED). |
+| `PolicyConflict` | to_dict | A detected conflict between two policies. |
+| `PolicyDependency` | to_dict | A dependency relationship between policies. |
+| `PolicyNode` | to_dict | A node in the dependency graph. |
+| `DependencyGraphResult` | to_dict | Result of dependency graph computation. |
+| `ConflictDetectionResult` | to_dict | Result of conflict detection. |
+| `PolicyConflictEngine` | __init__, detect_conflicts, _detect_scope_overlaps, _detect_threshold_contradictions, _detect_temporal_conflicts, _detect_priority_overrides, _has_contradicting_conditions, _time_windows_overlap (+1 more) | Detects logical contradictions, overlaps, or unsafe coexistence between policies. |
+| `PolicyDependencyEngine` | __init__, compute_dependency_graph, _detect_explicit_dependencies, _detect_implicit_scope_dependencies, _detect_implicit_limit_dependencies, check_can_delete, check_can_activate | Computes structural relationships between policies. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_conflict_engine` | `(tenant_id: str) -> PolicyConflictEngine` | no | Get a PolicyConflictEngine instance for a tenant. |
+| `get_dependency_engine` | `(tenant_id: str) -> PolicyDependencyEngine` | no | Get a PolicyDependencyEngine instance for a tenant. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `__future__` | annotations | no |
+| `logging` | logging | no |
+| `dataclasses` | dataclass, field | no |
+| `datetime` | datetime, timezone | no |
+| `enum` | Enum | no |
+| `typing` | Any, Optional | no |
+| `app.hoc.cus.policies.L6_drivers.policy_graph_driver` | PolicyGraphDriver, get_policy_graph_driver | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+### __all__ Exports
+`ConflictType`, `ConflictSeverity`, `DependencyType`, `PolicyConflict`, `PolicyDependency`, `PolicyNode`, `DependencyGraphResult`, `ConflictDetectionResult`, `PolicyConflictEngine`, `PolicyDependencyEngine`, `get_conflict_engine`, `get_dependency_engine`, `PolicyGraphDriver`, `get_policy_graph_driver`
 
 ---
 
@@ -1478,13 +1733,13 @@
 | `app.hoc.cus.hoc_spine.schemas.domain_enums` | ActorType | no |
 | `app.hoc.cus.controls.L5_schemas.policy_limits` | CreatePolicyLimitRequest, UpdatePolicyLimitRequest, PolicyLimitResponse | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -1519,13 +1774,13 @@
 | `enum` | Enum | no |
 | `typing` | Any, Dict, List, Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -1579,13 +1834,13 @@
 | `uuid` | uuid4 | no |
 | `pydantic` | BaseModel, Field | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -1626,13 +1881,13 @@
 | `app.hoc.cus.hoc_spine.schemas.domain_enums` | ActorType | no |
 | `app.hoc.cus.policies.L5_engines.policy_graph` | ConflictSeverity, get_conflict_engine, get_dependency_engine | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `FEEDBACK_THRESHOLD_FOR_PROPOSAL`, `PROPOSAL_TYPES`
@@ -1668,13 +1923,13 @@
 | `app.hoc.cus.hoc_spine.schemas.domain_enums` | ActorType | no |
 | `app.hoc.cus.policies.L5_schemas.policy_rules` | CreatePolicyRuleRequest, UpdatePolicyRuleRequest, PolicyRuleResponse | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -1707,13 +1962,13 @@
 | `uuid` | uuid4 | no |
 | `app.hoc.cus.policies.L5_engines.content_accuracy` | ContentAccuracyValidator, ValidationResult | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -1744,13 +1999,13 @@
 | `app.protection.decisions` | Decision, ProtectionResult, AnomalySignal, allow, reject_rate_limit (+2) | no |
 | `app.billing` | get_billing_provider, Limits | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `AbuseProtectionProvider`, `MockAbuseProtectionProvider`, `get_protection_provider`, `set_protection_provider`
@@ -1788,13 +2043,13 @@
 | `app.hoc.cus.hoc_spine.utilities.recovery_decisions` | combine_confidences, should_auto_execute, should_select_action | no |
 | `app.hoc.cus.hoc_spine.services.cross_domain_gateway` | evaluate_rules | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `FailureContext`, `RecoveryDecision`, `RecoveryEvaluationEngine`, `evaluate_recovery`, `evaluate_and_execute`
@@ -1837,13 +2092,13 @@
 | `dataclasses` | dataclass, field | no |
 | `typing` | Any, Dict, List, Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `DEFAULT_BUDGET_CENTS`, `DEFAULT_RATE_LIMIT_PER_MINUTE`, `DEFAULT_MAX_CONCURRENT`, `SUPPORTED_QUERY_TYPES`, `DEFAULT_SKILL_METADATA`, `QueryResult`, `SkillInfo`, `ResourceContractInfo`, `CapabilitiesInfo`, `get_supported_query_types`, `query_remaining_budget`, `query_execution_history`, `query_allowed_skills`, `query_last_step_outcome`, `query_skills_for_goal`, `execute_query`, `get_skill_info`, `list_skills`, `get_all_skill_descriptors`, `get_resource_contract`, `get_capabilities`
@@ -1878,13 +2133,62 @@
 | `typing` | Any, Dict, List, Optional, Set | no |
 | `sandbox_executor` | ExecutionResult, IsolationLevel, NetworkPolicy, ResourceLimits, SandboxExecutor (+2) | yes |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+---
+
+## sandbox_executor.py
+**Path:** `backend/app/hoc/cus/policies/L5_engines/sandbox_executor.py`  
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 683
+
+**Docstring:** Sandbox Executor (GAP-174)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `IsolationLevel` |  | Level of isolation for sandbox execution. |
+| `SandboxStatus` |  | Status of a sandbox execution. |
+| `NetworkPolicy` |  | Network access policy for sandboxes. |
+| `ResourceLimits` | to_dict | Resource limits for sandbox execution. |
+| `ExecutionResult` | to_dict | Result of a sandbox execution. |
+| `SandboxExecutor` | execute, cleanup, isolation_level | Abstract base class for sandbox executors. |
+| `ProcessSandboxExecutor` | __init__, isolation_level, execute, _write_code_file, _get_interpreter_command, _run_with_limits, cleanup | Process-based sandbox executor. |
+| `ContainerSandboxExecutor` | __init__, isolation_level, execute, _write_code_file, _get_image_for_language, _build_container_command, _run_container, _kill_container (+1 more) | Container-based sandbox executor. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `create_sandbox_executor` | `(isolation_level: IsolationLevel = IsolationLevel.PROCESS, **kwargs) -> SandboxE` | no | Create a sandbox executor with the specified isolation level. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `asyncio` | asyncio | no |
+| `logging` | logging | no |
+| `os` | os | no |
+| `resource` | resource | no |
+| `shutil` | shutil | no |
+| `tempfile` | tempfile | no |
+| `abc` | ABC, abstractmethod | no |
+| `dataclasses` | dataclass, field | no |
+| `datetime` | datetime, timezone | no |
+| `enum` | Enum | no |
+| `pathlib` | Path | no |
+| `typing` | Any, Dict, List, Optional | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -1926,13 +2230,13 @@
 | `json` | json | no |
 | `uuid` | uuid | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -1952,13 +2256,13 @@
 |--------|-------|----------|
 | `enum` | Enum | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `BillingState`
@@ -1986,13 +2290,13 @@
 | `enum` | Enum, auto | no |
 | `typing` | Iterator, List, Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `KEYWORD_TOKENS`
@@ -2028,13 +2332,13 @@
 | `typing` | Callable | no |
 | `app.dsl.ast` | Condition, Mode, PolicyAST, is_block_action, is_exists_predicate (+3) | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `V001`, `V002`, `V010`, `V020`, `V021`, `W001`, `W002`
@@ -2062,13 +2366,13 @@
 | `app.policy.ast.nodes` | ActionBlockNode, ASTVisitor, AttrAccessNode, BinaryOpNode, ConditionBlockNode (+11) | no |
 | `app.policy.compiler.grammar` | PolicyCategory | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -2099,13 +2403,13 @@
 | `dataclasses` | dataclass | no |
 | `typing` | Any, Dict, List, Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `WorkerExecutionResult`, `ReplayResult`, `calculate_cost_cents`, `get_brand_schema_types`, `convert_brand_request`, `execute_worker`, `replay_execution`

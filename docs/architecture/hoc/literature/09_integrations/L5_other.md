@@ -1,8 +1,8 @@
-# Integrations — L5 Other (3 files)
+# Integrations — L5 Other (4 files)
 
 **Domain:** integrations  
 **Layer:** L5_other  
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 ---
 
@@ -104,5 +104,28 @@
 | `enum` | Enum | no |
 | `typing` | Any, Dict, Optional | no |
 | `typing` | Literal | no |
+
+---
+
+## vault_rule_check.py
+**Path:** `backend/app/hoc/cus/integrations/L5_vault/engines/vault_rule_check.py`  
+**Layer:** L5_other | **Domain:** integrations | **Lines:** 118
+
+**Docstring:** Credential Access Rule Checker (PIN-517 FIX 4.1)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `CredentialAccessResult` |  | Result of credential access rule check. |
+| `CredentialAccessRuleChecker` | check_credential_access | Protocol for credential access rule validation. |
+| `DefaultCredentialAccessRuleChecker` | check_credential_access | Default rule checker - allows all access. |
+| `DenyAllRuleChecker` | check_credential_access | Fail-closed rule checker - denies all access. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `__future__` | annotations | no |
+| `dataclasses` | dataclass | no |
+| `typing` | Optional, Protocol, runtime_checkable | no |
 
 ---

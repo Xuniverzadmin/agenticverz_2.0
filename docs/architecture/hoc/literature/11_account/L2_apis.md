@@ -2,7 +2,7 @@
 
 **Domain:** account  
 **Layer:** L2_apis  
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 ---
 
@@ -42,12 +42,12 @@
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
 | `app.schemas.response` | wrap_dict | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---

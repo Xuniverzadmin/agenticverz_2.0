@@ -1,8 +1,8 @@
-# Policies — L2 Apis (37 files)
+# Policies — L2 Apis (38 files)
 
 **Domain:** policies  
 **Layer:** L2_apis  
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 ---
 
@@ -72,12 +72,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.integrations.events` | LoopStage | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -124,12 +124,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.hoc.cus.hoc_spine.services.alerts_facade` | AlertsFacade, get_alerts_facade | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -189,12 +189,12 @@
 | `app.auth.gateway_middleware` | get_auth_context | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -265,12 +265,12 @@
 | `app.auth.gateway_middleware` | get_auth_context | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -305,12 +305,12 @@
 | `app.auth.gateway_middleware` | get_auth_context | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -348,12 +348,12 @@
 | `app.schemas.response` | wrap_dict, wrap_list | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -390,12 +390,12 @@
 | `app.hoc.cus.account.L5_schemas.onboarding_state` | OnboardingState | no |
 | `app.schemas.response` | wrap_dict | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ### __all__ Exports
@@ -436,12 +436,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.hoc.cus.hoc_spine.services.compliance_facade` | ComplianceFacade, get_compliance_facade | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -479,12 +479,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -519,12 +519,12 @@
 | `app.schemas.response` | wrap_dict, wrap_list | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -577,12 +577,12 @@
 | `app.middleware.tenancy` | get_tenant_id | no |
 | `app.schemas.response` | wrap_dict | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -623,12 +623,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -666,12 +666,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -712,12 +712,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -760,12 +760,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -857,12 +857,12 @@
 | `json` | json | no |
 | `decimal` | Decimal | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -888,12 +888,12 @@
 | `app.auth.console_auth` | verify_console_token | no |
 | `app.schemas.response` | wrap_dict | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -939,12 +939,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.hoc.cus.hoc_spine.services.lifecycle_facade` | LifecycleFacade, get_lifecycle_facade | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -1025,12 +1025,12 @@
 | `app.auth.gateway_middleware` | get_auth_context | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -1071,12 +1071,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.hoc.cus.hoc_spine.services.monitors_facade` | MonitorsFacade, get_monitors_facade | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -1115,12 +1115,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -1161,12 +1161,12 @@
 | `app.schemas.limits.overrides` | LimitOverrideRequest, LimitOverrideResponse, OverrideStatus | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -1241,12 +1241,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ### Constants
@@ -1348,12 +1348,12 @@
 | `app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges` | get_policies_engine_bridge | no |
 | `app.schemas.response` | wrap_dict | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ### Constants
@@ -1445,12 +1445,12 @@
 | `app.policy` | ActionType, PolicyEvaluationRequest, PolicyEvaluationResult, PolicyState, PolicyViolation (+1) | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -1492,12 +1492,12 @@
 | `app.schemas.limits.policy_limits` | CreatePolicyLimitRequest, LimitCategoryEnum, LimitEnforcementEnum, LimitScopeEnum, PolicyLimitResponse (+2) | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -1541,12 +1541,12 @@
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_async_session_context, get_operation_registry | no |
 | `app.schemas.response` | wrap_dict | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -1582,12 +1582,12 @@
 | `app.schemas.limits.policy_rules` | CreatePolicyRuleRequest, PolicyRuleResponse, UpdatePolicyRuleRequest | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -1625,12 +1625,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -1672,12 +1672,12 @@
 | `app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges` | get_account_bridge | no |
 | `app.schemas.response` | wrap_dict | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -1726,12 +1726,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | get_operation_registry, get_sync_session_dep, OperationContext | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -1770,12 +1770,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.hoc.cus.hoc_spine.services.retrieval_facade` | RetrievalFacade, get_retrieval_facade | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -1831,12 +1831,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.commands.runtime_command` | DEFAULT_SKILL_METADATA | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ### Constants
@@ -1882,12 +1882,12 @@
 | `app.schemas.response` | wrap_dict | no |
 | `app.hoc.cus.hoc_spine.services.scheduler_facade` | SchedulerFacade, get_scheduler_facade | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -1918,12 +1918,12 @@
 | `app.hoc.cus.controls.L5_schemas.simulation` | LimitSimulationRequest, LimitSimulationResponse, SimulationDecision | no |
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ---
@@ -1974,16 +1974,76 @@
 | `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
 | `app.schemas.response` | wrap_dict | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ### Constants
 `EXPORT_DIR`, `SIGNED_URL_SECRET`, `SIGNED_URL_TTL_SECONDS`
+
+---
+
+## v1_killswitch.py
+**Path:** `backend/app/hoc/api/cus/policies/v1_killswitch.py`  
+**Layer:** L2_api | **Domain:** policies | **Lines:** 914
+
+**Docstring:** M22 KillSwitch MVP - Control & Observability API
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `TriggerType` |  |  |
+| `KillSwitchAction` |  |  |
+| `KillSwitchStatus` |  |  |
+| `GuardrailSummary` |  |  |
+| `IncidentSummary` |  |  |
+| `IncidentDetail` |  |  |
+| `ReplayRequest` |  |  |
+| `ReplayResult` |  |  |
+| `ProxyCallDetail` |  |  |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `utc_now` | `() -> datetime` | no |  |
+| `freeze_tenant` | `(tenant_id: str = Query(..., description='Tenant ID to freeze'), action: KillSwi` | yes | Hard stop everything for a tenant. |
+| `freeze_key` | `(key_id: str = Query(..., description='API key ID to freeze'), action: KillSwitc` | yes | Kill a single API key. |
+| `get_killswitch_status` | `(tenant_id: str = Query(..., description='Tenant ID'), session = Depends(get_syn` | yes | Get complete kill switch status for a tenant. |
+| `unfreeze_tenant` | `(tenant_id: str = Query(..., description='Tenant ID to unfreeze'), actor: str = ` | yes | Unfreeze a tenant. |
+| `unfreeze_key` | `(key_id: str = Query(..., description='API key ID to unfreeze'), actor: str = Qu` | yes | Unfreeze an API key. |
+| `get_active_policies` | `(session = Depends(get_sync_session_dep), ctx: TenantContext = Depends(get_tenan` | yes | Get active guardrails - "What's protecting me right now?" |
+| `list_incidents` | `(tenant_id: str = Query(..., description='Tenant ID'), status: Optional[str] = Q` | yes | List incidents (auto-grouped failures). |
+| `get_incident` | `(incident_id: str, session = Depends(get_sync_session_dep), ctx: TenantContext =` | yes | Get incident detail with timeline. |
+| `replay_call` | `(call_id: str, request: ReplayRequest = None, session = Depends(get_sync_session` | yes | REPLAY PROVES ENFORCEMENT |
+| `get_call` | `(call_id: str, session = Depends(get_sync_session_dep), ctx: TenantContext = Dep` | yes | Get single call truth. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `json` | json | no |
+| `uuid` | uuid | no |
+| `datetime` | datetime, timezone | no |
+| `enum` | Enum | no |
+| `typing` | Any, Dict, List, Optional | no |
+| `fastapi` | APIRouter, Depends, HTTPException, Query | no |
+| `pydantic` | BaseModel, Field | no |
+| `app.auth.authority` | AuthorityResult, emit_authority_audit, require_replay_execute | no |
+| `app.schemas.response` | wrap_dict | no |
+| `app.auth.tenant_auth` | TenantContext, get_tenant_context | no |
+| `app.auth.tier_gating` | requires_feature | no |
+| `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | get_operation_registry, get_sync_session_dep, OperationContext | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
+
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
+**Called by:** L2.1_facade
 
 ---
 
@@ -2063,12 +2123,12 @@
 | `app.hoc.cus.hoc_spine.drivers.worker_write_driver_async` | WorkerWriteServiceAsync | no |
 | `app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges` | get_policies_engine_bridge | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
-**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L3
+**Contract:** HTTP translation — request validation, auth, response formatting, delegates to L4 spine
 
-**SHOULD call:** L3_adapters
-**MUST NOT call:** L5_engines, L6_drivers, L7_models
+**SHOULD call:** L4_spine
+**MUST NOT call:** L6_drivers, L7_models
 **Called by:** L2.1_facade
 
 ### Constants

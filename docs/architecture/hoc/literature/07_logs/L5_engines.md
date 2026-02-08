@@ -1,8 +1,8 @@
-# Logs — L5 Engines (13 files)
+# Logs — L5 Engines (16 files)
 
 **Domain:** logs  
 **Layer:** L5_engines  
-**Reference:** HOC_LAYER_TOPOLOGY_V1.md (RATIFIED, V1.4.0)
+**Reference:** HOC_LAYER_TOPOLOGY_V2.0.0.md (RATIFIED)
 
 **Layer Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
@@ -41,16 +41,53 @@
 | `enum` | Enum | no |
 | `typing` | Any, Dict, List, Optional | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `SENSITIVE_PATTERNS`
+
+---
+
+## audit_ledger_engine.py
+**Path:** `backend/app/hoc/cus/logs/L5_engines/audit_ledger_engine.py`  
+**Layer:** L5_engines | **Domain:** logs | **Lines:** 226
+
+**Docstring:** Audit Ledger Service (Sync)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `AuditLedgerService` | __init__, _emit, incident_acknowledged, incident_resolved, incident_manually_closed | Sync service for writing to the audit ledger. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_audit_ledger_service` | `(session: 'Session') -> AuditLedgerService` | no | Get an AuditLedgerService instance. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `__future__` | annotations | no |
+| `logging` | logging | no |
+| `typing` | Any, Dict, Optional, TYPE_CHECKING | no |
+| `app.hoc.cus.hoc_spine.schemas.domain_enums` | ActorType, AuditEntityType, AuditEventType | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+### __all__ Exports
+`AuditLedgerService`, `get_audit_ledger_service`
 
 ---
 
@@ -81,13 +118,13 @@
 | `app.hoc.cus.hoc_spine.schemas.rac_models` | AuditAction, AuditDomain, AuditExpectation, AuditStatus, DomainAck (+1) | no |
 | `app.hoc.cus.hoc_spine.services.audit_store` | AuditStore, get_audit_store | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `RECONCILIATION_TOTAL`, `MISSING_ACTIONS_TOTAL`, `DRIFT_ACTIONS_TOTAL`, `STALE_RUNS_TOTAL`, `RECONCILIATION_DURATION`
@@ -122,13 +159,13 @@
 | `typing` | Any, Dict, List, Optional | no |
 | `app.hoc.cus.logs.L5_engines.replay_determinism` | DeterminismLevel, ReplayResult | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `CertificateService`, `Certificate`, `CertificatePayload`, `CertificateType`
@@ -162,13 +199,50 @@
 | `enum` | Enum | no |
 | `typing` | Any, Dict, FrozenSet, List, Optional (+1) | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+---
+
+## cost_intelligence_engine.py
+**Path:** `backend/app/hoc/cus/logs/L5_engines/cost_intelligence_engine.py`  
+**Layer:** L5_engines | **Domain:** logs | **Lines:** 438
+
+**Docstring:** Cost Intelligence Engine (L5)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `CostIntelligenceEngine` | __init__, check_feature_tag_exists, list_feature_tags, get_feature_tag, get_active_feature_tag, update_feature_tag, get_cost_summary, get_total_cost (+10 more) | L5 engine for cost intelligence operations. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_cost_intelligence_engine` | `(driver: CostIntelligenceSyncDriver) -> CostIntelligenceEngine` | no | Get cost intelligence engine instance for the given (session-bound) driver. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `datetime` | datetime, timedelta | no |
+| `typing` | Any, List, Optional | no |
+| `app.hoc.cus.logs.L6_drivers.cost_intelligence_sync_driver` | CostIntelligenceSyncDriver | no |
+| `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
+
+### __all__ Exports
+`CostIntelligenceEngine`, `get_cost_intelligence_engine`
 
 ---
 
@@ -207,13 +281,13 @@
 | `hashlib` | hashlib | no |
 | `json` | json | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -250,13 +324,13 @@
 | `reportlab.lib.units` | inch | no |
 | `reportlab.platypus` | HRFlowable, PageBreak, Paragraph, SimpleDocTemplate, Spacer (+2) | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -319,13 +393,13 @@
 | `typing` | Any, Optional | no |
 | `app.hoc.cus.logs.L6_drivers.logs_domain_store` | AuditLedgerSnapshot, LLMRunSnapshot, LogsDomainStore, LogExportSnapshot, QueryResult (+3) | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `LogsFacade`, `get_logs_facade`, `SourceDomain`, `Origin`, `EvidenceMetadataResult`, `LLMRunRecordResult`, `LLMRunRecordsResult`, `TraceStepResult`, `LLMRunEnvelopeResult`, `LLMRunTraceResult`, `GovernanceEventResult`, `LLMRunGovernanceResult`, `ReplayEventResult`, `LLMRunReplayResult`, `LLMRunExportResult`, `SystemRecordResult`, `SystemRecordsResult`, `SystemSnapshotResult`, `TelemetryStubResult`, `SystemEventResult`, `SystemEventsResult`, `SystemReplayResult`, `SystemAuditResult`, `AuditLedgerItemResult`, `AuditLedgerDetailResult`, `AuditLedgerListResult`, `IdentityEventResult`, `AuditIdentityResult`, `AuthorizationDecisionResult`, `AuditAuthorizationResult`, `AccessEventResult`, `AuditAccessResult`, `IntegrityCheckResult`, `AuditIntegrityResult`, `ExportRecordResult`, `AuditExportsResult`
@@ -355,13 +429,13 @@
 | `app.hoc.cus.logs.L5_engines.traces_models` | TraceRecord, TraceSummary | no |
 | `app.hoc.cus.logs.L6_drivers.pg_store` | PostgresTraceStore, get_postgres_trace_store | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `LogsReadService`, `get_logs_read_service`
@@ -392,13 +466,13 @@
 | `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
 | `app.hoc.cus.hoc_spine.services.control_registry` | SOC2ComplianceStatus, SOC2Control, SOC2ControlMapping, SOC2ControlRegistry, get_control_registry | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -433,13 +507,13 @@
 | `reportlab.lib.units` | inch | no |
 | `reportlab.platypus` | HRFlowable, PageBreak, Paragraph, SimpleDocTemplate, Spacer (+2) | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -468,13 +542,13 @@
 | `re` | re | no |
 | `typing` | Any | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### Constants
 `PII_PATTERNS`, `SENSITIVE_FIELD_NAMES`
@@ -510,16 +584,55 @@
 | `typing` | Any, Dict, List, Optional | no |
 | `app.hoc.cus.logs.L5_schemas.determinism_types` | DeterminismLevel | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `DeterminismLevel`, `ModelVersion`, `PolicyDecision`, `ReplayMatch`, `ReplayResult`, `CallRecord`, `ReplayValidator`, `ReplayContextBuilder`
+
+---
+
+## trace_mismatch_engine.py
+**Path:** `backend/app/hoc/cus/logs/L5_engines/trace_mismatch_engine.py`  
+**Layer:** L5_engines | **Domain:** logs | **Lines:** 583
+
+**Docstring:** Trace Mismatch Engine (L5)
+
+### Classes
+| Name | Methods | Docstring |
+|------|---------|-----------|
+| `MismatchReportInput` |  | Input for reporting a mismatch. |
+| `NotificationResult` |  | Result of notification attempt. |
+| `TraceMismatchEngine` | __init__, list_all_mismatches, list_trace_mismatches, report_mismatch, resolve_mismatch, bulk_report_mismatches, _send_notification, _create_bulk_github_issue (+1 more) | L5 engine for trace mismatch business logic. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_trace_mismatch_engine` | `(driver: TraceMismatchDriver) -> TraceMismatchEngine` | no | Get trace mismatch engine instance for the given (session-bound) driver. |
+
+### Imports
+| Module | Names | Relative |
+|--------|-------|----------|
+| `logging` | logging | no |
+| `os` | os | no |
+| `uuid` | uuid | no |
+| `dataclasses` | dataclass, field | no |
+| `datetime` | datetime, timedelta, timezone | no |
+| `typing` | Any, Optional | no |
+| `app.hoc.cus.logs.L6_drivers.trace_mismatch_driver` | TraceMismatchDriver | no |
+
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
+
+**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
+
+**SHOULD call:** L6_drivers, L5_schemas
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ---
 
@@ -534,13 +647,13 @@
 |--------|-------|----------|
 | `app.hoc.cus.logs.L5_schemas.traces_models` | ParityResult, TraceRecord, TraceStatus, TraceStep, TraceSummary (+2) | no |
 
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
+### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V2.0.0)
 
 **Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
 
 **SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
+**MUST NOT call:** L2_api, L7_models
+**Called by:** L4_spine
 
 ### __all__ Exports
 `TraceStatus`, `TraceStep`, `TraceSummary`, `TraceRecord`, `ParityResult`, `compare_traces`, `_normalize_for_determinism`
