@@ -10,7 +10,7 @@
 
 ## Summary
 
-Migrated all 68 legacy API routers from `app/api/*` to `app/hoc/api/*`, completing the HOC (Hierarchical Operations Console) API layer consolidation. This migration enables future deletion of the legacy `app/api/` package.
+Migrated all legacy API routers from `app/api/*` to `app/hoc/api/*`, completing the HOC (Hierarchical Operations Console) API layer consolidation. The legacy `backend/app/api/**` package has since been deleted (2026-02-08) — see PIN-532.
 
 ---
 
@@ -59,7 +59,7 @@ Added 4 HOC routers that had no legacy equivalent:
 
 ### Phase 4: Dead Code Cleanup
 - Deleted `app/hoc/api/int/agent/main.py` (85KB duplicate)
-- Added tombstone to `app/api/__init__.py` (expiry: 2026-03-04)
+- Legacy `backend/app/api/**` deletion completed (2026-02-08) — PIN-532
 
 ### Phase 5: Verification
 - App imports successfully with 688 API routes
@@ -119,15 +119,13 @@ Created `app/services/_audit_shim.py` as no-op stub to break circular dependency
 
 ---
 
-## Tombstone Registry
+## Legacy Deletion Status (Post-Migration)
 
-| File | Expiry | Action |
-|------|--------|--------|
-| `app/api/__init__.py` | 2026-03-04 | Delete entire package |
-| `app/hoc/api/cus/policies/__init__.py` | 2026-03-04 | Review re-exports |
-| `app/services/_audit_shim.py` | 2026-03-04 | Delete shim |
-
----
+| Item | Status |
+|------|--------|
+| `backend/app/api/**` | Deleted (PIN-532, 2026-02-08) |
+| `backend/app/hoc/api/cus/policies/__init__.py` legacy re-export cleanup | Completed (no tombstone) |
+| `backend/app/services/_audit_shim.py` compatibility shim | Still present (delete once no callers remain) |
 
 ## Metrics
 
@@ -138,7 +136,6 @@ Created `app/services/_audit_shim.py` as no-op stub to break circular dependency
 | Total API routes | 688 |
 | Broken imports fixed | 25+ |
 | Dead code deleted | 85KB |
-| Files with tombstones | 3 |
 
 ---
 
@@ -170,10 +167,9 @@ cd backend && PYTHONPATH=. python -m pytest tests/api/ -v --tb=short
 
 ## Future Work
 
-1. **Delete legacy `app/api/*`** after tombstone expiry (2026-03-04)
-2. **Migrate remaining adapters** from `app/adapters/` to HOC equivalents
-3. **Fix remaining type errors** in HOC API files (pre-existing)
-4. **Remove `_audit_shim.py`** once services layer deleted
+1. **Migrate remaining adapters** from `app/adapters/` to HOC equivalents
+2. **Fix remaining type errors** in HOC API files (pre-existing)
+3. **Remove `_audit_shim.py`** once services layer is fully severed
 
 ---
 

@@ -301,15 +301,10 @@ Many HOC files had broken relative imports (`from ..auth import`) that were fixe
 
 ---
 
-## Tombstone Registry
+## Legacy Deletion (Completed)
 
-The following files have tombstone expiry dates:
-
-| File | Expiry | Reason |
-|------|--------|--------|
-| `app/api/__init__.py` | 2026-03-04 | Legacy package deprecated |
-| `app/hoc/api/cus/policies/__init__.py` | 2026-03-04 | Legacy re-exports removed |
-| `app/services/_audit_shim.py` | 2026-03-04 | Temporary shim |
+- Legacy `backend/app/api/**` has been deleted (2026-02-08). HOC (`backend/app/hoc/api/**`) is the only canonical API surface.
+- Remaining compatibility shims (if any) should be deleted only after their last caller is removed (tracked in memory pins).
 
 ---
 
@@ -329,6 +324,7 @@ cd backend && python -c "from app.main import app; print('OK')"
 ## References
 
 - PIN-526: HOC API Wiring Migration
+- PIN-532: Delete Legacy backend/app/api
 - PLAN-HOC-API-WIRING.md: Migration plan with audit findings
 - HOC Layer Topology V2.0.0: Layer definitions
 - PIN-511: Legacy `app/services/*` boundary
