@@ -1,4 +1,4 @@
-# Activity — L5 Engines (8 files)
+# Activity — L5 Engines (4 files)
 
 **Domain:** activity  
 **Layer:** L5_engines  
@@ -43,13 +43,16 @@
 
 ## activity_facade.py
 **Path:** `backend/app/hoc/cus/activity/L5_engines/activity_facade.py`  
-**Layer:** L5_engines | **Domain:** activity | **Lines:** 1387
+**Layer:** L5_engines | **Domain:** activity | **Lines:** 1731
 
 **Docstring:** Activity Facade (L5)
 
 ### Classes
 | Name | Methods | Docstring |
 |------|---------|-----------|
+| `RunEvidenceCoordinatorPort` | get_run_evidence | Protocol for run evidence coordinator (PIN-520 L5 purity). |
+| `RunProofCoordinatorPort` | get_run_proof | Protocol for run proof coordinator (PIN-520 L5 purity). |
+| `SignalFeedbackCoordinatorPort` | get_signal_feedback | Protocol for signal feedback coordinator (PIN-520 L5 purity). |
 | `PolicyContextResult` |  | Policy context for a run. |
 | `RunSummaryResult` |  | Run summary for list view. |
 | `RunSummaryV2Result` |  | Run summary with policy context (V2). |
@@ -66,12 +69,14 @@
 | `ThresholdSignalResult` |  | A threshold proximity signal. |
 | `ThresholdSignalsResult` |  | Result of getting threshold signals (V2). |
 | `RiskSignalsResult` |  | Risk signal aggregates. |
-| `ActivityFacade` | __init__, _get_driver, _get_pattern_service, _get_cost_service, _get_attention_service, _get_feedback_service, get_runs, get_run_detail (+18 more) | Unified facade for Activity domain operations. |
+| `DimensionGroupResult` |  | A dimension group with count and percentage. |
+| `DimensionBreakdownResult` |  | Dimension breakdown result. |
+| `ActivityFacade` | __init__, _get_driver, _get_pattern_service, _get_cost_service, _get_attention_service, _get_feedback_service, get_runs, get_run_detail (+20 more) | Unified facade for Activity domain operations. |
 
 ### Functions
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
-| `get_activity_facade` | `() -> ActivityFacade` | no | Get the singleton ActivityFacade instance. |
+| `get_activity_facade` | `(run_evidence_coordinator: RunEvidenceCoordinatorPort | None = None, run_proof_c` | no | Get the singleton ActivityFacade instance. |
 
 ### Imports
 | Module | Names | Relative |
@@ -80,140 +85,17 @@
 | `logging` | logging | no |
 | `dataclasses` | dataclass, field | no |
 | `datetime` | datetime, timezone | no |
-| `typing` | TYPE_CHECKING, Any | no |
+| `typing` | TYPE_CHECKING, Any, Protocol | no |
 | `app.hoc.cus.activity.L6_drivers.activity_read_driver` | get_activity_read_driver | no |
-| `app.hoc.cus.activity.L5_engines.attention_ranking_engine` | AttentionRankingService | no |
-| `app.hoc.cus.activity.L5_engines.cost_analysis_engine` | CostAnalysisService | no |
-| `app.hoc.cus.activity.L5_engines.pattern_detection_engine` | PatternDetectionService | no |
+| `app.hoc.cus.activity.L5_engines.attention_ranking` | AttentionRankingService | no |
+| `app.hoc.cus.activity.L5_engines.cost_analysis` | CostAnalysisService | no |
+| `app.hoc.cus.activity.L5_engines.pattern_detection` | PatternDetectionService | no |
 | `app.hoc.cus.activity.L5_engines.signal_feedback_engine` | SignalFeedbackService, AcknowledgeResult, SuppressResult, SignalFeedbackStatus | no |
 | `app.hoc.cus.activity.L5_engines.signal_identity` | compute_signal_fingerprint_from_row | no |
 | `app.hoc.cus.activity.L5_engines.activity_enums` | SignalType, SeverityLevel, RunState | no |
-| `app.hoc.cus.activity.L5_engines.pattern_detection_engine` | PatternDetectionResult, DetectedPattern | no |
-| `app.hoc.cus.activity.L5_engines.cost_analysis_engine` | CostAnalysisResult, CostAnomaly | no |
-| `app.hoc.cus.activity.L5_engines.attention_ranking_engine` | AttentionQueueResult, AttentionSignal | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
----
-
-## attention_ranking_engine.py
-**Path:** `backend/app/hoc/cus/activity/L5_engines/attention_ranking_engine.py`  
-**Layer:** L5_engines | **Domain:** activity | **Lines:** 99
-
-**Docstring:** Attention ranking engine for prioritizing signals.
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `AttentionSignal` |  | A signal in the attention queue. |
-| `AttentionQueueResult` |  | Result of attention queue query. |
-| `AttentionRankingService` | __init__, get_attention_queue, compute_attention_score | Service for ranking and prioritizing activity signals. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `dataclasses` | dataclass | no |
-| `datetime` | datetime | no |
-| `typing` | Any, Optional | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
----
-
-## cost_analysis_engine.py
-**Path:** `backend/app/hoc/cus/activity/L5_engines/cost_analysis_engine.py`  
-**Layer:** L5_engines | **Domain:** activity | **Lines:** 93
-
-**Docstring:** Cost analysis engine for detecting cost anomalies.
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `CostAnomaly` |  | A detected cost anomaly. |
-| `CostAnalysisResult` |  | Result of cost analysis. |
-| `CostAnalysisService` | __init__, analyze_costs, get_cost_breakdown | Service for analyzing cost patterns and detecting anomalies. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `dataclasses` | dataclass | no |
-| `datetime` | datetime | no |
-| `typing` | Optional | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
----
-
-## cus_telemetry_service.py
-**Path:** `backend/app/hoc/cus/activity/L5_engines/cus_telemetry_service.py`  
-**Layer:** L5_engines | **Domain:** activity | **Lines:** 77
-
-**Docstring:** CusTelemetryService (SWEEP-03 Batch 2)
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `get_cus_telemetry_service` | `() -> CusTelemetryService` | no | Get the CusTelemetryService instance. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `typing` | TYPE_CHECKING | no |
-| `app.services.cus_telemetry_engine` | BatchIngestResult, CusTelemetryEngine, IngestResult, get_cus_telemetry_engine | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### __all__ Exports
-`CusTelemetryService`, `CusTelemetryEngine`, `IngestResult`, `BatchIngestResult`, `get_cus_telemetry_service`, `get_cus_telemetry_engine`
-
----
-
-## pattern_detection_engine.py
-**Path:** `backend/app/hoc/cus/activity/L5_engines/pattern_detection_engine.py`  
-**Layer:** L5_engines | **Domain:** activity | **Lines:** 92
-
-**Docstring:** Pattern detection engine for identifying recurring patterns.
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `DetectedPattern` |  | A detected activity pattern. |
-| `PatternDetectionResult` |  | Result of pattern detection. |
-| `PatternDetectionService` | __init__, detect_patterns, get_pattern_detail | Service for detecting patterns in activity data. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `dataclasses` | dataclass | no |
-| `datetime` | datetime | no |
-| `typing` | Optional | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
+| `app.hoc.cus.activity.L5_engines.pattern_detection` | PatternDetectionResult, DetectedPattern | no |
+| `app.hoc.cus.activity.L5_engines.cost_analysis` | CostAnalysisResult, CostAnomaly | no |
+| `app.hoc.cus.activity.L5_engines.attention_ranking` | AttentionQueueResult, AttentionSignal | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -245,7 +127,7 @@
 | `dataclasses` | dataclass | no |
 | `datetime` | datetime | no |
 | `typing` | Optional | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
+| `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 

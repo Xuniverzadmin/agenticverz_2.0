@@ -8,17 +8,16 @@
 
 ## cus_telemetry.py
 **Path:** `backend/app/hoc/api/cus/integrations/cus_telemetry.py`  
-**Layer:** L2_api | **Domain:** integrations | **Lines:** 337
+**Layer:** L2_api | **Domain:** integrations | **Lines:** 391
 
 **Docstring:** Customer LLM Telemetry Ingestion API
 
 ### Functions
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
-| `get_telemetry_service` | `() -> CusTelemetryService` | no | Dependency to get telemetry service instance. |
 | `get_integration_context` | `(request: Request, x_cus_integration_key: Optional[str] = Header(None, alias='X-` | yes | Extract and validate integration context from request. |
-| `ingest_llm_usage` | `(payload: CusLLMUsageIngest, ctx: dict = Depends(get_integration_context), servi` | yes | Ingest a single LLM usage telemetry record. |
-| `ingest_llm_usage_batch` | `(payload: CusLLMUsageBatchIngest, ctx: dict = Depends(get_integration_context), ` | yes | Ingest a batch of LLM usage telemetry records. |
+| `ingest_llm_usage` | `(payload: CusLLMUsageIngest, ctx: dict = Depends(get_integration_context))` | yes | Ingest a single LLM usage telemetry record. |
+| `ingest_llm_usage_batch` | `(payload: CusLLMUsageBatchIngest, ctx: dict = Depends(get_integration_context))` | yes | Ingest a batch of LLM usage telemetry records. |
 | `get_usage_summary` | `(request: Request, integration_id: Optional[str] = Query(None, description='Filt` | yes | Get aggregated usage summary for dashboard. |
 | `get_usage_history` | `(request: Request, integration_id: Optional[str] = Query(None, description='Filt` | yes | Get detailed usage history records. |
 | `get_daily_aggregates` | `(request: Request, integration_id: Optional[str] = Query(None, description='Filt` | yes | Get daily aggregated usage for charts. |
@@ -31,7 +30,7 @@
 | `fastapi` | APIRouter, Depends, Header, HTTPException, Query (+1) | no |
 | `app.schemas.cus_schemas` | CusLLMUsageBatchIngest, CusLLMUsageIngest, CusLLMUsageResponse, CusUsageSummary | no |
 | `app.schemas.response` | wrap_dict, wrap_error, wrap_list | no |
-| `app.hoc.cus.activity.L5_engines.cus_telemetry_service` | CusTelemetryService | no |
+| `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -41,16 +40,11 @@
 **MUST NOT call:** L5_engines, L6_drivers, L7_models
 **Called by:** L2.1_facade
 
-### Violations
-| Import | Rule Broken | Required Fix | Line |
-|--------|-------------|-------------|------|
-| `from app.hoc.cus.activity.L5_engines.cus_telemetry_service import CusTelemetryService` | L2 MUST NOT import L5 directly | Route through L3 adapter | 47 |
-
 ---
 
 ## protection_dependencies.py
 **Path:** `backend/app/hoc/api/cus/integrations/protection_dependencies.py`  
-**Layer:** L2_api | **Domain:** integrations | **Lines:** 242
+**Layer:** L2_api | **Domain:** integrations | **Lines:** 243
 
 **Docstring:** Phase-7 Protection Dependencies — FastAPI Integration
 
@@ -96,7 +90,7 @@
 
 ## session_context.py
 **Path:** `backend/app/hoc/api/cus/integrations/session_context.py`  
-**Layer:** L2_api | **Domain:** integrations | **Lines:** 156
+**Layer:** L2_api | **Domain:** integrations | **Lines:** 155
 
 **Docstring:** Session Context API
 
@@ -104,7 +98,8 @@
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
 | `get_session_context` | `(request: Request) -> Dict[str, Any]` | yes | Get verified session context for the current authenticated user. |
-| `_get_onboarding_state` | `(tenant_id: str) -> str` | no | Get onboarding state for a tenant. |
+| `_fetch_lifecycle_state_name` | `(tenant_id: str) -> str` | yes | Fetch lifecycle state name from DB (Tenant.status). |
+| `_get_onboarding_state` | `(tenant_id: str) -> str` | yes | Fetch onboarding state name from DB (Tenant.onboarding_state). |
 
 ### Imports
 | Module | Names | Relative |
@@ -113,8 +108,8 @@
 | `fastapi` | APIRouter, Request, HTTPException | no |
 | `app.auth.contexts` | FounderAuthContext, HumanAuthContext, MachineCapabilityContext | no |
 | `app.auth.gateway_middleware` | get_auth_context | no |
-| `app.auth.lifecycle_provider` | get_lifecycle_provider | no |
-| `app.auth.onboarding_state` | OnboardingState | no |
+| `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | get_async_session_context, sql_text | no |
+| `app.hoc.cus.account.L5_schemas.tenant_lifecycle_enums` | normalize_status | no |
 | `app.schemas.response` | wrap_dict | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)

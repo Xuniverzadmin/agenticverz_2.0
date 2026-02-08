@@ -59,7 +59,7 @@
 
 ## tenant_driver.py
 **Path:** `backend/app/hoc/cus/account/L6_drivers/tenant_driver.py`  
-**Layer:** L6_drivers | **Domain:** account | **Lines:** 574
+**Layer:** L6_drivers | **Domain:** account | **Lines:** 573
 
 **Docstring:** Tenant Driver (L6)
 
@@ -84,10 +84,9 @@
 | `__future__` | annotations | no |
 | `json` | json | no |
 | `dataclasses` | dataclass | no |
-| `datetime` | datetime, timedelta | no |
+| `datetime` | datetime, timedelta, timezone | no |
 | `typing` | Any, List, Optional, cast | no |
 | `sqlmodel` | Session, func, select | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
 | `app.models.tenant` | APIKey, AuditLog, Tenant, TenantMembership, UsageRecord (+2) | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
@@ -122,9 +121,9 @@
 ### Imports
 | Module | Names | Relative |
 |--------|-------|----------|
+| `datetime` | datetime, timezone | no |
 | `typing` | Dict, Optional | no |
 | `sqlmodel` | Session | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
 | `app.models.tenant` | User | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)

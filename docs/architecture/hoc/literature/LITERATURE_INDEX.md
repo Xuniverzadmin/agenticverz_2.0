@@ -21,28 +21,22 @@
 
 | # | Domain | L2.1 | L2 | L3 | L4 | L5 | L6 | L7 | Violations | Gaps | Conformance |
 |---|--------|------|----|----|----|----|----|----|-----------|------|-------------|
-| 1 | general | ❌ | 4 | 0 | 6 | 57 | 13 | 0 | 11 | 4 | 66% |
-| 2 | overview | ❌ | 1 | 0 | — | 1 | 1 | 0 | 1 | 3 | 60% |
-| 3 | activity | ❌ | 1 | 0 | — | 8 | 3 | 0 | 1 | 3 | 60% |
-| 4 | incidents | ❌ | 2 | 1 | — | 16 | 11 | 0 | 4 | 2 | 80% |
-| 5 | policies | ❌ | 38 | 2 | — | 62 | 14 | 0 | 42 | 3 | 80% |
-| 6 | controls | ❌ | 0 | 1 | — | 14 | 8 | 0 | 5 | 2 | 60% |
-| 7 | logs | ❌ | 4 | 1 | — | 18 | 12 | 0 | 4 | 2 | 80% |
-| 8 | analytics | ❌ | 4 | 2 | — | 21 | 8 | 0 | 7 | 7 | 80% |
-| 9 | integrations | ❌ | 3 | 21 | — | 23 | 3 | 0 | 6 | 3 | 80% |
+| 1 | general | ❌ | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0% |
+| 2 | overview | ✅ | 1 | 0 | — | 1 | 1 | 0 | 0 | 2 | 80% |
+| 3 | activity | ✅ | 1 | 0 | — | 4 | 1 | 0 | 0 | 2 | 80% |
+| 4 | incidents | ✅ | 2 | 0 | — | 9 | 11 | 0 | 0 | 2 | 80% |
+| 5 | policies | ✅ | 37 | 0 | — | 52 | 14 | 0 | 2 | 2 | 80% |
+| 6 | controls | ✅ | 0 | 0 | — | 5 | 5 | 0 | 0 | 3 | 60% |
+| 7 | logs | ✅ | 4 | 0 | — | 13 | 4 | 0 | 0 | 2 | 80% |
+| 8 | analytics | ✅ | 4 | 0 | — | 5 | 5 | 0 | 0 | 2 | 80% |
+| 9 | integrations | ✅ | 3 | 0 | — | 15 | 1 | 0 | 0 | 2 | 80% |
 | 10 | apis | ❌ | 0 | 0 | — | 0 | 1 | 0 | 0 | 2 | 20% |
-| 11 | account | ❌ | 1 | 0 | — | 10 | 3 | 0 | 1 | 3 | 60% |
+| 11 | account | ✅ | 1 | 0 | — | 3 | 3 | 0 | 0 | 2 | 80% |
 
 ## Table of Contents
 
 ### 1. General
 - [general/DOMAIN_WIRING_MAP.md](01_general/DOMAIN_WIRING_MAP.md)
-- [general/L2_apis.md](01_general/L2_apis.md)
-- [general/L4_runtime.md](01_general/L4_runtime.md)
-- [general/L5_engines.md](01_general/L5_engines.md)
-- [general/L5_schemas.md](01_general/L5_schemas.md)
-- [general/L5_other.md](01_general/L5_other.md)
-- [general/L6_drivers.md](01_general/L6_drivers.md)
 
 ### 2. Overview
 - [overview/DOMAIN_WIRING_MAP.md](02_overview/DOMAIN_WIRING_MAP.md)
@@ -59,38 +53,31 @@
 ### 4. Incidents
 - [incidents/DOMAIN_WIRING_MAP.md](04_incidents/DOMAIN_WIRING_MAP.md)
 - [incidents/L2_apis.md](04_incidents/L2_apis.md)
-- [incidents/L3_adapters.md](04_incidents/L3_adapters.md)
 - [incidents/L5_engines.md](04_incidents/L5_engines.md)
 - [incidents/L6_drivers.md](04_incidents/L6_drivers.md)
 
 ### 5. Policies
 - [policies/DOMAIN_WIRING_MAP.md](05_policies/DOMAIN_WIRING_MAP.md)
 - [policies/L2_apis.md](05_policies/L2_apis.md)
-- [policies/L3_adapters.md](05_policies/L3_adapters.md)
 - [policies/L5_engines.md](05_policies/L5_engines.md)
 - [policies/L5_schemas.md](05_policies/L5_schemas.md)
 - [policies/L6_drivers.md](05_policies/L6_drivers.md)
 
 ### 6. Controls
 - [controls/DOMAIN_WIRING_MAP.md](06_controls/DOMAIN_WIRING_MAP.md)
-- [controls/L3_adapters.md](06_controls/L3_adapters.md)
 - [controls/L5_engines.md](06_controls/L5_engines.md)
 - [controls/L5_schemas.md](06_controls/L5_schemas.md)
-- [controls/L5_other.md](06_controls/L5_other.md)
 - [controls/L6_drivers.md](06_controls/L6_drivers.md)
 
 ### 7. Logs
 - [logs/DOMAIN_WIRING_MAP.md](07_logs/DOMAIN_WIRING_MAP.md)
 - [logs/L2_apis.md](07_logs/L2_apis.md)
-- [logs/L3_adapters.md](07_logs/L3_adapters.md)
 - [logs/L5_engines.md](07_logs/L5_engines.md)
-- [logs/L5_other.md](07_logs/L5_other.md)
 - [logs/L6_drivers.md](07_logs/L6_drivers.md)
 
 ### 8. Analytics
 - [analytics/DOMAIN_WIRING_MAP.md](08_analytics/DOMAIN_WIRING_MAP.md)
 - [analytics/L2_apis.md](08_analytics/L2_apis.md)
-- [analytics/L3_adapters.md](08_analytics/L3_adapters.md)
 - [analytics/L5_engines.md](08_analytics/L5_engines.md)
 - [analytics/L5_schemas.md](08_analytics/L5_schemas.md)
 - [analytics/L6_drivers.md](08_analytics/L6_drivers.md)
@@ -98,7 +85,6 @@
 ### 9. Integrations
 - [integrations/DOMAIN_WIRING_MAP.md](09_integrations/DOMAIN_WIRING_MAP.md)
 - [integrations/L2_apis.md](09_integrations/L2_apis.md)
-- [integrations/L3_adapters.md](09_integrations/L3_adapters.md)
 - [integrations/L5_engines.md](09_integrations/L5_engines.md)
 - [integrations/L5_schemas.md](09_integrations/L5_schemas.md)
 - [integrations/L5_other.md](09_integrations/L5_other.md)
@@ -112,13 +98,7 @@
 - [account/DOMAIN_WIRING_MAP.md](11_account/DOMAIN_WIRING_MAP.md)
 - [account/L2_apis.md](11_account/L2_apis.md)
 - [account/L5_engines.md](11_account/L5_engines.md)
-- [account/L5_other.md](11_account/L5_other.md)
 - [account/L6_drivers.md](11_account/L6_drivers.md)
-
-## Topology
-- [Topology Index](../../topology/INDEX.md) — Proposals, reviews, and ratified topology specs
-- [HOC_SPINE_TOPOLOGY_PROPOSAL.md](../../topology/HOC_SPINE_TOPOLOGY_PROPOSAL.md) — V1.5.0 proposal (REVIEWED)
-- [HOC_SPINE_TOPOLOGY_REVIEW.md](../../topology/HOC_SPINE_TOPOLOGY_REVIEW.md) — Architectural review & decisions
 
 ## Cross-Domain Documents
 - [GAP_REGISTER.md](GAP_REGISTER.md)

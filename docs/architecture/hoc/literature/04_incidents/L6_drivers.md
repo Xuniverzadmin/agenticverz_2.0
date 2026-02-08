@@ -10,19 +10,20 @@
 
 ## export_bundle_driver.py
 **Path:** `backend/app/hoc/cus/incidents/L6_drivers/export_bundle_driver.py`  
-**Layer:** L6_drivers | **Domain:** incidents | **Lines:** 421
+**Layer:** L6_drivers | **Domain:** incidents | **Lines:** 434
 
 **Docstring:** Export Bundle Service
 
 ### Classes
 | Name | Methods | Docstring |
 |------|---------|-----------|
-| `ExportBundleService` | __init__, trace_store, create_evidence_bundle, create_soc2_bundle, create_executive_debrief, _compute_bundle_hash, _generate_attestation, _assess_risk_level (+3 more) | Generate structured export bundles from incidents/traces. |
+| `TraceStorePort` | get_trace_summary, get_trace_steps |  |
+| `ExportBundleDriver` | __init__, trace_store, create_evidence_bundle, create_soc2_bundle, create_executive_debrief, _compute_bundle_hash, _generate_attestation, _assess_risk_level (+3 more) | Generate structured export bundles from incidents/traces. |
 
 ### Functions
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
-| `get_export_bundle_service` | `() -> ExportBundleService` | no | Get or create ExportBundleService singleton. |
+| `get_export_bundle_driver` | `() -> ExportBundleDriver` | no | Get or create ExportBundleDriver singleton. |
 
 ### Imports
 | Module | Names | Relative |
@@ -31,11 +32,11 @@
 | `json` | json | no |
 | `logging` | logging | no |
 | `datetime` | datetime, timezone | no |
-| `typing` | Optional | no |
+| `typing` | Any, Optional, Protocol, runtime_checkable | no |
 | `sqlmodel` | Session, select | no |
-| `app.db` | Incident, Run, engine | no |
+| `app.db` | Run, engine | no |
+| `app.models.killswitch` | Incident | no |
 | `app.models.export_bundles` | DEFAULT_SOC2_CONTROLS, EvidenceBundle, ExecutiveDebriefBundle, PolicyContext, SOC2Bundle (+1) | no |
-| `app.traces.store` | TraceStore | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -49,7 +50,7 @@
 
 ## incident_aggregator.py
 **Path:** `backend/app/hoc/cus/incidents/L6_drivers/incident_aggregator.py`  
-**Layer:** L6_drivers | **Domain:** incidents | **Lines:** 613
+**Layer:** L6_drivers | **Domain:** incidents | **Lines:** 614
 
 **Docstring:** Incident Aggregation Driver - Prevents Incident Explosion Under Load
 
@@ -74,7 +75,7 @@
 | `decimal` | Decimal | no |
 | `typing` | Any, Callable, Dict, Optional, Tuple (+1) | no |
 | `sqlmodel` | Session, and_, select | no |
-| `app.hoc.cus.incidents.L5_engines.incident_severity_engine` | IncidentSeverityEngine, SeverityConfig, generate_incident_title | no |
+| `app.hoc.cus.incidents.L5_schemas.severity_policy` | IncidentSeverityEngine, SeverityConfig, generate_incident_title | no |
 | `app.models.killswitch` | Incident, IncidentEvent, IncidentSeverity, IncidentStatus | no |
 | `app.utils.runtime` | generate_uuid, utc_now | no |
 
@@ -128,7 +129,7 @@
 
 ## incident_read_driver.py
 **Path:** `backend/app/hoc/cus/incidents/L6_drivers/incident_read_driver.py`  
-**Layer:** L6_drivers | **Domain:** incidents | **Lines:** 209
+**Layer:** L6_drivers | **Domain:** incidents | **Lines:** 212
 
 **Docstring:** Incident Read Driver (L6)
 
@@ -166,14 +167,14 @@
 
 ## incident_write_driver.py
 **Path:** `backend/app/hoc/cus/incidents/L6_drivers/incident_write_driver.py`  
-**Layer:** L6_drivers | **Domain:** incidents | **Lines:** 540
+**Layer:** L6_drivers | **Domain:** incidents | **Lines:** 611
 
 **Docstring:** Incident Write Driver (L6)
 
 ### Classes
 | Name | Methods | Docstring |
 |------|---------|-----------|
-| `IncidentWriteDriver` | __init__, update_incident_acknowledged, update_incident_resolved, create_incident_event, refresh_incident, insert_incident, update_run_incident_count, update_trace_incident_id (+4 more) | L6 driver for incident write operations. |
+| `IncidentWriteDriver` | __init__, update_incident_acknowledged, update_incident_resolved, create_incident_event, refresh_incident, insert_incident, update_run_incident_count, update_trace_incident_id (+5 more) | L6 driver for incident write operations. |
 
 ### Functions
 | Name | Signature | Async | Docstring |
@@ -205,7 +206,7 @@
 
 ## incidents_facade_driver.py
 **Path:** `backend/app/hoc/cus/incidents/L6_drivers/incidents_facade_driver.py`  
-**Layer:** L6_drivers | **Domain:** incidents | **Lines:** 531
+**Layer:** L6_drivers | **Domain:** incidents | **Lines:** 807
 
 **Docstring:** Incidents Facade Driver (L6)
 
@@ -216,7 +217,10 @@
 | `IncidentListSnapshot` |  | Paginated list of incident snapshots. |
 | `MetricsSnapshot` |  | Raw metrics aggregates from database. |
 | `CostImpactRowSnapshot` |  | Single row from cost impact query. |
-| `IncidentsFacadeDriver` | __init__, fetch_active_incidents, fetch_resolved_incidents, fetch_historical_incidents, fetch_incident_by_id, fetch_incidents_by_run, fetch_metrics_aggregates, fetch_cost_impact_data (+1 more) | L6 Database driver for incidents facade. |
+| `HistoricalTrendRowSnapshot` |  | Single row from historical trend query. |
+| `HistoricalDistributionRowSnapshot` |  | Single row from distribution query. |
+| `CostTrendRowSnapshot` |  | Single row from cost trend query. |
+| `IncidentsFacadeDriver` | __init__, fetch_active_incidents, fetch_resolved_incidents, fetch_historical_incidents, fetch_incident_by_id, fetch_incidents_by_run, fetch_metrics_aggregates, fetch_cost_impact_data (+5 more) | L6 Database driver for incidents facade. |
 
 ### Imports
 | Module | Names | Relative |
@@ -237,7 +241,7 @@
 **Called by:** L5_engines, L4_runtime
 
 ### __all__ Exports
-`IncidentsFacadeDriver`, `IncidentSnapshot`, `IncidentListSnapshot`, `MetricsSnapshot`, `CostImpactRowSnapshot`
+`IncidentsFacadeDriver`, `IncidentSnapshot`, `IncidentListSnapshot`, `MetricsSnapshot`, `CostImpactRowSnapshot`, `HistoricalTrendRowSnapshot`, `HistoricalDistributionRowSnapshot`, `CostTrendRowSnapshot`
 
 ---
 
@@ -321,7 +325,7 @@
 
 ## policy_violation_driver.py
 **Path:** `backend/app/hoc/cus/incidents/L6_drivers/policy_violation_driver.py`  
-**Layer:** L6_drivers | **Domain:** incidents | **Lines:** 490
+**Layer:** L6_drivers | **Domain:** incidents | **Lines:** 481
 
 **Docstring:** Policy Violation Driver (L6)
 
@@ -333,7 +337,7 @@
 ### Functions
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
-| `insert_policy_evaluation_sync` | `(database_url: str, evaluation_id: str, run_id: str, tenant_id: str, outcome: st` | no | Insert policy evaluation record using sync psycopg2 connection. |
+| `insert_policy_evaluation_sync_with_cursor` | `(cursor, evaluation_id: str, run_id: str, tenant_id: str, outcome: str, policies` | no | Insert policy evaluation record using provided cursor. |
 | `get_policy_violation_driver` | `(session: AsyncSession) -> PolicyViolationDriver` | no | Factory function to get PolicyViolationDriver instance. |
 
 ### Imports
@@ -355,7 +359,7 @@
 **Called by:** L5_engines, L4_runtime
 
 ### __all__ Exports
-`PolicyViolationDriver`, `get_policy_violation_driver`, `insert_policy_evaluation_sync`
+`PolicyViolationDriver`, `get_policy_violation_driver`, `insert_policy_evaluation_sync_with_cursor`
 
 ---
 

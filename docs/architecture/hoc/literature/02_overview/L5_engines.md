@@ -42,7 +42,7 @@
 | `dataclasses` | dataclass | no |
 | `datetime` | datetime, timedelta | no |
 | `typing` | TYPE_CHECKING, Any, Dict, List, Optional | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
+| `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
 | `app.hoc.cus.overview.L6_drivers.overview_facade_driver` | OverviewFacadeDriver | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)

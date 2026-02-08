@@ -8,7 +8,7 @@
 
 ## overview.py
 **Path:** `backend/app/hoc/api/cus/overview/overview.py`  
-**Layer:** L2_api | **Domain:** overview | **Lines:** 519
+**Layer:** L2_api | **Domain:** overview | **Lines:** 561
 
 **Docstring:** Unified Overview API (L2)
 
@@ -34,10 +34,10 @@
 |------|-----------|-------|-----------|
 | `require_preflight` | `() -> None` | no | Guard for preflight-only endpoints (O4, O5). |
 | `get_tenant_id_from_auth` | `(request: Request) -> str` | no | Extract tenant_id from auth_context. Raises 401/403 if missing. |
-| `get_highlights` | `(request: Request, session: AsyncSession = Depends(get_async_session_dep)) -> Hi` | yes | System pulse and domain counts. Tenant-scoped. |
+| `get_highlights` | `(request: Request, session = Depends(get_session_dep)) -> HighlightsResponse` | yes | System pulse and domain counts. Tenant-scoped. |
 | `get_decisions` | `(request: Request, source_domain: Annotated[str | None, Query(description='Filte` | yes | Pending decisions from incidents and policy proposals. Tenant-scoped. |
 | `get_costs` | `(request: Request, period_days: Annotated[int, Query(ge=1, le=365, description='` | yes | Cost intelligence summary. Tenant-scoped. |
-| `get_decisions_count` | `(request: Request, session: AsyncSession = Depends(get_async_session_dep)) -> De` | yes | Decisions count by domain and priority. Tenant-scoped. |
+| `get_decisions_count` | `(request: Request, session = Depends(get_session_dep)) -> DecisionsCountResponse` | yes | Decisions count by domain and priority. Tenant-scoped. |
 | `get_recovery_stats` | `(request: Request, period_days: Annotated[int, Query(ge=1, le=365, description='` | yes | Recovery statistics from incidents. Tenant-scoped. |
 
 ### Imports
@@ -49,10 +49,8 @@
 | `typing` | Annotated, Any, List, Optional | no |
 | `fastapi` | APIRouter, Depends, HTTPException, Query, Request | no |
 | `pydantic` | BaseModel | no |
-| `sqlalchemy.ext.asyncio` | AsyncSession | no |
 | `app.auth.gateway_middleware` | get_auth_context | no |
-| `app.db` | get_async_session_dep | no |
-| `app.hoc.cus.overview.L5_engines.overview_facade` | get_overview_facade | no |
+| `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -61,11 +59,6 @@
 **SHOULD call:** L3_adapters
 **MUST NOT call:** L5_engines, L6_drivers, L7_models
 **Called by:** L2.1_facade
-
-### Violations
-| Import | Rule Broken | Required Fix | Line |
-|--------|-------------|-------------|------|
-| `from app.hoc.cus.overview.L5_engines.overview_facade import get_overview_facade` | L2 MUST NOT import L5 directly | Route through L3 adapter | 51 |
 
 ### Constants
 `_CURRENT_ENVIRONMENT`

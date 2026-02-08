@@ -10,7 +10,7 @@
 
 ## policy_rules.py
 **Path:** `backend/app/hoc/cus/policies/L5_schemas/policy_rules.py`  
-**Layer:** L5_schemas | **Domain:** policies | **Lines:** 160
+**Layer:** L5_schemas | **Domain:** policies | **Lines:** 161
 
 **Docstring:** Policy Rules Schemas (PIN-LIM-02)
 

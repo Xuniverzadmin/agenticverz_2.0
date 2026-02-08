@@ -4,7 +4,7 @@
 
 ## Target State
 
-L2.1 Facade: `hoc/api/facades/cus/overview.py` — **TO BUILD**
+L2.1 Facade: `/root/agenticverz2.0/backend/app/hoc/api/facades/cus/overview.py` ✅
   │
   └──→ L2 API: `hoc/api/cus/overview/` (1 files)
          ├── overview.py
@@ -28,12 +28,5 @@ L2.1 Facade: `hoc/api/facades/cus/overview.py` — **TO BUILD**
 
 | Type | Description | Action |
 |------|-------------|--------|
-| L2.1_facade | No L2.1 facade to group 1 L2 routers | Build hoc/api/facades/cus/overview.py grouping: overview.py |
 | L3_adapter | No L3 adapters but 1 L5 engines exist — L2 cannot reach L5 | Build hoc/cus/overview/L3_adapters/ with domain adapter(s) |
 | L7_models | 1 L6 drivers but no domain-specific L7 models | FLAG: domain-localized data candidate (human decision) |
-
-## Violations
-
-| File | Import | Rule Broken | Fix |
-|------|--------|-------------|-----|
-| `overview.py` | `from app.hoc.cus.overview.L5_engines.overview_facade import ` | L2 MUST NOT import L5 directly | Route through L3 adapter |

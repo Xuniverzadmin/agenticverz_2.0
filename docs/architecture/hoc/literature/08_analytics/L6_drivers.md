@@ -1,4 +1,4 @@
-# Analytics — L6 Drivers (8 files)
+# Analytics — L6 Drivers (5 files)
 
 **Domain:** analytics  
 **Layer:** L6_drivers  
@@ -42,44 +42,6 @@
 
 ---
 
-## audit_persistence.py
-**Path:** `backend/app/hoc/cus/analytics/L6_drivers/audit_persistence.py`  
-**Layer:** L6_drivers | **Domain:** analytics | **Lines:** 169
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `CoordinationAuditRecordDB` |  | SQLModel for coordination_audit_records table. |
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `_now_utc` | `() -> datetime` | no | Get current UTC timestamp. |
-| `persist_audit_record` | `(db: Session, audit_id: str, envelope_id: str, envelope_class: str, decision: st` | no | Persist a coordination audit record to the database. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `app.infra` | FeatureIntent, RetryPolicy | no |
-| `logging` | logging | no |
-| `datetime` | datetime, timezone | no |
-| `typing` | Optional | no |
-| `uuid` | UUID | no |
-| `sqlmodel` | Field, Session, SQLModel | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
-
-**SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
-
-### Constants
-`FEATURE_INTENT`, `RETRY_POLICY`
-
----
-
 ## cost_anomaly_driver.py
 **Path:** `backend/app/hoc/cus/analytics/L6_drivers/cost_anomaly_driver.py`  
 **Layer:** L6_drivers | **Domain:** analytics | **Lines:** 992
@@ -119,7 +81,7 @@
 
 ## cost_write_driver.py
 **Path:** `backend/app/hoc/cus/analytics/L6_drivers/cost_write_driver.py`  
-**Layer:** L6_drivers | **Domain:** analytics | **Lines:** 251
+**Layer:** L6_drivers | **Domain:** analytics | **Lines:** 250
 
 **Docstring:** Cost Write Driver (L6)
 
@@ -140,7 +102,6 @@
 | `typing` | Optional | no |
 | `sqlmodel` | Session | no |
 | `app.db` | CostBudget, CostRecord, FeatureTag | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -152,54 +113,6 @@
 
 ### __all__ Exports
 `CostWriteDriver`, `get_cost_write_driver`
-
----
-
-## leader.py
-**Path:** `backend/app/hoc/cus/analytics/L6_drivers/leader.py`  
-**Layer:** L6_drivers | **Domain:** analytics | **Lines:** 359
-
-**Docstring:** Leader election using PostgreSQL advisory locks.
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `LeaderContext` | __init__, __aenter__, __aexit__, is_leader | Async context manager for leader election. |
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `try_acquire_leader_lock` | `(session: AsyncSession, lock_id: int) -> bool` | yes | Try to acquire an advisory lock (non-blocking). |
-| `release_leader_lock` | `(session: AsyncSession, lock_id: int) -> bool` | yes | Explicitly release an advisory lock. |
-| `is_lock_held` | `(session: AsyncSession, lock_id: int) -> bool` | yes | Check if a lock is currently held by any session. |
-| `leader_election` | `(lock_id: int, timeout_seconds: float = 5.0) -> AsyncGenerator[bool, None]` | yes | Context manager for leader election. |
-| `with_leader_lock` | `(lock_id: int, callback, *args, **kwargs)` | yes | Execute callback only if we can acquire leadership. |
-| `with_canary_lock` | `(callback, *args, **kwargs)` | yes | Execute callback with canary runner lock. |
-| `with_alert_worker_lock` | `(callback, *args, **kwargs)` | yes | Execute callback with alert worker lock. |
-| `with_archiver_lock` | `(callback, *args, **kwargs)` | yes | Execute callback with provenance archiver lock. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `__future__` | annotations | no |
-| `asyncio` | asyncio | no |
-| `logging` | logging | no |
-| `contextlib` | asynccontextmanager | no |
-| `typing` | AsyncGenerator, Optional | no |
-| `sqlalchemy` | text | no |
-| `sqlalchemy.ext.asyncio` | AsyncSession | no |
-| `app.db_async` | AsyncSessionLocal | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
-
-**SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
-
-### Constants
-`LOCK_CANARY_RUNNER`, `LOCK_ALERT_WORKER`, `LOCK_PROVENANCE_ARCHIVER`, `LOCK_BASELINE_BACKFILL`
 
 ---
 
@@ -278,47 +191,5 @@
 
 ### __all__ Exports
 `PredictionDriver`, `get_prediction_driver`
-
----
-
-## provenance_async.py
-**Path:** `backend/app/hoc/cus/analytics/L6_drivers/provenance_async.py`  
-**Layer:** L6_drivers | **Domain:** analytics | **Lines:** 463
-
-**Docstring:** Async provenance logging for CostSim V2.
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `write_provenance` | `(run_id: Optional[str] = None, tenant_id: Optional[str] = None, variant_slug: st` | yes | Write a single provenance record. |
-| `write_provenance_batch` | `(records: List[Dict[str, Any]], session: Optional[AsyncSession] = None) -> List[` | yes | Write multiple provenance records in a single transaction. |
-| `query_provenance` | `(tenant_id: Optional[str] = None, variant_slug: Optional[str] = None, source: Op` | yes | Query provenance records. |
-| `count_provenance` | `(tenant_id: Optional[str] = None, variant_slug: Optional[str] = None, start_date` | yes | Count provenance records matching filters. |
-| `get_drift_stats` | `(start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> ` | yes | Get drift statistics between V1 and V2 costs. |
-| `check_duplicate` | `(input_hash: str) -> bool` | yes | Check if a record with this input hash already exists. |
-| `compute_input_hash` | `(payload: Dict[str, Any]) -> str` | no | Compute deterministic hash of input payload. |
-| `backfill_v1_baseline` | `(records: List[Dict[str, Any]], batch_size: int = 100) -> Dict[str, int]` | yes | Backfill V1 baseline records from historical data. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `__future__` | annotations | no |
-| `hashlib` | hashlib | no |
-| `json` | json | no |
-| `logging` | logging | no |
-| `datetime` | datetime | no |
-| `typing` | Any, Dict, List, Optional | no |
-| `sqlalchemy` | and_, func, select | no |
-| `sqlalchemy.ext.asyncio` | AsyncSession | no |
-| `app.db_async` | AsyncSessionLocal, async_session_context | no |
-| `app.models.costsim_cb` | CostSimProvenanceModel | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** DB operations — query building, data transformation, returns domain objects NOT ORM
-
-**SHOULD call:** L7_models
-**MUST NOT call:** L2_api, L3_adapters, L4_runtime, L5_engines
-**Called by:** L5_engines, L4_runtime
 
 ---

@@ -1,4 +1,4 @@
-# Logs — L5 Engines (17 files)
+# Logs — L5 Engines (13 files)
 
 **Domain:** logs  
 **Layer:** L5_engines  
@@ -54,47 +54,6 @@
 
 ---
 
-## audit_ledger_service.py
-**Path:** `backend/app/hoc/cus/logs/L5_engines/audit_ledger_service.py`  
-**Layer:** L5_engines | **Domain:** logs | **Lines:** 220
-
-**Docstring:** Audit Ledger Service (Sync)
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `AuditLedgerService` | __init__, _emit, incident_acknowledged, incident_resolved, incident_manually_closed | Sync service for writing to the audit ledger. |
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `get_audit_ledger_service` | `(session: 'Session') -> AuditLedgerService` | no | Get an AuditLedgerService instance. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `logging` | logging | no |
-| `typing` | Any, Dict, Optional, TYPE_CHECKING | no |
-| `app.models.audit_ledger` | ActorType, AuditEntityType, AuditEventType, AuditLedger | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### Violations
-| Import | Rule Broken | Required Fix | Line |
-|--------|-------------|-------------|------|
-| `from app.models.audit_ledger import ActorType, AuditEntityType, AuditEventType, AuditLedger` | L5 MUST NOT import L7 models directly | Route through L6 driver | 41 |
-
-### __all__ Exports
-`AuditLedgerService`, `get_audit_ledger_service`
-
----
-
 ## audit_reconciler.py
 **Path:** `backend/app/hoc/cus/logs/L5_engines/audit_reconciler.py`  
 **Layer:** L5_engines | **Domain:** logs | **Lines:** 322
@@ -119,8 +78,8 @@
 | `typing` | List, Optional, Set, Tuple | no |
 | `uuid` | UUID | no |
 | `prometheus_client` | Counter, Histogram | no |
-| `app.hoc.cus.general.L5_schemas.rac_models` | AuditAction, AuditDomain, AuditExpectation, AuditStatus, DomainAck (+1) | no |
-| `app.hoc.cus.general.L5_engines.audit_store` | AuditStore, get_audit_store | no |
+| `app.hoc.cus.hoc_spine.schemas.rac_models` | AuditAction, AuditDomain, AuditExpectation, AuditStatus, DomainAck (+1) | no |
+| `app.hoc.cus.hoc_spine.services.audit_store` | AuditStore, get_audit_store | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -393,8 +352,8 @@
 | Module | Names | Relative |
 |--------|-------|----------|
 | `typing` | List, Optional | no |
-| `app.traces.models` | TraceRecord, TraceSummary | no |
-| `app.traces.pg_store` | PostgresTraceStore, get_postgres_trace_store | no |
+| `app.hoc.cus.logs.L5_engines.traces_models` | TraceRecord, TraceSummary | no |
+| `app.hoc.cus.logs.L6_drivers.pg_store` | PostgresTraceStore, get_postgres_trace_store | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -430,44 +389,8 @@
 |--------|-------|----------|
 | `datetime` | datetime, timezone | no |
 | `typing` | Any, Optional | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
-| `app.hoc.cus.general.L5_engines.control_registry` | SOC2ComplianceStatus, SOC2Control, SOC2ControlMapping, SOC2ControlRegistry, get_control_registry | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
----
-
-## panel_response_assembler.py
-**Path:** `backend/app/hoc/cus/logs/L5_engines/panel_response_assembler.py`  
-**Layer:** L5_engines | **Domain:** logs | **Lines:** 265
-
-**Docstring:** Panel Response Assembler — Assemble spec-compliant response envelope
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `PanelResponseAssembler` | __init__, assemble, _slot_to_dict, _aggregate_verification, _determine_panel_state, _determine_panel_authority, assemble_error | Assembles the final panel response envelope. |
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `create_response_assembler` | `(adapter_version: Optional[str] = None, schema_version: Optional[str] = None) ->` | no | Create response assembler. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `logging` | logging | no |
-| `dataclasses` | asdict | no |
-| `datetime` | datetime, timezone | no |
-| `typing` | Any, Dict, List, Optional | no |
-| `panel_consistency_checker` | ConsistencyCheckResult | yes |
-| `panel_types` | Authority, PanelSlotResult, SlotState, VerificationSignals | yes |
+| `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
+| `app.hoc.cus.hoc_spine.services.control_registry` | SOC2ComplianceStatus, SOC2Control, SOC2ControlMapping, SOC2ControlRegistry, get_control_registry | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -481,9 +404,9 @@
 
 ## pdf_renderer.py
 **Path:** `backend/app/hoc/cus/logs/L5_engines/pdf_renderer.py`  
-**Layer:** L5_engines | **Domain:** logs | **Lines:** 687
+**Layer:** L5_engines | **Domain:** logs | **Lines:** 683
 
-**Docstring:** PDF Renderer Service
+**Docstring:** PDF Renderer Engine
 
 ### Classes
 | Name | Methods | Docstring |
@@ -498,17 +421,17 @@
 ### Imports
 | Module | Names | Relative |
 |--------|-------|----------|
+| `__future__` | annotations | no |
 | `io` | io | no |
 | `logging` | logging | no |
 | `datetime` | datetime | no |
-| `typing` | Optional | no |
+| `typing` | TYPE_CHECKING, Optional | no |
 | `reportlab.lib` | colors | no |
 | `reportlab.lib.enums` | TA_CENTER, TA_LEFT | no |
 | `reportlab.lib.pagesizes` | letter | no |
 | `reportlab.lib.styles` | ParagraphStyle, getSampleStyleSheet | no |
 | `reportlab.lib.units` | inch | no |
 | `reportlab.platypus` | HRFlowable, PageBreak, Paragraph, SimpleDocTemplate, Spacer (+2) | no |
-| `app.models.export_bundles` | EvidenceBundle, ExecutiveDebriefBundle, SOC2Bundle | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -517,11 +440,6 @@
 **SHOULD call:** L6_drivers, L5_schemas
 **MUST NOT call:** L2_api, L3_adapters, L7_models
 **Called by:** L3_adapters, L4_runtime
-
-### Violations
-| Import | Rule Broken | Required Fix | Line |
-|--------|-------------|-------------|------|
-| `from app.models.export_bundles import EvidenceBundle, ExecutiveDebriefBundle, SOC2Bundle` | L5 MUST NOT import L7 models directly | Route through L6 driver | 54 |
 
 ---
 
@@ -565,14 +483,13 @@
 
 ## replay_determinism.py
 **Path:** `backend/app/hoc/cus/logs/L5_engines/replay_determinism.py`  
-**Layer:** L5_engines | **Domain:** logs | **Lines:** 519
+**Layer:** L5_engines | **Domain:** logs | **Lines:** 498
 
 **Docstring:** Replay Determinism Service - Defines and Enforces Determinism Semantics
 
 ### Classes
 | Name | Methods | Docstring |
 |------|---------|-----------|
-| `DeterminismLevel` |  | Levels of determinism for replay validation. |
 | `ModelVersion` | to_dict, from_dict | Track the model version used for a call. |
 | `PolicyDecision` | to_dict | Record of a policy enforcement decision. |
 | `ReplayMatch` |  | Result of replay comparison. |
@@ -591,6 +508,7 @@
 | `datetime` | datetime, timezone | no |
 | `enum` | Enum | no |
 | `typing` | Any, Dict, List, Optional | no |
+| `app.hoc.cus.logs.L5_schemas.determinism_types` | DeterminismLevel | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -605,114 +523,16 @@
 
 ---
 
-## trace_facade.py
-**Path:** `backend/app/hoc/cus/logs/L5_engines/trace_facade.py`  
-**Layer:** L5_engines | **Domain:** logs | **Lines:** 297
-
-**Docstring:** Trace Domain Facade (L5 Domain Engine)
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `TraceFacade` | __init__, _store, start_trace, complete_trace, add_step, _emit_ack | Facade for trace domain operations. |
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `get_trace_facade` | `(trace_store = None) -> TraceFacade` | no | Get the trace facade singleton. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `logging` | logging | no |
-| `os` | os | no |
-| `typing` | Optional | no |
-| `uuid` | UUID | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### Constants
-`RAC_ENABLED`
-
----
-
-## traces_metrics.py
-**Path:** `backend/app/hoc/cus/logs/L5_engines/traces_metrics.py`  
-**Layer:** L5_engines | **Domain:** logs | **Lines:** 297
-
-**Docstring:** Prometheus Metrics for AOS Traces API
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `TracesMetrics` | __init__, measure_request, record_trace_stored, record_replay_enforcement, record_idempotency_check, record_parity_check, measure_storage | Centralized metrics manager for traces API. |
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `get_traces_metrics` | `() -> TracesMetrics` | no | Get or create global traces metrics instance. |
-| `instrument_trace_request` | `(operation: str)` | no | Decorator to instrument trace API endpoints. |
-| `instrument_replay_check` | `(func: Callable) -> Callable` | no | Decorator to instrument replay enforcement. |
-| `instrument_parity_check` | `(func: Callable) -> Callable` | no | Decorator to instrument parity checks. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `functools` | functools | no |
-| `logging` | logging | no |
-| `time` | time | no |
-| `contextlib` | contextmanager | no |
-| `typing` | Callable, Optional | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### Constants
-`TRACE_LATENCY_HISTOGRAM`, `TRACE_REQUESTS_COUNTER`, `TRACE_PARITY_GAUGE`, `REPLAY_ENFORCEMENT_COUNTER`, `IDEMPOTENCY_COUNTER`, `TRACE_STEPS_HISTOGRAM`, `TRACE_SIZE_HISTOGRAM`, `PARITY_FAILURES_COUNTER`, `TRACE_STORAGE_LATENCY`
-
----
-
 ## traces_models.py
 **Path:** `backend/app/hoc/cus/logs/L5_engines/traces_models.py`  
-**Layer:** L5_engines | **Domain:** logs | **Lines:** 420
+**Layer:** L5_engines | **Domain:** logs | **Lines:** 51
 
-**Docstring:** Trace Models for AOS
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `TraceStatus` |  | Status of a trace step. |
-| `TraceStep` | to_dict, from_dict, determinism_hash | A single step in an execution trace. |
-| `TraceSummary` | to_dict | Summary of a trace for listing purposes. |
-| `TraceRecord` | total_cost_cents, total_duration_ms, success_count, failure_count, to_dict, from_dict, to_summary, determinism_signature | Complete trace record with all steps. |
-| `ParityResult` | to_dict | Result of comparing two traces for replay parity. |
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `_normalize_for_determinism` | `(value: Any) -> Any` | no | Normalize a value for deterministic hashing. |
-| `compare_traces` | `(original: TraceRecord, replay: TraceRecord) -> ParityResult` | no | Compare two traces to verify replay parity. |
+**Docstring:** Trace Models for AOS - BACKWARD COMPATIBILITY RE-EXPORTS
 
 ### Imports
 | Module | Names | Relative |
 |--------|-------|----------|
-| `hashlib` | hashlib | no |
-| `json` | json | no |
-| `dataclasses` | dataclass, field | no |
-| `datetime` | datetime, timezone | no |
-| `enum` | Enum | no |
-| `typing` | Any, ClassVar | no |
+| `app.hoc.cus.logs.L5_schemas.traces_models` | ParityResult, TraceRecord, TraceStatus, TraceStep, TraceSummary (+2) | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -721,5 +541,8 @@
 **SHOULD call:** L6_drivers, L5_schemas
 **MUST NOT call:** L2_api, L3_adapters, L7_models
 **Called by:** L3_adapters, L4_runtime
+
+### __all__ Exports
+`TraceStatus`, `TraceStep`, `TraceSummary`, `TraceRecord`, `ParityResult`, `compare_traces`, `_normalize_for_determinism`
 
 ---

@@ -8,7 +8,7 @@
 
 ## costsim.py
 **Path:** `backend/app/hoc/api/cus/analytics/costsim.py`  
-**Layer:** L2_api | **Domain:** analytics | **Lines:** 913
+**Layer:** L2_api | **Domain:** analytics | **Lines:** 1010
 
 **Docstring:** API endpoints for CostSim V2 sandbox.
 
@@ -34,17 +34,17 @@
 | `get_memory_context` | `(tenant_id: str, workflow_id: Optional[str] = None, agent_id: Optional[str] = No` | yes | Retrieve memory context for simulation. |
 | `apply_post_execution_updates` | `(tenant_id: str, workflow_id: Optional[str], agent_id: Optional[str], simulation` | yes | Apply deterministic post-execution memory updates. |
 | `detect_simulation_drift` | `(baseline_result: Dict[str, Any], memory_result: Dict[str, Any], workflow_id: Op` | yes | Detect drift between baseline and memory-enabled simulation. |
-| `get_sandbox_status` | `()` | yes | Get current V2 sandbox status. |
-| `simulate_v2` | `(request: SimulateRequest)` | yes | Run simulation through V2 sandbox. |
-| `reset_circuit_breaker` | `(reason: Optional[str] = Query(None, description='Reason for reset'))` | yes | Reset the V2 circuit breaker. |
+| `get_sandbox_status` | `(session = Depends(get_session_dep))` | yes | Get current V2 sandbox status. |
+| `simulate_v2` | `(request: SimulateRequest, session = Depends(get_session_dep))` | yes | Run simulation through V2 sandbox. |
+| `reset_circuit_breaker` | `(reason: Optional[str] = Query(None, description='Reason for reset'), session = ` | yes | Reset the V2 circuit breaker. |
 | `get_incidents` | `(include_resolved: bool = Query(False, description='Include resolved incidents')` | yes | Get circuit breaker incidents. |
 | `get_divergence_report` | `(start_date: Optional[datetime] = Query(None, description='Start of analysis per` | yes | Get cost divergence report between V1 and V2. |
 | `trigger_canary_run` | `(sample_count: int = Query(100, ge=10, le=1000, description='Number of samples')` | yes | Trigger a canary run on-demand. |
-| `get_canary_reports` | `(limit: int = Query(10, ge=1, le=100, description='Max reports to return'))` | yes | Get recent canary run reports. |
-| `list_datasets` | `()` | yes | List all available reference datasets. |
-| `get_dataset_info` | `(dataset_id: str)` | yes | Get information about a specific dataset. |
-| `validate_against_dataset` | `(dataset_id: str)` | yes | Validate V2 against a specific reference dataset. |
-| `validate_all` | `()` | yes | Validate V2 against ALL reference datasets. |
+| `get_canary_reports` | `(limit: int = Query(10, ge=1, le=100, description='Max reports to return'), stat` | yes | Get recent canary run reports. |
+| `list_datasets` | `(session = Depends(get_session_dep))` | yes | List all available reference datasets. |
+| `get_dataset_info` | `(dataset_id: str, session = Depends(get_session_dep))` | yes | Get information about a specific dataset. |
+| `validate_against_dataset` | `(dataset_id: str, session = Depends(get_session_dep))` | yes | Validate V2 against a specific reference dataset. |
+| `validate_all` | `(session = Depends(get_session_dep))` | yes | Validate V2 against ALL reference datasets. |
 
 ### Imports
 | Module | Names | Relative |
@@ -54,14 +54,10 @@
 | `os` | os | no |
 | `datetime` | datetime, timedelta, timezone | no |
 | `typing` | Any, Dict, List, Optional | no |
-| `fastapi` | APIRouter, HTTPException, Query | no |
+| `fastapi` | APIRouter, Depends, HTTPException, Query | no |
 | `pydantic` | BaseModel, Field | no |
-| `app.costsim` | get_circuit_breaker, is_v2_disabled_by_drift, is_v2_sandbox_enabled, run_canary, simulate_with_sandbox | no |
-| `app.costsim.config` | get_config | no |
-| `app.costsim.divergence` | generate_divergence_report | no |
+| `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
 | `app.schemas.response` | wrap_dict | no |
-| `app.costsim.datasets` | get_dataset_validator, validate_all_datasets | no |
-| `app.costsim.datasets` | validate_dataset | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -78,7 +74,7 @@
 
 ## feedback.py
 **Path:** `backend/app/hoc/api/cus/analytics/feedback.py`  
-**Layer:** L2_api | **Domain:** analytics | **Lines:** 260
+**Layer:** L2_api | **Domain:** analytics | **Lines:** 221
 
 **Docstring:** PB-S3 Pattern Feedback API (READ-ONLY)
 
@@ -101,14 +97,11 @@
 |--------|-------|----------|
 | `logging` | logging | no |
 | `typing` | Optional | no |
-| `uuid` | UUID | no |
 | `fastapi` | APIRouter, Depends, HTTPException, Query | no |
 | `pydantic` | BaseModel | no |
-| `sqlalchemy` | func, select | no |
-| `auth` | verify_api_key | yes |
-| `db` | get_async_session | yes |
-| `models.feedback` | PatternFeedback | yes |
-| `schemas.response` | wrap_dict | yes |
+| `app.auth` | verify_api_key | no |
+| `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | get_async_session_context, get_operation_registry, OperationContext | no |
+| `app.schemas.response` | wrap_dict | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -122,7 +115,7 @@
 
 ## predictions.py
 **Path:** `backend/app/hoc/api/cus/analytics/predictions.py`  
-**Layer:** L2_api | **Domain:** analytics | **Lines:** 348
+**Layer:** L2_api | **Domain:** analytics | **Lines:** 300
 
 **Docstring:** PB-S5 Predictions API (READ-ONLY)
 
@@ -137,7 +130,7 @@
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
 | `list_predictions` | `(tenant_id: Optional[str] = Query(None, description='Filter by tenant'), predict` | yes | List prediction events (PB-S5). |
-| `get_prediction` | `(prediction_id: str, auth: AuthorityResult = Depends(require_predictions_read))` | yes | Get detailed prediction by ID (PB-S5). |
+| `get_prediction` | `(prediction_id: str, session = Depends(get_session_dep), auth: AuthorityResult =` | yes | Get detailed prediction by ID (PB-S5). |
 | `get_predictions_for_subject` | `(subject_type: str, subject_id: str, include_expired: bool = Query(False, descri` | yes | Get all predictions for a specific subject (PB-S5). |
 | `get_prediction_stats` | `(tenant_id: Optional[str] = Query(None, description='Filter by tenant'), include` | yes | Get prediction statistics (PB-S5). |
 
@@ -145,16 +138,12 @@
 | Module | Names | Relative |
 |--------|-------|----------|
 | `logging` | logging | no |
-| `datetime` | datetime | no |
 | `typing` | Optional | no |
-| `uuid` | UUID | no |
 | `fastapi` | APIRouter, Depends, HTTPException, Query | no |
 | `pydantic` | BaseModel | no |
-| `sqlalchemy` | func, select | no |
-| `auth.authority` | AuthorityResult, emit_authority_audit, require_predictions_read | yes |
-| `db` | get_async_session | yes |
-| `models.prediction` | PredictionEvent | yes |
-| `schemas.response` | wrap_dict | yes |
+| `app.auth.authority` | AuthorityResult, emit_authority_audit, require_predictions_read | no |
+| `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | get_operation_registry, get_session_dep, OperationContext | no |
+| `app.schemas.response` | wrap_dict | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -206,8 +195,8 @@
 | `typing` | Any, Dict, List, Optional | no |
 | `fastapi` | APIRouter, Depends, HTTPException, Query | no |
 | `pydantic` | BaseModel, Field | no |
-| `auth.console_auth` | verify_fops_token | yes |
-| `schemas.response` | wrap_dict | yes |
+| `app.auth.console_auth` | verify_fops_token | no |
+| `app.schemas.response` | wrap_dict | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 

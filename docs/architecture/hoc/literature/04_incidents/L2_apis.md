@@ -8,7 +8,7 @@
 
 ## cost_guard.py
 **Path:** `backend/app/hoc/api/cus/incidents/cost_guard.py`  
-**Layer:** L2_api | **Domain:** incidents | **Lines:** 556
+**Layer:** L2_api | **Domain:** incidents | **Lines:** 484
 
 **Docstring:** Guard Console Cost Visibility API - Customer Cost Transparency
 
@@ -18,6 +18,7 @@
 | `_map_trend` | `(deviation_pct: Optional[float]) -> tuple[Literal['normal', 'rising', 'spike'], ` | no | Map deviation to customer-friendly trend. |
 | `_map_severity_to_status` | `(severity: str) -> Literal['protected', 'attention_needed', 'resolved']` | no | Map internal severity to calm vocabulary. |
 | `_generate_summary` | `(by_feature: List[CostBreakdownItemDTO], by_model: List[CostBreakdownItemDTO], t` | no | Generate a one-sentence summary of cost drivers. |
+| `_dispatch` | `(session, tenant_id: str, method: str, **params)` | yes | Dispatch to L4 registry for cost_guard operations. |
 | `get_cost_summary` | `(tenant_id: str = Query(..., description='Your tenant ID'), token: CustomerToken` | yes | GET /guard/costs/summary |
 | `get_cost_explained` | `(tenant_id: str = Query(..., description='Your tenant ID'), period: Literal['tod` | yes | GET /guard/costs/explained |
 | `get_cost_incidents` | `(tenant_id: str = Query(..., description='Your tenant ID'), include_resolved: bo` | yes | GET /guard/costs/incidents |
@@ -28,12 +29,10 @@
 | `logging` | logging | no |
 | `datetime` | datetime, timedelta, timezone | no |
 | `typing` | List, Literal, Optional | no |
-| `fastapi` | APIRouter, Depends, Query | no |
-| `sqlalchemy` | text | no |
-| `sqlmodel` | Session | no |
+| `fastapi` | APIRouter, Depends, HTTPException, Query | no |
 | `app.auth.console_auth` | CustomerToken, verify_console_token | no |
 | `app.contracts.guard` | CostBreakdownItemDTO, CustomerCostExplainedDTO, CustomerCostIncidentDTO, CustomerCostIncidentListDTO, CustomerCostSummaryDTO | no |
-| `app.db` | get_session | no |
+| `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | get_operation_registry, get_sync_session_dep, OperationContext | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -47,7 +46,7 @@
 
 ## incidents.py
 **Path:** `backend/app/hoc/api/cus/incidents/incidents.py`  
-**Layer:** L2_api | **Domain:** incidents | **Lines:** 2023
+**Layer:** L2_api | **Domain:** incidents | **Lines:** 1922
 
 **Docstring:** Unified Incidents API (L2)
 
@@ -90,7 +89,7 @@
 | `require_preflight` | `() -> None` | no | Guard for preflight-only endpoints (O4, O5). |
 | `get_tenant_id_from_auth` | `(request: Request) -> str` | no | Extract tenant_id from auth_context. Raises 401/403 if missing. |
 | `list_incidents` | `(request: Request, topic: Annotated[Topic | None, Query(description='UX Topic: A` | yes | List incidents with unified query filters. Tenant-scoped. |
-| `get_incidents_for_run` | `(request: Request, run_id: str, session: AsyncSession = Depends(get_async_sessio` | yes | Get all incidents linked to a specific run. Tenant-scoped. |
+| `get_incidents_for_run` | `(request: Request, run_id: str, session = Depends(get_session_dep)) -> Incidents` | yes | Get all incidents linked to a specific run. Tenant-scoped. |
 | `detect_patterns` | `(request: Request, window_hours: Annotated[int, Query(ge=1, le=168, description=` | yes | Detect incident patterns. Tenant-scoped. |
 | `analyze_recurrence` | `(request: Request, baseline_days: Annotated[int, Query(ge=1, le=90, description=` | yes | Analyze recurring incident patterns. Tenant-scoped. |
 | `analyze_cost_impact` | `(request: Request, baseline_days: Annotated[int, Query(ge=1, le=90, description=` | yes | Analyze cost impact across incidents. Tenant-scoped. |
@@ -101,10 +100,10 @@
 | `get_historical_trend` | `(request: Request, window_days: Annotated[int, Query(ge=7, le=365, description='` | yes | Get historical trend. Backend-computed, deterministic. |
 | `get_historical_distribution` | `(request: Request, window_days: Annotated[int, Query(ge=7, le=365, description='` | yes | Get historical distribution. Backend-computed, deterministic. |
 | `get_historical_cost_trend` | `(request: Request, window_days: Annotated[int, Query(ge=7, le=365, description='` | yes | Get historical cost trend. Backend-computed, deterministic. |
-| `get_incident_detail` | `(request: Request, incident_id: str, session: AsyncSession = Depends(get_async_s` | yes | Get incident detail (O3). Tenant isolation enforced. |
+| `get_incident_detail` | `(request: Request, incident_id: str, session = Depends(get_session_dep)) -> Inci` | yes | Get incident detail (O3). Tenant isolation enforced. |
 | `get_incident_evidence` | `(request: Request, incident_id: str) -> dict[str, Any]` | yes | Get incident evidence (O4). Preflight console only. |
 | `get_incident_proof` | `(request: Request, incident_id: str) -> dict[str, Any]` | yes | Get incident proof (O5). Preflight console only. |
-| `get_incident_learnings` | `(request: Request, incident_id: str, session: AsyncSession = Depends(get_async_s` | yes | Get post-mortem learnings for an incident. Tenant-scoped. |
+| `get_incident_learnings` | `(request: Request, incident_id: str, session = Depends(get_session_dep)) -> Lear` | yes | Get post-mortem learnings for an incident. Tenant-scoped. |
 | `export_evidence` | `(request: Request, incident_id: str, export_request: ExportRequest) -> Any` | yes | Export incident evidence bundle. |
 | `export_soc2` | `(request: Request, incident_id: str, export_request: ExportRequest) -> Any` | yes | Export SOC2-compliant bundle as PDF. |
 | `export_executive_debrief` | `(request: Request, incident_id: str, export_request: ExportRequest) -> Any` | yes | Export executive debrief as PDF. |
@@ -119,13 +118,9 @@
 | `typing` | Annotated, Any, List, Optional | no |
 | `fastapi` | APIRouter, Depends, HTTPException, Query, Request | no |
 | `pydantic` | BaseModel | no |
-| `sqlalchemy` | func, select | no |
-| `sqlalchemy.ext.asyncio` | AsyncSession | no |
 | `app.auth.gateway_middleware` | get_auth_context | no |
-| `app.db` | get_async_session_dep | no |
-| `app.models.killswitch` | Incident | no |
 | `app.schemas.response` | wrap_dict | no |
-| `app.hoc.cus.incidents.L5_engines.incidents_facade` | get_incidents_facade | no |
+| `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -134,12 +129,6 @@
 **SHOULD call:** L3_adapters
 **MUST NOT call:** L5_engines, L6_drivers, L7_models
 **Called by:** L2.1_facade
-
-### Violations
-| Import | Rule Broken | Required Fix | Line |
-|--------|-------------|-------------|------|
-| `from app.models.killswitch import Incident` | L2 MUST NOT import L7 models | Use L5 schemas or response models | 54 |
-| `from app.hoc.cus.incidents.L5_engines.incidents_facade import get_incidents_facade` | L2 MUST NOT import L5 directly | Route through L3 adapter | 57 |
 
 ### Constants
 `_CURRENT_ENVIRONMENT`

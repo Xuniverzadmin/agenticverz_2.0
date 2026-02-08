@@ -66,13 +66,13 @@
 | `dataclasses` | dataclass | no |
 | `datetime` | datetime, timezone | no |
 | `typing` | Any, Dict, List, Optional | no |
-| `vault` | CredentialData, CredentialMetadata, CredentialType, CredentialVault | yes |
+| `drivers.vault` | CredentialData, CredentialMetadata, CredentialType, CredentialVault | yes |
 
 ---
 
 ## vault.py
 **Path:** `backend/app/hoc/cus/integrations/L5_vault/drivers/vault.py`  
-**Layer:** L5_other | **Domain:** integrations | **Lines:** 749
+**Layer:** L5_other | **Domain:** integrations | **Lines:** 1050
 
 **Docstring:** Credential Vault Abstraction (GAP-171)
 
@@ -86,11 +86,12 @@
 | `CredentialVault` | store_credential, get_credential, get_metadata, list_credentials, update_credential, delete_credential, rotate_credential | Abstract credential vault interface. |
 | `HashiCorpVault` | __init__, store_credential, get_credential, get_metadata, list_credentials, update_credential, delete_credential, rotate_credential | HashiCorp Vault implementation. |
 | `EnvCredentialVault` | __init__, store_credential, get_credential, get_metadata, list_credentials, update_credential, delete_credential, rotate_credential | Environment variable credential vault (development only). |
+| `AwsSecretsManagerVault` | __init__, _get_client, _secret_id, store_credential, get_credential, get_metadata, list_credentials, update_credential (+2 more) | AWS Secrets Manager implementation (PIN-517 FIX 3). |
 
 ### Functions
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
-| `create_credential_vault` | `() -> CredentialVault` | no | Factory function to create appropriate vault based on configuration. |
+| `create_credential_vault` | `() -> CredentialVault` | no | Factory function to create appropriate vault based on scope and configuration. |
 
 ### Imports
 | Module | Names | Relative |
@@ -102,5 +103,6 @@
 | `datetime` | datetime, timezone | no |
 | `enum` | Enum | no |
 | `typing` | Any, Dict, Optional | no |
+| `typing` | Literal | no |
 
 ---

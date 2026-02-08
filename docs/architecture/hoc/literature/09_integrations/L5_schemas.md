@@ -62,7 +62,7 @@
 | `datetime` | date, datetime | no |
 | `typing` | Any, Dict, List, Optional | no |
 | `pydantic` | BaseModel, Field, field_validator | no |
-| `app.models.cus_models` | CusHealthState, CusIntegrationStatus, CusPolicyResult, CusProviderType | no |
+| `app.hoc.cus.integrations.L5_schemas.cus_enums` | CusHealthState, CusIntegrationStatus, CusPolicyResult, CusProviderType | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -75,7 +75,7 @@
 
 ## datasource_model.py
 **Path:** `backend/app/hoc/cus/integrations/L5_schemas/datasource_model.py`  
-**Layer:** L5_schemas | **Domain:** integrations | **Lines:** 582
+**Layer:** L5_schemas | **Domain:** integrations | **Lines:** 584
 
 **Docstring:** CustomerDataSource - Customer data source models and registry.
 

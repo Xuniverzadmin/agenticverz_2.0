@@ -8,7 +8,7 @@
 
 ## memory_pins.py
 **Path:** `backend/app/hoc/api/cus/account/memory_pins.py`  
-**Layer:** L2_api | **Domain:** account | **Lines:** 578
+**Layer:** L2_api | **Domain:** account | **Lines:** 363
 
 **Docstring:** Memory Pins API - M7 Implementation
 
@@ -23,10 +23,9 @@
 ### Functions
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
-| `check_feature_enabled` | `()` | no | Check if memory pins feature is enabled. |
 | `extract_tenant_from_request` | `(request: Request, tenant_id: Optional[str] = None) -> str` | no | Extract tenant ID from request or parameter. |
-| `write_memory_audit` | `(db, operation: str, tenant_id: str, key: str, success: bool, latency_ms: float,` | no | Write an audit entry to system.memory_audit. |
-| `create_or_upsert_pin` | `(pin: MemoryPinCreate, request: Request, db = Depends(get_db_session))` | yes | Create or upsert a memory pin. |
+| `_pin_row_to_response` | `(pin: Any) -> MemoryPinResponse` | no | Convert a MemoryPinRow dataclass to response model. |
+| `create_or_upsert_pin` | `(pin: MemoryPinCreate, request: Request, session = Depends(get_session_dep))` | yes | Create or upsert a memory pin. |
 | `get_pin` | `(key: str, request: Request, tenant_id: str = Query(default='global', descriptio` | yes | Get a memory pin by key. |
 | `list_pins` | `(request: Request, tenant_id: str = Query(default='global', description='Tenant ` | yes | List memory pins for a tenant. |
 | `delete_pin` | `(key: str, request: Request, tenant_id: str = Query(default='global', descriptio` | yes | Delete a memory pin by key. |
@@ -36,16 +35,12 @@
 | Module | Names | Relative |
 |--------|-------|----------|
 | `logging` | logging | no |
-| `os` | os | no |
-| `datetime` | datetime, timezone | no |
+| `datetime` | datetime | no |
 | `typing` | Any, Dict, List, Optional | no |
 | `fastapi` | APIRouter, Depends, HTTPException, Query, Request | no |
 | `pydantic` | BaseModel, Field, field_validator | no |
-| `sqlalchemy` | text | no |
-| `sqlalchemy.exc` | IntegrityError | no |
-| `db` | get_session | yes |
-| `schemas.response` | wrap_dict | yes |
-| `utils.metrics_helpers` | get_or_create_counter, get_or_create_histogram | yes |
+| `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_session_dep | no |
+| `app.schemas.response` | wrap_dict | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -54,8 +49,5 @@
 **SHOULD call:** L3_adapters
 **MUST NOT call:** L5_engines, L6_drivers, L7_models
 **Called by:** L2.1_facade
-
-### Constants
-`MEMORY_PINS_ENABLED`, `MEMORY_PINS_OPERATIONS`, `MEMORY_PINS_LATENCY`
 
 ---

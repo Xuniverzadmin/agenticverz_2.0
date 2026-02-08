@@ -1,4 +1,4 @@
-# Policies — L5 Engines (61 files)
+# Policies — L5 Engines (51 files)
 
 **Domain:** policies  
 **Layer:** L5_engines  
@@ -139,38 +139,6 @@
 
 ---
 
-## claim_decision_engine.py
-**Path:** `backend/app/hoc/cus/policies/L5_engines/claim_decision_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 123
-
-**Docstring:** Domain engine for recovery claim decisions.
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `is_candidate_claimable` | `(confidence: Optional[float]) -> bool` | no | Determine if a candidate is eligible for claiming based on confidence. |
-| `determine_claim_status` | `(evaluation_result: Dict[str, Any]) -> str` | no | Determine the execution status from an evaluation result. |
-| `get_result_confidence` | `(evaluation_result: Dict[str, Any]) -> float` | no | Extract confidence from evaluation result with default fallback. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `os` | os | no |
-| `typing` | Any, Dict, Optional | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### __all__ Exports
-`CLAIM_ELIGIBILITY_THRESHOLD`, `is_candidate_claimable`, `determine_claim_status`, `get_result_confidence`
-
----
-
 ## compiler_parser.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/compiler_parser.py`  
 **Layer:** L5_engines | **Domain:** policies | **Lines:** 460
@@ -237,36 +205,6 @@
 
 ### Constants
 `DEFINITIVE_PATTERNS`, `UNCERTAINTY_PATTERNS`, `HEDGED_PATTERNS`, `CONTRACT_TERMS`
-
----
-
-## cus_enforcement_service.py
-**Path:** `backend/app/hoc/cus/policies/L5_engines/cus_enforcement_service.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 80
-
-**Docstring:** CusEnforcementService (SWEEP-03 Batch 2)
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `get_cus_enforcement_service` | `() -> CusEnforcementService` | no | Get the CusEnforcementService instance. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `typing` | TYPE_CHECKING | no |
-| `app.services.cus_enforcement_engine` | CusEnforcementEngine, EnforcementDecision, EnforcementReason, EnforcementResult, get_cus_enforcement_engine | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### __all__ Exports
-`CusEnforcementService`, `CusEnforcementEngine`, `EnforcementResult`, `EnforcementReason`, `EnforcementDecision`, `get_cus_enforcement_service`, `get_cus_enforcement_engine`
 
 ---
 
@@ -387,7 +325,7 @@
 
 ## deterministic_engine.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/deterministic_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 513
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 560
 
 **Docstring:** Deterministic execution engine for PLang v2.0.
 
@@ -399,16 +337,23 @@
 | `ExecutionResult` | to_dict | Result of policy execution. |
 | `DeterministicEngine` | __init__, _register_builtins, execute, _execute_function, _execute_instruction, _eval_binary_op, _eval_unary_op, _eval_compare (+2 more) | Deterministic policy execution engine. |
 
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `safe_regex_match` | `(input_str: str, pattern: str) -> bool` | no | Safe regex match with length limits and ReDoS guards. |
+
 ### Imports
 | Module | Names | Relative |
 |--------|-------|----------|
 | `hashlib` | hashlib | no |
+| `re` | re | no |
 | `dataclasses` | dataclass, field | no |
 | `enum` | Enum, auto | no |
 | `typing` | Any, Callable, Dict, List, Optional | no |
+| `app.hoc.cus.policies.L5_schemas.policy_check` | PolicyCheckValidator | no |
 | `app.policy.compiler.grammar` | ActionType, PolicyCategory | no |
 | `app.policy.ir.ir_nodes` | IRAction, IRBinaryOp, IRCall, IRCheckPolicy, IRCompare (+11) | no |
-| `app.policy.runtime.intent` | Intent, IntentEmitter, IntentPayload, IntentType | no |
+| `app.hoc.cus.policies.L5_engines.intent` | Intent, IntentEmitter, IntentPayload, IntentType | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -417,6 +362,9 @@
 **SHOULD call:** L6_drivers, L5_schemas
 **MUST NOT call:** L2_api, L3_adapters, L7_models
 **Called by:** L3_adapters, L4_runtime
+
+### Constants
+`MAX_PATTERN_LEN`, `MAX_INPUT_LEN`, `_REDOS_PATTERN`
 
 ---
 
@@ -460,65 +408,14 @@
 
 ---
 
-## eligibility_engine.py
-**Path:** `backend/app/hoc/cus/policies/L5_engines/eligibility_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 836
-
-**Docstring:** Part-2 Eligibility Engine (L4)
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `EligibilityDecision` |  | Binary eligibility decision. |
-| `SystemHealthStatus` |  | System health status for E-104 rule. |
-| `EligibilityConfig` |  | Eligibility engine configuration. |
-| `CapabilityLookup` | exists, is_frozen | Protocol for capability registry lookups. |
-| `GovernanceSignalLookup` | has_blocking_signal | Protocol for governance signal lookups. |
-| `SystemHealthLookup` | get_status | Protocol for system health lookups. |
-| `ContractLookup` | has_similar_pending | Protocol for contract lookups. |
-| `PreApprovalLookup` | has_system_pre_approval | Protocol for pre-approval lookups. |
-| `DefaultCapabilityLookup` | __init__, exists, is_frozen | Default capability lookup using provided registry. |
-| `DefaultGovernanceSignalLookup` | __init__, has_blocking_signal | Default governance signal lookup with no blocking signals. |
-| `DefaultSystemHealthLookup` | __init__, get_status | Default system health lookup returning HEALTHY. |
-| `DefaultContractLookup` | __init__, has_similar_pending | Default contract lookup with no pending contracts. |
-| `DefaultPreApprovalLookup` | __init__, has_system_pre_approval | Default pre-approval lookup with no pre-approvals. |
-| `EligibilityInput` |  | Input to the eligibility engine. |
-| `RuleResult` |  | Result of evaluating a single rule. |
-| `EligibilityVerdict` |  | Output from the eligibility engine. |
-| `EligibilityEngine` | __init__, evaluate, _evaluate_e104_health_degraded, _evaluate_e100_below_minimum_confidence, _evaluate_e101_critical_without_escalation, _evaluate_e102_frozen_capability, _evaluate_e103_system_scope_without_preapproval, _evaluate_e001_confidence_threshold (+6 more) | Part-2 Eligibility Engine (L4) |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `dataclasses` | dataclass | no |
-| `datetime` | datetime, timezone | no |
-| `decimal` | Decimal | no |
-| `enum` | Enum | no |
-| `typing` | Any, Optional, Protocol | no |
-| `uuid` | UUID | no |
-| `app.hoc.cus.general.L4_runtime.engines` | IssueType, RecommendedAction, Severity, ValidatorVerdict | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### Constants
-`ELIGIBILITY_ENGINE_VERSION`, `DEFAULT_ELIGIBILITY_CONFIG`
-
----
-
 ## engine.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 2843
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 2779
 
 ### Classes
 | Name | Methods | Docstring |
 |------|---------|-----------|
-| `PolicyEngine` | __init__, evaluate, pre_check, _check_ethical_constraints, _evaluate_ethical_constraint, _extract_text_content, _check_safety_rules, _evaluate_safety_rule (+50 more) | M19 Policy Engine - Constitutional Governance Layer. |
+| `PolicyEngine` | __init__, driver, evaluate, pre_check, _check_ethical_constraints, _evaluate_ethical_constraint, _extract_text_content, _check_safety_rules (+53 more) | M19 Policy Engine - Constitutional Governance Layer. |
 
 ### Functions
 | Name | Signature | Async | Docstring |
@@ -529,6 +426,7 @@
 | Module | Names | Relative |
 |--------|-------|----------|
 | `__future__` | annotations | no |
+| `hashlib` | hashlib | no |
 | `json` | json | no |
 | `logging` | logging | no |
 | `os` | os | no |
@@ -538,7 +436,6 @@
 | `typing` | TYPE_CHECKING, Any, Dict, List, Optional (+1) | no |
 | `uuid` | uuid4 | no |
 | `app.hoc.cus.policies.L6_drivers.policy_engine_driver` | PolicyEngineDriver, get_policy_engine_driver | no |
-| `sqlalchemy.exc` | SQLAlchemyError | no |
 | `app.policy.models` | ActionType, BusinessRule, BusinessRuleType, EthicalConstraint, EthicalConstraintType (+14) | no |
 | `app.contracts.decisions` | emit_policy_decision | no |
 
@@ -550,11 +447,6 @@
 **MUST NOT call:** L2_api, L3_adapters, L7_models
 **Called by:** L3_adapters, L4_runtime
 
-### Violations
-| Import | Rule Broken | Required Fix | Line |
-|--------|-------------|-------------|------|
-| `from sqlalchemy.exc import SQLAlchemyError` | L5 MUST NOT import sqlalchemy | Move DB logic to L6 driver | 102 |
-
 ### Constants
 `POLICY_SIGNING_SECRET`, `MAX_EVALUATION_TIME_MS`, `CACHE_TTL_SECONDS`, `DEFAULT_COST_CEILING_PER_HOUR`, `DEFAULT_RETRY_CEILING_PER_MINUTE`, `DEFAULT_CASCADE_DEPTH`, `DEFAULT_CONCURRENT_AGENTS`
 
@@ -562,7 +454,7 @@
 
 ## failure_mode_handler.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/failure_mode_handler.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 273
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 296
 
 **Docstring:** Module: failure_mode_handler
 
@@ -576,6 +468,7 @@
 ### Functions
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
+| `set_governance_config_getter` | `(getter: Callable[[], Any]) -> None` | no | Set the governance config getter for L5 purity (PIN-520). |
 | `get_failure_mode` | `() -> FailureMode` | no | Get configured failure mode. |
 | `handle_policy_failure` | `(error: Optional[Exception], context: Dict[str, Any], failure_type: FailureType ` | no | Handle a policy evaluation failure. |
 | `handle_missing_policy` | `(context: Dict[str, Any]) -> FailureDecision` | no | Handle case where no policy exists for the action. |
@@ -587,7 +480,7 @@
 |--------|-------|----------|
 | `dataclasses` | dataclass | no |
 | `enum` | Enum | no |
-| `typing` | Optional, Any, Dict | no |
+| `typing` | Optional, Any, Dict, Callable | no |
 | `datetime` | datetime, timezone | no |
 | `logging` | logging | no |
 
@@ -637,7 +530,7 @@
 
 ## governance_facade.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/governance_facade.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 618
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 740
 
 **Docstring:** Governance Facade (L4 Domain Logic)
 
@@ -654,7 +547,7 @@
 ### Functions
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
-| `get_governance_facade` | `() -> GovernanceFacade` | no | Get the governance facade instance. |
+| `get_governance_facade` | `(runtime_switch: Optional[ModuleType] = None) -> GovernanceFacade` | no | Get the governance facade instance. |
 
 ### Imports
 | Module | Names | Relative |
@@ -663,6 +556,7 @@
 | `dataclasses` | dataclass | no |
 | `datetime` | datetime, timezone | no |
 | `enum` | Enum | no |
+| `types` | ModuleType | no |
 | `typing` | Any, Dict, List, Optional | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
@@ -712,7 +606,7 @@
 
 ## intent.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/intent.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 365
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 405
 
 **Docstring:** Intent system for PLang v2.0 runtime.
 
@@ -729,10 +623,12 @@
 |--------|-------|----------|
 | `hashlib` | hashlib | no |
 | `json` | json | no |
+| `logging` | logging | no |
 | `dataclasses` | dataclass, field | no |
 | `datetime` | datetime, timezone | no |
 | `enum` | Enum, auto | no |
-| `typing` | Any, Callable, Dict, List, Optional | no |
+| `typing` | Any, Awaitable, Callable, Dict, List (+1) | no |
+| `app.hoc.cus.policies.L5_schemas.intent_validation` | PolicyIntentValidationResult, PolicyIntentValidator | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -741,6 +637,9 @@
 **SHOULD call:** L6_drivers, L5_schemas
 **MUST NOT call:** L2_api, L3_adapters, L7_models
 **Called by:** L3_adapters, L4_runtime
+
+### Constants
+`_ENFORCEMENT_INTENT_TYPES`
 
 ---
 
@@ -957,50 +856,6 @@
 
 ---
 
-## keys_shim.py
-**Path:** `backend/app/hoc/cus/policies/L5_engines/keys_shim.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 152
-
-**Docstring:** Keys Service (L4) — DEPRECATED SHIM
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `KeysReadService` | __init__, list_keys, get_key, get_key_usage_today | L4 service for API key read operations. |
-| `KeysWriteService` | __init__, freeze_key, unfreeze_key | L4 service for API key write operations. |
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `get_keys_read_service` | `(session: 'Session') -> KeysReadService` | no | Factory function to get KeysReadService instance. |
-| `get_keys_write_service` | `(session: 'Session') -> KeysWriteService` | no | Factory function to get KeysWriteService instance. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `datetime` | datetime | no |
-| `typing` | TYPE_CHECKING, List, Optional, Tuple | no |
-| `app.hoc.cus.apis.L6_drivers.keys_driver` | KeysDriver, get_keys_driver | no |
-| `app.models.tenant` | APIKey | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### Violations
-| Import | Rule Broken | Required Fix | Line |
-|--------|-------------|-------------|------|
-| `from app.models.tenant import APIKey` | L5 MUST NOT import L7 models directly | Route through L6 driver | 49 |
-
-### __all__ Exports
-`KeysReadService`, `KeysWriteService`, `get_keys_read_service`, `get_keys_write_service`
-
----
-
 ## kill_switch.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/kill_switch.py`  
 **Layer:** L5_engines | **Domain:** policies | **Lines:** 223
@@ -1041,54 +896,9 @@
 
 ---
 
-## learning_proof_engine.py
-**Path:** `backend/app/hoc/cus/policies/L5_engines/learning_proof_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 850
-
-**Docstring:** M25 Learning Proof System
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `PreventionOutcome` |  | Outcome of a prevention attempt. |
-| `PreventionRecord` | create_prevention, to_console_timeline | Evidence that a policy prevented a recurrence. |
-| `PreventionTracker` | record_prevention, record_failure, prevention_rate, has_proven_prevention, get_top_preventing_patterns | Tracks prevention effectiveness across policies. |
-| `RegretType` |  | Types of policy regret. |
-| `RegretEvent` |  | A single regret event - when a policy caused harm. |
-| `PolicyRegretTracker` | add_regret, _trigger_demotion, decay_regret, is_demoted, to_rollback_timeline | Tracks regret for individual policies. |
-| `GlobalRegretTracker` | get_or_create_tracker, record_regret, has_proven_rollback, system_regret_rate | System-wide regret tracking. |
-| `PatternCalibration` | record_outcome, _recalibrate, accuracy, is_calibrated, get_calibrated_band | Per-pattern confidence calibration based on actual outcomes. |
-| `AdaptiveConfidenceSystem` | get_or_create_calibration, record_outcome, get_threshold_for_pattern, get_confidence_report | System-wide adaptive confidence management. |
-| `CheckpointPriority` |  | Priority levels for human checkpoints. |
-| `CheckpointConfig` | is_blocking, get_priority, should_auto_dismiss | Per-tenant checkpoint configuration. |
-| `PrioritizedCheckpoint` | create, check_auto_dismiss | Enhanced checkpoint with priority and configurability. |
-| `M25GraduationStatus` | gate1_passed, gate2_passed, gate3_passed, is_graduated, status_label, to_dashboard, _get_next_action | The three gates that graduate M25 from "loop-enabled" to "loop-proven". |
-| `PreventionTimeline` | add_incident_created, add_policy_born, add_prevention, add_regret, add_rollback, to_console, _generate_narrative | Console-ready timeline showing the learning loop in action. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `__future__` | annotations | no |
-| `uuid` | uuid | no |
-| `collections` | defaultdict | no |
-| `dataclasses` | dataclass, field | no |
-| `datetime` | datetime, timedelta, timezone | no |
-| `enum` | Enum | no |
-| `typing` | Optional | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
----
-
 ## lessons_engine.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/lessons_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 1080
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 1082
 
 **Docstring:** Lessons Learned Engine (L4 Domain Logic)
 
@@ -1102,7 +912,7 @@
 |------|-----------|-------|-----------|
 | `is_valid_transition` | `(from_status: str, to_status: str) -> bool` | no | Check if a state transition is valid. |
 | `get_threshold_band` | `(utilization: float) -> str` | no | Get the threshold band for a utilization percentage. |
-| `get_lessons_learned_engine` | `() -> LessonsLearnedEngine` | no | Get the singleton LessonsLearnedEngine instance. |
+| `get_lessons_learned_engine` | `(driver: Any = None) -> LessonsLearnedEngine` | no | Get a LessonsLearnedEngine instance. |
 
 ### Imports
 | Module | Names | Relative |
@@ -1113,8 +923,7 @@
 | `typing` | TYPE_CHECKING, Any, Dict, List, Optional | no |
 | `uuid` | UUID, uuid4 | no |
 | `prometheus_client` | Counter | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
-| `app.hoc.cus.incidents.L6_drivers.lessons_driver` | LessonsDriver, get_lessons_driver | no |
+| `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -1205,86 +1014,6 @@
 **SHOULD call:** L6_drivers, L5_schemas
 **MUST NOT call:** L2_api, L3_adapters, L7_models
 **Called by:** L3_adapters, L4_runtime
-
----
-
-## limits_simulation_service.py
-**Path:** `backend/app/hoc/cus/policies/L5_engines/limits_simulation_service.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 80
-
-**Docstring:** LimitsSimulationService (SWEEP-03 Batch 2)
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `get_limits_simulation_service` | `(session: 'AsyncSession') -> LimitsSimulationService` | no | Get the LimitsSimulationService instance. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `typing` | TYPE_CHECKING | no |
-| `app.services.limits.simulation_engine` | LimitsSimulationEngine, LimitsSimulationServiceError, TenantNotFoundError, get_limits_simulation_engine | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### __all__ Exports
-`LimitsSimulationService`, `LimitsSimulationEngine`, `LimitsSimulationServiceError`, `TenantNotFoundError`, `get_limits_simulation_service`, `get_limits_simulation_engine`
-
----
-
-## llm_policy_engine.py
-**Path:** `backend/app/hoc/cus/policies/L5_engines/llm_policy_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 442
-
-**Docstring:** L4 LLM Policy Engine - Domain Authority for LLM Safety and Cost Controls
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `SafetyCheckResult` |  | Result of a safety limit check. |
-| `LLMRateLimiter` | get_instance, __init__, check_and_record, requests_remaining | Sliding window rate limiter for LLM requests (L4 policy enforcement). |
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `estimate_tokens` | `(text: str) -> int` | no | Estimate token count for text (L4 domain function). |
-| `estimate_cost_cents` | `(model: str, input_tokens: int, output_tokens: int) -> float` | no | Estimate cost in cents (L4 domain function). |
-| `check_safety_limits` | `(model: str, max_tokens: int, estimated_input_tokens: int, provider: str = 'defa` | no | Check safety limits before making LLM API call (L4 domain function). |
-| `is_model_allowed` | `(model: str, tenant_allowed_models: Optional[List[str]] = None) -> bool` | no | Check if a model is allowed (L4 domain function). |
-| `is_expensive_model` | `(model: str) -> bool` | no | Check if a model is classified as expensive (L4 domain function). |
-| `get_model_for_task` | `(task_type: str, requested_model: Optional[str] = None, tenant_allowed_models: O` | no | Get appropriate model for a task type (L4 policy decision). |
-| `get_effective_model` | `(requested_model: Optional[str], preferred_model: str, fallback_model: str, allo` | no | Get effective model based on request and tenant config (L4 policy decision). |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `logging` | logging | no |
-| `os` | os | no |
-| `threading` | threading | no |
-| `time` | time | no |
-| `collections` | deque | no |
-| `dataclasses` | dataclass, field | no |
-| `typing` | Any, Dict, List, Optional | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### Constants
-`LLM_MAX_TOKENS_PER_REQUEST`, `LLM_MAX_COST_CENTS_PER_REQUEST`, `LLM_REQUESTS_PER_MINUTE`, `DEFAULT_MODELS`, `FALLBACK_MODEL`
-
-### __all__ Exports
-`LLM_MAX_TOKENS_PER_REQUEST`, `LLM_MAX_COST_CENTS_PER_REQUEST`, `LLM_REQUESTS_PER_MINUTE`, `LLM_ALLOWED_MODELS`, `LLM_COST_MODEL`, `SYSTEM_ALLOWED_MODELS`, `EXPENSIVE_MODELS`, `TASK_MODEL_POLICY`, `SafetyCheckResult`, `LLMRateLimiter`, `estimate_tokens`, `estimate_cost_cents`, `check_safety_limits`, `is_model_allowed`, `is_expensive_model`, `get_model_for_task`, `get_effective_model`
 
 ---
 
@@ -1408,61 +1137,54 @@
 
 ---
 
-## plan_generation_engine.py
-**Path:** `backend/app/hoc/cus/policies/L5_engines/plan_generation_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 257
+## policies_facade.py
+**Path:** `backend/app/hoc/cus/policies/L5_engines/policies_facade.py`  
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 1193
 
-**Docstring:** Domain engine for plan generation.
+**Docstring:** PoliciesFacade (L5)
 
 ### Classes
 | Name | Methods | Docstring |
 |------|---------|-----------|
-| `PlanGenerationContext` |  | Context for plan generation. |
-| `PlanGenerationResult` |  | Result of plan generation. |
-| `PlanGenerationEngine` | __init__, generate | L4 Domain Engine for plan generation. |
+| `PolicyRuleSummaryResult` |  | Policy rule summary for list view (O2). |
+| `PolicyRulesListResult` |  | Policy rules list response. |
+| `PolicyRuleDetailResult` |  | Policy rule detail response (O3). |
+| `LimitSummaryResult` |  | Limit summary for list view (O2). |
+| `LimitsListResult` |  | Limits list response. |
+| `LimitDetailResult` |  | Limit detail response (O3). |
+| `PolicyStateResult` |  | Policy layer state summary (ACT-O4). |
+| `PolicyMetricsResult` |  | Policy enforcement metrics (ACT-O5). |
+| `PolicyConflictResult` |  | Policy conflict summary (DFT-O4). |
+| `ConflictsListResult` |  | Policy conflicts list response. |
+| `PolicyDependencyRelation` |  | A dependency relationship. |
+| `PolicyNodeResult` |  | A node in the dependency graph (DFT-O5). |
+| `PolicyDependencyEdge` |  | A dependency edge in the graph. |
+| `DependencyGraphResult` |  | Policy dependency graph response. |
+| `PolicyViolationResult` |  | Policy violation summary (VIO-O1). |
+| `ViolationsListResult` |  | Policy violations list response. |
+| `BudgetDefinitionResult` |  | Budget definition summary (THR-O2). |
+| `BudgetsListResult` |  | Budget definitions list response. |
+| `PolicyRequestResult` |  | Pending policy request summary (ACT-O3). |
+| `PolicyRequestsListResult` |  | Policy requests list response. |
+| `LessonSummaryResult` |  | Lesson summary for list view (O2). |
+| `LessonsListResult` |  | Lessons list response. |
+| `LessonDetailResult` |  | Lesson detail response (O3). |
+| `LessonStatsResult` |  | Lesson statistics response. |
+| `PoliciesFacade` | __init__, list_policy_rules, get_policy_rule_detail, list_limits, get_limit_detail, list_lessons, get_lesson_detail, get_lesson_stats (+7 more) | Unified facade for policy management. |
 
 ### Functions
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
-| `generate_plan_for_run` | `(agent_id: str, goal: str, run_id: str) -> PlanGenerationResult` | no | Convenience function to generate a plan for a run. |
+| `get_policies_facade` | `(driver: Optional[PoliciesFacadeDriver] = None) -> PoliciesFacade` | no | Get the singleton PoliciesFacade instance. |
 
 ### Imports
 | Module | Names | Relative |
 |--------|-------|----------|
-| `json` | json | no |
-| `logging` | logging | no |
-| `dataclasses` | dataclass | no |
-| `typing` | Any, Dict, List, Optional | no |
-| `app.memory` | get_retriever | no |
-| `app.planners` | get_planner | no |
-| `app.skills` | get_skill_manifest | no |
-| `app.utils.budget_tracker` | get_budget_tracker | no |
-| `app.utils.plan_inspector` | validate_plan | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### __all__ Exports
-`PlanGenerationContext`, `PlanGenerationResult`, `PlanGenerationEngine`, `generate_plan_for_run`
-
----
-
-## policies_facade.py
-**Path:** `backend/app/hoc/cus/policies/L5_engines/policies_facade.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 111
-
-**Docstring:** PoliciesFacade (SWEEP-03 Batch 3)
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `typing` | TYPE_CHECKING | no |
-| `app.services.policies_facade` | PoliciesFacade, get_policies_facade, PolicyRuleSummaryResult, PolicyRulesListResult, PolicyRuleDetailResult (+21) | no |
+| `dataclasses` | dataclass, field | no |
+| `datetime` | datetime, timedelta, timezone | no |
+| `decimal` | Decimal | no |
+| `typing` | Any, Optional | no |
+| `app.hoc.cus.policies.L6_drivers.policies_facade_driver` | PoliciesFacadeDriver | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -1479,7 +1201,7 @@
 
 ## policies_limits_query_engine.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/policies_limits_query_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 318
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 343
 
 **Docstring:** Limits Query Engine (L5)
 
@@ -1496,7 +1218,7 @@
 ### Functions
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
-| `get_limits_query_engine` | `(session: 'AsyncSession') -> LimitsQueryEngine` | no | Get a LimitsQueryEngine instance. |
+| `get_limits_query_engine` | `(session: 'AsyncSession' = None) -> LimitsQueryEngine` | no | Get a LimitsQueryEngine instance. |
 
 ### Imports
 | Module | Names | Relative |
@@ -1505,7 +1227,6 @@
 | `datetime` | datetime | no |
 | `decimal` | Decimal | no |
 | `typing` | TYPE_CHECKING, Any, Optional | no |
-| `app.hoc.cus.controls.L6_drivers.limits_read_driver` | LimitsReadDriver, get_limits_read_driver | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -1522,7 +1243,7 @@
 
 ## policies_proposals_query_engine.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/policies_proposals_query_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 224
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 294
 
 **Docstring:** Proposals Query Engine (L5)
 
@@ -1532,7 +1253,7 @@
 | `PolicyRequestResult` |  | Pending policy request summary (ACT-O3). |
 | `PolicyRequestsListResult` |  | Policy requests list response. |
 | `PolicyRequestDetailResult` |  | Policy request detail response. |
-| `ProposalsQueryEngine` | __init__, list_policy_requests, get_policy_request_detail, count_drafts | L5 Query Engine for policy proposals. |
+| `ProposalsQueryEngine` | __init__, list_policy_requests, get_policy_request_detail, count_drafts, list_proposals_paginated, get_proposal_stats, get_proposal_detail, list_proposal_versions | L5 Query Engine for policy proposals. |
 
 ### Functions
 | Name | Signature | Async | Docstring |
@@ -1603,7 +1324,7 @@
 
 ## policy_command.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/policy_command.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 478
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 480
 
 **Docstring:** Policy Command (L4)
 
@@ -1699,14 +1420,14 @@
 
 ## policy_driver.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/policy_driver.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 415
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 424
 
 **Docstring:** Policy Domain Driver (INTERNAL)
 
 ### Classes
 | Name | Methods | Docstring |
 |------|---------|-----------|
-| `PolicyDriver` | __init__, _engine, evaluate, pre_check, get_state, reload_policies, get_violations, get_violation (+29 more) | Driver for Policy domain operations (INTERNAL). |
+| `PolicyDriver` | __init__, _engine, policy_engine_driver, evaluate, pre_check, get_state, reload_policies, get_violations (+30 more) | Driver for Policy domain operations (INTERNAL). |
 
 ### Functions
 | Name | Signature | Async | Docstring |
@@ -1731,58 +1452,9 @@
 
 ---
 
-## policy_graph_engine.py
-**Path:** `backend/app/hoc/cus/policies/L5_engines/policy_graph_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 797
-
-**Docstring:** Policy Graph Engine — Conflict Detection & Dependency Analysis
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `ConflictType` |  | Conflict taxonomy (LOCKED). |
-| `ConflictSeverity` |  | Conflict severity levels. |
-| `DependencyType` |  | Dependency types (LOCKED). |
-| `PolicyConflict` | to_dict | A detected conflict between two policies. |
-| `PolicyDependency` | to_dict | A dependency relationship between policies. |
-| `PolicyNode` | to_dict | A node in the dependency graph. |
-| `DependencyGraphResult` | to_dict | Result of dependency graph computation. |
-| `ConflictDetectionResult` | to_dict | Result of conflict detection. |
-| `PolicyConflictEngine` | __init__, detect_conflicts, _detect_scope_overlaps, _detect_threshold_contradictions, _detect_temporal_conflicts, _detect_priority_overrides, _has_contradicting_conditions, _time_windows_overlap (+1 more) | Detects logical contradictions, overlaps, or unsafe coexistence between policies. |
-| `PolicyDependencyEngine` | __init__, compute_dependency_graph, _detect_explicit_dependencies, _detect_implicit_scope_dependencies, _detect_implicit_limit_dependencies, check_can_delete, check_can_activate | Computes structural relationships between policies. |
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `get_conflict_engine` | `(tenant_id: str) -> PolicyConflictEngine` | no | Get a PolicyConflictEngine instance for a tenant. |
-| `get_dependency_engine` | `(tenant_id: str) -> PolicyDependencyEngine` | no | Get a PolicyDependencyEngine instance for a tenant. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `__future__` | annotations | no |
-| `logging` | logging | no |
-| `dataclasses` | dataclass, field | no |
-| `datetime` | datetime, timezone | no |
-| `enum` | Enum | no |
-| `typing` | Any, Optional | no |
-| `app.hoc.cus.policies.L6_drivers.policy_graph_driver` | PolicyGraphDriver, get_policy_graph_driver | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
----
-
 ## policy_limits_engine.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/policy_limits_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 371
-
-**Docstring:** Policy Limits Service (PIN-LIM-01)
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 391
 
 ### Classes
 | Name | Methods | Docstring |
@@ -1796,17 +1468,15 @@
 ### Imports
 | Module | Names | Relative |
 |--------|-------|----------|
+| `__future__` | annotations | no |
 | `uuid` | uuid | no |
 | `datetime` | datetime, timezone | no |
 | `decimal` | Decimal | no |
-| `typing` | TYPE_CHECKING, Optional | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
-| `app.hoc.cus.general.L6_drivers.cross_domain` | generate_uuid | no |
-| `app.hoc.cus.controls.L6_drivers.policy_limits_driver` | PolicyLimitsDriver, get_policy_limits_driver | no |
-| `app.models.policy_control_plane` | Limit, LimitIntegrity, LimitStatus | no |
-| `app.models.audit_ledger` | ActorType | no |
+| `typing` | TYPE_CHECKING, Any, Optional | no |
+| `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
+| `app.hoc.cus.hoc_spine.drivers.cross_domain` | generate_uuid | no |
+| `app.hoc.cus.hoc_spine.schemas.domain_enums` | ActorType | no |
 | `app.hoc.cus.controls.L5_schemas.policy_limits` | CreatePolicyLimitRequest, UpdatePolicyLimitRequest, PolicyLimitResponse | no |
-| `app.hoc.cus.logs.L6_drivers.audit_ledger_service_async` | AuditLedgerServiceAsync | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -1816,17 +1486,11 @@
 **MUST NOT call:** L2_api, L3_adapters, L7_models
 **Called by:** L3_adapters, L4_runtime
 
-### Violations
-| Import | Rule Broken | Required Fix | Line |
-|--------|-------------|-------------|------|
-| `from app.models.policy_control_plane import Limit, LimitIntegrity, LimitStatus` | L5 MUST NOT import L7 models directly | Route through L6 driver | 66 |
-| `from app.models.audit_ledger import ActorType` | L5 MUST NOT import L7 models directly | Route through L6 driver | 71 |
-
 ---
 
 ## policy_mapper.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/policy_mapper.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 490
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 643
 
 **Docstring:** Module: policy_mapper
 
@@ -1927,7 +1591,7 @@
 
 ## policy_proposal_engine.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/policy_proposal_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 713
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 716
 
 **Docstring:** Policy Proposal Engine (L5)
 
@@ -1945,23 +1609,22 @@
 | `get_policy_proposal_engine` | `(session: 'AsyncSession') -> PolicyProposalEngine` | no | Get a PolicyProposalEngine instance with drivers. |
 | `check_proposal_eligibility` | `(session: 'AsyncSession', tenant_id: Optional[UUID] = None, feedback_type: Optio` | yes | Backward-compatible wrapper for eligibility checking. |
 | `create_policy_proposal` | `(session: 'AsyncSession', proposal: PolicyProposalCreate) -> str` | yes | Backward-compatible wrapper for proposal creation. |
-| `review_policy_proposal` | `(session: 'AsyncSession', proposal_id: UUID, review: PolicyApprovalRequest) -> d` | yes | Backward-compatible wrapper for proposal review. |
+| `review_policy_proposal` | `(session: 'AsyncSession', proposal_id: UUID, review: PolicyApprovalRequest, audi` | yes | Backward-compatible wrapper for proposal review. |
 | `delete_policy_rule` | `(session: 'AsyncSession', rule_id: str, tenant_id: str, deleted_by: str) -> bool` | yes | Backward-compatible wrapper for rule deletion. |
 | `get_proposal_summary` | `(session: 'AsyncSession', tenant_id: Optional[UUID] = None, status: Optional[str` | yes | Backward-compatible wrapper for proposal summary. |
 
 ### Imports
 | Module | Names | Relative |
 |--------|-------|----------|
+| `__future__` | annotations | no |
 | `logging` | logging | no |
-| `typing` | TYPE_CHECKING, Optional | no |
+| `typing` | TYPE_CHECKING, Any, Optional | no |
 | `uuid` | UUID | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
+| `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
 | `app.hoc.cus.policies.L6_drivers.policy_proposal_read_driver` | PolicyProposalReadDriver, get_policy_proposal_read_driver | no |
 | `app.hoc.cus.policies.L6_drivers.policy_proposal_write_driver` | PolicyProposalWriteDriver, get_policy_proposal_write_driver | no |
-| `app.models.audit_ledger` | ActorType | no |
-| `app.models.policy` | PolicyApprovalRequest, PolicyProposalCreate | no |
-| `app.hoc.cus.logs.L6_drivers.audit_ledger_service_async` | AuditLedgerServiceAsync | no |
-| `app.hoc.cus.policies.L5_engines.policy_graph_engine` | ConflictSeverity, get_conflict_engine, get_dependency_engine | no |
+| `app.hoc.cus.hoc_spine.schemas.domain_enums` | ActorType | no |
+| `app.hoc.cus.policies.L5_engines.policy_graph` | ConflictSeverity, get_conflict_engine, get_dependency_engine | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -1970,12 +1633,6 @@
 **SHOULD call:** L6_drivers, L5_schemas
 **MUST NOT call:** L2_api, L3_adapters, L7_models
 **Called by:** L3_adapters, L4_runtime
-
-### Violations
-| Import | Rule Broken | Required Fix | Line |
-|--------|-------------|-------------|------|
-| `from app.models.audit_ledger import ActorType` | L5 MUST NOT import L7 models directly | Route through L6 driver | 49 |
-| `from app.models.policy import PolicyApprovalRequest, PolicyProposalCreate` | L5 MUST NOT import L7 models directly | Route through L6 driver | 50 |
 
 ### Constants
 `FEEDBACK_THRESHOLD_FOR_PROPOSAL`, `PROPOSAL_TYPES`
@@ -1987,9 +1644,7 @@
 
 ## policy_rules_engine.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/policy_rules_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 394
-
-**Docstring:** Policy Rules Service (PIN-LIM-02)
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 397
 
 ### Classes
 | Name | Methods | Docstring |
@@ -2002,63 +1657,16 @@
 ### Imports
 | Module | Names | Relative |
 |--------|-------|----------|
+| `__future__` | annotations | no |
 | `uuid` | uuid | no |
 | `datetime` | datetime, timezone | no |
 | `decimal` | Decimal | no |
 | `typing` | TYPE_CHECKING, Any, Optional | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
-| `app.hoc.cus.general.L6_drivers.cross_domain` | generate_uuid | no |
+| `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
+| `app.hoc.cus.hoc_spine.drivers.cross_domain` | generate_uuid | no |
 | `app.hoc.cus.policies.L6_drivers.policy_rules_driver` | PolicyRulesDriver, get_policy_rules_driver | no |
-| `app.models.policy_control_plane` | PolicyRule, PolicyRuleIntegrity, PolicyRuleStatus | no |
-| `app.models.audit_ledger` | ActorType | no |
+| `app.hoc.cus.hoc_spine.schemas.domain_enums` | ActorType | no |
 | `app.hoc.cus.policies.L5_schemas.policy_rules` | CreatePolicyRuleRequest, UpdatePolicyRuleRequest, PolicyRuleResponse | no |
-| `app.hoc.cus.logs.L6_drivers.audit_ledger_service_async` | AuditLedgerServiceAsync | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### Violations
-| Import | Rule Broken | Required Fix | Line |
-|--------|-------------|-------------|------|
-| `from app.models.policy_control_plane import PolicyRule, PolicyRuleIntegrity, PolicyRuleStatus` | L5 MUST NOT import L7 models directly | Route through L6 driver | 67 |
-| `from app.models.audit_ledger import ActorType` | L5 MUST NOT import L7 models directly | Route through L6 driver | 72 |
-
----
-
-## prevention_engine.py
-**Path:** `backend/app/hoc/cus/policies/L5_engines/prevention_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 521
-
-**Docstring:** Prevention Engine
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `PreventionAction` |  | Action to take based on policy evaluation. |
-| `ViolationType` |  | Types of policy violations. |
-| `PreventionContext` |  | Context for policy evaluation at a step checkpoint. |
-| `PreventionResult` | allow, warn, block | Result of policy evaluation. |
-| `PolicyViolationError` | __init__ | Exception raised when a policy violation stops a run. |
-| `PreventionEngine` | __init__, load_snapshot, evaluate_step, _evaluate_step_inner, _evaluate_custom_policy | Evaluates policies at runtime checkpoints. |
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `create_policy_snapshot_for_run` | `(tenant_id: str, run_id: str) -> Optional[str]` | no | Create a policy snapshot at run start. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `logging` | logging | no |
-| `dataclasses` | dataclass, field | no |
-| `datetime` | datetime, timezone | no |
-| `enum` | Enum | no |
-| `typing` | Any, Optional | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -2097,7 +1705,7 @@
 | `enum` | Enum | no |
 | `typing` | Any, Dict, Optional | no |
 | `uuid` | uuid4 | no |
-| `app.policy.validators.content_accuracy` | ContentAccuracyValidator, ValidationResult | no |
+| `app.hoc.cus.policies.L5_engines.content_accuracy` | ContentAccuracyValidator, ValidationResult | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -2151,7 +1759,7 @@
 
 ## recovery_evaluation_engine.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/recovery_evaluation_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 411
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 415
 
 **Docstring:** Domain engine for recovery evaluation decisions.
 
@@ -2177,7 +1785,8 @@
 | `typing` | Any, Dict, Optional | no |
 | `app.contracts.decisions` | emit_recovery_decision | no |
 | `app.hoc.cus.policies.L6_drivers.recovery_matcher` | RecoveryMatcher | no |
-| `app.hoc.cus.incidents.L5_engines.recovery_rule_engine` | combine_confidences, evaluate_rules, should_auto_execute, should_select_action | no |
+| `app.hoc.cus.hoc_spine.utilities.recovery_decisions` | combine_confidences, should_auto_execute, should_select_action | no |
+| `app.hoc.cus.hoc_spine.services.cross_domain_gateway` | evaluate_rules | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -2243,7 +1852,7 @@
 
 ## sandbox_engine.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/sandbox_engine.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 551
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 562
 
 **Docstring:** Sandbox Service (GAP-174)
 
@@ -2254,6 +1863,11 @@
 | `ExecutionRequest` |  | Request to execute code in a sandbox. |
 | `ExecutionRecord` | to_dict | Record of a sandbox execution for audit. |
 | `SandboxService` | __init__, _setup_default_policies, _get_executor, execute, _get_policy, _check_quota, _track_execution, define_policy (+4 more) | High-level sandbox service. |
+
+### Functions
+| Name | Signature | Async | Docstring |
+|------|-----------|-------|-----------|
+| `get_sandbox_service` | `() -> 'SandboxService'` | no | Return the process-wide SandboxService singleton (GAP-174). |
 
 ### Imports
 | Module | Names | Relative |
@@ -2460,7 +2074,7 @@
 
 ## worker_execution_command.py
 **Path:** `backend/app/hoc/cus/policies/L5_engines/worker_execution_command.py`  
-**Layer:** L5_engines | **Domain:** policies | **Lines:** 353
+**Layer:** L5_engines | **Domain:** policies | **Lines:** 355
 
 **Docstring:** Worker Execution Command (L4)
 

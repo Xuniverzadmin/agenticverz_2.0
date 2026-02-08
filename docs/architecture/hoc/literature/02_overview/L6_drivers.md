@@ -10,7 +10,7 @@
 
 ## overview_facade_driver.py
 **Path:** `backend/app/hoc/cus/overview/L6_drivers/overview_facade_driver.py`  
-**Layer:** L6_drivers | **Domain:** overview | **Lines:** 519
+**Layer:** L6_drivers | **Domain:** overview | **Lines:** 517
 
 **Docstring:** Overview Facade Driver (L6 Data Access)
 
@@ -36,11 +36,10 @@
 |--------|-------|----------|
 | `logging` | logging | no |
 | `dataclasses` | dataclass | no |
-| `datetime` | datetime, timedelta | no |
+| `datetime` | datetime, timedelta, timezone | no |
 | `typing` | Any, List, Optional | no |
 | `sqlalchemy` | and_, case, func, select | no |
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
 | `app.models.audit_ledger` | AuditLedger | no |
 | `app.models.killswitch` | Incident, IncidentLifecycleState | no |
 | `app.models.policy` | PolicyProposal | no |

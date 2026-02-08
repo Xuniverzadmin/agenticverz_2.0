@@ -4,7 +4,7 @@
 
 ## Target State
 
-L2.1 Facade: `hoc/api/facades/cus/logs.py` — **TO BUILD**
+L2.1 Facade: `/root/agenticverz2.0/backend/app/hoc/api/facades/cus/logs.py` ✅
   │
   └──→ L2 API: `hoc/api/cus/logs/` (4 files)
          ├── cost_intelligence.py
@@ -12,14 +12,12 @@ L2.1 Facade: `hoc/api/facades/cus/logs.py` — **TO BUILD**
          ├── tenants.py
          ├── traces.py
          │
-         └──→ L3 Adapters (1 files)
-                ├── export_bundle_adapter.py ✅
+         └──→ L3 Adapters — **GAP** (0 files, need domain adapter)
                 │
                 ├──→ L4 Runtime (via general/L4_runtime/)
                 │
-                └──→ L5 Engines (17 files)
+                └──→ L5 Engines (13 files)
                        ├── audit_evidence.py → L6 ❌ (no matching driver)
-                       ├── audit_ledger_service.py → L6 ❌ (no matching driver)
                        ├── audit_reconciler.py → L6 ❌ (no matching driver)
                        ├── certificate.py → L6 ❌ (no matching driver)
                        ├── completeness_checker.py → L6 ❌ (no matching driver)
@@ -28,19 +26,14 @@ L2.1 Facade: `hoc/api/facades/cus/logs.py` — **TO BUILD**
                        ├── logs_facade.py → L6 ✅
                        ├── logs_read_engine.py → L6 ❌ (no matching driver)
                        ├── mapper.py → L6 ❌ (no matching driver)
-                       └── ... (+7 more)
-                     L5 Other (1 files)
+                       ├── pdf_renderer.py → L6 ❌ (no matching driver)
+                       └── ... (+3 more)
                        │
-                       └──→ L6 Drivers (12 files)
-                              ├── audit_ledger_service_async.py
+                       └──→ L6 Drivers (4 files)
                               ├── bridges_driver.py
-                              ├── capture.py
                               ├── export_bundle_store.py
-                              ├── idempotency.py
-                              ├── integrity.py
-                              ├── job_execution.py
                               ├── logs_domain_store.py
-                              └── ... (+4 more)
+                              ├── pg_store.py
                               │
                               └──→ L7 Models — **GAP** (no domain models)
                                      FLAG: domain-localized data candidate (human decision)
@@ -51,14 +44,5 @@ L2.1 Facade: `hoc/api/facades/cus/logs.py` — **TO BUILD**
 
 | Type | Description | Action |
 |------|-------------|--------|
-| L2.1_facade | No L2.1 facade to group 4 L2 routers | Build hoc/api/facades/cus/logs.py grouping: cost_intelligence.py, guard_logs.py, tenants.py, traces.py |
-| L7_models | 12 L6 drivers but no domain-specific L7 models | FLAG: domain-localized data candidate (human decision) |
-
-## Violations
-
-| File | Import | Rule Broken | Fix |
-|------|--------|-------------|-----|
-| `export_bundle_adapter.py` | `from app.models.export_bundles import DEFAULT_SOC2_CONTROLS,` | L3 MUST NOT import L7 models | Use L5 schemas for data contracts |
-| `audit_ledger_service.py` | `from app.models.audit_ledger import ActorType, AuditEntityTy` | L5 MUST NOT import L7 models directly | Route through L6 driver |
-| `pdf_renderer.py` | `from app.models.export_bundles import EvidenceBundle, Execut` | L5 MUST NOT import L7 models directly | Route through L6 driver |
-| `audit_engine.py` | `from app.models.contract import AuditVerdict` | L5 MUST NOT import L7 models directly | Route through L6 driver |
+| L3_adapter | No L3 adapters but 13 L5 engines exist — L2 cannot reach L5 | Build hoc/cus/logs/L3_adapters/ with domain adapter(s) |
+| L7_models | 4 L6 drivers but no domain-specific L7 models | FLAG: domain-localized data candidate (human decision) |

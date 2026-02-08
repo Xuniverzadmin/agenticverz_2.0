@@ -8,7 +8,7 @@
 
 ## cost_intelligence.py
 **Path:** `backend/app/hoc/api/cus/logs/cost_intelligence.py`  
-**Layer:** L2_api | **Domain:** logs | **Lines:** 1287
+**Layer:** L2_api | **Domain:** logs | **Lines:** 903
 
 **Docstring:** M26 Cost Intelligence API
 
@@ -40,11 +40,13 @@
 ### Functions
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
+| `_get_cost_write_service` | `(session)` | no | Get cost write service via L4 analytics bridge (PIN-520 compliance). |
+| `_get_cost_intelligence_engine` | `(session)` | no | Get cost intelligence engine via L4 logs bridge (L2 purity migration). |
 | `get_tenant_id` | `(tenant_id: str = Query(..., description='Tenant ID')) -> str` | no | Extract tenant_id from query parameter. |
-| `create_feature_tag` | `(data: FeatureTagCreate, tenant_id: str = Depends(get_tenant_id), session: Sessi` | yes | Register a new feature tag. |
+| `create_feature_tag` | `(data: FeatureTagCreate, tenant_id: str = Depends(get_tenant_id), session = Depe` | yes | Register a new feature tag. |
 | `list_feature_tags` | `(include_inactive: bool = False, tenant_id: str = Depends(get_tenant_id), sessio` | yes | List all feature tags for the tenant. |
 | `update_feature_tag` | `(tag: str, data: FeatureTagUpdate, tenant_id: str = Depends(get_tenant_id), sess` | yes | Update a feature tag. |
-| `record_cost` | `(data: CostRecordCreate, tenant_id: str = Depends(get_tenant_id), session: Sessi` | yes | Record a cost entry. |
+| `record_cost` | `(data: CostRecordCreate, tenant_id: str = Depends(get_tenant_id), session = Depe` | yes | Record a cost entry. |
 | `get_cost_dashboard` | `(period: str = Query('24h', regex='^(24h|7d|30d)$'), tenant_id: str = Depends(ge` | yes | Get complete cost dashboard. |
 | `get_cost_summary` | `(period: str = Query('24h', regex='^(24h|7d|30d)$'), tenant_id: str = Depends(ge` | yes | Get cost summary for the period. |
 | `get_costs_by_feature` | `(period: str = Query('24h', regex='^(24h|7d|30d)$'), tenant_id: str = Depends(ge` | yes | Get cost breakdown by feature tag. |
@@ -52,15 +54,8 @@
 | `get_costs_by_model` | `(period: str = Query('24h', regex='^(24h|7d|30d)$'), tenant_id: str = Depends(ge` | yes | Get cost breakdown by model. |
 | `get_anomalies` | `(days: int = Query(7, ge=1, le=90), include_resolved: bool = False, tenant_id: s` | yes | Get detected cost anomalies. |
 | `get_projection` | `(lookback_days: int = Query(7, ge=1, le=30), forecast_days: int = Query(7, ge=1,` | yes | Get cost projection based on historical data. |
-| `create_or_update_budget` | `(data: BudgetCreate, tenant_id: str = Depends(get_tenant_id), session: Session =` | yes | Create or update a budget. |
-| `list_budgets` | `(tenant_id: str = Depends(get_tenant_id), session: Session = Depends(get_session` | yes | List all budgets for the tenant. |
-| `_get_cost_summary` | `(session: Session, tenant_id: str, period_start: datetime, period_end: datetime,` | yes | Get cost summary for a period. |
-| `_get_costs_by_feature` | `(session: Session, tenant_id: str, period_start: datetime, total_cost: float) ->` | yes | Get costs grouped by feature tag. |
-| `_get_costs_by_user` | `(session: Session, tenant_id: str, period_start: datetime, total_cost: float) ->` | yes | Get costs grouped by user with anomaly detection. |
-| `_get_costs_by_model` | `(session: Session, tenant_id: str, period_start: datetime, total_cost: float) ->` | yes | Get costs grouped by model. |
-| `_get_recent_anomalies` | `(session: Session, tenant_id: str, days: int = 7, include_resolved: bool = False` | yes | Get recent anomalies. |
-| `_get_cost_projection` | `(session: Session, tenant_id: str, lookback_days: int = 7, forecast_days: int = ` | yes | Calculate cost projection based on historical trend. |
-| `_get_current_spend` | `(session: Session, tenant_id: str, budget_type: str, entity_id: Optional[str]) -` | yes | Get current daily and monthly spend for a budget entity. |
+| `create_or_update_budget` | `(data: BudgetCreate, tenant_id: str = Depends(get_tenant_id), session = Depends(` | yes | Create or update a budget. |
+| `list_budgets` | `(tenant_id: str = Depends(get_tenant_id), session = Depends(get_sync_session_dep` | yes | List all budgets for the tenant. |
 | `trigger_anomaly_detection` | `(request: AnomalyDetectionRequest = AnomalyDetectionRequest(), tenant_id: str = ` | yes | Trigger anomaly detection for this tenant. |
 
 ### Imports
@@ -69,14 +64,14 @@
 | `__future__` | annotations | no |
 | `logging` | logging | no |
 | `datetime` | datetime, timedelta | no |
-| `typing` | Any, List, Optional, cast | no |
+| `typing` | List, Optional | no |
 | `fastapi` | APIRouter, Depends, HTTPException, Query | no |
 | `pydantic` | BaseModel, Field | no |
-| `sqlalchemy` | text | no |
-| `sqlmodel` | Session, select | no |
-| `app.db` | CostAnomaly, CostBudget, FeatureTag, get_session, utc_now | no |
+| `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | get_sync_session_dep | no |
+| `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
+| `app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.analytics_bridge` | get_analytics_bridge | no |
+| `app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.logs_bridge` | get_logs_bridge | no |
 | `app.schemas.response` | wrap_dict | no |
-| `app.services.cost_write_service` | CostWriteService | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -124,7 +119,7 @@
 
 ## tenants.py
 **Path:** `backend/app/hoc/api/cus/logs/tenants.py`  
-**Layer:** L2_api | **Domain:** logs | **Lines:** 636
+**Layer:** L2_api | **Domain:** logs | **Lines:** 677
 
 **Docstring:** Tenant & API Key Management API (M21)
 
@@ -147,8 +142,9 @@
 ### Functions
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
-| `get_db` | `()` | no | Get database session. |
-| `get_services` | `(session: Session = Depends(get_db))` | no | Get tenant and worker registry services. |
+| `get_services` | `(session = Depends(get_sync_session_dep))` | no | Get worker registry and session for route handlers. |
+| `_tenant_op` | `(session, tenant_id: str, method: str, **kwargs)` | yes | Execute a tenant operation via L4 registry (account.tenant). |
+| `_api_keys_op` | `(session, tenant_id: str, method: str, **kwargs)` | yes | Execute an API keys operation via L4 registry (api_keys.write). |
 | `_maybe_advance_to_api_key_created` | `(tenant_id: str) -> None` | yes | PIN-399: Trigger onboarding state transition on first API key creation. |
 | `get_current_tenant` | `(ctx: TenantContext = Depends(get_tenant_context), services: dict = Depends(get_` | yes | Get information about the current tenant (from API key). |
 | `get_tenant_usage` | `(period: str = Query('24h', regex='^(24h|7d|30d)$'), ctx: TenantContext = Depend` | yes | Get usage summary for the current tenant. |
@@ -169,16 +165,14 @@
 | Module | Names | Relative |
 |--------|-------|----------|
 | `logging` | logging | no |
-| `datetime` | datetime | no |
+| `datetime` | datetime, timezone | no |
 | `typing` | List, Optional | no |
 | `fastapi` | APIRouter, Depends, HTTPException, Query, status | no |
 | `pydantic` | BaseModel, Field | no |
-| `sqlmodel` | Session | no |
-| `auth.tenant_auth` | TenantContext, get_tenant_context | yes |
-| `db` | utc_now | yes |
-| `services.tenant_service` | QuotaExceededError, TenantService, TenantServiceError | yes |
-| `schemas.response` | wrap_dict, wrap_list | yes |
-| `services.worker_registry_service` | WorkerNotFoundError, WorkerRegistryService | yes |
+| `app.auth.tenant_auth` | TenantContext, get_tenant_context | no |
+| `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_operation_registry, get_sync_session_dep | no |
+| `app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges` | get_integrations_driver_bridge | no |
+| `app.schemas.response` | wrap_dict, wrap_list | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -192,7 +186,7 @@
 
 ## traces.py
 **Path:** `backend/app/hoc/api/cus/logs/traces.py`  
-**Layer:** L2_api | **Domain:** logs | **Lines:** 1205
+**Layer:** L2_api | **Domain:** logs | **Lines:** 910
 
 **Docstring:** Trace Query API
 
@@ -237,9 +231,11 @@
 | `typing` | List, Optional | no |
 | `fastapi` | APIRouter, Depends, HTTPException, Query, Request (+2) | no |
 | `pydantic` | BaseModel, Field | no |
-| `auth.jwt_auth` | JWTAuthDependency, JWTConfig, TokenPayload | yes |
-| `schemas.response` | wrap_dict | yes |
-| `traces.redact` | redact_trace_data | yes |
+| `app.auth.jwt_auth` | JWTAuthDependency, JWTConfig, TokenPayload | no |
+| `app.hoc.cus.hoc_spine.orchestrator.operation_registry` | OperationContext, get_async_session_context, get_operation_registry, get_session_dep | no |
+| `app.schemas.response` | wrap_dict | no |
+| `app.traces.redact` | redact_trace_data | no |
+| `app.hoc.cus.hoc_spine.orchestrator.handlers.traces_handler` | register_traces_handlers | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 

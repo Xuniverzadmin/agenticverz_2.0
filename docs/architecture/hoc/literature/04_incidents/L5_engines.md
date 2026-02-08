@@ -1,4 +1,4 @@
-# Incidents — L5 Engines (16 files)
+# Incidents — L5 Engines (9 files)
 
 **Domain:** incidents  
 **Layer:** L5_engines  
@@ -49,46 +49,9 @@
 
 ---
 
-## incident_driver.py
-**Path:** `backend/app/hoc/cus/incidents/L5_engines/incident_driver.py`  
-**Layer:** L5_engines | **Domain:** incidents | **Lines:** 279
-
-**Docstring:** Incident Domain Driver (INTERNAL)
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `IncidentDriver` | __init__, _engine, check_and_create_incident, create_incident_for_run, _emit_ack, get_incidents_for_run | Driver for Incident domain operations (INTERNAL). |
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `get_incident_driver` | `(db_url: Optional[str] = None) -> IncidentDriver` | no | Get the incident driver instance. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `logging` | logging | no |
-| `os` | os | no |
-| `typing` | Any, Dict, List, Optional | no |
-| `uuid` | UUID | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### Constants
-`RAC_ENABLED`
-
----
-
 ## incident_engine.py
 **Path:** `backend/app/hoc/cus/incidents/L5_engines/incident_engine.py`  
-**Layer:** L5_engines | **Domain:** incidents | **Lines:** 905
+**Layer:** L5_engines | **Domain:** incidents | **Lines:** 910
 
 **Docstring:** Incident Engine (L4 Domain Logic)
 
@@ -100,8 +63,7 @@
 ### Functions
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
-| `_get_lessons_learned_engine` | `()` | no | Get the LessonsLearnedEngine singleton (lazy import). |
-| `get_incident_engine` | `() -> IncidentEngine` | no | Get or create singleton incident engine instance. |
+| `get_incident_engine` | `(evidence_recorder: Any = None) -> IncidentEngine` | no | Get or create singleton incident engine instance. |
 
 ### Imports
 | Module | Names | Relative |
@@ -111,7 +73,7 @@
 | `uuid` | uuid | no |
 | `datetime` | datetime, timezone | no |
 | `typing` | TYPE_CHECKING, Any, Dict, List, Optional | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
+| `app.hoc.cus.hoc_spine.services.time` | utc_now | no |
 | `app.hoc.cus.incidents.L6_drivers.incident_write_driver` | IncidentWriteDriver, get_incident_write_driver | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
@@ -124,38 +86,6 @@
 
 ### Constants
 `INCIDENT_OUTCOME_SUCCESS`, `INCIDENT_OUTCOME_FAILURE`, `INCIDENT_OUTCOME_BLOCKED`, `INCIDENT_OUTCOME_ABORTED`, `SEVERITY_NONE`, `FAILURE_SEVERITY_MAP`, `FAILURE_CATEGORY_MAP`
-
----
-
-## incident_pattern_engine.py
-**Path:** `backend/app/hoc/cus/incidents/L5_engines/incident_pattern_engine.py`  
-**Layer:** L5_engines | **Domain:** incidents | **Lines:** 279
-
-**Docstring:** Incident Pattern Engine - L4 Domain Logic
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `PatternMatch` |  | A detected incident pattern. |
-| `PatternResult` |  | Result of pattern detection. |
-| `IncidentPatternService` | __init__, detect_patterns, _detect_category_clusters, _detect_severity_spikes, _detect_cascade_failures | Detect structural patterns across incidents. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `dataclasses` | dataclass | no |
-| `datetime` | datetime, timedelta | no |
-| `typing` | TYPE_CHECKING, Optional | no |
-| `app.hoc.cus.incidents.L6_drivers.incident_pattern_driver` | IncidentPatternDriver, get_incident_pattern_driver | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
 
 ---
 
@@ -195,75 +125,29 @@
 
 ---
 
-## incident_severity_engine.py
-**Path:** `backend/app/hoc/cus/incidents/L5_engines/incident_severity_engine.py`  
-**Layer:** L5_engines | **Domain:** incidents | **Lines:** 218
-
-**Docstring:** Incident Severity Engine (L4)
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `SeverityConfig` | default | Configuration for severity decisions. |
-| `IncidentSeverityEngine` | __init__, get_initial_severity, calculate_severity_for_calls, should_escalate | L4 Engine for incident severity decisions. |
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `generate_incident_title` | `(trigger_type: str, trigger_value: str) -> str` | no | Generate human-readable incident title. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `dataclasses` | dataclass | no |
-| `typing` | Dict, Tuple | no |
-| `app.models.killswitch` | IncidentSeverity | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### Violations
-| Import | Rule Broken | Required Fix | Line |
-|--------|-------------|-------------|------|
-| `from app.models.killswitch import IncidentSeverity` | L5 MUST NOT import L7 models directly | Route through L6 driver | 39 |
-
-### Constants
-`DEFAULT_SEVERITY`
-
-### __all__ Exports
-`IncidentSeverityEngine`, `SeverityConfig`, `TRIGGER_SEVERITY_MAP`, `DEFAULT_SEVERITY`, `generate_incident_title`
-
----
-
 ## incident_write_engine.py
 **Path:** `backend/app/hoc/cus/incidents/L5_engines/incident_write_engine.py`  
-**Layer:** L5_engines | **Domain:** incidents | **Lines:** 303
+**Layer:** L5_engines | **Domain:** incidents | **Lines:** 317
 
 **Docstring:** Incident Write Service (L4)
 
 ### Classes
 | Name | Methods | Docstring |
 |------|---------|-----------|
-| `IncidentWriteService` | __init__, acknowledge_incident, resolve_incident, manual_close_incident | L4 service for incident write operations. |
+| `IncidentWriteService` | __init__, acknowledge_incident, resolve_incident, manual_close_incident | L5 engine for incident write operations. |
 
 ### Functions
 | Name | Signature | Async | Docstring |
 |------|-----------|-------|-----------|
-| `get_incident_write_service` | `(session: 'Session') -> IncidentWriteService` | no | Factory function to get IncidentWriteService instance. |
+| `get_incident_write_service` | `(session: 'Session', audit: Any = None) -> IncidentWriteService` | no | Factory function to get IncidentWriteService instance. |
 
 ### Imports
 | Module | Names | Relative |
 |--------|-------|----------|
 | `datetime` | datetime, timezone | no |
-| `typing` | TYPE_CHECKING, Optional | no |
+| `typing` | TYPE_CHECKING, Any, Optional | no |
 | `app.hoc.cus.incidents.L6_drivers.incident_write_driver` | IncidentWriteDriver, get_incident_write_driver | no |
-| `app.models.audit_ledger` | ActorType | no |
-| `app.hoc.cus.logs.L5_engines.audit_ledger_service` | AuditLedgerService | no |
+| `app.hoc.cus.hoc_spine.schemas.domain_enums` | ActorType | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
@@ -272,11 +156,6 @@
 **SHOULD call:** L6_drivers, L5_schemas
 **MUST NOT call:** L2_api, L3_adapters, L7_models
 **Called by:** L3_adapters, L4_runtime
-
-### Violations
-| Import | Rule Broken | Required Fix | Line |
-|--------|-------------|-------------|------|
-| `from app.models.audit_ledger import ActorType` | L5 MUST NOT import L7 models directly | Route through L6 driver | 57 |
 
 ### __all__ Exports
 `IncidentWriteService`, `get_incident_write_service`
@@ -285,7 +164,7 @@
 
 ## incidents_facade.py
 **Path:** `backend/app/hoc/cus/incidents/L5_engines/incidents_facade.py`  
-**Layer:** L5_engines | **Domain:** incidents | **Lines:** 983
+**Layer:** L5_engines | **Domain:** incidents | **Lines:** 1195
 
 **Docstring:** Incidents Domain Facade (L5)
 
@@ -313,7 +192,7 @@
 | `LearningInsightResult` |  | A learning insight from incident analysis. |
 | `ResolutionSummaryResult` |  | Summary of incident resolution. |
 | `LearningsResult` |  | Incident learnings response. |
-| `IncidentsFacade` | list_active_incidents, list_resolved_incidents, list_historical_incidents, get_incident_detail, get_incidents_for_run, get_metrics, analyze_cost_impact, _snapshot_to_summary (+3 more) | Unified facade for incident management. |
+| `IncidentsFacade` | list_active_incidents, list_resolved_incidents, list_historical_incidents, list_incidents, get_incident_detail, get_incidents_for_run, get_metrics, analyze_cost_impact (+7 more) | Unified facade for incident management. |
 
 ### Functions
 | Name | Signature | Async | Docstring |
@@ -366,44 +245,9 @@
 
 ---
 
-## llm_failure_engine.py
-**Path:** `backend/app/hoc/cus/incidents/L5_engines/llm_failure_engine.py`  
-**Layer:** L5_engines | **Domain:** incidents | **Lines:** 348
-
-**Docstring:** LLMFailureService - S4 Failure Truth Implementation
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `LLMFailureFact` | __post_init__ | Authoritative LLM failure fact. |
-| `LLMFailureResult` |  | Result of failure persistence operation. |
-| `LLMFailureService` | __init__, persist_failure_and_mark_run, _persist_failure, _capture_evidence, _mark_run_failed, _verify_no_contamination, get_failure_by_run_id | Service for handling LLM failures with S4 truth guarantees. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `os` | os | no |
-| `dataclasses` | dataclass, field | no |
-| `datetime` | datetime | no |
-| `typing` | TYPE_CHECKING, Any, Callable, Dict, Optional | no |
-| `app.hoc.cus.incidents.L6_drivers.llm_failure_driver` | LLMFailureDriver, get_llm_failure_driver | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### Constants
-`VERIFICATION_MODE`
-
----
-
 ## policy_violation_engine.py
 **Path:** `backend/app/hoc/cus/incidents/L5_engines/policy_violation_engine.py`  
-**Layer:** L5_engines | **Domain:** incidents | **Lines:** 713
+**Layer:** L5_engines | **Domain:** incidents | **Lines:** 725
 
 **Docstring:** Policy Violation Service - S3 Hardening for Phase A.5 Verification
 
@@ -432,7 +276,7 @@
 | `datetime` | datetime, timezone | no |
 | `decimal` | Decimal | no |
 | `typing` | TYPE_CHECKING, Any, Dict, Optional | no |
-| `app.hoc.cus.incidents.L6_drivers.policy_violation_driver` | PolicyViolationDriver, get_policy_violation_driver, insert_policy_evaluation_sync | no |
+| `app.hoc.cus.incidents.L6_drivers.policy_violation_driver` | PolicyViolationDriver, get_policy_violation_driver | no |
 | `app.utils.runtime` | generate_uuid | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
@@ -445,93 +289,6 @@
 
 ### Constants
 `VERIFICATION_MODE`, `POLICY_OUTCOME_NO_VIOLATION`, `POLICY_OUTCOME_VIOLATION`, `POLICY_OUTCOME_ADVISORY`, `POLICY_OUTCOME_NOT_APPLICABLE`
-
----
-
-## postmortem_engine.py
-**Path:** `backend/app/hoc/cus/incidents/L5_engines/postmortem_engine.py`  
-**Layer:** L5_engines | **Domain:** incidents | **Lines:** 444
-
-**Docstring:** Post-Mortem Engine - L4 Domain Logic
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `ResolutionSummary` |  | Summary of how an incident was resolved. |
-| `LearningInsight` |  | A learning extracted from incident analysis. |
-| `PostMortemResult` |  | Result of post-mortem analysis for an incident. |
-| `CategoryLearnings` |  | Aggregated learnings for a category. |
-| `PostMortemService` | __init__, get_incident_learnings, get_category_learnings, _get_resolution_summary, _find_similar_incidents, _extract_insights, _generate_category_insights | Extract learnings and post-mortem insights from incidents. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `dataclasses` | dataclass | no |
-| `datetime` | datetime, timezone | no |
-| `typing` | TYPE_CHECKING, Optional | no |
-| `app.hoc.cus.incidents.L6_drivers.postmortem_driver` | PostMortemDriver, get_postmortem_driver | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
----
-
-## prevention_engine.py
-**Path:** `backend/app/hoc/cus/incidents/L5_engines/prevention_engine.py`  
-**Layer:** L5_engines | **Domain:** incidents | **Lines:** 890
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `PolicyType` |  | Types of policies that can be evaluated. |
-| `Severity` |  | Severity levels for policy violations. |
-| `PreventionAction` |  | Action to take when prevention triggers. |
-| `PolicyViolation` | to_dict | A single policy violation detected. |
-| `PreventionContext` | hash_output | Context for prevention evaluation. |
-| `PreventionResult` | highest_severity, primary_violation, to_dict | Result of prevention engine evaluation. |
-| `BaseValidator` | validate | Base class for policy validators. |
-| `ContentAccuracyValidatorV2` | __init__, validate, _get_value, _extract_claim | Enhanced content accuracy validator. |
-| `PIIValidator` | __init__, validate, _redact | Detects PII in LLM output that shouldn't be exposed. |
-| `SafetyValidator` | __init__, validate | Detects harmful, dangerous, or inappropriate content. |
-| `HallucinationValidator` | __init__, validate, _claim_in_context | Detects potential hallucinations by checking for unsupported claims. |
-| `BudgetValidator` | __init__, validate | Validates that response doesn't exceed budget limits. |
-| `PreventionEngine` | __init__, evaluate, _generate_safe_response, _emit_metrics | Multi-policy prevention engine with severity levels and async incident creation. |
-
-### Functions
-| Name | Signature | Async | Docstring |
-|------|-----------|-------|-----------|
-| `get_prevention_engine` | `() -> PreventionEngine` | no | Get global prevention engine instance. |
-| `evaluate_prevention` | `(tenant_id: str, call_id: str, user_query: str, llm_output: str, context_data: D` | no | Convenience function to evaluate prevention. |
-| `create_incident_from_violation` | `(ctx: PreventionContext, result: PreventionResult, session: Optional[Any] = None` | yes | Create an incident from prevention violation. |
-| `_create_incident_with_service` | `(session: Any, ctx: PreventionContext, primary: PolicyViolation, evidence: dict)` | yes | Helper to create incident using PolicyViolationService. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `hashlib` | hashlib | no |
-| `re` | re | no |
-| `time` | time | no |
-| `dataclasses` | dataclass, field | no |
-| `datetime` | datetime, timezone | no |
-| `enum` | Enum | no |
-| `typing` | Any, Dict, List, Optional, Set | no |
-| `uuid` | uuid4 | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
-
-### __all__ Exports
-`PolicyType`, `Severity`, `PreventionAction`, `PolicyViolation`, `PreventionContext`, `PreventionResult`, `BaseValidator`, `ContentAccuracyValidatorV2`, `PIIValidator`, `SafetyValidator`, `HallucinationValidator`, `BudgetValidator`, `PreventionEngine`, `get_prevention_engine`, `evaluate_prevention`, `create_incident_from_violation`
 
 ---
 
@@ -588,38 +345,6 @@
 
 ### __all__ Exports
 `Rule`, `RuleContext`, `RuleResult`, `EvaluationResult`, `ErrorCodeRule`, `HistoricalPatternRule`, `SkillSpecificRule`, `OccurrenceThresholdRule`, `CompositeRule`, `RecoveryRuleEngine`, `evaluate_rules`, `DEFAULT_RULES`, `AUTO_EXECUTE_CONFIDENCE_THRESHOLD`, `should_auto_execute`, `ERROR_CATEGORY_RULES`, `classify_error_category`, `RECOVERY_MODE_RULES`, `suggest_recovery_mode`, `ACTION_SELECTION_THRESHOLD`, `combine_confidences`, `should_select_action`
-
----
-
-## recurrence_analysis_engine.py
-**Path:** `backend/app/hoc/cus/incidents/L5_engines/recurrence_analysis_engine.py`  
-**Layer:** L5_engines | **Domain:** incidents | **Lines:** 189
-
-**Docstring:** Recurrence Analysis Service (L4 Engine)
-
-### Classes
-| Name | Methods | Docstring |
-|------|---------|-----------|
-| `RecurrenceGroup` |  | A group of recurring incidents. |
-| `RecurrenceResult` |  | Result of recurrence analysis. |
-| `RecurrenceAnalysisService` | __init__, analyze_recurrence, get_recurrence_for_category, _snapshot_to_group | Analyze recurring incident patterns. |
-
-### Imports
-| Module | Names | Relative |
-|--------|-------|----------|
-| `dataclasses` | dataclass | no |
-| `datetime` | datetime | no |
-| `typing` | TYPE_CHECKING | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
-| `app.hoc.cus.incidents.L6_drivers.recurrence_analysis_driver` | RecurrenceAnalysisDriver, RecurrenceGroupSnapshot | no |
-
-### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
-
-**Contract:** Business logic — pattern detection, decisions, calls L6 for DB ops
-
-**SHOULD call:** L6_drivers, L5_schemas
-**MUST NOT call:** L2_api, L3_adapters, L7_models
-**Called by:** L3_adapters, L4_runtime
 
 ---
 

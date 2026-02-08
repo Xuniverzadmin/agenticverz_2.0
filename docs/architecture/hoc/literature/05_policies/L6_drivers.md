@@ -87,14 +87,14 @@
 
 ## policy_engine_driver.py
 **Path:** `backend/app/hoc/cus/policies/L6_drivers/policy_engine_driver.py`  
-**Layer:** L6_drivers | **Domain:** policies | **Lines:** 1411
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 1911
 
 **Docstring:** Policy Engine Driver (L6)
 
 ### Classes
 | Name | Methods | Docstring |
 |------|---------|-----------|
-| `PolicyEngineDriver` | __init__, _get_engine, fetch_ethical_constraints, fetch_risk_ceilings, fetch_safety_rules, fetch_business_rules, insert_evaluation, insert_violation (+36 more) | L6 driver for PolicyEngine data access. |
+| `PolicyEngineDriver` | __init__, _get_engine, get_engine, fetch_ethical_constraints, fetch_risk_ceilings, fetch_safety_rules, fetch_business_rules, insert_evaluation (+86 more) | L6 driver for PolicyEngine data access. |
 
 ### Functions
 | Name | Signature | Async | Docstring |
@@ -104,6 +104,7 @@
 ### Imports
 | Module | Names | Relative |
 |--------|-------|----------|
+| `contextlib` | contextmanager | no |
 | `datetime` | datetime | no |
 | `typing` | Any, Dict, List, Optional, Tuple | no |
 | `sqlalchemy` | create_engine, text | no |
@@ -196,7 +197,7 @@
 
 ## policy_proposal_write_driver.py
 **Path:** `backend/app/hoc/cus/policies/L6_drivers/policy_proposal_write_driver.py`  
-**Layer:** L6_drivers | **Domain:** policies | **Lines:** 229
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 228
 
 **Docstring:** Policy Proposal Write Driver (L6)
 
@@ -214,12 +215,11 @@
 | Module | Names | Relative |
 |--------|-------|----------|
 | `json` | json | no |
-| `datetime` | datetime | no |
+| `datetime` | datetime, timezone | no |
 | `typing` | Any, Optional | no |
 | `uuid` | UUID | no |
 | `sqlalchemy` | text | no |
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
 | `app.models.policy` | PolicyProposal, PolicyVersion | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
@@ -280,14 +280,14 @@
 
 ## policy_rules_driver.py
 **Path:** `backend/app/hoc/cus/policies/L6_drivers/policy_rules_driver.py`  
-**Layer:** L6_drivers | **Domain:** policies | **Lines:** 117
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 149
 
 **Docstring:** Policy Rules Driver
 
 ### Classes
 | Name | Methods | Docstring |
 |------|---------|-----------|
-| `PolicyRulesDriver` | __init__, fetch_rule_by_id, add_rule, add_integrity, flush | Data access driver for policy rules. |
+| `PolicyRulesDriver` | __init__, fetch_rule_by_id, add_rule, add_integrity, create_rule, create_integrity, flush | Data access driver for policy rules. |
 
 ### Functions
 | Name | Signature | Async | Docstring |
@@ -313,7 +313,7 @@
 
 ## policy_rules_read_driver.py
 **Path:** `backend/app/hoc/cus/policies/L6_drivers/policy_rules_read_driver.py`  
-**Layer:** L6_drivers | **Domain:** policies | **Lines:** 256
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 255
 
 **Docstring:** Policy Rules Read Driver (L6)
 
@@ -330,12 +330,11 @@
 ### Imports
 | Module | Names | Relative |
 |--------|-------|----------|
-| `datetime` | datetime, timedelta | no |
+| `datetime` | datetime, timedelta, timezone | no |
 | `decimal` | Decimal | no |
 | `typing` | Any, Optional | no |
 | `sqlalchemy` | and_, func, select | no |
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
 | `app.models.policy_control_plane` | PolicyEnforcement, PolicyRule, PolicyRuleIntegrity | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
@@ -353,14 +352,14 @@
 
 ## proposals_read_driver.py
 **Path:** `backend/app/hoc/cus/policies/L6_drivers/proposals_read_driver.py`  
-**Layer:** L6_drivers | **Domain:** policies | **Lines:** 205
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 413
 
 **Docstring:** Proposals Read Driver (L6)
 
 ### Classes
 | Name | Methods | Docstring |
 |------|---------|-----------|
-| `ProposalsReadDriver` | __init__, fetch_proposals, fetch_proposal_by_id, count_draft_proposals | Read operations for policy proposals (list view). |
+| `ProposalsReadDriver` | __init__, fetch_proposals, fetch_proposal_by_id, count_draft_proposals, list_proposals_paginated, get_proposal_stats, get_proposal_detail, list_proposal_versions | Read operations for policy proposals (list view). |
 
 ### Functions
 | Name | Signature | Async | Docstring |
@@ -374,7 +373,6 @@
 | `typing` | Any, Optional | no |
 | `sqlalchemy` | and_, func, select | no |
 | `sqlalchemy.ext.asyncio` | AsyncSession | no |
-| `app.hoc.cus.general.L5_utils.time` | utc_now | no |
 | `app.models.policy` | PolicyProposal | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
@@ -392,13 +390,13 @@
 
 ## recovery_matcher.py
 **Path:** `backend/app/hoc/cus/policies/L6_drivers/recovery_matcher.py`  
-**Layer:** L6_drivers | **Domain:** policies | **Lines:** 953
+**Layer:** L6_drivers | **Domain:** policies | **Lines:** 1011
 
 ### Classes
 | Name | Methods | Docstring |
 |------|---------|-----------|
 | `MatchResult` |  | Result from matching a failure to a recovery suggestion. |
-| `RecoveryMatcher` | __init__, _normalize_error, _calculate_time_weight, _compute_confidence, _generate_suggestion, _find_similar_failures, _count_occurrences, _get_cached_recovery (+8 more) | Matches failures to recovery suggestions using pattern matching |
+| `RecoveryMatcher` | __init__, _normalize_error, _calculate_time_weight, _compute_confidence, _generate_suggestion, _find_similar_failures, _count_occurrences, _get_cached_recovery (+10 more) | Matches failures to recovery suggestions using pattern matching |
 
 ### Imports
 | Module | Names | Relative |

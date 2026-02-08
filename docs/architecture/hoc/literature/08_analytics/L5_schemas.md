@@ -10,7 +10,7 @@
 
 ## cost_snapshot_schemas.py
 **Path:** `backend/app/hoc/cus/analytics/L5_schemas/cost_snapshot_schemas.py`  
-**Layer:** L5_schemas | **Domain:** analytics | **Lines:** 243
+**Layer:** L5_schemas | **Domain:** analytics | **Lines:** 302
 
 **Docstring:** M27 Cost Snapshot Schemas
 
@@ -24,6 +24,7 @@
 | `SnapshotAggregate` | create | Aggregated cost data for an entity within a snapshot. |
 | `SnapshotBaseline` | create | Rolling baseline for an entity (used for anomaly threshold). |
 | `AnomalyEvaluation` |  | Audit record for an anomaly evaluation. |
+| `CostSnapshotsDriverProtocol` | insert_snapshot, update_snapshot, insert_aggregate, get_current_baseline, aggregate_cost_records, insert_baseline, get_snapshot, get_aggregates_with_baseline (+3 more) | Typed boundary contract for cost snapshot database operations. |
 
 ### Imports
 | Module | Names | Relative |
@@ -33,7 +34,7 @@
 | `dataclasses` | dataclass, field | no |
 | `datetime` | datetime, timedelta, timezone | no |
 | `enum` | Enum | no |
-| `typing` | Any | no |
+| `typing` | Any, Protocol, runtime_checkable | no |
 
 ### Prescriptive Wiring (per HOC_LAYER_TOPOLOGY_V1)
 
