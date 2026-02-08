@@ -508,6 +508,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-535](PIN-535-knowledge-plane-phase2-persistence-ssot.md) | **Knowledge Planes Phase 2 — Persisted SSOT (knowledge_plane_registry)** | HOC Governance / Durability | **✅ COMPLETE** | 2026-02-08 |
 | [PIN-536](PIN-536-knowledge-plane-phase3-ops-registry-wiring.md) | **Knowledge Planes Phase 3 — L4 Operations + FDR Surface Rewire** | HOC Governance / Wiring | **✅ COMPLETE** | 2026-02-08 |
 | [PIN-537](PIN-537-knowledge-plane-phase4-retrieval-unification.md) | **Knowledge Planes Phase 4 — Retrieval Uses Persisted Planes + DB Evidence** | HOC Governance / Retrieval Durability | **✅ COMPLETE** | 2026-02-08 |
+| [PIN-538](PIN-538-knowledge-plane-phase5-delete-app-services-shims.md) | **Knowledge Planes Phase 5 — Delete Legacy `app.services.*` Shims** | HOC Governance / Canonicalization | **✅ COMPLETE** | 2026-02-08 |
 
 ---
 
@@ -1277,6 +1278,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-08 | **PIN-538 Knowledge Planes Phase 5 — Delete Legacy `app.services.*` Shims** - Created. |
 | 2026-02-08 | **PIN-537 Knowledge Planes Phase 4 — Retrieval Uses Persisted Planes + DB Evidence** - Created. |
 | 2026-02-08 | **PIN-536 Knowledge Planes Phase 3 — L4 Operations + FDR Surface Rewire** - Created. |
 | 2026-02-08 | **PIN-535 Knowledge Planes Phase 2 — Persisted SSOT (knowledge_plane_registry)** - Created. |

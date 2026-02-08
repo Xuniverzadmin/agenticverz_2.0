@@ -9,7 +9,7 @@ with deny-by-default and policy enforcement.
 """
 
 import pytest
-from app.services.mediation.retrieval_mediator import (
+from app.hoc.cus.hoc_spine.services.retrieval_mediator import (
     RetrievalMediator,
     MediatedResult,
     MediationDeniedError,
@@ -177,11 +177,14 @@ class TestEvidenceRecord:
             run_id="run-123",
             plane_id="documents",
             connector_id="sql-gateway",
+            action="query",
             query_hash="abc123",
             doc_ids=["doc-1", "doc-2"],
             token_count=150,
             policy_snapshot_id="snap-001",
-            timestamp="2026-01-21T00:00:00Z",
+            requested_at="2026-01-21T00:00:00Z",
+            completed_at="2026-01-21T00:00:00Z",
+            duration_ms=0,
         )
 
         assert record.id == "ev-001"

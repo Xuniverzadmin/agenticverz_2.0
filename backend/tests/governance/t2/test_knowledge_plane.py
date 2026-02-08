@@ -16,17 +16,24 @@ class TestKnowledgePlaneImports:
 
     def test_status_import(self):
         """KnowledgePlaneStatus should be importable."""
-        from app.services.knowledge import KnowledgePlaneStatus
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgePlaneStatus,
+        )
         assert KnowledgePlaneStatus.ACTIVE == "active"
 
     def test_node_type_import(self):
         """KnowledgeNodeType should be importable."""
-        from app.services.knowledge import KnowledgeNodeType
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgeNodeType,
+        )
         assert KnowledgeNodeType.DOCUMENT == "document"
 
     def test_node_import(self):
         """KnowledgeNode should be importable."""
-        from app.services.knowledge import KnowledgeNode, KnowledgeNodeType
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgeNode,
+            KnowledgeNodeType,
+        )
         node = KnowledgeNode(
             node_id="node-1",
             node_type=KnowledgeNodeType.DOCUMENT,
@@ -36,7 +43,9 @@ class TestKnowledgePlaneImports:
 
     def test_plane_import(self):
         """KnowledgePlane should be importable."""
-        from app.services.knowledge import KnowledgePlane
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgePlane,
+        )
         plane = KnowledgePlane(
             plane_id="plane-1",
             tenant_id="tenant-1",
@@ -46,13 +55,17 @@ class TestKnowledgePlaneImports:
 
     def test_registry_import(self):
         """KnowledgePlaneRegistry should be importable."""
-        from app.services.knowledge import KnowledgePlaneRegistry
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgePlaneRegistry,
+        )
         registry = KnowledgePlaneRegistry()
         assert registry is not None
 
     def test_error_import(self):
         """KnowledgePlaneError should be importable."""
-        from app.services.knowledge import KnowledgePlaneError
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgePlaneError,
+        )
         error = KnowledgePlaneError("test")
         assert str(error) == "test"
 
@@ -62,7 +75,10 @@ class TestKnowledgeNode:
 
     def test_node_creation(self):
         """Node should be created with required fields."""
-        from app.services.knowledge import KnowledgeNode, KnowledgeNodeType
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgeNode,
+            KnowledgeNodeType,
+        )
 
         node = KnowledgeNode(
             node_id="node-1",
@@ -76,7 +92,10 @@ class TestKnowledgeNode:
 
     def test_add_child(self):
         """Adding children should work correctly."""
-        from app.services.knowledge import KnowledgeNode, KnowledgeNodeType
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgeNode,
+            KnowledgeNodeType,
+        )
 
         node = KnowledgeNode(
             node_id="parent",
@@ -92,7 +111,10 @@ class TestKnowledgeNode:
 
     def test_add_related(self):
         """Adding related nodes should work correctly."""
-        from app.services.knowledge import KnowledgeNode, KnowledgeNodeType
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgeNode,
+            KnowledgeNodeType,
+        )
 
         node = KnowledgeNode(
             node_id="node-1",
@@ -105,7 +127,10 @@ class TestKnowledgeNode:
 
     def test_to_dict(self):
         """Node should serialize to dict."""
-        from app.services.knowledge import KnowledgeNode, KnowledgeNodeType
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgeNode,
+            KnowledgeNodeType,
+        )
 
         node = KnowledgeNode(
             node_id="node-1",
@@ -125,7 +150,7 @@ class TestKnowledgePlane:
 
     def test_plane_creation(self):
         """Plane should be created with required fields."""
-        from app.services.knowledge import (
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
             KnowledgePlane,
             KnowledgePlaneStatus,
         )
@@ -141,7 +166,7 @@ class TestKnowledgePlane:
 
     def test_add_node(self):
         """Adding nodes should work correctly."""
-        from app.services.knowledge import (
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
             KnowledgePlane,
             KnowledgeNode,
             KnowledgeNodeType,
@@ -165,7 +190,7 @@ class TestKnowledgePlane:
 
     def test_remove_node(self):
         """Removing nodes should work correctly."""
-        from app.services.knowledge import (
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
             KnowledgePlane,
             KnowledgeNode,
             KnowledgeNodeType,
@@ -191,7 +216,9 @@ class TestKnowledgePlane:
 
     def test_add_source(self):
         """Adding sources should work correctly."""
-        from app.services.knowledge import KnowledgePlane
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgePlane,
+        )
 
         plane = KnowledgePlane(
             plane_id="plane-1",
@@ -204,7 +231,7 @@ class TestKnowledgePlane:
 
     def test_status_lifecycle(self):
         """Status transitions should work correctly."""
-        from app.services.knowledge import (
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
             KnowledgePlane,
             KnowledgePlaneStatus,
         )
@@ -233,7 +260,7 @@ class TestKnowledgePlane:
 
     def test_error_handling(self):
         """Error recording should work correctly."""
-        from app.services.knowledge import (
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
             KnowledgePlane,
             KnowledgePlaneStatus,
         )
@@ -250,7 +277,9 @@ class TestKnowledgePlane:
 
     def test_to_dict(self):
         """Plane should serialize to dict."""
-        from app.services.knowledge import KnowledgePlane
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgePlane,
+        )
 
         plane = KnowledgePlane(
             plane_id="plane-1",
@@ -271,21 +300,25 @@ class TestKnowledgePlaneRegistry:
     @pytest.fixture(autouse=True)
     def reset_registry(self):
         """Reset registry before each test."""
-        from app.services.knowledge.knowledge_plane import _reset_registry
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            _reset_registry,
+        )
         _reset_registry()
         yield
         _reset_registry()
 
     def test_registry_creation(self):
         """Registry should be created."""
-        from app.services.knowledge import KnowledgePlaneRegistry
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgePlaneRegistry,
+        )
 
         registry = KnowledgePlaneRegistry()
         assert registry is not None
 
     def test_register_plane(self):
         """Registering a plane should store it."""
-        from app.services.knowledge import (
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
             KnowledgePlaneRegistry,
             KnowledgePlaneStatus,
         )
@@ -301,7 +334,9 @@ class TestKnowledgePlaneRegistry:
 
     def test_get_plane(self):
         """Getting a plane by ID should work."""
-        from app.services.knowledge import KnowledgePlaneRegistry
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgePlaneRegistry,
+        )
 
         registry = KnowledgePlaneRegistry()
         plane = registry.register(
@@ -315,7 +350,9 @@ class TestKnowledgePlaneRegistry:
 
     def test_get_by_name(self):
         """Getting a plane by name should work."""
-        from app.services.knowledge import KnowledgePlaneRegistry
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgePlaneRegistry,
+        )
 
         registry = KnowledgePlaneRegistry()
         registry.register(
@@ -329,7 +366,9 @@ class TestKnowledgePlaneRegistry:
 
     def test_list_by_tenant(self):
         """Planes should be filterable by tenant."""
-        from app.services.knowledge import KnowledgePlaneRegistry
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgePlaneRegistry,
+        )
 
         registry = KnowledgePlaneRegistry()
 
@@ -342,7 +381,7 @@ class TestKnowledgePlaneRegistry:
 
     def test_list_by_status(self):
         """Planes should be filterable by status."""
-        from app.services.knowledge import (
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
             KnowledgePlaneRegistry,
             KnowledgePlaneStatus,
         )
@@ -362,7 +401,9 @@ class TestKnowledgePlaneRegistry:
 
     def test_delete_plane(self):
         """Deleting should remove plane."""
-        from app.services.knowledge import KnowledgePlaneRegistry
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgePlaneRegistry,
+        )
 
         registry = KnowledgePlaneRegistry()
         plane = registry.register(
@@ -376,7 +417,9 @@ class TestKnowledgePlaneRegistry:
 
     def test_get_statistics(self):
         """Statistics should be collected correctly."""
-        from app.services.knowledge import KnowledgePlaneRegistry
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgePlaneRegistry,
+        )
 
         registry = KnowledgePlaneRegistry()
 
@@ -388,7 +431,9 @@ class TestKnowledgePlaneRegistry:
 
     def test_clear_tenant(self):
         """Clearing tenant should remove all planes."""
-        from app.services.knowledge import KnowledgePlaneRegistry
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            KnowledgePlaneRegistry,
+        )
 
         registry = KnowledgePlaneRegistry()
 
@@ -406,14 +451,18 @@ class TestHelperFunctions:
     @pytest.fixture(autouse=True)
     def reset_registry(self):
         """Reset registry before each test."""
-        from app.services.knowledge.knowledge_plane import _reset_registry
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            _reset_registry,
+        )
         _reset_registry()
         yield
         _reset_registry()
 
     def test_create_knowledge_plane(self):
         """create_knowledge_plane should use singleton."""
-        from app.services.knowledge import create_knowledge_plane
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
+            create_knowledge_plane,
+        )
 
         plane = create_knowledge_plane(
             tenant_id="tenant-1",
@@ -423,7 +472,7 @@ class TestHelperFunctions:
 
     def test_get_knowledge_plane(self):
         """get_knowledge_plane should use singleton."""
-        from app.services.knowledge import (
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
             create_knowledge_plane,
             get_knowledge_plane,
         )
@@ -438,7 +487,7 @@ class TestHelperFunctions:
 
     def test_list_knowledge_planes(self):
         """list_knowledge_planes should use singleton."""
-        from app.services.knowledge import (
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
             create_knowledge_plane,
             list_knowledge_planes,
         )

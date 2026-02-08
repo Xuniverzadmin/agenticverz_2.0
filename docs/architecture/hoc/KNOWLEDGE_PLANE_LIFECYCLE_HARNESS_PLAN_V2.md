@@ -233,6 +233,17 @@ The canonical plane registry and lifecycle state must be **persisted to Postgres
 1. Remove `app.services.knowledge.*` plane registry if unused after repointing.
 2. Remove or demote legacy plane registries once importers are zero.
 
+**Phase 5 implementation (DONE 2026-02-08):**
+- Deleted legacy `app.services.*` knowledge/retrieval shim modules:
+  - `backend/app/services/knowledge/*`
+  - `backend/app/services/knowledge_lifecycle_manager.py`
+  - `backend/app/services/mediation/*`
+  - `backend/app/services/retrieval/*`
+- Updated governance tests to import canonical HOC equivalents:
+  - `backend/tests/governance/t0/test_retrieval_mediator.py`
+  - `backend/tests/governance/t2/test_knowledge_plane.py`
+  - `backend/tests/governance/t3/test_knowledge_domain.py`
+
 **Exit criteria:** one canonical plane SSOT; no duplicate managers.
 
 ---

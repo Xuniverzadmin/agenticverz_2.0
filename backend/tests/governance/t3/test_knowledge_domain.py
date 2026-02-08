@@ -26,21 +26,19 @@ from datetime import datetime, timezone
 
 import pytest
 
-from app.services.knowledge import (
+from app.hoc.cus.hoc_spine.orchestrator.lifecycle.drivers.knowledge_plane import (
     KnowledgeNode,
     KnowledgeNodeType,
     KnowledgePlane,
     KnowledgePlaneError,
     KnowledgePlaneRegistry,
+    KnowledgePlaneStats,
     KnowledgePlaneStatus,
+    _reset_registry,
     create_knowledge_plane,
     get_knowledge_plane,
-    list_knowledge_planes,
-)
-from app.services.knowledge.knowledge_plane import (
-    KnowledgePlaneStats,
     get_knowledge_plane_registry,
-    _reset_registry,
+    list_knowledge_planes,
 )
 
 
