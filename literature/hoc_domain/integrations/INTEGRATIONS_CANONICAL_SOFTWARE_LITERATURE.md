@@ -15,6 +15,14 @@
 - L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain integrations --json --advisory` reports 0 blocking, 0 advisory.
 - Remaining coherence debt (execution boundary): 5 orphaned L5 entry modules remain in `backend/app/hoc/cus/integrations/L5_engines/` (see `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`).
 
+### Knowledge Planes (System Runtime Integration)
+
+- Integrations is a **capability provider** for knowledge planes (connectors, vector stores, ingestion/index jobs).
+- Knowledge plane lifecycle authority is **hoc_spine-owned** (internal runtime), not domain-owned.
+- Canonical design literature + plan:
+  - `literature/hoc_spine/KNOWLEDGE_PLANE_LITERATURE.md`
+  - `docs/architecture/hoc/KNOWLEDGE_PLANE_LIFECYCLE_HARNESS_PLAN_V2.md`
+
 ## Consolidation Actions (2026-01-31)
 
 ### Naming Violations Fixed (6 renames)

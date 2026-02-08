@@ -25,6 +25,15 @@ The **policies** domain is the largest and most complex domain in the HOC archit
 
 **Strict T0 wiring fix:** policy plan generation now imports `get_planner` from `app.planners` (not `hoc.int.platform` facades) to preserve authority boundaries.
 
+### Knowledge Access (RAG) — Policy-Governed Plane Authorization
+
+- Knowledge access must be treated as an **explicit authorization gate**, not as a prompt-side behavior.
+- Policies are the natural owner of the **`knowledge_access`** policy surface (deny-by-default, allow/deny plane lists, query constraints, logging rules).
+- Enforcement is runtime-owned (hoc_spine mediation/retrieval choke point), not domain-owned transition logic.
+- Canonical design literature + plan:
+  - `literature/hoc_spine/KNOWLEDGE_PLANE_LITERATURE.md`
+  - `docs/architecture/hoc/KNOWLEDGE_PLANE_LIFECYCLE_HARNESS_PLAN_V2.md`
+
 ### Domain Metrics
 
 | Metric | Value |

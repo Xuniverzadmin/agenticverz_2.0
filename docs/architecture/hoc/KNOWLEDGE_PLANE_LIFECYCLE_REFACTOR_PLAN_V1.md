@@ -4,6 +4,9 @@
 **Non-scope:** Tenant/integration/policy/api_key lifecycle harnessing (handled separately).  
 **Goal:** Eliminate duplicate knowledge lifecycle implementations so **worker runtime, tests, and SDK** share one canonical lifecycle manager + one canonical stage handler set.
 
+**Superseded:** This V1 plan focuses on “duplicate implementation elimination” only. The canonical end-state (template + harness + Postgres durability + surface re-home) is tracked in:
+- `docs/architecture/hoc/KNOWLEDGE_PLANE_LIFECYCLE_HARNESS_PLAN_V2.md`
+
 ## Status (2026-02-08)
 
 - **Canonical owner:** hoc_spine

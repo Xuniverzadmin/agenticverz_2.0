@@ -15,6 +15,7 @@
 | **Master Migration Plan** | [HOC_MIGRATION_PLAN.md](../HOC_MIGRATION_PLAN.md) | v1.1.0 DRAFT |
 | **Phase 1 Plan** | [migration/PHASE1_MIGRATION_PLAN.md](migration/PHASE1_MIGRATION_PLAN.md) | COMPLETE |
 | **Phase 2 Plan** | [migration/PHASE2_MIGRATION_PLAN.md](migration/PHASE2_MIGRATION_PLAN.md) | IN PROGRESS |
+| **Knowledge Planes** | [KNOWLEDGE_PLANE_LIFECYCLE_HARNESS_PLAN_V2.md](KNOWLEDGE_PLANE_LIFECYCLE_HARNESS_PLAN_V2.md) | DRAFT |
 
 ---
 

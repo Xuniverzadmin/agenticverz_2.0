@@ -473,6 +473,11 @@ separate from `orchestrator/lifecycle/`, which governs system lifecycle phases a
 
 `app.services.lifecycle_stages.*`, `app.services.knowledge_lifecycle_manager`, and `app.services.knowledge_sdk` exist only as compatibility shims and must not be used as canonical import sources for HOC.
 
+#### Canonical Literature + Plan (This Workstream)
+
+- Literature (first principles): `literature/hoc_spine/KNOWLEDGE_PLANE_LITERATURE.md`
+- Implementation plan (template + harness + durability): `docs/architecture/hoc/KNOWLEDGE_PLANE_LIFECYCLE_HARNESS_PLAN_V2.md`
+
 ---
 
 ### 3.4a `orchestrator/lifecycle/drivers/`
