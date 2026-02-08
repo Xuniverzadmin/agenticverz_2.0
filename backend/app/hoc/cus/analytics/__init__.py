@@ -18,7 +18,7 @@ INSIGHT LAYER (Customer Console owned):
   - detection_facade.py — anomaly lifecycle, read models
 
 TRUTH LAYER (System-wide, governance-adjacent):
-  - cost_model_engine.py — system truth, all products depend
+  - cost_model.py — system truth, all products depend
   - cost_anomaly_detector.py — system truth, incident escalation
   - cost_write_service.py — DB delegation
 

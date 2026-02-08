@@ -9,10 +9,10 @@
 
 ## Reality Delta (2026-02-07)
 
-- Execution topology: analytics L2 routes dispatch via L4 `OperationRegistry` (no direct L2→L5 gaps).
-- Some DB/ORM surfaces have been pushed behind L6 drivers, but L5 still contains a runtime `sqlmodel.Session` import in `cost_write_engine.py` and model imports in prediction/pattern engines.
-- Remaining clean-arch debt (mechanical audit): `backend/app/hoc/cus/analytics/L5_engines/cost_write_engine.py` imports `sqlmodel`, and `prediction_engine.py` / `pattern_detection_engine.py` still import `app.models.*`.
-- Verify now: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain analytics`.
+- Execution topology: analytics L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5 gaps).
+- L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain analytics --json --advisory` reports 0 blocking, 0 advisory.
+- Remaining coherence debt (execution boundary): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain analytics --json` reports 9 orphaned L5 entry modules: `ai_console_panel_engine.py`, `alert_worker_engine.py`, `coordinator_engine.py`, `cost_model_engine.py`, `cost_write_engine.py`, `costsim_models_engine.py`, `pattern_detection_engine.py`, `provenance_engine.py`, `v2_adapter_engine.py`.
+- Plan: `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`.
 
 ## Script Registry
 

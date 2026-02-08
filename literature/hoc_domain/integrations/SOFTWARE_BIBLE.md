@@ -9,11 +9,11 @@
 
 ## Reality Delta (2026-02-07)
 
-- Execution topology: integrations L2 routes dispatch via L4 `OperationRegistry` (no direct L2→L5 gaps).
-- CUS health: new `backend/app/hoc/cus/integrations/L6_drivers/cus_health_driver.py` introduced to move internal DB coupling out of `cus_health_engine.py`.
-- Known exception (intentional integration effect): `sql_gateway.py` opens external connections (e.g. `asyncpg.connect`) to customer systems; this is allowed for integrations, but must remain isolated from internal DB/session patterns.
-- Remaining clean-arch debt (mechanical audit): `cus_schemas.py` still imports `app.models.*`, and `loop_events.py` still performs rollback.
-- Verify now: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain integrations`.
+- Execution topology: integrations L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5 gaps).
+- External connector I/O: customer-system connection logic is isolated behind `backend/app/hoc/cus/integrations/L6_drivers/sql_gateway_driver.py` with Protocol/DTO boundary in `backend/app/hoc/cus/integrations/L5_schemas/sql_gateway_protocol.py`.
+- L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain integrations --json --advisory` reports 0 blocking, 0 advisory.
+- Remaining coherence debt (execution boundary): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain integrations --json` reports 5 orphaned L5 entry modules: `cost_bridges_engine.py`, `graduation_engine.py`, `http_connector_engine.py`, `iam_engine.py`, `mcp_connector_engine.py`.
+- Plan: `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`.
 
 ## Script Registry
 

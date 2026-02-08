@@ -5,7 +5,7 @@
 #   Trigger: import-time
 #   Execution: sync
 # Role: L5-safe feedback DTO for pattern detection engine
-# Callers: pattern_detection_engine.py (L5)
+# Callers: pattern_detection.py (L5)
 # Allowed Imports: pydantic (DTO framework)
 # Forbidden Imports: L1, L2, L3, L7 (app.models)
 # Reference: PIN-520 Phase 3 (L5 purity — no runtime app.models imports)

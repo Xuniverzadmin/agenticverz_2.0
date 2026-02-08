@@ -9,9 +9,9 @@
 
 ## Reality Delta (2026-02-07)
 
-- Execution topology: analytics L2 routes dispatch via L4 `OperationRegistry` (no direct L2→L5 gaps).
-- Remaining clean-arch debt (mechanical audit): `backend/app/hoc/cus/analytics/L5_engines/cost_write_engine.py` imports `sqlmodel`, and `prediction_engine.py` / `pattern_detection_engine.py` still import `app.models.*`.
-- Verification: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain analytics`.
+- Execution topology: analytics L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5 gaps).
+- L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain analytics --json --advisory` reports 0 blocking, 0 advisory.
+- Remaining coherence debt (execution boundary): 9 orphaned L5 entry modules remain in `backend/app/hoc/cus/analytics/L5_engines/` (see `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`).
 
 ## Consolidation Actions (2026-01-31)
 

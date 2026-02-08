@@ -20,9 +20,9 @@ Decision engines for activity domain. Pure business logic, no DB access.
 Exports:
 - threshold_engine: Threshold resolution and evaluation logic
 - signal_feedback_engine: Signal feedback engine (stub)
-- attention_ranking_engine: Attention ranking engine (stub)
-- pattern_detection_engine: Pattern detection engine (stub)
-- cost_analysis_engine: Cost analysis engine (stub)
+- attention_ranking: Attention ranking (stub, demoted from _engine 2026-02-08)
+- pattern_detection: Pattern detection (stub, demoted from _engine 2026-02-08)
+- cost_analysis: Cost analysis (stub, demoted from _engine 2026-02-08)
 - signal_identity: Signal identity utilities
 """
 

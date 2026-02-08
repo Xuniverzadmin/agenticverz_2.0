@@ -49,7 +49,7 @@ from app.hoc.cus.policies.L6_drivers.policy_proposal_write_driver import (
     get_policy_proposal_write_driver,
 )
 from app.hoc.cus.hoc_spine.schemas.domain_enums import ActorType
-from app.hoc.cus.policies.L5_engines.policy_graph_engine import (
+from app.hoc.cus.policies.L5_engines.policy_graph import (
     ConflictSeverity,
     get_conflict_engine,
     get_dependency_engine,

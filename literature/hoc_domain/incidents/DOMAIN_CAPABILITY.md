@@ -8,10 +8,10 @@
 
 ## Reality Delta (2026-02-07)
 
-- L2 purity preserved: incidents L2 routes dispatch via L4 `OperationRegistry` (no direct L2→L5).
-- `policy_violation_engine.py` supports an L4-owned connection path; the legacy L5-owned psycopg2 connection+commit path still exists and remains a known exception until removed.
-- Remaining clean-arch debt (mechanical audit): L5 imports `app.models.*` in write paths (`incident_write_engine.py`, `severity_policy.py`).
-- Verify now: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain incidents`.
+- L2 purity preserved: incidents L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5).
+- L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain incidents --json --advisory` reports 0 blocking, 0 advisory.
+- Remaining coherence debt (execution boundary): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain incidents --json` reports 5 orphaned L5 entry modules.
+- Plan: `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`.
 
 ## 1. Domain Purpose
 

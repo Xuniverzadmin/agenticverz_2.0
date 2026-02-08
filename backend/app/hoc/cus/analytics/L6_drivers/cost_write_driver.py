@@ -13,7 +13,7 @@
 #   Scope: domain (analytics)
 #   Models: FeatureTag, CostRecord, CostBudget
 # Role: Data access for cost write operations
-# Callers: cost_write_engine.py (L5 engine)
+# Callers: cost_write.py (L5)
 # Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
 # Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT

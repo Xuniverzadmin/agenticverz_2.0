@@ -73,6 +73,16 @@ def register_all_handlers(registry: "OperationRegistry") -> None:
 
     policies_handler.register(registry)  # policies.query, .enforcement, .governance, .lessons, .policy_facade, .limits, .rules, .rate_limits, .simulate
 
+    # GAP-174 — Policies sandbox execution (1 operation: policies.sandbox_execute)
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import policies_sandbox_handler
+
+    policies_sandbox_handler.register(registry)  # policies.sandbox_execute
+
+    # Part-2 CRM — Governance audit execution (1 operation: governance.audit_job)
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import governance_audit_handler
+
+    governance_audit_handler.register(registry)  # governance.audit_job
+
     # PIN-516 Phase 3 — MCP Servers (1 operation: integrations.mcp_servers)
     from app.hoc.cus.hoc_spine.orchestrator.handlers import mcp_handler
 
@@ -119,6 +129,11 @@ def register_all_handlers(registry: "OperationRegistry") -> None:
     from app.hoc.cus.hoc_spine.orchestrator.handlers import system_handler
 
     system_handler.register(registry)  # system.health
+
+    # Tenant lifecycle — DB-backed lifecycle state (Phase A: Tenant Lifecycle SSOT)
+    from app.hoc.cus.hoc_spine.orchestrator.handlers import lifecycle_handler
+
+    lifecycle_handler.register(registry)  # account.lifecycle.query, account.lifecycle.transition
 
 
 def bootstrap_hoc_spine() -> None:

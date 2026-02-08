@@ -115,34 +115,33 @@ class IncidentWriteService:
         """
         now = datetime.now(timezone.utc)
 
-        # ATOMIC BLOCK: state change + audit must succeed together
-        with self._session.begin():
-            # Delegate DB operations to driver
-            self._driver.update_incident_acknowledged(
-                incident=incident,
-                acknowledged_at=now,
-                acknowledged_by=acknowledged_by,
-            )
+        # ATOMIC BLOCK: L4 owns transaction boundary (PIN-520)
+        # Delegate DB operations to driver
+        self._driver.update_incident_acknowledged(
+            incident=incident,
+            acknowledged_at=now,
+            acknowledged_by=acknowledged_by,
+        )
 
-            # Delegate event creation to driver
-            self._driver.create_incident_event(
+        # Delegate event creation to driver
+        self._driver.create_incident_event(
+            incident_id=str(incident.id),
+            event_type="acknowledged",
+            description=f"Incident acknowledged by {acknowledged_by}",
+        )
+
+        # Emit audit event (PIN-413: Logs Domain)
+        # Audit service injected by L4 handler (PIN-504)
+        if self._audit:
+            self._audit.incident_acknowledged(
+                tenant_id=incident.tenant_id,
                 incident_id=str(incident.id),
-                event_type="acknowledged",
-                description=f"Incident acknowledged by {acknowledged_by}",
+                actor_id=acknowledged_by,
+                actor_type=actor_type,
+                reason=reason,
             )
 
-            # Emit audit event (PIN-413: Logs Domain)
-            # Audit service injected by L4 handler (PIN-504)
-            if self._audit:
-                self._audit.incident_acknowledged(
-                    tenant_id=incident.tenant_id,
-                    incident_id=str(incident.id),
-                    actor_id=acknowledged_by,
-                    actor_type=actor_type,
-                    reason=reason,
-                )
-
-        # Refresh after commit via driver
+        # Refresh via driver
         return self._driver.refresh_incident(incident)
 
     def resolve_incident(
@@ -185,36 +184,35 @@ class IncidentWriteService:
         if resolution_notes:
             description += f": {resolution_notes}"
 
-        # ATOMIC BLOCK: state change + audit must succeed together
-        with self._session.begin():
-            # Delegate DB operations to driver
-            self._driver.update_incident_resolved(
-                incident=incident,
-                resolved_at=now,
-                resolved_by=resolved_by,
+        # ATOMIC BLOCK: L4 owns transaction boundary (PIN-520)
+        # Delegate DB operations to driver
+        self._driver.update_incident_resolved(
+            incident=incident,
+            resolved_at=now,
+            resolved_by=resolved_by,
+            resolution_method=resolution_method,
+        )
+
+        # Delegate event creation to driver
+        self._driver.create_incident_event(
+            incident_id=str(incident.id),
+            event_type="resolved",
+            description=description,
+        )
+
+        # Emit audit event (PIN-413: Logs Domain)
+        # Audit service injected by L4 handler (PIN-504)
+        if self._audit:
+            self._audit.incident_resolved(
+                tenant_id=incident.tenant_id,
+                incident_id=str(incident.id),
+                actor_id=resolved_by,
+                actor_type=actor_type,
+                reason=reason or resolution_notes,
                 resolution_method=resolution_method,
             )
 
-            # Delegate event creation to driver
-            self._driver.create_incident_event(
-                incident_id=str(incident.id),
-                event_type="resolved",
-                description=description,
-            )
-
-            # Emit audit event (PIN-413: Logs Domain)
-            # Audit service injected by L4 handler (PIN-504)
-            if self._audit:
-                self._audit.incident_resolved(
-                    tenant_id=incident.tenant_id,
-                    incident_id=str(incident.id),
-                    actor_id=resolved_by,
-                    actor_type=actor_type,
-                    reason=reason or resolution_notes,
-                    resolution_method=resolution_method,
-                )
-
-        # Refresh after commit via driver
+        # Refresh via driver
         return self._driver.refresh_incident(incident)
 
     def manual_close_incident(
@@ -262,44 +260,43 @@ class IncidentWriteService:
         if reason:
             description += f": {reason}"
 
-        # ATOMIC BLOCK: state change + audit must succeed together
-        with self._session.begin():
-            # Delegate DB operations to driver
-            self._driver.update_incident_resolved(
-                incident=incident,
-                resolved_at=now,
-                resolved_by=closed_by,
-                resolution_method="manual_closure",
-            )
+        # ATOMIC BLOCK: L4 owns transaction boundary (PIN-520)
+        # Delegate DB operations to driver
+        self._driver.update_incident_resolved(
+            incident=incident,
+            resolved_at=now,
+            resolved_by=closed_by,
+            resolution_method="manual_closure",
+        )
 
-            # Delegate event creation to driver
-            self._driver.create_incident_event(
+        # Delegate event creation to driver
+        self._driver.create_incident_event(
+            incident_id=str(incident.id),
+            event_type="manually_closed",
+            description=description,
+        )
+
+        # Capture after state for audit
+        after_state = {
+            "status": "RESOLVED",  # Known state after update
+            "resolved_at": now.isoformat(),
+            "resolution_method": "manual_closure",
+        }
+
+        # Emit audit event (PIN-413: Logs Domain)
+        # Audit service injected by L4 handler (PIN-504)
+        if self._audit:
+            self._audit.incident_manually_closed(
+                tenant_id=incident.tenant_id,
                 incident_id=str(incident.id),
-                event_type="manually_closed",
-                description=description,
+                actor_id=closed_by,
+                actor_type=actor_type,
+                reason=reason,
+                before_state=before_state,
+                after_state=after_state,
             )
 
-            # Capture after state for audit (L4 logic)
-            after_state = {
-                "status": "RESOLVED",  # Known state after update
-                "resolved_at": now.isoformat(),
-                "resolution_method": "manual_closure",
-            }
-
-            # Emit audit event (PIN-413: Logs Domain)
-            # Audit service injected by L4 handler (PIN-504)
-            if self._audit:
-                self._audit.incident_manually_closed(
-                    tenant_id=incident.tenant_id,
-                    incident_id=str(incident.id),
-                    actor_id=closed_by,
-                    actor_type=actor_type,
-                    reason=reason,
-                    before_state=before_state,
-                    after_state=after_state,
-                )
-
-        # Refresh after commit via driver
+        # Refresh via driver
         return self._driver.refresh_incident(incident)
 
 

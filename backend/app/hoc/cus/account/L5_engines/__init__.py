@@ -19,20 +19,11 @@ For CUSTOMER account operations:
     from app.hoc.cus.account.L5_engines import get_accounts_facade
 """
 
-from app.hoc.cus.account.L5_engines.email_verification_engine import (
-    EmailVerificationService,
-    EmailVerificationError,
-    VerificationResult,
-    get_email_verification_service,
-)
 from app.hoc.cus.account.L5_engines.tenant_engine import (
     TenantEngine,
     TenantEngineError,
     QuotaExceededError,
     get_tenant_engine,
-)
-from app.hoc.cus.account.L5_engines.user_write_engine import (
-    UserWriteService,
 )
 from app.hoc.cus.account.L5_engines.accounts_facade import (
     AccountsFacade,
@@ -44,18 +35,11 @@ from app.hoc.cus.account.L5_engines.notifications_facade import (
 )
 
 __all__ = [
-    # email_verification
-    "EmailVerificationService",
-    "EmailVerificationError",
-    "VerificationResult",
-    "get_email_verification_service",
     # tenant_engine
     "TenantEngine",
     "TenantEngineError",
     "QuotaExceededError",
     "get_tenant_engine",
-    # user_write_engine (class name not yet renamed to UserWriteEngine)
-    "UserWriteService",
     # accounts_facade
     "AccountsFacade",
     "get_accounts_facade",

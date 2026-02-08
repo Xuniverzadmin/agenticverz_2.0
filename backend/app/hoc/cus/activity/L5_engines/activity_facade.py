@@ -80,9 +80,9 @@ from app.hoc.cus.activity.L6_drivers.activity_read_driver import (
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
     from app.hoc.cus.activity.L6_drivers.activity_read_driver import ActivityReadDriver
-from app.hoc.cus.activity.L5_engines.attention_ranking_engine import AttentionRankingService
-from app.hoc.cus.activity.L5_engines.cost_analysis_engine import CostAnalysisService
-from app.hoc.cus.activity.L5_engines.pattern_detection_engine import PatternDetectionService
+from app.hoc.cus.activity.L5_engines.attention_ranking import AttentionRankingService
+from app.hoc.cus.activity.L5_engines.cost_analysis import CostAnalysisService
+from app.hoc.cus.activity.L5_engines.pattern_detection import PatternDetectionService
 from app.hoc.cus.activity.L5_engines.signal_feedback_engine import (
     SignalFeedbackService,
     AcknowledgeResult,
@@ -390,15 +390,15 @@ class DimensionBreakdownResult:
 
 
 # Import service result types for pass-through
-from app.hoc.cus.activity.L5_engines.pattern_detection_engine import (
+from app.hoc.cus.activity.L5_engines.pattern_detection import (
     PatternDetectionResult,
     DetectedPattern,
 )
-from app.hoc.cus.activity.L5_engines.cost_analysis_engine import (
+from app.hoc.cus.activity.L5_engines.cost_analysis import (
     CostAnalysisResult,
     CostAnomaly,
 )
-from app.hoc.cus.activity.L5_engines.attention_ranking_engine import (
+from app.hoc.cus.activity.L5_engines.attention_ranking import (
     AttentionQueueResult,
     AttentionSignal,
 )

@@ -2,7 +2,7 @@
 
 **Domain:** `policies`
 **Status:** LARGEST HOC DOMAIN (77 files)
-**Last Updated:** 2026-02-07
+**Last Updated:** 2026-02-08
 **Phase:** Phase-6 Architecture (HOC Multi-Tenant SaaS)
 
 ---
@@ -13,11 +13,13 @@ The **policies** domain is the largest and most complex domain in the HOC archit
 
 **L2 Purity Update (2026-02-06):** L2 policy APIs no longer import L5 engines directly. They use L4 bridge capabilities (`PoliciesEngineBridge`, `AccountBridge`) for policy engine and RBAC access (PIN-L2-PURITY).
 
-### Reality Delta (2026-02-07)
+### Reality Delta (2026-02-08)
 
-- Policy evaluation persistence moved behind `backend/app/hoc/cus/policies/L6_drivers/policy_engine_driver.py`; `backend/app/hoc/cus/policies/L5_engines/engine.py` no longer owns DB connection/commit.
-- Remaining clean-arch debt (mechanical audit): L5 still imports `app.models.*` in `policy_proposal_engine.py`, `policy_limits_engine.py`, `policy_rules_engine.py`; L6 `policy_engine_driver.py` still contains committed wrappers (`conn.commit()`) and must be refactored so L4 owns commit/rollback.
-- Verification: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain policies` and `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain policies`.
+- L2 purity preserved: policies L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5).
+- L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain policies --json --advisory` reports 0 blocking, 0 advisory (transaction boundaries owned by L4).
+- Execution boundary (pairing): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain policies --json` reports 0 orphaned L5 entry modules (`total_l5_engines: 17`, `wired_via_l4: 17`, `direct_l2_to_l5: 0`).
+
+**New L4 Operation (GAP-174):** `policies.sandbox_execute` executes `L5_engines/sandbox_engine.py` through hoc_spine (handler: `hoc_spine/orchestrator/handlers/policies_sandbox_handler.py`).
 
 ### Domain Metrics
 

@@ -33,14 +33,42 @@ EXEMPT PATHS:
 """
 
 from dataclasses import dataclass
-from typing import Optional, Set
+from typing import Set
 from fastapi import Request, HTTPException
 import logging
 
 from app.auth.tenant_lifecycle import TenantLifecycleState
-from app.auth.lifecycle_provider import get_lifecycle_provider
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    get_async_session_context,
+    sql_text,
+)
+from app.hoc.cus.account.L5_schemas.tenant_lifecycle_enums import (
+    TenantLifecycleStatus,
+    normalize_status,
+)
 
 logger = logging.getLogger(__name__)
+
+# Map L5 string status → L4 IntEnum state
+_STATUS_TO_INT_STATE = {
+    TenantLifecycleStatus.ACTIVE: TenantLifecycleState.ACTIVE,
+    TenantLifecycleStatus.SUSPENDED: TenantLifecycleState.SUSPENDED,
+    TenantLifecycleStatus.TERMINATED: TenantLifecycleState.TERMINATED,
+    TenantLifecycleStatus.ARCHIVED: TenantLifecycleState.ARCHIVED,
+}
+
+
+async def _fetch_lifecycle_state(tenant_id: str) -> TenantLifecycleState:
+    """Fetch lifecycle state from DB (Tenant.status), returns IntEnum."""
+    async with get_async_session_context() as session:
+        row = (await session.execute(
+            sql_text("SELECT status FROM tenants WHERE id = :tid"),
+            {"tid": tenant_id},
+        )).mappings().first()
+        if row is None:
+            return TenantLifecycleState.ACTIVE
+        status = normalize_status(row["status"])
+        return _STATUS_TO_INT_STATE.get(status, TenantLifecycleState.ACTIVE)
 
 
 # Paths exempt from lifecycle enforcement
@@ -139,9 +167,8 @@ class LifecycleGate:
             await self.app(scope, receive, send)
             return
 
-        # Get lifecycle state
-        provider = get_lifecycle_provider()
-        state = provider.get_state(tenant_id)
+        # Get lifecycle state from DB
+        state = await _fetch_lifecycle_state(tenant_id)
 
         # Check SDK paths
         if is_sdk_path(path) and not state.allows_sdk_execution():
@@ -216,7 +243,7 @@ class LifecycleGate:
 # =============================================================================
 
 
-def check_lifecycle(request: Request) -> LifecycleContext:
+async def check_lifecycle(request: Request) -> LifecycleContext:
     """
     FastAPI dependency: Get lifecycle context for current request.
 
@@ -248,9 +275,8 @@ def check_lifecycle(request: Request) -> LifecycleContext:
             is_exempt=False,
         )
 
-    # Get lifecycle state
-    provider = get_lifecycle_provider()
-    state = provider.get_state(tenant_id)
+    # Get lifecycle state from DB
+    state = await _fetch_lifecycle_state(tenant_id)
 
     return LifecycleContext(
         tenant_id=tenant_id,
@@ -262,13 +288,13 @@ def check_lifecycle(request: Request) -> LifecycleContext:
     )
 
 
-def require_active_lifecycle(request: Request) -> LifecycleContext:
+async def require_active_lifecycle(request: Request) -> LifecycleContext:
     """
     FastAPI dependency: Require ACTIVE lifecycle state.
 
     Raises HTTP 403 if tenant is not ACTIVE.
     """
-    context = check_lifecycle(request)
+    context = await check_lifecycle(request)
 
     if context.is_exempt:
         return context
@@ -287,13 +313,13 @@ def require_active_lifecycle(request: Request) -> LifecycleContext:
     return context
 
 
-def require_sdk_execution(request: Request) -> LifecycleContext:
+async def require_sdk_execution(request: Request) -> LifecycleContext:
     """
     FastAPI dependency: Require SDK execution permission.
 
     Raises HTTP 403 if SDK execution not allowed.
     """
-    context = check_lifecycle(request)
+    context = await check_lifecycle(request)
 
     if context.is_exempt:
         return context
@@ -312,13 +338,13 @@ def require_sdk_execution(request: Request) -> LifecycleContext:
     return context
 
 
-def require_writes_allowed(request: Request) -> LifecycleContext:
+async def require_writes_allowed(request: Request) -> LifecycleContext:
     """
     FastAPI dependency: Require write permission.
 
     Raises HTTP 403 if writes not allowed.
     """
-    context = check_lifecycle(request)
+    context = await check_lifecycle(request)
 
     if context.is_exempt:
         return context

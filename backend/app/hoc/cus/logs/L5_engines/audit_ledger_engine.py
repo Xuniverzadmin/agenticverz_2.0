@@ -68,6 +68,11 @@ class AuditLedgerService:
     def __init__(self, session: "Session"):
         """Initialize with sync database session."""
         self._session = session
+        # PIN-520 No-Exemptions Phase 3: ORM construction delegated to L6 driver
+        from app.hoc.cus.logs.L6_drivers.audit_ledger_write_driver_sync import (
+            get_audit_ledger_write_driver_sync,
+        )
+        self._write_driver = get_audit_ledger_write_driver_sync(session)
 
     def _emit(
         self,
@@ -80,7 +85,7 @@ class AuditLedgerService:
         reason: Optional[str] = None,
         before_state: Optional[Dict[str, Any]] = None,
         after_state: Optional[Dict[str, Any]] = None,
-    ) -> AuditLedger:
+    ) -> "AuditLedger":
         """
         Emit an audit event to the ledger.
 
@@ -96,16 +101,10 @@ class AuditLedgerService:
             after_state: Optional state after change
 
         Returns:
-            Created AuditLedger record
+            Created AuditLedger record (from L6 driver)
         """
-        # PIN-520 Phase 3: Lazy import of ORM model for construction.
-        # This is the architectural bridge — audit_ledger_engine is a thin
-        # writer that constructs AuditLedger rows. Delegating construction
-        # to an L6 driver would add indirection without value since this
-        # engine IS the audit write layer.
-        from app.models.audit_ledger import AuditLedger
-
-        entry = AuditLedger(
+        # PIN-520 No-Exemptions Phase 3: ORM construction in L6 driver
+        entry = self._write_driver.emit_entry(
             tenant_id=tenant_id,
             event_type=event_type.value,
             entity_type=entity_type.value,
@@ -116,10 +115,6 @@ class AuditLedgerService:
             before_state=before_state,
             after_state=after_state,
         )
-
-        self._session.add(entry)
-        # Note: Commit happens in caller's transaction
-        self._session.flush()
 
         logger.info(
             "audit_event_emitted",

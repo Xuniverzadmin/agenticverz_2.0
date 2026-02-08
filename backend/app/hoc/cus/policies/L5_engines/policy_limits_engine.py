@@ -168,56 +168,55 @@ class PolicyLimitsService:
         limit_id = generate_uuid()
         now = utc_now()
 
-        # ATOMIC BLOCK: state change + audit must succeed together
-        async with self._session.begin():
-            limit = self._driver.create_limit(
-                id=limit_id,
+        # ATOMIC BLOCK: L4 owns transaction boundary (PIN-520)
+        limit = self._driver.create_limit(
+            id=limit_id,
+            tenant_id=tenant_id,
+            name=request.name,
+            description=request.description,
+            limit_category=request.limit_category.value,
+            limit_type=request.limit_type,
+            scope=request.scope.value,
+            scope_id=request.scope_id,
+            max_value=request.max_value,
+            enforcement=request.enforcement.value,
+            reset_period=request.reset_period.value if request.reset_period else None,
+            window_seconds=request.window_seconds,
+            status="ACTIVE",
+            created_at=now,
+            updated_at=now,
+        )
+
+        # Create integrity record (INVARIANT: every active limit needs one)
+        integrity = self._driver.create_integrity(
+            id=generate_uuid(),
+            limit_id=limit_id,
+            integrity_status="VERIFIED",
+            integrity_score=Decimal("1.0000"),
+            computed_at=now,
+        )
+
+        # Build limit state for audit
+        limit_state = {
+            "name": limit.name,
+            "limit_category": limit.limit_category,
+            "limit_type": limit.limit_type,
+            "scope": limit.scope,
+            "max_value": str(limit.max_value),
+            "enforcement": limit.enforcement,
+        }
+
+        # Emit audit event (PIN-413: Logs Domain)
+        # Audit service injected by L4 handler (PIN-504)
+        if self._audit:
+            await self._audit.limit_created(
                 tenant_id=tenant_id,
-                name=request.name,
-                description=request.description,
-                limit_category=request.limit_category.value,
-                limit_type=request.limit_type,
-                scope=request.scope.value,
-                scope_id=request.scope_id,
-                max_value=request.max_value,
-                enforcement=request.enforcement.value,
-                reset_period=request.reset_period.value if request.reset_period else None,
-                window_seconds=request.window_seconds,
-                status="ACTIVE",
-                created_at=now,
-                updated_at=now,
-            )
-
-            # Create integrity record (INVARIANT: every active limit needs one)
-            integrity = self._driver.create_integrity(
-                id=generate_uuid(),
                 limit_id=limit_id,
-                integrity_status="VERIFIED",
-                integrity_score=Decimal("1.0000"),
-                computed_at=now,
+                actor_id=created_by,
+                actor_type=ActorType.HUMAN if created_by else ActorType.SYSTEM,
+                reason=f"Limit created: {limit.name}",
+                limit_state=limit_state,
             )
-
-            # Build limit state for audit
-            limit_state = {
-                "name": limit.name,
-                "limit_category": limit.limit_category,
-                "limit_type": limit.limit_type,
-                "scope": limit.scope,
-                "max_value": str(limit.max_value),
-                "enforcement": limit.enforcement,
-            }
-
-            # Emit audit event (PIN-413: Logs Domain)
-            # Audit service injected by L4 handler (PIN-504)
-            if self._audit:
-                await self._audit.limit_created(
-                    tenant_id=tenant_id,
-                    limit_id=limit_id,
-                    actor_id=created_by,
-                    actor_type=ActorType.HUMAN if created_by else ActorType.SYSTEM,
-                    reason=f"Limit created: {limit.name}",
-                    limit_state=limit_state,
-                )
 
         return self._to_response(limit)
 
@@ -261,48 +260,47 @@ class PolicyLimitsService:
             "window_seconds": limit.window_seconds,
         }
 
-        # ATOMIC BLOCK: state change + audit must succeed together
-        async with self._session.begin():
-            # Update mutable fields only
-            if request.name is not None:
-                limit.name = request.name
-            if request.description is not None:
-                limit.description = request.description
-            if request.max_value is not None:
-                limit.max_value = request.max_value
-            if request.enforcement is not None:
-                limit.enforcement = request.enforcement.value
-            if request.reset_period is not None:
-                limit.reset_period = request.reset_period.value
-            if request.window_seconds is not None:
-                limit.window_seconds = request.window_seconds
-            if request.status is not None:
-                limit.status = request.status
+        # ATOMIC BLOCK: L4 owns transaction boundary (PIN-520)
+        # Update mutable fields only
+        if request.name is not None:
+            limit.name = request.name
+        if request.description is not None:
+            limit.description = request.description
+        if request.max_value is not None:
+            limit.max_value = request.max_value
+        if request.enforcement is not None:
+            limit.enforcement = request.enforcement.value
+        if request.reset_period is not None:
+            limit.reset_period = request.reset_period.value
+        if request.window_seconds is not None:
+            limit.window_seconds = request.window_seconds
+        if request.status is not None:
+            limit.status = request.status
 
-            limit.updated_at = utc_now()
+        limit.updated_at = utc_now()
 
-            # Capture after state for audit
-            after_state = {
-                "name": limit.name,
-                "max_value": str(limit.max_value),
-                "enforcement": limit.enforcement,
-                "status": limit.status,
-                "reset_period": limit.reset_period,
-                "window_seconds": limit.window_seconds,
-            }
+        # Capture after state for audit
+        after_state = {
+            "name": limit.name,
+            "max_value": str(limit.max_value),
+            "enforcement": limit.enforcement,
+            "status": limit.status,
+            "reset_period": limit.reset_period,
+            "window_seconds": limit.window_seconds,
+        }
 
-            # Emit audit event (PIN-413: Logs Domain)
-            # Audit service injected by L4 handler (PIN-504)
-            if self._audit:
-                await self._audit.limit_updated(
-                    tenant_id=tenant_id,
-                    limit_id=limit_id,
-                    actor_id=updated_by,
-                    actor_type=ActorType.HUMAN if updated_by else ActorType.SYSTEM,
-                    reason=f"Limit updated: {limit.name}",
-                    before_state=before_state,
-                    after_state=after_state,
-                )
+        # Emit audit event (PIN-413: Logs Domain)
+        # Audit service injected by L4 handler (PIN-504)
+        if self._audit:
+            await self._audit.limit_updated(
+                tenant_id=tenant_id,
+                limit_id=limit_id,
+                actor_id=updated_by,
+                actor_type=ActorType.HUMAN if updated_by else ActorType.SYSTEM,
+                reason=f"Limit updated: {limit.name}",
+                before_state=before_state,
+                after_state=after_state,
+            )
 
         return self._to_response(limit)
 

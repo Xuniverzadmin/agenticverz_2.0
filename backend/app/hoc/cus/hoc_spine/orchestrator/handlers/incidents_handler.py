@@ -130,7 +130,7 @@ class IncidentsWriteHandler:
         from app.hoc.cus.incidents.L5_engines.incident_write_engine import (
             get_incident_write_service,
         )
-        from app.hoc.cus.logs.L5_engines.audit_ledger_service import (
+        from app.hoc.cus.logs.L5_engines.audit_ledger_engine import (
             AuditLedgerService,
         )
 
@@ -157,7 +157,9 @@ class IncidentsWriteHandler:
 
         kwargs = dict(ctx.params)
         kwargs.pop("method", None)
-        data = method(**kwargs)
+        # L4 owns transaction boundary (PIN-520)
+        with ctx.session.begin():
+            data = method(**kwargs)
         return OperationResult.ok(data)
 
 

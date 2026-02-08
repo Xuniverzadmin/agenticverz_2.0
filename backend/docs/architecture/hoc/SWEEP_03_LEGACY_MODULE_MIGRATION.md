@@ -349,3 +349,13 @@ python3 scripts/ops/sweep_03_module_blocker.py --priority
 - `app/hoc/cus/general/L5_engines/cus_credential_service.py` (migrated from app.services)
 - `app/hoc/cus/logs/L6_drivers/audit_ledger_service_async.py` (new L6 driver)
 - `app/hoc/cus/general/L5_schemas/rac_models.py` (RAC models migrated from app.services.audit.models)
+
+## Knowledge Lifecycle Canonicalization (2026-02-08)
+
+To prevent split-brain lifecycle imports, the canonical surfaces are now:
+
+- Stage surface: `app.hoc.cus.hoc_spine.orchestrator.lifecycle.stages`
+- Manager surface: `app.hoc.cus.hoc_spine.orchestrator.lifecycle.knowledge_lifecycle_manager`
+- SDK surface: `app.hoc.cus.hoc_spine.orchestrator.lifecycle.knowledge_sdk`
+
+Legacy `app.services.lifecycle_stages.*`, `app.services.knowledge_lifecycle_manager`, and `app.services.knowledge_sdk` remain only as compatibility shims (re-exports) and should not be used as canonical import sources for HOC.

@@ -1418,7 +1418,7 @@ async def post_goal(
         # the run is queued for L5 execution.
         # Reference: PIN-257 Phase R-2 (L5→L4 Violation Fix)
         try:
-            from app.hoc.cus.policies.L5_engines.plan_generation_engine import generate_plan_for_run
+            from app.hoc.cus.policies.L5_engines.plan_generation import generate_plan_for_run
 
             plan_result = generate_plan_for_run(
                 agent_id=agent_id,

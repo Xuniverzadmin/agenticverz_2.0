@@ -59,14 +59,14 @@ from app.hoc.cus.analytics.L6_drivers.leader_driver import (
     LOCK_CANARY_RUNNER,
     leader_election,
 )
-from app.hoc.cus.analytics.L5_engines.costsim_models_engine import (
+from app.hoc.cus.analytics.L5_engines.costsim_models import (
     CanaryReport,
     ComparisonResult,
     ComparisonVerdict,
     DiffResult,
 )
-from app.hoc.cus.analytics.L5_engines.provenance_engine import get_provenance_logger
-from app.hoc.cus.analytics.L5_engines.v2_adapter_engine import CostSimV2Adapter
+from app.hoc.cus.analytics.L5_engines.provenance import get_provenance_logger
+from app.hoc.cus.analytics.L5_engines.v2_adapter import CostSimV2Adapter
 from app.worker.simulate import CostSimulator
 
 logger = logging.getLogger("nova.costsim.canary")

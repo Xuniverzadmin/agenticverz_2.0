@@ -28,7 +28,7 @@ Test Categories:
 import pytest
 
 from app.models.knowledge_lifecycle import KnowledgePlaneLifecycleState
-from app.services.lifecycle_stages import (
+from app.hoc.cus.hoc_spine.orchestrator.lifecycle.stages import (
     StageContext,
     StageResult,
     StageRegistry,
@@ -39,8 +39,8 @@ from app.services.lifecycle_stages import (
     ClassifyHandler,
     ActivateHandler,
     GovernHandler,
+    StageStatus,
 )
-from app.services.lifecycle_stages.base import StageStatus
 
 
 # =============================================================================

@@ -84,6 +84,15 @@ class PolicyDriver:
             self._policy_engine = PolicyEngine(database_url=self._db_url)
         return self._policy_engine
 
+    @property
+    def policy_engine_driver(self):
+        """Expose L6 PolicyEngineDriver for L4 transaction management.
+
+        L4 handlers use this to open engine.begin() transactions and inject
+        connections via driver.managed_connection(conn).
+        """
+        return self._engine.driver
+
     # =========================================================================
     # Core Evaluation Operations
     # =========================================================================

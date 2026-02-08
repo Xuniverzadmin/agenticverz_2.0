@@ -120,6 +120,16 @@ class PoliciesEngineBridge:
 
         return get_governance_config
 
+    def sandbox_engine_capability(self):
+        """
+        Return sandbox engine module (GAP-174).
+
+        Exposes SandboxService + policy constructs for live execution sandboxing.
+        """
+        from app.hoc.cus.policies.L5_engines import sandbox_engine
+
+        return sandbox_engine
+
     @contextmanager
     def policy_engine_write_context(self):
         """L4 managed write context for PolicyEngine operations.

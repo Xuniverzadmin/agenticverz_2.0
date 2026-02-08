@@ -1,7 +1,7 @@
 # Phase 5 Design — `backend/app/hoc/app.py` (HOC Wiring Entry)
 
 **Date:** 2026-02-07  
-**Status:** DRAFT (design + implementation notes)  
+**Status:** IMPLEMENTED (2026-02-08)  
 **Scope:** `backend/app/hoc/app.py` + `backend/app/hoc/api/facades/**`
 
 ---
@@ -62,6 +62,10 @@ Structural:
 - `backend/app/main.py` contains **0** `from .hoc.api...` router imports
 - `backend/app/main.py` contains **0** `app.include_router(<hoc_router>)` calls for individual HOC routers
 - All HOC router inclusion happens via `include_hoc(app)`
+
+**Evidence (2026-02-08):**
+- `backend/app/hoc/app.py` exists and imports facades only.
+- `backend/app/main.py` calls `include_hoc(app)` and does not include individual HOC routers.
 
 ---
 

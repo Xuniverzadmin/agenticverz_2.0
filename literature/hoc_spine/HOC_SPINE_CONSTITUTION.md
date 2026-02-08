@@ -432,7 +432,7 @@ This folder answers **"how execution happens once approved."**
 ### 3.4 `orchestrator/lifecycle/`
 
 **Status:** VALID (Critical)
-**Scripts:** 5 (across drivers/ and engines/ sub-subfolders)
+**Scripts:** 11 (including canonical import surfaces + manager/SDK)
 
 #### Purpose
 
@@ -455,6 +455,14 @@ Governs **system lifecycle phases** that surround execution. Lifecycle is about
 - Not user workflow logic
 
 Lifecycle answers **"is the system in a state where this execution makes sense?"**
+
+#### Canonical Import Surfaces (No Split-Brain)
+
+- Stage handlers + base types: `app.hoc.cus.hoc_spine.orchestrator.lifecycle.stages`
+- Knowledge plane lifecycle manager: `app.hoc.cus.hoc_spine.orchestrator.lifecycle.knowledge_lifecycle_manager`
+- Knowledge lifecycle SDK facade: `app.hoc.cus.hoc_spine.orchestrator.lifecycle.knowledge_sdk`
+
+`app.services.lifecycle_stages.*`, `app.services.knowledge_lifecycle_manager`, and `app.services.knowledge_sdk` exist only as compatibility shims and must not be used as canonical import sources for HOC.
 
 ---
 

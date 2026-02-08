@@ -1002,7 +1002,7 @@ class IncidentsFacade:
         - cascade_failure: Multiple incidents from same source run
         """
         # L5 engine import (migrated to HOC per SWEEP-05)
-        from app.hoc.cus.incidents.L5_engines.incident_pattern_engine import IncidentPatternService
+        from app.hoc.cus.incidents.L5_engines.incident_pattern import IncidentPatternService
 
         service = IncidentPatternService(session)
         result = await service.detect_patterns(
@@ -1048,7 +1048,7 @@ class IncidentsFacade:
         Identifies incident categories that recur frequently.
         """
         # L5 engine import (migrated to HOC per SWEEP-05, PIN-468)
-        from app.hoc.cus.incidents.L5_engines.recurrence_analysis_engine import RecurrenceAnalysisService
+        from app.hoc.cus.incidents.L5_engines.recurrence_analysis import RecurrenceAnalysisService
 
         service = RecurrenceAnalysisService(session)
         result = await service.analyze_recurrence(
@@ -1094,7 +1094,7 @@ class IncidentsFacade:
         Provides resolution summary, similar incidents, and actionable insights.
         """
         # L5 engine import (migrated to HOC per SWEEP-05)
-        from app.hoc.cus.incidents.L5_engines.postmortem_engine import PostMortemService
+        from app.hoc.cus.incidents.L5_engines.postmortem import PostMortemService
 
         service = PostMortemService(session)
         result = await service.get_incident_learnings(

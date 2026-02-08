@@ -40,7 +40,7 @@ from app.models.knowledge_lifecycle import (
     KnowledgePlaneLifecycleState,
     LifecycleAction,
 )
-from app.services.knowledge_lifecycle_manager import (
+from app.hoc.cus.hoc_spine.orchestrator.lifecycle.knowledge_lifecycle_manager import (
     KnowledgeLifecycleManager,
     KnowledgePlane,
     TransitionRequest,
@@ -49,7 +49,7 @@ from app.services.knowledge_lifecycle_manager import (
     GateResult,
     reset_manager,
 )
-from app.services.knowledge_sdk import (
+from app.hoc.cus.hoc_spine.orchestrator.lifecycle.knowledge_sdk import (
     KnowledgeSDK,
     KnowledgePlaneConfig,
     WaitOptions,

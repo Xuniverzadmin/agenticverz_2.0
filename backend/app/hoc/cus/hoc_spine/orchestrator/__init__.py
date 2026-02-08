@@ -34,7 +34,7 @@ Implementation Order (from VALIDATOR_LOGIC.md):
 # =============================================================================
 # PIN-513: Cross-domain re-exports removed (L1 re-wiring complete).
 # Audit and eligibility types are accessed via their home domains:
-#   - AuditService → logs/L5_support/CRM/engines/audit_engine.py
+#   - AuditService → account/logs/CRM/audit/audit_engine.py
 #   - EligibilityEngine → policies/L5_engines/eligibility_engine.py
 # L4 code uses Protocol interfaces from hoc_spine/schemas/protocols.py.
 
@@ -69,6 +69,28 @@ from app.hoc.cus.hoc_spine.orchestrator.execution.job_executor import (
     StepOutput,
     create_default_executor,
     execution_result_to_evidence,
+)
+
+# Audit Service (PIN-295) — L8 verification lives in account-owned CRM audit namespace
+from app.hoc.cus.account.logs.CRM.audit.audit_engine import (
+    AUDIT_SERVICE_VERSION,
+    AuditCheck,
+    AuditChecks,
+    AuditInput,
+    AuditResult,
+    AuditService,
+    CheckResult,
+    RolloutGate,
+    audit_result_to_record,
+    create_audit_input_from_evidence,
+)
+
+# Sandbox (GAP-174) — policy-owned sandbox runtime (wired through hoc_spine)
+from app.hoc.cus.policies.L5_engines.sandbox_engine import (
+    ExecutionRecord as PolicySandboxExecutionRecord,
+    ExecutionRequest as PolicySandboxExecutionRequest,
+    SandboxPolicy as PolicySandboxPolicy,
+    SandboxService as PolicySandboxService,
 )
 # PIN-513: rollout_projection relocated to frontend/app/projections/rollout_projection.py
 # PIN-513: ValidatorService types accessed via account/L5_engines/crm_validator_engine.py
@@ -147,6 +169,21 @@ __all__ = [
     "FailingHandler",
     "EXECUTOR_VERSION",
     # Audit Service (PIN-295) — accessed via logs/L5_support (PIN-513)
+    "AUDIT_SERVICE_VERSION",
+    "AuditCheck",
+    "AuditChecks",
+    "AuditInput",
+    "AuditResult",
+    "AuditService",
+    "CheckResult",
+    "RolloutGate",
+    "audit_result_to_record",
+    "create_audit_input_from_evidence",
+    # Sandbox (GAP-174) — policy-owned sandbox runtime
+    "PolicySandboxExecutionRecord",
+    "PolicySandboxExecutionRequest",
+    "PolicySandboxPolicy",
+    "PolicySandboxService",
     # Rollout Projection (PIN-296) — relocated to frontend/app/projections/
     # Cross-Domain Governance (mandatory functions)
     "create_incident_from_cost_anomaly",

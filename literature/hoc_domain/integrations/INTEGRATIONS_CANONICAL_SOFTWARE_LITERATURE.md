@@ -10,10 +10,10 @@
 
 ## Reality Delta (2026-02-07)
 
-- New internal DB driver: `backend/app/hoc/cus/integrations/L6_drivers/cus_health_driver.py` introduced to move internal DB coupling out of `cus_health_engine.py`.
-- Known exception (intentional integration effect): `sql_gateway.py` opens external connections (e.g. `asyncpg.connect`) to customer systems; this is allowed for integrations but must remain isolated from internal DB/session patterns.
-- Remaining clean-arch debt (mechanical audit): `cus_schemas.py` still imports `app.models.*`, and `loop_events.py` still performs rollback.
-- Verification: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain integrations`.
+- Execution topology: integrations L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5 gaps).
+- External connector I/O is isolated behind L6 (`backend/app/hoc/cus/integrations/L6_drivers/sql_gateway_driver.py`) with Protocol/DTO boundary in L5 schemas.
+- L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain integrations --json --advisory` reports 0 blocking, 0 advisory.
+- Remaining coherence debt (execution boundary): 5 orphaned L5 entry modules remain in `backend/app/hoc/cus/integrations/L5_engines/` (see `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`).
 
 ## Consolidation Actions (2026-01-31)
 

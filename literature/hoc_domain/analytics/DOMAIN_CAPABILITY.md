@@ -8,9 +8,10 @@
 
 ## Reality Delta (2026-02-07)
 
-- L2 purity preserved: analytics L2 routes dispatch via L4 `OperationRegistry` (no direct L2→L5).
-- Remaining clean-arch debt (mechanical audit): `backend/app/hoc/cus/analytics/L5_engines/cost_write_engine.py` imports `sqlmodel`, and `prediction_engine.py` / `pattern_detection_engine.py` still import `app.models.*`.
-- Verify now: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain analytics`.
+- L2 purity preserved: analytics L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5).
+- L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain analytics --json --advisory` reports 0 blocking, 0 advisory.
+- Remaining coherence debt (execution boundary): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain analytics --json` reports 9 orphaned L5 entry modules.
+- Plan: `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`.
 
 ## 1. Domain Purpose
 

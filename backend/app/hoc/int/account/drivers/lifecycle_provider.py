@@ -1,10 +1,14 @@
+# TOMBSTONE_EXPIRY: 2026-03-15
+# DEPRECATED: Production callers use account/L5_engines/tenant_lifecycle_engine.py
+# Retained for test compatibility only.
+#
 # Layer: L6 — Driver
 # Product: system-wide
 # Temporal:
 #   Trigger: request
 #   Execution: sync
-# Role: Phase-9 Tenant Lifecycle Provider
-# Callers: Auth middleware, protection provider, founder endpoints
+# Role: Phase-9 Tenant Lifecycle Provider (DEPRECATED — see tombstone)
+# Callers: Tests only. Production callers migrated to HOC lifecycle engine.
 # Allowed Imports: L4 (tenant_lifecycle), L6 (observability emit only)
 # Forbidden Imports: L1, L2, L3
 # Reference: PIN-400 Phase-9 (Offboarding & Tenant Lifecycle)

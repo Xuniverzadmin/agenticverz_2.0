@@ -52,7 +52,7 @@ Acceptance Criteria:
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 from datetime import datetime
 from enum import Enum
 import logging
@@ -62,6 +62,15 @@ from app.hoc.cus.integrations.L5_engines.credentials import (
     Credential,
     CredentialService,
 )
+from app.hoc.cus.integrations.L5_schemas.sql_gateway_protocol import (
+    SqlQueryRequest,
+    SqlQueryResult,
+)
+
+if TYPE_CHECKING:
+    from app.hoc.cus.integrations.L5_schemas.sql_gateway_protocol import (
+        SqlGatewayDriverProtocol,
+    )
 
 logger = logging.getLogger("nova.services.connectors.sql_gateway")
 
@@ -164,10 +173,12 @@ class SqlGatewayService:
         config: SqlGatewayConfig,
         template_registry: Dict[str, QueryTemplate],
         credential_service: Optional[CredentialService] = None,
+        driver: Optional["SqlGatewayDriverProtocol"] = None,
     ):
         self.config = config
         self.templates = template_registry
         self.credential_service = credential_service
+        self._driver = driver
 
     @property
     def id(self) -> str:
@@ -210,81 +221,32 @@ class SqlGatewayService:
         # Step 4: Get connection string (machine-controlled from vault)
         connection_string = await self._get_connection_string()
 
-        # Step 5: Execute query
+        # Step 5: Build parameter list in order
+        param_values = [
+            validated_params.get(p.name)
+            for p in template.parameters
+            if p.name in validated_params
+        ]
+
+        # Step 6: Delegate I/O to L6 driver (PIN-520 No-Exemptions Phase 1)
+        driver = self._driver
+        if driver is None:
+            from app.hoc.cus.integrations.L6_drivers.sql_gateway_driver import (
+                get_sql_gateway_driver,
+            )
+            driver = get_sql_gateway_driver()
+
+        request = SqlQueryRequest(
+            connection_string=connection_string,
+            sql=template.sql,
+            param_values=param_values,
+            timeout_seconds=template.timeout_seconds,
+            max_rows=min(template.max_rows, self.config.max_rows),
+            max_result_bytes=self.config.max_result_bytes,
+        )
+
         try:
-            import asyncpg
-
-            conn = await asyncpg.connect(
-                connection_string,
-                timeout=self.config.timeout_seconds,
-            )
-
-            try:
-                # Build parameter list in order
-                param_values = [
-                    validated_params.get(p.name)
-                    for p in template.parameters
-                    if p.name in validated_params
-                ]
-
-                # Execute with timeout
-                rows = await asyncio.wait_for(
-                    conn.fetch(template.sql, *param_values),
-                    timeout=template.timeout_seconds,
-                )
-
-                # Enforce max rows
-                row_limit = min(template.max_rows, self.config.max_rows)
-                if len(rows) > row_limit:
-                    logger.warning("sql_gateway.rows_truncated", extra={
-                        "connector_id": self.id,
-                        "template_id": action,
-                        "original_count": len(rows),
-                        "limit": row_limit,
-                    })
-                    rows = rows[:row_limit]
-                    truncated = True
-                else:
-                    truncated = False
-
-                # Convert to dicts
-                result_data = [dict(row) for row in rows]
-
-                # Check result size
-                result_bytes = len(str(result_data).encode())
-                if result_bytes > self.config.max_result_bytes:
-                    logger.warning("sql_gateway.result_truncated", extra={
-                        "connector_id": self.id,
-                        "template_id": action,
-                        "original_bytes": result_bytes,
-                        "limit": self.config.max_result_bytes,
-                    })
-                    # Truncate by removing rows until under limit
-                    while result_bytes > self.config.max_result_bytes and result_data:
-                        result_data.pop()
-                        result_bytes = len(str(result_data).encode())
-                    truncated = True
-
-                return {
-                    "data": result_data,
-                    "row_count": len(result_data),
-                    "truncated": truncated,
-                    "token_count": result_bytes,
-                }
-
-            finally:
-                await conn.close()
-
-        except asyncio.TimeoutError:
-            logger.error("sql_gateway.timeout", extra={
-                "connector_id": self.id,
-                "template_id": action,
-                "timeout": template.timeout_seconds,
-            })
-            raise SqlGatewayError(
-                f"Query timed out after {template.timeout_seconds}s"
-            )
-
+            result = await driver.execute_query(request)
         except Exception as e:
             logger.error("sql_gateway.error", extra={
                 "connector_id": self.id,
@@ -292,6 +254,13 @@ class SqlGatewayService:
                 "error": str(e),
             })
             raise SqlGatewayError(f"Query failed: {e}") from e
+
+        return {
+            "data": result.data,
+            "row_count": result.row_count,
+            "truncated": result.truncated,
+            "token_count": result.result_bytes,
+        }
 
     def _resolve_template(self, template_id: str) -> QueryTemplate:
         """Resolve template by ID (machine-controlled)."""
@@ -458,7 +427,3 @@ class SqlGatewayService:
             self.config.connection_string_ref
         )
         return credential.value
-
-
-# Need asyncio for timeout
-import asyncio

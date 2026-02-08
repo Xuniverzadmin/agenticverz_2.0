@@ -6,12 +6,14 @@
 
 ---
 
-## Reality Delta (2026-02-07)
+## Reality Delta (2026-02-08)
 
-- L2 purity preserved: policies L2 routes dispatch via L4 `OperationRegistry` (no direct L2→L5).
-- Policy evaluation persistence has been shifted behind `backend/app/hoc/cus/policies/L6_drivers/policy_engine_driver.py`; `backend/app/hoc/cus/policies/L5_engines/engine.py` no longer owns connection/commit.
-- Known remaining exceptions (mechanical audit): some L5 engines still import `app.models.*`, and L6 `policy_engine_driver.py` still contains committed wrappers (`conn.commit()`); both must be eliminated for full driver/engine purity.
-- Verify now: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain policies`.
+- L2 purity preserved: policies L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5).
+- L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain policies --json --advisory` reports 0 blocking, 0 advisory.
+- Execution boundary (pairing): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain policies --json` reports 0 orphaned L5 entry modules (`total_l5_engines: 17`, `wired_via_l4: 17`, `direct_l2_to_l5: 0`).
+- Plan: `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`.
+
+**Runtime Call Path Added:** `policies.sandbox_execute` executes `SandboxService.execute` through L4 (no direct L2→L5).
 
 ## 1. Domain Purpose
 

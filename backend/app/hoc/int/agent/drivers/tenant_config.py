@@ -80,7 +80,7 @@ class TenantLLMConfig:
         L3 no longer contains model selection policy logic.
         """
         # L5 engine import (migrated to HOC per SWEEP-12)
-        from app.hoc.cus.policies.L5_engines.llm_policy_engine import get_effective_model
+        from app.hoc.cus.policies.L5_engines.llm_policy import get_effective_model
 
         return get_effective_model(
             requested_model=requested_model,
@@ -250,7 +250,7 @@ async def get_model_for_tenant(
         Model identifier to use
     """
     # L5 engine import (migrated to HOC per SWEEP-12)
-    from app.hoc.cus.policies.L5_engines.llm_policy_engine import get_model_for_task
+    from app.hoc.cus.policies.L5_engines.llm_policy import get_model_for_task
 
     config = await get_tenant_config(tenant_id)
 

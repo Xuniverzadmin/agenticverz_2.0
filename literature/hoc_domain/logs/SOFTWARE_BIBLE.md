@@ -7,11 +7,14 @@
 
 ---
 
-## Reality Delta (2026-02-07)
+## Reality Delta (2026-02-08)
 
-- Execution topology: logs L2 routes dispatch via L4 `OperationRegistry` (no direct L2→L5 gaps).
-- Clean-arch note: several L5 engines still import `app.models.*` (e.g. audit ledger + PDF rendering) and should be pushed behind L6 drivers to satisfy strict driver/engine purity.
-- Verify now: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain logs`.
+- Execution topology: logs L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5 gaps).
+- L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain logs --json --advisory` reports 0 blocking, 0 advisory.
+- Execution boundary (pairing): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain logs --json` reports 0 orphaned L5 entry modules (`total_l5_engines: 6`, `wired_via_l4: 6`, `direct_l2_to_l5: 0`).
+- Plan: `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`.
+
+**Note (Scope):** `backend/app/hoc/cus/account/logs/CRM/audit/audit_engine.py` is governance-job audit (contract/job evidence → verdict), not LLM-run record auditing. It is executed via L4 operation `governance.audit_job`.
 
 ## Script Registry
 

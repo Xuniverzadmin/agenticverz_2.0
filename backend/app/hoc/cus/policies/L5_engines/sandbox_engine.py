@@ -549,3 +549,14 @@ class SandboxService:
             "by_policy": by_policy,
             "avg_wall_time_seconds": total_time / time_count if time_count > 0 else 0,
         }
+
+
+_sandbox_service_instance: Optional["SandboxService"] = None
+
+
+def get_sandbox_service() -> "SandboxService":
+    """Return the process-wide SandboxService singleton (GAP-174)."""
+    global _sandbox_service_instance
+    if _sandbox_service_instance is None:
+        _sandbox_service_instance = SandboxService()
+    return _sandbox_service_instance

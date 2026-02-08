@@ -83,16 +83,21 @@ class CircuitBreakerHandler:
         disabled_by: str,
         disabled_until: Optional[datetime] = None,
     ) -> Tuple[bool, Any]:
-        """Manually disable CostSim V2. Idempotent. Creates incident."""
+        """Manually disable CostSim V2. Idempotent. Creates incident.
+        L4 owns transaction boundary (PIN-520)."""
+        from app.db_async import AsyncSessionLocal
         from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import (
             disable_v2,
         )
 
-        result = await disable_v2(
-            reason=reason,
-            disabled_by=disabled_by,
-            disabled_until=disabled_until,
-        )
+        async with AsyncSessionLocal() as session:
+            async with session.begin():
+                result = await disable_v2(
+                    session=session,
+                    reason=reason,
+                    disabled_by=disabled_by,
+                    disabled_until=disabled_until,
+                )
         logger.info(
             "circuit_breaker_disable_v2",
             extra={
@@ -108,12 +113,20 @@ class CircuitBreakerHandler:
         enabled_by: str,
         reason: Optional[str] = None,
     ) -> bool:
-        """Manually enable CostSim V2. Resolves incident, sends alert."""
+        """Manually enable CostSim V2. Resolves incident, sends alert.
+        L4 owns transaction boundary (PIN-520)."""
+        from app.db_async import AsyncSessionLocal
         from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import (
             enable_v2,
         )
 
-        result = await enable_v2(enabled_by=enabled_by, reason=reason)
+        async with AsyncSessionLocal() as session:
+            async with session.begin():
+                result = await enable_v2(
+                    session=session,
+                    enabled_by=enabled_by,
+                    reason=reason,
+                )
         logger.info(
             "circuit_breaker_enable_v2",
             extra={"enabled_by": enabled_by, "state_changed": result},
@@ -126,31 +139,41 @@ class CircuitBreakerHandler:
         sample_count: int = 1,
         details: Optional[Dict[str, Any]] = None,
     ) -> Any:
-        """Report drift observation. May trip breaker if threshold exceeded."""
+        """Report drift observation. May trip breaker if threshold exceeded.
+        L4 owns transaction boundary (PIN-520)."""
+        from app.db_async import AsyncSessionLocal
         from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import (
             report_drift,
         )
 
-        return await report_drift(
-            drift_score=drift_score,
-            sample_count=sample_count,
-            details=details,
-        )
+        async with AsyncSessionLocal() as session:
+            async with session.begin():
+                return await report_drift(
+                    session=session,
+                    drift_score=drift_score,
+                    sample_count=sample_count,
+                    details=details,
+                )
 
     async def report_schema_error(
         self,
         error_count: int = 1,
         details: Optional[Dict[str, Any]] = None,
     ) -> Any:
-        """Report schema error. May trip breaker if threshold exceeded."""
+        """Report schema error. May trip breaker if threshold exceeded.
+        L4 owns transaction boundary (PIN-520)."""
+        from app.db_async import AsyncSessionLocal
         from app.hoc.cus.controls.L6_drivers.circuit_breaker_async_driver import (
             report_schema_error,
         )
 
-        return await report_schema_error(
-            error_count=error_count,
-            details=details,
-        )
+        async with AsyncSessionLocal() as session:
+            async with session.begin():
+                return await report_schema_error(
+                    session=session,
+                    error_count=error_count,
+                    details=details,
+                )
 
     async def get_incidents(
         self,

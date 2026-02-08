@@ -8,11 +8,11 @@
 
 ---
 
-## Reality Delta (2026-02-07)
+## Reality Delta (2026-02-08)
 
-- Execution topology: logs L2 routes dispatch via L4 `OperationRegistry` (no direct L2→L5 gaps).
-- Clean-arch debt (mechanical audit): several L5 engines still import `app.models.*` (e.g. audit ledger + PDF rendering) and should be pushed behind L6 drivers to satisfy strict driver/engine purity.
-- Verification: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain logs`.
+- Execution topology: logs L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5 gaps).
+- L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain logs --json --advisory` reports 0 blocking, 0 advisory.
+- Execution boundary (pairing): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain logs --json` reports 0 orphaned L5 entry modules (`total_l5_engines: 6`, `wired_via_l4: 6`, `direct_l2_to_l5: 0`).
 
 ## Consolidation Actions (2026-01-31)
 
@@ -245,11 +245,10 @@ They now use `IntegrationsDriverBridge` capabilities from hoc_spine (PIN-L2-PURI
 
 ---
 
-## L5_support (1 file)
+## L5_support (0 files)
 
-### CRM/engines/audit_engine.py
-- **Role:** CRM audit engine (L8 support layer)
-- **Layer:** L5_support
+_None._ CRM governance-job audit moved to the account domain:
+`backend/app/hoc/cus/account/logs/CRM/audit/audit_engine.py` (invoked by L4 operation `governance.audit_job`).
 
 ---
 

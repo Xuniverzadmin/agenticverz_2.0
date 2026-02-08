@@ -44,10 +44,8 @@ from datetime import date, datetime, timedelta
 from enum import Enum
 from typing import List, Optional
 
-from app.db import (
-    CostAnomaly,
-    utc_now,
-)
+from app.hoc.cus.hoc_spine.services.time import utc_now
+from app.hoc.cus.analytics.L5_schemas.cost_anomaly_dtos import PersistedAnomaly
 # R1 Resolution: Cross-domain incident write REMOVED.
 # Analytics emits CostAnomalyFact; incidents domain decides incident creation.
 # See: app/hoc/cus/incidents/L5_engines/anomaly_bridge.py
@@ -864,57 +862,36 @@ class CostAnomalyDetector:
         self,
         tenant_id: str,
         anomalies: List[DetectedAnomaly],
-    ) -> List[CostAnomaly]:
-        """Persist detected anomalies to database."""
-        created = []
+    ) -> List[PersistedAnomaly]:
+        """Persist detected anomalies to database.
+
+        PIN-520 No-Exemptions Phase 2: ORM construction delegated to L6 driver.
+        L5 passes primitives; L6 returns PersistedAnomaly DTOs.
+        """
+        created: List[PersistedAnomaly] = []
 
         for anomaly in anomalies:
             today_start = datetime.combine(self.today, datetime.min.time())
 
-            # PIN-511: Delegated to read driver (was TRANSITIONAL_READ_OK)
-            existing = self._read_driver.find_existing_anomaly(
+            persisted = self._read_driver.upsert_anomaly(
                 tenant_id=tenant_id,
                 anomaly_type=anomaly.anomaly_type.value,
+                severity=anomaly.severity.value,
                 entity_type=anomaly.entity_type,
                 entity_id=anomaly.entity_id,
-                since=today_start,
+                current_value_cents=anomaly.current_value_cents,
+                expected_value_cents=anomaly.expected_value_cents,
+                deviation_pct=anomaly.deviation_pct,
+                threshold_pct=ABSOLUTE_SPIKE_THRESHOLD * 100
+                if anomaly.anomaly_type == AnomalyType.ABSOLUTE_SPIKE
+                else SUSTAINED_DRIFT_THRESHOLD * 100,
+                message=anomaly.message,
+                breach_count=anomaly.breach_count,
+                derived_cause=anomaly.derived_cause.value,
+                metadata_json=anomaly.metadata,
+                today_start=today_start,
             )
-
-            if existing:
-                # Update existing
-                existing.current_value_cents = anomaly.current_value_cents
-                existing.deviation_pct = anomaly.deviation_pct
-                existing.severity = anomaly.severity.value
-                existing.message = anomaly.message
-                existing.breach_count = anomaly.breach_count
-                existing.derived_cause = anomaly.derived_cause.value
-                existing.metadata_json = anomaly.metadata
-                self._read_driver.persist_anomaly(existing)
-                created.append(existing)
-            else:
-                # Create new
-                cost_anomaly = CostAnomaly(
-                    tenant_id=tenant_id,
-                    anomaly_type=anomaly.anomaly_type.value,
-                    severity=anomaly.severity.value,
-                    entity_type=anomaly.entity_type,
-                    entity_id=anomaly.entity_id,
-                    current_value_cents=anomaly.current_value_cents,
-                    expected_value_cents=anomaly.expected_value_cents,
-                    deviation_pct=anomaly.deviation_pct,
-                    threshold_pct=ABSOLUTE_SPIKE_THRESHOLD * 100
-                    if anomaly.anomaly_type == AnomalyType.ABSOLUTE_SPIKE
-                    else SUSTAINED_DRIFT_THRESHOLD * 100,
-                    message=anomaly.message,
-                    breach_count=anomaly.breach_count,
-                    derived_cause=anomaly.derived_cause.value,
-                    metadata_json=anomaly.metadata,
-                )
-                self._read_driver.persist_anomaly(cost_anomaly)
-                created.append(cost_anomaly)
-
-        # PIN-511: Flush/refresh delegated to read driver
-        self._read_driver.flush_and_refresh(created)
+            created.append(persisted)
 
         logger.info(f"Persisted {len(created)} anomalies for tenant {tenant_id}")
         return created
@@ -925,7 +902,7 @@ class CostAnomalyDetector:
 # =============================================================================
 
 
-async def run_anomaly_detection(session, tenant_id: str) -> List[CostAnomaly]:
+async def run_anomaly_detection(session, tenant_id: str) -> List[PersistedAnomaly]:
     """Run anomaly detection and persist results."""
     detector = CostAnomalyDetector(session)
 
@@ -958,7 +935,7 @@ async def _run_anomaly_detection_with_facts(
 
     Returns:
         {
-            "detected": [CostAnomaly, ...],
+            "detected": [PersistedAnomaly, ...],
             "facts": [CostAnomalyFact, ...],  # Pure facts for HIGH+ anomalies
         }
 
@@ -983,26 +960,26 @@ async def _run_anomaly_detection_with_facts(
     # Only HIGH severity anomalies become facts for incident consideration
     high_anomalies = [a for a in persisted if a.severity == "HIGH"]
 
-    for cost_anomaly in high_anomalies:
+    for pa in high_anomalies:
         # Emit pure fact - no side effects, no incident creation
         fact = CostAnomalyFact(
             tenant_id=tenant_id,
-            anomaly_id=str(cost_anomaly.id),
-            anomaly_type=cost_anomaly.anomaly_type,
-            severity=cost_anomaly.severity,
-            current_value_cents=int(cost_anomaly.current_value_cents),
-            expected_value_cents=int(cost_anomaly.expected_value_cents),
-            entity_type=cost_anomaly.entity_type,
-            entity_id=cost_anomaly.entity_id,
-            deviation_pct=float(cost_anomaly.deviation_pct) if cost_anomaly.deviation_pct else 0.0,
+            anomaly_id=pa.id,
+            anomaly_type=pa.anomaly_type,
+            severity=pa.severity,
+            current_value_cents=int(pa.current_value_cents),
+            expected_value_cents=int(pa.expected_value_cents),
+            entity_type=pa.entity_type,
+            entity_id=pa.entity_id,
+            deviation_pct=pa.deviation_pct,
             confidence=1.0,  # Analytics doesn't compute confidence yet
-            metadata=cost_anomaly.metadata_json or {},
+            metadata=pa.metadata_json,
         )
         facts.append(fact)
 
         logger.info(
-            f"[ANALYTICS] Emitted CostAnomalyFact for anomaly {cost_anomaly.id} "
-            f"(severity={cost_anomaly.severity}, type={cost_anomaly.anomaly_type})"
+            f"[ANALYTICS] Emitted CostAnomalyFact for anomaly {pa.id} "
+            f"(severity={pa.severity}, type={pa.anomaly_type})"
         )
 
     return {

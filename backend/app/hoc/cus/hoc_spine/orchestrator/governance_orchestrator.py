@@ -86,6 +86,28 @@ ORCHESTRATOR_VERSION = "1.0.0"
 
 
 # ==============================================================================
+# AUDIT SERVICE ACCESSOR (L8, account-owned CRM audit)
+# ==============================================================================
+
+
+_audit_service_instance = None
+
+
+def get_audit_service():
+    """Return singleton AuditService (L8) implementation.
+
+    Lives in account-owned CRM audit namespace. Wired here so audit is reachable
+    from the execution authority (hoc_spine).
+    """
+    global _audit_service_instance
+    if _audit_service_instance is None:
+        from app.hoc.cus.account.logs.CRM.audit.audit_engine import AuditService
+
+        _audit_service_instance = AuditService()
+    return _audit_service_instance
+
+
+# ==============================================================================
 # LOOKUP PROTOCOLS (Dependency Injection)
 # ==============================================================================
 

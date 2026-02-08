@@ -6,11 +6,14 @@
 
 ---
 
-## Reality Delta (2026-02-07)
+## Reality Delta (2026-02-08)
 
-- RBAC audit path: `rbac_engine.py` now prefers an injected audit writer callable (L5 purity), but a legacy path still performs a direct DB write+commit and remains a known exception until removed.
-- Tenant engine: `tenant_engine.py` still imports `app.models.*` and must be pushed behind L6 drivers for full L5 purity.
-- Verify now: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain account`.
+- L2 purity preserved: account L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5).
+- L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain account --json --advisory` reports 0 blocking, 0 advisory.
+- Execution boundary (pairing): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain account --json` reports 0 orphaned L5 entry modules (`total_l5_engines: 5`, `wired_via_l4: 5`, `direct_l2_to_l5: 0`).
+- Plan: `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`.
+
+**Note (Scope):** `backend/app/hoc/cus/account/logs/CRM/audit/audit_engine.py` is CRM governance-job audit (contract/job evidence → verdict), executed via L4 operation `governance.audit_job`.
 
 ## 1. Domain Purpose
 

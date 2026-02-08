@@ -28,6 +28,7 @@ Registers twelve operations:
 """
 
 import logging
+from contextlib import contextmanager
 from typing import Any, Dict, Optional
 
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
@@ -37,6 +38,24 @@ from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
 )
 
 logger = logging.getLogger("nova.hoc.policies.handler")
+
+
+@contextmanager
+def _policy_write_ctx(facade):
+    """L4 transaction context for PolicyEngine write operations.
+
+    Opens engine.begin() and injects into driver.managed_connection().
+    Auto-commits on clean exit, auto-rollbacks on exception.
+    L4 is the sole transaction boundary owner (PIN-520).
+
+    Args:
+        facade: PolicyDriver (L5) with policy_engine_driver property.
+    """
+    pe_driver = facade.policy_engine_driver
+    db_engine = pe_driver.get_engine()
+    with db_engine.begin() as conn:
+        with pe_driver.managed_connection(conn):
+            yield
 
 
 class PoliciesQueryHandler:
@@ -259,9 +278,14 @@ class PoliciesPolicyFacadeHandler:
 
         method = async_dispatch.get(method_name)
         if method:
-            data = await method(**kwargs)
+            # L4 owns transaction boundary: open engine.begin() and inject
+            # into driver.managed_connection() before calling L5 methods
+            # that may trigger _committed write wrappers (PIN-520).
+            with _policy_write_ctx(facade):
+                data = await method(**kwargs)
         elif method_name in sync_dispatch:
-            data = sync_dispatch[method_name](**kwargs)
+            with _policy_write_ctx(facade):
+                data = sync_dispatch[method_name](**kwargs)
         else:
             return OperationResult.fail(f"Unknown policy_facade method: {method_name}", "UNKNOWN_METHOD")
         return OperationResult.ok(data)
@@ -315,7 +339,8 @@ class PoliciesLimitsHandler:
             kwargs["tenant_id"] = ctx.tenant_id
 
         try:
-            data = await method(**kwargs)
+            async with ctx.session.begin():
+                data = await method(**kwargs)
             return OperationResult.ok(data)
         except LimitNotFoundError as e:
             return OperationResult.fail(str(e), "LIMIT_NOT_FOUND")
@@ -369,7 +394,8 @@ class PoliciesRulesHandler:
             kwargs["tenant_id"] = ctx.tenant_id
 
         try:
-            data = await method(**kwargs)
+            async with ctx.session.begin():
+                data = await method(**kwargs)
             return OperationResult.ok(data)
         except RuleNotFoundError as e:
             return OperationResult.fail(str(e), "RULE_NOT_FOUND")

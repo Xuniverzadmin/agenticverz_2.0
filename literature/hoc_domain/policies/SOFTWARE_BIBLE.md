@@ -7,12 +7,14 @@
 
 ---
 
-## Reality Delta (2026-02-07)
+## Reality Delta (2026-02-08)
 
-- Execution topology: L2 routes dispatch via L4 `OperationRegistry` (no direct L2→L5 gaps).
-- Policy evaluation persistence: `backend/app/hoc/cus/policies/L5_engines/engine.py` no longer owns DB connection/commit; persistence helpers were moved behind `backend/app/hoc/cus/policies/L6_drivers/policy_engine_driver.py`.
-- Remaining clean-arch debt (mechanical audit): L5 still imports `app.models.*` in `policy_proposal_engine.py`, `policy_limits_engine.py`, `policy_rules_engine.py`; L6 `policy_engine_driver.py` still has `conn.commit()` wrappers and must be refactored so L4 owns commit/rollback.
-- Verify now: `python3 scripts/ops/hoc_l5_l6_purity_audit.py --domain policies` and `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain policies`.
+- Execution topology: L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5 gaps).
+- L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain policies --json --advisory` reports 0 blocking, 0 advisory.
+- Execution boundary (pairing): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain policies --json` reports 0 orphaned L5 entry modules (`total_l5_engines: 17`, `wired_via_l4: 17`, `direct_l2_to_l5: 0`).
+- Plan: `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`.
+
+**Runtime Call Path Added:** `SandboxService.execute` is now exercised via L4 operation `policies.sandbox_execute` (handler: `hoc_spine/orchestrator/handlers/policies_sandbox_handler.py`).
 
 ## Script Registry
 

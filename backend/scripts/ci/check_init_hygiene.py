@@ -431,19 +431,19 @@ L5_SESSION_PARAM_ALLOWLIST: set[str] = {
     "keys_engine.py",
     # Pre-existing — analytics domain
     # "cost_anomaly_detector_engine.py",  # PIN-511: Session removed
-    "cost_write_engine.py",
+    "cost_write.py",  # Demoted from cost_write_engine.py (orphan demotion)
     # Pre-existing — incidents domain
-    "incident_pattern_engine.py",
+    "incident_pattern.py",  # Demoted from incident_pattern_engine.py (orphan demotion)
     "incident_read_engine.py",
     "incident_write_engine.py",
     "incidents_facade.py",
     "llm_failure_engine.py",
     "policy_violation_engine.py",
-    "postmortem_engine.py",
-    "recurrence_analysis_engine.py",
+    "postmortem.py",  # Demoted from postmortem_engine.py (orphan demotion)
+    "recurrence_analysis.py",  # Demoted from recurrence_analysis_engine.py (orphan demotion)
     # PIN-520 Phase 4 — L5→L4 reach-up fix (session injected from L4 handler)
     "prediction_engine.py",
-    "pattern_detection_engine.py",
+    "pattern_detection.py",  # Demoted from pattern_detection_engine.py (2026-02-08)
 }
 
 

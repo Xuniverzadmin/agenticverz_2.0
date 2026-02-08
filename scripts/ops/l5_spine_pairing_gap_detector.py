@@ -9,10 +9,14 @@
 L5 → HOC Spine Pairing Gap Detector
 
 Scans all L2 API files and L4 orchestrator files using AST to determine which
-L5 engines are:
+L5 *entry modules* are:
   - WIRED: Referenced through L4 orchestrator (correct path)
   - DIRECT: Called directly by L2 APIs (gap — should go through L4)
   - ORPHANED: Not referenced by L2 or L4
+
+Important: This tool only counts **L5 entry modules** (e.g. `*_engine.py`,
+`*_facade.py`, `*_bridge.py`). It intentionally excludes internal helpers
+living under `L5_engines/` that are not meant to be invoked from L4.
 
 Usage:
     # Full scan across all domains
@@ -59,6 +63,10 @@ DOMAINS = [
     "incidents", "account", "activity", "api_keys", "overview",
     "controls", "ops", "recovery",
 ]
+
+# L5 "entry module" heuristic: modules that L4 is expected to call directly.
+# This keeps metrics meaningful (we don't count internal helpers as "orphaned").
+ENTRY_MODULE_RE = re.compile(r".*_(?:engine|facade|bridge)$")
 
 
 @dataclass
@@ -123,51 +131,60 @@ def _extract_l5_imports_from_file(filepath: Path) -> list[L5Reference]:
             continue
 
         module = node.module
+        parts = module.split(".")
 
-        # Match patterns like:
-        #   app.hoc.cus.{domain}.L5_engines.{module}
-        #   app.hoc.cus.{domain}.L5_support.{module}
-        #   app.hoc.cus.{domain}.L5_controls.{module}
-        m = re.match(
-            r"app\.hoc\.cus\.(\w+)\.L5_(?:engines|support|controls)\.(\w+)",
-            module,
-        )
-        if not m:
-            # Also match shorter form without specific file
-            m = re.match(
-                r"app\.hoc\.cus\.(\w+)\.L5_(?:engines|support|controls)",
-                module,
+        # Expect: app.hoc.cus.{domain}.L5_{engines|support|controls}...
+        try:
+            cus_i = parts.index("cus")
+        except ValueError:
+            continue
+        if cus_i + 1 >= len(parts):
+            continue
+        domain = parts[cus_i + 1]
+
+        l5_layer_i = None
+        for i, part in enumerate(parts):
+            if part in {"L5_engines", "L5_support", "L5_controls"}:
+                l5_layer_i = i
+                break
+        if l5_layer_i is None:
+            continue
+
+        after = parts[l5_layer_i + 1 :]
+        imported_names = [alias.name for alias in node.names]
+
+        # If the import specifies a concrete module path (e.g. ...L5_engines.foo_engine),
+        # treat that last segment as the module name.
+        if after:
+            refs.append(
+                L5Reference(
+                    source_file=rel_path,
+                    source_line=node.lineno,
+                    domain=domain,
+                    engine_module=after[-1],
+                    imported_names=imported_names,
+                )
             )
-            if m:
-                domain = m.group(1)
-                # The imported names ARE the engine modules
-                for alias in node.names:
-                    refs.append(L5Reference(
-                        source_file=rel_path,
-                        source_line=node.lineno,
-                        domain=domain,
-                        engine_module=alias.name,
-                        imported_names=[alias.name],
-                    ))
-                continue
+            continue
 
-        if m:
-            domain = m.group(1)
-            engine_module = m.group(2)
-            imported_names = [alias.name for alias in node.names]
-            refs.append(L5Reference(
-                source_file=rel_path,
-                source_line=node.lineno,
-                domain=domain,
-                engine_module=engine_module,
-                imported_names=imported_names,
-            ))
+        # Otherwise (e.g. from ...L5_engines import foo_engine), each imported name
+        # could be a module. Record each candidate.
+        for name in imported_names:
+            refs.append(
+                L5Reference(
+                    source_file=rel_path,
+                    source_line=node.lineno,
+                    domain=domain,
+                    engine_module=name,
+                    imported_names=[name],
+                )
+            )
 
     return refs
 
 
 def _discover_l5_engines(domain: str) -> list[L5Engine]:
-    """Discover all L5 engine files for a domain."""
+    """Discover all L5 *entry module* files for a domain."""
     engines: list[L5Engine] = []
     domain_root = CUS_ROOT / domain
 
@@ -177,6 +194,8 @@ def _discover_l5_engines(domain: str) -> list[L5Engine]:
             continue
         for filepath in sorted(engine_dir.rglob("*.py")):
             if filepath.name == "__init__.py":
+                continue
+            if not ENTRY_MODULE_RE.match(filepath.stem):
                 continue
 
             # Count functions and classes
@@ -554,6 +573,42 @@ def load_baseline() -> dict[str, Any] | None:
         return None
 
 
+def _get_baseline_summary(baseline: dict[str, Any]) -> dict[str, Any]:
+    """Return a baseline summary dict, supporting multiple baseline schemas."""
+    summary = baseline.get("summary")
+    if isinstance(summary, dict):
+        return summary
+
+    # Back-compat: some baselines stored the summary fields at the top-level.
+    top_keys = {"total_l5_engines", "wired_via_l4", "direct_l2_to_l5", "orphaned"}
+    if top_keys.issubset(baseline.keys()):
+        return {k: baseline[k] for k in sorted(top_keys)}
+
+    return {}
+
+
+def _get_known_gaps(baseline: dict[str, Any]) -> dict[str, list[str]]:
+    """Return known gap mapping: domain -> list[engine.py]."""
+    known = baseline.get("known_gaps")
+    if isinstance(known, dict):
+        return {k: list(v) for k, v in known.items() if isinstance(v, list)}
+
+    # Back-compat: some baselines stored direct gaps as a flat list.
+    direct = baseline.get("direct_l2_modules")
+    if isinstance(direct, list):
+        mapping: dict[str, list[str]] = {}
+        for item in direct:
+            if not isinstance(item, str):
+                continue
+            # Accept "domain/engine.py" (or deeper) and bucket by first segment.
+            if "/" in item:
+                domain, rest = item.split("/", 1)
+                mapping.setdefault(domain, []).append(rest)
+        return mapping
+
+    return {}
+
+
 def save_baseline(reports: list[DomainReport]) -> None:
     """Save the current state as the frozen baseline."""
     total_gaps = sum(r.direct_l2_to_l5 for r in reports)
@@ -567,16 +622,32 @@ def save_baseline(reports: list[DomainReport]) -> None:
         if report.gaps:
             domain_gaps[report.domain] = [g["l5_engine"] for g in report.gaps]
 
+    orphaned_modules: list[str] = []
+    direct_l2_modules: list[str] = []
+    for report in reports:
+        for orphan in report.orphans:
+            orphaned_modules.append(f"{report.domain}/{orphan['l5_engine']}")
+        for gap in report.gaps:
+            direct_l2_modules.append(f"{report.domain}/{gap['l5_engine']}")
+
     baseline = {
         "frozen_at": datetime.now().isoformat(),
         "phase": "C",
         "pin": "491",
+        # Summary (canonical)
         "summary": {
             "total_l5_engines": total_engines,
             "wired_via_l4": total_wired,
             "direct_l2_to_l5": total_gaps,
             "orphaned": total_orphaned,
         },
+        # Back-compat (flat summary fields)
+        "total_l5_engines": total_engines,
+        "wired_via_l4": total_wired,
+        "direct_l2_to_l5": total_gaps,
+        "orphaned": total_orphaned,
+        "orphaned_modules": sorted(orphaned_modules),
+        "direct_l2_modules": sorted(direct_l2_modules),
         "known_gaps": domain_gaps,
     }
     BASELINE_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -591,7 +662,12 @@ def check_against_baseline(reports: list[DomainReport]) -> int:
         print("ERROR: No baseline found. Run with --freeze-baseline first.")
         return 2
 
-    baseline_gaps = baseline["summary"]["direct_l2_to_l5"]
+    baseline_summary = _get_baseline_summary(baseline)
+    if not baseline_summary:
+        print(f"ERROR: Baseline schema invalid: {BASELINE_PATH.relative_to(PROJECT_ROOT)}")
+        return 2
+
+    baseline_gaps = baseline_summary["direct_l2_to_l5"]
     current_gaps = sum(r.direct_l2_to_l5 for r in reports)
 
     # Collect current gap engines
@@ -600,7 +676,7 @@ def check_against_baseline(reports: list[DomainReport]) -> int:
         if report.gaps:
             current_gap_engines[report.domain] = [g["l5_engine"] for g in report.gaps]
 
-    known_gaps = baseline.get("known_gaps", {})
+    known_gaps = _get_known_gaps(baseline)
 
     # Find NEW gaps (not in baseline)
     new_gaps: list[str] = []

@@ -9,22 +9,25 @@
 # Callers: Developer, CI pipeline
 # Allowed Imports: stdlib
 # Forbidden Imports: app.*
-# Reference: PIN-520 Phase 3 (L5/L6 Purity)
+# Reference: PIN-520 (L5/L6 Purity), No-Exemptions Remediation Plan
 # artifact_class: CODE
 
 """
-HOC L5/L6 Purity Audit Script
+HOC L5/L6 Purity Audit Script (No-Exemptions Edition)
 
-Scans L5 engines for structural purity violations:
+Scans L5 engines/schemas/support for structural purity violations:
 - Runtime imports of sqlalchemy/sqlmodel/asyncpg/psycopg
 - Session/AsyncSession symbol imports outside TYPE_CHECKING
-- connect()/commit()/rollback() calls
-- app.models.* imports (BLOCKING at module level, advisory for lazy/function-body imports)
+- connect()/commit()/rollback() calls on DB-ish receivers
+- begin()/begin_nested() calls on DB-ish receivers (implicit commit)
+- app.models.* imports (BLOCKING at module level AND lazy)
 - app.db imports (session acquisition violation)
-- Direct ORM model instantiation (heuristic)
 
 Scans L6 drivers for:
 - commit()/rollback() calls (PIN-520: L4 owns transactions)
+- begin()/begin_nested() calls (implicit commit on context exit)
+
+NO EXEMPTIONS. Every violation is visible until fixed in code.
 
 Usage:
     python3 scripts/ops/hoc_l5_l6_purity_audit.py
@@ -52,24 +55,16 @@ SESSION_SYMBOLS = {"Session", "AsyncSession"}
 # Methods that indicate transaction control (L6 must not call)
 TRANSACTION_METHODS = {"commit", "rollback"}
 
+# Transaction boundary methods — begin()/begin_nested() implicitly commit on context exit
+# L6 must not call these (always); L5 must not call on DB-ish receivers
+TRANSACTION_BOUNDARY_METHODS = {"begin", "begin_nested"}
+
 # Connection methods that L5 must not call
 CONNECTION_METHODS = {"connect", "commit", "rollback"}
 
-# Frozen architectural exceptions — files exempt from purity checks.
-# Each entry: filename -> reason for exemption.
-# No new entries permitted without PIN approval.
-L5_EXEMPT_FILES = {
-    "sql_gateway.py": "External DB connector for customer integrations (asyncpg for external databases, not internal DB)",
-    "cost_anomaly_detector_engine.py": "Imports CostAnomaly ORM + utc_now from app.db — pre-existing, needs L6 driver extraction (PIN-520 Phase 4)",
-    "loop_events.py": "self.rollback() is a domain method on LoopAdjustment dataclass, not session.rollback() (PIN-520 Phase 4)",
-}
-
-# L5 files allowed to have lazy (function-body) app.models imports.
-# Module-level app.models imports are always blocking.
-# Each entry: filename -> reason for exemption.
-L5_LAZY_MODELS_EXEMPT = {
-    "audit_ledger_engine.py": "Thin writer that constructs AuditLedger ORM rows (PIN-520 Phase 3 bridge pattern)",
-}
+# Receiver names that indicate a DB object (for commit/rollback false-positive filtering).
+# If the receiver is NOT one of these, the call is not flagged (e.g. self.rollback() is safe).
+DB_RECEIVER_NAMES = {"session", "conn", "connection", "tx", "txn", "db", "engine", "cursor"}
 
 # DB infrastructure modules that L5 engines must not import
 DB_INFRA_MODULES = {"app.db"}
@@ -138,6 +133,36 @@ def _get_function_body_lines(tree: ast.Module) -> set:
     return body_lines
 
 
+def _is_db_receiver(node: ast.Attribute) -> bool:
+    """Check if the receiver of .commit()/.rollback()/.connect() looks DB-ish.
+
+    Returns True for: session.commit(), conn.rollback(), self._conn.commit()
+    Returns False for: self.rollback() (domain method on a dataclass)
+    """
+    value = node.value
+
+    # Direct name: session.commit(), conn.rollback()
+    if isinstance(value, ast.Name):
+        return value.id.lower() in DB_RECEIVER_NAMES
+
+    # Attribute access: self._session.commit(), self._conn.commit()
+    if isinstance(value, ast.Attribute):
+        attr_lower = value.attr.lower()
+        # Check if the attribute name contains a DB-ish substring
+        for db_name in DB_RECEIVER_NAMES:
+            if db_name in attr_lower:
+                return True
+        return False
+
+    # self.commit() — "self" is NOT a DB receiver
+    # (catches self.rollback() domain methods)
+    if isinstance(value, ast.Name) and value.id == "self":
+        return False
+
+    # Unknown receiver — flag it to be safe
+    return True
+
+
 def scan_l5_engine(py_file: Path) -> List[Violation]:
     """Scan a single L5 engine file for purity violations."""
     violations = []
@@ -189,22 +214,13 @@ def scan_l5_engine(py_file: Path) -> List[Violation]:
                         f"— use operation_registry wrappers instead",
                     ))
 
-                # Check app.models imports
+                # Check app.models imports — ALL are blocking (no exemptions)
                 if node.module.startswith("app.models"):
                     imported = [a.name for a in (node.names or []) if a.name != "*"]
                     imported_str = ", ".join(imported) if imported else "*"
                     is_lazy = node.lineno in func_lines
-                    is_exempt = py_file.name in L5_LAZY_MODELS_EXEMPT and is_lazy
 
-                    if is_exempt:
-                        # Lazy import in exempted file — advisory only
-                        violations.append(Violation(
-                            rel, node.lineno, "APP_MODELS_IMPORT_LAZY",
-                            f"Lazy import from {node.module}: {imported_str} (exempt: bridge pattern)",
-                            severity="advisory",
-                        ))
-                    elif is_lazy:
-                        # Lazy import in non-exempt file — blocking
+                    if is_lazy:
                         violations.append(Violation(
                             rel, node.lineno, "APP_MODELS_IMPORT_LAZY",
                             f"Lazy import from {node.module}: {imported_str} "
@@ -229,19 +245,34 @@ def scan_l5_engine(py_file: Path) -> List[Violation]:
                         ))
 
         # Check method calls: connect(), commit(), rollback()
+        # Only flag when receiver looks DB-ish (avoids false positives like self.rollback())
         if isinstance(node, ast.Call):
             if isinstance(node.func, ast.Attribute):
                 if node.func.attr in CONNECTION_METHODS:
-                    violations.append(Violation(
-                        rel, node.lineno, "CONNECTION_METHOD",
-                        f"L5 engine calls .{node.func.attr}() — L4 owns connection lifecycle",
-                    ))
+                    if _is_db_receiver(node.func):
+                        violations.append(Violation(
+                            rel, node.lineno, "CONNECTION_METHOD",
+                            f"L5 engine calls .{node.func.attr}() — L4 owns connection lifecycle",
+                        ))
+
+                # Check transaction boundary calls: begin(), begin_nested()
+                # These implicitly commit on context exit — L5 must not own transaction boundaries
+                if node.func.attr in TRANSACTION_BOUNDARY_METHODS:
+                    if _is_db_receiver(node.func):
+                        violations.append(Violation(
+                            rel, node.lineno, "TRANSACTION_BOUNDARY",
+                            f"L5 engine calls .{node.func.attr}() — "
+                            f"implicit commit on context exit; L4 owns transaction boundaries",
+                        ))
 
     return violations
 
 
 def scan_l6_driver(py_file: Path) -> List[Violation]:
-    """Scan a single L6 driver file for transaction violations."""
+    """Scan a single L6 driver file for transaction violations.
+
+    All commit()/rollback() calls in L6 are violations — no exceptions.
+    """
     violations = []
     rel = _rel_path(py_file)
 
@@ -256,51 +287,22 @@ def scan_l6_driver(py_file: Path) -> List[Violation]:
         if isinstance(node, ast.Call):
             if isinstance(node.func, ast.Attribute):
                 if node.func.attr in TRANSACTION_METHODS:
-                    # Check if this is inside a _write_conn or managed_connection
-                    # context manager definition (allowed)
                     violations.append(Violation(
                         rel, node.lineno, "L6_TRANSACTION_CONTROL",
                         f"L6 driver calls .{node.func.attr}() — "
                         f"L4 owns transaction boundaries (PIN-520)",
                     ))
 
+                # Transaction boundary calls: begin(), begin_nested()
+                # These implicitly commit on context exit — always a violation in L6
+                if node.func.attr in TRANSACTION_BOUNDARY_METHODS:
+                    violations.append(Violation(
+                        rel, node.lineno, "L6_TRANSACTION_BOUNDARY",
+                        f"L6 driver calls .{node.func.attr}() — "
+                        f"implicit commit on context exit; L4 owns transaction boundaries",
+                    ))
+
     return violations
-
-
-def _filter_l6_false_positives(violations: List[Violation], py_file: Path) -> List[Violation]:
-    """Filter out known false positives from L6 driver scans.
-
-    The _write_conn() context manager legitimately calls conn.commit()
-    as a fallback for standalone (non-managed) mode. This is the
-    architectural bridge pattern, not a violation.
-    """
-    try:
-        source = py_file.read_text()
-        tree = ast.parse(source, filename=str(py_file))
-    except (SyntaxError, UnicodeDecodeError):
-        return violations
-
-    # Find lines inside _write_conn or managed_connection methods
-    allowed_lines = set()
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if node.name in ("_write_conn", "managed_connection"):
-                for child in ast.walk(node):
-                    if hasattr(child, "lineno"):
-                        allowed_lines.add(child.lineno)
-
-    filtered = []
-    for v in violations:
-        if v.line in allowed_lines:
-            filtered.append(Violation(
-                v.file, v.line, "L6_BRIDGE_COMMIT",
-                f"Bridge pattern: .commit() in _write_conn/managed_connection "
-                f"(PIN-520 Phase 3 — standalone commit is advisory)",
-                severity="advisory",
-            ))
-        else:
-            filtered.append(v)
-    return filtered
 
 
 def scan_domain(domain: str) -> Dict[str, List[Violation]]:
@@ -322,13 +324,11 @@ def scan_domain(domain: str) -> Dict[str, List[Violation]]:
                     continue
                 if "_frozen" in str(py_file):
                     continue
-                if py_file.name in L5_EXEMPT_FILES:
-                    continue
                 violations = scan_l5_engine(py_file)
                 if violations:
                     results[_rel_path(py_file)] = violations
 
-        # Scan L5 schemas (PIN-520 Phase 4 — expanded scope)
+        # Scan L5 schemas
         l5_schemas_dir = domain_dir / "L5_schemas"
         if l5_schemas_dir.is_dir():
             for py_file in sorted(l5_schemas_dir.glob("*.py")):
@@ -336,21 +336,17 @@ def scan_domain(domain: str) -> Dict[str, List[Violation]]:
                     continue
                 if "_frozen" in str(py_file):
                     continue
-                if py_file.name in L5_EXEMPT_FILES:
-                    continue
                 violations = scan_l5_engine(py_file)
                 if violations:
                     results[_rel_path(py_file)] = violations
 
-        # Scan L5 support (PIN-520 Phase 4 — expanded scope, recursive)
+        # Scan L5 support (recursive)
         l5_support_dir = domain_dir / "L5_support"
         if l5_support_dir.is_dir():
             for py_file in sorted(l5_support_dir.rglob("*.py")):
                 if py_file.name == "__init__.py":
                     continue
                 if "_frozen" in str(py_file):
-                    continue
-                if py_file.name in L5_EXEMPT_FILES:
                     continue
                 violations = scan_l5_engine(py_file)
                 if violations:
@@ -365,7 +361,6 @@ def scan_domain(domain: str) -> Dict[str, List[Violation]]:
                 if "_frozen" in str(py_file):
                     continue
                 violations = scan_l6_driver(py_file)
-                violations = _filter_l6_false_positives(violations, py_file)
                 if violations:
                     results[_rel_path(py_file)] = violations
 
@@ -397,6 +392,11 @@ def main():
     parser.add_argument("--domain", help="Scan a specific domain (e.g., policies, incidents)")
     parser.add_argument("--json", action="store_true", help="Output as JSON")
     parser.add_argument("--advisory", action="store_true", help="Include advisory violations")
+    parser.add_argument(
+        "--all-domains",
+        action="store_true",
+        help="In JSON output, include empty per-domain entries",
+    )
     args = parser.parse_args()
 
     if args.domain:
@@ -427,8 +427,14 @@ def main():
                 "advisory": total_advisory,
                 "domains_scanned": len(domains),
             },
-            "note": "Pass --advisory to include advisory entries in the per-domain payload.",
+            "domains_scanned_list": domains,
+            "note": "Pass --advisory to include advisory entries. Pass --all-domains to include empty domains.",
         }
+
+        if args.all_domains:
+            for domain in domains:
+                output["domains"][domain] = {}
+
         for domain, results in all_results.items():
             domain_payload = {}
             for filepath, violations in results.items():

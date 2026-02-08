@@ -43,7 +43,11 @@ from app.auth.contexts import (
     MachineCapabilityContext,
 )
 from app.auth.gateway_middleware import get_auth_context
-from app.auth.lifecycle_provider import get_lifecycle_provider
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    get_async_session_context,
+    sql_text,
+)
+from app.hoc.cus.account.L5_schemas.tenant_lifecycle_enums import normalize_status
 from app.auth.onboarding_state import OnboardingState
 from app.schemas.response import wrap_dict
 
@@ -97,13 +101,7 @@ async def get_session_context(request: Request) -> Dict[str, Any]:
 
         # Get lifecycle and onboarding state if tenant_id is present
         if tenant_id:
-            lifecycle_provider = get_lifecycle_provider()
-            lifecycle = lifecycle_provider.get_state(tenant_id)
-            lifecycle_state = lifecycle.name
-
-            # Get onboarding state from tenant (would need to query DB)
-            # For now, if lifecycle is valid, assume onboarding is COMPLETE
-            # Real implementation would query tenant.onboarding_state
+            lifecycle_state = await _fetch_lifecycle_state_name(tenant_id)
             onboarding_state = _get_onboarding_state(tenant_id)
 
     elif isinstance(context, MachineCapabilityContext):
@@ -114,9 +112,7 @@ async def get_session_context(request: Request) -> Dict[str, Any]:
 
         # Get lifecycle state for machine clients too
         if tenant_id:
-            lifecycle_provider = get_lifecycle_provider()
-            lifecycle = lifecycle_provider.get_state(tenant_id)
-            lifecycle_state = lifecycle.name
+            lifecycle_state = await _fetch_lifecycle_state_name(tenant_id)
 
     else:
         # Unknown context type - should not happen
@@ -132,6 +128,19 @@ async def get_session_context(request: Request) -> Dict[str, Any]:
         "lifecycle_state": lifecycle_state,
         "onboarding_state": onboarding_state,
     })
+
+
+async def _fetch_lifecycle_state_name(tenant_id: str) -> str:
+    """Fetch lifecycle state name from DB (Tenant.status)."""
+    async with get_async_session_context() as session:
+        row = (await session.execute(
+            sql_text("SELECT status FROM tenants WHERE id = :tid"),
+            {"tid": tenant_id},
+        )).mappings().first()
+        if row is None:
+            return "ACTIVE"
+        status = normalize_status(row["status"])
+        return status.value.upper()
 
 
 def _get_onboarding_state(tenant_id: str) -> str:

@@ -24,17 +24,10 @@ from app.hoc.cus.logs.L5_engines.evidence_facade import (
     EvidenceFacade,
     get_evidence_facade,
 )
-from app.hoc.cus.logs.L5_engines.trace_facade import (
-    TraceFacade,
-    get_trace_facade,
-)
-
 __all__ = [
     # Facades
     "LogsFacade",
     "get_logs_facade",
     "EvidenceFacade",
     "get_evidence_facade",
-    "TraceFacade",
-    "get_trace_facade",
 ]

@@ -268,7 +268,7 @@ async def is_v2_disabled(session: Optional[AsyncSession] = None) -> bool:
     - disabled=True AND disabled_until <= now (TTL expired, auto-recover)
 
     Args:
-        session: Optional async session (creates new if None)
+        session: Async session (L4-owned). Creates temporary read session if None.
 
     Returns:
         True if V2 is disabled
@@ -302,8 +302,8 @@ async def is_v2_disabled(session: Optional[AsyncSession] = None) -> bool:
                 # TTL expired - trigger auto-recovery with proper locking
                 config = _get_config()
                 if config.auto_recover_enabled:
-                    # Auto-recovery uses its own locked transaction to avoid TOCTOU
-                    recovered = await _try_auto_recover(state.id)
+                    # Auto-recovery uses L4-owned session for state mutations
+                    recovered = await _try_auto_recover(session, state.id)
                     if recovered:
                         return False
 
@@ -314,74 +314,74 @@ async def is_v2_disabled(session: Optional[AsyncSession] = None) -> bool:
             await session.close()
 
 
-async def _try_auto_recover(state_id: int) -> bool:
+async def _try_auto_recover(session: AsyncSession, state_id: int) -> bool:
     """
     Attempt auto-recovery with proper locking to avoid TOCTOU race.
 
     Uses SELECT FOR UPDATE to ensure only one worker performs recovery.
     Returns True if recovery was performed (or already done by another worker).
 
+    Transaction Boundary: L4 owns begin/commit (PIN-520).
+
     Args:
+        session: L4-owned async session (already in transaction)
         state_id: ID of the state row to recover
 
     Returns:
         True if recovered (or already recovered), False if still disabled
     """
-    async with AsyncSessionLocal() as session:
-        async with session.begin():
-            # Re-fetch with lock to check current state
-            result = await session.execute(
-                select(CostSimCBStateModel)
-                .where(CostSimCBStateModel.id == state_id)
-                .with_for_update()  # Critical: lock the row
-            )
-            state = result.scalars().first()
+    # Re-fetch with lock to check current state
+    result = await session.execute(
+        select(CostSimCBStateModel)
+        .where(CostSimCBStateModel.id == state_id)
+        .with_for_update()  # Critical: lock the row
+    )
+    state = result.scalars().first()
 
-            if state is None:
-                return False
+    if state is None:
+        return False
 
-            # Another worker may have already recovered
-            if not state.disabled:
-                return True
+    # Another worker may have already recovered
+    if not state.disabled:
+        return True
 
-            # Re-check TTL (may have changed)
-            if state.disabled_until is None:
-                # Permanent disable - cannot auto-recover
-                return False
+    # Re-check TTL (may have changed)
+    if state.disabled_until is None:
+        # Permanent disable - cannot auto-recover
+        return False
 
-            now = datetime.now(timezone.utc)
-            disabled_until = state.disabled_until
-            if disabled_until.tzinfo is None:
-                disabled_until = disabled_until.replace(tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
+    disabled_until = state.disabled_until
+    if disabled_until.tzinfo is None:
+        disabled_until = disabled_until.replace(tzinfo=timezone.utc)
 
-            if now < disabled_until:
-                # TTL not yet expired
-                return False
+    if now < disabled_until:
+        # TTL not yet expired
+        return False
 
-            # Perform recovery
-            old_incident_id = state.incident_id
+    # Perform recovery
+    old_incident_id = state.incident_id
 
-            state.disabled = False
-            state.disabled_by = None
-            state.disabled_reason = None
-            state.disabled_until = None
-            state.incident_id = None
-            state.consecutive_failures = 0
-            state.updated_at = now
+    state.disabled = False
+    state.disabled_by = None
+    state.disabled_reason = None
+    state.disabled_until = None
+    state.incident_id = None
+    state.consecutive_failures = 0
+    state.updated_at = now
 
-            # Commit within transaction
-            await session.flush()
+    await session.flush()
 
-            logger.info(f"Circuit breaker auto-recovered (locked): name={CB_NAME}, old_incident_id={old_incident_id}")
+    logger.info(f"Circuit breaker auto-recovered (locked): name={CB_NAME}, old_incident_id={old_incident_id}")
 
-            # Record metrics
-            metrics = _get_metrics()
-            metrics.record_auto_recovery()
-            metrics.record_cb_enabled(reason="auto_recovery")
-            metrics.set_circuit_breaker_state(is_open=False)
-            metrics.set_consecutive_failures(0)
+    # Record metrics
+    metrics = _get_metrics()
+    metrics.record_auto_recovery()
+    metrics.record_cb_enabled(reason="auto_recovery")
+    metrics.set_circuit_breaker_state(is_open=False)
+    metrics.set_consecutive_failures(0)
 
-    # Post-recovery actions (outside transaction to avoid holding lock)
+    # Post-recovery actions (separate session to avoid holding lock)
     if old_incident_id:
         try:
             async with async_session_context() as post_session:
@@ -474,6 +474,7 @@ async def get_state() -> CircuitBreakerState:
 
 
 async def report_drift(
+    session: AsyncSession,
     drift_score: float,
     sample_count: int = 1,
     details: Optional[Dict[str, Any]] = None,
@@ -483,7 +484,10 @@ async def report_drift(
 
     If drift exceeds threshold, trips the circuit breaker.
 
+    Transaction Boundary: L4 owns begin/commit (PIN-520).
+
     Args:
+        session: L4-owned async session (already in transaction)
         drift_score: Observed drift score (0.0 - 1.0)
         sample_count: Number of samples in observation
         details: Additional details
@@ -493,56 +497,58 @@ async def report_drift(
     """
     config = _get_config()
 
-    async with AsyncSessionLocal() as session:
-        async with session.begin():
-            state = await _get_or_create_state(session, lock=True)
-            now = datetime.now(timezone.utc)
+    state = await _get_or_create_state(session, lock=True)
+    now = datetime.now(timezone.utc)
 
-            # Check if drift exceeds threshold
-            if drift_score > config.drift_threshold:
-                state.consecutive_failures += 1
-                state.last_failure_at = now
-                state.updated_at = now
+    # Check if drift exceeds threshold
+    if drift_score > config.drift_threshold:
+        state.consecutive_failures += 1
+        state.last_failure_at = now
+        state.updated_at = now
 
-                logger.warning(
-                    f"Drift threshold exceeded: {drift_score:.4f} > {config.drift_threshold}, "
-                    f"consecutive_failures={state.consecutive_failures}"
-                )
+        logger.warning(
+            f"Drift threshold exceeded: {drift_score:.4f} > {config.drift_threshold}, "
+            f"consecutive_failures={state.consecutive_failures}"
+        )
 
-                # Record consecutive failure metric
-                metrics = _get_metrics()
-                metrics.set_consecutive_failures(state.consecutive_failures)
+        # Record consecutive failure metric
+        metrics = _get_metrics()
+        metrics.set_consecutive_failures(state.consecutive_failures)
 
-                # Trip breaker after consecutive failures
-                if state.consecutive_failures >= config.failure_threshold:
-                    incident = await _trip(
-                        session=session,
-                        state=state,
-                        reason=f"Drift exceeded threshold: {drift_score:.4f} > {config.drift_threshold}",
-                        drift_score=drift_score,
-                        sample_count=sample_count,
-                        details=details,
-                        disabled_by="circuit_breaker",
-                    )
-                    return incident
-            else:
-                # Reset consecutive failures on success
-                if state.consecutive_failures > 0:
-                    logger.info("Drift within threshold, resetting consecutive failures")
-                    state.consecutive_failures = 0
-                    state.updated_at = now
+        # Trip breaker after consecutive failures
+        if state.consecutive_failures >= config.failure_threshold:
+            incident = await _trip(
+                session=session,
+                state=state,
+                reason=f"Drift exceeded threshold: {drift_score:.4f} > {config.drift_threshold}",
+                drift_score=drift_score,
+                sample_count=sample_count,
+                details=details,
+                disabled_by="circuit_breaker",
+            )
+            return incident
+    else:
+        # Reset consecutive failures on success
+        if state.consecutive_failures > 0:
+            logger.info("Drift within threshold, resetting consecutive failures")
+            state.consecutive_failures = 0
+            state.updated_at = now
 
     return None
 
 
 async def report_schema_error(
+    session: AsyncSession,
     error_count: int = 1,
     details: Optional[Dict[str, Any]] = None,
 ) -> Optional[Incident]:
     """
     Report schema validation errors.
 
+    Transaction Boundary: L4 owns begin/commit (PIN-520).
+
     Args:
+        session: L4-owned async session (already in transaction)
         error_count: Number of schema errors
         details: Error details
 
@@ -552,20 +558,18 @@ async def report_schema_error(
     config = _get_config()
 
     if error_count >= config.schema_error_threshold:
-        async with AsyncSessionLocal() as session:
-            async with session.begin():
-                state = await _get_or_create_state(session, lock=True)
+        state = await _get_or_create_state(session, lock=True)
 
-                return await _trip(
-                    session=session,
-                    state=state,
-                    reason=f"Schema error threshold exceeded: {error_count} >= {config.schema_error_threshold}",
-                    drift_score=1.0,
-                    sample_count=error_count,
-                    details=details,
-                    severity="P3",
-                    disabled_by="circuit_breaker",
-                )
+        return await _trip(
+            session=session,
+            state=state,
+            reason=f"Schema error threshold exceeded: {error_count} >= {config.schema_error_threshold}",
+            drift_score=1.0,
+            sample_count=error_count,
+            details=details,
+            severity="P3",
+            disabled_by="circuit_breaker",
+        )
 
     return None
 
@@ -574,6 +578,7 @@ async def report_schema_error(
 
 
 async def disable_v2(
+    session: AsyncSession,
     reason: str,
     disabled_by: str,
     disabled_until: Optional[datetime] = None,
@@ -583,7 +588,10 @@ async def disable_v2(
 
     Idempotent: returns False if already disabled with same params.
 
+    Transaction Boundary: L4 owns begin/commit (PIN-520).
+
     Args:
+        session: L4-owned async session (already in transaction)
         reason: Reason for disabling
         disabled_by: Who disabled (user_id, system, etc.)
         disabled_until: Optional TTL (None = use default from config)
@@ -591,30 +599,29 @@ async def disable_v2(
     Returns:
         Tuple of (state_changed, incident)
     """
-    async with AsyncSessionLocal() as session:
-        async with session.begin():
-            state = await _get_or_create_state(session, lock=True)
+    state = await _get_or_create_state(session, lock=True)
 
-            # Check if already disabled with same params
-            if state.disabled and state.disabled_reason == reason and state.disabled_until == disabled_until:
-                return False, None
+    # Check if already disabled with same params
+    if state.disabled and state.disabled_reason == reason and state.disabled_until == disabled_until:
+        return False, None
 
-            incident = await _trip(
-                session=session,
-                state=state,
-                reason=reason,
-                drift_score=0.0,
-                sample_count=0,
-                details={"manual_disable": True},
-                severity="P2",
-                disabled_by=disabled_by,
-                disabled_until=disabled_until,
-            )
+    incident = await _trip(
+        session=session,
+        state=state,
+        reason=reason,
+        drift_score=0.0,
+        sample_count=0,
+        details={"manual_disable": True},
+        severity="P2",
+        disabled_by=disabled_by,
+        disabled_until=disabled_until,
+    )
 
-            return True, incident
+    return True, incident
 
 
 async def enable_v2(
+    session: AsyncSession,
     enabled_by: str,
     reason: Optional[str] = None,
 ) -> bool:
@@ -623,61 +630,64 @@ async def enable_v2(
 
     Idempotent: returns False if already enabled.
 
+    Transaction Boundary: L4 owns begin/commit (PIN-520).
+
     Args:
+        session: L4-owned async session (already in transaction)
         enabled_by: Who enabled (user_id, system, etc.)
         reason: Optional reason for enabling
 
     Returns:
         True if state changed, False otherwise
     """
-    async with AsyncSessionLocal() as session:
-        async with session.begin():
-            state = await _get_or_create_state(session, lock=True)
+    state = await _get_or_create_state(session, lock=True)
 
-            if not state.disabled:
-                logger.info("Circuit breaker already closed")
-                return True
-
-            old_incident_id = state.incident_id
-            old_reason = state.disabled_reason
-
-            # Reset state
-            state.disabled = False
-            state.disabled_by = None
-            state.disabled_reason = None
-            state.disabled_until = None
-            state.incident_id = None
-            state.consecutive_failures = 0
-            state.updated_at = datetime.now(timezone.utc)
-
-        # Resolve incident (outside transaction)
-        if old_incident_id:
-            await _resolve_incident(
-                session,
-                old_incident_id,
-                resolved_by=enabled_by,
-                resolution_notes=reason or "Manual reset",
-            )
-
-        # Enqueue resolved alert
-        await _enqueue_alert(
-            session,
-            alert_type="enable",
-            payload=_build_enable_alert_payload(enabled_by, reason),
-        )
-
-        logger.info(
-            f"Circuit breaker RESET: incident_id={old_incident_id}, "
-            f"reason={reason or 'Manual reset'}, enabled_by={enabled_by}"
-        )
-
-        # Record metrics
-        metrics = _get_metrics()
-        metrics.record_cb_enabled(reason="manual")
-        metrics.set_circuit_breaker_state(is_open=False)
-        metrics.set_consecutive_failures(0)
-
+    if not state.disabled:
+        logger.info("Circuit breaker already closed")
         return True
+
+    old_incident_id = state.incident_id
+    old_reason = state.disabled_reason
+
+    # Reset state
+    state.disabled = False
+    state.disabled_by = None
+    state.disabled_reason = None
+    state.disabled_until = None
+    state.incident_id = None
+    state.consecutive_failures = 0
+    state.updated_at = datetime.now(timezone.utc)
+
+    await session.flush()
+
+    # Resolve incident
+    if old_incident_id:
+        await _resolve_incident(
+            session,
+            old_incident_id,
+            resolved_by=enabled_by,
+            resolution_notes=reason or "Manual reset",
+        )
+
+    # Enqueue resolved alert
+    await _enqueue_alert(
+        session,
+        alert_type="enable",
+        payload=_build_enable_alert_payload(enabled_by, reason),
+    )
+
+    logger.info(
+        f"Circuit breaker RESET: incident_id={old_incident_id}, "
+        f"reason={reason or 'Manual reset'}, enabled_by={enabled_by}"
+    )
+
+    # Record metrics
+    metrics = _get_metrics()
+    metrics.record_cb_enabled(reason="manual")
+    metrics.set_circuit_breaker_state(is_open=False)
+    metrics.set_consecutive_failures(0)
+
+    return True
 
 
 # ========== Trip Logic ==========
@@ -981,53 +991,59 @@ class AsyncCircuitBreaker:
 
     async def report_drift(
         self,
+        session: AsyncSession,
         drift_score: float,
         sample_count: int = 1,
         details: Optional[Dict[str, Any]] = None,
     ) -> Optional[Incident]:
-        """Report drift observation."""
-        return await report_drift(drift_score, sample_count, details)
+        """Report drift observation. L4 owns transaction boundary."""
+        return await report_drift(session, drift_score, sample_count, details)
 
     async def report_schema_error(
         self,
+        session: AsyncSession,
         error_count: int = 1,
         details: Optional[Dict[str, Any]] = None,
     ) -> Optional[Incident]:
-        """Report schema errors."""
-        return await report_schema_error(error_count, details)
+        """Report schema errors. L4 owns transaction boundary."""
+        return await report_schema_error(session, error_count, details)
 
     async def disable_v2(
         self,
+        session: AsyncSession,
         reason: str,
         disabled_by: str,
         disabled_until: Optional[datetime] = None,
     ) -> Tuple[bool, Optional[Incident]]:
-        """Disable V2."""
-        return await disable_v2(reason, disabled_by, disabled_until)
+        """Disable V2. L4 owns transaction boundary."""
+        return await disable_v2(session, reason, disabled_by, disabled_until)
 
     async def enable_v2(
         self,
+        session: AsyncSession,
         enabled_by: str,
         reason: Optional[str] = None,
     ) -> bool:
-        """Enable V2."""
-        return await enable_v2(enabled_by, reason)
+        """Enable V2. L4 owns transaction boundary."""
+        return await enable_v2(session, enabled_by, reason)
 
     async def reset(
         self,
+        session: AsyncSession,
         reason: Optional[str] = None,
         reset_by: Optional[str] = None,
     ) -> bool:
-        """Reset circuit breaker."""
-        return await enable_v2(reset_by or "manual", reason)
+        """Reset circuit breaker. L4 owns transaction boundary."""
+        return await enable_v2(session, reset_by or "manual", reason)
 
     async def reset_v2(
         self,
+        session: AsyncSession,
         reason: Optional[str] = None,
         reset_by: Optional[str] = None,
     ) -> bool:
-        """Reset circuit breaker (alias for reset)."""
-        return await self.reset(reason, reset_by)
+        """Reset circuit breaker (alias for reset). L4 owns transaction."""
+        return await self.reset(session=session, reason=reason, reset_by=reset_by)
 
     def get_incidents(
         self,

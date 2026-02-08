@@ -206,6 +206,8 @@ class CircuitBreakerHandler:
             return OperationResult.ok(state.to_dict())
 
         elif method_name == "reset":
+            from app.db_async import AsyncSessionLocal
+
             reason = ctx.params.get("reason", "Manual reset via L4")
             is_disabled = await circuit_breaker.is_disabled()
             if not is_disabled:
@@ -215,7 +217,10 @@ class CircuitBreakerHandler:
                     "message": "Circuit breaker was already closed",
                     "state": state.to_dict(),
                 })
-            success = await circuit_breaker.reset_v2(reason=reason)
+            # L4 owns transaction boundary (PIN-520)
+            async with AsyncSessionLocal() as session:
+                async with session.begin():
+                    success = await circuit_breaker.reset(session=session, reason=reason)
             state = await circuit_breaker.get_state()
             return OperationResult.ok({
                 "success": success,

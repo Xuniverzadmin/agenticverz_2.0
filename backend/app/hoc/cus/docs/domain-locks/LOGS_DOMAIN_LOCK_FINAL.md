@@ -13,6 +13,12 @@
 
 ---
 
+## Post-Lock Errata (2026-02-08)
+
+- `L5_support/CRM/engines/audit_engine.py` was re-homed out of the Logs domain because it is **CRM governance-job audit** (job/contract evidence → verdict), not LLM-run logs audit.
+- Canonical location: `backend/app/hoc/cus/account/logs/CRM/audit/audit_engine.py`.
+- Runtime call path is L4-owned via `governance.audit_job` (see `backend/app/hoc/cus/hoc_spine/orchestrator/handlers/governance_audit_handler.py`).
+
 ## Layer Distribution
 
 | Layer | Files | LOC |

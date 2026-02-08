@@ -145,56 +145,55 @@ class PolicyRulesService:
         rule_id = generate_uuid()
         now = utc_now()
 
-        # ATOMIC BLOCK: state change + audit must succeed together
-        async with self._session.begin():
-            rule = self._driver.create_rule(
-                id=rule_id,
+        # ATOMIC BLOCK: L4 owns transaction boundary (PIN-520)
+        rule = self._driver.create_rule(
+            id=rule_id,
+            tenant_id=tenant_id,
+            name=request.name,
+            description=request.description,
+            enforcement_mode=request.enforcement_mode,
+            scope=request.scope,
+            scope_id=request.scope_id,
+            conditions=request.conditions,
+            status="ACTIVE",
+            source=request.source,
+            source_proposal_id=request.source_proposal_id,
+            parent_rule_id=request.parent_rule_id,
+            created_by=created_by,
+            created_at=now,
+            updated_at=now,
+        )
+
+        # Create integrity record (INVARIANT: every active rule needs one)
+        integrity = self._driver.create_integrity(
+            id=generate_uuid(),
+            rule_id=rule_id,
+            integrity_status="VERIFIED",
+            integrity_score=Decimal("1.000"),
+            hash_root=self._compute_hash(rule),
+            computed_at=now,
+        )
+
+        # Build rule state for audit
+        rule_state = {
+            "name": rule.name,
+            "enforcement_mode": rule.enforcement_mode,
+            "scope": rule.scope,
+            "conditions": rule.conditions,
+            "source": rule.source,
+        }
+
+        # Emit audit event (PIN-413: Logs Domain)
+        # Audit service injected by L4 handler (PIN-504)
+        if self._audit:
+            await self._audit.policy_rule_created(
                 tenant_id=tenant_id,
-                name=request.name,
-                description=request.description,
-                enforcement_mode=request.enforcement_mode,
-                scope=request.scope,
-                scope_id=request.scope_id,
-                conditions=request.conditions,
-                status="ACTIVE",
-                source=request.source,
-                source_proposal_id=request.source_proposal_id,
-                parent_rule_id=request.parent_rule_id,
-                created_by=created_by,
-                created_at=now,
-                updated_at=now,
-            )
-
-            # Create integrity record (INVARIANT: every active rule needs one)
-            integrity = self._driver.create_integrity(
-                id=generate_uuid(),
                 rule_id=rule_id,
-                integrity_status="VERIFIED",
-                integrity_score=Decimal("1.000"),
-                hash_root=self._compute_hash(rule),
-                computed_at=now,
+                actor_id=created_by,
+                actor_type=ActorType.HUMAN if created_by else ActorType.SYSTEM,
+                reason=f"Rule created: {rule.name}",
+                rule_state=rule_state,
             )
-
-            # Build rule state for audit
-            rule_state = {
-                "name": rule.name,
-                "enforcement_mode": rule.enforcement_mode,
-                "scope": rule.scope,
-                "conditions": rule.conditions,
-                "source": rule.source,
-            }
-
-            # Emit audit event (PIN-413: Logs Domain)
-            # Audit service injected by L4 handler (PIN-504)
-            if self._audit:
-                await self._audit.policy_rule_created(
-                    tenant_id=tenant_id,
-                    rule_id=rule_id,
-                    actor_id=created_by,
-                    actor_type=ActorType.HUMAN if created_by else ActorType.SYSTEM,
-                    reason=f"Rule created: {rule.name}",
-                    rule_state=rule_state,
-                )
 
         return self._to_response(rule)
 
@@ -237,74 +236,73 @@ class PolicyRulesService:
             "status": rule.status,
         }
 
-        # ATOMIC BLOCK: state change + audit must succeed together
-        async with self._session.begin():
-            # Handle retirement specially
-            if request.status == "RETIRED":
-                if not request.retirement_reason:
-                    raise RuleValidationError("Retirement requires a reason")
-                rule.retire(
-                    by=updated_by or "system",
+        # ATOMIC BLOCK: L4 owns transaction boundary (PIN-520)
+        # Handle retirement specially
+        if request.status == "RETIRED":
+            if not request.retirement_reason:
+                raise RuleValidationError("Retirement requires a reason")
+            rule.retire(
+                by=updated_by or "system",
+                reason=request.retirement_reason,
+                superseded_by_id=request.superseded_by,
+            )
+
+            # Capture after state for retirement audit
+            after_state = {
+                "name": rule.name,
+                "status": "RETIRED",
+                "retired_by": updated_by or "system",
+                "retirement_reason": request.retirement_reason,
+                "superseded_by": request.superseded_by,
+            }
+
+            # Emit retirement audit event (PIN-413)
+            # Audit service injected by L4 handler (PIN-504)
+            if self._audit:
+                await self._audit.policy_rule_retired(
+                    tenant_id=tenant_id,
+                    rule_id=rule_id,
+                    actor_id=updated_by,
+                    actor_type=ActorType.HUMAN if updated_by else ActorType.SYSTEM,
                     reason=request.retirement_reason,
-                    superseded_by_id=request.superseded_by,
+                    before_state=before_state,
+                    after_state=after_state,
                 )
+        else:
+            # Update mutable fields
+            if request.name is not None:
+                rule.name = request.name
+            if request.description is not None:
+                rule.description = request.description
+            if request.enforcement_mode is not None:
+                rule.enforcement_mode = request.enforcement_mode
+            if request.conditions is not None:
+                self._validate_conditions(request.conditions)
+                rule.conditions = request.conditions
 
-                # Capture after state for retirement audit
-                after_state = {
-                    "name": rule.name,
-                    "status": "RETIRED",
-                    "retired_by": updated_by or "system",
-                    "retirement_reason": request.retirement_reason,
-                    "superseded_by": request.superseded_by,
-                }
+            rule.updated_at = utc_now()
 
-                # Emit retirement audit event (PIN-413)
-                # Audit service injected by L4 handler (PIN-504)
-                if self._audit:
-                    await self._audit.policy_rule_retired(
-                        tenant_id=tenant_id,
-                        rule_id=rule_id,
-                        actor_id=updated_by,
-                        actor_type=ActorType.HUMAN if updated_by else ActorType.SYSTEM,
-                        reason=request.retirement_reason,
-                        before_state=before_state,
-                        after_state=after_state,
-                    )
-            else:
-                # Update mutable fields
-                if request.name is not None:
-                    rule.name = request.name
-                if request.description is not None:
-                    rule.description = request.description
-                if request.enforcement_mode is not None:
-                    rule.enforcement_mode = request.enforcement_mode
-                if request.conditions is not None:
-                    self._validate_conditions(request.conditions)
-                    rule.conditions = request.conditions
+            # Capture after state for modification audit
+            after_state = {
+                "name": rule.name,
+                "enforcement_mode": rule.enforcement_mode,
+                "scope": rule.scope,
+                "conditions": rule.conditions,
+                "status": rule.status,
+            }
 
-                rule.updated_at = utc_now()
-
-                # Capture after state for modification audit
-                after_state = {
-                    "name": rule.name,
-                    "enforcement_mode": rule.enforcement_mode,
-                    "scope": rule.scope,
-                    "conditions": rule.conditions,
-                    "status": rule.status,
-                }
-
-                # Emit modification audit event (PIN-413)
-                # Audit service injected by L4 handler (PIN-504)
-                if self._audit:
-                    await self._audit.policy_rule_modified(
-                        tenant_id=tenant_id,
-                        rule_id=rule_id,
-                        actor_id=updated_by,
-                        actor_type=ActorType.HUMAN if updated_by else ActorType.SYSTEM,
-                        reason=f"Rule modified: {rule.name}",
-                        before_state=before_state,
-                        after_state=after_state,
-                    )
+            # Emit modification audit event (PIN-413)
+            # Audit service injected by L4 handler (PIN-504)
+            if self._audit:
+                await self._audit.policy_rule_modified(
+                    tenant_id=tenant_id,
+                    rule_id=rule_id,
+                    actor_id=updated_by,
+                    actor_type=ActorType.HUMAN if updated_by else ActorType.SYSTEM,
+                    reason=f"Rule modified: {rule.name}",
+                    before_state=before_state,
+                    after_state=after_state,
+                )
 
         return self._to_response(rule)
 

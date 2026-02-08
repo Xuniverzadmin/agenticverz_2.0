@@ -86,6 +86,14 @@ class PolicyEngineDriver:
             self._engine = create_engine(self._db_url)
         return self._engine
 
+    def get_engine(self) -> Engine:
+        """Expose the SQLAlchemy engine for L4 transaction management.
+
+        L4 handlers call engine.begin() to open a transaction, then pass the
+        connection to managed_connection(conn).  L6 never calls begin() itself.
+        """
+        return self._get_engine()
+
     # =========================================================================
     # CONFIGURATION LOAD OPERATIONS (READ)
     # =========================================================================
@@ -1406,17 +1414,33 @@ class PolicyEngineDriver:
     # =========================================================================
 
     @contextmanager
-    def managed_connection(self):
+    def managed_connection(self, conn: Optional[Connection] = None):
         """L4 transaction context. All methods called during this context
-        share a single connection. Caller (L4) is responsible for commit."""
-        engine = self._get_engine()
-        with engine.connect() as conn:
+        share a single connection.
+
+        Args:
+            conn: L4-owned connection (from engine.begin()). When provided,
+                  L4 owns the transaction boundary. When None, opens a
+                  read-only connection via engine.connect().
+        """
+        if conn is not None:
+            # L4-provided connection — L4 owns begin/commit
             prev = self._managed_conn
             self._managed_conn = conn
             try:
                 yield conn
             finally:
                 self._managed_conn = prev
+        else:
+            # Read-only connection (no transaction boundary)
+            engine = self._get_engine()
+            with engine.connect() as c:
+                prev = self._managed_conn
+                self._managed_conn = c
+                try:
+                    yield c
+                finally:
+                    self._managed_conn = prev
 
     @contextmanager
     def _conn(self):
@@ -1430,26 +1454,23 @@ class PolicyEngineDriver:
 
     @contextmanager
     def _write_conn(self):
-        """Write connection context — auto-commits only when NOT in managed mode.
+        """Write connection context — REQUIRES L4-owned transaction context.
 
-        When managed_connection() is active: yields managed conn, no commit (L4 owns).
-        When standalone: opens fresh conn, commits on clean exit.
+        L4 must call managed_connection(conn) with an engine.begin() connection
+        before invoking any write operation. Standalone writes are forbidden.
 
-        PIN-520 Phase 3 BRIDGE PATTERN:
-            The standalone commit here is the architectural bridge while the
-            singleton PolicyEngine pattern exists.  Each standalone write opens
-            one connection, commits immediately, and disposes.  Full L4
-            ownership would require wiring all 14+ call-sites through
-            managed_connection()—tracked as a future refactor, not a violation.
-            The purity audit excludes _write_conn() from L6 commit detection.
+        Transaction Boundary Purity (PIN-520):
+            L6 never calls begin()/commit()/rollback(). L4 owns all
+            transaction boundaries via engine.begin() + managed_connection().
         """
         if self._managed_conn is not None:
             yield self._managed_conn
         else:
-            engine = self._get_engine()
-            with engine.connect() as conn:
-                yield conn
-                conn.commit()
+            raise RuntimeError(
+                "PolicyEngine write requires L4-owned transaction context. "
+                "Call driver.managed_connection(conn) with an engine.begin() "
+                "connection before invoking write operations."
+            )
 
     # =========================================================================
     # READ AUTO-CONNECTION WRAPPERS (*_auto)

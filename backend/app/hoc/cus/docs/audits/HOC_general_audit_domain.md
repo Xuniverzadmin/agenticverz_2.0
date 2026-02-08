@@ -146,7 +146,7 @@ from app.houseofcards.customer.general.lifecycle.engines.knowledge_plane import 
 | `engines/knowledge_sdk.py` | `KnowledgeSDK` | SDK facade for lifecycle operations |
 | `lifecycle/engines/knowledge_plane.py` | `KnowledgePlane`, `KnowledgePlaneRegistry` | Knowledge graph abstraction |
 
-**knowledge_sdk.py** imports from `app.services.knowledge_lifecycle_manager` (external to houseofcards).
+**knowledge_sdk.py** imports from `app.hoc.cus.hoc_spine.orchestrator.lifecycle.knowledge_lifecycle_manager` (canonical); `app.services.*` is now a compatibility shim only.
 
 ---
 

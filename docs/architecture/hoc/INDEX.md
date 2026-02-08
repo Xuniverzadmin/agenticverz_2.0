@@ -11,7 +11,7 @@
 
 | Category | Document | Status |
 |----------|----------|--------|
-| **Canonical Architecture** | [HOC_LAYER_TOPOLOGY_V1.md](../HOC_LAYER_TOPOLOGY_V1.md) | RATIFIED |
+| **Canonical Architecture** | [`../topology/HOC_LAYER_TOPOLOGY_V2.0.0.md`](../topology/HOC_LAYER_TOPOLOGY_V2.0.0.md) | RATIFIED |
 | **Master Migration Plan** | [HOC_MIGRATION_PLAN.md](../HOC_MIGRATION_PLAN.md) | v1.1.0 DRAFT |
 | **Phase 1 Plan** | [migration/PHASE1_MIGRATION_PLAN.md](migration/PHASE1_MIGRATION_PLAN.md) | COMPLETE |
 | **Phase 2 Plan** | [migration/PHASE2_MIGRATION_PLAN.md](migration/PHASE2_MIGRATION_PLAN.md) | IN PROGRESS |
@@ -24,7 +24,7 @@ These are the authoritative documents for HOC architecture.
 
 | Document | Location | Version | Status | Description |
 |----------|----------|---------|--------|-------------|
-| **Layer Topology** | [`../HOC_LAYER_TOPOLOGY_V1.md`](../HOC_LAYER_TOPOLOGY_V1.md) | 1.2.0 | RATIFIED | L1-L8 layer model, naming rules, import contracts |
+| **Layer Topology** | [`../topology/HOC_LAYER_TOPOLOGY_V2.0.0.md`](../topology/HOC_LAYER_TOPOLOGY_V2.0.0.md) | 2.0.0 | RATIFIED | 6-layer execution topology (L2.1→L2→L4→L5→L6→L7) |
 | **Master Migration Plan** | [`../HOC_MIGRATION_PLAN.md`](../HOC_MIGRATION_PLAN.md) | 1.1.0 | DRAFT | 5-phase migration overview (P1-P5) |
 | **Driver-Engine Contract** | [`../../../backend/app/hoc/DRIVER_ENGINE_CONTRACT.md`](../../../backend/app/hoc/DRIVER_ENGINE_CONTRACT.md) | — | ACTIVE | L5/L6 boundary rules |
 
@@ -176,14 +176,17 @@ Phase 4 focuses on wiring general domain services to other customer domains.
 | **Spine Literature Validator** | [`scripts/ops/hoc_spine_study_validator.py`](../../../scripts/ops/hoc_spine_study_validator.py) | **UPGRADED** | Now generates Export Contract, Import Boundary, L5 Pairing Declaration sections |
 | **Spine Literature Index** | [`literature/INDEX.md`](../../../literature/INDEX.md) | **REGENERATED** | Master index with violation roll-up |
 
-**L5 Pairing Gap Summary (PIN-491, 2026-01-30):**
+**L5 Pairing Gap Summary (Baseline Freeze, 2026-02-08):**
 
-| Metric | Initial | After A.1 |
-|--------|---------|-----------|
-| Total L5 engines | 185 | 185 |
-| Wired via L4 orchestrator | 0 | **10** |
-| Direct L2→L5 (gaps) | 32 | **22** |
-| Orphaned (no callers) | 153 | 153 |
+Metrics are computed by `scripts/ops/l5_spine_pairing_gap_detector.py` using the
+**L5 entry module** heuristic (`*_engine.py`, `*_facade.py`, `*_bridge.py`).
+
+| Metric | Value |
+|--------|-------|
+| Total L5 entry modules | 66 |
+| Wired via L4 orchestrator | 66 |
+| Direct L2→L5 (gaps) | 0 |
+| Orphaned (no L2/L4 callers) | 0 |
 
 **Construction Plan Progress:**
 - **A.0** ✅ `operation_registry.py` + `OperationHandler` protocol + 16 invariant tests
@@ -325,7 +328,8 @@ Active implementation plans for Phase 2.5A domain extraction.
 
 ```
 docs/architecture/
-├── HOC_LAYER_TOPOLOGY_V1.md          # CANONICAL layer architecture
+├── topology/
+│   └── HOC_LAYER_TOPOLOGY_V2.0.0.md  # CANONICAL HOC execution topology
 ├── HOC_MIGRATION_PLAN.md             # Master migration plan (5 phases)
 │
 └── hoc/                              # HOC Documentation Hub

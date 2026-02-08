@@ -33,18 +33,7 @@ from .prevention_contract import (
 )
 # NOTE: learning_proof_engine was moved to policies/L5_engines/ during domain
 # consolidation (PIN-498). Stale re-export removed per PIN-507 Law 0.
-from .cost_bridges_engine import (
-    AnomalySeverity,
-    AnomalyType,
-    CostAnomaly,
-    CostEstimationProbe,
-    CostLoopBridge,
-    CostLoopOrchestrator,
-    CostPatternMatcher,
-    CostPolicyGenerator,
-    CostRecoveryGenerator,
-    CostRoutingAdjuster,
-)
+# NOTE: cost_bridges_engine deleted — orphaned entry module (PIN-520 Phase 4).
 # MCP Server Engine (PIN-516 Phase 2)
 from .mcp_server_engine import (
     McpDiscoveryResult,
@@ -71,17 +60,6 @@ __all__ = [
     "assert_prevention_immutable",
     "validate_prevention_candidate",
     "validate_prevention_for_graduation",
-    # cost_bridges_engine
-    "AnomalySeverity",
-    "AnomalyType",
-    "CostAnomaly",
-    "CostEstimationProbe",
-    "CostLoopBridge",
-    "CostLoopOrchestrator",
-    "CostPatternMatcher",
-    "CostPolicyGenerator",
-    "CostRecoveryGenerator",
-    "CostRoutingAdjuster",
     # mcp_server_engine (PIN-516 Phase 2)
     "McpServerEngine",
     "McpServerStatus",

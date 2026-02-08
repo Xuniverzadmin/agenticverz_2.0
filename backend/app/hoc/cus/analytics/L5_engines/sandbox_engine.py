@@ -40,12 +40,12 @@ from app.hoc.cus.hoc_spine.services.cross_domain_gateway import (
     report_drift,
 )
 from app.hoc.cus.analytics.L5_engines.config_engine import is_v2_sandbox_enabled
-from app.hoc.cus.analytics.L5_engines.costsim_models_engine import (
+from app.hoc.cus.analytics.L5_engines.costsim_models import (
     ComparisonResult,
     ComparisonVerdict,
     V2SimulationResult,
 )
-from app.hoc.cus.analytics.L5_engines.v2_adapter_engine import CostSimV2Adapter
+from app.hoc.cus.analytics.L5_engines.v2_adapter import CostSimV2Adapter
 from app.worker.simulate import CostSimulator, SimulationResult
 
 logger = logging.getLogger("nova.costsim.sandbox")

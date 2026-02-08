@@ -29,7 +29,7 @@ from app.db import (
 
 # Phase 2B: Write service for DB operations
 from app.schemas.response import wrap_dict
-from app.hoc.cus.analytics.L5_engines.cost_write_engine import CostWriteService
+from app.hoc.cus.analytics.L5_engines.cost_write import CostWriteService
 
 
 def get_tenant_id(tenant_id: str = Query(..., description="Tenant ID")) -> str:

@@ -910,7 +910,7 @@ class PoliciesFacade:
         include_resolved: bool = False,
     ) -> ConflictsListResult:
         """Detect policy conflicts."""
-        from app.hoc.cus.policies.L5_engines.policy_graph_engine import (
+        from app.hoc.cus.policies.L5_engines.policy_graph import (
             ConflictSeverity,
             get_conflict_engine,
         )
@@ -969,7 +969,7 @@ class PoliciesFacade:
         policy_id: Optional[str] = None,
     ) -> DependencyGraphResult:
         """Get policy dependency graph."""
-        from app.hoc.cus.policies.L5_engines.policy_graph_engine import get_dependency_engine
+        from app.hoc.cus.policies.L5_engines.policy_graph import get_dependency_engine
         from app.hoc.cus.policies.L6_drivers.policy_graph_driver import (
             get_policy_graph_driver,
         )

@@ -1,16 +1,18 @@
 {
-  "frozen_at": "2026-01-30T11:04:44.826955",
+  "frozen_at": "2026-02-08T06:18:50.053526",
   "phase": "C",
   "pin": "491",
   "summary": {
-    "total_l5_engines": 185,
-    "wired_via_l4": 31,
-    "direct_l2_to_l5": 1,
-    "orphaned": 153
+    "total_l5_engines": 66,
+    "wired_via_l4": 66,
+    "direct_l2_to_l5": 0,
+    "orphaned": 0
   },
-  "known_gaps": {
-    "incidents": [
-      "recovery_rule_engine.py"
-    ]
-  }
+  "total_l5_engines": 66,
+  "wired_via_l4": 66,
+  "direct_l2_to_l5": 0,
+  "orphaned": 0,
+  "orphaned_modules": [],
+  "direct_l2_modules": [],
+  "known_gaps": {}
 }

@@ -14,7 +14,7 @@
 #   Scope: domain (incidents)
 #   Models: Incident
 # Role: Database operations for recurrence analysis - pure data access
-# Callers: recurrence_analysis_engine.py (L5)
+# Callers: recurrence_analysis.py (L5)
 # Allowed Imports: L6, L7 (models)
 # Forbidden Imports: L1, L2, L3, L4, L5
 # Reference: PIN-470, INCIDENTS_PHASE2.5_IMPLEMENTATION_PLAN.md — Violation I.2

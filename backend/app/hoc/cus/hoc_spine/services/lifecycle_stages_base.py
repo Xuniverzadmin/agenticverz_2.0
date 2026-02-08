@@ -279,7 +279,7 @@ class StageRegistry:
     @classmethod
     def create_default(cls) -> "StageRegistry":
         """Create registry with all default handlers."""
-        from .onboarding import (
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.engines.onboarding import (
             RegisterHandler,
             VerifyHandler,
             IngestHandler,
@@ -288,7 +288,7 @@ class StageRegistry:
             ActivateHandler,
             GovernHandler,
         )
-        from .offboarding import (
+        from app.hoc.cus.hoc_spine.orchestrator.lifecycle.engines.offboarding import (
             DeregisterHandler,
             VerifyDeactivateHandler,
             DeactivateHandler,
