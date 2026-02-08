@@ -40,8 +40,12 @@ from pydantic import BaseModel, Field
 
 from ..auth.console_auth import FounderToken, verify_fops_token
 from ..auth.onboarding_state import OnboardingState
-from ..auth.onboarding_transitions import get_onboarding_service
 from ..schemas.response import wrap_dict
+from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
+    async_advance_onboarding,
+    async_detect_stalled_onboarding,
+    async_get_onboarding_state,
+)
 
 logger = logging.getLogger("nova.api.founder_onboarding")
 
@@ -173,15 +177,14 @@ async def force_complete_onboarding(
     tenant_id = body.tenant_id
     reason = body.reason
 
-    # Get current state
-    service = get_onboarding_service()
-    current_state = await service.get_current_state(tenant_id)
-
-    if current_state is None:
+    current_state_val = await async_get_onboarding_state(tenant_id)
+    if current_state_val is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Tenant {tenant_id} not found",
         )
+
+    current_state = OnboardingState(current_state_val)
 
     # Already complete - no-op
     if current_state == OnboardingState.COMPLETE:
@@ -213,33 +216,33 @@ async def force_complete_onboarding(
             detail="Failed to emit audit log - action aborted",
         )
 
-    # Execute force-complete transition
-    result = await service.advance_to_complete(
-        tenant_id=tenant_id,
-        trigger=f"founder_force_complete:{token.email}",
+    result = await async_advance_onboarding(
+        tenant_id,
+        OnboardingState.COMPLETE.value,
+        f"founder_force_complete:{token.email}",
     )
 
-    if not result.success:
+    if not result.get("success"):
         logger.error(
             "force_complete_failed",
             extra={
                 "tenant_id": tenant_id,
                 "from_state": current_state.name,
-                "error": result.message,
+                "error": result.get("message"),
                 "audit_id": audit_id,
             },
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Force-complete failed: {result.message}",
+            detail=f"Force-complete failed: {result.get('message')}",
         )
 
     logger.info(
         "force_complete_succeeded",
         extra={
             "tenant_id": tenant_id,
-            "from_state": result.from_state.name,
-            "to_state": result.to_state.name,
+            "from_state": result.get("from_state"),
+            "to_state": result.get("to_state"),
             "actor_email": token.email,
             "audit_id": audit_id,
         },
@@ -248,8 +251,8 @@ async def force_complete_onboarding(
     return ForceCompleteResponse(
         success=True,
         tenant_id=tenant_id,
-        from_state=result.from_state.name,
-        to_state=result.to_state.name,
+        from_state=result.get("from_state", current_state.name),
+        to_state=result.get("to_state", OnboardingState.COMPLETE.name),
         reason=reason,
         actor_email=token.email,
         timestamp=datetime.now(timezone.utc).isoformat(),
@@ -271,19 +274,17 @@ async def get_stalled_tenants(
 
     Use the force-complete endpoint to resolve if needed.
     """
-    from ..auth.onboarding_transitions import detect_stalled_onboarding
-
-    stalled = await detect_stalled_onboarding(threshold_hours=threshold_hours)
+    stalled = await async_detect_stalled_onboarding(threshold_hours=threshold_hours)
 
     return wrap_dict({
         "stalled_count": len(stalled),
         "threshold_hours": threshold_hours,
         "tenants": [
             {
-                "tenant_id": t.tenant_id,
-                "current_state": t.current_state.name,
-                "hours_stalled": round(t.hours_in_state, 1),
-                "created_at": t.created_at.isoformat(),
+                "tenant_id": t.get("tenant_id"),
+                "current_state": t.get("state_name"),
+                "hours_stalled": round(float(t.get("hours_stalled", 0.0)), 1),
+                "created_at": t.get("created_at"),
             }
             for t in stalled
         ],

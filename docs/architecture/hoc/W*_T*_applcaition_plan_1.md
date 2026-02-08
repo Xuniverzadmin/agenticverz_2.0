@@ -94,7 +94,7 @@ These failures are not cosmetic; they indicate:
 
 Observed results (ran from `backend/` unless noted):
 
-- `PYTHONPATH=. python3 -m pytest tests/governance/t0 -q` → `594 passed, 18 xfailed, 1 xpassed`
+- `PYTHONPATH=. python3 -m pytest tests/governance/t0 -q` → `599 passed, 18 xfailed, 1 xpassed`
 - `PYTHONPATH=. python3 -m pytest tests/governance/t4 -q` → `429 passed`
 - Repo root: `PYTHONPATH=backend python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py` → `0 blocking, 0 advisory`
 - Repo root: `PYTHONPATH=backend python3 backend/scripts/ci/check_init_hygiene.py --ci` → `0 blocking violations`

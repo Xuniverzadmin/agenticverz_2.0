@@ -79,29 +79,29 @@ async def _maybe_advance_to_sdk_connected(tenant_id: str) -> Optional[str]:
     Returns the new state name if transition occurred, None otherwise.
     """
     try:
-        from ..auth.onboarding_transitions import (
-            TransitionTrigger,
-            get_onboarding_service,
+        from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
+            async_advance_onboarding,
+        )
+        from app.hoc.cus.account.L5_schemas.onboarding_enums import OnboardingStatus
+
+        result = await async_advance_onboarding(
+            tenant_id,
+            OnboardingStatus.SDK_CONNECTED.value,
+            "first_sdk_handshake",
         )
 
-        service = get_onboarding_service()
-        result = await service.advance_to_sdk_connected(
-            tenant_id=tenant_id,
-            trigger=TransitionTrigger.FIRST_SDK_HANDSHAKE,
-        )
-
-        if result.success and not result.was_no_op:
+        if result.get("success") and not result.get("was_no_op"):
             logger.info(
                 "onboarding_advanced_on_sdk_handshake",
                 extra={
                     "tenant_id": tenant_id,
-                    "from_state": result.from_state.name,
-                    "to_state": result.to_state.name,
+                    "from_state": result.get("from_state"),
+                    "to_state": result.get("to_state"),
                 },
             )
-            return result.to_state.name
+            return result.get("to_state")
 
-        return result.to_state.name if result.success else None
+        return result.get("to_state") if result.get("success") else None
 
     except Exception as e:
         logger.warning(f"Failed to advance onboarding state on SDK handshake: {e}")
@@ -157,11 +157,13 @@ async def sdk_handshake(
     new_state = await _maybe_advance_to_sdk_connected(tenant_id)
 
     # Get current state for response
-    from ..auth.onboarding_transitions import get_onboarding_service
+    from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
+        async_get_onboarding_state,
+    )
+    from app.hoc.cus.account.L5_schemas.onboarding_enums import ONBOARDING_STATUS_NAMES
 
-    service = get_onboarding_service()
-    current_state = await service.get_current_state(tenant_id)
-    state_name = current_state.name if current_state else "UNKNOWN"
+    state_val = await async_get_onboarding_state(tenant_id)
+    state_name = ONBOARDING_STATUS_NAMES.get(state_val or 0, "UNKNOWN")
 
     return HandshakeResponse(
         success=True,

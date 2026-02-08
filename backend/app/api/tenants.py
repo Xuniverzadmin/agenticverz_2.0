@@ -71,24 +71,24 @@ async def _maybe_advance_to_api_key_created(tenant_id: str) -> None:
     this is a no-op.
     """
     try:
-        from ..auth.onboarding_transitions import (
-            TransitionTrigger,
-            get_onboarding_service,
+        from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (
+            async_advance_onboarding,
+        )
+        from app.hoc.cus.account.L5_schemas.onboarding_enums import OnboardingStatus
+
+        result = await async_advance_onboarding(
+            tenant_id,
+            OnboardingStatus.API_KEY_CREATED.value,
+            "first_api_key_created",
         )
 
-        service = get_onboarding_service()
-        result = await service.advance_to_api_key_created(
-            tenant_id=tenant_id,
-            trigger=TransitionTrigger.FIRST_API_KEY_CREATED,
-        )
-
-        if result.success and not result.was_no_op:
+        if result.get("success") and not result.get("was_no_op"):
             logger.info(
                 "onboarding_advanced_on_api_key_creation",
                 extra={
                     "tenant_id": tenant_id,
-                    "from_state": result.from_state.name,
-                    "to_state": result.to_state.name,
+                    "from_state": result.get("from_state"),
+                    "to_state": result.get("to_state"),
                 },
             )
 

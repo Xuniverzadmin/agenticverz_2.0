@@ -9,7 +9,7 @@
 - Phase A1 (Account / Tenant lifecycle SSOT): implemented using `Tenant.status` as the canonical persisted lifecycle field.
 - Production call sites rewired to DB-backed lifecycle reads and L4-owned lifecycle operations (`account.lifecycle.query`, `account.lifecycle.transition`).
 - Governance proof gates (current): `tests/governance/t0` green in strict mode; layer boundaries/cross-domain/purity/pairing all CLEAN.
-- Remaining work (this plan): Onboarding SSOT (Phase A2) + domain-by-domain lifecycle harnessing (Integrations → Policies → API Keys).
+- Remaining work (this plan): Policies + API Keys lifecycle harnessing (Phase C → Phase D).
 
 ---
 
@@ -30,12 +30,11 @@
 
 - Canonical endpoint→required onboarding state mapping is in hoc_spine authority (pure policy):
   - `backend/app/hoc/cus/hoc_spine/authority/onboarding_policy.py`
-- Onboarding mutations are performed by an auth service that writes `Tenant.onboarding_state`:
-  - `backend/app/auth/onboarding_transitions.py`
-- Multiple L2/middleware call sites invoke onboarding transitions directly:
-  - `backend/app/auth/gateway_middleware.py`
-  - `backend/app/hoc/api/int/general/sdk.py`
-  - `backend/app/hoc/api/int/agent/onboarding.py`
+- Onboarding state mutations now flow through L4-owned operations and domain-owned L5/L6 (SSOT = `Tenant.onboarding_state`):
+  - L4: `account.onboarding.query`, `account.onboarding.advance`
+  - L5/L6: `account/L5_engines/onboarding_engine.py`, `account/L6_drivers/onboarding_driver.py`
+
+**Outcome:** onboarding split authority removed. No legacy onboarding transition service remains.
 
 ### 1.3 Other Domain Lifecycles Already Exist (Good Inputs)
 
@@ -119,9 +118,9 @@ New files:
 - `backend/app/hoc/cus/account/L5_engines/onboarding_engine.py` — monotonic state machine
 - `backend/app/hoc/cus/hoc_spine/orchestrator/handlers/onboarding_handler.py` — L4 handlers + async helpers
 
-Tombstoned (2026-03-15):
-- `backend/app/auth/onboarding_transitions.py` (retained for `detect_stalled_onboarding` ops)
-- `backend/app/hoc/int/api_keys/engines/onboarding_transitions.py`
+Legacy duplicates removed:
+- Deleted `backend/app/auth/onboarding_transitions.py`
+- Deleted `backend/app/hoc/int/api_keys/engines/onboarding_transitions.py`
 
 Pairing gap: 69 wired, 0 orphaned, 0 direct.
 CI: 0 blocking purity, 0 advisory, all 30 init checks pass, 599 t0, 429 t4.
@@ -149,6 +148,6 @@ No changes needed.
 - `PYTHONPATH=. python3 scripts/ci/check_layer_boundaries.py --ci`
 - `PYTHONPATH=. python3 scripts/ops/hoc_cross_domain_validator.py`
 - `pytest backend/tests/governance/t0 -q`
-  - Current evidence (2026-02-08): `594 passed, 18 xfailed, 1 xpassed`
+  - Current evidence (2026-02-08): `599 passed, 18 xfailed, 1 xpassed`
 - `PYTHONPATH=. python3 scripts/ops/hoc_l5_l6_purity_audit.py --all-domains --advisory`
 - `PYTHONPATH=. python3 scripts/ops/l5_spine_pairing_gap_detector.py`
