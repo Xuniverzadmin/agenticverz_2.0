@@ -34,7 +34,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.auth.onboarding_state import OnboardingState
-from app.auth.onboarding_transitions import TransitionResult
+from app.hoc.cus.account.L5_schemas.onboarding_dtos import OnboardingTransitionResult
 
 
 # =============================================================================
@@ -99,28 +99,28 @@ class TestForceCompleteEndpoint:
 
     def test_force_complete_request_requires_tenant_id(self):
         """Request must include tenant_id."""
-        from app.api.founder_onboarding import ForceCompleteRequest
+        from app.hoc.api.fdr.incidents.founder_onboarding import ForceCompleteRequest
 
         with pytest.raises(ValueError):
             ForceCompleteRequest(reason="Valid reason here for the test")
 
     def test_force_complete_request_requires_reason(self):
         """Request must include reason."""
-        from app.api.founder_onboarding import ForceCompleteRequest
+        from app.hoc.api.fdr.incidents.founder_onboarding import ForceCompleteRequest
 
         with pytest.raises(ValueError):
             ForceCompleteRequest(tenant_id="tenant-001")
 
     def test_force_complete_request_reason_min_length(self):
         """Reason must be at least 10 characters."""
-        from app.api.founder_onboarding import ForceCompleteRequest
+        from app.hoc.api.fdr.incidents.founder_onboarding import ForceCompleteRequest
 
         with pytest.raises(ValueError):
             ForceCompleteRequest(tenant_id="tenant-001", reason="short")
 
     def test_force_complete_request_valid(self, valid_force_complete_request):
         """Valid request should pass validation."""
-        from app.api.founder_onboarding import ForceCompleteRequest
+        from app.hoc.api.fdr.incidents.founder_onboarding import ForceCompleteRequest
 
         req = ForceCompleteRequest(**valid_force_complete_request)
         assert req.tenant_id == "tenant-001"
@@ -171,7 +171,7 @@ class TestForceCompleteAudit:
 
     def test_audit_record_has_required_fields(self):
         """Audit record must have all required fields."""
-        from app.api.founder_onboarding import OnboardingRecoveryAuditRecord
+        from app.hoc.api.fdr.incidents.founder_onboarding import OnboardingRecoveryAuditRecord
 
         required_fields = {
             "event",
@@ -191,7 +191,7 @@ class TestForceCompleteAudit:
 
     def test_emit_recovery_audit_returns_audit_id(self):
         """emit_recovery_audit must return an audit_id."""
-        from app.api.founder_onboarding import emit_recovery_audit
+        from app.hoc.api.fdr.incidents.founder_onboarding import emit_recovery_audit
 
         audit_id = emit_recovery_audit(
             tenant_id="tenant-001",
@@ -210,29 +210,27 @@ class TestForceCompleteTransitionLogic:
 
     def test_transition_result_has_required_fields(self):
         """TransitionResult must have all required fields."""
-        from app.auth.onboarding_transitions import TransitionResult
-
-        result = TransitionResult(
+        result = OnboardingTransitionResult(
             success=True,
             tenant_id="tenant-001",
-            from_state=OnboardingState.CREATED,
-            to_state=OnboardingState.COMPLETE,
+            from_state=OnboardingState.CREATED.name,
+            to_state=OnboardingState.COMPLETE.name,
             trigger="test",
             message="Test message",
             was_no_op=False,
         )
         assert result.success is True
         assert result.tenant_id == "tenant-001"
-        assert result.from_state == OnboardingState.CREATED
-        assert result.to_state == OnboardingState.COMPLETE
+        assert result.from_state == OnboardingState.CREATED.name
+        assert result.to_state == OnboardingState.COMPLETE.name
 
     def test_transition_is_idempotent_when_already_complete(self):
         """Transition should be no-op when already at COMPLETE."""
-        result = TransitionResult(
+        result = OnboardingTransitionResult(
             success=True,
             tenant_id="tenant-001",
-            from_state=OnboardingState.COMPLETE,
-            to_state=OnboardingState.COMPLETE,
+            from_state=OnboardingState.COMPLETE.name,
+            to_state=OnboardingState.COMPLETE.name,
             trigger="test",
             message="Already at COMPLETE",
             was_no_op=True,
@@ -252,7 +250,7 @@ class TestForceCompleteResponse:
 
     def test_force_complete_response_has_required_fields(self):
         """ForceCompleteResponse must have all required fields."""
-        from app.api.founder_onboarding import ForceCompleteResponse
+        from app.hoc.api.fdr.incidents.founder_onboarding import ForceCompleteResponse
 
         required_fields = {
             "success",
@@ -270,7 +268,7 @@ class TestForceCompleteResponse:
 
     def test_force_complete_response_valid(self):
         """Valid response should pass validation."""
-        from app.api.founder_onboarding import ForceCompleteResponse
+        from app.hoc.api.fdr.incidents.founder_onboarding import ForceCompleteResponse
 
         response = ForceCompleteResponse(
             success=True,
@@ -317,7 +315,7 @@ class TestPhase4Invariants:
     def test_force_complete_advances_to_complete(self):
         """Force-complete should advance to COMPLETE state."""
         # This is a design invariant - the endpoint only advances to COMPLETE
-        from app.api.founder_onboarding import ForceCompleteRequest
+        from app.hoc.api.fdr.incidents.founder_onboarding import ForceCompleteRequest
 
         # Request doesn't specify target state - it's always COMPLETE
         req = ForceCompleteRequest(
