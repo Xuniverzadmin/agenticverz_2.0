@@ -38,11 +38,13 @@ Implementation Order (from VALIDATOR_LOGIC.md):
 #   - EligibilityEngine → policies/L5_engines/eligibility_engine.py
 # L4 code uses Protocol interfaces from hoc_spine/schemas/protocols.py.
 
-from app.hoc.cus.hoc_spine.authority.contracts.contract_engine import (
-    CONTRACT_SERVICE_VERSION,
+from app.hoc.cus.hoc_spine.authority.contracts import (
     ContractService,
     ContractState,
     ContractStateMachine,
+)
+from app.hoc.cus.hoc_spine.authority.contracts.contract_engine import (
+    CONTRACT_SERVICE_VERSION,
 )
 from app.hoc.cus.hoc_spine.orchestrator.governance_orchestrator import (
     ORCHESTRATOR_VERSION,

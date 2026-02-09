@@ -517,6 +517,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-544](PIN-544-alembic-stamp-fix-two-path-ci-guard.md) | **Alembic Stamp Fix + Two-Path CI Guard** | Database | **✅ COMPLETE** | 2026-02-09 |
 | [PIN-545](PIN-545-guardrail-violations-data-001-limits-001-analysis.md) | **Guardrail Violations DATA-001 & LIMITS-001 Analysis** | Database | **✅ COMPLETE** | 2026-02-09 |
 | [PIN-546](PIN-546-run-linkage-governance-log-scoping.md) | **Run Linkage & Governance Log Scoping** | Architecture / Governance | **✅ COMPLETE** | 2026-02-09 |
+| [PIN-547](PIN-547-domain-linkage-test-results-issues.md) | **Domain Linkage Test Results & Issues** | Testing / QA | **✅ COMPLETE** | 2026-02-09 |
 
 ---
 
@@ -1286,6 +1287,8 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-09 | **PIN-547 Domain Linkage Test Results & Issues** - 5 bugs fixed, 3 pre-existing issues documented, 110 tests pass, CI green. |
+| 2026-02-09 | **PIN-546 Run Linkage & Governance Log Scoping** - Created via docs update. |
 | 2026-02-09 | **PIN-545 Guardrail Violations DATA-001 & LIMITS-001 Analysis** - Created via memory_trail. |
 | 2026-02-09 | **PIN-544 Alembic Stamp Fix + Two-Path CI Guard** - Created via memory_trail. |
 | 2026-02-09 | **PIN-543 Alembic Migration Audit Docs Generated** - Created via memory_trail. |

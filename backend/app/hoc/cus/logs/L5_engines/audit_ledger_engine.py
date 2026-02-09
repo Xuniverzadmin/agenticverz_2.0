@@ -160,10 +160,16 @@ class AuditLedgerService:
         actor_id: Optional[str] = None,
         actor_type: ActorType = ActorType.HUMAN,
         reason: Optional[str] = None,
+        resolution_method: Optional[str] = None,
         before_state: Optional[Dict[str, Any]] = None,
         after_state: Optional[Dict[str, Any]] = None,
     ) -> AuditLedger:
         """Record an incident resolution event."""
+        if resolution_method:
+            resolved_state = dict(after_state or {})
+            resolved_state.setdefault("resolution_method", resolution_method)
+        else:
+            resolved_state = after_state
         return self._emit(
             tenant_id=tenant_id,
             event_type=AuditEventType.INCIDENT_RESOLVED,
@@ -173,7 +179,7 @@ class AuditLedgerService:
             actor_id=actor_id,
             reason=reason,
             before_state=before_state,
-            after_state=after_state,
+            after_state=resolved_state,
         )
 
     def incident_manually_closed(

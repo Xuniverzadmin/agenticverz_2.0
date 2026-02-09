@@ -51,7 +51,7 @@ from app.models.contract import (
     InvalidTransitionError,
     RiskLevel,
 )
-from app.services.governance.contract_service import (
+from app.hoc.cus.hoc_spine.authority.contracts import (
     ContractService,
     ContractState,
 )

@@ -79,7 +79,7 @@ from app.models.governance_job import (
     StepStatus,
 )
 # V2.0.0 - hoc_spine authority
-from app.hoc.cus.hoc_spine.authority.contracts.contract_engine import ContractService, ContractState
+from app.hoc.cus.hoc_spine.authority.contracts import ContractService, ContractState
 
 # Orchestrator version
 ORCHESTRATOR_VERSION = "1.0.0"

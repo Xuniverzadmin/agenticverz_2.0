@@ -36,7 +36,7 @@ from datetime import datetime
 from typing import Any, List, Optional
 
 # V2.0.0 - hoc_spine authority
-from app.hoc.cus.hoc_spine.authority.contracts.contract_engine import ContractState
+from app.hoc.cus.hoc_spine.authority.contracts import ContractState
 
 # =============================================================================
 # L3 VIEW DTOs (Founder-facing, not domain models)
