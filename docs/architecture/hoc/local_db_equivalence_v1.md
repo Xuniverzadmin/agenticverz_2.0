@@ -7,6 +7,33 @@
 
 ---
 
+## Implemented Report (Reference)
+
+`docs/architecture/hoc/local_db_equivalence_v1_implemented.md`
+
+---
+
+## Topology Architecture Snapshot (Post‑Rebuild)
+
+**Captured from implementation report:**
+- **Tables:** 187 across 8 schemas  
+- **Views:** 14 across 5 schemas  
+- **Alembic head:** `124_prevention_records_run_id`
+
+**Schemas (tables):**
+- agents (13)
+- contracts (1)
+- m10_recovery (12)
+- m11_audit (4)
+- policy (14)
+- public (136)
+- routing (4)
+- system (3)
+
+This snapshot is the **authoritative local topology** for migration‑equivalent staging.
+
+---
+
 ## Root Cause
 
 Local DB was stamped at head without running migrations. This created a 128‑table gap versus the 156 tables defined across 124 migrations. The only correct fix is a clean rebuild from migrations.
@@ -66,4 +93,3 @@ If mismatch, stop and investigate before proceeding.
 3. Table count verified.
 4. `alembic_version` verified.
 5. No ORM bootstrap occurred during migration.
-

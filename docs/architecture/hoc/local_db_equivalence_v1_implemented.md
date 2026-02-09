@@ -124,6 +124,61 @@ SELECT version_num FROM alembic_version;
 -- Result: 124_prevention_records_run_id
 ```
 
+---
+
+## Topology Architecture Snapshot (Authoritative Local)
+
+**Tables:** 187 across 8 schemas  
+**Views:** 14 across 5 schemas  
+**Alembic head:** `124_prevention_records_run_id`
+
+This snapshot is the **authoritative local topology** for staging after a full migration rebuild.
+
+---
+
+## Migration Register Proposal (Traceability)
+
+To make each migration traceable like memory pins:
+
+1. Create a **Migration Register Index** file (single source of truth).
+2. Append one entry per migration (one row each), with links to the migration file and any remediation notes.
+
+**Recommended location:**
+- Index: `docs/architecture/hoc/MIGRATION_REGISTER_INDEX.md`
+- Records: `docs/architecture/hoc/migration_register/`
+
+**Index row schema (example):**
+
+| Rev | File | Date | Summary | Tables | Risk | Notes |
+|-----|------|------|---------|--------|------|-------|
+| 124 | `backend/alembic/versions/124_prevention_records_run_id.py` | 2026-02-09 | Add run_id to prevention_records | prevention_records | LOW | Run-scoped evaluations |
+
+**Record template (per migration):**
+
+```md
+# Migration Record — 124_prevention_records_run_id
+
+**Revision:** 124_prevention_records_run_id  
+**Date:** 2026-02-09  
+**File:** backend/alembic/versions/124_prevention_records_run_id.py  
+**Category:** Schema Evolution  
+
+## Intent
+Add run_id to prevention_records for run-scoped policy evaluations.
+
+## DDL Summary
+- ALTER TABLE prevention_records ADD COLUMN run_id
+
+## Affected Tables
+- prevention_records
+
+## Risks
+- None (idempotent guard recommended)
+
+## Validation
+- SELECT column_name FROM information_schema.columns WHERE table_name='prevention_records' AND column_name='run_id';
+```
+
 ### Runs Table Verification (ORM-bootstrapped + 7 migrations)
 
 52 columns total:
