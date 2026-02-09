@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,046_m26_cost_intelligence.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/046_m26_cost_intelligence.py
+meta,revision,046_m26_cost
+meta,down_revision,045_m25_policy_audit
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,10
+op_call,create_table,5
+op_call,drop_table,6
+op_call,get_bind,1

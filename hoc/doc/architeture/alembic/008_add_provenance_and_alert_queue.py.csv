@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,008_add_provenance_and_alert_queue.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/008_add_provenance_and_alert_queue.py
+meta,revision,008_provenance_alerts
+meta,down_revision,007_costsim_cb
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,11
+op_call,create_table,2
+op_call,drop_index,11
+op_call,drop_table,2

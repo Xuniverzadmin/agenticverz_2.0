@@ -1,0 +1,22 @@
+kind,name,value
+meta,file,028_m15_1_sba_schema.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/028_m15_1_sba_schema.py
+meta,revision,028_m15_1_sba_schema
+meta,down_revision,027_m15_llm_governance
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,1
+op_call,create_index,2
+op_call,create_table,1
+op_call,drop_column,1
+op_call,drop_index,2
+op_call,drop_table,1
+op_call,execute,10
+sql_keyword,CREATE TRIGGER,1
+sql_keyword,CREATE VIEW,1
+sql_keyword,DROP TRIGGER,1
+sql_keyword,DROP VIEW,1
+sql_keyword,INSERT INTO,1
+sql_keyword,UPDATE,3

@@ -31,6 +31,7 @@ sys.path.insert(0, str(backend_path))
 
 # Default test environment
 os.environ.setdefault("DATABASE_URL", "postgresql://nova:novapass@localhost:5433/nova_aos")
+os.environ.setdefault("DEV_DATABASE_URL", os.environ["DATABASE_URL"])
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("AOS_API_KEY", "test-key-for-testing")
 os.environ.setdefault("ENFORCE_TENANCY", "false")

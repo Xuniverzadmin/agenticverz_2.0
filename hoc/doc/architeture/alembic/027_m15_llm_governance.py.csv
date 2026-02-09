@@ -1,0 +1,16 @@
+kind,name,value
+meta,file,027_m15_llm_governance.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/027_m15_llm_governance.py
+meta,revision,027_m15_llm_governance
+meta,down_revision,026_m12_credit_tables_fix
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,15
+op_call,drop_column,15
+op_call,execute,16
+sql_keyword,CREATE INDEX,2
+sql_keyword,DROP INDEX,2
+sql_keyword,DROP VIEW,4
+sql_keyword,UPDATE,1

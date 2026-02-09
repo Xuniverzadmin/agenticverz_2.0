@@ -32,6 +32,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+import sqlalchemy as sa
 from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
@@ -81,7 +82,10 @@ class PolicySnapshot(SQLModel, table=True):
     )
 
     # Immutable timestamp
-    created_at: datetime = Field(default_factory=utc_now)
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+    )
 
     @classmethod
     def create_snapshot(

@@ -226,7 +226,9 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
 
-    with connectable.connect() as connection:
+    # Use an explicit transactional connection to ensure DDL + alembic_version
+    # writes are committed under SQLAlchemy 2.x.
+    with connectable.begin() as connection:
         _ensure_alembic_version_column_width(connection)
         context.configure(
             connection=connection,

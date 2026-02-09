@@ -1,0 +1,15 @@
+kind,name,value
+meta,file,066_interpretation_ownership.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/066_interpretation_ownership.py
+meta,revision,066_interpretation_ownership
+meta,down_revision,065_precomputed_auth
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,2
+op_call,create_index,4
+op_call,create_table,1
+op_call,drop_column,2
+op_call,drop_index,4
+op_call,drop_table,1

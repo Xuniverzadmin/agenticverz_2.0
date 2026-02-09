@@ -1,0 +1,18 @@
+kind,name,value
+meta,file,042_m25_integration_loop.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/042_m25_integration_loop.py
+meta,revision,042_m25_integration
+meta,down_revision,041_fix_enqueue_work_constraint
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,9
+op_call,create_table,4
+op_call,execute,14
+sql_keyword,ALTER TABLE,5
+sql_keyword,CREATE INDEX,1
+sql_keyword,CREATE TABLE,2
+sql_keyword,DROP INDEX,1
+sql_keyword,DROP TABLE,6
+sql_keyword,UPDATE,2

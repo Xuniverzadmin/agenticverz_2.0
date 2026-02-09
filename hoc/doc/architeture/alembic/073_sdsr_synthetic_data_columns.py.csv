@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,073_sdsr_synthetic_data_columns.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/073_sdsr_synthetic_data_columns.py
+meta,revision,073_sdsr_synthetic_data_columns
+meta,down_revision,072_create_gcl_daily_anchors
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,10
+op_call,create_index,5
+op_call,drop_column,10
+op_call,drop_index,5

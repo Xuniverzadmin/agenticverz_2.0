@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,115_add_inflection_point_metadata.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/115_add_inflection_point_metadata.py
+meta,revision,115_add_inflection_point_metadata
+meta,down_revision,114_add_threshold_snapshot_hash
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,6
+op_call,create_index,2
+op_call,drop_column,6
+op_call,drop_index,2

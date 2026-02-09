@@ -1,0 +1,14 @@
+kind,name,value
+meta,file,024_m11_skill_audit.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/024_m11_skill_audit.py
+meta,revision,024_m11_skill_audit
+meta,down_revision,023_m10_archive_partitioning
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,4
+op_call,create_table,4
+op_call,drop_table,4
+op_call,execute,8
+sql_keyword,DROP VIEW,1

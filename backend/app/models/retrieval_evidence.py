@@ -32,6 +32,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 
+import sqlalchemy as sa
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
@@ -97,12 +98,23 @@ class RetrievalEvidence(SQLModel, table=True):
     policy_snapshot_id: Optional[str] = Field(default=None, max_length=100, description="Policy snapshot active at retrieval time")
 
     # Timing
-    requested_at: datetime = Field(default_factory=utc_now, description="When the retrieval was requested")
-    completed_at: Optional[datetime] = Field(default=None, description="When the retrieval completed")
+    requested_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), nullable=False),
+        description="When the retrieval was requested",
+    )
+    completed_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), nullable=True),
+        description="When the retrieval completed",
+    )
     duration_ms: Optional[int] = Field(default=None, ge=0, description="Duration in milliseconds")
 
     # Immutability marker
-    created_at: datetime = Field(default_factory=utc_now)
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+    )
 
     # =========================================================================
     # COMPUTED PROPERTIES

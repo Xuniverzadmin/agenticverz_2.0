@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,078_aos_traces_sdsr_columns.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/078_aos_traces_sdsr_columns.py
+meta,revision,078_aos_traces_sdsr_columns
+meta,down_revision,077_prevention_records_sdsr
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,5
+op_call,create_index,4
+op_call,drop_column,5
+op_call,drop_index,4

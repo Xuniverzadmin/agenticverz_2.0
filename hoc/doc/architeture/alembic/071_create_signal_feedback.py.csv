@@ -1,0 +1,18 @@
+kind,name,value
+meta,file,071_create_signal_feedback.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/071_create_signal_feedback.py
+meta,revision,071_create_signal_feedback
+meta,down_revision,070_create_signal_accuracy
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,7
+op_call,create_table,2
+op_call,drop_index,7
+op_call,drop_table,2
+op_call,execute,4
+sql_keyword,CREATE TRIGGER,1
+sql_keyword,DROP TRIGGER,1
+sql_keyword,INSERT INTO,1
+sql_keyword,UPDATE,4

@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,106_threshold_params.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/106_threshold_params.py
+meta,revision,106_threshold_params
+meta,down_revision,105_attribution_check_constraints
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,1
+op_call,create_index,2
+op_call,drop_column,1
+op_call,drop_index,2

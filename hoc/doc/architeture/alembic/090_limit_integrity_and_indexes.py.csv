@@ -1,0 +1,19 @@
+kind,name,value
+meta,file,090_limit_integrity_and_indexes.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/090_limit_integrity_and_indexes.py
+meta,revision,090_limit_integrity
+meta,down_revision,089_policy_rule_integrity
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,2
+op_call,create_table,1
+op_call,drop_index,2
+op_call,drop_table,1
+op_call,execute,12
+sql_keyword,CREATE INDEX,4
+sql_keyword,CREATE TRIGGER,1
+sql_keyword,DROP INDEX,4
+sql_keyword,DROP TRIGGER,1
+sql_keyword,UPDATE,1

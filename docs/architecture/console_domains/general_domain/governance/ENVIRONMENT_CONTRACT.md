@@ -344,6 +344,302 @@ async def my_feature():
 
 ---
 
+## 12. Complete Environment Variable Registry
+
+### 12.1 Core Platform
+
+| Variable | Owner |
+|----------|-------|
+| `ENV` | Platform |
+| `PORT` | Platform |
+| `HOST` | Platform |
+| `DATABASE_URL` | Platform / Vault |
+| `DATABASE_URL_ASYNC` | Platform |
+| `REDIS_URL` | Platform / Vault |
+| `DB_AUTHORITY` | Platform |
+| `DB_POOL_SIZE` | Platform |
+| `DB_MAX_OVERFLOW` | Platform |
+| `AOS_MODE` | Platform |
+| `AOS_ENVIRONMENT` | Platform |
+| `GIT_COMMIT_SHA` | Platform |
+| `HOSTNAME` | Platform |
+
+### 12.2 Authentication
+
+| Variable | Owner |
+|----------|-------|
+| `AOS_API_KEY` | Auth (Vault: agenticverz/app-prod) |
+| `AOS_FOPS_SECRET` | Auth |
+| `AOS_MACHINE_TOKEN` | Auth |
+| `AOS_OPERATOR_TOKEN` | Auth |
+| `AOS_USE_LEGACY_AUTH` | Auth |
+| `AOS_VERIFICATION_MODE` | Auth |
+| `MACHINE_SECRET_TOKEN` | Auth (Vault: agenticverz/app-prod) |
+| `RBAC_ENABLED` | Auth |
+| `RBAC_ENFORCE` | Auth |
+| `RBAC_FAIL_OPEN` | Auth |
+| `RBAC_AUDIT_ENABLED` | Auth |
+| `RBAC_SHADOW_AUDIT` | Auth |
+| `RBAC_POLICY_FILE` | Auth |
+| `AUTHZ_PHASE` | Auth |
+| `AUTHZ_STRICT_MODE` | Auth |
+| `AUTH_GATEWAY_ENABLED` | Auth |
+| `AUTH_GATEWAY_REQUIRED` | Auth |
+| `AUTH_SERVICE_URL` | Auth |
+| `AUTH_SERVICE_TIMEOUT` | Auth |
+| `DEV_AUTH_ENABLED` | Auth |
+| `DEV_DEFAULT_ROLE` | Auth |
+| `NEW_AUTH_SHADOW_ENABLED` | Auth |
+
+### 12.3 OIDC / Clerk / JWT
+
+| Variable | Owner |
+|----------|-------|
+| `OIDC_ISSUER_URL` | Auth |
+| `OIDC_CLIENT_ID` | Auth |
+| `OIDC_CLIENT_SECRET` | Auth (Vault: agenticverz/app-prod) |
+| `OIDC_VERIFY_SSL` | Auth |
+| `OIDC_AUDIENCE` | Auth |
+| `OIDC_ALLOWED_AUDIENCES` | Auth |
+| `OIDC_JWKS_URI` | Auth |
+| `OIDC_JWKS_URL` | Auth |
+| `CLERK_ISSUER_URL` | Auth |
+| `CLERK_ISSUERS` | Auth |
+| `CLERK_JWKS_URL` | Auth |
+| `CLERK_SECRET_KEY` | Auth (Vault) |
+| `JWT_SECRET` | Auth |
+| `JWT_VERIFY_SIGNATURE` | Auth |
+| `JWT_ALLOW_DEV_TOKEN` | Auth |
+| `JWT_DEV_SECRET` | Auth |
+
+### 12.4 LLM Providers
+
+| Variable | Owner |
+|----------|-------|
+| `PLANNER_BACKEND` | LLM |
+| `LLM_ADAPTER` | LLM |
+| `ANTHROPIC_API_KEY` | LLM (Vault: agenticverz/external-apis) |
+| `OPENAI_API_KEY` | LLM (Vault: agenticverz/external-apis) |
+| `OPENAI_DEFAULT_MODEL` | LLM |
+| `DEFAULT_LLM_MODEL` | LLM |
+| `DEFAULT_LLM_FALLBACK_MODEL` | LLM |
+| `LLM_ALLOWED_MODELS` | LLM |
+| `LLM_MAX_TOKENS_PER_REQUEST` | LLM |
+| `LLM_MAX_COMPLETION_TOKENS` | LLM |
+| `LLM_MAX_COST_CENTS_PER_REQUEST` | LLM |
+| `LLM_REQUESTS_PER_MINUTE` | LLM |
+| `LLM_DAILY_LIMIT_CENTS` | LLM |
+| `LLM_BUDGET_CENTS` | LLM |
+| `LLM_CACHE_ENABLED` | LLM |
+| `LLM_CACHE_TTL` | LLM |
+| `LLM_CACHE_MAX_SIZE` | LLM |
+| `LLM_ENFORCE_SAFETY` | LLM |
+| `LLM_RISK_THRESHOLD` | LLM |
+| `LLM_MAX_TEMPERATURE` | LLM |
+| `PROXY_DEFAULT_MODEL` | LLM |
+
+### 12.5 Worker / Runtime
+
+| Variable | Owner |
+|----------|-------|
+| `WORKER_CONCURRENCY` | Worker |
+| `WORKER_POLL_INTERVAL` | Worker |
+| `WORKER_BATCH_SIZE` | Worker |
+| `RUN_MAX_ATTEMPTS` | Worker |
+| `EVENT_PUBLISHER` | Worker |
+| `WORKFLOW_EMERGENCY_STOP` | Worker |
+| `CONCURRENT_SLOT_TIMEOUT` | Worker |
+
+### 12.6 Multi-Tenancy
+
+| Variable | Owner |
+|----------|-------|
+| `TENANT_HEADER` | Platform |
+| `ENFORCE_TENANCY` | Platform |
+| `DEFAULT_TENANT` | Platform |
+| `TENANT_MODE` | Platform |
+| `TENANT_LLM_CONFIG_SOURCE` | Platform |
+| `CUSTOMER_SANDBOX_ENABLED` | Platform |
+| `DEFAULT_TENANT_BUDGET_CENTS` | Platform |
+| `DEFAULT_TENANT_RATE_LIMIT` | Platform |
+
+### 12.7 Console Modes
+
+| Variable | Owner |
+|----------|-------|
+| `CONSOLE_MODE` | Console |
+| `DATA_MODE` | Console |
+| `ACTION_MODE` | Console |
+| `HOC_DENY_AS_404` | Console |
+| `HOC_DOCS_ENABLED` | Console |
+| `GOVERNANCE_PROFILE` | Console |
+
+### 12.8 Storage (R2/S3)
+
+| Variable | Owner |
+|----------|-------|
+| `R2_ACCESS_KEY_ID` | Storage (Vault: secret/data/user/r2) |
+| `R2_SECRET_ACCESS_KEY` | Storage (Vault: secret/data/user/r2) |
+| `R2_ENDPOINT` | Storage (Vault: secret/data/user/r2) |
+| `R2_BUCKET` | Storage (Vault: secret/data/user/r2) |
+| `R2_ACCOUNT_ID` | Storage |
+| `R2_UPLOAD_PREFIX` | Storage |
+| `R2_RETENTION_DAYS` | Storage |
+| `R2_MAX_RETRIES` | Storage |
+| `AGG_LOCAL_FALLBACK` | Storage |
+| `ARTIFACT_BACKEND` | Storage |
+| `ARTIFACT_LOCAL_PATH` | Storage |
+| `ARTIFACT_S3_BUCKET` | Storage |
+| `ARTIFACT_S3_ENDPOINT` | Storage |
+| `ARTIFACT_S3_PREFIX` | Storage |
+
+### 12.9 Store Configuration
+
+| Variable | Owner |
+|----------|-------|
+| `BUDGET_STORE` | Platform |
+| `CHECKPOINT_STORE` | Platform |
+| `CHECKPOINT_RETENTION_DAYS` | Platform |
+| `CHECKPOINT_OFFLOAD_OLDER_THAN_DAYS` | Platform |
+| `CHECKPOINT_OFFLOAD_BATCH_SIZE` | Platform |
+| `CHECKPOINT_OFFLOAD_MAX_RETRIES` | Platform |
+
+### 12.10 Monitoring / Alerting
+
+| Variable | Owner |
+|----------|-------|
+| `OBSERVABILITY_MODE` | SRE |
+| `ALERTMANAGER_URL` | SRE |
+| `ALERTMANAGER_TIMEOUT` | SRE |
+| `ALERTMANAGER_RETRY_ATTEMPTS` | SRE |
+| `ALERTMANAGER_RETRY_DELAY` | SRE |
+| `ALERT_FATIGUE_ENABLED` | SRE |
+| `ALERT_DEDUP_WINDOW_SECONDS` | SRE |
+| `MAX_ALERTS_PER_TENANT_PER_HOUR` | SRE |
+| `HEALTH_CHECK_TIMEOUT_SECONDS` | SRE |
+
+### 12.11 Cost / Budget
+
+| Variable | Owner |
+|----------|-------|
+| `AOS_COST_ENFORCEMENT` | Cost |
+| `PER_RUN_MAX_CENTS` | Cost |
+| `PER_DAY_MAX_CENTS` | Cost |
+| `DEFAULT_EST_COST_CENTS` | Cost |
+| `DEFAULT_STEP_CEILING_CENTS` | Cost |
+| `DEFAULT_WORKFLOW_CEILING_CENTS` | Cost |
+| `BUDGET_ALERT_THRESHOLD` | Cost |
+| `AUTO_PAUSE_ON_BREACH` | Cost |
+| `GPT4_MAX_CENTS_PER_RUN` | Cost |
+| `OPUS_MAX_CENTS_PER_RUN` | Cost |
+| `COST_SPIKE_THRESHOLD_PERCENT` | Cost |
+| `COST_SPIKE_MIN_RUNS` | Cost |
+
+### 12.12 CostSim
+
+| Variable | Owner |
+|----------|-------|
+| `COSTSIM_ADAPTER_VERSION` | Analytics |
+| `COSTSIM_ARTIFACTS_DIR` | Analytics |
+| `COSTSIM_AUTO_RECOVER` | Analytics |
+| `COSTSIM_CANARY_ENABLED` | Analytics |
+| `COSTSIM_DISABLE_FILE` | Analytics |
+| `COSTSIM_DISABLE_TTL_HOURS` | Analytics |
+| `COSTSIM_DRIFT_THRESHOLD` | Analytics |
+| `COSTSIM_DRIFT_WARNING_THRESHOLD` | Analytics |
+| `COSTSIM_FAILURE_THRESHOLD` | Analytics |
+| `COSTSIM_MODEL_VERSION` | Analytics |
+| `COSTSIM_PROVENANCE_ENABLED` | Analytics |
+| `COSTSIM_SCHEMA_ERROR_THRESHOLD` | Analytics |
+| `COSTSIM_USE_DB_CB` | Analytics |
+| `COSTSIM_V2_AUTO_DISABLE` | Analytics |
+| `COSTSIM_V2_SANDBOX` | Analytics |
+
+### 12.13 Webhook
+
+| Variable | Owner |
+|----------|-------|
+| `WEBHOOK_KEY_VERSION` | Platform |
+| `WEBHOOK_KEY_GRACE_VERSIONS` | Platform |
+| `WEBHOOK_SECRET_V1` | Platform (Vault) |
+| `WEBHOOK_SECRET_V2` | Platform (Vault) |
+| `WEBHOOK_SIGNING_SECRET` | Platform (Vault) |
+
+### 12.14 Rate Limiting
+
+| Variable | Owner |
+|----------|-------|
+| `RATE_LIMIT_ENABLED` | Platform |
+| `RATE_LIMIT_DEFAULT_RPM` | Platform |
+| `RATE_LIMIT_BURST_RPM` | Platform |
+| `HOC_PROBE_RATE_LIMIT_ENABLED` | Platform |
+| `HOC_PROBE_RATE_PER_MIN` | Platform |
+| `SANDBOX_RATE_LIMIT_PER_MINUTE` | Platform |
+
+### 12.15 Vault Configuration
+
+| Variable | Owner |
+|----------|-------|
+| `VAULT_ADDR` | Platform |
+| `VAULT_TOKEN` | Platform |
+| `CREDENTIAL_VAULT_PROVIDER` | Platform |
+
+---
+
+## 13. Vault Secret Paths
+
+| Vault Path | Keys | Owner |
+|------------|------|-------|
+| `agenticverz/app-prod` | AOS_API_KEY, MACHINE_SECRET_TOKEN, OIDC_CLIENT_SECRET | Platform |
+| `agenticverz/database` | POSTGRES_USER, POSTGRES_PASSWORD, DATABASE_URL, KEYCLOAK_DB_USER, KEYCLOAK_DB_PASSWORD | Platform |
+| `agenticverz/external-apis` | ANTHROPIC_API_KEY, OPENAI_API_KEY, GITHUB_TOKEN | LLM / CI |
+| `agenticverz/keycloak-admin` | KEYCLOAK_ADMIN, KEYCLOAK_ADMIN_PASSWORD | Auth |
+| `secret/data/user/anthropic` | ANTHROPIC_API_KEY | LLM |
+| `secret/data/user/openai` | OPENAI_API_KEY | LLM |
+| `secret/data/user/neon` | DATABASE_URL | Platform |
+| `secret/data/user/upstash` | REDIS_URL | Platform |
+| `secret/data/user/r2` | R2_ENDPOINT, R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY | Storage |
+
+---
+
+## 14. Canonical Source Files
+
+| File | Purpose |
+|------|---------|
+| `.env.example` | Development template (all vars) |
+| `scripts/deploy/backend/.env.production.example` | Production template |
+| `scripts/ops/vault/vault_env.sh` | Load secrets from Vault |
+| `backend/app/secrets/vault_client.py` | Application Vault integration |
+
+---
+
+## 15. Database Bootstrap Required Variables
+
+These environment variables are **required** for fresh DB setup and alembic operations:
+
+| Variable | Required For | Notes |
+|----------|-------------|-------|
+| `DATABASE_URL` | All DB operations | Must point to valid PostgreSQL instance |
+| `DB_ROLE` | Alembic migrations | `staging`, `prod`, or `replica` |
+| `DB_AUTHORITY` | Authority governance | `neon` or `local` |
+| `CONFIRM_PROD_MIGRATIONS` | Production alembic only | Must be `true` for `DB_ROLE=prod` |
+
+### Fresh Staging DB Setup
+
+A fresh local DB requires ORM bootstrap before alembic:
+
+```bash
+# Required env vars
+DATABASE_URL=postgresql://nova:novapass@localhost:6432/nova_aos
+DB_ROLE=staging
+```
+
+`alembic upgrade head` on an empty DB will **fail** — core tables (`runs`, `tenants`, etc.)
+are created by `SQLModel.metadata.create_all()`, not by migrations. See `docs/runtime/DB_AUTHORITY.md`
+for the correct bootstrap procedure (PIN-542).
+
+---
+
 ## Final Rules (Memorize)
 
 1. **If an endpoint requires Clerk JWT, test it like a human.**

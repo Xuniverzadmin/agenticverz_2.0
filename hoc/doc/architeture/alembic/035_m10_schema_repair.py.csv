@@ -1,0 +1,10 @@
+kind,name,value
+meta,file,035_m10_schema_repair.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/035_m10_schema_repair.py
+meta,revision,035_m10_schema_repair
+meta,down_revision,034_fix_outbox_constraint
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,get_bind,2

@@ -1,0 +1,16 @@
+kind,name,value
+meta,file,061_c2_prediction_hardening.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/061_c2_prediction_hardening.py
+meta,revision,061_c2_prediction_hardening
+meta,down_revision,060_c1_telemetry_plane
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,alter_column,4
+op_call,create_check_constraint,2
+op_call,create_index,1
+op_call,drop_constraint,2
+op_call,drop_index,1
+op_call,execute,2
+sql_keyword,UPDATE,1

@@ -1,0 +1,18 @@
+kind,name,value
+meta,file,103_cus_integrations.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/103_cus_integrations.py
+meta,revision,103_cus_integrations
+meta,down_revision,102_lessons_source_run_id_varchar
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_check_constraint,5
+op_call,create_index,7
+op_call,create_table,3
+op_call,create_unique_constraint,1
+op_call,drop_table,3
+op_call,execute,4
+sql_keyword,CREATE TRIGGER,1
+sql_keyword,DROP TRIGGER,1
+sql_keyword,UPDATE,4

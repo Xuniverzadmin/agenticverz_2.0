@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 from datetime import date, datetime, timezone
 from typing import AsyncGenerator, Optional
 
+import sqlalchemy as sa
 from sqlalchemy import JSON, Column
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -340,10 +341,13 @@ class Run(SQLModel, table=True):
     synthetic_scenario_id: Optional[str] = Field(default=None, description="Scenario ID for traceability")
 
     # Timestamps
-    created_at: datetime = Field(default_factory=utc_now)
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    next_attempt_at: Optional[datetime] = None
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+    )
+    started_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.TIMESTAMP(timezone=True), nullable=True))
+    completed_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.TIMESTAMP(timezone=True), nullable=True))
+    next_attempt_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.TIMESTAMP(timezone=True), nullable=True))
     duration_ms: Optional[float] = None
 
     # Phase E FIX-02: Pre-computed authorization fields
@@ -364,6 +368,7 @@ class Run(SQLModel, table=True):
     authorized_at: Optional[datetime] = Field(
         default=None,
         description="When authorization decision was computed (submission time)",
+        sa_column=Column(sa.TIMESTAMP(timezone=True), nullable=True),
     )
     authorized_by: Optional[str] = Field(
         default=None,
@@ -433,6 +438,8 @@ class Run(SQLModel, table=True):
     last_seen_at: Optional[datetime] = Field(
         default=None,
         description="Last heartbeat timestamp for LIVE runs"
+        ,
+        sa_column=Column(sa.TIMESTAMP(timezone=True), nullable=True),
     )
 
     # Source and provider

@@ -138,7 +138,7 @@ async def test_governed_retrieval_requires_active_plane_and_policy_allowlist():
                         "connector_id": "sqlgw_1",
                         "config": {
                             # Use the test DB as the governed "RAG" source via env ref.
-                            "connection_string_ref": "env://DATABASE_URL",
+                            "connection_string_ref": "env://DEV_DATABASE_URL",
                             "templates": {
                                 "query": {
                                     "name": "Query",

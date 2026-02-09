@@ -1,0 +1,18 @@
+kind,name,value
+meta,file,053_pb_s1_retry_immutability.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/053_pb_s1_retry_immutability.py
+meta,revision,053_pb_s1_retry
+meta,down_revision,052_s6_trace_immutability
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,3
+op_call,create_index,2
+op_call,drop_column,3
+op_call,drop_index,2
+op_call,execute,7
+sql_keyword,CREATE TRIGGER,1
+sql_keyword,DROP TRIGGER,2
+sql_keyword,DROP VIEW,1
+sql_keyword,UPDATE,2

@@ -1,0 +1,10 @@
+kind,name,value
+meta,file,041_fix_enqueue_work_constraint.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/041_fix_enqueue_work_constraint.py
+meta,revision,041_fix_enqueue_work_constraint
+meta,down_revision,040_m24_onboarding
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,get_bind,2

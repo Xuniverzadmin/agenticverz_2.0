@@ -1,0 +1,17 @@
+kind,name,value
+meta,file,117_w2_budget_envelopes.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/117_w2_budget_envelopes.py
+meta,revision,117_w2_budget_envelopes
+meta,down_revision,116_w2_audit_events
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_check_constraint,7
+op_call,create_index,4
+op_call,create_table,2
+op_call,create_unique_constraint,1
+op_call,drop_constraint,8
+op_call,drop_index,4
+op_call,drop_table,2
+op_call,execute,2

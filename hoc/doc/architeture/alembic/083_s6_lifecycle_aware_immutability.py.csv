@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,083_s6_lifecycle_aware_immutability.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/083_s6_lifecycle_aware_immutability.py
+meta,revision,083_s6_lifecycle_aware_immutability
+meta,down_revision,082_governance_taxonomy_tables
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,execute,20
+sql_keyword,CREATE TRIGGER,4
+sql_keyword,DROP TRIGGER,6
+sql_keyword,UPDATE,18

@@ -1,0 +1,15 @@
+kind,name,value
+meta,file,004_add_feature_flags_and_policy_approval.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/004_add_feature_flags_and_policy_approval.py
+meta,revision,
+meta,down_revision,
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,3
+op_call,create_table,3
+op_call,drop_index,3
+op_call,drop_table,3
+warning,missing_revision,True
+warning,missing_down_revision,True

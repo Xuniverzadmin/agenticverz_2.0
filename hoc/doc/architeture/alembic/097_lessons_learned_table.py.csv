@@ -1,0 +1,16 @@
+kind,name,value
+meta,file,097_lessons_learned_table.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/097_lessons_learned_table.py
+meta,revision,097_lessons_learned_table
+meta,down_revision,096_incidents_domain_model
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,5
+op_call,create_table,1
+op_call,drop_table,1
+op_call,execute,3
+op_call,get_bind,2
+sql_keyword,ALTER TABLE,1
+sql_keyword,DROP TYPE,2

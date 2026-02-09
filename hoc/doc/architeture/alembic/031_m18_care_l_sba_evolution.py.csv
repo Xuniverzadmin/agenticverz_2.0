@@ -1,0 +1,16 @@
+kind,name,value
+meta,file,031_m18_care_l_sba_evolution.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/031_m18_care_l_sba_evolution.py
+meta,revision,031_m18_care_l_sba_evolution
+meta,down_revision,030_m17_care_routing
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,execute,20
+sql_keyword,ALTER TABLE,2
+sql_keyword,CREATE INDEX,7
+sql_keyword,CREATE TABLE,5
+sql_keyword,DROP TABLE,5
+sql_keyword,INSERT INTO,1
+sql_keyword,UPDATE,1

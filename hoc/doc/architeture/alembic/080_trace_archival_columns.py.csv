@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,080_trace_archival_columns.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/080_trace_archival_columns.py
+meta,revision,080_trace_archival_columns
+meta,down_revision,079_sdsr_column_parity
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,2
+op_call,create_index,2
+op_call,drop_column,2
+op_call,drop_index,2

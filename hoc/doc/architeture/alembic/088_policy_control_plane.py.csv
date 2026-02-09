@@ -1,0 +1,15 @@
+kind,name,value
+meta,file,088_policy_control_plane.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/088_policy_control_plane.py
+meta,revision,088_policy_control_plane
+meta,down_revision,087_incidents_lifecycle_repair
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_check_constraint,12
+op_call,create_foreign_key,13
+op_call,create_index,12
+op_call,create_table,4
+op_call,drop_table,4
+op_call,rename_table,2

@@ -1,0 +1,14 @@
+kind,name,value
+meta,file,038_m24_ops_events.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/038_m24_ops_events.py
+meta,revision,038_m24_ops_events
+meta,down_revision,037_m22_killswitch
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,6
+op_call,create_table,4
+op_call,drop_table,4
+op_call,execute,1
+sql_keyword,INSERT INTO,1

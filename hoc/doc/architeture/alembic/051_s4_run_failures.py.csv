@@ -1,0 +1,14 @@
+kind,name,value
+meta,file,051_s4_run_failures.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/051_s4_run_failures.py
+meta,revision,051_s4_run_failures
+meta,down_revision,048_m29_anomaly_rules
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,7
+op_call,create_table,2
+op_call,drop_index,7
+op_call,drop_table,2
+op_call,execute,2

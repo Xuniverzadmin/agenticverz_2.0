@@ -1,0 +1,15 @@
+kind,name,value
+meta,file,030_m17_care_routing.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/030_m17_care_routing.py
+meta,revision,030_m17_care_routing
+meta,down_revision,029_m15_sba_validator
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,4
+op_call,create_table,2
+op_call,drop_table,2
+op_call,execute,6
+sql_keyword,ALTER TABLE,2
+sql_keyword,DROP VIEW,1

@@ -1,0 +1,17 @@
+kind,name,value
+meta,file,026_m12_credit_tables_fix.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/026_m12_credit_tables_fix.py
+meta,revision,026_m12_credit_tables_fix
+meta,down_revision,025_m12_agents_schema
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_foreign_key,1
+op_call,create_table,3
+op_call,drop_constraint,1
+op_call,drop_table,3
+op_call,execute,6
+sql_keyword,ALTER TABLE,2
+sql_keyword,CREATE INDEX,2
+sql_keyword,DROP INDEX,2

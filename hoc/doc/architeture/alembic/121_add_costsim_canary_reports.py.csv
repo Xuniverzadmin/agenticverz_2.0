@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,121_add_costsim_canary_reports.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/121_add_costsim_canary_reports.py
+meta,revision,121_canary_reports
+meta,down_revision,120_is_frozen_api_keys
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,4
+op_call,create_table,1
+op_call,drop_index,4
+op_call,drop_table,1

@@ -1,0 +1,19 @@
+kind,name,value
+meta,file,118_w2_knowledge_planes.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/118_w2_knowledge_planes.py
+meta,revision,118_w2_knowledge_planes
+meta,down_revision,117_w2_budget_envelopes
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_check_constraint,4
+op_call,create_index,5
+op_call,create_table,3
+op_call,drop_constraint,4
+op_call,drop_index,5
+op_call,drop_table,3
+op_call,execute,7
+sql_keyword,CREATE TRIGGER,1
+sql_keyword,DROP TRIGGER,1
+sql_keyword,UPDATE,2

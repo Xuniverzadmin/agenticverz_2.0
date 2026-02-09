@@ -1,0 +1,18 @@
+kind,name,value
+meta,file,070_create_signal_accuracy.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/070_create_signal_accuracy.py
+meta,revision,070_create_signal_accuracy
+meta,down_revision,069_create_gcl_audit_log
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,4
+op_call,create_table,2
+op_call,drop_index,4
+op_call,drop_table,2
+op_call,execute,8
+sql_keyword,CREATE TRIGGER,2
+sql_keyword,DROP TRIGGER,2
+sql_keyword,INSERT INTO,1
+sql_keyword,UPDATE,3

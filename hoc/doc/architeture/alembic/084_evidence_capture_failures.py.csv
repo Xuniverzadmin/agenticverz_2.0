@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,084_evidence_capture_failures.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/084_evidence_capture_failures.py
+meta,revision,084_evidence_capture_failures
+meta,down_revision,083_s6_lifecycle_aware_immutability
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,1
+op_call,create_table,1
+op_call,create_unique_constraint,1
+op_call,drop_table,1

@@ -395,18 +395,21 @@ def check_migration_declarations(migration_file: str):
 
 ### LIMITS-001: Single Source of Truth
 
-**Rule:** There is ONE limits system. No parallel limit tables.
+**Rule:** There is ONE limits system for enforcement. No parallel enforcement tables.
+Observational analytics budgets are allowed if they do not gate execution.
 
 **Forbidden:**
-- Creating `cost_budgets` separate from `limits`
 - Creating `tenant_quotas` separate from `limits`
 - Creating `rate_limits` separate from `limits`
+
+**Allowed (Analytics, observational only):**
+- `cost_budgets` (analytics spend tracking, no enforcement)
 
 **Enforcement:**
 
 ```python
 # scripts/ci/check_limit_tables.py
-ALLOWED_LIMIT_TABLES = ["limits", "limit_breaches"]
+ALLOWED_LIMIT_TABLES = ["limits", "limit_breaches", "cost_budgets"]
 
 def check_no_parallel_limits():
     all_tables = get_all_tables()

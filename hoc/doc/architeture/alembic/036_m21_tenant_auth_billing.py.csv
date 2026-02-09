@@ -1,0 +1,14 @@
+kind,name,value
+meta,file,036_m21_tenant_auth_billing.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/036_m21_tenant_auth_billing.py
+meta,revision,036_m21_tenant_auth
+meta,down_revision,035_m10_schema_repair
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,26
+op_call,create_table,10
+op_call,drop_table,10
+op_call,execute,1
+sql_keyword,INSERT INTO,1

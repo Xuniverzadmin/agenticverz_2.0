@@ -34,6 +34,7 @@ Note: Lifecycle transitions and retrieval mediation rewiring are Phase 4+.
 from __future__ import annotations
 
 import logging
+from contextlib import asynccontextmanager
 from typing import Any, Dict, Optional
 
 from sqlmodel import select
@@ -48,6 +49,23 @@ logger = logging.getLogger("nova.hoc_spine.knowledge_planes_handler")
 
 _BOUND_POLICY_IDS_KEY = "bound_policy_ids"
 _PURGE_APPROVED_KEY = "purge_approved"
+
+
+@asynccontextmanager
+async def _write_tx(session):
+    """
+    Transaction helper for L4 handlers.
+
+    - In normal runtime calls, handlers own the commit via `session.begin()`.
+    - In tests (or higher-level orchestrations) where a transaction is already active,
+      use a SAVEPOINT via `begin_nested()` so we don't commit the caller's outer tx.
+    """
+    if session.in_transaction():
+        async with session.begin_nested():
+            yield
+    else:
+        async with session.begin():
+            yield
 
 
 class KnowledgePlanesRegisterHandler:
@@ -74,19 +92,18 @@ class KnowledgePlanesRegisterHandler:
 
         driver = KnowledgePlaneRegistryDriver()
         try:
-            record = await driver.create(
-                ctx.session,
-                tenant_id=tenant_id,
-                plane_type=str(plane_type),
-                plane_name=str(plane_name),
-                connector_type=str(connector_type),
-                connector_id=str(connector_id),
-                config=config if isinstance(config, dict) else {"config": config},
-                created_by=str(created_by) if created_by else None,
-            )
-            await ctx.session.commit()
+            async with _write_tx(ctx.session):
+                record = await driver.create(
+                    ctx.session,
+                    tenant_id=tenant_id,
+                    plane_type=str(plane_type),
+                    plane_name=str(plane_name),
+                    connector_type=str(connector_type),
+                    connector_id=str(connector_id),
+                    config=config if isinstance(config, dict) else {"config": config},
+                    created_by=str(created_by) if created_by else None,
+                )
         except Exception as e:
-            await ctx.session.rollback()
             return OperationResult.fail(f"Failed to register plane: {e}", "PLANE_REGISTER_FAILED")
 
         return OperationResult.ok(
@@ -265,15 +282,14 @@ class KnowledgePlanesTransitionHandler:
                 return OperationResult.fail("Purge not approved (approve_purge required)", "POLICY_GATE_PENDING")
 
         try:
-            record = await driver.set_lifecycle_state_value(
-                ctx.session,
-                tenant_id=ctx.tenant_id,
-                plane_id=str(plane_id),
-                lifecycle_state_value=int(target_state.value),
-            )
-            await ctx.session.commit()
+            async with _write_tx(ctx.session):
+                record = await driver.set_lifecycle_state_value(
+                    ctx.session,
+                    tenant_id=ctx.tenant_id,
+                    plane_id=str(plane_id),
+                    lifecycle_state_value=int(target_state.value),
+                )
         except Exception as e:
-            await ctx.session.rollback()
             return OperationResult.fail(f"Failed to transition plane: {e}", "PLANE_TRANSITION_FAILED")
 
         return OperationResult.ok(
@@ -317,7 +333,8 @@ class KnowledgePlanesBindPolicyHandler:
         if record is None:
             return OperationResult.fail("Plane not found", "NOT_FOUND")
 
-        config = record.config if isinstance(record.config, dict) else {}
+        # Copy so SQLAlchemy sees a new value; JSONB isn't guaranteed to detect in-place mutation.
+        config = dict(record.config) if isinstance(record.config, dict) else {}
         bound = config.get(_BOUND_POLICY_IDS_KEY)
         if bound is None:
             bound = []
@@ -326,19 +343,18 @@ class KnowledgePlanesBindPolicyHandler:
 
         policy_id_str = str(policy_id)
         if policy_id_str not in bound:
-            bound.append(policy_id_str)
-        config[_BOUND_POLICY_IDS_KEY] = bound
+            bound = [*bound, policy_id_str]
+        config[_BOUND_POLICY_IDS_KEY] = list(bound)
 
         try:
-            record = await driver.set_config(
-                ctx.session,
-                tenant_id=ctx.tenant_id,
-                plane_id=str(plane_id),
-                config=config,
-            )
-            await ctx.session.commit()
+            async with _write_tx(ctx.session):
+                record = await driver.set_config(
+                    ctx.session,
+                    tenant_id=ctx.tenant_id,
+                    plane_id=str(plane_id),
+                    config=config,
+                )
         except Exception as e:
-            await ctx.session.rollback()
             return OperationResult.fail(f"Failed to bind policy: {e}", "BIND_POLICY_FAILED")
 
         return OperationResult.ok(
@@ -379,25 +395,24 @@ class KnowledgePlanesUnbindPolicyHandler:
         if record is None:
             return OperationResult.fail("Plane not found", "NOT_FOUND")
 
-        config = record.config if isinstance(record.config, dict) else {}
+        config = dict(record.config) if isinstance(record.config, dict) else {}
         bound = config.get(_BOUND_POLICY_IDS_KEY) or []
         if not isinstance(bound, list):
             return OperationResult.fail("Invalid bound_policy_ids (expected list)", "INVALID_CONFIG")
 
         policy_id_str = str(policy_id)
         bound = [p for p in bound if str(p) != policy_id_str]
-        config[_BOUND_POLICY_IDS_KEY] = bound
+        config[_BOUND_POLICY_IDS_KEY] = list(bound)
 
         try:
-            record = await driver.set_config(
-                ctx.session,
-                tenant_id=ctx.tenant_id,
-                plane_id=str(plane_id),
-                config=config,
-            )
-            await ctx.session.commit()
+            async with _write_tx(ctx.session):
+                record = await driver.set_config(
+                    ctx.session,
+                    tenant_id=ctx.tenant_id,
+                    plane_id=str(plane_id),
+                    config=config,
+                )
         except Exception as e:
-            await ctx.session.rollback()
             return OperationResult.fail(f"Failed to unbind policy: {e}", "UNBIND_POLICY_FAILED")
 
         return OperationResult.ok(
@@ -434,19 +449,18 @@ class KnowledgePlanesApprovePurgeHandler:
         if record is None:
             return OperationResult.fail("Plane not found", "NOT_FOUND")
 
-        config = record.config if isinstance(record.config, dict) else {}
+        config = dict(record.config) if isinstance(record.config, dict) else {}
         config[_PURGE_APPROVED_KEY] = True
 
         try:
-            record = await driver.set_config(
-                ctx.session,
-                tenant_id=ctx.tenant_id,
-                plane_id=str(plane_id),
-                config=config,
-            )
-            await ctx.session.commit()
+            async with _write_tx(ctx.session):
+                record = await driver.set_config(
+                    ctx.session,
+                    tenant_id=ctx.tenant_id,
+                    plane_id=str(plane_id),
+                    config=config,
+                )
         except Exception as e:
-            await ctx.session.rollback()
             return OperationResult.fail(f"Failed to approve purge: {e}", "APPROVE_PURGE_FAILED")
 
         return OperationResult.ok(

@@ -1,0 +1,15 @@
+kind,name,value
+meta,file,065_precomputed_auth.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/065_precomputed_auth.py
+meta,revision,065_precomputed_auth
+meta,down_revision,064_phase_e_governance_signals
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,5
+op_call,create_check_constraint,1
+op_call,create_index,1
+op_call,drop_column,5
+op_call,drop_constraint,1
+op_call,drop_index,1

@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,095_activity_signal_indexes.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/095_activity_signal_indexes.py
+meta,revision,095_activity_signal_indexes
+meta,down_revision,094_limit_overrides
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,7
+op_call,drop_index,8
+op_call,execute,1
+sql_keyword,CREATE INDEX,1

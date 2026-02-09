@@ -1,0 +1,17 @@
+kind,name,value
+meta,file,069_create_gcl_audit_log.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/069_create_gcl_audit_log.py
+meta,revision,069_create_gcl_audit_log
+meta,down_revision,068_create_gcl_policy_library
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,8
+op_call,create_table,2
+op_call,drop_index,8
+op_call,drop_table,2
+op_call,execute,6
+sql_keyword,CREATE TRIGGER,2
+sql_keyword,DROP TRIGGER,2
+sql_keyword,UPDATE,3

@@ -1,0 +1,19 @@
+kind,name,value
+meta,file,018_add_m10_recovery_enhancements.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/018_add_m10_recovery_enhancements.py
+meta,revision,018_m10_recovery_enhancements
+meta,down_revision,017_recovery_candidates
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,execute,16
+sql_keyword,ALTER TABLE,2
+sql_keyword,CREATE INDEX,4
+sql_keyword,CREATE TABLE,3
+sql_keyword,CREATE TRIGGER,1
+sql_keyword,DROP TABLE,3
+sql_keyword,DROP TRIGGER,2
+sql_keyword,DROP VIEW,1
+sql_keyword,INSERT INTO,1
+sql_keyword,UPDATE,5

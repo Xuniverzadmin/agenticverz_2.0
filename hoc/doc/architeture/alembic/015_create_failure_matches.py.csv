@@ -1,0 +1,15 @@
+kind,name,value
+meta,file,015_create_failure_matches.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/015_create_failure_matches.py
+meta,revision,015_failure_matches
+meta,down_revision,014_trace_mismatches
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,execute,6
+sql_keyword,CREATE INDEX,1
+sql_keyword,CREATE TABLE,1
+sql_keyword,DROP TABLE,1
+sql_keyword,DROP VIEW,2
+sql_keyword,UPDATE,1

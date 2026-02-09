@@ -24,11 +24,12 @@ ALLOWED_LIMIT_TABLES: Set[str] = {
     "limits",
     "limit_breaches",
     "limit_integrity",
+    # Analytics domain: observational spend tracking (not enforcement)
+    "cost_budgets",
 }
 
 # Forbidden table name patterns (would indicate parallel systems)
 FORBIDDEN_PATTERNS: List[str] = [
-    r'cost_budgets',      # Should be migrated to limits
     r'tenant_quotas',     # Should be in limits
     r'rate_limits',       # Should be in limits
     r'usage_limits',      # Should be in limits

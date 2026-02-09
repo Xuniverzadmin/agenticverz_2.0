@@ -1,0 +1,9 @@
+kind,name,value
+meta,file,054_merge_heads.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/054_merge_heads.py
+meta,revision,054_merge_heads
+meta,down_revision,"('050_dr_causal_binding', '053_pb_s1_retry')"
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True

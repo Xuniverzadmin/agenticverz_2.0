@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,085_evidence_failure_resolution.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/085_evidence_failure_resolution.py
+meta,revision,085_evidence_failure_resolution
+meta,down_revision,084_evidence_capture_failures
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,1
+op_call,create_check_constraint,1
+op_call,drop_column,1
+op_call,drop_constraint,1

@@ -1,0 +1,11 @@
+kind,name,value
+meta,file,108_limit_breaches_evaluation_type.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/108_limit_breaches_evaluation_type.py
+meta,revision,108_limit_breaches_evaluation_type
+meta,down_revision,107_v_runs_o2_policy_context
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,1
+op_call,create_check_constraint,1

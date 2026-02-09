@@ -1,0 +1,14 @@
+kind,name,value
+meta,file,057_pb_s4_policy_proposals.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/057_pb_s4_policy_proposals.py
+meta,revision,057_pb_s4_policy_proposals
+meta,down_revision,056_pb_s3_pattern_feedback
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,5
+op_call,create_table,2
+op_call,drop_index,5
+op_call,drop_table,2
+op_call,execute,2

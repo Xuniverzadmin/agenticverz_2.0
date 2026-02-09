@@ -1,0 +1,14 @@
+kind,name,value
+meta,file,012_add_aos_traces_table.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/012_add_aos_traces_table.py
+meta,revision,012_add_aos_traces
+meta,down_revision,011_create_memory_audit
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,13
+op_call,create_table,2
+op_call,drop_table,3
+op_call,execute,1
+sql_keyword,CREATE TABLE,1

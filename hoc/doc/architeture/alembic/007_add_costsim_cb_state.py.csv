@@ -1,0 +1,15 @@
+kind,name,value
+meta,file,007_add_costsim_cb_state.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/007_add_costsim_cb_state.py
+meta,revision,007_costsim_cb
+meta,down_revision,006_add_archival_partitioning
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,4
+op_call,create_table,2
+op_call,drop_index,4
+op_call,drop_table,2
+op_call,execute,1
+sql_keyword,INSERT INTO,1

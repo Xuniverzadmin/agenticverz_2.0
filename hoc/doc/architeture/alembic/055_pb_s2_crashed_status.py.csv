@@ -1,0 +1,10 @@
+kind,name,value
+meta,file,055_pb_s2_crashed_status.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/055_pb_s2_crashed_status.py
+meta,revision,055_pb_s2_crashed_status
+meta,down_revision,054_merge_heads
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,execute,4

@@ -1,0 +1,15 @@
+kind,name,value
+meta,file,122_knowledge_plane_registry.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/122_knowledge_plane_registry.py
+meta,revision,122_knowledge_plane_registry
+meta,down_revision,121_canary_reports
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_check_constraint,1
+op_call,create_index,4
+op_call,create_table,1
+op_call,drop_constraint,1
+op_call,drop_index,4
+op_call,drop_table,1

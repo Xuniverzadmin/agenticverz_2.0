@@ -1,0 +1,10 @@
+kind,name,value
+meta,file,022_m10_production_hardening.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/022_m10_production_hardening.py
+meta,revision,022_m10_production_hardening
+meta,down_revision,021_m10_durable_queue_fallback
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,get_bind,2

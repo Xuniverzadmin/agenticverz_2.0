@@ -1,0 +1,15 @@
+kind,name,value
+meta,file,114_add_threshold_snapshot_hash.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/114_add_threshold_snapshot_hash.py
+meta,revision,114_add_threshold_snapshot_hash
+meta,down_revision,113_add_retrieval_evidence
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,1
+op_call,create_index,1
+op_call,drop_column,1
+op_call,drop_index,1
+op_call,execute,1
+sql_keyword,UPDATE,1

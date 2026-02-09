@@ -17,12 +17,25 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import AsyncContextManager, Callable, List, Optional
 
 from app.hoc.cus.hoc_spine.drivers.retrieval_evidence_driver import RetrievalEvidenceDriver
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import get_async_session_context
 from sqlalchemy.ext.asyncio import AsyncSession
+
+
+@asynccontextmanager
+async def _write_tx(session: AsyncSession):
+    # In runtime, L4 engines own the commit; in tests and higher-level orchestration
+    # we may already be inside a SAVEPOINT/transaction.
+    if session.in_transaction():
+        async with session.begin_nested():
+            yield
+    else:
+        async with session.begin():
+            yield
 
 
 class DbRetrievalEvidenceService:
@@ -61,7 +74,7 @@ class DbRetrievalEvidenceService:
         from app.hoc.cus.hoc_spine.services.retrieval_mediator import EvidenceRecord
 
         async with self._session_provider() as session:
-            async with session.begin():
+            async with _write_tx(session):
                 record = await self._driver.append(
                     session,
                     tenant_id=tenant_id,

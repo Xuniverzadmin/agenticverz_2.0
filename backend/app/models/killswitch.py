@@ -287,7 +287,7 @@ class Incident(SQLModel, table=True):
     resolved_by: Optional[str] = Field(default=None, max_length=100)
 
     # SDSR fields (PIN-370) - for run-failure incidents
-    source_run_id: Optional[str] = Field(default=None, index=True)
+    source_run_id: Optional[str] = Field(default=None, foreign_key="runs.id", index=True)
     source_type: Optional[str] = Field(default="killswitch")  # run, killswitch, policy, manual
     category: Optional[str] = None  # EXECUTION_FAILURE, POLICY_VIOLATION, etc.
     description: Optional[str] = None

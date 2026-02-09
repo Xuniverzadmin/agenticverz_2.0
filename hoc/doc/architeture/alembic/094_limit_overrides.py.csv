@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,094_limit_overrides.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/094_limit_overrides.py
+meta,revision,094_limit_overrides
+meta,down_revision,093_llm_run_records_system_records
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,4
+op_call,create_table,1
+op_call,drop_index,4
+op_call,drop_table,1

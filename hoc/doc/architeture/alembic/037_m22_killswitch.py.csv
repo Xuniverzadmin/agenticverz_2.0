@@ -1,0 +1,16 @@
+kind,name,value
+meta,file,037_m22_killswitch.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/037_m22_killswitch.py
+meta,revision,037_m22_killswitch
+meta,down_revision,036_m21_tenant_auth
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,6
+op_call,create_index,6
+op_call,create_table,5
+op_call,drop_column,6
+op_call,drop_table,5
+op_call,execute,1
+sql_keyword,INSERT INTO,1

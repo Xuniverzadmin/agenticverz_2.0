@@ -1,0 +1,17 @@
+kind,name,value
+meta,file,082_governance_taxonomy_tables.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/082_governance_taxonomy_tables.py
+meta,revision,082_governance_taxonomy_tables
+meta,down_revision,081_tenant_onboarding_state
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,2
+op_call,create_index,16
+op_call,create_table,5
+op_call,create_unique_constraint,4
+op_call,drop_column,2
+op_call,drop_constraint,4
+op_call,drop_index,16
+op_call,drop_table,5

@@ -1,0 +1,14 @@
+kind,name,value
+meta,file,056_pb_s3_pattern_feedback.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/056_pb_s3_pattern_feedback.py
+meta,revision,056_pb_s3_pattern_feedback
+meta,down_revision,055_pb_s2_crashed_status
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,3
+op_call,create_table,1
+op_call,drop_index,3
+op_call,drop_table,1
+op_call,execute,1

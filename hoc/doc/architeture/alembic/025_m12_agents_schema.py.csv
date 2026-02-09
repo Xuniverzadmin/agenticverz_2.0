@@ -1,0 +1,16 @@
+kind,name,value
+meta,file,025_m12_agents_schema.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/025_m12_agents_schema.py
+meta,revision,025_m12_agents_schema
+meta,down_revision,024_m11_skill_audit
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_foreign_key,1
+op_call,create_table,7
+op_call,drop_table,7
+op_call,execute,19
+sql_keyword,CREATE INDEX,5
+sql_keyword,DROP VIEW,2
+sql_keyword,UPDATE,4

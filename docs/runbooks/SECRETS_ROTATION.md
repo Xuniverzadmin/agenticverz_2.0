@@ -184,36 +184,188 @@ export SECRET_COMPROMISED=true
 
 ---
 
-## Vault Integration (Future)
+## Vault Integration (ACTIVE)
 
-When HashiCorp Vault is integrated:
+HashiCorp Vault is integrated and manages all secrets.
+
+### Vault Architecture
+
+| Component | Location |
+|-----------|----------|
+| Container | `vault` at `/opt/vault/` |
+| Address | `http://127.0.0.1:8200` |
+| UI | `http://127.0.0.1:8200/ui` |
+| Keys file | `/opt/vault/.vault-keys` (mode 600) |
+| Data directory | `/opt/vault/data/` |
+| App integration | `backend/app/secrets/vault_client.py` |
+| HOC driver | `backend/app/hoc/int/general/drivers/vault_client.py` |
+
+### Unseal Vault (after restart)
 
 ```bash
-# Read current secret
-vault kv get -field=api_key secret/aos/openai
-
-# Rotate with audit
-vault write sys/policies/password \
-  rules='length=64 charset=alphanumeric'
-
-vault kv put secret/aos/openai api_key=$(vault read -field=password sys/policies/password/generate)
+./scripts/ops/vault/unseal_vault.sh
 ```
 
+### Rotate via Vault Script (Preferred Method)
+
+```bash
+# Auto-generate new value (openssl rand -hex 32)
+./scripts/ops/vault/rotate_secret.sh app-prod MACHINE_SECRET_TOKEN
+
+# Set specific value
+./scripts/ops/vault/rotate_secret.sh app-prod WEBHOOK_KEY "my-new-key"
+```
+
+The script:
+1. Fetches current secrets from the path
+2. Updates the specific key
+3. Writes back to Vault
+4. Verifies the update
+5. Reports success/failure
+
+### Load Secrets to Environment
+
+```bash
+source scripts/ops/vault/vault_env.sh app-prod
+source scripts/ops/vault/vault_env.sh database
+source scripts/ops/vault/vault_env.sh external-apis
+```
+
+### Application Reload After Rotation
+
+| Method | Command | Downtime |
+|--------|---------|----------|
+| Container restart | `docker compose restart backend` | ~5s |
+| Full rebuild | `docker compose up -d --build backend` | ~30s |
+
 ---
 
-## Rotation Schedule
+## Vault Secret Paths & Owners
 
-| Secret | Rotation Frequency | Last Rotated | Next Due |
-|--------|-------------------|--------------|----------|
-| OpenAI API Key | 90 days | - | TBD |
-| Database Password | 180 days | - | TBD |
-| Grafana API Key | 90 days | - | TBD |
-| Webhook Key | 180 days | - | TBD |
+| Vault Path | Keys | Owner | Rotation Frequency |
+|------------|------|-------|-------------------|
+| `agenticverz/app-prod` | AOS_API_KEY | Platform | Quarterly |
+| `agenticverz/app-prod` | MACHINE_SECRET_TOKEN | Platform | Quarterly |
+| `agenticverz/app-prod` | OIDC_CLIENT_SECRET | Auth | On provider change |
+| `agenticverz/database` | POSTGRES_USER | Platform | Annually |
+| `agenticverz/database` | POSTGRES_PASSWORD | Platform | Quarterly |
+| `agenticverz/database` | DATABASE_URL | Platform | On password change |
+| `agenticverz/database` | KEYCLOAK_DB_USER | Auth | Annually |
+| `agenticverz/database` | KEYCLOAK_DB_PASSWORD | Auth | Quarterly |
+| `agenticverz/external-apis` | ANTHROPIC_API_KEY | LLM | On compromise/expiry |
+| `agenticverz/external-apis` | OPENAI_API_KEY | LLM | On compromise/expiry |
+| `agenticverz/external-apis` | GITHUB_TOKEN | CI | Annually |
+| `agenticverz/keycloak-admin` | KEYCLOAK_ADMIN | Auth | Never (static) |
+| `agenticverz/keycloak-admin` | KEYCLOAK_ADMIN_PASSWORD | Auth | Quarterly |
+| `secret/data/user/r2` | R2_ACCESS_KEY_ID | Storage | Annually |
+| `secret/data/user/r2` | R2_SECRET_ACCESS_KEY | Storage | Annually |
+| `secret/data/user/neon` | DATABASE_URL | Platform | On password change |
+| `secret/data/user/upstash` | REDIS_URL | Platform | On token change |
 
 ---
 
-## Contacts
+## Vault Scripts Reference
 
-- **Security Team**: security@example.com
-- **On-Call Platform**: pagerduty://aos-platform
-- **Emergency**: [Internal emergency contacts]
+| Script | Location | Purpose |
+|--------|----------|---------|
+| `unseal_vault.sh` | `scripts/ops/vault/` | Unseal Vault after restart |
+| `vault_env.sh` | `scripts/ops/vault/` | Export secrets to env vars |
+| `rotate_secret.sh` | `scripts/ops/vault/` | Rotate a single secret |
+| `vault_client.py` | `backend/app/secrets/` | Application Vault SDK |
+
+---
+
+## Neon (PostgreSQL) Credential Rotation
+
+### Rotation Flow
+
+1. **Generate** new password in Neon Console → Project → Connection Details → Reset Password
+2. **Build** new DATABASE_URL: `postgresql://<user>:<new-password>@<host>/nova_aos?sslmode=require`
+3. **Update Vault:**
+   ```bash
+   ./scripts/ops/vault/rotate_secret.sh database DATABASE_URL
+   ./scripts/ops/vault/rotate_secret.sh database POSTGRES_PASSWORD
+   ```
+4. **Update** `secret/data/user/neon` path in Vault with new DATABASE_URL
+5. **Restart** backend: `docker compose restart backend worker`
+6. **Verify:** `curl localhost:8000/health`
+
+### Branch Management
+
+- Neon branches auto-suspend after compute idle timeout
+- Delete unused branches to avoid compute hour charges
+- After branch deletion, local DB requires ORM bootstrap (PIN-542)
+
+---
+
+## Upstash (Redis) Token Rotation
+
+### Rotation Flow
+
+1. **Generate** new token in Upstash Console → Database → Configuration → Reset Password
+2. **Build** new REDIS_URL: `rediss://default:<new-token>@<host>:6379`
+3. **Update Vault:**
+   ```bash
+   ./scripts/ops/vault/rotate_secret.sh database REDIS_URL
+   ```
+4. **Update** `secret/data/user/upstash` path in Vault
+5. **Restart** backend: `docker compose restart backend worker`
+6. **Verify:** Check Redis connectivity in health endpoint
+
+### Notes
+
+- Upstash uses `rediss://` (TLS) not `redis://`
+- Token rotation invalidates all existing connections immediately
+- No grace period — deploy immediately after rotation
+
+---
+
+## Clerk (OIDC) Secret Rotation
+
+### Rotation Flow
+
+1. **Generate** new secret in Clerk Dashboard → API Keys → Secret Keys
+2. **Update Vault:**
+   ```bash
+   ./scripts/ops/vault/rotate_secret.sh app-prod OIDC_CLIENT_SECRET
+   ```
+3. **Restart** backend: `docker compose restart backend`
+4. **Verify:** Test JWT validation: `curl -H "Authorization: Bearer <jwt>" localhost:8000/api/v1/runtime/capabilities`
+
+### Notes
+
+- Clerk supports multiple active secret keys for zero-downtime rotation
+- Old key remains valid until explicitly revoked in Clerk Dashboard
+- OIDC_ISSUER_URL and OIDC_CLIENT_ID do not change during rotation
+
+---
+
+## Resend (Email) API Key Rotation
+
+### Rotation Flow
+
+1. **Generate** new API key in Resend Dashboard → API Keys → Create API Key
+2. **Update Vault:**
+   ```bash
+   ./scripts/ops/vault/rotate_secret.sh external-apis RESEND_API_KEY
+   ```
+3. **Restart** backend: `docker compose restart backend`
+4. **Verify:** Trigger test email or check logs for send failures
+
+### Notes
+
+- Resend keys are scoped per domain — ensure correct domain scope
+- Old key can remain active during grace period
+- Revoke old key in Resend Dashboard after 24 hours
+
+---
+
+## Security Notes
+
+1. Never commit `/opt/vault/.vault-keys` or any Vault tokens
+2. Never print secret values in logs or CI output
+3. Vault root token and unseal key must be stored with mode 600
+4. In production, use auto-unseal with AWS KMS / Azure Key Vault
+5. Backup Vault data directory regularly
+6. Monitor Vault audit logs for unauthorized access
+7. Use TLS in production (current setup is localhost-only)

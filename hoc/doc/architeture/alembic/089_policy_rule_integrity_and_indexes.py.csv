@@ -1,0 +1,17 @@
+kind,name,value
+meta,file,089_policy_rule_integrity_and_indexes.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/089_policy_rule_integrity_and_indexes.py
+meta,revision,089_policy_rule_integrity
+meta,down_revision,088_policy_control_plane
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,4
+op_call,create_table,1
+op_call,drop_index,4
+op_call,drop_table,1
+op_call,execute,4
+sql_keyword,CREATE TRIGGER,1
+sql_keyword,DROP TRIGGER,1
+sql_keyword,UPDATE,1

@@ -26,17 +26,19 @@ from alembic import op
 
 
 def upgrade():
-    # 1. Create credit_balances table
-    op.create_table(
-        "credit_balances",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("tenant_id", sa.String(128), nullable=False, unique=True),
-        sa.Column("total_credits", sa.Numeric(12, 2), nullable=False, server_default="1000"),
-        sa.Column("reserved_credits", sa.Numeric(12, 2), nullable=False, server_default="0"),
-        sa.Column("spent_credits", sa.Numeric(12, 2), nullable=False, server_default="0"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        schema="agents",
+    # 1. Create credit_balances table (IF NOT EXISTS — 025 may have created it)
+    op.execute(
+        """
+        CREATE TABLE IF NOT EXISTS agents.credit_balances (
+            id UUID DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+            tenant_id VARCHAR(128) NOT NULL UNIQUE,
+            total_credits NUMERIC(12, 2) NOT NULL DEFAULT 1000,
+            reserved_credits NUMERIC(12, 2) NOT NULL DEFAULT 0,
+            spent_credits NUMERIC(12, 2) NOT NULL DEFAULT 0,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+        """
     )
 
     # 2. Add context column to credit_ledger (if not exists)

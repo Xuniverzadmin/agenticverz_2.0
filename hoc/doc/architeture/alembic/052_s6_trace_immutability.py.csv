@@ -1,0 +1,18 @@
+kind,name,value
+meta,file,052_s6_trace_immutability.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/052_s6_trace_immutability.py
+meta,revision,052_s6_trace_immutability
+meta,down_revision,051_s4_run_failures
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,1
+op_call,create_index,1
+op_call,drop_column,1
+op_call,drop_index,1
+op_call,execute,16
+sql_keyword,CREATE TRIGGER,4
+sql_keyword,DELETE FROM,1
+sql_keyword,DROP TRIGGER,8
+sql_keyword,UPDATE,6

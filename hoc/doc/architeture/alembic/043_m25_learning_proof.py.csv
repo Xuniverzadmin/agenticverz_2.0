@@ -1,0 +1,15 @@
+kind,name,value
+meta,file,043_m25_learning_proof.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/043_m25_learning_proof.py
+meta,revision,043_m25_learning
+meta,down_revision,042_m25_integration
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,5
+op_call,create_table,6
+op_call,execute,11
+sql_keyword,ALTER TABLE,4
+sql_keyword,DROP TABLE,6
+sql_keyword,INSERT INTO,1

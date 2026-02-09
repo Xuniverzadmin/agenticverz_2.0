@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,045_m25_policy_activation_audit.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/045_m25_policy_activation_audit.py
+meta,revision,045_m25_policy_audit
+meta,down_revision,044_m25_hardening
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,2
+op_call,create_table,1
+op_call,drop_index,2
+op_call,drop_table,1

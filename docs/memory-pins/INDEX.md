@@ -512,6 +512,10 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-539](PIN-539-knowledge-plane-phase6-policy-gate-and-sql-connector.md) | **Knowledge Planes Phase 6 — Policy Snapshot Gate + SQL Connector Runtime** | HOC Governance / Retrieval Enablement | **✅ COMPLETE** | 2026-02-08 |
 | [PIN-540](PIN-540-knowledge-plane-transition-operation.md) | **Knowledge Planes — Persisted Lifecycle Transitions (`knowledge.planes.transition`)** | HOC Governance / Lifecycle Authority | **✅ COMPLETE** | 2026-02-08 |
 | [PIN-541](PIN-541-knowledge-plane-config-ops-and-legacy-ssot-removal.md) | **Knowledge Planes — Config Ops + Legacy SSOT Removal** | HOC Governance / Lifecycle Authority | **✅ COMPLETE** | 2026-02-08 |
+| [PIN-542](PIN-542-local-db-migration-issues-fixes.md) | **Local DB Migration Issues & Fixes** | Database | **✅ COMPLETE** | 2026-02-09 |
+| [PIN-543](PIN-543-alembic-migration-audit-docs-generated.md) | **Alembic Migration Audit Docs Generated** | Documentation | **✅ COMPLETE** | 2026-02-09 |
+| [PIN-544](PIN-544-alembic-stamp-fix-two-path-ci-guard.md) | **Alembic Stamp Fix + Two-Path CI Guard** | Database | **✅ COMPLETE** | 2026-02-09 |
+| [PIN-545](PIN-545-guardrail-violations-data-001-limits-001-analysis.md) | **Guardrail Violations DATA-001 & LIMITS-001 Analysis** | Database | **✅ COMPLETE** | 2026-02-09 |
 
 ---
 
@@ -1281,6 +1285,11 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-09 | **PIN-545 Guardrail Violations DATA-001 & LIMITS-001 Analysis** - Created via memory_trail. |
+| 2026-02-09 | **PIN-544 Alembic Stamp Fix + Two-Path CI Guard** - Created via memory_trail. |
+| 2026-02-09 | **PIN-543 Alembic Migration Audit Docs Generated** - Created via memory_trail. |
+| 2026-02-09 | **PIN-542 Local DB Migration Issues & Fixes** - Created via memory_trail. |
+| 2026-02-09 | **PIN-537 Knowledge Planes Phase 4 — Retrieval Uses Persisted Planes + DB Evidence** - Updated: Updates |
 | 2026-02-08 | **PIN-541 Knowledge Planes — Config Ops + Legacy SSOT Removal** - Created. |
 | 2026-02-08 | **PIN-540 Knowledge Planes — Persisted Lifecycle Transitions (`knowledge.planes.transition`)** - Created. |
 | 2026-02-08 | **PIN-539 Knowledge Planes Phase 6 — Policy Snapshot Gate + SQL Connector Runtime** - Created. |

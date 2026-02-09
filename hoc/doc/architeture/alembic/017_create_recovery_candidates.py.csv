@@ -1,0 +1,17 @@
+kind,name,value
+meta,file,017_create_recovery_candidates.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/017_create_recovery_candidates.py
+meta,revision,017_recovery_candidates
+meta,down_revision,016_failure_pattern_exports
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,execute,9
+sql_keyword,CREATE INDEX,2
+sql_keyword,CREATE TABLE,2
+sql_keyword,CREATE TRIGGER,1
+sql_keyword,DROP TABLE,2
+sql_keyword,DROP TRIGGER,2
+sql_keyword,DROP VIEW,1
+sql_keyword,UPDATE,4

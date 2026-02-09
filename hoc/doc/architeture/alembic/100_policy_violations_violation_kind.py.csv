@@ -1,0 +1,15 @@
+kind,name,value
+meta,file,100_policy_violations_violation_kind.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/100_policy_violations_violation_kind.py
+meta,revision,100_policy_violations_violation_kind
+meta,down_revision,099_policy_rules_rule_type
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,1
+op_call,create_index,1
+op_call,drop_column,1
+op_call,drop_index,1
+op_call,execute,2
+sql_keyword,ALTER TABLE,2

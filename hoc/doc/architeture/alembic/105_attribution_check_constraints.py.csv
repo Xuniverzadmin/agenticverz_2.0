@@ -1,0 +1,14 @@
+kind,name,value
+meta,file,105_attribution_check_constraints.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/105_attribution_check_constraints.py
+meta,revision,105_attribution_check_constraints
+meta,down_revision,104_attribution_schema_hardening
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,execute,13
+sql_keyword,ALTER TABLE,6
+sql_keyword,CREATE TRIGGER,2
+sql_keyword,DROP TRIGGER,2
+sql_keyword,INSERT INTO,1

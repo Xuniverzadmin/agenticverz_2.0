@@ -1,0 +1,10 @@
+kind,name,value
+meta,file,101_lessons_source_event_id_varchar.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/101_lessons_source_event_id_varchar.py
+meta,revision,101_lessons_source_event_id_varchar
+meta,down_revision,100_policy_violations_violation_kind
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,alter_column,2

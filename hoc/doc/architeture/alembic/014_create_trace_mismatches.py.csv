@@ -1,0 +1,14 @@
+kind,name,value
+meta,file,014_create_trace_mismatches.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/014_create_trace_mismatches.py
+meta,revision,014_trace_mismatches
+meta,down_revision,013_add_trace_retention
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,execute,4
+sql_keyword,CREATE INDEX,1
+sql_keyword,CREATE TABLE,1
+sql_keyword,DROP TABLE,1
+sql_keyword,DROP VIEW,1

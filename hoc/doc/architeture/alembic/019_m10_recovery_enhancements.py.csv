@@ -1,0 +1,10 @@
+kind,name,value
+meta,file,019_m10_recovery_enhancements.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/019_m10_recovery_enhancements.py
+meta,revision,019_m10_recovery_enhancements
+meta,down_revision,018_m10_recovery_enhancements
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,get_bind,2

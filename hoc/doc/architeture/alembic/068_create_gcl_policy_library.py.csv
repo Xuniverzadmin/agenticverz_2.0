@@ -1,0 +1,17 @@
+kind,name,value
+meta,file,068_create_gcl_policy_library.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/068_create_gcl_policy_library.py
+meta,revision,068_create_gcl_policy_library
+meta,down_revision,067_phase_s_error_persistence
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,13
+op_call,create_table,3
+op_call,drop_index,13
+op_call,drop_table,3
+op_call,execute,4
+sql_keyword,CREATE TRIGGER,1
+sql_keyword,DROP TRIGGER,1
+sql_keyword,UPDATE,2

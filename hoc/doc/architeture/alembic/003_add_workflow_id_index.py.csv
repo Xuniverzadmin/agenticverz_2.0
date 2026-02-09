@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,003_add_workflow_id_index.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/003_add_workflow_id_index.py
+meta,revision,
+meta,down_revision,
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_index,2
+op_call,drop_index,2
+warning,missing_revision,True
+warning,missing_down_revision,True

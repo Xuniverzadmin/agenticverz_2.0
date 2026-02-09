@@ -1,0 +1,14 @@
+kind,name,value
+meta,file,013_add_trace_retention_lifecycle.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/013_add_trace_retention_lifecycle.py
+meta,revision,013_add_trace_retention
+meta,down_revision,012_add_aos_traces
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_table,1
+op_call,drop_table,1
+op_call,execute,5
+sql_keyword,DELETE FROM,1
+sql_keyword,INSERT INTO,2

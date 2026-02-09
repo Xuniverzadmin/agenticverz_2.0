@@ -1,6 +1,6 @@
 {
   "status": "VIOLATIONS",
-  "last_check": "2026-02-08T10:30:03.805738",
+  "last_check": "2026-02-09T11:00:04.562143",
   "violations": [
     {
       "file": "/root/agenticverz2.0/backend/alembic/versions/001_create_workflow_checkpoints.py",
@@ -801,6 +801,20 @@
       "code": ""
     },
     {
+      "file": "/root/agenticverz2.0/backend/alembic/versions/122_knowledge_plane_registry.py",
+      "line": 1,
+      "rule": "MIG-001",
+      "message": "Missing MIGRATION_CONTRACT header",
+      "code": ""
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/alembic/versions/123_incidents_source_run_fk.py",
+      "line": 1,
+      "rule": "MIG-001",
+      "message": "Missing MIGRATION_CONTRACT header",
+      "code": ""
+    },
+    {
       "file": "/root/agenticverz2.0/backend/alembic/versions/c8213cda2be4_add_uuid_constraint_to_tenant_id.py",
       "line": 1,
       "rule": "MIG-001",
@@ -815,27 +829,6 @@
       "code": ""
     },
     {
-      "file": "/root/agenticverz2.0/backend/app/api/limits/simulate.py",
-      "line": 138,
-      "rule": "RAB-001",
-      "message": "Direct access to .headroom.tokens (use adapter)",
-      "code": "\"tokens_remaining\": result.headroom.tokens if result.headroo"
-    },
-    {
-      "file": "/root/agenticverz2.0/backend/app/api/limits/simulate.py",
-      "line": 139,
-      "rule": "RAB-001",
-      "message": "Direct access to .headroom.runs (use adapter)",
-      "code": "\"runs_remaining\": result.headroom.runs if result.headroom el"
-    },
-    {
-      "file": "/root/agenticverz2.0/backend/app/api/limits/simulate.py",
-      "line": 140,
-      "rule": "RAB-001",
-      "message": "Direct access to .headroom.cost_cents (use adapter)",
-      "code": "\"cost_remaining_cents\": result.headroom.cost_cents if result"
-    },
-    {
       "file": "/root/agenticverz2.0/backend/app/schemas/skill.py",
       "line": 325,
       "rule": "NC-001",
@@ -843,7 +836,7 @@
       "code": "ttl_remaining: Optional[int] = Field(default=None, descripti"
     }
   ],
-  "files_scanned": 256,
-  "checks_run": 256,
+  "files_scanned": 172,
+  "checks_run": 172,
   "scanner": "agen_internal_system_scan"
 }

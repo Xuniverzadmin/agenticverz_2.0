@@ -1,0 +1,14 @@
+kind,name,value
+meta,file,016_create_failure_pattern_exports.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/016_create_failure_pattern_exports.py
+meta,revision,016_failure_pattern_exports
+meta,down_revision,015b_harden_failure_matches
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,execute,2
+sql_keyword,CREATE INDEX,1
+sql_keyword,CREATE TABLE,1
+sql_keyword,DROP INDEX,1
+sql_keyword,DROP TABLE,1

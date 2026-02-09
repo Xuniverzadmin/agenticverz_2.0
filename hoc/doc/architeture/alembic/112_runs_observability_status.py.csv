@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,112_runs_observability_status.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/112_runs_observability_status.py
+meta,revision,112_runs_observability_status
+meta,down_revision,111_policy_control_lever
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,2
+op_call,create_index,1
+op_call,drop_column,2
+op_call,drop_index,1

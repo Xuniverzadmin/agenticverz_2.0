@@ -1,0 +1,10 @@
+kind,name,value
+meta,file,021_m10_durable_queue_fallback.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/021_m10_durable_queue_fallback.py
+meta,revision,021_m10_durable_queue_fallback
+meta,down_revision,020_m10_concurrent_indexes
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,get_bind,2

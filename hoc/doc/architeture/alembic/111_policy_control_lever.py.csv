@@ -1,0 +1,19 @@
+kind,name,value
+meta,file,111_policy_control_lever.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/111_policy_control_lever.py
+meta,revision,111_policy_control_lever
+meta,down_revision,110_governance_fields
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,create_check_constraint,4
+op_call,create_index,4
+op_call,create_table,7
+op_call,drop_constraint,4
+op_call,drop_index,4
+op_call,drop_table,7
+op_call,execute,8
+sql_keyword,CREATE TRIGGER,2
+sql_keyword,DROP TRIGGER,4
+sql_keyword,UPDATE,4

@@ -1,0 +1,15 @@
+kind,name,value
+meta,file,086_runs_o2_schema.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/086_runs_o2_schema.py
+meta,revision,086_runs_o2_schema
+meta,down_revision,085_evidence_failure_resolution
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,16
+op_call,create_index,7
+op_call,drop_column,16
+op_call,drop_index,7
+op_call,execute,2
+sql_keyword,DROP VIEW,1

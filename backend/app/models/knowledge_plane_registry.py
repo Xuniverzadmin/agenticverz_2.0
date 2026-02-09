@@ -28,6 +28,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
+import sqlalchemy as sa
 from sqlalchemy import Column, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
@@ -85,8 +86,14 @@ class KnowledgePlaneRegistry(SQLModel, table=True):
     )
 
     created_by: Optional[str] = Field(default=None, max_length=64)
-    created_at: datetime = Field(default_factory=utc_now)
-    updated_at: datetime = Field(default_factory=utc_now)
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+    )
+    updated_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=sa.Column(sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+    )
 
     # =========================================================================
     # Computed helpers (no DB access)
@@ -95,4 +102,3 @@ class KnowledgePlaneRegistry(SQLModel, table=True):
     @property
     def lifecycle_state(self) -> KnowledgePlaneLifecycleState:
         return KnowledgePlaneLifecycleState(self.lifecycle_state_value)
-

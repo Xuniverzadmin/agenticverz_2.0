@@ -1,0 +1,10 @@
+kind,name,value
+meta,file,029_m15_sba_validator.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/029_m15_sba_validator.py
+meta,revision,029_m15_sba_validator
+meta,down_revision,028_m15_1_sba_schema
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,execute,2

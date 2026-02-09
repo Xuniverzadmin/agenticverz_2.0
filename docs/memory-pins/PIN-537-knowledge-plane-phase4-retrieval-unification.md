@@ -70,4 +70,24 @@ This closes the Phase 4 contract in the plan:
 - Implement a real `PolicyChecker` that enforces deny-by-default based on policy snapshots.
 - Implement real connector runtime factories for `(connector_type, connector_id)` (Phase 4 resolves bindings only).
 - Phase 5: remove/demote remaining legacy plane registries once importers are zero.
+---
 
+## Updates
+
+### Update (2026-02-09)
+
+- Added idempotent DB bootstrapper `backend/scripts/ops/bootstrap_knowledge_governance_tables.py` to ensure `knowledge_plane_registry`, `retrieval_evidence`, `policy_snapshots`, and required tenant/run rows for governance tests.
+- Fixed L4 handler config mutation persistence (JSONB copy) in `backend/app/hoc/cus/hoc_spine/orchestrator/handlers/knowledge_planes_handler.py`.
+- Fixed evidence writer to work inside SAVEPOINT-based tests in `backend/app/hoc/cus/hoc_spine/services/retrieval_evidence_engine.py`.
+- Fixed asyncpg naive/aware timestamp mismatch in `backend/app/db.py` and `backend/app/hoc/int/agent/drivers/db.py`.
+- Updated governance E2E to use `env://DEV_DATABASE_URL` via `backend/tests/conftest.py`.
+- Reality check: `tests/governance/t0` = `609 passed, 18 xfailed, 1 xpassed`; `tests/governance/t4` = `243 passed`.
+
+### How to run on dev/staging DB
+
+```bash
+cd backend
+PYTHONPATH=. DATABASE_URL='postgresql://…' python3 scripts/ops/bootstrap_knowledge_governance_tables.py
+PYTHONPATH=. DATABASE_URL='postgresql://…' pytest tests/governance/t0 -q
+PYTHONPATH=. DATABASE_URL='postgresql://…' pytest tests/governance/t4 -q
+```

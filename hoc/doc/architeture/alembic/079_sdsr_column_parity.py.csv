@@ -1,0 +1,13 @@
+kind,name,value
+meta,file,079_sdsr_column_parity.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/079_sdsr_column_parity.py
+meta,revision,079_sdsr_column_parity
+meta,down_revision,078_aos_traces_sdsr_columns
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,add_column,5
+op_call,create_index,3
+op_call,drop_column,5
+op_call,drop_index,3

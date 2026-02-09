@@ -1,0 +1,10 @@
+kind,name,value
+meta,file,020_m10_concurrent_indexes.py
+meta,path,/root/agenticverz2.0/backend/alembic/versions/020_m10_concurrent_indexes.py
+meta,revision,020_m10_concurrent_indexes
+meta,down_revision,019_m10_recovery_enhancements
+meta,branch_labels,
+meta,depends_on,
+meta,has_upgrade,True
+meta,has_downgrade,True
+op_call,get_bind,2
