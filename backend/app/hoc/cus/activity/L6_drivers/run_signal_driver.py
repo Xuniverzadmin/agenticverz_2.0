@@ -53,17 +53,24 @@ logger = logging.getLogger("nova.hoc.activity.run_signal_service")
 # Risk Level Mapping
 # =============================================================================
 
-# Map signal types to risk levels
-# Higher number = higher risk
+# Map signal types to risk levels (string classification)
 SIGNAL_TO_RISK_LEVEL = {
-    "EXECUTION_TIME_EXCEEDED": 2,
-    "TOKEN_LIMIT_EXCEEDED": 2,
-    "COST_LIMIT_EXCEEDED": 2,
-    "RUN_FAILED": 3,
+    "EXECUTION_TIME_EXCEEDED": "AT_RISK",
+    "TOKEN_LIMIT_EXCEEDED": "AT_RISK",
+    "COST_LIMIT_EXCEEDED": "AT_RISK",
+    "RUN_FAILED": "VIOLATED",
+}
+
+# Ordered risk severity (higher index = higher risk)
+RISK_LEVEL_PRIORITY = {
+    "NORMAL": 0,
+    "NEAR_THRESHOLD": 1,
+    "AT_RISK": 2,
+    "VIOLATED": 3,
 }
 
 # Default risk level when no signals
-DEFAULT_RISK_LEVEL = 0
+DEFAULT_RISK_LEVEL = "NORMAL"
 
 
 class RunSignalDriver:
@@ -118,8 +125,9 @@ class RunSignalDriver:
         max_risk = DEFAULT_RISK_LEVEL
         for signal in signals:
             signal_name = signal.value if hasattr(signal, "value") else str(signal)
-            risk = SIGNAL_TO_RISK_LEVEL.get(signal_name, 1)
-            max_risk = max(max_risk, risk)
+            risk = SIGNAL_TO_RISK_LEVEL.get(signal_name, "NEAR_THRESHOLD")
+            if RISK_LEVEL_PRIORITY.get(risk, 0) > RISK_LEVEL_PRIORITY.get(max_risk, 0):
+                max_risk = risk
 
         # Update runs table
         try:
@@ -153,7 +161,7 @@ class RunSignalDriver:
             # Re-raise to let caller handle
             raise
 
-    def get_risk_level(self, run_id: str) -> int:
+    def get_risk_level(self, run_id: str) -> str:
         """
         Get current risk level for a run.
 

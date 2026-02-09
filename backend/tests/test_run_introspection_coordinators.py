@@ -52,19 +52,19 @@ class TestRunEvidenceCoordinator:
         ) as mock_policies, patch(
             "app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.controls_bridge.get_controls_bridge"
         ) as mock_controls:
-            # Setup mock incident reader
-            incident_reader = MagicMock()
-            incident_reader.list_incidents.return_value = ([], 0)
+            # Setup mock incident reader (async — returns list of dicts)
+            incident_reader = AsyncMock()
+            incident_reader.fetch_incidents_by_run_id.return_value = []
             mock_incidents.return_value.incidents_for_run_capability.return_value = incident_reader
 
-            # Setup mock policy reader
+            # Setup mock policy reader (returns prevention_records dicts)
             policy_reader = AsyncMock()
             policy_reader.fetch_policy_evaluations_for_run.return_value = [
                 {
-                    "rule_id": "rule-1",
+                    "policy_id": "rule-1",
                     "rule_name": "Test Rule",
-                    "action_taken": "WARNED",
-                    "triggered_at": datetime.now(timezone.utc),
+                    "outcome": "WARNED",
+                    "created_at": datetime.now(timezone.utc),
                 }
             ]
             mock_policies.return_value.policy_evaluations_capability.return_value = policy_reader
@@ -109,8 +109,8 @@ class TestRunEvidenceCoordinator:
             "app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.controls_bridge.get_controls_bridge"
         ) as mock_controls:
             # All bridges return empty
-            incident_reader = MagicMock()
-            incident_reader.list_incidents.return_value = ([], 0)
+            incident_reader = AsyncMock()
+            incident_reader.fetch_incidents_by_run_id.return_value = []
             mock_incidents.return_value.incidents_for_run_capability.return_value = incident_reader
 
             policy_reader = AsyncMock()

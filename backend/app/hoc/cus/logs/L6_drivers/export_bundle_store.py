@@ -153,7 +153,7 @@ class ExportBundleStore:
     def get_run_by_run_id(self, run_id: str) -> Optional[RunSnapshot]:
         """Get run by run_id."""
         with Session(engine) as session:
-            stmt = select(Run).where(Run.run_id == run_id)
+            stmt = select(Run).where(Run.id == run_id)
             result = session.exec(stmt)
             run = result.first()
 
@@ -161,7 +161,7 @@ class ExportBundleStore:
                 return None
 
             return RunSnapshot(
-                run_id=run.run_id,
+                run_id=run.id,
                 tenant_id=run.tenant_id,
                 agent_id=run.agent_id,
                 goal=run.goal,

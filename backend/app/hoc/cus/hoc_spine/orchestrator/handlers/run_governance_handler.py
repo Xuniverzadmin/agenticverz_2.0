@@ -145,6 +145,19 @@ class RunGovernanceHandler:
         )
 
         if result:
+            try:
+                from app.hoc.cus.activity.L6_drivers.run_metrics_driver import (
+                    RunMetricsDriverAsync,
+                )
+
+                metrics = RunMetricsDriverAsync(session)
+                await metrics.mark_policy_violation(run_id, True)
+            except Exception as e:
+                logger.warning(
+                    "run_governance_policy_violation_update_failed",
+                    extra={"run_id": run_id, "error": str(e)},
+                )
+
             logger.info(
                 "run_governance_violation_reported",
                 extra={

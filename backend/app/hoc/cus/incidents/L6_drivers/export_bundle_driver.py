@@ -112,7 +112,7 @@ class ExportBundleDriver:
             # Load related run
             run = None
             if incident.source_run_id:
-                stmt = select(Run).where(Run.run_id == incident.source_run_id)
+                stmt = select(Run).where(Run.id == incident.source_run_id)
                 result = session.exec(stmt)
                 run = result.first()
 
@@ -121,7 +121,7 @@ class ExportBundleDriver:
             steps: list[TraceStepEvidence] = []
             if run:
                 trace_summary = await self.trace_store.get_trace_summary(
-                    run_id=run.run_id,
+                    run_id=run.id,
                     tenant_id=incident.tenant_id,
                 )
 
@@ -165,7 +165,7 @@ class ExportBundleDriver:
 
             # Build bundle
             bundle = EvidenceBundle(
-                run_id=run.run_id if run else "N/A",
+                run_id=run.id if run else "N/A",
                 incident_id=incident_id,
                 trace_id=trace_summary.trace_id if trace_summary else "N/A",
                 tenant_id=incident.tenant_id,
@@ -297,7 +297,7 @@ class ExportBundleDriver:
             # Load related run
             run = None
             if incident.source_run_id:
-                stmt = select(Run).where(Run.run_id == incident.source_run_id)
+                stmt = select(Run).where(Run.id == incident.source_run_id)
                 result = session.exec(stmt)
                 run = result.first()
 
@@ -322,7 +322,7 @@ class ExportBundleDriver:
                 incident_summary=incident_summary,
                 business_impact=business_impact,
                 risk_level=risk_level,
-                run_id=run.run_id if run else "N/A",
+                run_id=run.id if run else "N/A",
                 incident_id=incident_id,
                 tenant_id=incident.tenant_id,
                 policy_violated=getattr(incident, "policy_name", "Policy Violation"),

@@ -306,6 +306,7 @@ class Incident(SQLModel, table=True):
     # PIN-412: Canonical lifecycle and linkage fields
     # These are the authoritative fields for UI projection
     lifecycle_state: str = Field(default="ACTIVE", max_length=16)  # ACTIVE, ACKED, RESOLVED
+    # TOMBSTONE (2026-02-09): llm_run_id deprecated; remove after 2026-06-30.
     llm_run_id: Optional[str] = Field(default=None, foreign_key="runs.id", index=True)
     cause_type: str = Field(default="HUMAN", max_length=16)  # LLM_RUN, SYSTEM, HUMAN
 

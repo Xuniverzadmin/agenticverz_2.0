@@ -123,22 +123,16 @@ class RunEvidenceCoordinator:
         """Get incidents caused by this run via IncidentsBridge."""
         try:
             reader = bridge.incidents_for_run_capability(session)
-            incidents, _ = reader.list_incidents(
-                tenant_id=tenant_id,
-                limit=100,
-            )
+            incidents = await reader.fetch_incidents_by_run_id(run_id, tenant_id=tenant_id)
 
-            # Filter to incidents related to this run
-            # (incidents have run_id in their context)
             return [
                 IncidentSummary(
-                    incident_id=str(inc.id),
-                    severity=inc.severity if hasattr(inc, "severity") else "UNKNOWN",
-                    title=inc.title if hasattr(inc, "title") else "Untitled",
-                    created_at=inc.created_at if hasattr(inc, "created_at") else datetime.now(timezone.utc),
+                    incident_id=str(inc.get("id")),
+                    severity=inc.get("severity") or "UNKNOWN",
+                    title=inc.get("title") or "Untitled",
+                    created_at=inc.get("created_at") or datetime.now(timezone.utc),
                 )
                 for inc in incidents
-                if hasattr(inc, "run_id") and inc.run_id == run_id
             ]
         except Exception as e:
             logger.warning(f"Failed to get incidents for run {run_id}: {e}")
@@ -161,10 +155,10 @@ class RunEvidenceCoordinator:
 
             return [
                 PolicyEvaluationSummary(
-                    policy_id=ev["rule_id"],
+                    policy_id=ev.get("policy_id") or "UNKNOWN",
                     policy_name=ev.get("rule_name", "Unknown"),
-                    outcome=ev.get("action_taken", "UNKNOWN"),
-                    evaluated_at=ev.get("triggered_at", datetime.now(timezone.utc)),
+                    outcome=ev.get("outcome", "UNKNOWN"),
+                    evaluated_at=ev.get("created_at", datetime.now(timezone.utc)),
                 )
                 for ev in evaluations
             ]
@@ -210,11 +204,11 @@ class RunEvidenceCoordinator:
             DecisionSummary(
                 decision_id=f"dec-{ev.policy_id[:8]}",
                 decision_type="POLICY_EVALUATION",
-                outcome=ev.outcome,
+                outcome=(ev.outcome or "UNKNOWN").upper(),
                 decided_at=ev.evaluated_at,
             )
             for ev in evaluations
-            if ev.outcome in ("BLOCKED", "WARNED")
+            if (ev.outcome or "").upper() in ("BLOCKED", "WARNED", "STOPPED", "KILLED", "PREVENTED")
         ]
 
 

@@ -827,10 +827,24 @@ backend/app/runtime_projections/
 
 ---
 
+## Post-Freeze Discovery (PIN-545, 2026-02-09)
+
+Migration 087 introduced `llm_run_id` as the canonical FK to `runs.id`, but L5 incident engines
+were **never updated** to write it. All writes and reads still use `source_run_id` (legacy field).
+Post-087 incidents have `llm_run_id = NULL`.
+
+**Resolution:** FK added on `source_run_id` via migration 123 (NOT VALID). Model updated.
+Long-term plan: rewire engines to write `llm_run_id` (Option A — deferred).
+
+See [PIN-545](PIN-545-guardrail-violations-data-001-limits-001-analysis.md) for full analysis.
+
+---
+
 ## References
 
 - PIN-411: Activity Domain (CLOSED)
 - PIN-370: SDSR System Contract
 - PIN-352: L2.1 UI Projection Pipeline
+- PIN-545: Guardrail Violations DATA-001 & LIMITS-001 Analysis (post-freeze discovery)
 - `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`
 - `docs/contracts/UX_INVARIANTS_CHECKLIST.md` — Cross-domain UX consistency (FROZEN)

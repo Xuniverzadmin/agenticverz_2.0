@@ -292,6 +292,7 @@ class IncidentEngine:
             pattern_id=error_code or "UNKNOWN",
             original_incident_id=source_incident_id or policy_id,
             blocked_incident_id=run_id,
+            run_id=run_id,
             tenant_id=tenant_id,
             now=now,
             is_synthetic=is_synthetic,

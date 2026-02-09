@@ -1,7 +1,7 @@
 # Incidents Domain — Canonical Software Literature
 
 **Domain:** incidents
-**Physical Files:** 30 (17 L5_engines + 11 L6_drivers + 2 adapters)
+**Physical Files:** 30 (14 L5_engines + 14 L6_drivers + 2 adapters)
 **Traced Scripts:** 27 (in call graph)
 **Total LOC:** ~8,200
 **Consolidation Date:** 2026-01-31
@@ -15,6 +15,8 @@
 - L2 purity preserved: incidents L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5).
 - L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain incidents --json --advisory` reports 0 blocking, 0 advisory.
 - Execution boundary (pairing): `PYTHONPATH=. python3 backend/scripts/ops/l5_spine_pairing_gap_detector.py --json` reports `total_l5_engines: 69`, `wired_via_l4: 69`, `direct_l2_to_l5: 0`, `orphaned: 0` (incidents entry modules are no longer orphaned).
+- Run-scoped incident reads are now served via `IncidentRunReadDriver` (async), matching the canonical `source_run_id` linkage.
+- Incident audit ledger entries now embed `run_id` in `after_state` for run-governance log scoping.
 
 **Strict T0 invariant:** incidents `L6_drivers/` contain no `hoc_spine` imports; any cross-domain coordination is wired at L4.
 
@@ -47,41 +49,41 @@
                     └────────────┬─────────────┘
                                  │
           ┌──────────────────────▼──────────────────────┐
-          │            L5 ENGINES (17 files)             │
+          │            L5 ENGINES (14 files)             │
           │                                              │
           │  FACADE         │ incidents_facade           │
-          │  ORCHESTRATION  │ incident_driver            │
           │  DECISION       │ incident_engine            │
-          │                 │ incident_severity_engine    │
-          │  POLICY         │ prevention_engine           │
-          │                 │ policy_violation_engine     │
+          │  POLICY         │ policy_violation_engine     │
           │  RECOVERY       │ recovery_rule_engine        │
           │  DETECTION      │ hallucination_detector      │
-          │                 │ llm_failure_engine           │
           │                 │ semantic_failures            │
-          │  ANALYSIS       │ postmortem_engine            │
-          │                 │ incident_pattern_engine      │
-          │                 │ recurrence_analysis_engine   │
-          │  BRIDGE         │ anomaly_bridge               │
-          │  READ/WRITE     │ incident_read_engine         │
-          │                 │ incident_write_engine         │
-          │  SUPPORT        │ incidents_types               │
+          │  ANALYSIS       │ postmortem                  │
+          │                 │ incident_pattern            │
+          │                 │ recurrence_analysis         │
+          │  BRIDGE         │ anomaly_bridge              │
+          │  READ/WRITE     │ incident_read_engine        │
+          │                 │ incident_write_engine        │
+          │                 │ export_engine               │
+          │  SUPPORT        │ incidents_types             │
           └──────────────────────┬──────────────────────┘
                                  │
           ┌──────────────────────▼──────────────────────┐
-          │            L6 DRIVERS (11 files)             │
+          │            L6 DRIVERS (14 files)             │
           │                                              │
-          │  incident_read_driver        (READ)          │
-          │  incident_write_driver       (WRITE)         │
-          │  incidents_facade_driver     (READ)          │
-          │  incident_aggregator         (READ+WRITE)    │
-          │  incident_pattern_driver     (READ)          │
-          │  postmortem_driver           (READ)          │
-          │  recurrence_analysis_driver  (READ)          │
-          │  export_bundle_driver        (READ)          │
-          │  lessons_driver              (READ+WRITE)    │
-          │  llm_failure_driver          (READ+WRITE)    │
-          │  policy_violation_driver     (READ+WRITE)    │
+          │  cost_guard_driver          (READ)           │
+          │  export_bundle_driver       (READ)           │
+          │  incident_aggregator        (READ+WRITE)     │
+          │  incident_driver            (INTERNAL)       │
+          │  incident_pattern_driver    (READ)           │
+          │  incident_read_driver       (READ)           │
+          │  incident_run_read_driver   (READ)           │
+          │  incident_write_driver      (WRITE)          │
+          │  incidents_facade_driver    (READ)           │
+          │  lessons_driver             (READ+WRITE)     │
+          │  llm_failure_driver         (READ+WRITE)     │
+          │  policy_violation_driver    (READ+WRITE)     │
+          │  postmortem_driver          (READ)           │
+          │  recurrence_analysis_driver (READ)           │
           └──────────────────────┬──────────────────────┘
                                  │
           ┌──────────────────────▼──────────────────────┐
@@ -95,43 +97,43 @@
 
 ## 2. Script Inventory (30 files)
 
-### L5 Engines (17 files)
+### L5 Engines (14 files)
 
 | # | File | Class | Role | LOC | Decisions | Methods | DB Access |
 |---|------|-------|------|-----|-----------|---------|-----------|
 | 1 | `anomaly_bridge.py` | AnomalyIncidentBridge | PATTERN_ANALYSIS | ~280 | 3 | ingest, _meets_severity_threshold, _is_suppressed, _check_existing_incident | Delegates to incident_write_driver (PIN-508 Phase 1B) |
-| 2 | `hallucination_detector.py` | HallucinationDetector | DETECTION | ~468 | 6 | detect, _detect_suspicious_urls, _detect_suspicious_citations, _detect_contradictions, _detect_temporal_issues, _hash_content | None (pure logic) |
-| 3 | `incident_driver.py` | IncidentDriver | ORCHESTRATION | ~280 | 1 | create_incident_for_run, check_and_create_incident, get_incidents_for_run, _emit_ack | Delegates to incident_engine |
+| 2 | `export_engine.py` | ExportEngine | EXPORT | ~225 | — | export_evidence, export_soc2, export_executive_debrief, export_with_integrity | Delegates to export_bundle_driver |
+| 3 | `hallucination_detector.py` | HallucinationDetector | DETECTION | ~468 | 6 | detect, _detect_suspicious_urls, _detect_suspicious_citations, _detect_contradictions, _detect_temporal_issues, _hash_content | None (pure logic) |
 | 4 | `incident_engine.py` | IncidentEngine | DECISION_ENGINE | ~906 | 6 | create_incident_for_run, create_incident_for_failed_run, check_and_create_incident, create_incident_for_all_runs, _check_policy_suppression, _write_prevention_record, _maybe_create_policy_proposal, _generate_title, _extract_error_code, get_incidents_for_run | Delegates to incident_write_driver |
-| 5 | `incident_pattern_engine.py` | IncidentPatternService | PATTERN_ANALYSIS | ~280 | 0 | detect_patterns, _detect_category_clusters, _detect_severity_spikes, _detect_cascade_failures | Delegates to incident_pattern_driver |
+| 5 | `incident_pattern.py` | IncidentPatternService | PATTERN_ANALYSIS | ~280 | 0 | detect_patterns, _detect_category_clusters, _detect_severity_spikes, _detect_cascade_failures | Delegates to incident_pattern_driver |
 | 6 | `incident_read_engine.py` | IncidentReadService | READ_SERVICE | ~154 | 0 | list_incidents, get_incident, get_incident_events, count_incidents_since, get_last_incident | Delegates to incident_read_driver |
-| 7 | `incident_severity_engine.py` | — (TOMBSTONE) | DELETED | — | — | — | DELETED per PIN-508 Phase 4B (logic moved to L5_schemas/severity_policy.py, zero dependents) |
-| 8 | `incident_write_engine.py` | IncidentWriteService | WRITE_SERVICE | ~304 | 2 | acknowledge_incident, resolve_incident, manual_close_incident | Delegates to incident_write_driver + audit_ledger |
-| 9 | `incidents_facade.py` | IncidentsFacade | FACADE | ~984 | 6 | list_active_incidents, list_resolved_incidents, list_historical_incidents, get_incident_detail, get_incidents_for_run, get_metrics, analyze_cost_impact, detect_patterns, analyze_recurrence, get_incident_learnings, _snapshot_to_summary | Delegates to incidents_facade_driver + sub-engines |
-| 10 | `incidents_types.py` | — (type aliases) | SUPPORT | ~45 | 0 | — | None |
-| 11 | `llm_failure_engine.py` | LLMFailureService | DETECTION | ~349 | 1 | persist_failure_and_mark_run, _persist_failure, _capture_evidence, _mark_run_failed, _verify_no_contamination, get_failure_by_run_id | Delegates to llm_failure_driver |
-| 12 | `policy_violation_engine.py` | PolicyViolationService | POLICY | ~714 | 5 | persist_violation_fact, check_violation_persisted, check_policy_enabled, persist_evidence, check_incident_exists, create_incident_from_violation, persist_violation_and_create_incident, verify_violation_truth | Delegates to policy_violation_driver |
-| 13 | `postmortem_engine.py` | PostMortemService | ANALYSIS | ~445 | 1 | get_incident_learnings, get_category_learnings, _get_resolution_summary, _find_similar_incidents, _extract_insights, _generate_category_insights | Delegates to postmortem_driver |
-| 14 | `prevention_engine.py` | PreventionEngine + 5 validators | POLICY | ~891 | 6 | evaluate, _generate_safe_response, _emit_metrics; Validators: ContentAccuracyValidatorV2, PIIValidator, SafetyValidator, HallucinationValidator, BudgetValidator | Delegates to policy_violation_engine |
-| 15 | `recovery_rule_engine.py` | RecoveryRuleEngine + 5 rule types | RECOVERY | ~803 | 4 | evaluate, add_rule, remove_rule; Rules: ErrorCodeRule, HistoricalPatternRule, SkillSpecificRule, OccurrenceThresholdRule, CompositeRule | None (pure logic) |
-| 16 | `recurrence_analysis_engine.py` | RecurrenceAnalysisService | PATTERN_ANALYSIS | ~190 | 0 | analyze_recurrence, get_recurrence_for_category, _snapshot_to_group | Delegates to recurrence_analysis_driver |
-| 17 | `semantic_failures.py` | — (functions + constants) | SUPPORT | ~299 | 0 | get_failure_info, get_fix_owner, get_fix_action, get_violation_class, format_violation_message | None (pure data) |
+| 7 | `incident_write_engine.py` | IncidentWriteService | WRITE_SERVICE | ~304 | 2 | acknowledge_incident, resolve_incident, manual_close_incident | Delegates to incident_write_driver + audit_ledger |
+| 8 | `incidents_facade.py` | IncidentsFacade | FACADE | ~984 | 6 | list_active_incidents, list_resolved_incidents, list_historical_incidents, get_incident_detail, get_incidents_for_run, get_metrics, analyze_cost_impact, detect_patterns, analyze_recurrence, get_incident_learnings, _snapshot_to_summary | Delegates to incidents_facade_driver + sub-engines |
+| 9 | `incidents_types.py` | — (type aliases) | SUPPORT | ~45 | 0 | — | None |
+| 10 | `policy_violation_engine.py` | PolicyViolationService | POLICY | ~714 | 5 | persist_violation_fact, check_violation_persisted, check_policy_enabled, persist_evidence, check_incident_exists, create_incident_from_violation, persist_violation_and_create_incident, verify_violation_truth | Delegates to policy_violation_driver |
+| 11 | `postmortem.py` | PostMortemService | ANALYSIS | ~445 | 1 | get_incident_learnings, get_category_learnings, _get_resolution_summary, _find_similar_incidents, _extract_insights, _generate_category_insights | Delegates to postmortem_driver |
+| 12 | `recovery_rule_engine.py` | RecoveryRuleEngine + 5 rule types | RECOVERY | ~803 | 4 | evaluate, add_rule, remove_rule; Rules: ErrorCodeRule, HistoricalPatternRule, SkillSpecificRule, OccurrenceThresholdRule, CompositeRule | None (pure logic) |
+| 13 | `recurrence_analysis.py` | RecurrenceAnalysisService | PATTERN_ANALYSIS | ~190 | 0 | analyze_recurrence, get_recurrence_for_category, _snapshot_to_group | Delegates to recurrence_analysis_driver |
+| 14 | `semantic_failures.py` | — (functions + constants) | SUPPORT | ~299 | 0 | get_failure_info, get_fix_owner, get_fix_action, get_violation_class, format_violation_message | None (pure data) |
 
-### L6 Drivers (11 files)
+### L6 Drivers (14 files)
 
 | # | File | Class | Tables | LOC | Methods |
 |---|------|-------|--------|-----|---------|
-| 18 | `incident_read_driver.py` | IncidentReadDriver | Incident, IncidentEvent (READ) | ~180 | list_incidents, get_incident, get_incident_events, count_incidents_since, get_last_incident |
-| 19 | `incident_write_driver.py` | IncidentWriteDriver | Incident, IncidentEvent, runs*, aos_traces*, prevention_records*, policy_proposals*, policy_rules* (READ+WRITE) | ~480 | insert_incident, insert_incident_from_anomaly, update_incident_acknowledged, update_incident_resolved, create_incident_event, refresh_incident, update_run_incident_count, update_trace_incident_id, insert_prevention_record, insert_policy_proposal, fetch_suppressing_policy, fetch_incidents_by_run_id |
-| 20 | `incidents_facade_driver.py` | IncidentsFacadeDriver | Incident (READ) | ~400 | fetch_active_incidents, fetch_resolved_incidents, fetch_historical_incidents, fetch_incident_by_id, fetch_incidents_by_run, fetch_metrics_aggregates, fetch_cost_impact_data, _to_snapshot |
-| 21 | `incident_aggregator.py` | IncidentAggregator | Incident, IncidentEvent (READ+WRITE) | ~380 | get_or_create_incident, resolve_stale_incidents, get_incident_stats, _find_open_incident, _can_create_incident, _get_rate_limit_incident, _create_incident, _add_call_to_incident, _add_incident_event |
-| 22 | `incident_pattern_driver.py` | IncidentPatternDriver | incidents (READ) | ~200 | fetch_incidents_count, fetch_category_clusters, fetch_severity_spikes, fetch_cascade_failures |
-| 23 | `postmortem_driver.py` | PostMortemDriver | incidents, incident_evidence (READ) | ~250 | fetch_category_stats, fetch_resolution_methods, fetch_recurrence_data, fetch_resolution_summary, fetch_similar_incidents |
-| 24 | `recurrence_analysis_driver.py` | RecurrenceAnalysisDriver | incidents (READ) | ~150 | fetch_recurrence_groups, fetch_recurrence_for_category |
-| 25 | `export_bundle_driver.py` | ExportBundleDriver | Incident, Run*, AosTrace* (READ) | ~430 | create_evidence_bundle, create_soc2_bundle, create_executive_debrief, _compute_bundle_hash, _generate_attestation, _assess_risk_level, _generate_incident_summary, _assess_business_impact, _generate_recommendations |
-| 26 | `lessons_driver.py` | LessonsDriver | lessons_learned*, policy_proposals* (READ+WRITE) | ~350 | insert_lesson, fetch_lesson_by_id, fetch_lessons_list, fetch_lesson_stats, update_lesson_deferred, update_lesson_dismissed, update_lesson_converted, update_lesson_reactivated, fetch_debounce_count, fetch_expired_deferred, insert_policy_proposal_from_lesson |
-| 27 | `llm_failure_driver.py` | LLMFailureDriver | run_failures, failure_evidence, worker_runs*, cost_records*, cost_anomalies* (READ+WRITE) | ~250 | insert_failure, insert_evidence, update_run_failed, fetch_failure_by_run_id, fetch_contamination_check |
-| 28 | `policy_violation_driver.py` | PolicyViolationDriver | prevention_records*, policy_rules*, incidents, incident_events (READ+WRITE) | ~300 | insert_violation_record, fetch_violation_exists, fetch_policy_enabled, insert_evidence_event, fetch_incident_by_violation, fetch_violation_truth_check, insert_policy_evaluation; sync: insert_policy_evaluation_sync |
+| 15 | `cost_guard_driver.py` | CostGuardDriver | cost_records, cost_budgets, cost_snapshot_baselines, cost_snapshots, cost_anomalies (READ) | ~485 | get_spend_totals, get_budget_limits, list_cost_anomalies, list_cost_snapshots, list_feature_breakdown |
+| 16 | `export_bundle_driver.py` | ExportBundleDriver | Incident, Run*, AosTrace* (READ) | ~430 | create_evidence_bundle, create_soc2_bundle, create_executive_debrief, _compute_bundle_hash, _generate_attestation, _assess_risk_level, _generate_incident_summary, _assess_business_impact, _generate_recommendations |
+| 17 | `incident_aggregator.py` | IncidentAggregator | Incident, IncidentEvent (READ+WRITE) | ~380 | get_or_create_incident, resolve_stale_incidents, get_incident_stats, _find_open_incident, _can_create_incident, _get_rate_limit_incident, _create_incident, _add_call_to_incident, _add_incident_event |
+| 18 | `incident_driver.py` | IncidentDriver | Incident (via decision port) (READ+WRITE) | ~250 | check_and_create_incident, create_incident_for_run, get_incidents_for_run |
+| 19 | `incident_pattern_driver.py` | IncidentPatternDriver | incidents (READ) | ~200 | fetch_incidents_count, fetch_category_clusters, fetch_severity_spikes, fetch_cascade_failures |
+| 20 | `incident_read_driver.py` | IncidentReadDriver | Incident, IncidentEvent (READ) | ~180 | list_incidents, get_incident, get_incident_events, count_incidents_since, get_last_incident |
+| 21 | `incident_run_read_driver.py` | IncidentRunReadDriver | incidents (READ) | ~64 | fetch_incidents_by_run_id |
+| 22 | `incident_write_driver.py` | IncidentWriteDriver | Incident, IncidentEvent, runs*, aos_traces*, prevention_records*, policy_proposals*, policy_rules* (READ+WRITE) | ~480 | insert_incident, insert_incident_from_anomaly, update_incident_acknowledged, update_incident_resolved, create_incident_event, refresh_incident, update_run_incident_count, update_trace_incident_id, insert_prevention_record, insert_policy_proposal, fetch_suppressing_policy, fetch_incidents_by_run_id |
+| 23 | `incidents_facade_driver.py` | IncidentsFacadeDriver | Incident (READ) | ~400 | fetch_active_incidents, fetch_resolved_incidents, fetch_historical_incidents, fetch_incident_by_id, fetch_incidents_by_run, fetch_metrics_aggregates, fetch_cost_impact_data, _to_snapshot |
+| 24 | `lessons_driver.py` | LessonsDriver | lessons_learned*, policy_proposals* (READ+WRITE) | ~350 | insert_lesson, fetch_lesson_by_id, fetch_lessons_list, fetch_lesson_stats, update_lesson_deferred, update_lesson_dismissed, update_lesson_converted, update_lesson_reactivated, fetch_debounce_count, fetch_expired_deferred, insert_policy_proposal_from_lesson |
+| 25 | `llm_failure_driver.py` | LLMFailureDriver | run_failures, failure_evidence, worker_runs*, cost_records*, cost_anomalies* (READ+WRITE) | ~250 | insert_failure, insert_evidence, update_run_failed, fetch_failure_by_run_id, fetch_contamination_check |
+| 26 | `policy_violation_driver.py` | PolicyViolationDriver | prevention_records*, policy_rules*, incidents, incident_events (READ+WRITE) | ~300 | insert_violation_record, fetch_violation_exists, fetch_policy_enabled, insert_evidence_event, fetch_incident_by_violation, fetch_violation_truth_check, insert_policy_evaluation; sync: insert_policy_evaluation_sync |
+| 27 | `postmortem_driver.py` | PostMortemDriver | incidents, incident_evidence (READ) | ~250 | fetch_category_stats, fetch_resolution_methods, fetch_recurrence_data, fetch_resolution_summary, fetch_similar_incidents |
+| 28 | `recurrence_analysis_driver.py` | RecurrenceAnalysisDriver | incidents (READ) | ~150 | fetch_recurrence_groups, fetch_recurrence_for_category |
 
 _Tables marked with * are owned by other domains (see Section 8)._
 
@@ -151,33 +153,33 @@ Each script's identity-defining function — the one that makes this script uniq
 | # | Script | Canonical Function | Status |
 |---|--------|--------------------|--------|
 | 1 | anomaly_bridge | `AnomalyIncidentBridge.ingest` | CANONICAL |
-| 2 | hallucination_detector | `HallucinationDetector.detect` | CANONICAL |
-| 3 | incident_driver | `IncidentDriver.create_incident_for_run` | CANONICAL (facade) |
+| 2 | export_engine | `ExportEngine.export_evidence` | CANONICAL |
+| 3 | hallucination_detector | `HallucinationDetector.detect` | CANONICAL |
 | 4 | incident_engine | `IncidentEngine.create_incident_for_run` | CANONICAL (authority) |
-| 5 | incident_pattern_engine | `IncidentPatternService.detect_patterns` | CANONICAL |
+| 5 | incident_pattern | `IncidentPatternService.detect_patterns` | CANONICAL |
 | 6 | incident_read_engine | `IncidentReadService.list_incidents` | INTERFACE |
-| 7 | incident_severity_engine | — (DELETED) | TOMBSTONE (PIN-508 Phase 4B) |
-| 8 | incident_write_engine | `IncidentWriteService.resolve_incident` | CANONICAL |
-| 9 | incidents_facade | `IncidentsFacade.list_active_incidents` | CANONICAL |
-| 10 | incidents_types | — (type aliases) | SUPPORT |
-| 11 | llm_failure_engine | `LLMFailureService.persist_failure_and_mark_run` | CANONICAL |
-| 12 | policy_violation_engine | `PolicyViolationService.persist_violation_and_create_incident` | CANONICAL |
-| 13 | postmortem_engine | `PostMortemService.get_category_learnings` | CANONICAL |
-| 14 | prevention_engine | `PreventionEngine.evaluate` | CANONICAL |
-| 15 | recovery_rule_engine | `RecoveryRuleEngine.evaluate` | CANONICAL |
-| 16 | recurrence_analysis_engine | `RecurrenceAnalysisService.analyze_recurrence` | CANONICAL |
-| 17 | semantic_failures | `get_failure_info` | SUPPORT |
-| 18 | incident_read_driver | `IncidentReadDriver.list_incidents` | CANONICAL |
-| 19 | incident_write_driver | `IncidentWriteDriver.insert_incident` | CANONICAL; `insert_incident_from_anomaly` added (PIN-508 Phase 1B) |
-| 20 | incidents_facade_driver | `IncidentsFacadeDriver.fetch_active_incidents` | CANONICAL |
-| 21 | incident_aggregator | `IncidentAggregator.get_or_create_incident` | CANONICAL |
-| 22 | incident_pattern_driver | `IncidentPatternDriver.fetch_cascade_failures` | CANONICAL |
-| 23 | postmortem_driver | `PostMortemDriver.fetch_category_stats` | CANONICAL |
-| 24 | recurrence_analysis_driver | `RecurrenceAnalysisDriver.fetch_recurrence_groups` | CANONICAL |
-| 25 | export_bundle_driver | `ExportBundleDriver.create_evidence_bundle` | CANONICAL |
-| 26 | lessons_driver | `LessonsDriver.insert_lesson` | CANONICAL |
-| 27 | llm_failure_driver | `LLMFailureDriver.insert_failure` | CANONICAL |
-| 28 | policy_violation_driver | `PolicyViolationDriver.insert_violation_record` | CANONICAL |
+| 7 | incident_write_engine | `IncidentWriteService.resolve_incident` | CANONICAL |
+| 8 | incidents_facade | `IncidentsFacade.list_active_incidents` | CANONICAL |
+| 9 | incidents_types | — (type aliases) | SUPPORT |
+| 10 | policy_violation_engine | `PolicyViolationService.persist_violation_and_create_incident` | CANONICAL |
+| 11 | postmortem | `PostMortemService.get_category_learnings` | CANONICAL |
+| 12 | recovery_rule_engine | `RecoveryRuleEngine.evaluate` | CANONICAL |
+| 13 | recurrence_analysis | `RecurrenceAnalysisService.analyze_recurrence` | CANONICAL |
+| 14 | semantic_failures | `get_failure_info` | SUPPORT |
+| 15 | cost_guard_driver | `CostGuardDriver.get_spend_totals` | CANONICAL |
+| 16 | export_bundle_driver | `ExportBundleDriver.create_evidence_bundle` | CANONICAL |
+| 17 | incident_aggregator | `IncidentAggregator.get_or_create_incident` | CANONICAL |
+| 18 | incident_driver | `IncidentDriver.create_incident_for_run` | CANONICAL |
+| 19 | incident_pattern_driver | `IncidentPatternDriver.fetch_cascade_failures` | CANONICAL |
+| 20 | incident_read_driver | `IncidentReadDriver.list_incidents` | CANONICAL |
+| 21 | incident_run_read_driver | `IncidentRunReadDriver.fetch_incidents_by_run_id` | CANONICAL |
+| 22 | incident_write_driver | `IncidentWriteDriver.insert_incident` | CANONICAL; `insert_incident_from_anomaly` added (PIN-508 Phase 1B) |
+| 23 | incidents_facade_driver | `IncidentsFacadeDriver.fetch_active_incidents` | CANONICAL |
+| 24 | lessons_driver | `LessonsDriver.insert_lesson` | CANONICAL |
+| 25 | llm_failure_driver | `LLMFailureDriver.insert_failure` | CANONICAL |
+| 26 | policy_violation_driver | `PolicyViolationDriver.insert_violation_record` | CANONICAL |
+| 27 | postmortem_driver | `PostMortemDriver.fetch_category_stats` | CANONICAL |
+| 28 | recurrence_analysis_driver | `RecurrenceAnalysisDriver.fetch_recurrence_groups` | CANONICAL |
 | 29 | customer_incidents_adapter | `CustomerIncidentsAdapter.list_incidents` | CANONICAL |
 | 30 | founder_ops_adapter | `FounderOpsAdapter.to_summary_response` | CANONICAL |
 
@@ -191,8 +193,7 @@ Each script's identity-defining function — the one that makes this script uniq
 
 | Pair | Verdict | Evidence |
 |------|---------|----------|
-| `incident_driver` vs `incident_engine` | **FACADE_PATTERN** | Driver = orchestration facade (1 decision, RAC ack, delegates to engine). Engine = SDSR decision logic (6 decisions: severity, category, suppression, title, proposal). Driver.create_incident_for_run() → Engine.create_incident_for_run(). |
-| `prevention_engine` vs `recovery_rule_engine` | **FALSE_POSITIVE** | Prevention = before-incident (5 validators: content accuracy, PII, safety, hallucination, budget). Recovery = after-incident (5 rule types: error code, historical, skill-specific, threshold, composite). Zero shared algorithm code. |
+| `incident_driver` vs `incident_engine` | **FACADE_PATTERN** | Driver = internal orchestration entry point (L6, RAC ack), Engine = SDSR decision logic (L5). Driver.create_incident_for_run() → Engine.create_incident_for_run(). |
 
 ---
 
@@ -212,26 +213,11 @@ Each script's identity-defining function — the one that makes this script uniq
 
 ## 6. Architecture Violations
 
-### V1: L6 imports L5 (HIGH)
+### V1: L6 imports L5 (RESOLVED)
 
 **Location:** `L6_drivers/incident_aggregator.py`
-**Violation:** Imports `IncidentSeverityEngine` from `L5_engines/incident_severity_engine.py`
-**Topology Rule:** L6 drivers MUST NOT import L5 engines. Flow is L5→L6, never L6→L5.
-
-```
-CURRENT (WRONG):                    CORRECT (per HOC Topology V2.0.0):
-L5 policy_violation_engine           L5 policy_violation_engine
-    │                                    │
-    ▼                                    ├──▶ L5 incident_severity_engine
-L6 incident_aggregator                   │       (calculate severity)
-    │                                    │
-    ▼ VIOLATION                          ▼
-L5 incident_severity_engine          L6 incident_aggregator
-                                         (receives severity as parameter)
-```
-
-**Fix:** The L5 caller (policy_violation_engine or its callers) should call `IncidentSeverityEngine` first, then pass the computed severity to `incident_aggregator.get_or_create_incident()`.
-**Status:** DEFERRED — wiring exercise post-domain-completion.
+**Resolution:** Severity logic moved to `L5_schemas/severity_policy.py` (PIN-507 Law 1). L6 now imports only L5_schemas contracts, not L5_engines.
+**Status:** CLOSED — no L6→L5 engine imports in incidents domain.
 
 ### V2: Cross-domain L5→L6 (MEDIUM)
 

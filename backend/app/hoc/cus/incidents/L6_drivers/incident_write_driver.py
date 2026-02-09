@@ -323,6 +323,7 @@ class IncidentWriteDriver:
         pattern_id: str,
         original_incident_id: str,
         blocked_incident_id: str,
+        run_id: str,
         tenant_id: str,
         now: datetime,
         is_synthetic: bool = False,
@@ -349,12 +350,12 @@ class IncidentWriteDriver:
             text("""
                 INSERT INTO prevention_records (
                     id, policy_id, pattern_id, original_incident_id,
-                    blocked_incident_id, tenant_id, outcome,
+                    blocked_incident_id, run_id, tenant_id, outcome,
                     signature_match_confidence, created_at,
                     is_synthetic, synthetic_scenario_id
                 ) VALUES (
                     :id, :policy_id, :pattern_id, :original_incident_id,
-                    :blocked_incident_id, :tenant_id, :outcome,
+                    :blocked_incident_id, :run_id, :tenant_id, :outcome,
                     :signature_match_confidence, :created_at,
                     :is_synthetic, :synthetic_scenario_id
                 )
@@ -365,6 +366,7 @@ class IncidentWriteDriver:
                 "pattern_id": pattern_id,
                 "original_incident_id": original_incident_id,
                 "blocked_incident_id": blocked_incident_id,
+                "run_id": run_id,
                 "tenant_id": tenant_id,
                 "outcome": "prevented",
                 "signature_match_confidence": 1.0,

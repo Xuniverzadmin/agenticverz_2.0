@@ -120,18 +120,35 @@ These tables are **intentionally separate** per HOC domain architecture (PIN-484
 
 ---
 
-## Verdict
+## Verdict & Resolution
 
-| Violation | Real Issue? | Action |
-|-----------|------------|--------|
-| **DATA-001** | Yes | Add FK on `source_run_id` OR rewire writes to `llm_run_id` |
-| **LIMITS-001** | No (false positive) | Update guardrail rule to allow domain separation |
+| Violation | Real Issue? | Action | Status |
+|-----------|------------|--------|--------|
+| **DATA-001** | Yes | Added FK on `source_run_id` via migration 123 (NOT VALID). Model updated in `killswitch.py`. Long-term: rewire to `llm_run_id` (Option A, deferred). | **RESOLVED** |
+| **LIMITS-001** | No (false positive) | Added `cost_budgets` to `ALLOWED_LIMIT_TABLES` in `check_limit_tables.py`. Updated `GOVERNANCE_GUARDRAILS.md`. | **RESOLVED** |
+
+Both guardrails now pass. Pre-commit hook unblocked.
+
+---
+
+## Files Changed (Remediation)
+
+| File | Change |
+|------|--------|
+| `backend/alembic/versions/123_incidents_source_run_fk.py` | New migration: FK `fk_incidents_source_run_id` (NOT VALID, idempotent) |
+| `backend/app/models/killswitch.py` | `source_run_id` now has `foreign_key="runs.id"` |
+| `scripts/ci/check_limit_tables.py` | `cost_budgets` added to `ALLOWED_LIMIT_TABLES` |
+| `docs/.../GOVERNANCE_GUARDRAILS.md` | Updated with domain separation rationale |
+
+## Commit
+
+All changes committed and pushed in `ee87a605` (2026-02-09).
 
 ---
 
 ## Related
 
-- **PIN-412:** Incidents lifecycle repair (introduced `llm_run_id`)
+- **[PIN-412](PIN-412-domain-design-incidents-policies.md):** Domain Design — Incidents & Policies (V1_FROZEN). Introduced `llm_run_id` in migration 087 as canonical FK, but write paths were never updated. PIN-412 updated with post-freeze discovery section referencing this PIN.
 - **PIN-141:** Cost intelligence (FROZEN `cost_budgets`)
 - **PIN-484:** HOC Topology V2.0.0 (domain separation rationale)
 - **PIN-542:** Local DB migration issues (same commit session)

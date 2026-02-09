@@ -559,14 +559,17 @@ class LogsDomainStore:
         self,
         session: AsyncSession,
         tenant_id: str,
+        run_id: Optional[str] = None,
         limit: int = 100,
     ) -> list[AuditLedgerSnapshot]:
-        """Get governance (policy) related audit events."""
+        """Get governance-related audit events (optionally scoped to a run)."""
         stmt = (
             select(AuditLedger)
             .where(AuditLedger.tenant_id == tenant_id)
             .where(
-                AuditLedger.entity_type.in_(["POLICY_RULE", "LIMIT", "POLICY_PROPOSAL"])
+                AuditLedger.entity_type.in_(
+                    ["POLICY_RULE", "LIMIT", "POLICY_PROPOSAL", "INCIDENT"]
+                )
             )
             .order_by(AuditLedger.created_at.desc())
             .limit(limit)
@@ -574,7 +577,20 @@ class LogsDomainStore:
         result = await session.execute(stmt)
         entries = result.scalars().all()
 
-        return [self._to_audit_snapshot(e) for e in entries]
+        snapshots = [self._to_audit_snapshot(e) for e in entries]
+
+        if run_id:
+            def _matches_run(snapshot: AuditLedgerSnapshot) -> bool:
+                for key in ("run_id", "source_run_id"):
+                    if snapshot.after_state and str(snapshot.after_state.get(key)) == run_id:
+                        return True
+                    if snapshot.before_state and str(snapshot.before_state.get(key)) == run_id:
+                        return True
+                return False
+
+            snapshots = [s for s in snapshots if _matches_run(s)]
+
+        return snapshots
 
     def _to_audit_snapshot(self, entry: AuditLedger) -> AuditLedgerSnapshot:
         """Transform ORM model to immutable snapshot."""

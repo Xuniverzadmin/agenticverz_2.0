@@ -81,7 +81,6 @@ class PolicyEnforcementReadDriver:
                 PolicyEnforcement.details,
                 PolicyRule.name.label("rule_name"),
                 PolicyRule.rule_type,
-                PolicyRule.severity,
             )
             .join(PolicyRule, PolicyRule.id == PolicyEnforcement.rule_id)
             .where(
@@ -123,7 +122,6 @@ class PolicyEnforcementReadDriver:
                 PolicyEnforcement.details,
                 PolicyRule.name.label("rule_name"),
                 PolicyRule.rule_type,
-                PolicyRule.severity,
             )
             .join(PolicyRule, PolicyRule.id == PolicyEnforcement.rule_id)
             .where(

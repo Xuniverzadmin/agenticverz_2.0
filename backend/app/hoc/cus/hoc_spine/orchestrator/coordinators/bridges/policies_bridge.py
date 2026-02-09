@@ -23,10 +23,10 @@ class PoliciesBridge:
 
     def policy_evaluations_capability(self, session):
         """Return policy evaluations read capability for run queries (PIN-519)."""
-        from app.hoc.cus.policies.L6_drivers.policy_enforcement_driver import (
-            PolicyEnforcementReadDriver,
+        from app.hoc.cus.policies.L6_drivers.prevention_records_read_driver import (
+            PreventionRecordsReadDriver,
         )
-        return PolicyEnforcementReadDriver(session)
+        return PreventionRecordsReadDriver(session)
 
     def recovery_write_capability(self, session):
         """

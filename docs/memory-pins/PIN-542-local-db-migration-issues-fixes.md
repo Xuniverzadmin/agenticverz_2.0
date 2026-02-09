@@ -124,17 +124,18 @@ DB_ROLE=staging DATABASE_URL="postgresql://nova:novapass@localhost:5433/nova_aos
 | Metric | Value |
 |--------|-------|
 | DB | `nova_aos` on `localhost:5433` (direct) / `6432` (PgBouncer) |
-| Alembic Head | `122_knowledge_plane_registry` |
+| Alembic Head | `123_incidents_source_run_fk` |
 | Tables | 20 (19 ORM + alembic_version) |
 | Schema | public only (no custom schemas from skipped 023) |
 | DB_ROLE | staging |
+| Commit | `ee87a605` (pushed to origin/main 2026-02-09) |
 
 ---
 
 ## Lessons Learned
 
 1. **ORM tables predate alembic** — `init_db()` must run before any alembic operations on a fresh DB
-2. **alembic stamp is broken with SQLAlchemy 2.0** — env.py needs `connection.commit()` after stamp (or use manual SQL)
+2. **alembic stamp is broken with SQLAlchemy 2.0** — env.py needs `connectable.begin()` (fixed in PIN-544)
 3. **DEFERRED migrations must be truly inert** — migration 023 had active DDL despite being marked deferred
 4. **Duplicate CREATE TABLE across migrations** — always use `IF NOT EXISTS` for idempotency
 5. **Neon deletion = full DB rebuild** — local staging requires ORM bootstrap + alembic stamp, not migration replay

@@ -38,6 +38,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from uuid import uuid4
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.policy_control_plane import PolicyEnforcement
@@ -48,6 +49,11 @@ logger = logging.getLogger("nova.hoc.policies.policy_enforcement_write_driver")
 def _generate_enforcement_id() -> str:
     """Generate a unique enforcement ID."""
     return f"enf_{uuid4().hex[:16]}"
+
+
+def _generate_prevention_id() -> str:
+    """Generate a unique prevention record ID."""
+    return f"prev_{uuid4().hex[:16]}"
 
 
 def _utc_now() -> datetime:
@@ -115,6 +121,36 @@ class PolicyEnforcementWriteDriver:
         )
 
         self._session.add(enforcement)
+
+        # Mirror enforcement into prevention_records (canonical evaluation ledger).
+        # Outcome is stored as the enforcement action (BLOCKED/WARNED/etc.).
+        prevention_id = _generate_prevention_id()
+        fallback_id = incident_id or run_id or rule_id
+        await self._session.execute(
+            text(
+                """
+                INSERT INTO prevention_records (
+                    id, policy_id, pattern_id, original_incident_id, blocked_incident_id,
+                    run_id, tenant_id, outcome, signature_match_confidence, created_at
+                ) VALUES (
+                    :id, :policy_id, :pattern_id, :original_incident_id, :blocked_incident_id,
+                    :run_id, :tenant_id, :outcome, :signature_match_confidence, :created_at
+                )
+                """
+            ),
+            {
+                "id": prevention_id,
+                "policy_id": rule_id,
+                "pattern_id": f"enforcement:{action_taken.lower()}",
+                "original_incident_id": fallback_id,
+                "blocked_incident_id": fallback_id,
+                "run_id": run_id,
+                "tenant_id": tenant_id,
+                "outcome": action_taken.lower(),
+                "signature_match_confidence": 1.0,
+                "created_at": _utc_now(),
+            },
+        )
         await self._session.flush()  # Flush to validate, but don't commit
 
         logger.info(
@@ -172,6 +208,36 @@ class PolicyEnforcementWriteDriver:
 
             self._session.add(enforcement)
             enforcement_ids.append(enforcement_id)
+
+            prevention_id = _generate_prevention_id()
+            run_id = enf_data.get("run_id")
+            incident_id = enf_data.get("incident_id")
+            fallback_id = incident_id or run_id or enf_data["rule_id"]
+            await self._session.execute(
+                text(
+                    """
+                    INSERT INTO prevention_records (
+                        id, policy_id, pattern_id, original_incident_id, blocked_incident_id,
+                        run_id, tenant_id, outcome, signature_match_confidence, created_at
+                    ) VALUES (
+                        :id, :policy_id, :pattern_id, :original_incident_id, :blocked_incident_id,
+                        :run_id, :tenant_id, :outcome, :signature_match_confidence, :created_at
+                    )
+                    """
+                ),
+                {
+                    "id": prevention_id,
+                    "policy_id": enf_data["rule_id"],
+                    "pattern_id": f"enforcement:{enf_data['action_taken'].lower()}",
+                    "original_incident_id": fallback_id,
+                    "blocked_incident_id": fallback_id,
+                    "run_id": run_id,
+                    "tenant_id": tenant_id,
+                    "outcome": enf_data["action_taken"].lower(),
+                    "signature_match_confidence": 1.0,
+                    "created_at": _utc_now(),
+                },
+            )
 
         await self._session.flush()
 

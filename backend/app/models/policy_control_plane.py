@@ -250,6 +250,7 @@ class PolicyEnforcement(SQLModel, table=True):
     """
 
     __tablename__ = "policy_enforcements"
+    # TOMBSTONE (2026-02-09): policy_enforcements deprecated; remove after 2026-06-30.
 
     id: str = Field(primary_key=True)
     tenant_id: str = Field(foreign_key="tenants.id", index=True)

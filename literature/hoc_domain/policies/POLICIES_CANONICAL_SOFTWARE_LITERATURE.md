@@ -20,6 +20,7 @@ The **policies** domain is the largest and most complex domain in the HOC archit
 - L2 purity preserved: policies L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5).
 - L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain policies --json --advisory` reports 0 blocking, 0 advisory (transaction boundaries owned by L4).
 - Execution boundary (pairing): `PYTHONPATH=. python3 backend/scripts/ops/l5_spine_pairing_gap_detector.py --json` reports `total_l5_engines: 69`, `wired_via_l4: 69`, `direct_l2_to_l5: 0`, `orphaned: 0`.
+- Run-scoped policy evaluations are now read from `prevention_records` via `PreventionRecordsReadDriver` (canonical ledger).
 
 **New L4 Operation (GAP-174):** `policies.sandbox_execute` executes `L5_engines/sandbox_engine.py` through hoc_spine (handler: `hoc_spine/orchestrator/handlers/policies_sandbox_handler.py`).
 

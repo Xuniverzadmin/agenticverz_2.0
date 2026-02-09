@@ -13,8 +13,12 @@
 - L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain incidents --json --advisory` reports 0 blocking, 0 advisory.
 - Execution boundary (pairing): `PYTHONPATH=. python3 backend/scripts/ops/l5_spine_pairing_gap_detector.py --json` reports `total_l5_engines: 69`, `wired_via_l4: 69`, `direct_l2_to_l5: 0`, `orphaned: 0` (incidents entry modules are no longer orphaned).
 - Plan: `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`.
+- Run-scoped incident reads are served via `IncidentRunReadDriver` (async, `source_run_id`).
+- Incident audit ledger events now embed `run_id` for governance log scoping.
 
 **Strict T0 invariant:** incidents `L6_drivers/` contain no `hoc_spine` imports; any cross-domain coordination (e.g., ack emission) is wired at L4.
+
+**Legacy note:** References to `prevention_engine` and `incident_severity_engine` in historical sections below are legacy; current incidents domain uses `policy_violation_engine` + `recovery_rule_engine`, and severity logic lives in `L5_schemas/severity_policy.py`.
 
 ## Script Registry
 
@@ -23,32 +27,32 @@ Each script's unique contribution and canonical function.
 | Script | Layer | Script Role | Canonical Function | Role | Decisions | Callers | Status |
 |--------|-------|-------------|--------------------|----- |-----------|---------|--------|
 | anomaly_bridge | L5 | PATTERN_ANALYSIS | `AnomalyIncidentBridge.ingest` | CANONICAL | 3 | L5:cost_anomaly_detector, incident_aggregator, recovery_rule_engine | YES |
-| hallucination_detector | L5 | DETECTION | `HallucinationDetector.detect` | CANONICAL | 6 | ?:hallucination_hook | ?:__init__, prevention_engine, recovery_rule_engine | YES |
-| incident_driver | L5 | ORCHESTRATION | `IncidentDriver.create_incident_for_run` | CANONICAL | 1 | ?:incident_driver | ?:__init__ | L4:transaction_coordinator, incident_engine, recovery_rule_engine | FACADE_PATTERN |
-| incident_engine | L5 | DECISION_ENGINE | `IncidentEngine.create_incident_for_run` | CANONICAL | 6 | ?:hallucination_detector | ?:incident_driver | L5:incident_driver | L5:hallucination_detector | ?:inject_synthetic, incident_driver, recovery_rule_engine | FACADE_PATTERN |
-| incident_pattern_engine | L5 | PATTERN_ANALYSIS | `IncidentPatternService._detect_cascade_failures` | INTERNAL | 0 | L5:incidents_facade, incidents_facade, recovery_rule_engine | YES |
+| export_engine | L5 | EXPORT | `ExportEngine.export_evidence` | CANONICAL | 1 | L4:incidents_bridge | YES |
+| hallucination_detector | L5 | DETECTION | `HallucinationDetector.detect` | CANONICAL | 6 | ?:hallucination_hook | ?:__init__, recovery_rule_engine | YES |
+| incident_engine | L5 | DECISION_ENGINE | `IncidentEngine.create_incident_for_run` | CANONICAL | 6 | ?:hallucination_detector | L5:hallucination_detector | ?:inject_synthetic, recovery_rule_engine | YES |
+| incident_pattern | L5 | PATTERN_ANALYSIS | `IncidentPatternService._detect_cascade_failures` | INTERNAL | 0 | L5:incidents_facade, incidents_facade, recovery_rule_engine | YES |
 | incident_read_engine | L5 | READ_SERVICE | `IncidentReadService.__init__` | WRAPPER | 0 | L5:customer_incidents_adapter | L3:customer_incidents_adapter, recovery_rule_engine | INTERFACE |
-| incident_severity_engine | L5 | DECISION_ENGINE | `IncidentSeverityEngine.should_escalate` | SUPERSET | 2 | L6:incident_aggregator, incident_aggregator, recovery_rule_engine | YES |
 | incident_write_engine | L5 | WRITE_SERVICE | `IncidentWriteService.resolve_incident` | CANONICAL | 2 | ?:incident_write_service | L5:customer_incidents_adapter | L3:customer_incidents_adapter, recovery_rule_engine | YES |
-| incidents_facade | L5 | FACADE | `IncidentsFacade.list_active_incidents` | CANONICAL | 6 | ?:incidents | L4:incidents_handler | ?:learning_insight_result | ?:recurrence_group_result | ?:recurrence_analysis_result | ?:resolution_summary_result | ?:pattern_match_result | ?:learnings_result | ?:pattern_detection_result, incident_driver | YES |
-| llm_failure_engine | L5 | DETECTION | `LLMFailureService.persist_failure_and_mark_run` | CANONICAL | 1 | ?:llm_failure_service, recovery_rule_engine | YES |
-| policy_violation_engine | L5 | POLICY | `create_policy_evaluation_sync` | CANONICAL | 5 | prevention_engine, recovery_rule_engine | YES |
-| postmortem_engine | L5 | ANALYSIS | `PostMortemService.get_category_learnings` | CANONICAL | 1 | L5:incidents_facade, incidents_facade, recovery_rule_engine | YES |
-| prevention_engine | L5 | POLICY | `PreventionEngine.evaluate` | CANONICAL | 6 | ?:arbitrator | ?:__init__ | ?:scope_resolver | ?:step_enforcement | L7:override_authority | L7:monitor_config | L7:threshold_signal | ?:alert_emitter | ?:authority_checker | L6:arbitrator, hallucination_detector, policy_violation_engine +1 | FACADE_PATTERN |
-| recovery_rule_engine | L5 | RECOVERY | `RecoveryRuleEngine.evaluate` | CANONICAL | 4 | ?:recovery | ?:failure_intelligence | ?:failure_classification_engine | ?:recovery_evaluation_engine | L5:recovery_evaluation_engine | L2:recovery | ?:test_m10_recovery_enhanced, hallucination_detector, prevention_engine | FACADE_PATTERN |
-| recurrence_analysis_engine | L5 | PATTERN_ANALYSIS | `RecurrenceAnalysisService.analyze_recurrence` | INTERNAL | 0 | L5:incidents_facade, incidents_facade, recovery_rule_engine | YES |
+| incidents_facade | L5 | FACADE | `IncidentsFacade.list_active_incidents` | CANONICAL | 6 | ?:incidents | L4:incidents_handler | ?:learning_insight_result | ?:recurrence_group_result | ?:recurrence_analysis_result | ?:resolution_summary_result | ?:pattern_match_result | ?:learnings_result | ?:pattern_detection_result | YES |
+| policy_violation_engine | L5 | POLICY | `create_policy_evaluation_sync` | CANONICAL | 5 | recovery_rule_engine | YES |
+| postmortem | L5 | ANALYSIS | `PostMortemService.get_category_learnings` | CANONICAL | 1 | L5:incidents_facade, incidents_facade, recovery_rule_engine | YES |
+| recovery_rule_engine | L5 | RECOVERY | `RecoveryRuleEngine.evaluate` | CANONICAL | 4 | ?:recovery | ?:failure_intelligence | ?:failure_classification_engine | ?:recovery_evaluation_engine | L5:recovery_evaluation_engine | L2:recovery | ?:test_m10_recovery_enhanced, hallucination_detector | FACADE_PATTERN |
+| recurrence_analysis | L5 | PATTERN_ANALYSIS | `RecurrenceAnalysisService.analyze_recurrence` | INTERNAL | 0 | L5:incidents_facade, incidents_facade, recovery_rule_engine | YES |
 | semantic_failures | L5 | DETECTION | `get_failure_info` | LEAF | 0 | ?:semantic_validator | ?:__init__ | YES |
+| cost_guard_driver | L6 | PERSISTENCE | `CostGuardDriver.get_spend_totals` | CANONICAL | 0 | L4:incidents_handler | YES |
 | export_bundle_driver | L6 | PERSISTENCE | `ExportBundleService.create_evidence_bundle` | CANONICAL | 4 | L4:incidents_handler (incidents.export), recovery_rule_engine | YES |
 | incident_aggregator | L6 | AGGREGATION | `IncidentAggregator._add_call_to_incident` | SUPERSET | 3 | L5:policy_violation_engine, anomaly_bridge, policy_violation_engine +1 | YES |
-| incident_pattern_driver | L6 | PERSISTENCE | `IncidentPatternDriver.fetch_cascade_failures` | LEAF | 0 | L5:incident_pattern_engine, incident_pattern_engine, recovery_rule_engine | YES |
+| incident_driver | L6 | ORCHESTRATION | `IncidentDriver.create_incident_for_run` | CANONICAL | 1 | L4:transaction_coordinator | YES |
+| incident_pattern_driver | L6 | PERSISTENCE | `IncidentPatternDriver.fetch_cascade_failures` | LEAF | 0 | L5:incident_pattern, incident_pattern, recovery_rule_engine | YES |
 | incident_read_driver | L6 | PERSISTENCE | `IncidentReadDriver.count_incidents_since` | LEAF | 0 | L6:__init__ | L5:incident_read_engine, incident_read_engine, recovery_rule_engine | YES |
+| incident_run_read_driver | L6 | PERSISTENCE | `IncidentRunReadDriver.fetch_incidents_by_run_id` | LEAF | 0 | L4:run_evidence_coordinator | YES |
 | incident_write_driver | L6 | PERSISTENCE | `IncidentWriteDriver.fetch_incidents_by_run_id` | LEAF | 0 | ?:incident_write_engine | L6:__init__ | L5:incident_write_engine | L5:incident_engine | L5:anomaly_bridge, anomaly_bridge, incident_engine +2 | YES |
 | incidents_facade_driver | L6 | FACADE | `IncidentsFacadeDriver.fetch_active_incidents` | CANONICAL | 7 | L5:incidents_facade, incidents_facade, recovery_rule_engine | YES |
 | lessons_driver | L6 | PERSISTENCE | `LessonsDriver.fetch_debounce_count` | LEAF | 1 | L5:lessons_engine, recovery_rule_engine | YES |
-| llm_failure_driver | L6 | PERSISTENCE | `LLMFailureDriver.fetch_contamination_check` | LEAF | 0 | ?:llm_failure_engine | L5:llm_failure_engine, llm_failure_engine, recovery_rule_engine | YES |
+| llm_failure_driver | L6 | PERSISTENCE | `LLMFailureDriver.fetch_contamination_check` | LEAF | 0 | recovery_rule_engine | YES |
 | policy_violation_driver | L6 | PERSISTENCE | `PolicyViolationDriver.fetch_incident_by_violation` | LEAF | 0 | L5:policy_violation_engine, policy_violation_engine, recovery_rule_engine | YES |
-| postmortem_driver | L6 | PERSISTENCE | `PostMortemDriver.fetch_category_stats` | LEAF | 1 | L5:postmortem_engine, postmortem_engine, recovery_rule_engine | YES |
-| recurrence_analysis_driver | L6 | PERSISTENCE | `RecurrenceAnalysisDriver.fetch_recurrence_for_category` | LEAF | 1 | ?:incidents_facade | ?:__init__ | L5:recurrence_analysis_engine, recovery_rule_engine, recurrence_analysis_engine | YES |
+| postmortem_driver | L6 | PERSISTENCE | `PostMortemDriver.fetch_category_stats` | LEAF | 1 | L5:postmortem, postmortem, recovery_rule_engine | YES |
+| recurrence_analysis_driver | L6 | PERSISTENCE | `RecurrenceAnalysisDriver.fetch_recurrence_for_category` | LEAF | 1 | ?:incidents_facade | ?:__init__ | L5:recurrence_analysis, recovery_rule_engine, recurrence_analysis | YES |
 
 ## Uncalled Functions
 

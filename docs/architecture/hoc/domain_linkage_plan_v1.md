@@ -11,9 +11,21 @@
 - `backend/app/models/audit_ledger.py`
 - `backend/app/hoc/cus/activity/L6_drivers/activity_read_driver.py`
 - `backend/app/hoc/cus/activity/L6_drivers/run_signal_driver.py`
+- `backend/app/hoc/cus/hoc_spine/orchestrator/coordinators/run_evidence_coordinator.py`
+- `backend/app/hoc/cus/hoc_spine/orchestrator/coordinators/run_proof_coordinator.py`
+- `backend/app/hoc/cus/hoc_spine/orchestrator/coordinators/bridges/incidents_bridge.py`
+- `backend/app/hoc/cus/hoc_spine/orchestrator/coordinators/bridges/policies_bridge.py`
+- `backend/app/hoc/cus/hoc_spine/orchestrator/coordinators/bridges/logs_bridge.py`
+- `backend/app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py`
+- `backend/app/hoc/cus/hoc_spine/orchestrator/handlers/run_governance_handler.py`
 - `backend/app/hoc/cus/incidents/L5_engines/incident_engine.py`
+- `backend/app/hoc/cus/incidents/L5_engines/incident_write_engine.py`
 - `backend/app/hoc/cus/incidents/L5_engines/policy_violation_engine.py`
+- `backend/app/hoc/cus/incidents/L5_engines/incident_read_engine.py`
 - `backend/app/hoc/cus/incidents/L6_drivers/policy_violation_driver.py`
+- `backend/app/hoc/cus/incidents/L6_drivers/incident_write_driver.py`
+- `backend/app/hoc/cus/activity/L6_drivers/run_signal_driver.py`
+- `backend/app/hoc/cus/activity/L6_drivers/run_metrics_driver.py`
 - `backend/app/hoc/cus/logs/L5_engines/logs_facade.py`
 - `backend/app/hoc/cus/logs/L6_drivers/logs_domain_store.py`
 - `backend/app/hoc/cus/logs/L6_drivers/pg_store.py`
@@ -39,7 +51,7 @@
 - Adds policy context fields (`policy_id`, `policy_name`, `limit_type`, `evaluation_outcome`, `proximity_pct`).
 
 ### incidents (table: `incidents`)
-- Run linkage: `source_run_id`, `llm_run_id` (FK to `runs.id`).
+- Run linkage: `source_run_id` (canonical), `llm_run_id` (tombstoned).
 - Governance: `trigger_type`, `category`, `severity`, `status`, `created_at`.
 
 ### policy_enforcements (table: `policy_enforcements`)
@@ -50,7 +62,7 @@
 
 ### prevention_records (table: `prevention_records`)
 - Observed columns in insert paths: `id`, `policy_id`, `pattern_id`, `original_incident_id`, `blocked_incident_id`,
-  `tenant_id`, `outcome`, `signature_match_confidence`, `created_at`, `is_synthetic`, `synthetic_scenario_id`.
+  `run_id`, `tenant_id`, `outcome`, `signature_match_confidence`, `created_at`, `is_synthetic`, `synthetic_scenario_id`.
 - Used for policy evaluation records and policy violation facts (based on L6 inserts).
 
 ### llm_run_records (table: `llm_run_records`)
@@ -73,7 +85,7 @@
 
 ### audit_ledger (table: `audit_ledger`)
 - Governance events: `event_type`, `entity_type`, `entity_id`, `actor_type`, `actor_id`, `before_state`, `after_state`, `created_at`.
-- No `run_id` column observed.
+- Run linkage: `after_state.run_id` (for incident audit events) when present.
 
 ## Observed Linkage Paths (Current)
 
@@ -92,29 +104,29 @@
 - Policy enforcement records link `run_id` in `policy_enforcements`.
 - Policy evaluation records are inserted into `prevention_records` with `blocked_incident_id = run_id`.
 
+5. **Run evidence/proof (L4 cross-domain)**
+- `RunEvidenceCoordinator` aggregates incidents (by `source_run_id`) + policy evaluations (from `prevention_records`) + limits for a `run_id`.
+- `RunProofCoordinator` fetches traces via Logs bridge (Postgres in prod) and computes integrity proofs.
+
+6. **Run lifecycle → Governance logs**
+- `LogsFacade.get_llm_run_governance` filters audit ledger events by `run_id` when present in `after_state`.
+- Incident write audit events embed `run_id` for correlation.
+
 ## Observed Gaps and Suggested Fixes
 
-1. **Policy violation → incident creation is broken**
-- `create_incident_from_violation()` requires `sync_session`, but callers in the policy violation flow do not pass it.
-- Suggested fix: update the L4 path to provide a sync session, or refactor the incident creation entry point to accept L4-owned session context.
+1. **Run-scoped governance logs are partial**
+- `get_llm_run_governance()` now filters by `run_id` using `after_state`, but only entries that embed `run_id` are returned.
+- Incident audit events embed `run_id`; policy rule/proposal/limit events still lack run-scoped fields.
+- Suggested fix: include `run_id` in audit writes where available (e.g., limit breach, enforcement) or extend schema if allowed.
 
-2. **Logs export run lookup uses a non-existent field**
-- `ExportBundleStore.get_run_by_run_id()` queries `Run.run_id`, but the `Run` model uses `id` as the run identifier.
-- Suggested fix: switch to `Run.id == run_id` (or align the model and schema if `run_id` is intended).
+2. **Risk level type mismatch — RESOLVED (2026-02-09)**
+- `RunSignalDriver` now maps signals to string risk levels (NORMAL, NEAR_THRESHOLD, AT_RISK, VIOLATED).
 
-3. **Run-scoped governance logs are not correlated**
-- `get_llm_run_governance()` returns tenant-wide audit events and ignores `run_id`.
-- Suggested fix: filter audit ledger events by `run_id` via `after_state` or add explicit `run_id` capture in audit writes.
+3. **Missing writers for `runs.policy_violation` and `runs.policy_draft_count` — RESOLVED (2026-02-09)**
+- `RunGovernanceHandler.report_violation` now sets `runs.policy_violation = true`.
+- `PoliciesLessonsHandler.convert_lesson_to_draft` increments `runs.policy_draft_count` when `source_run_id` is present.
 
-4. **Risk level type mismatch**
-- `runs.risk_level` is defined as a string classification, but `RunSignalDriver` writes numeric values.
-- Suggested fix: map signals to string risk levels (e.g., NORMAL, NEAR_THRESHOLD, AT_RISK, VIOLATED) or update schema to numeric.
-
-5. **No observed writer for `runs.policy_violation` and `runs.policy_draft_count`**
-- Activity panels read these fields via `v_runs_o2`.
-- Suggested fix: confirm external writers or add explicit updates in the policy violation / policy draft creation flow.
-
-6. **Audit Ledger run linkage is implicit only**
+4. **Audit Ledger run linkage is implicit only**
 - `audit_ledger` lacks `run_id`; run correlation relies on optional `after_state` data.
 - Suggested fix: enforce `run_id` embedding in `after_state` for run-scoped events, or extend the table with `run_id` if allowed.
 

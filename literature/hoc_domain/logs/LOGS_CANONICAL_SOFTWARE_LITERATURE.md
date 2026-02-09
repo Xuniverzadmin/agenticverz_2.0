@@ -13,6 +13,8 @@
 - Execution topology: logs L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5 gaps).
 - L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain logs --json --advisory` reports 0 blocking, 0 advisory.
 - Execution boundary (pairing): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain logs --json` reports 0 orphaned L5 entry modules (`total_l5_engines: 6`, `wired_via_l4: 6`, `direct_l2_to_l5: 0`).
+- Run-governance queries now support `run_id` scoping via `LogsDomainStore.get_governance_events` (filters `before_state`/`after_state` on `run_id` or `source_run_id`).
+- PostgresTraceStore is the canonical trace store for production; SQLiteTraceStore remains dev-only.
 
 ## Consolidation Actions (2026-01-31)
 

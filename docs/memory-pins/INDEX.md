@@ -516,6 +516,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-543](PIN-543-alembic-migration-audit-docs-generated.md) | **Alembic Migration Audit Docs Generated** | Documentation | **✅ COMPLETE** | 2026-02-09 |
 | [PIN-544](PIN-544-alembic-stamp-fix-two-path-ci-guard.md) | **Alembic Stamp Fix + Two-Path CI Guard** | Database | **✅ COMPLETE** | 2026-02-09 |
 | [PIN-545](PIN-545-guardrail-violations-data-001-limits-001-analysis.md) | **Guardrail Violations DATA-001 & LIMITS-001 Analysis** | Database | **✅ COMPLETE** | 2026-02-09 |
+| [PIN-546](PIN-546-run-linkage-governance-log-scoping.md) | **Run Linkage & Governance Log Scoping** | Architecture / Governance | **✅ COMPLETE** | 2026-02-09 |
 
 ---
 

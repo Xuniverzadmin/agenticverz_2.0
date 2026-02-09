@@ -1,7 +1,7 @@
 # Activity Domain — Canonical Software Literature
 
 **Domain:** activity
-**Physical Files:** 16 (9 L5_engines + 4 L6_drivers + 2 `__init__.py` + 1 deprecated)
+**Physical Files:** 16 (8 L5_engines + 5 L6_drivers + 2 `__init__.py` + 1 deprecated)
 **Traced Scripts:** 13 (in call graph)
 **Total LOC:** ~2,800
 **Consolidation Date:** 2026-01-31
@@ -41,24 +41,26 @@
                     └────────────┬─────────────┘
                                  │
           ┌──────────────────────▼──────────────────────┐
-          │            L5 ENGINES (9 files)              │
+          │            L5 ENGINES (8 files)              │
           │                                              │
           │  FACADE         │ activity_facade (main)    │
           │  ORCHESTRATION  │ run_governance_facade     │
           │  ENUMS          │ activity_enums            │
           │  SIGNAL         │ signal_identity           │
-          │  STUB ENGINES   │ attention_ranking_engine  │
-          │                 │ cost_analysis_engine      │
-          │                 │ pattern_detection_engine  │
+          │  STUB ENGINES   │ attention_ranking         │
+          │                 │ cost_analysis             │
+          │                 │ pattern_detection         │
           │                 │ signal_feedback_engine    │
           │  RE-EXPORT      │ cus_telemetry_engine      │
           └──────────────────────┬──────────────────────┘
                                  │
           ┌──────────────────────▼──────────────────────┐
-          │            L6 DRIVERS (4 files)              │
+          │            L6 DRIVERS (5 files)              │
           │                                              │
           │  activity_read_driver        (READ)         │
+          │  cus_telemetry_driver        (READ+WRITE)   │
           │  run_signal_driver           (WRITE)        │
+          │  run_metrics_driver          (WRITE)        │
           │  orphan_recovery_driver      (READ+WRITE)   │
           │  llm_threshold_service.py.deprecated (DEP)  │
           └──────────────────────┬──────────────────────┘
@@ -88,25 +90,27 @@
 | 1 | `__init__.py` | — (package init) | SUPPORT | ~15 | — | Re-exports from threshold_engine, activity_facade, run_governance_facade |
 | 2 | `activity_enums.py` | SignalType, SeverityLevel, RunState, RiskType, EvidenceHealth | ENUMS | ~120 | Converters: severity_from_string, severity_to_int | None (pure data) |
 | 3 | `activity_facade.py` | ActivityFacade (singleton) | FACADE | ~900 | 16+ async methods: get_runs, get_run_detail, get_run_evidence, get_run_proof, get_status_summary, get_live_runs, get_completed_runs, get_signals, get_metrics, get_threshold_signals, get_risk_signals, get_dimension_breakdown, get_patterns, get_cost_analysis, get_attention_queue, acknowledge_signal, suppress_signal | ActivityReadDriver (L6), PatternDetectionService, CostAnalysisService, AttentionRankingService, SignalFeedbackService, signal_identity |
-| 4 | `attention_ranking_engine.py` | AttentionRankingService | STUB_ENGINE | ~80 | get_attention_queue (stub), compute_attention_score (formula: severity*0.4 + recency*0.3 + frequency*0.3) | None (pure logic) |
-| 5 | `cost_analysis_engine.py` | CostAnalysisService | STUB_ENGINE | ~95 | analyze_costs (stub), get_cost_breakdown (stub) | None (pure logic) |
+| 4 | `attention_ranking.py` | AttentionRankingService | STUB_ENGINE | ~80 | get_attention_queue (stub), compute_attention_score (formula: severity*0.4 + recency*0.3 + frequency*0.3) | None (pure logic) |
+| 5 | `cost_analysis.py` | CostAnalysisService | STUB_ENGINE | ~95 | analyze_costs (stub), get_cost_breakdown (stub) | None (pure logic) |
 | 6 | `cus_telemetry_engine.py` | CusTelemetryEngine: telemetry ingestion, queries, aggregation (384 lines). Rewired from legacy 2026-02-02 (PIN-512 Cat-B). | CANONICAL | ~384 | ingest, batch_ingest, query_telemetry, aggregate, get_summary | CusTelemetryDriver (L6) |
-| 7 | `pattern_detection_engine.py` | PatternDetectionService | STUB_ENGINE | ~110 | detect_patterns (stub), get_pattern_detail (stub) | None (pure logic) |
+| 7 | `pattern_detection.py` | PatternDetectionService | STUB_ENGINE | ~110 | detect_patterns (stub), get_pattern_detail (stub) | None (pure logic) |
 | 8 | `signal_feedback_engine.py` | SignalFeedbackService | STUB_ENGINE | ~130 | acknowledge_signal, suppress_signal, get_signal_feedback_status, get_bulk_signal_feedback (all stubs) | None (pure logic) |
 | 9 | `signal_identity.py` | compute_signal_fingerprint_from_row, compute_signal_fingerprint | PURE_COMPUTATION | ~45 | sha256[:32] fingerprinting | None (hashlib only) |
 
 **18 Dataclasses in activity_facade.py:**
 PolicyContextResult, RunSummaryResult, RunSummaryV2Result, RunListResult, RunsResult, RunDetailResult, RunEvidenceResult, RunProofResult, StatusCount, StatusSummaryResult, SignalProjectionResult, SignalsResult, MetricsResult, ThresholdSignalResult, ThresholdSignalsResult, RiskSignalsResult, DimensionGroupResult, DimensionBreakdownResult
 
-### L6 Drivers (4 files + 1 deprecated)
+### L6 Drivers (5 files + 1 deprecated)
 
 | # | File | Class | Tables | LOC | Methods |
 |---|------|-------|--------|-----|---------|
 | 10 | `__init__.py` | — (package init) | — | ~15 | Re-exports from controls/threshold_driver: LimitSnapshot, ThresholdDriver, ThresholdDriverSync, emit_and_persist_threshold_signal, emit_threshold_signal_sync |
 | 11 | `activity_read_driver.py` | ActivityReadDriver(session) | v_runs_o2 (READ) | ~420 | count_runs, fetch_runs, fetch_run_detail, fetch_status_summary, fetch_runs_with_policy_context, fetch_at_risk_runs, fetch_metrics, fetch_threshold_signals, fetch_dimension_breakdown |
-| 12 | `orphan_recovery_driver.py` | detect_orphaned_runs, mark_run_as_crashed, recover_orphaned_runs, get_crash_recovery_summary | WorkerRun (READ+WRITE) | ~280 | PB-S2 truth guarantee. Renamed from orphan_recovery.py (2026-01-31) |
-| 13 | `run_signal_driver.py` | RunSignalDriver(session) | WorkerRun (WRITE) | ~150 | update_risk_level(run_id, signals), get_risk_level(run_id). SIGNAL_TO_RISK_LEVEL mapping. Backward alias: RunSignalService |
-| 14 | `llm_threshold_service.py.deprecated` | — (deprecated) | — | — | DEPRECATED file, not active |
+| 12 | `cus_telemetry_driver.py` | CusTelemetryDriver(session) | CusUsage* (READ+WRITE) | ~620 | fetch_usage_summary, fetch_per_integration_usage, fetch_usage_history, fetch_daily_aggregates, create_usage |
+| 13 | `orphan_recovery_driver.py` | detect_orphaned_runs, mark_run_as_crashed, recover_orphaned_runs, get_crash_recovery_summary | WorkerRun (READ+WRITE) | ~280 | PB-S2 truth guarantee. Renamed from orphan_recovery.py (2026-01-31) |
+| 14 | `run_signal_driver.py` | RunSignalDriver(session) | WorkerRun (WRITE) | ~150 | update_risk_level(run_id, signals), get_risk_level(run_id). String risk classification mapping. |
+| 15 | `run_metrics_driver.py` | RunMetricsDriver(session) | Run (WRITE) | ~90 | mark_policy_violation(run_id), increment_policy_draft_count(run_id) |
+| 16 | `llm_threshold_service.py.deprecated` | — (deprecated) | — | — | DEPRECATED file, not active |
 
 _Tables: v_runs_o2 is a view; WorkerRun owned by activity domain._
 
@@ -120,15 +124,17 @@ Each script's identity-defining function — the one that makes this script uniq
 |---|--------|--------------------|--------|
 | 1 | activity_enums | SignalType, SeverityLevel enums | CANONICAL (domain vocabulary) |
 | 2 | activity_facade | `ActivityFacade.get_runs` | CANONICAL (main facade) |
-| 3 | attention_ranking_engine | `AttentionRankingService.compute_attention_score` | STUB (needs ideal contractor) |
-| 4 | cost_analysis_engine | `CostAnalysisService.analyze_costs` | STUB (needs ideal contractor) |
+| 3 | attention_ranking | `AttentionRankingService.compute_attention_score` | STUB (needs ideal contractor) |
+| 4 | cost_analysis | `CostAnalysisService.analyze_costs` | STUB (needs ideal contractor) |
 | 5 | cus_telemetry_engine | `CusTelemetryEngine.ingest` | CANONICAL (rewired from legacy, PIN-512 Cat-B) |
-| 6 | pattern_detection_engine | `PatternDetectionService.detect_patterns` | STUB (needs ideal contractor) |
+| 6 | pattern_detection | `PatternDetectionService.detect_patterns` | STUB (needs ideal contractor) |
 | 7 | signal_feedback_engine | `SignalFeedbackService.acknowledge_signal` | STUB (needs ideal contractor) |
 | 8 | signal_identity | `compute_signal_fingerprint` | CANONICAL (pure computation) |
 | 9 | activity_read_driver | `ActivityReadDriver.fetch_runs` | CANONICAL (persistence) |
-| 10 | orphan_recovery_driver | `detect_orphaned_runs` | CANONICAL (PB-S2 truth) |
-| 11 | run_signal_driver | `RunSignalDriver.update_risk_level` | CANONICAL (signal→risk mapping) |
+| 10 | cus_telemetry_driver | `CusTelemetryDriver.list_usage` | CANONICAL (telemetry persistence) |
+| 11 | orphan_recovery_driver | `detect_orphaned_runs` | CANONICAL (PB-S2 truth) |
+| 12 | run_signal_driver | `RunSignalDriver.update_risk_level` | CANONICAL (signal→risk mapping) |
+| 13 | run_metrics_driver | `RunMetricsDriver.mark_policy_violation` | CANONICAL (run impact signals) |
 
 ---
 
@@ -193,9 +199,9 @@ activity/L6 run_signal_driver        controls/L5 threshold_engine
 
 | # | Engine | Dataclasses | Methods | Current Behavior | Ideal State |
 |---|--------|-------------|---------|------------------|-------------|
-| 1 | `attention_ranking_engine.py` | AttentionSignal, AttentionQueueResult | get_attention_queue (stub → empty), compute_attention_score (formula) | Returns empty queue | Real attention ranking based on severity, recency, frequency |
-| 2 | `cost_analysis_engine.py` | CostAnomaly, CostAnalysisResult | analyze_costs (stub), get_cost_breakdown (stub) | Returns empty results | Real cost analysis from analytics domain |
-| 3 | `pattern_detection_engine.py` | DetectedPattern, PatternDetectionResult | detect_patterns (stub), get_pattern_detail (stub) | Returns empty patterns | Real pattern detection across runs |
+| 1 | `attention_ranking.py` | AttentionSignal, AttentionQueueResult | get_attention_queue (stub → empty), compute_attention_score (formula) | Returns empty queue | Real attention ranking based on severity, recency, frequency |
+| 2 | `cost_analysis.py` | CostAnomaly, CostAnalysisResult | analyze_costs (stub), get_cost_breakdown (stub) | Returns empty results | Real cost analysis from analytics domain |
+| 3 | `pattern_detection.py` | DetectedPattern, PatternDetectionResult | detect_patterns (stub), get_pattern_detail (stub) | Returns empty patterns | Real pattern detection across runs |
 | 4 | `signal_feedback_engine.py` | AcknowledgeResult, SuppressResult, SignalFeedbackStatus | acknowledge_signal, suppress_signal, get_signal_feedback_status, get_bulk_signal_feedback | Returns mock success | Real signal acknowledgment persistence |
 
 **Ideal Contractor Questions:**
@@ -378,7 +384,7 @@ ls -1 backend/app/hoc/cus/activity/L5_engines/*.py | wc -l
 # Expected: 9 (including __init__.py)
 
 ls -1 backend/app/hoc/cus/activity/L6_drivers/*.py | wc -l
-# Expected: 5 (including __init__.py and deprecated file)
+# Expected: 7 (including __init__.py and deprecated file)
 
 # Naming violation check (should return 0 matches)
 grep -r "class.*Service" backend/app/hoc/cus/activity/L6_drivers/*.py | grep -v "# Backward"
@@ -389,7 +395,7 @@ grep -r "from.*activity.*L6_drivers" backend/app/hoc/cus/controls/
 # Expected: 1 match (threshold_driver.py → run_signal_driver, known V1)
 
 # Stub engine verification
-grep -A 3 "def get_attention_queue" backend/app/hoc/cus/activity/L5_engines/attention_ranking_engine.py
+grep -A 3 "def get_attention_queue" backend/app/hoc/cus/activity/L5_engines/attention_ranking.py
 # Expected: Returns empty list (stub behavior)
 ```
 

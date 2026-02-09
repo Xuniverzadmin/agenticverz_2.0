@@ -133,12 +133,16 @@ class IncidentWriteService:
         # Emit audit event (PIN-413: Logs Domain)
         # Audit service injected by L4 handler (PIN-504)
         if self._audit:
+            incident_state = {"status": "acknowledged"}
+            if incident.source_run_id:
+                incident_state["run_id"] = incident.source_run_id
             self._audit.incident_acknowledged(
                 tenant_id=incident.tenant_id,
                 incident_id=str(incident.id),
                 actor_id=acknowledged_by,
                 actor_type=actor_type,
                 reason=reason,
+                incident_state=incident_state,
             )
 
         # Refresh via driver
@@ -203,12 +207,18 @@ class IncidentWriteService:
         # Emit audit event (PIN-413: Logs Domain)
         # Audit service injected by L4 handler (PIN-504)
         if self._audit:
+            after_state = {"status": "resolved"}
+            if resolution_method:
+                after_state["resolution_method"] = resolution_method
+            if incident.source_run_id:
+                after_state["run_id"] = incident.source_run_id
             self._audit.incident_resolved(
                 tenant_id=incident.tenant_id,
                 incident_id=str(incident.id),
                 actor_id=resolved_by,
                 actor_type=actor_type,
                 reason=reason or resolution_notes,
+                after_state=after_state,
                 resolution_method=resolution_method,
             )
 
@@ -254,6 +264,8 @@ class IncidentWriteService:
             "status": incident.status.value if hasattr(incident.status, "value") else str(incident.status),
             "resolved_at": incident.resolved_at.isoformat() if incident.resolved_at else None,
         }
+        if incident.source_run_id:
+            before_state["run_id"] = incident.source_run_id
 
         # Build description for event (L4 logic)
         description = f"Incident manually closed by {closed_by}"
@@ -282,6 +294,8 @@ class IncidentWriteService:
             "resolved_at": now.isoformat(),
             "resolution_method": "manual_closure",
         }
+        if incident.source_run_id:
+            after_state["run_id"] = incident.source_run_id
 
         # Emit audit event (PIN-413: Logs Domain)
         # Audit service injected by L4 handler (PIN-504)

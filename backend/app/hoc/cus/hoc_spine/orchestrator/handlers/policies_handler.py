@@ -213,7 +213,40 @@ class PoliciesLessonsHandler:
         kwargs = dict(ctx.params)
         kwargs.pop("method", None)
 
+        # Snapshot lesson before conversion so we can capture source_run_id
+        lesson_snapshot = None
+        if method_name == "convert_lesson_to_draft":
+            lesson_id = kwargs.get("lesson_id")
+            tenant_id = kwargs.get("tenant_id")
+            if lesson_id and tenant_id:
+                lesson_snapshot = engine.get_lesson(lesson_id, tenant_id)
+
         data = method(**kwargs)
+
+        # After successful conversion, increment policy_draft_count on the source run
+        if (
+            method_name == "convert_lesson_to_draft"
+            and data
+            and lesson_snapshot
+            and lesson_snapshot.get("source_run_id")
+        ):
+            try:
+                from app.hoc.cus.activity.L6_drivers.run_metrics_driver import (
+                    RunMetricsDriver,
+                )
+
+                metrics = RunMetricsDriver(ctx.session)
+                metrics.increment_policy_draft_count(lesson_snapshot["source_run_id"])
+            except Exception as e:
+                logger.warning(
+                    "policy_draft_count_update_failed",
+                    extra={
+                        "lesson_id": lesson_snapshot.get("id"),
+                        "run_id": lesson_snapshot.get("source_run_id"),
+                        "error": str(e),
+                    },
+                )
+
         return OperationResult.ok(data)
 
 

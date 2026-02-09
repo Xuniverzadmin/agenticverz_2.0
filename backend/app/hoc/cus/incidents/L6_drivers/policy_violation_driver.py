@@ -120,10 +120,10 @@ class PolicyViolationDriver:
                 """
                 INSERT INTO prevention_records (
                     id, policy_id, pattern_id, original_incident_id, blocked_incident_id,
-                    tenant_id, outcome, signature_match_confidence, created_at, is_simulated
+                    run_id, tenant_id, outcome, signature_match_confidence, created_at, is_simulated
                 ) VALUES (
                     :id, :policy_id, :rule_id, :run_id, :run_id,
-                    :tenant_id, 'violation_incident', 1.0, :created_at, false
+                    :run_id, :tenant_id, 'violation_incident', 1.0, :created_at, false
                 )
             """
             ),
@@ -379,11 +379,11 @@ class PolicyViolationDriver:
                 """
                 INSERT INTO prevention_records (
                     id, policy_id, pattern_id, original_incident_id, blocked_incident_id,
-                    tenant_id, outcome, signature_match_confidence, created_at,
+                    run_id, tenant_id, outcome, signature_match_confidence, created_at,
                     is_synthetic, synthetic_scenario_id
                 ) VALUES (
                     :id, :policy_id, :pattern_id, :run_id, :run_id,
-                    :tenant_id, :outcome, :confidence, :created_at,
+                    :run_id, :tenant_id, :outcome, :confidence, :created_at,
                     :is_synthetic, :synthetic_scenario_id
                 )
             """
@@ -443,10 +443,10 @@ def insert_policy_evaluation_sync_with_cursor(
         """
         INSERT INTO prevention_records (
             id, policy_id, pattern_id, original_incident_id, blocked_incident_id,
-            tenant_id, outcome, signature_match_confidence, created_at,
+            run_id, tenant_id, outcome, signature_match_confidence, created_at,
             is_synthetic, synthetic_scenario_id
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT DO NOTHING
         RETURNING id
         """,
@@ -454,6 +454,7 @@ def insert_policy_evaluation_sync_with_cursor(
             evaluation_id,
             f"policy_eval_{run_id[:8]}",
             f"policies_checked:{policies_checked}",
+            run_id,
             run_id,
             run_id,
             tenant_id,

@@ -10,6 +10,8 @@ Logs Bridge (PIN-510)
 Domain-scoped capability accessor for logs domain.
 """
 
+import os
+
 
 class LogsBridge:
     """Capabilities for logs domain. Max 5 methods."""
@@ -24,6 +26,18 @@ class LogsBridge:
 
         PIN-520: Use infrastructure store (not L6_drivers).
         """
+        use_postgres_env = os.getenv("USE_POSTGRES_TRACES")
+        if use_postgres_env is not None:
+            use_postgres = use_postgres_env.lower() == "true"
+        else:
+            env = os.getenv("ENV", "").lower()
+            aos_env = os.getenv("AOS_ENVIRONMENT", "").lower()
+            use_postgres = env in ("prod", "production") or aos_env in ("prod", "production")
+
+        if use_postgres:
+            from app.hoc.cus.logs.L6_drivers.pg_store import PostgresTraceStore
+            return PostgresTraceStore()
+
         from app.traces.store import SQLiteTraceStore
         return SQLiteTraceStore()
 

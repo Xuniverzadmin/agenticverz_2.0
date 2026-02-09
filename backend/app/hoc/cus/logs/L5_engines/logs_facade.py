@@ -675,7 +675,9 @@ class LogsFacade:
         run_id: str,
     ) -> LLMRunGovernanceResult:
         """O3: Get policy interaction trace."""
-        audit_snapshots = await self._store.get_governance_events(session, tenant_id)
+        audit_snapshots = await self._store.get_governance_events(
+            session, tenant_id, run_id=run_id
+        )
 
         events = [
             GovernanceEventResult(

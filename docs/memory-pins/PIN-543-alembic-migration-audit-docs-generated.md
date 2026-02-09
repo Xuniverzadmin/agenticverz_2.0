@@ -91,8 +91,15 @@ Output goes to `hoc/doc/architeture/alembic/` (note: path has legacy typo `archi
 
 ---
 
+## Commit
+
+All 250 files committed and pushed in `ee87a605` (2026-02-09).
+
+---
+
 ## Related
 
 - **PIN-542:** Local DB Migration Issues & Fixes (blocking issues found during migration run)
+- **PIN-544:** Alembic Stamp Fix + Two-Path CI Guard
 - **DB_AUTHORITY.md:** `docs/runtime/DB_AUTHORITY.md` (migration inventory section)
 - **Alembic env.py:** `backend/alembic/env.py` (245 lines, validates DB_ROLE)
