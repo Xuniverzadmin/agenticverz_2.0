@@ -1,0 +1,82 @@
+{
+  "mode": "core",
+  "gate": "PASS",
+  "passed": 7,
+  "failed": 0,
+  "repo_root": "/root/agenticverz2.0",
+  "backend_dir": "/root/agenticverz2.0/backend",
+  "run_dir": "/root/agenticverz2.0/artifacts/codebase_audit_gatepass/20260215T095350Z",
+  "results": [
+    {
+      "check_id": "arch_cross_domain",
+      "category": "ARCH_VIOLATION",
+      "description": "HOC cross-domain authority validator",
+      "command": "python3 scripts/ops/hoc_cross_domain_validator.py --output json",
+      "return_code": 0,
+      "status": "PASS",
+      "duration_seconds": 0.588,
+      "log_file": "/root/agenticverz2.0/artifacts/codebase_audit_gatepass/20260215T095350Z/logs/arch_cross_domain.log"
+    },
+    {
+      "check_id": "arch_layer_boundaries",
+      "category": "ARCH_VIOLATION",
+      "description": "Layer boundaries and import contracts",
+      "command": "python3 scripts/ci/check_layer_boundaries.py",
+      "return_code": 0,
+      "status": "PASS",
+      "duration_seconds": 0.113,
+      "log_file": "/root/agenticverz2.0/artifacts/codebase_audit_gatepass/20260215T095350Z/logs/arch_layer_boundaries.log"
+    },
+    {
+      "check_id": "arch_init_hygiene",
+      "category": "ARCH_VIOLATION",
+      "description": "Init hygiene CI checks",
+      "command": "python3 scripts/ci/check_init_hygiene.py --ci",
+      "return_code": 0,
+      "status": "PASS",
+      "duration_seconds": 23.537,
+      "log_file": "/root/agenticverz2.0/artifacts/codebase_audit_gatepass/20260215T095350Z/logs/arch_init_hygiene.log"
+    },
+    {
+      "check_id": "arch_l5_pairing",
+      "category": "ARCH_VIOLATION",
+      "description": "L5/L4 pairing gap detector",
+      "command": "python3 scripts/ops/l5_spine_pairing_gap_detector.py --json",
+      "return_code": 0,
+      "status": "PASS",
+      "duration_seconds": 0.245,
+      "log_file": "/root/agenticverz2.0/artifacts/codebase_audit_gatepass/20260215T095350Z/logs/arch_l5_pairing.log"
+    },
+    {
+      "check_id": "arch_uc_mon_strict",
+      "category": "ARCH_VIOLATION",
+      "description": "UC monitor strict validator",
+      "command": "python3 scripts/verification/uc_mon_validation.py --strict",
+      "return_code": 0,
+      "status": "PASS",
+      "duration_seconds": 0.388,
+      "log_file": "/root/agenticverz2.0/artifacts/codebase_audit_gatepass/20260215T095350Z/logs/arch_uc_mon_strict.log"
+    },
+    {
+      "check_id": "bug_governance_table",
+      "category": "BUG",
+      "description": "Governance mapping/manifest integrity regression tests",
+      "command": "python3 -m pytest -q tests/governance/t4/test_uc_mapping_decision_table.py tests/governance/t4/test_uc_operation_manifest_integrity.py",
+      "return_code": 0,
+      "status": "PASS",
+      "duration_seconds": 2.209,
+      "log_file": "/root/agenticverz2.0/artifacts/codebase_audit_gatepass/20260215T095350Z/logs/bug_governance_table.log"
+    },
+    {
+      "check_id": "determinism_invariant",
+      "category": "DETERMINISM_VIOLATION",
+      "description": "Determinism invariant tests",
+      "command": "python3 -m pytest -q tests/test_determinism_invariant.py",
+      "return_code": 0,
+      "status": "PASS",
+      "duration_seconds": 2.139,
+      "log_file": "/root/agenticverz2.0/artifacts/codebase_audit_gatepass/20260215T095350Z/logs/determinism_invariant.log"
+    }
+  ],
+  "generated_at": "2026-02-15T09:54:20.212480+00:00"
+}

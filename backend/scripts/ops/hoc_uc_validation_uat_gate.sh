@@ -144,19 +144,30 @@ if [ -n "$WEBSITE_DIR" ] && [ -d "$WEBSITE_DIR/tests" ]; then
     fi
 
     if [ "$PLAYWRIGHT_AVAILABLE" = true ]; then
-        # Check if browsers are installed
-        if npx playwright test --config tests/uat/playwright.config.ts --list >/dev/null 2>&1; then
+        # Preflight: verify Chromium headless shell binary exists locally.
+        PLAYWRIGHT_HEADLESS_SHELL_PATH="$(npx playwright install --dry-run chromium 2>/dev/null | awk '
+            /Chrome Headless Shell/ { in_shell=1; next }
+            in_shell && /Install location:/ {
+                gsub(/^[ \t]+|[ \t]+$/, "", $0);
+                sub(/^Install location:[ \t]*/, "", $0);
+                print $0 "/chrome-headless-shell-linux64/chrome-headless-shell";
+                exit
+            }')"
+
+        if [ -z "$PLAYWRIGHT_HEADLESS_SHELL_PATH" ] || [ ! -x "$PLAYWRIGHT_HEADLESS_SHELL_PATH" ]; then
+            echo ""
+            echo "ERROR: Playwright Chromium browser is not installed."
+            echo "  Expected binary: ${PLAYWRIGHT_HEADLESS_SHELL_PATH:-<unknown>}"
+            echo "  Action: cd website/app-shell && npx playwright install chromium"
+            echo "  Note: requires outbound DNS/network access."
+            RESULTS+=("FAIL  Playwright: Chromium browser missing (run: npx playwright install chromium)")
+            FAIL=$((FAIL + 1))
+        else
             run_stage "Playwright: BIT" \
                 npx playwright test --config tests/bit/playwright.config.ts
 
             run_stage "Playwright: UAT" \
                 npx playwright test --config tests/uat/playwright.config.ts
-        else
-            echo ""
-            echo "ERROR: Playwright browsers not installed."
-            echo "  Action: Run 'npx playwright install chromium' in website/app-shell/"
-            RESULTS+=("FAIL  Playwright: Browsers not installed (run: npx playwright install chromium)")
-            FAIL=$((FAIL + 1))
         fi
     else
         echo ""

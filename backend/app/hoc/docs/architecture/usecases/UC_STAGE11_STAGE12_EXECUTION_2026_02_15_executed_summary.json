@@ -1,0 +1,30 @@
+{
+  "executed_file": "/root/agenticverz2.0/backend/app/hoc/docs/architecture/usecases/UC_STAGE11_STAGE12_EXECUTION_2026_02_15_executed.md",
+  "generated_at": "2026-02-15 10:44:28 UTC",
+  "stage_status": {
+    "Stage 1.1": "PASS",
+    "Stage 1.2": "PASS",
+    "Stage 2": "SKIPPED"
+  },
+  "case_counts": {
+    "total_cases": 14,
+    "stage_1_1": {
+      "PASS": 14
+    },
+    "stage_1_2": {
+      "PASS": 14
+    },
+    "stage_2": {
+      "SKIPPED": 14
+    }
+  },
+  "metric_status": {
+    "quality": "PASS",
+    "quantity": "PARTIAL",
+    "velocity": "SKIPPED",
+    "veracity": "PASS",
+    "determinism": "PASS"
+  },
+  "blocking_cases": [],
+  "pending_cases": []
+}

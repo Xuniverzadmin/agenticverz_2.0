@@ -405,11 +405,14 @@ function checkOrphanedPages(isCI) {
       continue;
     }
 
-    // Check if this page is imported in routes
+    // Check if this page is referenced in routes via static or dynamic import
     const importPattern = new RegExp(`from\\s+['"][^'"]*${fileName}['"]`);
+    const dynamicImportPattern = new RegExp(`import\\(\\s*['"][^'"]*${fileName}['"]\\s*\\)`);
     const componentPattern = new RegExp(`<${fileName}`);
 
-    if (!importPattern.test(routesContent) && !componentPattern.test(routesContent)) {
+    if (!importPattern.test(routesContent) &&
+        !dynamicImportPattern.test(routesContent) &&
+        !componentPattern.test(routesContent)) {
       // Check if it's imported elsewhere
       let isUsed = false;
       const allFiles = getAllFiles(SRC_DIR, '.tsx');
@@ -417,7 +420,7 @@ function checkOrphanedPages(isCI) {
       for (const file of allFiles) {
         if (file === pageFile) continue;
         const content = fs.readFileSync(file, 'utf-8');
-        if (importPattern.test(content)) {
+        if (importPattern.test(content) || dynamicImportPattern.test(content)) {
           isUsed = true;
           break;
         }

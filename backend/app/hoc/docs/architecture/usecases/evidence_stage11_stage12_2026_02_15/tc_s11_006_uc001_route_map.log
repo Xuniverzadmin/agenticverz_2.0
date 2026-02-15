@@ -1,0 +1,62 @@
+UC-001 Route-to-Operation Mapping Verifier
+============================================================
+Total canonical routes: 48
+  CUS: 22
+  INT: 21
+  FDR: 5
+
+ALL PASSED (100 checks)
+
+Endpoint-to-Operation Summary:
+------------------------------------------------------------------------------------------
+Audience Method  Path                                     L4 Operation                  
+------------------------------------------------------------------------------------------
+cus    GET     /accounts/me                             account.query                 
+cus    GET     /accounts/tenants/self                   account.query                 
+cus    GET     /accounts/tenants/self/status            account.query                 
+cus    GET     /accounts/projects                       account.query                 
+cus    GET     /accounts/projects/{id}                  account.query                 
+cus    POST    /accounts/projects                       account.query                 
+cus    GET     /api-keys                                api_keys.query                
+cus    GET     /api-keys/{key_id}                       api_keys.query                
+cus    GET     /tenant/api-keys                         api_keys.write                
+cus    POST    /tenant/api-keys                         api_keys.write                
+cus    DELETE  /tenant/api-keys/{key_id}                api_keys.write                
+cus    GET     /integrations                            integrations.query            
+cus    GET     /integrations/{id}                       integrations.query            
+cus    POST    /integrations                            integrations.query            
+cus    PUT     /integrations/{id}                       integrations.query            
+cus    DELETE  /integrations/{id}                       integrations.query            
+cus    POST    /integrations/{id}/enable                integrations.query            
+cus    POST    /integrations/{id}/disable               integrations.query            
+cus    POST    /integrations/{id}/test                  integrations.query            
+cus    GET     /activity/recent                         activity.query                
+cus    GET     /incidents                               incidents.query               
+cus    GET     /controls/summary                        controls.query                
+int    POST    /recovery/suggest                        policies.recovery.match       
+int    GET     /recovery/candidates                     policies.recovery.match       
+int    POST    /recovery/approve                        policies.recovery.match       
+int    DELETE  /recovery/candidates/{id}                policies.recovery.match       
+int    GET     /recovery/stats                          policies.recovery.match       
+int    GET     /recovery/candidates/{id}                policies.recovery.read        
+int    PATCH   /recovery/candidates/{id}                policies.recovery.write       
+int    GET     /recovery/actions                        policies.recovery.read        
+int    POST    /recovery/ingest                         policies.recovery.write       
+int    POST    /sdk/handshake                           account.sdk_attestation       
+int    GET     /sdk/instructions                        EXEMPT                        
+int    GET     /onboarding/status                       DIRECT                        
+int    POST    /onboarding/verify                       DIRECT                        
+int    POST    /onboarding/advance/api-key              DIRECT                        
+int    GET     /platform/health                         platform.health               
+int    GET     /platform/capabilities                   platform.health               
+int    GET     /health                                  system.health                 
+int    POST    /jobs                                    agents.job                    
+int    GET     /jobs/{id}                               agents.job                    
+int    POST    /agents/register                         agents.job                    
+int    GET     /debug/auth/context                      EXEMPT                        
+fdr    GET     /ops/cost/overview                       ops.cost                      
+fdr    GET     /ops/cost/anomalies                      ops.cost                      
+fdr    POST    /ops/actions/freeze-tenant               DIRECT                        
+fdr    POST    /ops/actions/unfreeze-tenant             DIRECT                        
+fdr    GET     /ops/actions/audit                       DIRECT                        
+------------------------------------------------------------------------------------------

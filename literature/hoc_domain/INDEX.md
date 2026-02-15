@@ -20,7 +20,7 @@
 | [incidents](incidents/_summary.md) | 17 | 11 | 0 | 28 |
 | [integrations](integrations/_summary.md) | 44 | 3 | 0 | 47 |
 | [logs](logs/_summary.md) | 18 | 12 | 0 | 30 |
-| [ops](ops/SOFTWARE_BIBLE.md) *(DRAFT)* | 3 | 4 | 0 | 16 |
+| [ops](ops/_summary.md) *(DRAFT)* | 3 | 4 | 0 | 18 |
 | [overview](overview/_summary.md) | 1 | 1 | 0 | 2 |
 | [platform](platform/SOFTWARE_BIBLE.md) *(DRAFT)* | 20 | 42 | 0 | 72 |
 | [policies](policies/_summary.md) | 62 | 14 | 0 | 76 |
@@ -359,13 +359,13 @@
 
 ## Ops *(DRAFT)*
 
-[Software Bible](ops/SOFTWARE_BIBLE.md) | [Canonical Literature](ops/OPS_CANONICAL_SOFTWARE_LITERATURE.md)
+[Domain Summary](ops/_summary.md) | [Software Bible](ops/SOFTWARE_BIBLE.md) | [Domain Capability](ops/DOMAIN_CAPABILITY.md) | [Canonical Literature](ops/OPS_CANONICAL_SOFTWARE_LITERATURE.md)
 
 ### L5 Engines (fdr/ops/engines/)
 
-- `founder_action_write_service.py` — Write engine for founder ops actions
+- `founder_action_write_engine.py` — Write engine for founder ops actions
 - `founder_review.py` — Contract review queue engine
-- `ops_incident_service.py` — Incident aggregation and classification
+- `ops_incident_engine.py` — Incident aggregation and classification
 
 ### L5 Schemas (fdr/ops/schemas/)
 
@@ -377,12 +377,18 @@
 - `error_store.py` — Error persistence and query
 - `event_emitter.py` — Domain event emission
 - `founder_action_write_driver.py` — Founder action DB operations
-- `ops_write_service.py` — Ops data write operations
+- `ops_write_driver.py` — Ops data write operations
 
 ### L2.1 Facades (fdr/ops/facades/)
 
 - `ops_facade.py` — Unified ops access facade
 - `founder_review_adapter.py` — Review queue view adapter
+
+### L2 APIs (api/fdr/ops/)
+
+- `cost_ops.py` — Founder cost intelligence endpoints (`ops.cost` via L4)
+- `founder_actions.py` — Founder intervention and reversal endpoints
+- `retrieval_admin.py` — Founder retrieval plane + evidence administration
 
 ## Overview
 

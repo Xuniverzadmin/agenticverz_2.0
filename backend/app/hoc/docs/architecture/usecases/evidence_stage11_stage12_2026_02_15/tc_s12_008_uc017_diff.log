@@ -1,0 +1,6 @@
+--- /root/agenticverz2.0/backend/app/hoc/docs/architecture/usecases/evidence_stage11_stage12_2026_02_15/tc_s12_008_uc017_run1.log	2026-02-15 11:51:04.314980189 +0100
++++ /root/agenticverz2.0/backend/app/hoc/docs/architecture/usecases/evidence_stage11_stage12_2026_02_15/tc_s12_008_uc017_run2.log	2026-02-15 11:51:06.798948575 +0100
+@@ -1,2 +1,2 @@
+ ...                                                                      [100%]
+-3 passed in 0.95s
++3 passed in 1.06s

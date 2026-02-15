@@ -1,0 +1,13 @@
+============================================================
+LAYER BOUNDARY CHECK
+============================================================
+Root: /root/agenticverz2.0/backend
+
+Checking FastAPI imports in domain code...
+Checking upward imports (domain -> routes)...
+Checking route file placement...
+Checking observability query boundary...
+
+============================================================
+CLEAN: No layer boundary violations found
+============================================================

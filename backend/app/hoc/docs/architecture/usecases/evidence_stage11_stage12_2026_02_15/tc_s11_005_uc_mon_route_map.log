@@ -1,0 +1,90 @@
+UC-MON Route-to-Operation Mapping Verifier
+============================================================
+Total canonical routes: 73
+  activity: 17
+  incidents: 17
+  controls: 6
+  analytics: 13
+  logs: 13
+  policies: 7
+
+ALL PASSED (96 checks)
+
+Domain Route Summary:
+------------------------------------------------------------------------------------------
+Domain       Method  Path                                     L4 Operation                  
+------------------------------------------------------------------------------------------
+activity     GET     /activity/runs                           activity.query                
+activity     GET     /activity/runs/{run_id}                  activity.query                
+activity     GET     /activity/summary/by-status              activity.query                
+activity     GET     /activity/runs/live/by-dimension         activity.query                
+activity     GET     /activity/runs/completed/by-dimension    activity.query                
+activity     GET     /activity/runs/by-dimension              activity.query                
+activity     GET     /activity/patterns                       activity.query                
+activity     GET     /activity/cost-analysis                  activity.query                
+activity     GET     /activity/attention-queue                activity.query                
+activity     GET     /activity/risk-signals                   activity.query                
+activity     GET     /activity/live                           activity.query                
+activity     GET     /activity/completed                      activity.query                
+activity     GET     /activity/signals                        activity.query                
+activity     GET     /activity/metrics                        activity.query                
+activity     GET     /activity/threshold-signals              activity.query                
+activity     POST    /activity/signals/{fp}/ack               activity.query                
+activity     POST    /activity/signals/{fp}/suppress          activity.query                
+incidents    GET     /incidents                               incidents.query               
+incidents    GET     /incidents/by-run/{run_id}               incidents.query               
+incidents    GET     /incidents/patterns                      incidents.query               
+incidents    GET     /incidents/recurring                     incidents.query               
+incidents    GET     /incidents/cost-impact                   incidents.query               
+incidents    GET     /incidents/active                        incidents.query               
+incidents    GET     /incidents/resolved                      incidents.query               
+incidents    GET     /incidents/historical                    incidents.query               
+incidents    GET     /incidents/metrics                       incidents.query               
+incidents    GET     /incidents/historical/trend              incidents.query               
+incidents    GET     /incidents/historical/distribution       incidents.query               
+incidents    GET     /incidents/historical/cost-trend         incidents.query               
+incidents    GET     /incidents/{incident_id}                 incidents.query               
+incidents    GET     /incidents/{incident_id}/learnings       incidents.query               
+incidents    POST    /{incident_id}/export/evidence           incidents.export              
+incidents    POST    /{incident_id}/export/soc2               incidents.export              
+incidents    POST    /{incident_id}/export/executive-debrief  incidents.export              
+controls     GET     /controls                                controls.query                
+controls     GET     /controls/status                         controls.query                
+controls     GET     /controls/{control_id}                   controls.query                
+controls     PUT     /controls/{control_id}                   controls.query                
+controls     POST    /controls/{control_id}/enable            controls.query                
+controls     POST    /controls/{control_id}/disable           controls.query                
+analytics    GET     /feedback                                analytics.feedback            
+analytics    GET     /feedback/{feedback_id}                  analytics.feedback            
+analytics    GET     /feedback/stats/summary                  analytics.feedback            
+analytics    GET     /predictions                             analytics.prediction_read     
+analytics    GET     /predictions/{prediction_id}             analytics.prediction_read     
+analytics    GET     /predictions/subject/{st}/{sid}          analytics.prediction_read     
+analytics    GET     /predictions/stats/summary               analytics.prediction_read     
+analytics    GET     /costsim/v2/status                       analytics.costsim.status      
+analytics    POST    /costsim/v2/simulate                     analytics.costsim.simulate    
+analytics    GET     /costsim/divergence                      analytics.costsim.divergence  
+analytics    GET     /costsim/canary/reports                  analytics.canary_reports      
+analytics    GET     /costsim/datasets                        analytics.costsim.datasets    
+analytics    GET     /costsim/datasets/{dataset_id}           analytics.costsim.datasets    
+logs         GET     /traces                                  logs.traces_api               
+logs         POST    /traces                                  logs.traces_api               
+logs         GET     /traces/{run_id}                         logs.traces_api               
+logs         GET     /traces/by-hash/{root_hash}              logs.traces_api               
+logs         GET     /traces/compare/{r1}/{r2}                logs.traces_api               
+logs         DELETE  /traces/{run_id}                         logs.traces_api               
+logs         POST    /traces/cleanup                          logs.traces_api               
+logs         GET     /traces/idempotency/{key}                logs.traces_api               
+logs         GET     /traces/mismatches                       traces.list_mismatches        
+logs         POST    /traces/mismatches/bulk-report           traces.bulk_report_mismatches 
+logs         POST    /traces/{tid}/mismatch                   traces.report_mismatch        
+logs         GET     /traces/{tid}/mismatches                 traces.list_trace_mismatches  
+logs         POST    /traces/{tid}/mismatches/{mid}/resolve   traces.resolve_mismatch       
+policies     GET     /policies                                policies.query                
+policies     POST    /policies                                policies.query                
+policies     GET     /policies/{id}                           policies.query                
+policies     PUT     /policies/{id}                           policies.query                
+policies     DELETE  /policies/{id}                           policies.query                
+policies     POST    /policies/{id}/enable                    policies.query                
+policies     POST    /policies/{id}/disable                   policies.query                
+------------------------------------------------------------------------------------------

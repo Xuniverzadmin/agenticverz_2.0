@@ -1,0 +1,10 @@
+Loaded manifest: 44 entries
+
+PASS  required_fields
+PASS  assign_test_refs
+PASS  valid_uc_ids
+PASS  no_duplicate_conflicts
+PASS  handler_files_exist
+PASS  hold_status_present
+
+Summary: 6 passed, 0 failed [strict]

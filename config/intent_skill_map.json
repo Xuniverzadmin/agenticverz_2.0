@@ -41,6 +41,58 @@
       ],
       "skill": "git-commit-push",
       "confidence": "high"
+    },
+    {
+      "intent_id": "codebase_audit_bugs_architecture_determinism",
+      "match_any": [
+        "audit codebase",
+        "bugs and errors",
+        "architecture deviation",
+        "improper design",
+        "determinism checks",
+        "gatepass"
+      ],
+      "skill": "codebase-arch-audit-gatepass",
+      "confidence": "high"
+    },
+    {
+      "intent_id": "llm_task_todo_detailed_plan_handoff",
+      "match_any": [
+        "detailed plan",
+        "todo plan",
+        "claude execute",
+        "plan md",
+        "plan_implemented",
+        "taskpack for claude"
+      ],
+      "skill": "llm-task-plan-handoff",
+      "confidence": "high"
+    },
+    {
+      "intent_id": "strategic_direction_northstar_cycle",
+      "match_any": [
+        "strategic thinker",
+        "north star",
+        "strategic direction",
+        "iteration strategy",
+        "vision mission analyze codebase",
+        "measure progress each iteration"
+      ],
+      "skill": "strategic-thinker-northstar",
+      "confidence": "high"
+    },
+    {
+      "intent_id": "uc_testcase_generator_staged_handoff",
+      "match_any": [
+        "test case generator",
+        "use case registered tests",
+        "staged test pack",
+        "stage 1.1 stage 1.2 stage 2",
+        "executed md report",
+        "routes and means to test"
+      ],
+      "skill": "uc-testcase-generator",
+      "confidence": "high"
     }
   ]
 }

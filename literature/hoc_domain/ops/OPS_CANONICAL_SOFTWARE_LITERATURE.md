@@ -1,101 +1,117 @@
 # Ops Domain — Canonical Software Literature (DRAFT)
 
-**Domain:** ops (fdr/ops)
-**Status:** DRAFT — not yet canonical
-**Generated:** 2026-02-01
-**Reference:** PIN-513 Phase 7
+**Domain:** ops (fdr/ops)  
+**Status:** DRAFT — audit-aligned, not yet fully canonical  
+**Updated:** 2026-02-15  
+**References:** PIN-564, PIN-565, PIN-566
 
 ---
+
+## Reality Delta (2026-02-15)
+
+- Founder UAT console is wired via app-shell routing for both founder surfaces:
+  - `/prefops/uat`
+  - `/fops/uat`
+- UAT execution gate is unified in:
+  - `backend/scripts/ops/hoc_uc_validation_uat_gate.sh`
+- Determinism hardening applied:
+  - Playwright configs pinned to `127.0.0.1:5173` + explicit app-shell `cwd`
+  - Browser binary preflight check added to gate script
+  - UI orphan-page check now recognizes lazy dynamic imports
 
 ## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
 
 - Wave-4 UC script coverage audited `hoc/cus/ops` scope as:
-- `4` scripts total (`0 UC_LINKED`, `4 NON_UC_SUPPORT`, `0 UNLINKED` in target scope).
-- This document remains focused on `fdr/ops` canonicalization; this note anchors CUS script-coverage state for cross-domain documentation coherence.
+  - `4` scripts total (`0 UC_LINKED`, `4 NON_UC_SUPPORT`, `0 UNLINKED` in target scope).
+- This document remains focused on `fdr/ops`; Wave-4 note is retained as cross-domain coverage context.
 
 ## File Registry
 
-### L2 APIs
+### L2 APIs (`backend/app/hoc/api/fdr/ops/`)
 
-**`hoc/api/cus/ops/cost_ops.py`** (LOC TBD)
-- Role: Founder ops cost intelligence endpoints (L2)
-- Callers: Founder Ops Console UI
-- Delegates: L4 operation registry (`ops.cost`)
-- Session DI: `get_session_dep` from `hoc_spine.orchestrator.operation_registry` (L2 does not import DB/ORM)
+**`cost_ops.py`**
+- Role: founder cost intelligence API surface
+- Delegation: L4 `OperationRegistry` operation `ops.cost`
+- Methods used: `get_overview`, `get_anomalies`, `get_tenants`, `get_customer_drilldown`
+- Boundary shape: thin L2 route pattern (expected topology-compliant path)
 
-### L5 Engines
+**`founder_actions.py`**
+- Role: founder freeze/throttle/override + reversal + audit endpoints
+- Delegation: uses `FounderActionWriteService` plus in-file SQL helper logic
+- Boundary shape: currently mixed (L2 contains direct SQL/business logic)
 
-**`founder_action_write_service.py`** (109 LOC)
-- Role: Write engine for founder operational actions (freeze-tenant, throttle-tenant, override-incident)
-- Callers: `api/fdr/ops/founder_actions.py` (L2)
-- Delegates: `founder_action_write_driver.py` (L6)
+**`retrieval_admin.py`**
+- Role: founder retrieval-plane and evidence administration
+- Delegation: L4 operations (`knowledge.planes.*`)
+- Boundary shape: L2->L4 dispatch present, with L2 session type imports
+
+### L5 Engines (`backend/app/hoc/fdr/ops/engines/`)
+
+**`founder_action_write_engine.py`**
+- Role: write engine for founder operational actions
+- Delegates to: `founder_action_write_driver.py`
 - Key methods: `create_founder_action()`, `mark_action_reversed()`, `commit()`, `rollback()`
 
-**`ops_incident_service.py`** (463 LOC)
-- Role: Incident aggregation and severity classification from error store data
-- Callers: `ops_facade.py` (L2.1 facade)
-- Delegates: `error_store.py` (L6) via `ErrorStoreProtocol`
+**`ops_incident_engine.py`**
+- Role: incident aggregation and severity classification from error-store facts
+- Delegates to: `error_store.py` via `ErrorStoreProtocol`
 - Key methods: `get_active_incidents()`, `get_incident_by_component()`, `get_incident_summary()`
-- Note: Identical copy exists at `fdr/incidents/engines/ops_incident_service.py` — potential dedup target
 
-**`founder_review.py`** (LOC TBD)
-- Role: Contract review queue engine for founder oversight
-- Callers: `founder_review_adapter.py` (facade)
-- Key functions: `get_contract_service()`, `get_eligible_contracts()`, `ReviewDecisionRequest`
+**`founder_review.py`**
+- Role: contract review queue + review decision flow
+- Key exports: `ReviewDecisionRequest`, `get_contract_service()`, `get_eligible_contracts()`
 
-### L5 Schemas
+### L5 Schemas (`backend/app/hoc/fdr/ops/schemas/`)
 
 **`ops_domain_models.py`**
-- Role: Core domain models for ops domain
-- Exports: `OpsIncident`, `OpsHealthSignal`, `OpsRiskFinding`, `OpsTrendMetric`, `OpsDecisionOutcome`
-- Enums: `OpsSeverity`, `OpsIncidentCategory`, `OpsHealthStatus`, `OpsRiskLevel`
-- Consumers: `ops_incident_service.py` (both copies), `ops_facade.py`
+- Core domain models and enums:
+  - `OpsIncident`, `OpsHealthSignal`, `OpsRiskFinding`, `OpsTrendMetric`, `OpsDecisionOutcome`
+  - `OpsSeverity`, `OpsIncidentCategory`, `OpsHealthStatus`, `OpsRiskLevel`
 
 **`ops.py`**
-- Role: DTO definitions for ops API layer (25+ DTOs)
-- Key exports: `SystemPulseDTO`, `CustomerSegmentDTO`, `CustomerAtRiskDTO`, `FounderActionRequestDTO`, `FounderActionResponseDTO`
+- Founder ops DTO catalog including:
+  - incident/cost/founder action DTOs
+  - auto-execute review DTOs
 
-### L6 Drivers
+### L6 Drivers (`backend/app/hoc/fdr/ops/drivers/`)
 
-**`error_store.py`** (131 LOC)
-- Role: Error persistence and query against infra error store
-- Callers: `ops_facade.py` (via lazy load)
-- Key methods: `get_errors_by_component()`, `get_error_counts_by_class()`, `get_error_counts_by_component()`
+**`error_store.py`**
+- Error persistence/query adapter over infra store APIs.
 
-**`founder_action_write_driver.py`** (148 LOC)
-- Role: Pure DB operations for founder actions
-- Callers: `founder_action_write_service.py` (L5)
-- Key methods: `insert_action()`, `update_action_reversed()`
+**`founder_action_write_driver.py`**
+- Pure DB writes for founder actions.
 
-**`ops_write_service.py`** (LOC TBD)
-- Role: Write operations for ops domain data
-- Callers: TBD
+**`ops_write_driver.py`**
+- Ops write operations (`OpsWriteService`).
 
-**`event_emitter.py`** (LOC TBD)
-- Role: Domain event emission for ops events
-- Exports: `EventType`, `EntityType`, `OpsEvent`, `EventEmitter`, `get_event_emitter()`
+**`event_emitter.py`**
+- Structured founder ops event emission (`EventEmitter`).
 
-### L2.1 Facades
+### L2.1 Facades (`backend/app/hoc/fdr/ops/facades/`)
 
-**`ops_facade.py`** (191 LOC)
-- Role: Unified access point for ops domain (incidents + errors)
-- Callers: `api/fdr/incidents/ops.py` (L2)
-- Delegates: `DatabaseErrorStore` (L6), `OpsIncidentService` (L5)
-- Key methods: `get_active_incidents()`, `get_incident_summary()`, `get_error_counts_by_component()`, `get_error_counts_by_class()`
-- Factory: `get_ops_facade(db_url)`
+**`ops_facade.py`**
+- Unified incident/error view facade for ops.
 
-**`founder_review_adapter.py`** (LOC TBD)
-- Role: View adapter translating review engine output to API-friendly format
-- Exports: `FounderReviewAdapter`, `FounderContractSummaryView`, `FounderReviewQueueResponse`
+**`founder_review_adapter.py`**
+- Converts review/contracts to founder-facing response views.
 
----
+## Route and Operation Maps
 
-## Legacy Connections
+### Founder Cost Ops (Topology-Compliant)
 
-**None.** All `app.services` imports severed (PIN-513 Phase 7).
+- `GET /ops/cost/overview` -> L4 `ops.cost` (`method=get_overview`)
+- `GET /ops/cost/anomalies` -> L4 `ops.cost` (`method=get_anomalies`)
+- `GET /ops/cost/tenants` -> L4 `ops.cost` (`method=get_tenants`)
+- `GET /ops/cost/customers/{tenant_id}` -> L4 `ops.cost` (`method=get_customer_drilldown`)
 
-## Known Issues
+### Founder UAT Console Route Map (Frontend)
 
-- Duplicate `ops_incident_service.py` exists at both `fdr/ops/engines/` and `fdr/incidents/engines/` — candidate for dedup
-- No tally script exists (`scripts/ops/hoc_ops_tally.py`)
-- Domain not yet registered in `literature/hoc_domain/INDEX.md`
+- `website/app-shell/src/routes/index.tsx`:
+  - `/${prefix}/uat` inside founder route set
+  - rendered for both prefixes: `/prefops` and `/fops`
+
+## Known Issues (Active)
+
+- `founder_actions.py` contains direct SQL and business-condition logic in L2.
+- `retrieval_admin.py` is partially compliant (dispatches to L4, but L2 boundary remains broader than ideal).
+- Full canonical status remains pending until founder L2 surfaces are fully thin and topology-clean.

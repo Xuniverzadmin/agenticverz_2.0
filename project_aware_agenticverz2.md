@@ -42,6 +42,44 @@ Do not hardcode full skill loading during bootstrap.
 5. Refresh registry when skills change:
 - `python3 scripts/ops/generate_skills_registry.py --repo-root /root/agenticverz2.0`
 
+## On-Demand Skill Invocations (Reference)
+
+Use these only when required by task intent.
+
+1. Strategic loop with deterministic gates:
+- init phase (north star -> audit -> micro north star -> handoff):
+```bash
+~/.codex/skills/strategic-thinker-northstar/scripts/strategic_loop.py \
+  --repo-root /root/agenticverz2.0 \
+  --mode init \
+  --title "YOUR_STRATEGY_TITLE" \
+  --audit-mode core \
+  --owner Claude
+```
+- close phase (after Claude updates `*_plan_implemented.md`):
+```bash
+~/.codex/skills/strategic-thinker-northstar/scripts/strategic_loop.py \
+  --repo-root /root/agenticverz2.0 \
+  --mode close \
+  --loop-id L001 \
+  --audit-mode core
+```
+
+2. Direct code audit gatepass:
+```bash
+~/.codex/skills/codebase-arch-audit-gatepass/scripts/audit_gatepass.sh \
+  --repo-root /root/agenticverz2.0 \
+  --mode core
+```
+
+3. Direct Claude plan handoff pack:
+```bash
+~/.codex/skills/llm-task-plan-handoff/scripts/create_plan_pack.py \
+  --title "YOUR_TASK_TITLE" \
+  --out-dir /root/agenticverz2.0/backend/app/hoc/docs/architecture/usecases \
+  --owner Claude
+```
+
 ## Working Memory Checklist
 Track this context per task:
 - Task goal and scope

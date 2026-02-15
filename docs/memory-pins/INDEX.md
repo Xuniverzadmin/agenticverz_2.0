@@ -534,6 +534,9 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-562](PIN-562-full-scope-uc-generation-across-all-hoccus-scripts-including-waves.md) | **Full-Scope UC Generation Across All hoc/cus Scripts (Including Waves)** | Architecture / Usecase Governance | **✅ COMPLETE** | 2026-02-12 |
 | [PIN-563](PIN-563-uc-033uc-040-closure-zero-unlinked-achievement.md) | **UC-033..UC-040 Closure + Zero UNLINKED Achievement** | Architecture | **✅ COMPLETE** | 2026-02-13 |
 | [PIN-564](PIN-564-uc-codebase-elicitation-validation-uat-taskpack-full-execution.md) | **UC Codebase Elicitation Validation UAT Taskpack — Full Execution** | Architecture | **✅ COMPLETE** | 2026-02-15 |
+| [PIN-565](PIN-565-uat-findings-clearance-detour-3-findings-closed-e1-e5.md) | **UAT Findings Clearance Detour — 3 Findings Closed (E1-E5)** | Architecture | **✅ COMPLETE** | 2026-02-15 |
+| [PIN-566](PIN-566-uat-hardening-reality-closure-and-ops-literature-canonicalization.md) | **UAT Hardening Reality Closure + Ops Literature Canonicalization** | Architecture / Validation / Documentation | **✅ COMPLETE** | 2026-02-15 |
+| [PIN-567](PIN-567-uc-testcase-generator-skill-lazy-bootstrap-reference.md) | **UC Testcase Generator Skill + Lazy Bootstrap Reference** | Architecture / Skills / Validation | **✅ COMPLETE** | 2026-02-15 |
 
 ---
 
@@ -1303,6 +1306,9 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-15 | **PIN-567 UC Testcase Generator Skill + Lazy Bootstrap Reference** - Created via memory_trail. |
+| 2026-02-15 | **PIN-566 UAT Hardening Reality Closure + Ops Literature Canonicalization** - Created via memory_trail. |
+| 2026-02-15 | **PIN-565 UAT Findings Clearance Detour — 3 Findings Closed (E1-E5)** - Created via memory_trail. |
 | 2026-02-15 | **PIN-564 UC Codebase Elicitation Validation UAT Taskpack — Full Execution** - Created via memory_trail. |
 | 2026-02-13 | **PIN-563 UC-033..UC-040 Closure + Zero UNLINKED Achievement** - Created via memory_trail. |
 | 2026-02-12 | **PIN-562 Full-Scope UC Generation Across All hoc/cus Scripts (Including Waves)** - Created via memory_trail. |
