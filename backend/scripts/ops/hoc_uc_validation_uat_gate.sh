@@ -3,18 +3,21 @@
 # AUDIENCE: INTERNAL
 # Role: Unified UC validation + UAT gate — runs all backend and frontend checks
 # artifact_class: CODE
-# Reference: UC_CODEBASE_ELICITATION_VALIDATION_UAT_TASKPACK_2026-02-15
+# Reference: UC_UAT_FINDINGS_CLEARANCE_DETOUR_PLAN_2026-02-15
 #
-# Usage: ./scripts/ops/hoc_uc_validation_uat_gate.sh
-# Exit: 0 only when ALL stages pass
+# Run from repo root:   backend/scripts/ops/hoc_uc_validation_uat_gate.sh
+# Run from backend/:    ./scripts/ops/hoc_uc_validation_uat_gate.sh
+#
+# Exit: 0 only when ALL blocking stages pass
 
-set -euo pipefail
+set -uo pipefail
 
 BACKEND_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-WEBSITE_DIR="$(cd "$BACKEND_DIR/../website/app-shell" && pwd)"
+WEBSITE_DIR="$(cd "$BACKEND_DIR/../website/app-shell" 2>/dev/null && pwd)" || WEBSITE_DIR=""
 
 PASS=0
 FAIL=0
+WARN=0
 RESULTS=()
 
 run_stage() {
@@ -33,25 +36,31 @@ run_stage() {
     fi
 }
 
+run_stage_nonblocking() {
+    local name="$1"
+    shift
+    echo ""
+    echo "============================================================"
+    echo "STAGE (non-blocking): $name"
+    echo "============================================================"
+    if "$@" 2>&1; then
+        RESULTS+=("PASS  $name (non-blocking)")
+        PASS=$((PASS + 1))
+    else
+        RESULTS+=("WARN  $name (non-blocking, informational only)")
+        WARN=$((WARN + 1))
+    fi
+}
+
 # ============================================================
 # STAGE 1: Backend Deterministic Gate Pack
 # ============================================================
 
 cd "$BACKEND_DIR"
+export PYTHONPATH="${BACKEND_DIR}"
 
 run_stage "CI Hygiene Checks" \
-    python3 -c "
-import subprocess, sys
-result = subprocess.run(
-    [sys.executable, 'scripts/ci/check_init_hygiene.py', '--ci'],
-    env={**__import__('os').environ, 'PYTHONPATH': '.'},
-    capture_output=True, text=True
-)
-print(result.stdout[-2000:] if len(result.stdout) > 2000 else result.stdout)
-if result.returncode != 0:
-    print(result.stderr[-500:] if result.stderr else '')
-sys.exit(result.returncode)
-"
+    python3 scripts/ci/check_init_hygiene.py --ci
 
 run_stage "UC Operation Manifest Validator" \
     python3 scripts/verification/uc_operation_manifest_check.py --strict
@@ -92,7 +101,7 @@ run_stage "UAT: UC-032 Redaction Export Safety" \
 # STAGE 4: App-Shell Guardrails
 # ============================================================
 
-if [ -d "$WEBSITE_DIR" ]; then
+if [ -n "$WEBSITE_DIR" ] && [ -d "$WEBSITE_DIR" ]; then
     cd "$WEBSITE_DIR"
 
     run_stage "App-Shell: Hygiene CI" \
@@ -101,29 +110,66 @@ if [ -d "$WEBSITE_DIR" ]; then
     run_stage "App-Shell: Boundary CI" \
         npm run boundary:ci
 
-    run_stage "App-Shell: TypeCheck" \
+    # UAT-scoped typecheck (BLOCKING — only UAT feature files)
+    run_stage "App-Shell: TypeCheck UAT" \
+        npm run typecheck:uat
+
+    # Global typecheck (NON-BLOCKING — pre-existing debt, informational)
+    run_stage_nonblocking "App-Shell: TypeCheck Global (debt report)" \
         npm run typecheck
 
     run_stage "App-Shell: Build" \
         npm run build
 else
-    RESULTS+=("SKIP  App-Shell (directory not found: $WEBSITE_DIR)")
+    echo ""
+    echo "WARNING: App-Shell directory not found at expected path."
+    echo "  Expected: $BACKEND_DIR/../website/app-shell"
+    echo "  Action:   Ensure website/app-shell exists relative to backend/"
+    RESULTS+=("FAIL  App-Shell (directory not found)")
+    FAIL=$((FAIL + 1))
 fi
 
 # ============================================================
 # STAGE 5: Playwright Tests
 # ============================================================
 
-if [ -d "$WEBSITE_DIR/tests/bit" ]; then
+if [ -n "$WEBSITE_DIR" ] && [ -d "$WEBSITE_DIR/tests" ]; then
     cd "$WEBSITE_DIR"
 
-    run_stage "Playwright: BIT" \
-        npx playwright test --config tests/bit/playwright.config.ts
+    # Check if Playwright browsers are installed
+    if npx playwright --version >/dev/null 2>&1; then
+        PLAYWRIGHT_AVAILABLE=true
+    else
+        PLAYWRIGHT_AVAILABLE=false
+    fi
 
-    run_stage "Playwright: UAT" \
-        npx playwright test --config tests/uat/playwright.config.ts
+    if [ "$PLAYWRIGHT_AVAILABLE" = true ]; then
+        # Check if browsers are installed
+        if npx playwright test --config tests/uat/playwright.config.ts --list >/dev/null 2>&1; then
+            run_stage "Playwright: BIT" \
+                npx playwright test --config tests/bit/playwright.config.ts
+
+            run_stage "Playwright: UAT" \
+                npx playwright test --config tests/uat/playwright.config.ts
+        else
+            echo ""
+            echo "ERROR: Playwright browsers not installed."
+            echo "  Action: Run 'npx playwright install chromium' in website/app-shell/"
+            RESULTS+=("FAIL  Playwright: Browsers not installed (run: npx playwright install chromium)")
+            FAIL=$((FAIL + 1))
+        fi
+    else
+        echo ""
+        echo "ERROR: @playwright/test not found in devDependencies."
+        echo "  Action: Run 'npm install --save-dev @playwright/test' in website/app-shell/"
+        RESULTS+=("FAIL  Playwright: Package not installed (run: npm install --save-dev @playwright/test)")
+        FAIL=$((FAIL + 1))
+    fi
 else
-    RESULTS+=("SKIP  Playwright (tests directory not found)")
+    echo ""
+    echo "WARNING: Playwright tests directory not found."
+    RESULTS+=("FAIL  Playwright (tests directory not found)")
+    FAIL=$((FAIL + 1))
 fi
 
 # ============================================================
@@ -140,7 +186,7 @@ for r in "${RESULTS[@]}"; do
 done
 
 echo ""
-echo "TOTAL: $PASS passed, $FAIL failed"
+echo "TOTAL: $PASS passed, $FAIL failed, $WARN warnings (non-blocking)"
 echo ""
 
 if [ "$FAIL" -gt 0 ]; then

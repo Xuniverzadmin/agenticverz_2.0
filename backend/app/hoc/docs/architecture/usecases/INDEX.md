@@ -75,6 +75,8 @@ Canonical registry for HOC usecase-to-code audit artifacts.
 66. `backend/app/hoc/docs/architecture/usecases/HOC_CUS_UC_MATCH_ITERATION3_DECISION_TABLE_2026-02-15.md`
 67. `backend/app/hoc/docs/architecture/usecases/HOC_CUS_UC_MATCH_ITERATION3_DECISION_TABLE_2026-02-15.csv`
 68. `backend/app/hoc/docs/architecture/usecases/UC_CODEBASE_ELICITATION_VALIDATION_UAT_TASKPACK_2026-02-15.md`
+69. `backend/app/hoc/docs/architecture/usecases/UC_CODEBASE_ELICITATION_VALIDATION_UAT_REALITY_AUDIT_2026-02-15.md`
+70. `backend/app/hoc/docs/architecture/usecases/UC_UAT_FINDINGS_CLEARANCE_DETOUR_PLAN_2026-02-15.md`
 
 ## Usecase Registry
 | ID | Usecase | Audience | Status | Primary Document | Last Updated |

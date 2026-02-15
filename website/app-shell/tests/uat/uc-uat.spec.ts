@@ -16,6 +16,7 @@
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
 // ============================================================================
 // Types
@@ -37,6 +38,8 @@ interface FixtureData {
 // Load Fixtures
 // ============================================================================
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const fixturesPath = path.join(__dirname, 'fixtures', 'uc-scenarios.json');
 let fixtures: ScenarioFixture[] = [];
 

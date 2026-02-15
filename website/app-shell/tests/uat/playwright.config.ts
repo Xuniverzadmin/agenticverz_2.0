@@ -34,6 +34,6 @@ export default defineConfig({
     url: 'http://localhost:5173',
     reuseExistingServer: true,
     timeout: 120000,
-    cwd: '../../',
+    cwd: '../../',  // Relative to tests/uat/ → website/app-shell/
   },
 });
