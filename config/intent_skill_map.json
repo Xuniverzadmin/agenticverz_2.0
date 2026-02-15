@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "defaults": {
+    "activation_mode": "lazy",
+    "max_skills_per_task": 2,
+    "low_confidence_action": "ask"
+  },
+  "rules": [
+    {
+      "intent_id": "hoc_session_start_or_resume",
+      "match_any": [
+        "bootstrap",
+        "session start",
+        "resume hoc",
+        "load project context",
+        "startup checklist"
+      ],
+      "skill": "hoc-session-bootstrap",
+      "confidence": "high"
+    },
+    {
+      "intent_id": "hoc_uc_closure_and_mapping",
+      "match_any": [
+        "uc closure",
+        "usecase mapping",
+        "red to green",
+        "hoc linkage",
+        "governance gates"
+      ],
+      "skill": "hoc-uc-closure",
+      "confidence": "high"
+    },
+    {
+      "intent_id": "git_commit_and_push",
+      "match_any": [
+        "commit",
+        "push",
+        "git commit",
+        "git push",
+        "publish branch"
+      ],
+      "skill": "git-commit-push",
+      "confidence": "high"
+    }
+  ]
+}

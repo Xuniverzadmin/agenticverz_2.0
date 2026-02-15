@@ -10,7 +10,7 @@ This file is a lightweight project memory guide for the agent. It defines:
 Use this to explicitly load context before tasks:
 
 ```
-Load project context and follow governance: codex_agents_agenticverz2.md, project_aware_agenticverz2.md, vision_mission_self_audit.md. Run scripts/ops/hoc_session_bootstrap.sh --strict first (add --gates core when closure verification is needed). When needed, consult docs/architecture/topology/HOC_LAYER_TOPOLOGY_V2.0.0.md, docs/architecture/architecture_core/LAYER_MODEL.md, and docs/architecture/architecture_core/DRIVER_ENGINE_PATTERN_LOCKED.md. For domain work, read literature/hoc_domain/<domain>/SOFTWARE_BIBLE.md and DOMAIN_CAPABILITY.md. Task: <your task>
+Load project context and follow governance: codex_agents_agenticverz2.md, project_aware_agenticverz2.md, vision_mission_self_audit.md. Run scripts/ops/hoc_session_bootstrap.sh --strict first (add --gates core when closure verification is needed). Use docs/SKILLS_REGISTRY.md and config/intent_skill_map.json for lazy skill activation (do not preload all skills). When needed, consult docs/architecture/topology/HOC_LAYER_TOPOLOGY_V2.0.0.md, docs/architecture/architecture_core/LAYER_MODEL.md, and docs/architecture/architecture_core/DRIVER_ENGINE_PATTERN_LOCKED.md. For domain work, read literature/hoc_domain/<domain>/SOFTWARE_BIBLE.md and DOMAIN_CAPABILITY.md. Task: <your task>
 ```
 
 ## Load Order (When Starting a Task)
@@ -24,6 +24,23 @@ Load project context and follow governance: codex_agents_agenticverz2.md, projec
 6. `docs/architecture/hoc/INDEX.md` (HOC domain index)
 7. `backend/app/hoc/docs/architecture/usecases/INDEX.md` (usecase registry)
 8. `backend/app/hoc/docs/architecture/usecases/HOC_USECASE_CODE_LINKAGE.md` (usecase-to-code audit map)
+
+## Skill Lazy-Load Policy (Bootstrap-Safe)
+
+Do not hardcode full skill loading during bootstrap.
+
+1. Discover skills via generated registry:
+- `docs/SKILLS_REGISTRY.md`
+2. Use intent routing rules:
+- `config/intent_skill_map.json`
+3. Activate skills only on demand:
+- load selected skill `SKILL.md` only when intent matches or user names the skill.
+- load `references/` files only for the active step.
+4. Keep context bounded:
+- max 1-2 skills per task.
+- do not preload unrelated skills.
+5. Refresh registry when skills change:
+- `python3 scripts/ops/generate_skills_registry.py --repo-root /root/agenticverz2.0`
 
 ## Working Memory Checklist
 Track this context per task:
