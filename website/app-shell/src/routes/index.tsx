@@ -100,6 +100,8 @@ const AutoExecuteReviewPage = lazy(() => import('@fops/pages/founder/AutoExecute
 const FounderReviewPage = lazy(() => import('@fops/pages/founder/FounderReviewPage'));
 // UAT Console — UC Codebase Elicitation Validation
 const UcUatConsolePage = lazy(() => import('@/features/uat/UcUatConsolePage'));
+// Stagetest Evidence Console — Audit-ready test artifact viewer
+const StagetestPage = lazy(() => import('@/features/stagetest/StagetestPage'));
 
 // =============================================================================
 // ONBOARDING PAGES
@@ -144,6 +146,7 @@ function renderFounderRoutes(prefix: string) {
       <Route path={`${prefix}/review/auto-execute`} element={<FounderRoute><AutoExecuteReviewPage /></FounderRoute>} />
       <Route path={`${prefix}/sba`} element={<FounderRoute><SBAInspectorPage /></FounderRoute>} />
       <Route path={`${prefix}/uat`} element={<FounderRoute><UcUatConsolePage /></FounderRoute>} />
+      <Route path={`${prefix}/stagetest`} element={<FounderRoute><StagetestPage /></FounderRoute>} />
     </>
   );
 }

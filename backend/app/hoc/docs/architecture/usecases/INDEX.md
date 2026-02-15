@@ -81,6 +81,11 @@ Canonical registry for HOC usecase-to-code audit artifacts.
 72. `backend/app/hoc/docs/architecture/usecases/UC_CODEBASE_ELICITATION_VALIDATION_UAT_SIGNOFF_2026-02-15_v2.md`
 73. `backend/app/hoc/docs/architecture/usecases/UC_CODEBASE_ELICITATION_VALIDATION_UAT_REALITY_AUDIT_ADDENDUM_2026-02-15.md`
 74. `backend/app/hoc/docs/architecture/usecases/APP_SHELL_TS_DEBT_INVENTORY_2026-02-15.md`
+75. `backend/app/hoc/docs/architecture/usecases/STAGETEST_HOC_API_EVIDENCE_CONSOLE_PLAN_2026-02-15.md`
+76. `backend/app/hoc/docs/architecture/usecases/STAGETEST_HOC_API_EVIDENCE_CONSOLE_TASKPACK_FOR_CLAUDE_2026-02-15.md`
+77. `backend/app/hoc/docs/architecture/usecases/stagetest_artifact_schema.json`
+78. `backend/app/hoc/docs/architecture/usecases/STAGETEST_SUBDOMAIN_DEPLOY_PLAN_2026-02-15.md`
+79. `backend/app/hoc/docs/architecture/usecases/STAGETEST_HOC_API_EVIDENCE_CONSOLE_TASKPACK_FOR_CLAUDE_2026-02-15_implemented.md`
 
 ## Usecase Registry
 | ID | Usecase | Audience | Status | Primary Document | Last Updated |

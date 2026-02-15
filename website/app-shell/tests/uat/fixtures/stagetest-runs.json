@@ -1,0 +1,53 @@
+{
+  "description": "Stagetest Evidence Console test fixtures — expected run/case shapes",
+  "runs": [
+    {
+      "run_id": "20260215T120000Z-abc123def456",
+      "created_at": "2026-02-15T12:00:00Z",
+      "stages_executed": ["1.1", "1.2"],
+      "total_cases": 14,
+      "pass_count": 14,
+      "fail_count": 0,
+      "determinism_digest": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6abcd",
+      "artifact_version": "1.0.0"
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "case-001-tenant-create",
+      "uc_id": "UC-001",
+      "stage": "1.1",
+      "operation_name": "tenant.create",
+      "status": "PASS",
+      "determinism_hash": "deadbeef1234567890abcdef1234567890abcdef1234567890abcdef12345678"
+    },
+    {
+      "case_id": "case-002-tenant-activate",
+      "uc_id": "UC-001",
+      "stage": "1.1",
+      "operation_name": "tenant.activate",
+      "status": "PASS",
+      "determinism_hash": "cafebabe1234567890abcdef1234567890abcdef1234567890abcdef12345678"
+    },
+    {
+      "case_id": "case-003-onboarding-complete",
+      "uc_id": "UC-002",
+      "stage": "1.2",
+      "operation_name": "onboarding.complete",
+      "status": "PASS",
+      "determinism_hash": "12345678deadbeef1234567890abcdef1234567890abcdef1234567890abcdef"
+    }
+  ],
+  "required_data_testids": [
+    "stagetest-page",
+    "stagetest-stats",
+    "stagetest-run-list"
+  ],
+  "required_components": [
+    "StagetestPage.tsx",
+    "StagetestRunList.tsx",
+    "StagetestCaseTable.tsx",
+    "StagetestCaseDetail.tsx",
+    "stagetestClient.ts"
+  ]
+}

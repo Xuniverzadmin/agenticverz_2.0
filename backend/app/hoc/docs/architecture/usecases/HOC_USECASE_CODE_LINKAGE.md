@@ -1037,3 +1037,47 @@
 **integrations external adapters** (20): init, cloud_functions_adapter, customer_activity_adapter, customer_keys_adapter, file_storage_base, founder_ops_adapter, gcs_adapter, lambda_adapter, mcp_server_registry, pgvector_adapter, pinecone_adapter, runtime_adapter, s3_adapter, serverless_base, slack_adapter, smtp_adapter, vector_stores_base, weaviate_adapter, webhook_adapter, workers_adapter
 **ops domain** (4): cost_ops_engine, cost_read_driver, plus 2 inits — founder ops infrastructure
 **overview package inits** (3): init files across L5_engines, L5_schemas, L6_drivers
+**ops stagetest infrastructure** (4): stagetest_read_engine, stagetest schemas, stagetest L2 router, stagetest facade registration
+
+---
+
+## Stagetest Evidence Console (FDR/OPS)
+
+**Added:** 2026-02-15
+**Audience:** `fdr` (founder)
+**Status:** GREEN
+**Canonical API prefix:** `/hoc/api/stagetest/*`
+**FORBIDDEN:** `/api/v1/stagetest/*`
+
+### Code Artifacts
+
+| Layer | File | Role |
+|-------|------|------|
+| L2 Router | `app/hoc/api/fdr/ops/stagetest.py` | 5 GET endpoints, verify_fops_token auth |
+| L2.1 Facade | `app/hoc/api/facades/fdr/ops.py` | stagetest_router registered |
+| L5 Engine | `app/hoc/fdr/ops/engines/stagetest_read_engine.py` | Filesystem artifact reader |
+| L5 Schema | `app/hoc/fdr/ops/schemas/stagetest.py` | Pydantic response models |
+| L1 UI | `website/app-shell/src/features/stagetest/` | 5 component files |
+| Route | `website/app-shell/src/routes/index.tsx` | /prefops/stagetest + /fops/stagetest |
+
+### Verification Artifacts
+
+| Artifact | Path |
+|----------|------|
+| Route prefix guard | `scripts/verification/stagetest_route_prefix_guard.py` |
+| Artifact integrity check | `scripts/verification/stagetest_artifact_check.py` |
+| Artifact schema | `app/hoc/docs/architecture/usecases/stagetest_artifact_schema.json` |
+| API tests | `tests/api/test_stagetest_read_api.py` (8 tests) |
+| Governance tests | `tests/governance/t4/test_stagetest_route_prefix_guard.py` (3 tests) |
+| Playwright tests | `website/app-shell/tests/uat/stagetest.spec.ts` (8 tests) |
+| Deploy plan | `app/hoc/docs/architecture/usecases/STAGETEST_SUBDOMAIN_DEPLOY_PLAN_2026-02-15.md` |
+
+### Endpoints
+
+| Method | Path | Response |
+|--------|------|----------|
+| GET | `/hoc/api/stagetest/runs` | RunListResponse |
+| GET | `/hoc/api/stagetest/runs/{run_id}` | RunSummary |
+| GET | `/hoc/api/stagetest/runs/{run_id}/cases` | CaseListResponse |
+| GET | `/hoc/api/stagetest/runs/{run_id}/cases/{case_id}` | CaseDetail |
+| GET | `/hoc/api/stagetest/apis` | ApisSnapshotResponse |
