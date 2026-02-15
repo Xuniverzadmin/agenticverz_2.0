@@ -15,8 +15,34 @@
 - Plan: `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`.
 - Run-governance queries now support `run_id` scoping via `LogsDomainStore.get_governance_events` (filters `before_state`/`after_state` on `run_id` or `source_run_id`).
 - PostgresTraceStore is the canonical trace store for production; SQLiteTraceStore remains dev-only.
+- Trace API endpoints are routed through L4 `logs.traces_api` → L5 `trace_api_engine` to avoid L2→L6 imports.
 
 **Note (Scope):** `backend/app/hoc/cus/account/logs/CRM/audit/audit_engine.py` is governance-job audit (contract/job evidence → verdict), not LLM-run record auditing. It is executed via L4 operation `governance.audit_job`.
+
+## Reality Delta (2026-02-11)
+
+- Canonical UC alignment now includes `UC-003` and `UC-017`, both architecture `GREEN`.
+- Replay mode labeling and replay artifact version persistence are now part of verified storage and determinism contracts.
+- Trace/read determinism (`as_of`) for priority logs trace APIs is now passing strict UC-MON validation.
+
+## Reality Delta (2026-02-12)
+
+- Logs expansion closure promotes `UC-032` (redaction governance + trace-safe export) to architecture `GREEN`.
+- Redaction call paths are now captured in expanded UC evidence and linked in canonical usecase docs.
+- Domain purity still reports pre-existing blocking findings in `trace_store.py`; this remains outside UC-032 scope and does not alter the UC-032 architecture closure.
+- Production readiness for logs expansion UCs is tracked separately in `backend/app/hoc/docs/architecture/usecases/PROD_READINESS_TRACKER.md`.
+
+## Reality Delta (2026-02-12, Wave-1 Script Coverage Audit)
+
+- Wave-1 script coverage (`policies + logs`) has been independently audited and reconciled.
+- Logs scope classification is complete:
+- `22` scripts marked `UC_LINKED`
+- `22` scripts marked `NON_UC_SUPPORT`
+- `0` logs scripts remain unclassified in Wave-1 scope.
+- Deterministic gates remain clean after Wave-1 updates and governance suite now runs `163` passing tests in `test_uc018_uc032_expansion.py`.
+- Canonical audit artifacts:
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_1_implemented.md`
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_1_AUDIT_2026-02-12.md`
 
 ## Script Registry
 
@@ -37,9 +63,10 @@ Each script's unique contribution and canonical function.
 | mapper | L5 | `SOC2ControlMapper.map_incident_to_controls` | CANONICAL | 1 | ?:__init__ | ?:control_registry | L4:control_registry, capture, completeness_checker +1 | YES |
 | panel_response_assembler | L5 | `PanelResponseAssembler._aggregate_verification` | LEAF | 0 | ?:__init__ | ?:ai_console_panel_engine | L5:ai_console_panel_engine, capture, completeness_checker +1 | YES |
 | pdf_renderer | L5 | `PDFRenderer.render_soc2_pdf` | CANONICAL | 1 | ?:incidents | L7:export_bundles | L4:logs_handler, capture, completeness_checker +1 | YES |
-| redact | L5 | `redact_trace_data` | CANONICAL | 8 | ?:traces | ?:pg_store | ?:__init__ | L6:pg_store | L2:traces | ?:mypy_zones, pg_store | YES |
+| redact | L5 | `redact_trace_data` | CANONICAL | 8 | ?:traces | ?:pg_store | ?:__init__ | L6:pg_store | L4:logs.traces_api | ?:mypy_zones, pg_store | YES |
 | replay_determinism | L5 | `ReplayValidator.validate_replay` | CANONICAL | 4 | ?:guard | ?:certificate | ?:replay_determinism | L5:certificate | L2:guard | L4:logs_handler, audit_evidence, capture +8 | YES |
 | trace_facade | L5 | `TraceFacade.start_trace` | CANONICAL | 1 | ?:transaction_coordinator | ?:__init__ | ?:trace_facade | L5:__init__ | L4:transaction_coordinator, capture, completeness_checker +1 | YES |
+| trace_api_engine | L5 | `TraceApiEngine.list_traces` | CANONICAL | 5 | L4:logs.traces_api | ?:__init__ | ?:traces | L5:__init__ | L4:logs.traces_api | YES |
 | traces_metrics | L5 | `TracesMetrics.measure_request` | LEAF | 0 | ?:__init__, capture, completeness_checker +1 | YES |
 | traces_models | L5 | `compare_traces` | CANONICAL | 7 | audit_evidence, certificate, evidence_facade +4 | YES |
 | audit_ledger_service_async | L6 | `AuditLedgerServiceAsync._emit` | LEAF | 0 | ?:policy_proposal | ?:policy_rules_service | ?:policy_limits_service | L5:policy_limits_engine | L5:policy_rules_engine | L5:policy_proposal_engine, audit_evidence, audit_ledger_service +4 | INTERFACE |
@@ -51,7 +78,7 @@ Each script's unique contribution and canonical function.
 | job_execution | L6 | `JobProgressTracker.update` | CANONICAL | 8 | ?:__init__, audit_evidence, audit_ledger_service +10 | YES |
 | logs_domain_store | L6 | `LogsDomainStore.list_llm_runs` | CANONICAL | 7 | L6:__init__ | L5:logs_facade, export_bundle_store, logs_facade | YES |
 | panel_consistency_checker | L6 | `PanelConsistencyChecker.check` | CANONICAL | 3 | ?:__init__ | ?:panel_metrics_emitter | ?:panel_response_assembler | ?:ai_console_panel_engine | L5:ai_console_panel_engine | L5:panel_response_assembler, capture, completeness_checker +1 | **OVERLAP** |
-| pg_store | L6 | `PostgresTraceStore.search_traces` | CANONICAL | 8 | ?:traces | ?:runner | ?:__init__ | ?:logs_read_service | ?:replay | L5:logs_read_engine | L2:traces | ?:apply | ?:mypy_zones | ?:test_trace_fail_closed, capture, completeness_checker +4 | **OVERLAP** |
+| pg_store | L6 | `PostgresTraceStore.search_traces` | CANONICAL | 8 | ?:traces | ?:runner | ?:__init__ | ?:logs_read_service | ?:replay | L5:logs_read_engine | L4:logs.traces_api | ?:apply | ?:mypy_zones | ?:test_trace_fail_closed, capture, completeness_checker +4 | **OVERLAP** |
 | replay | L6 | `ReplayEnforcer.enforce_step` | CANONICAL | 8 | ?:logs | ?:runtime | ?:workers | ?:execution_plan | ?:__init__ | ?:main | L2:logs | L2:runtime | L2:workers | L4:logs_handler, audit_engine, capture +16 | YES |
 | traces_store | L6 | `SQLiteTraceStore.search_traces` | CANONICAL | 8 | capture, completeness_checker, logs_read_engine +3 | **OVERLAP** |
 
@@ -105,7 +132,7 @@ L2:tenants.revoke_api_key → L4:logs_handler → L6:audit_ledger_service_async.
 
 #### DELETE /{run_id}
 ```
-L2:traces.delete_trace → L4:logs_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
+L2:traces.delete_trace → L4:logs.traces_api → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
 ```
 
 #### GET /anomalies
@@ -130,7 +157,7 @@ L2:cost_intelligence.get_costs_by_feature → L4:logs_handler → L6:audit_ledge
 
 #### GET /by-hash/{root_hash}
 ```
-L2:traces.get_trace_by_hash → L4:logs_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
+L2:traces.get_trace_by_hash → L4:logs.traces_api → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
 ```
 
 #### GET /by-model
@@ -145,7 +172,7 @@ L2:cost_intelligence.get_costs_by_user → L4:logs_handler → L6:audit_ledger_s
 
 #### GET /compare/{run_id1}/{run_id2}
 ```
-L2:traces.compare_traces → L4:logs_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
+L2:traces.compare_traces → L4:logs.traces_api → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
 ```
 
 #### GET /dashboard
@@ -165,12 +192,12 @@ L2:cost_intelligence.list_feature_tags → L4:logs_handler → L6:audit_ledger_s
 
 #### GET /idempotency/{idempotency_key}
 ```
-L2:traces.check_idempotency → L4:logs_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
+L2:traces.check_idempotency → L4:logs.traces_api → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
 ```
 
 #### GET /mismatches
 ```
-L2:traces.list_all_mismatches → L4:logs_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
+L2:traces.list_all_mismatches → L4:traces_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
 ```
 
 #### GET /projection
@@ -240,12 +267,12 @@ L2:guard_logs.get_log → L4:logs_handler → L6:audit_ledger_service_async.Audi
 
 #### GET /{run_id}
 ```
-L2:traces.get_trace → L4:logs_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
+L2:traces.get_trace → L4:logs.traces_api → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
 ```
 
 #### GET /{trace_id}/mismatches
 ```
-L2:traces.list_trace_mismatches → L4:logs_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
+L2:traces.list_trace_mismatches → L4:traces_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
 ```
 
 #### POST /anomalies/detect
@@ -265,7 +292,7 @@ L2:cost_intelligence.create_or_update_budget → L4:logs_handler → L6:audit_le
 
 #### POST /cleanup
 ```
-L2:traces.cleanup_old_traces → L4:logs_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
+L2:traces.cleanup_old_traces → L4:logs.traces_api → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
 ```
 
 #### POST /features
@@ -275,7 +302,7 @@ L2:cost_intelligence.create_feature_tag → L4:logs_handler → L6:audit_ledger_
 
 #### POST /mismatches/bulk-report
 ```
-L2:traces.bulk_report_mismatches → L4:logs_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
+L2:traces.bulk_report_mismatches → L4:traces_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
 ```
 
 #### POST /record
@@ -285,12 +312,12 @@ L2:cost_intelligence.record_cost → L4:logs_handler → L6:audit_ledger_service
 
 #### POST /{trace_id}/mismatch
 ```
-L2:traces.report_mismatch → L4:logs_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
+L2:traces.report_mismatch → L4:traces_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
 ```
 
 #### POST /{trace_id}/mismatches/{mismatch_id}/resolve
 ```
-L2:traces.resolve_mismatch → L4:logs_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
+L2:traces.resolve_mismatch → L4:traces_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
 ```
 
 #### PUT /features/{tag}
@@ -310,12 +337,12 @@ L2:guard_logs.list_logs → L4:logs_handler → L6:audit_ledger_service_async.Au
 
 #### list_traces
 ```
-L2:traces.list_traces → L4:logs_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
+L2:traces.list_traces → L4:logs.traces_api → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
 ```
 
 #### store_trace
 ```
-L2:traces.store_trace → L4:logs_handler → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
+L2:traces.store_trace → L4:logs.traces_api → L6:audit_ledger_service_async.AuditLedgerServiceAsync._emit
 ```
 
 ## Canonical Algorithm Inventory

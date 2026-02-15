@@ -21,15 +21,15 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-# PIN-520: Use infrastructure store and models (not L6_drivers)
-from app.traces.models import (
+# PIN-520: Use canonical HOC logs schemas + L6 drivers
+from app.hoc.cus.logs.L5_schemas import (
     ParityResult,
     TraceRecord,
     TraceStatus,
     TraceStep,
     compare_traces,
 )
-from app.traces.store import (
+from app.hoc.cus.logs.L6_drivers.trace_store import (
     SQLiteTraceStore,
     TraceStore,
     generate_correlation_id,

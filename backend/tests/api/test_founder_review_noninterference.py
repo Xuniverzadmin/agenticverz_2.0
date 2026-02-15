@@ -531,7 +531,7 @@ class TestNoSideEffects:
         # These imports would indicate potential state mutation
         forbidden_imports = [
             "from app.workflow",
-            "from app.worker",
+            "from app.hoc.int.worker",
             "from app.recovery",
             "AutoExecuteEngine",
             "RecoveryProcessor",

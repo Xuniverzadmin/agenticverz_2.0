@@ -145,7 +145,7 @@ LEGACY_LAYER_PATTERNS = {
     "backend/app/api/": "L2",
     "backend/app/services/": "L4",  # Legacy services treated as L4
     "backend/app/adapters/": "L3",
-    "backend/app/worker/": "L5",
+    "backend/app/hoc/int/worker/": "L5",
     "backend/app/workflow/": "L5",
     "backend/app/auth/": "L6",
     "backend/app/db/": "L6",

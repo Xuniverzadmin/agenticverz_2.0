@@ -1,0 +1,21 @@
+# HOC CUS Script UC Gap — UNLINKED Scripts
+# Updated: 2026-02-13
+# Status: ALL RESOLVED — 0 UNLINKED scripts remaining
+#
+# History:
+#   2026-02-12: 119 scripts identified as UNLINKED
+#   2026-02-13: Wave-4 coverage + UC-033..UC-040 expansion resolved all 119:
+#               - 88 scripts → UC_LINKED (UC-033..UC-040)
+#               - 31 __init__.py → NON_UC_SUPPORT (package inits)
+#
+# Final distribution (HOC_CUS_SCRIPT_UC_CLASSIFICATION_2026-02-12.csv):
+#   UC_LINKED: 264
+#   NON_UC_SUPPORT: 309
+#   UNLINKED: 0
+#   Total: 573
+#
+# Final distribution (HOC_CUS_FULL_SCOPE_UC_PROPOSAL_2026-02-12.csv):
+#   UC_LINKED: 59
+#   NON_UC_SUPPORT: 106
+#   UNLINKED: 0
+#   Total: 165

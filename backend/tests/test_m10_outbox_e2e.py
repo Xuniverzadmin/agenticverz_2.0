@@ -280,7 +280,7 @@ class TestOutboxBasicDelivery:
         db_session.commit()
 
         # Process the event
-        from app.worker.outbox_processor import OutboxProcessor
+        from app.hoc.int.worker.outbox_processor import OutboxProcessor
 
         processor = OutboxProcessor(DATABASE_URL)
         asyncio.run(processor.run(once=True, batch_size=10))
@@ -316,7 +316,7 @@ class TestOutboxBasicDelivery:
         db_session.commit()
 
         # Process events
-        from app.worker.outbox_processor import OutboxProcessor
+        from app.hoc.int.worker.outbox_processor import OutboxProcessor
 
         processor = OutboxProcessor(DATABASE_URL)
         asyncio.run(processor.run(once=True, batch_size=10))
@@ -358,7 +358,7 @@ class TestOutboxIdempotency:
         )
         db_session.commit()
 
-        from app.worker.outbox_processor import OutboxProcessor
+        from app.hoc.int.worker.outbox_processor import OutboxProcessor
 
         processor = OutboxProcessor(DATABASE_URL)
         asyncio.run(processor.run(once=True, batch_size=10))
@@ -395,7 +395,7 @@ class TestOutboxIdempotency:
         outbox_id = result.scalar()
         db_session.commit()
 
-        from app.worker.outbox_processor import OutboxProcessor
+        from app.hoc.int.worker.outbox_processor import OutboxProcessor
 
         # Process once
         processor = OutboxProcessor(DATABASE_URL)
@@ -453,7 +453,7 @@ class TestOutboxConcurrency:
             )
         db_session.commit()
 
-        from app.worker.outbox_processor import OutboxProcessor
+        from app.hoc.int.worker.outbox_processor import OutboxProcessor
 
         # Process all events with a single processor in multiple batches
         # This tests the core functionality without distributed lock contention
@@ -511,7 +511,7 @@ class TestOutboxFailureHandling:
         # Enable failure mode
         IdempotencyTrackingHandler.failure_mode = "error_500"
 
-        from app.worker.outbox_processor import OutboxProcessor
+        from app.hoc.int.worker.outbox_processor import OutboxProcessor
 
         processor = OutboxProcessor(DATABASE_URL)
         asyncio.run(processor.run(once=True, batch_size=10))
@@ -562,7 +562,7 @@ class TestOutboxFailureHandling:
         outbox_id = result.scalar()
         db_session.commit()
 
-        from app.worker.outbox_processor import OutboxProcessor
+        from app.hoc.int.worker.outbox_processor import OutboxProcessor
 
         # First process - should succeed
         processor = OutboxProcessor(DATABASE_URL)
@@ -615,7 +615,7 @@ class TestOutboxReplayDurability:
             )
         db_session.commit()
 
-        from app.worker.outbox_processor import OutboxProcessor
+        from app.hoc.int.worker.outbox_processor import OutboxProcessor
 
         # Process partial batch (simulate crash after 2 events)
         processor = OutboxProcessor(DATABASE_URL)
@@ -669,12 +669,12 @@ class TestOutboxMetrics:
 
             return MockMetric()
 
-        with patch("app.worker.outbox_processor.OutboxProcessor._update_metric") as mock_update:
+        with patch("app.hoc.int.worker.outbox_processor.OutboxProcessor._update_metric") as mock_update:
             mock_update.side_effect = lambda name, value: metrics_calls.__setitem__(
                 name, metrics_calls.get(name, 0) + value
             )
 
-            from app.worker.outbox_processor import OutboxProcessor
+            from app.hoc.int.worker.outbox_processor import OutboxProcessor
 
             processor = OutboxProcessor(DATABASE_URL)
             asyncio.run(processor.run(once=True, batch_size=10))

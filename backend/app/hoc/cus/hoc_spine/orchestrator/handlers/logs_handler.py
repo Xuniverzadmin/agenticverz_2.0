@@ -377,6 +377,47 @@ class LogsCaptureHandler:
             )
 
 
+class LogsTracesApiHandler:
+    """
+    Handler for logs.traces_api operations.
+
+    Dispatches to TraceApiEngine over trace store capability.
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.logs_bridge import (
+            get_logs_bridge,
+        )
+        from app.hoc.cus.logs.L5_engines.trace_api_engine import get_trace_api_engine
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail("Missing 'method' in params", "MISSING_METHOD")
+
+        trace_store = get_logs_bridge().traces_store_capability()
+        engine = get_trace_api_engine(trace_store)
+
+        dispatch = {
+            "list_traces": engine.list_traces,
+            "store_trace": engine.store_trace,
+            "get_trace": engine.get_trace,
+            "get_trace_by_root_hash": engine.get_trace_by_root_hash,
+            "compare_traces": engine.compare_traces,
+            "delete_trace": engine.delete_trace,
+            "cleanup_old_traces": engine.cleanup_old_traces,
+            "check_idempotency": engine.check_idempotency,
+        }
+
+        method = dispatch.get(method_name)
+        if not method:
+            return OperationResult.fail(f"Unknown traces method: {method_name}", "UNKNOWN_METHOD")
+
+        kwargs = dict(ctx.params)
+        kwargs.pop("method", None)
+        data = await method(**kwargs)
+        return OperationResult.ok(data)
+
+
 def register(registry: OperationRegistry) -> None:
     """Register logs operations with the registry."""
     registry.register("logs.query", LogsQueryHandler())
@@ -387,3 +428,4 @@ def register(registry: OperationRegistry) -> None:
     registry.register("logs.pdf", LogsPdfHandler())
     # PIN-520 Phase 1: Capture handler for workers.py migration
     registry.register("logs.capture", LogsCaptureHandler())
+    registry.register("logs.traces_api", LogsTracesApiHandler())

@@ -319,6 +319,52 @@ class AccountsFacadeDriver:
             updated_at=tenant.updated_at,
         )
 
+    async def insert_project(
+        self,
+        session: AsyncSession,
+        tenant_id: str,
+        *,
+        name: str,
+        description: Optional[str] = None,
+    ) -> TenantDetailSnapshot:
+        """Insert a new project (Tenant record) and return snapshot.
+
+        NO COMMIT — L4 coordinator owns transaction boundary.
+        """
+        new_tenant = Tenant(
+            id=generate_uuid(),
+            name=name,
+            slug=name.lower().replace(" ", "-"),
+            plan="free",
+            status="active",
+            created_at=utc_now(),
+            updated_at=utc_now(),
+        )
+        session.add(new_tenant)
+        await session.flush()
+        await session.refresh(new_tenant)
+
+        return TenantDetailSnapshot(
+            id=new_tenant.id,
+            name=new_tenant.name,
+            slug=new_tenant.slug,
+            status=new_tenant.status,
+            plan=new_tenant.plan,
+            max_workers=new_tenant.max_workers,
+            max_runs_per_day=new_tenant.max_runs_per_day,
+            max_concurrent_runs=new_tenant.max_concurrent_runs,
+            max_tokens_per_month=new_tenant.max_tokens_per_month,
+            max_api_keys=new_tenant.max_api_keys,
+            runs_today=getattr(new_tenant, "runs_today", 0),
+            runs_this_month=getattr(new_tenant, "runs_this_month", 0),
+            tokens_this_month=getattr(new_tenant, "tokens_this_month", 0),
+            onboarding_state=getattr(new_tenant, "onboarding_state", 0) or 0,
+            onboarding_complete=False,
+            created_at=new_tenant.created_at,
+            updated_at=new_tenant.updated_at,
+        )
+        # NO COMMIT — L4 coordinator owns transaction boundary
+
     # -------------------------------------------------------------------------
     # User Operations
     # -------------------------------------------------------------------------

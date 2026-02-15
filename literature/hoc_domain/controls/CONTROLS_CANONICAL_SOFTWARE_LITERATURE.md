@@ -13,6 +13,26 @@
 - Execution boundary (pairing): `PYTHONPATH=. python3 backend/scripts/ops/l5_spine_pairing_gap_detector.py --json` reports `total_l5_engines: 69`, `wired_via_l4: 69`, `direct_l2_to_l5: 0`, `orphaned: 0`.
 - Strict T0 invariant: controls `L6_drivers/` contain no `hoc_spine` imports; domain-local DTOs/config surfaces are used instead.
 
+## Reality Delta (2026-02-11)
+
+- UC alignment updated: controls domain now maps to `UC-004`, `UC-005`, `UC-014`, and `UC-015` with architecture `GREEN`.
+- Per-run controls version binding fields are now part of verified storage contracts and strict UC-MON validation.
+- Override lifecycle closure artifacts are captured in batch implementation evidence docs.
+
+## Reality Delta (2026-02-12)
+
+- `UC-021` (policies limits query lifecycle) is now architecture `GREEN` and uses controls `limits_read_driver` in canonical L2->L4->L5->L6 flow.
+- Controls architecture status remains closed while production readiness is tracked separately in the usecase readiness tracker.
+
+## Reality Delta (2026-02-12, Wave-3 Script Coverage Audit)
+
+- Wave-3 script classification for `controls` is now canonically audited and reconciled.
+- Controls classification state in Wave-3 target scope:
+- `8` scripts as `UC_LINKED`
+- `15` scripts as `NON_UC_SUPPORT`
+- `0` target-scope residual scripts.
+- Deterministic architecture gates remain passing post-wave, with governance suite now at `250` tests.
+
 ## Consolidation Actions (2026-01-31)
 
 ### Naming Violations Fixed (9 renames)

@@ -17,7 +17,7 @@ This is the proof, not a framework.
 import json
 from pathlib import Path
 
-from app.traces.models import TraceRecord, compare_traces
+from app.hoc.cus.logs.L5_schemas import TraceRecord, compare_traces
 
 
 def load_frozen_trace(fixture_name: str) -> TraceRecord:
@@ -190,7 +190,7 @@ class TestDeterminismDriftDetection:
         """
         Traces with different step statuses must not show parity.
         """
-        from app.traces.models import TraceStatus
+        from app.hoc.cus.logs.L5_schemas import TraceStatus
 
         trace1 = load_frozen_trace("golden_trace.json")
         trace2 = load_frozen_trace("golden_trace.json")

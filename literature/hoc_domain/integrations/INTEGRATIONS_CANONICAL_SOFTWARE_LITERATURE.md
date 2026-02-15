@@ -2,18 +2,38 @@
 
 **Domain:** integrations
 **Generated:** 2026-01-31
-**Updated:** 2026-02-07 (CUS health driver extraction)
+**Updated:** 2026-02-09 (CLI canonicalization + worker relocation)
 **Reference:** PIN-498, PIN-516, PIN-517, PIN-521
 **Total Files:** 59 (18 L5_engines, 2 L5_engines/credentials, 2 L5_vault/engines, 1 L5_vault/drivers, 6 L6_drivers, 23 adapters, 5 L5_schemas, 1 hoc_spine/services, 1 __init__.py)
 
 ---
 
-## Reality Delta (2026-02-07)
+## Reality Delta (2026-02-11)
+
+- Canonical onboarding integration surface is now exclusively:
+- `backend/app/hoc/api/cus/integrations/aos_cus_integrations.py`
+- Policy-path onboarding wrappers were removed.
+- Write-path session ownership is corrected:
+- L2 write endpoints use `get_sync_session_dep` and pass `sync_session` to L4.
+- L4 transport arg stripping is enforced in integrations handler (`_STRIP_PARAMS`).
+- Connector registry role is explicitly runtime cache only; it is not onboarding authority.
+- Onboarding activation uses persistent DB tables only (`api_keys`, `cus_integrations`, `sdk_attestations`), with blocking CI guardrail (check 35) preventing cache imports in activation section.
+
+## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
+
+- Wave-4 target scope for integrations is fully classified: `48` scripts (`7 UC_LINKED`, `41 NON_UC_SUPPORT`, `0 UNLINKED` in target scope).
+- `UC_LINKED` coverage is mapped to `UC-002` in linkage docs.
+- Validation gates remain deterministic and clean (`cross-domain`, `layer boundaries`, `init hygiene`, `pairing gap`, `UC-MON strict`, governance tests).
+- Governance test suite now includes Wave-4 assertions and passes at `308` tests.
+
+## Reality Delta (2026-02-09)
 
 - Execution topology: integrations L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5 gaps).
 - External connector I/O is isolated behind L6 (`backend/app/hoc/cus/integrations/L6_drivers/sql_gateway_driver.py`) with Protocol/DTO boundary in L5 schemas.
 - L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain integrations --json --advisory` reports 0 blocking, 0 advisory.
 - Remaining coherence debt (execution boundary): 5 orphaned L5 entry modules remain in `backend/app/hoc/cus/integrations/L5_engines/` (see `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`).
+- CLI canonicalization: Customer CLI moved to `backend/app/hoc/cus/integrations/cus_cli.py`; internal CLI to `backend/app/hoc/int/integrations/int_cli.py`. Legacy root CLIs deleted (no shims).
+- Run creation parity: `cus_cli.py` now requires `tenant_id`, sets `origin_system_id`, generates plans via `app.hoc.cus.policies.L5_engines.plan_generation.generate_plan_for_run`, and executes via `app.hoc.int.worker.runner.RunRunner` (worker package relocated under `hoc/int`).
 
 ### Knowledge Planes (System Runtime Integration)
 

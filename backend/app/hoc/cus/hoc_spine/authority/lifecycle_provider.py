@@ -194,14 +194,26 @@ class MockTenantLifecycleProvider:
         if self._observability_callback is None:
             return
         try:
+            import uuid
+
+            from app.hoc.cus.hoc_spine.authority.event_schema_contract import (
+                CURRENT_SCHEMA_VERSION,
+                validate_event_payload,
+            )
+
             event = {
-                "event_type": "tenant_lifecycle_transition",
+                "event_id": str(uuid.uuid4()),
+                "event_type": "tenant.lifecycle.transition",
                 "tenant_id": tenant_id,
+                "project_id": "__system__",
+                "actor_type": actor.actor_type.value.lower(),
+                "actor_id": actor.actor_id,
+                "decision_owner": "lifecycle",
+                "sequence_no": 0,
+                "schema_version": CURRENT_SCHEMA_VERSION,
                 "from_state": result.from_state.name,
                 "to_state": result.to_state.name,
                 "action": result.action,
-                "actor_type": actor.actor_type.value,
-                "actor_id": actor.actor_id,
                 "reason": actor.reason,
                 "success": result.success,
                 "error": result.error,
@@ -209,6 +221,7 @@ class MockTenantLifecycleProvider:
                 "revoked_api_keys": result.revoked_api_keys,
                 "blocked_workers": result.blocked_workers,
             }
+            validate_event_payload(event)
             self._observability_callback(event)
         except Exception as e:
             logger.warning(f"Failed to emit lifecycle event: {e}")

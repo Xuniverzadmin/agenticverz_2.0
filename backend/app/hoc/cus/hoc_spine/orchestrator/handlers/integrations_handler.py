@@ -37,6 +37,9 @@ class IntegrationsQueryHandler:
     create_integration, update_integration, delete_integration, etc.).
     """
 
+    # Transport-level params that must NOT leak to facade method kwargs
+    _STRIP_PARAMS = {"method", "sync_session"}
+
     async def execute(self, ctx: OperationContext) -> OperationResult:
         from app.hoc.cus.integrations.L5_engines.integrations_facade import (
             get_integrations_facade,
@@ -68,8 +71,7 @@ class IntegrationsQueryHandler:
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
             )
 
-        kwargs = dict(ctx.params)
-        kwargs.pop("method", None)
+        kwargs = {k: v for k, v in ctx.params.items() if k not in self._STRIP_PARAMS}
         data = await method(tenant_id=ctx.tenant_id, **kwargs)
         return OperationResult.ok(data)
 
@@ -82,6 +84,9 @@ class IntegrationsConnectorsHandler:
     get_connector, update_connector, delete_connector, test_connector).
     """
 
+    # Transport-level params that must NOT leak to facade method kwargs
+    _STRIP_PARAMS = {"method", "sync_session"}
+
     async def execute(self, ctx: OperationContext) -> OperationResult:
         from app.hoc.cus.integrations.L5_engines.connectors_facade import (
             get_connectors_facade,
@@ -93,7 +98,7 @@ class IntegrationsConnectorsHandler:
                 "Missing 'method' in params", "MISSING_METHOD"
             )
 
-        facade = get_connectors_facade()
+        facade = get_connectors_facade(session=ctx.params.get("sync_session") or ctx.session)
         dispatch = {
             "list_connectors": facade.list_connectors,
             "get_connector": facade.get_connector,
@@ -108,8 +113,7 @@ class IntegrationsConnectorsHandler:
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
             )
 
-        kwargs = dict(ctx.params)
-        kwargs.pop("method", None)
+        kwargs = {k: v for k, v in ctx.params.items() if k not in self._STRIP_PARAMS}
         data = await method(tenant_id=ctx.tenant_id, **kwargs)
         return OperationResult.ok(data)
 
@@ -122,6 +126,9 @@ class IntegrationsDataSourcesHandler:
     get_source, update_source, delete_source, test_connection, etc.).
     """
 
+    # Transport-level params that must NOT leak to facade method kwargs
+    _STRIP_PARAMS = {"method", "sync_session"}
+
     async def execute(self, ctx: OperationContext) -> OperationResult:
         from app.hoc.cus.integrations.L5_engines.datasources_facade import (
             get_datasources_facade,
@@ -133,7 +140,7 @@ class IntegrationsDataSourcesHandler:
                 "Missing 'method' in params", "MISSING_METHOD"
             )
 
-        facade = get_datasources_facade()
+        facade = get_datasources_facade(session=ctx.params.get("sync_session") or ctx.session)
         dispatch = {
             "register_source": facade.register_source,
             "list_sources": facade.list_sources,
@@ -151,8 +158,7 @@ class IntegrationsDataSourcesHandler:
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
             )
 
-        kwargs = dict(ctx.params)
-        kwargs.pop("method", None)
+        kwargs = {k: v for k, v in ctx.params.items() if k not in self._STRIP_PARAMS}
         data = await method(tenant_id=ctx.tenant_id, **kwargs)
         return OperationResult.ok(data)
 

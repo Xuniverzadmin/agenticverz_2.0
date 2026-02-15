@@ -6,6 +6,17 @@
 
 ---
 
+## Reality Delta (2026-02-11)
+
+- Integration onboarding write flows are session-corrected at L2:
+- `backend/app/hoc/api/cus/integrations/aos_cus_integrations.py`
+- `create/update/delete/enable/disable/test` now pass `sync_session` to L4 `integrations.query`.
+- L4 integrations handlers strip transport params (`method`, `sync_session`) before facade dispatch.
+- Activation authority boundary moved to persistent evidence:
+- connector readiness is evaluated via DB (`cus_integrations.status = 'enabled'`) in onboarding handler.
+- in-memory connector registry is explicitly cache-only and excluded from activation authority.
+- CI check 35 blocks any activation-section import/use of connector registry cache APIs.
+
 ## Reality Delta (2026-02-07)
 
 - L2 purity preserved: integrations L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5).

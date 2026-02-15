@@ -48,6 +48,7 @@ class AccountQueryHandler:
         dispatch = {
             "list_projects": facade.list_projects,
             "get_project_detail": facade.get_project_detail,
+            "create_project": facade.create_project,
             "list_users": facade.list_users,
             "get_user_detail": facade.get_user_detail,
             "get_profile": facade.get_profile,
@@ -279,6 +280,77 @@ class AccountTenantHandler:
             return OperationResult.fail(str(e), "TENANT_ERROR")
 
 
+class AccountSdkAttestationHandler:
+    """
+    Handler for account.sdk_attestation operations.
+
+    Provides SDK attestation persistence and query via L6 driver.
+    Methods:
+      - write: Persist an SDK attestation record
+      - query: Fetch latest attestation for a tenant
+      - has_attestation: Check if tenant has any attestation
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail("Missing 'method' in params", "MISSING_METHOD")
+
+        sync_session = ctx.params.get("sync_session")
+        if not sync_session:
+            return OperationResult.fail("Missing 'sync_session' in params", "MISSING_SESSION")
+
+        try:
+            from app.hoc.cus.account.L6_drivers.sdk_attestation_driver import (
+                write_attestation,
+                fetch_attestation,
+                has_attestation,
+                compute_attestation_hash,
+            )
+            from app.hoc.cus.account.L5_schemas.sdk_attestation import SDKAttestationRecord
+            from datetime import datetime, timezone
+
+            if method_name == "write":
+                record = SDKAttestationRecord(
+                    tenant_id=ctx.tenant_id,
+                    sdk_version=ctx.params.get("sdk_version", ""),
+                    sdk_language=ctx.params.get("sdk_language", ""),
+                    client_id=ctx.params.get("client_id"),
+                    attested_at=datetime.now(timezone.utc),
+                    attestation_hash=compute_attestation_hash(
+                        ctx.tenant_id,
+                        ctx.params.get("sdk_version", ""),
+                        ctx.params.get("sdk_language", ""),
+                        ctx.params.get("client_id"),
+                    ),
+                )
+                write_attestation(sync_session, record)
+                return OperationResult.ok({"attested": True, "hash": record.attestation_hash})
+
+            elif method_name == "query":
+                record = fetch_attestation(sync_session, ctx.tenant_id)
+                if record is None:
+                    return OperationResult.ok(None)
+                return OperationResult.ok({
+                    "tenant_id": record.tenant_id,
+                    "sdk_version": record.sdk_version,
+                    "sdk_language": record.sdk_language,
+                    "client_id": record.client_id,
+                    "attested_at": record.attested_at.isoformat() if record.attested_at else None,
+                    "attestation_hash": record.attestation_hash,
+                })
+
+            elif method_name == "has_attestation":
+                result = has_attestation(sync_session, ctx.tenant_id)
+                return OperationResult.ok({"has_attestation": result})
+
+            else:
+                return OperationResult.fail(f"Unknown method: {method_name}", "UNKNOWN_METHOD")
+
+        except Exception as e:
+            return OperationResult.fail(str(e), "SDK_ATTESTATION_ERROR")
+
+
 def register(registry: OperationRegistry) -> None:
     """Register account operations with the registry."""
     registry.register("account.query", AccountQueryHandler())
@@ -288,3 +360,5 @@ def register(registry: OperationRegistry) -> None:
     registry.register("account.memory_pins", AccountMemoryPinsHandler())
     # PIN-520 ITER3.5: Tenant operations
     registry.register("account.tenant", AccountTenantHandler())
+    # UC-002: SDK attestation persistence
+    registry.register("account.sdk_attestation", AccountSdkAttestationHandler())

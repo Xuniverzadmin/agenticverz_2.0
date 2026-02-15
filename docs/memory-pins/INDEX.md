@@ -519,6 +519,20 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-546](PIN-546-run-linkage-governance-log-scoping.md) | **Run Linkage & Governance Log Scoping** | Architecture / Governance | **✅ COMPLETE** | 2026-02-09 |
 | [PIN-547](PIN-547-domain-linkage-test-results-issues.md) | **Domain Linkage Test Results & Issues** | Testing / QA | **✅ COMPLETE** | 2026-02-09 |
 | [PIN-548](PIN-548-local-db-neon-equivalence-schema-sync-complete.md) | **Local DB Neon Equivalence — Schema Sync Complete** | Database | **✅ COMPLETE** | 2026-02-09 |
+| [PIN-549](PIN-549-neon-connection-audit.md) | **Neon Connection Audit (Docker + systemd)** | Infrastructure / Ops | **✅ COMPLETE** | 2026-02-09 |
+| [PIN-550](PIN-550-run-proof-test-plan-v1-neon-purge.md) | **Run Proof Test Plan v1 Execution + Neon Connection Purge** | Testing / Ops | **✅ COMPLETE** | 2026-02-09 |
+| [PIN-551](PIN-551-cli-canonicalization-worker-relocation.md) | **CLI Canonicalization + Worker Relocation (HOC)** | Architecture / Integrations / Runtime | **✅ COMPLETE** | 2026-02-09 |
+| [PIN-552](PIN-552-run-proof-test-plan-v4-cli-canonical-path-validation-executed.md) | **Run Proof Test Plan v4 — CLI Canonical Path Validation Executed** | HOC Governance / Validation | **✅ COMPLETE** | 2026-02-10 |
+| [PIN-553](PIN-553-runproof-gap-validation-v1-postgres-trace-proof-closed.md) | **RunProof Gap Validation v1 — Postgres Trace Proof Closed** | HOC Governance / Validation | **✅ COMPLETE** | 2026-02-10 |
+| [PIN-555](PIN-555-uc-018uc-032-expansion-15-ucs-redgreen.md) | **UC-018..UC-032 Expansion — 15 UCs RED→GREEN** | Architecture | **✅ COMPLETE** | 2026-02-12 |
+| [PIN-556](PIN-556-cross-domain-e2-fix-sdkattestationdriverpy-pin-520.md) | **Cross-Domain E2 Fix — sdk_attestation_driver.py (PIN-520)** | Architecture | **✅ COMPLETE** | 2026-02-12 |
+| [PIN-557](PIN-557-uc-018uc-032-reality-audit-66-gates-pass.md) | **UC-018..UC-032 Reality Audit — 6/6 Gates PASS** | Architecture | **✅ COMPLETE** | 2026-02-12 |
+| [PIN-558](PIN-558-uc-script-coverage-wave-2-analyticsincidentsactivity-66-gates-pass.md) | **UC Script Coverage Wave-2: analytics+incidents+activity — 6/6 Gates PASS** | Architecture | **✅ COMPLETE** | 2026-02-12 |
+| [PIN-559](PIN-559-uc-script-coverage-wave-3-controlsaccount-66-gates-pass.md) | **UC Script Coverage Wave-3: controls+account — 6/6 Gates PASS** | Architecture | **✅ COMPLETE** | 2026-02-12 |
+| [PIN-560](PIN-560-uc-script-coverage-wave-4-hocspineintegrationsagentapikeysapisopsoverview-150-scripts-classified.md) | **UC Script Coverage Wave-4: hoc_spine+integrations+agent+api_keys+apis+ops+overview — 150 scripts classified** | Architecture | **✅ COMPLETE** | 2026-02-12 |
+| [PIN-561](PIN-561-wave-4-codex-audit-gate-re-run-66-pass-308-governance-tests.md) | **Wave-4 Codex Audit Gate Re-run — 6/6 PASS, 308 governance tests** | Architecture | **✅ COMPLETE** | 2026-02-12 |
+| [PIN-562](PIN-562-full-scope-uc-generation-across-all-hoccus-scripts-including-waves.md) | **Full-Scope UC Generation Across All hoc/cus Scripts (Including Waves)** | Architecture / Usecase Governance | **✅ COMPLETE** | 2026-02-12 |
+| [PIN-563](PIN-563-uc-033uc-040-closure-zero-unlinked-achievement.md) | **UC-033..UC-040 Closure + Zero UNLINKED Achievement** | Architecture | **✅ COMPLETE** | 2026-02-13 |
 
 ---
 
@@ -1288,7 +1302,23 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-13 | **PIN-563 UC-033..UC-040 Closure + Zero UNLINKED Achievement** - Created via memory_trail. |
+| 2026-02-12 | **PIN-562 Full-Scope UC Generation Across All hoc/cus Scripts (Including Waves)** - Created via memory_trail. |
+| 2026-02-12 | **PIN-561 Wave-4 Codex Audit Gate Re-run — 6/6 PASS, 308 governance tests** - Created via memory_trail. |
+| 2026-02-12 | **PIN-560 UC Script Coverage Wave-4: hoc_spine+integrations+agent+api_keys+apis+ops+overview — 150 scripts classified** - Created via memory_trail. |
+| 2026-02-12 | **PIN-559 UC Script Coverage Wave-3: controls+account — 6/6 Gates PASS** - Created via memory_trail. |
+| 2026-02-12 | **PIN-558 UC Script Coverage Wave-2: analytics+incidents+activity — 6/6 Gates PASS** - Created via memory_trail. |
+| 2026-02-12 | **PIN-557 UC-018..UC-032 Reality Audit — 6/6 Gates PASS** - Created via memory_trail. |
+| 2026-02-12 | **PIN-556 Cross-Domain E2 Fix — sdk_attestation_driver.py (PIN-520)** - Created via memory_trail. |
+| 2026-02-12 | **PIN-555 UC-018..UC-032 Expansion — 15 UCs RED→GREEN** - Created via memory_trail. |
+| 2026-02-10 | **PIN-553 RunProof Gap Validation v1 — Postgres Trace Proof Closed** - Updated: Updates |
+| 2026-02-10 | **PIN-553 RunProof Gap Validation v1 — Postgres Trace Proof Closed** - Updated: Updates |
+| 2026-02-10 | **PIN-553 RunProof Gap Validation v1 — Postgres Trace Proof Closed** - Created via memory_trail. |
+| 2026-02-10 | **PIN-552 Run Proof Test Plan v4 — CLI Canonical Path Validation Executed** - Created via memory_trail. |
+| 2026-02-09 | **PIN-551 CLI Canonicalization + Worker Relocation (HOC)** - Created. |
+| 2026-02-09 | **PIN-550 Run Proof Test Plan v1 Execution + Neon Connection Purge** - Created. |
 | 2026-02-09 | **PIN-548 Local DB Neon Equivalence — Schema Sync Complete** - Created via memory_trail. |
+| 2026-02-09 | **PIN-549 Neon Connection Audit (Docker + systemd)** - Recorded Docker + systemd Neon usage; PgBouncer routes local; next action to switch `.env` and rebuild containers. |
 | 2026-02-09 | **PIN-547 Domain Linkage Test Results & Issues** - 5 bugs fixed, 3 pre-existing issues documented, 110 tests pass, CI green. |
 | 2026-02-09 | **PIN-546 Run Linkage & Governance Log Scoping** - Created via docs update. |
 | 2026-02-09 | **PIN-545 Guardrail Violations DATA-001 & LIMITS-001 Analysis** - Created via memory_trail. |

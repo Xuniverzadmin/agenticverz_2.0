@@ -1,0 +1,574 @@
+script_path,domain,layer_bucket,uc_linkage_status,study_status,uc_id,notes
+app/hoc/cus/__init__.py,__init__.py,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/account/L5_engines/__init__.py,account,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/L5_engines/accounts_facade.py,account,L5_ENGINE,UC_LINKED,COMPLETE,UC-002,Wave-3 classification
+app/hoc/cus/account/L5_engines/billing_provider_engine.py,account,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/L5_engines/memory_pins_engine.py,account,L5_ENGINE,UC_LINKED,COMPLETE,UC-002,Wave-3 classification
+app/hoc/cus/account/L5_engines/notifications_facade.py,account,L5_ENGINE,UC_LINKED,COMPLETE,UC-002,Wave-3 classification
+app/hoc/cus/account/L5_engines/onboarding_engine.py,account,L5_ENGINE,UC_LINKED,COMPLETE,UC-002,Wave-3 classification
+app/hoc/cus/account/L5_engines/tenant_engine.py,account,L5_ENGINE,UC_LINKED,COMPLETE,UC-002,Wave-3 classification
+app/hoc/cus/account/L5_engines/tenant_lifecycle_engine.py,account,L5_ENGINE,UC_LINKED,COMPLETE,UC-002,Wave-3 classification
+app/hoc/cus/account/L5_schemas/__init__.py,account,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/L5_schemas/crm_validator_types.py,account,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/L5_schemas/lifecycle_dtos.py,account,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/L5_schemas/onboarding_dtos.py,account,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/L5_schemas/onboarding_state.py,account,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/L5_schemas/plan_quotas.py,account,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/L5_schemas/result_types.py,account,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/L5_schemas/sdk_attestation.py,account,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/L5_schemas/tenant_lifecycle_enums.py,account,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/L5_schemas/tenant_lifecycle_state.py,account,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/L6_drivers/__init__.py,account,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/L6_drivers/accounts_facade_driver.py,account,L6_DRIVER,UC_LINKED,COMPLETE,UC-002,Wave-3 classification
+app/hoc/cus/account/L6_drivers/memory_pins_driver.py,account,L6_DRIVER,UC_LINKED,COMPLETE,UC-002,Wave-3 classification
+app/hoc/cus/account/L6_drivers/onboarding_driver.py,account,L6_DRIVER,UC_LINKED,COMPLETE,UC-002,Wave-3 classification
+app/hoc/cus/account/L6_drivers/sdk_attestation_driver.py,account,L6_DRIVER,UC_LINKED,COMPLETE,UC-002,Wave-3 classification
+app/hoc/cus/account/L6_drivers/tenant_driver.py,account,L6_DRIVER,UC_LINKED,COMPLETE,UC-002,Wave-3 classification
+app/hoc/cus/account/L6_drivers/tenant_lifecycle_driver.py,account,L6_DRIVER,UC_LINKED,COMPLETE,UC-002,Wave-3 classification
+app/hoc/cus/account/L6_drivers/user_write_driver.py,account,L6_DRIVER,UC_LINKED,COMPLETE,UC-002,Wave-3 classification
+app/hoc/cus/account/__init__.py,account,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/account/auth/L5_engines/__init__.py,account,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/auth/L5_engines/identity_adapter.py,account,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/auth/L5_engines/invocation_safety.py,account,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/auth/L5_engines/rbac_engine.py,account,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/auth/L6_drivers/__init__.py,account,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/account/auth/__init__.py,account,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/account/logs/CRM/__init__.py,account,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/account/logs/CRM/audit/__init__.py,account,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/account/logs/CRM/audit/audit_engine.py,account,OTHER,UC_LINKED,COMPLETE,UC-040,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/account/logs/__init__.py,account,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/activity/L5_engines/__init__.py,activity,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/activity/L5_engines/activity_enums.py,activity,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/activity/L5_engines/activity_facade.py,activity,L5_ENGINE,UC_LINKED,COMPLETE,UC-MON-01,Wave-2 classification
+app/hoc/cus/activity/L5_engines/attention_ranking.py,activity,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/activity/L5_engines/cost_analysis.py,activity,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/activity/L5_engines/cus_telemetry_engine.py,activity,L5_ENGINE,UC_LINKED,COMPLETE,UC-MON-05,Wave-2 classification
+app/hoc/cus/activity/L5_engines/pattern_detection.py,activity,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/activity/L5_engines/signal_feedback_engine.py,activity,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/activity/L5_engines/signal_identity.py,activity,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/activity/L5_schemas/__init__.py,activity,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/activity/L6_drivers/__init__.py,activity,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/activity/L6_drivers/activity_read_driver.py,activity,L6_DRIVER,UC_LINKED,COMPLETE,UC-MON-01,Wave-2 classification
+app/hoc/cus/activity/L6_drivers/cus_telemetry_driver.py,activity,L6_DRIVER,UC_LINKED,COMPLETE,UC-MON-05,Wave-2 classification
+app/hoc/cus/activity/L6_drivers/orphan_recovery_driver.py,activity,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/activity/L6_drivers/run_metrics_driver.py,activity,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/activity/L6_drivers/run_signal_driver.py,activity,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/activity/L6_drivers/signal_feedback_driver.py,activity,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/activity/__init__.py,activity,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/activity/adapters/__init__.py,activity,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/activity/adapters/customer_activity_adapter.py,activity,ADAPTER,UC_LINKED,COMPLETE,UC-MON-01,Wave-2 classification
+app/hoc/cus/activity/adapters/workers_adapter.py,activity,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/agent/L6_drivers/__init__.py,agent,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/agent/L6_drivers/discovery_stats_driver.py,agent,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/agent/L6_drivers/platform_driver.py,agent,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/agent/L6_drivers/routing_driver.py,agent,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/agent/__init__.py,agent,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/analytics/L5_engines/__init__.py,analytics,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L5_engines/analytics_facade.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,UC-024,Wave-2 classification
+app/hoc/cus/analytics/L5_engines/canary_engine.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,UC-027,Wave-2 classification
+app/hoc/cus/analytics/L5_engines/config_engine.py,analytics,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L5_engines/cost_anomaly_detector_engine.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/analytics/L5_engines/cost_model.py,analytics,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L5_engines/cost_snapshots_engine.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/analytics/L5_engines/cost_write.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/analytics/L5_engines/costsim_models.py,analytics,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L5_engines/datasets_engine.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/analytics/L5_engines/detection_facade.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,UC-024,Wave-2 classification
+app/hoc/cus/analytics/L5_engines/divergence_engine.py,analytics,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L5_engines/feedback_read_engine.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,UC-MON-04,Wave-2 classification
+app/hoc/cus/analytics/L5_engines/metrics_engine.py,analytics,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L5_engines/prediction_engine.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/analytics/L5_engines/prediction_read_engine.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,UC-025,Wave-2 classification
+app/hoc/cus/analytics/L5_engines/provenance.py,analytics,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L5_engines/sandbox_engine.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,UC-027,Wave-2 classification
+app/hoc/cus/analytics/L5_engines/v2_adapter.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,UC-027,Wave-2 classification
+app/hoc/cus/analytics/L5_schemas/__init__.py,analytics,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L5_schemas/cost_anomaly_dtos.py,analytics,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L5_schemas/cost_anomaly_schemas.py,analytics,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L5_schemas/cost_snapshot_schemas.py,analytics,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L5_schemas/feedback_schemas.py,analytics,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L5_schemas/query_types.py,analytics,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L6_drivers/__init__.py,analytics,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L6_drivers/analytics_artifacts_driver.py,analytics,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/analytics/L6_drivers/analytics_read_driver.py,analytics,L6_DRIVER,UC_LINKED,COMPLETE,UC-024,Wave-2 classification
+app/hoc/cus/analytics/L6_drivers/canary_report_driver.py,analytics,L6_DRIVER,UC_LINKED,COMPLETE,UC-027,Wave-2 classification
+app/hoc/cus/analytics/L6_drivers/coordination_audit_driver.py,analytics,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L6_drivers/cost_anomaly_driver.py,analytics,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/analytics/L6_drivers/cost_anomaly_read_driver.py,analytics,L6_DRIVER,UC_LINKED,COMPLETE,UC-024,Wave-2 classification
+app/hoc/cus/analytics/L6_drivers/cost_snapshots_driver.py,analytics,L6_DRIVER,UC_LINKED,COMPLETE,UC-027,Wave-2 classification
+app/hoc/cus/analytics/L6_drivers/cost_write_driver.py,analytics,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/analytics/L6_drivers/feedback_read_driver.py,analytics,L6_DRIVER,UC_LINKED,COMPLETE,UC-MON-04,Wave-2 classification
+app/hoc/cus/analytics/L6_drivers/leader_driver.py,analytics,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L6_drivers/pattern_detection_driver.py,analytics,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/L6_drivers/prediction_driver.py,analytics,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/analytics/L6_drivers/prediction_read_driver.py,analytics,L6_DRIVER,UC_LINKED,COMPLETE,UC-025,Wave-2 classification
+app/hoc/cus/analytics/L6_drivers/provenance_driver.py,analytics,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/analytics/__init__.py,analytics,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/analytics/adapters/__init__.py,analytics,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/api_keys/L5_engines/__init__.py,api_keys,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/api_keys/L5_engines/api_keys_facade.py,api_keys,L5_ENGINE,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/api_keys/L5_engines/keys_engine.py,api_keys,L5_ENGINE,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/api_keys/L5_schemas/__init__.py,api_keys,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/api_keys/L6_drivers/__init__.py,api_keys,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/api_keys/L6_drivers/api_keys_facade_driver.py,api_keys,L6_DRIVER,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/api_keys/L6_drivers/keys_driver.py,api_keys,L6_DRIVER,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/api_keys/__init__.py,api_keys,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/api_keys/adapters/__init__.py,api_keys,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/api_keys/adapters/customer_keys_adapter.py,api_keys,ADAPTER,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/apis/L6_drivers/__init__.py,apis,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/apis/L6_drivers/keys_driver.py,apis,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/controls/L5_engines/__init__.py,controls,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/controls/L5_engines/cb_sync_wrapper_engine.py,controls,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/controls/L5_engines/controls_facade.py,controls,L5_ENGINE,UC_LINKED,COMPLETE,UC-021,Wave-3 classification
+app/hoc/cus/controls/L5_engines/threshold_engine.py,controls,L5_ENGINE,UC_LINKED,COMPLETE,UC-001,Wave-3 classification
+app/hoc/cus/controls/L5_schemas/__init__.py,controls,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/controls/L5_schemas/override_types.py,controls,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/controls/L5_schemas/overrides.py,controls,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/controls/L5_schemas/policy_limits.py,controls,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/controls/L5_schemas/simulation.py,controls,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/controls/L5_schemas/threshold_signals.py,controls,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/controls/L6_drivers/__init__.py,controls,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/controls/L6_drivers/budget_enforcement_driver.py,controls,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/controls/L6_drivers/circuit_breaker_async_driver.py,controls,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/controls/L6_drivers/circuit_breaker_driver.py,controls,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/controls/L6_drivers/evaluation_evidence_driver.py,controls,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/controls/L6_drivers/killswitch_ops_driver.py,controls,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/controls/L6_drivers/killswitch_read_driver.py,controls,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/controls/L6_drivers/limits_read_driver.py,controls,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/controls/L6_drivers/override_driver.py,controls,L6_DRIVER,UC_LINKED,COMPLETE,UC-021,Wave-3 classification
+app/hoc/cus/controls/L6_drivers/policy_limits_driver.py,controls,L6_DRIVER,UC_LINKED,COMPLETE,UC-021,Wave-3 classification
+app/hoc/cus/controls/L6_drivers/scoped_execution_driver.py,controls,L6_DRIVER,UC_LINKED,COMPLETE,UC-029,Wave-3 classification
+app/hoc/cus/controls/L6_drivers/threshold_driver.py,controls,L6_DRIVER,UC_LINKED,COMPLETE,UC-001,Wave-3 classification
+app/hoc/cus/controls/__init__.py,controls,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/controls/adapters/__init__.py,controls,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-3 support classification
+app/hoc/cus/hoc_spine/__init__.py,hoc_spine,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/hoc_spine/auth_wiring.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/authority/__init__.py,hoc_spine,AUTHORITY,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/authority/concurrent_runs.py,hoc_spine,AUTHORITY,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/authority/contracts/__init__.py,hoc_spine,AUTHORITY,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/authority/contracts/contract_engine.py,hoc_spine,AUTHORITY,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/authority/degraded_mode_checker.py,hoc_spine,AUTHORITY,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/authority/event_schema_contract.py,hoc_spine,AUTHORITY,UC_LINKED,COMPLETE,,
+app/hoc/cus/hoc_spine/authority/gateway_policy.py,hoc_spine,AUTHORITY,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/authority/guard_write_engine.py,hoc_spine,AUTHORITY,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/authority/lifecycle_provider.py,hoc_spine,AUTHORITY,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/authority/onboarding_policy.py,hoc_spine,AUTHORITY,UC_LINKED,COMPLETE,,
+app/hoc/cus/hoc_spine/authority/profile_policy_mode.py,hoc_spine,AUTHORITY,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/authority/rbac_policy.py,hoc_spine,AUTHORITY,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/authority/route_planes.py,hoc_spine,AUTHORITY,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/authority/runtime.py,hoc_spine,AUTHORITY,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/authority/runtime_adapter.py,hoc_spine,AUTHORITY,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/authority/runtime_switch.py,hoc_spine,AUTHORITY,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/authority/veil_policy.py,hoc_spine,AUTHORITY,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/consequences/__init__.py,hoc_spine,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/hoc_spine/consequences/adapters/__init__.py,hoc_spine,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/consequences/adapters/dispatch_metrics_adapter.py,hoc_spine,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/consequences/adapters/export_bundle_adapter.py,hoc_spine,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/consequences/pipeline.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/consequences/ports.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/drivers/__init__.py,hoc_spine,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/hoc_spine/drivers/alert_driver.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/drivers/alert_emitter.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/drivers/cross_domain.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/drivers/dag_executor.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/drivers/decisions.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/drivers/governance_signal_driver.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/drivers/guard_cache.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/drivers/guard_write_driver.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/drivers/idempotency.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/drivers/knowledge_plane_registry_driver.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/drivers/ledger.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/drivers/retrieval_evidence_driver.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/drivers/schema_parity.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/drivers/transaction_coordinator.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/drivers/worker_write_driver_async.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/orchestrator/__init__.py,hoc_spine,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/hoc_spine/orchestrator/constraint_checker.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/orchestrator/coordinators/__init__.py,hoc_spine,L4_COORDINATOR,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/anomaly_incident_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,UC-024,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/bridges/__init__.py,hoc_spine,L4_COORDINATOR,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/bridges/account_bridge.py,hoc_spine,L4_COORDINATOR,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/bridges/activity_bridge.py,hoc_spine,L4_COORDINATOR,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/bridges/analytics_bridge.py,hoc_spine,L4_COORDINATOR,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/bridges/api_keys_bridge.py,hoc_spine,L4_COORDINATOR,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/bridges/controls_bridge.py,hoc_spine,L4_COORDINATOR,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/bridges/incidents_bridge.py,hoc_spine,L4_COORDINATOR,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/bridges/integrations_bridge.py,hoc_spine,L4_COORDINATOR,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/bridges/logs_bridge.py,hoc_spine,L4_COORDINATOR,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/bridges/overview_bridge.py,hoc_spine,L4_COORDINATOR,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/bridges/policies_bridge.py,hoc_spine,L4_COORDINATOR,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/canary_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,UC-027,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/domain_bridge.py,hoc_spine,L4_COORDINATOR,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/evidence_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,UC-001,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/execution_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,UC-001,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/leadership_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,UC-024,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/lessons_coordinator.py,hoc_spine,L4_COORDINATOR,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/provenance_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,UC-024,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/replay_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,UC-001,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/run_evidence_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,UC-001,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/run_proof_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,UC-001,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/signal_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,UC-001,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/signal_feedback_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,UC-MON-04,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/snapshot_scheduler.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,UC-027,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/execution/__init__.py,hoc_spine,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/hoc_spine/orchestrator/execution/job_executor.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/orchestrator/governance_orchestrator.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/orchestrator/handlers/__init__.py,hoc_spine,L4_HANDLER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/account_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/activity_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,,
+app/hoc/cus/hoc_spine/orchestrator/handlers/agent_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-001,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_config_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-024,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-024,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_metrics_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-024,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_prediction_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-025,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_sandbox_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-027,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_snapshot_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-027,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_validation_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-026,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/api_keys_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/circuit_breaker_handler.py,hoc_spine,L4_HANDLER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/controls_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,,
+app/hoc/cus/hoc_spine/orchestrator/handlers/governance_audit_handler.py,hoc_spine,L4_HANDLER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/idempotency_handler.py,hoc_spine,L4_HANDLER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/incidents_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-MON-07,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/integration_bootstrap_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/integrations_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/integrity_handler.py,hoc_spine,L4_HANDLER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/killswitch_handler.py,hoc_spine,L4_HANDLER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/knowledge_planes_handler.py,hoc_spine,L4_HANDLER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/lifecycle_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/logs_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-001,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/m25_integration_handler.py,hoc_spine,L4_HANDLER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/mcp_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/onboarding_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,,
+app/hoc/cus/hoc_spine/orchestrator/handlers/ops_handler.py,hoc_spine,L4_HANDLER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/orphan_recovery_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-001,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/overview_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-001,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/platform_handler.py,hoc_spine,L4_HANDLER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,,
+app/hoc/cus/hoc_spine/orchestrator/handlers/policies_sandbox_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,,
+app/hoc/cus/hoc_spine/orchestrator/handlers/policy_approval_handler.py,hoc_spine,L4_HANDLER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/policy_governance_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-001,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/proxy_handler.py,hoc_spine,L4_HANDLER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/run_governance_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-001,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/system_handler.py,hoc_spine,L4_HANDLER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/traces_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,UC-001,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/lifecycle/__init__.py,hoc_spine,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/hoc_spine/orchestrator/lifecycle/drivers/__init__.py,hoc_spine,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/hoc_spine/orchestrator/lifecycle/drivers/execution.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-034,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/orchestrator/lifecycle/drivers/knowledge_plane.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-034,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/orchestrator/lifecycle/engines/__init__.py,hoc_spine,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/hoc_spine/orchestrator/lifecycle/engines/offboarding.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-034,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/orchestrator/lifecycle/engines/onboarding.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-034,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/orchestrator/lifecycle/engines/pool_manager.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-034,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/orchestrator/lifecycle/stages.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-034,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/orchestrator/operation_registry.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/orchestrator/phase_status_invariants.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/orchestrator/plan_generation_engine.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/orchestrator/run_governance_facade.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/__init__.py,hoc_spine,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/hoc_spine/schemas/agent.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/anomaly_types.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/artifact.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/authority_decision.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/common.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/domain_enums.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/knowledge_plane_harness.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/lifecycle_harness.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/plan.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/protocols.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/rac_models.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/response.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/retry.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/run_introspection_protocols.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/skill.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/schemas/threshold_types.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/__init__.py,hoc_spine,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/hoc_spine/services/alert_delivery.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/alerts_facade.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/audit_durability.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/audit_store.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/canonical_json.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/compliance_facade.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/control_registry.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/costsim_config.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/costsim_metrics.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/cross_domain_gateway.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/cus_credential_engine.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/dag_sorter.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/db_helpers.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/deterministic.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/dispatch_audit.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/fatigue_controller.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/guard.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/input_sanitizer.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/knowledge_plane_connector_registry_engine.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/lifecycle_facade.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/lifecycle_stages_base.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/metrics_helpers.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/monitors_facade.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/rate_limiter.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/retrieval_evidence_engine.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/retrieval_facade.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/retrieval_mediator.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/retrieval_policy_checker_engine.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/scheduler_facade.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/time.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/services/webhook_verify.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-036,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/tests/__init__.py,hoc_spine,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/hoc_spine/tests/conftest.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/tests/test_operation_registry.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-033,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/utilities/__init__.py,hoc_spine,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/hoc_spine/utilities/recovery_decisions.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/hoc_spine/utilities/s1_retry_backoff.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,UC-035,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/incidents/L5_engines/__init__.py,incidents,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/incidents/L5_engines/anomaly_bridge.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,UC-MON-07,Wave-2 classification
+app/hoc/cus/incidents/L5_engines/export_engine.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,UC-031,Wave-2 classification
+app/hoc/cus/incidents/L5_engines/hallucination_detector.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,UC-030,Wave-2 classification
+app/hoc/cus/incidents/L5_engines/incident_engine.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,UC-MON-07,Wave-2 classification
+app/hoc/cus/incidents/L5_engines/incident_pattern.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/incidents/L5_engines/incident_read_engine.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,UC-031,Wave-2 classification
+app/hoc/cus/incidents/L5_engines/incident_write_engine.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,UC-031,Wave-2 classification
+app/hoc/cus/incidents/L5_engines/incidents_facade.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,UC-MON-07,Wave-2 classification
+app/hoc/cus/incidents/L5_engines/incidents_types.py,incidents,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/incidents/L5_engines/policy_violation_engine.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/incidents/L5_engines/postmortem.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/incidents/L5_engines/recovery_rule_engine.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/incidents/L5_engines/recurrence_analysis.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,UC-031,Wave-2 classification
+app/hoc/cus/incidents/L5_engines/semantic_failures.py,incidents,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/incidents/L5_schemas/__init__.py,incidents,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/incidents/L5_schemas/export_schemas.py,incidents,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/incidents/L5_schemas/incident_decision_port.py,incidents,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/incidents/L5_schemas/severity_policy.py,incidents,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/incidents/L6_drivers/__init__.py,incidents,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/incidents/L6_drivers/cost_guard_driver.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,UC-MON-07,Wave-2 classification
+app/hoc/cus/incidents/L6_drivers/export_bundle_driver.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,UC-031,Wave-2 classification
+app/hoc/cus/incidents/L6_drivers/incident_aggregator.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,UC-MON-07,Wave-2 classification
+app/hoc/cus/incidents/L6_drivers/incident_driver.py,incidents,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/incidents/L6_drivers/incident_pattern_driver.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/incidents/L6_drivers/incident_read_driver.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,UC-031,Wave-2 classification
+app/hoc/cus/incidents/L6_drivers/incident_run_read_driver.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,UC-031,Wave-2 classification
+app/hoc/cus/incidents/L6_drivers/incident_write_driver.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,UC-031,Wave-2 classification
+app/hoc/cus/incidents/L6_drivers/incidents_facade_driver.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,UC-MON-07,Wave-2 classification
+app/hoc/cus/incidents/L6_drivers/lessons_driver.py,incidents,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/incidents/L6_drivers/llm_failure_driver.py,incidents,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/incidents/L6_drivers/policy_violation_driver.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/incidents/L6_drivers/postmortem_driver.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/incidents/L6_drivers/recurrence_analysis_driver.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,UC-031,Wave-2 classification
+app/hoc/cus/incidents/__init__.py,incidents,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/incidents/adapters/__init__.py,incidents,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/incidents/adapters/customer_incidents_adapter.py,incidents,ADAPTER,UC_LINKED,COMPLETE,UC-MON-07,Wave-2 classification
+app/hoc/cus/incidents/adapters/founder_ops_adapter.py,incidents,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-2 support classification
+app/hoc/cus/integrations/L5_engines/__init__.py,integrations,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_engines/connectors_facade.py,integrations,L5_ENGINE,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/integrations/L5_engines/credentials/__init__.py,integrations,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_engines/credentials/protocol.py,integrations,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_engines/cus_health_engine.py,integrations,L5_ENGINE,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/integrations/L5_engines/cus_integration_engine.py,integrations,L5_ENGINE,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/integrations/L5_engines/datasources_facade.py,integrations,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_engines/integrations_facade.py,integrations,L5_ENGINE,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/integrations/L5_engines/mcp_server_engine.py,integrations,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_engines/mcp_tool_invocation_engine.py,integrations,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_engines/prevention_contract.py,integrations,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_engines/sql_gateway.py,integrations,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_engines/types.py,integrations,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_notifications/engines/__init__.py,integrations,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/integrations/L5_notifications/engines/channel_engine.py,integrations,OTHER,UC_LINKED,COMPLETE,UC-038,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/integrations/L5_schemas/__init__.py,integrations,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_schemas/audit_schemas.py,integrations,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_schemas/cus_enums.py,integrations,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_schemas/cus_schemas.py,integrations,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_schemas/datasource_model.py,integrations,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_schemas/loop_events.py,integrations,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_schemas/sql_gateway_protocol.py,integrations,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L5_vault/__init__.py,integrations,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/integrations/L5_vault/drivers/__init__.py,integrations,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/integrations/L5_vault/drivers/vault.py,integrations,OTHER,UC_LINKED,COMPLETE,UC-037,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/integrations/L5_vault/engines/__init__.py,integrations,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/integrations/L5_vault/engines/service.py,integrations,OTHER,UC_LINKED,COMPLETE,UC-037,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/integrations/L5_vault/engines/vault_rule_check.py,integrations,OTHER,UC_LINKED,COMPLETE,UC-037,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/integrations/L6_drivers/__init__.py,integrations,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L6_drivers/bridges_driver.py,integrations,L6_DRIVER,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/integrations/L6_drivers/connector_registry_driver.py,integrations,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/integrations/L6_drivers/cus_health_driver.py,integrations,L6_DRIVER,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/integrations/L6_drivers/cus_integration_driver.py,integrations,L6_DRIVER,UC_LINKED,COMPLETE,UC-002,Wave-4 classification
+app/hoc/cus/integrations/L6_drivers/mcp_driver.py,integrations,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L6_drivers/proxy_driver.py,integrations,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L6_drivers/sql_gateway_driver.py,integrations,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/L6_drivers/worker_registry_driver.py,integrations,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/__init__.py,integrations,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/integrations/adapters/__init__.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/cloud_functions_adapter.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/customer_activity_adapter.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/customer_keys_adapter.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/file_storage_base.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/founder_ops_adapter.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/gcs_adapter.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/lambda_adapter.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/mcp_server_registry.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/pgvector_adapter.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/pinecone_adapter.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/runtime_adapter.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/s3_adapter.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/serverless_base.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/slack_adapter.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/smtp_adapter.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/vector_stores_base.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/weaviate_adapter.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/webhook_adapter.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/adapters/workers_adapter.py,integrations,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/integrations/cus_cli.py,integrations,OTHER,UC_LINKED,COMPLETE,UC-039,UC-033..UC-040 expansion (2026-02-13)
+app/hoc/cus/logs/L5_engines/__init__.py,logs,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L5_engines/audit_evidence.py,logs,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L5_engines/audit_ledger_engine.py,logs,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L5_engines/audit_reconciler.py,logs,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L5_engines/certificate.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,UC-017,Wave-1 classification
+app/hoc/cus/logs/L5_engines/completeness_checker.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,UC-017,Wave-1 classification
+app/hoc/cus/logs/L5_engines/cost_intelligence_engine.py,logs,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L5_engines/evidence_facade.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,UC-017,Wave-1 classification
+app/hoc/cus/logs/L5_engines/evidence_report.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,UC-017,Wave-1 classification
+app/hoc/cus/logs/L5_engines/logs_facade.py,logs,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L5_engines/logs_read_engine.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,UC-003,Wave-1 classification
+app/hoc/cus/logs/L5_engines/mapper.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,UC-017,Wave-1 classification
+app/hoc/cus/logs/L5_engines/pdf_renderer.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,UC-017,Wave-1 classification
+app/hoc/cus/logs/L5_engines/redact.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/logs/L5_engines/replay_determinism.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,UC-017,Wave-1 classification
+app/hoc/cus/logs/L5_engines/trace_api_engine.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/logs/L5_engines/trace_mismatch_engine.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,UC-003,Wave-1 classification
+app/hoc/cus/logs/L5_engines/traces_models.py,logs,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L5_schemas/__init__.py,logs,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L5_schemas/determinism_types.py,logs,L5_SCHEMA,UC_LINKED,COMPLETE,UC-017,Wave-1 classification
+app/hoc/cus/logs/L5_schemas/traces_models.py,logs,L5_SCHEMA,UC_LINKED,COMPLETE,UC-003,Wave-1 classification
+app/hoc/cus/logs/L5_support/CRM/engines/__init__.py,logs,OTHER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L6_drivers/__init__.py,logs,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L6_drivers/audit_ledger_driver.py,logs,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L6_drivers/audit_ledger_read_driver.py,logs,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L6_drivers/audit_ledger_write_driver_sync.py,logs,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L6_drivers/bridges_driver.py,logs,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L6_drivers/capture_driver.py,logs,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L6_drivers/cost_intelligence_driver.py,logs,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L6_drivers/cost_intelligence_sync_driver.py,logs,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L6_drivers/export_bundle_store.py,logs,L6_DRIVER,UC_LINKED,COMPLETE,UC-017,Wave-1 classification
+app/hoc/cus/logs/L6_drivers/idempotency_driver.py,logs,L6_DRIVER,UC_LINKED,COMPLETE,UC-003,Wave-1 classification
+app/hoc/cus/logs/L6_drivers/integrity_driver.py,logs,L6_DRIVER,UC_LINKED,COMPLETE,UC-017,Wave-1 classification
+app/hoc/cus/logs/L6_drivers/job_execution_driver.py,logs,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L6_drivers/logs_domain_store.py,logs,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L6_drivers/panel_consistency_driver.py,logs,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/L6_drivers/pg_store.py,logs,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/logs/L6_drivers/redact.py,logs,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/logs/L6_drivers/replay_driver.py,logs,L6_DRIVER,UC_LINKED,COMPLETE,UC-017,Wave-1 classification
+app/hoc/cus/logs/L6_drivers/trace_mismatch_driver.py,logs,L6_DRIVER,UC_LINKED,COMPLETE,UC-003,Wave-1 classification
+app/hoc/cus/logs/L6_drivers/trace_store.py,logs,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/logs/__init__.py,logs,OTHER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/adapters/__init__.py,logs,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/logs/adapters/customer_logs_adapter.py,logs,ADAPTER,UC_LINKED,COMPLETE,UC-003,Wave-1 classification
+app/hoc/cus/ops/L5_engines/__init__.py,ops,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/ops/L5_engines/cost_ops_engine.py,ops,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/ops/L6_drivers/__init__.py,ops,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/ops/L6_drivers/cost_read_driver.py,ops,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/ops/__init__.py,ops,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/overview/L5_engines/__init__.py,overview,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/overview/L5_engines/overview_facade.py,overview,L5_ENGINE,UC_LINKED,COMPLETE,UC-001,Wave-4 classification
+app/hoc/cus/overview/L5_schemas/__init__.py,overview,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/overview/L6_drivers/__init__.py,overview,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-4 support classification
+app/hoc/cus/overview/L6_drivers/overview_facade_driver.py,overview,L6_DRIVER,UC_LINKED,COMPLETE,UC-001,Wave-4 classification
+app/hoc/cus/overview/__init__.py,overview,OTHER,NON_UC_SUPPORT,COMPLETE,,Package init — NON_UC_SUPPORT
+app/hoc/cus/policies/L5_controls/KillSwitch/engines/__init__.py,policies,OTHER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_controls/drivers/__init__.py,policies,OTHER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/__init__.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/ast.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/authority_checker.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/binding_moment_enforcer.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/compiler_parser.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/content_accuracy.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/cus_enforcement_engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,UC-009,Wave-1 classification
+app/hoc/cus/policies/L5_engines/customer_policy_read_engine.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/dag_executor.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/decorator.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/degraded_mode.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/deterministic_engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,UC-018,Wave-1 classification
+app/hoc/cus/policies/L5_engines/dsl_parser.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,UC-009,Wave-1 classification
+app/hoc/cus/policies/L5_engines/failure_mode_handler.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/folds.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/governance_facade.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/grammar.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/intent.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/interpreter.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/ir_builder.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/ir_compiler.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/ir_nodes.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/kernel.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/kill_switch.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/lessons_engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,UC-023,Wave-1 classification
+app/hoc/cus/policies/L5_engines/limits.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/limits_facade.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/limits_simulation_engine.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/llm_policy.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/nodes.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/phase_status_invariants.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/plan.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/plan_generation.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/policies_facade.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/policies_limits_query_engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/policies/L5_engines/policies_proposals_query_engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/policies/L5_engines/policies_rules_query_engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/policies/L5_engines/policy_command.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/policy_conflict_resolver.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/policies/L5_engines/policy_driver.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/policy_graph.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/policy_limits_engine.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/policy_mapper.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/policy_models.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/policy_proposal_engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,UC-009,Wave-1 classification
+app/hoc/cus/policies/L5_engines/policy_rules_engine.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/prevention_hook.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/protection_provider.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/recovery_evaluation_engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,UC-029,Wave-1 classification
+app/hoc/cus/policies/L5_engines/runtime_command.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/sandbox_engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/policies/L5_engines/sandbox_executor.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/snapshot_engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,,
+app/hoc/cus/policies/L5_engines/state.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/tokenizer.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/validator.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/visitors.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_engines/worker_execution_command.py,policies,L5_ENGINE,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_schemas/__init__.py,policies,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_schemas/domain_bridge_capabilities.py,policies,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_schemas/intent_validation.py,policies,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_schemas/policy_check.py,policies,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L5_schemas/policy_rules.py,policies,L5_SCHEMA,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/__init__.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/arbitrator.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/cus_enforcement_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,UC-009,Wave-1 classification
+app/hoc/cus/policies/L6_drivers/guard_read_driver.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/limits_simulation_driver.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/m25_integration_read_driver.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/m25_integration_write_driver.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/optimizer_conflict_resolver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/policies/L6_drivers/policies_facade_driver.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/policy_approval_driver.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/policy_enforcement_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,UC-009,Wave-1 classification
+app/hoc/cus/policies/L6_drivers/policy_enforcement_write_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,UC-009,Wave-1 classification
+app/hoc/cus/policies/L6_drivers/policy_engine_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,UC-009,Wave-1 classification
+app/hoc/cus/policies/L6_drivers/policy_graph_driver.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/policy_proposal_read_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,UC-019,Wave-1 classification
+app/hoc/cus/policies/L6_drivers/policy_proposal_write_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,UC-019,Wave-1 classification
+app/hoc/cus/policies/L6_drivers/policy_read_driver.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/policy_rules_driver.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/policy_rules_read_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/policies/L6_drivers/prevention_records_read_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,UC-009,Wave-1 classification
+app/hoc/cus/policies/L6_drivers/proposals_read_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,,
+app/hoc/cus/policies/L6_drivers/rbac_audit_driver.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/recovery_matcher.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,UC-029,Wave-1 classification
+app/hoc/cus/policies/L6_drivers/recovery_read_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,UC-029,Wave-1 classification
+app/hoc/cus/policies/L6_drivers/recovery_write_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,UC-029,Wave-1 classification
+app/hoc/cus/policies/L6_drivers/replay_read_driver.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/scope_resolver.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/symbol_table.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/L6_drivers/workers_read_driver.py,policies,L6_DRIVER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/__init__.py,policies,OTHER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/adapters/__init__.py,policies,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/adapters/customer_policies_adapter.py,policies,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/adapters/founder_contract_review_adapter.py,policies,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification
+app/hoc/cus/policies/adapters/policy_adapter.py,policies,ADAPTER,NON_UC_SUPPORT,COMPLETE,,Wave-1 support classification

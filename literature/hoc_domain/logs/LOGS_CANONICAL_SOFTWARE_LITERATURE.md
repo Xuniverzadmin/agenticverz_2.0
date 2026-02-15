@@ -3,7 +3,7 @@
 **Domain:** logs
 **Generated:** 2026-01-31
 **Reference:** PIN-496
-**Total Files:** 37 (18 L5_engines, 14 L6_drivers, 1 L5_support, 1 adapter, 3 __init__.py)
+**Total Files:** 38 (19 L5_engines, 14 L6_drivers, 1 L5_support, 1 adapter, 3 __init__.py)
 **PIN-519 Update:** +1 L6_driver (audit_ledger_read_driver.py)
 
 ---
@@ -13,8 +13,30 @@
 - Execution topology: logs L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5 gaps).
 - L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain logs --json --advisory` reports 0 blocking, 0 advisory.
 - Execution boundary (pairing): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain logs --json` reports 0 orphaned L5 entry modules (`total_l5_engines: 6`, `wired_via_l4: 6`, `direct_l2_to_l5: 0`).
+- Trace API endpoints are routed through L4 `logs.traces_api` → L5 `trace_api_engine` to avoid L2→L6 imports.
 - Run-governance queries now support `run_id` scoping via `LogsDomainStore.get_governance_events` (filters `before_state`/`after_state` on `run_id` or `source_run_id`).
 - PostgresTraceStore is the canonical trace store for production; SQLiteTraceStore remains dev-only.
+
+## Reality Delta (2026-02-11)
+
+- Usecase mapping now includes logs-focused `UC-003` (ingest+trace) and `UC-017` (replay mode+integrity) as architecture `GREEN`.
+- Replay columns and trace completeness metadata are now represented in migration and verifier contracts.
+- Deterministic logs trace API checks now pass in strict UC-MON validation.
+
+## Reality Delta (2026-02-12)
+
+- Logs expansion usecase `UC-032` is now architecture `GREEN` in canonical registry/linkage.
+- Redaction governance/trace-safe export behavior is documented as closed on architecture track.
+- Residual logs purity blockers in `trace_store.py` remain pre-existing and are tracked separately from UC-032 closure.
+
+## Reality Delta (2026-02-12, Wave-1 Script Coverage Audit)
+
+- Wave-1 script classification for `policies + logs` is now canonically audited and reconciled.
+- Logs classification state:
+- `22` scripts as `UC_LINKED`
+- `22` scripts as `NON_UC_SUPPORT`
+- `0` unclassified scripts in Wave-1 logs scope.
+- Deterministic architecture gates remain passing post-wave, and governance suite count is now `163` for UC expansion tests.
 
 ## Consolidation Actions (2026-01-31)
 
@@ -158,6 +180,11 @@ They now use `IntegrationsDriverBridge` capabilities from hoc_spine (PIN-L2-PURI
 - **Role:** Trace domain facade
 - **Classes:** `TraceFacade`
 - **Factory:** `get_trace_facade()`
+
+### trace_api_engine.py
+- **Role:** Trace API orchestration over trace store (list/get/store/compare/delete/cleanup/idempotency)
+- **Factory:** `get_trace_api_engine(trace_store)`
+- **Callers:** L4 logs_handler (`logs.traces_api`)
 
 ### traces_metrics.py
 - **Role:** Trace metrics computation

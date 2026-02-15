@@ -114,6 +114,24 @@ class AccountOnboardingAdvanceHandler:
         driver = get_onboarding_driver(sync_session)
         engine = get_onboarding_engine(driver)
 
+        # UC-002: If advancing to COMPLETE, enforce activation predicate
+        from app.hoc.cus.account.L5_schemas.onboarding_state import OnboardingStatus
+
+        if target_state >= OnboardingStatus.COMPLETE.value:
+            predicate_result = _check_activation_conditions(sync_session, ctx.tenant_id)
+            passed, missing = predicate_result
+            if not passed:
+                is_force = trigger.startswith("founder_force_complete:")
+                if is_force:
+                    logger.warning(
+                        "activation_predicate_override_by_founder",
+                        extra={"tenant_id": ctx.tenant_id, "missing": missing, "trigger": trigger},
+                    )
+                else:
+                    return OperationResult.fail(
+                        f"Activation predicate failed: missing {missing}", "ACTIVATION_INCOMPLETE"
+                    )
+
         # L4 owns transaction — engine writes, we commit
         result = engine.advance(ctx.tenant_id, target_state, trigger)
 
@@ -136,6 +154,46 @@ class AccountOnboardingAdvanceHandler:
 # These are L4-owned async functions for call sites that cannot use DI
 # (middleware, fire-and-forget side effects in route handlers).
 # L4 owns the transaction (commit inside the async context manager).
+
+
+def _emit_validated_onboarding_event(
+    tenant_id: str, from_state: str, to_state: str, trigger: str,
+) -> None:
+    """
+    Emit a validated onboarding state transition event.
+
+    Constructs a contract-compliant event payload and validates against
+    the event schema contract before logging. Non-blocking: logs warning
+    on validation failure.
+
+    Reference: GREEN_CLOSURE_PLAN_UC001_UC002 Phase 1
+    """
+    try:
+        import uuid
+
+        from app.hoc.cus.hoc_spine.authority.event_schema_contract import (
+            CURRENT_SCHEMA_VERSION,
+            validate_event_payload,
+        )
+
+        event = {
+            "event_id": str(uuid.uuid4()),
+            "event_type": "onboarding.state.transition",
+            "tenant_id": tenant_id,
+            "project_id": "__system__",
+            "actor_type": "system",
+            "actor_id": trigger,
+            "decision_owner": "onboarding",
+            "sequence_no": 0,
+            "schema_version": CURRENT_SCHEMA_VERSION,
+            "from_state": from_state,
+            "to_state": to_state,
+            "trigger": trigger,
+        }
+        validate_event_payload(event)
+        logger.info("onboarding_event_validated", extra=event)
+    except Exception as e:
+        logger.warning(f"Failed to emit validated onboarding event: {e}")
 
 
 async def async_advance_onboarding(
@@ -174,6 +232,23 @@ async def async_advance_onboarding(
                     "to_state": current_name,
                 }
 
+            # UC-002: If advancing to COMPLETE, enforce activation predicate
+            if target_state >= OnboardingStatus.COMPLETE.value:
+                passed, missing = await _async_check_activation_conditions(session, tenant_id)
+                if not passed:
+                    is_force = trigger.startswith("founder_force_complete:")
+                    if is_force:
+                        logger.warning(
+                            "activation_predicate_override_by_founder",
+                            extra={"tenant_id": tenant_id, "missing": missing, "trigger": trigger},
+                        )
+                    else:
+                        return {
+                            "success": False,
+                            "message": f"Activation predicate failed: missing {missing}",
+                            "was_no_op": False,
+                        }
+
             await session.execute(
                 sql_text("UPDATE tenants SET onboarding_state = :state WHERE id = :tid"),
                 {"state": target_state, "tid": tenant_id},
@@ -192,6 +267,8 @@ async def async_advance_onboarding(
                     "trigger": trigger,
                 },
             )
+
+            _emit_validated_onboarding_event(tenant_id, from_name, to_name, trigger)
 
             return {
                 "success": True,
@@ -309,6 +386,141 @@ async def async_detect_stalled_onboarding(threshold_hours: int = 24) -> list[dic
             )
 
         return stalled
+
+
+# =============================================================================
+# ACTIVATION PREDICATE HELPERS (UC-002)
+# =============================================================================
+# AUTHORITY CONTRACT:
+#   Activation decisions use ONLY persistent DB evidence:
+#     - api_keys (revoked_at IS NULL)           -> key_ready
+#     - cus_integrations (status = 'enabled')   -> connector_validated
+#     - sdk_attestations (row exists)           -> sdk_attested
+#   NEVER import or query connector_registry_driver (in-memory cache).
+#   CI check 35 (check_activation_no_cache_import) enforces this boundary.
+# =============================================================================
+
+
+def _check_activation_conditions(sync_session, tenant_id: str) -> tuple[bool, list[str]]:
+    """
+    Sync: Check activation conditions via DB queries, then call predicate.
+    Used by AccountOnboardingAdvanceHandler (DI path).
+
+    All evidence is from persistent DB tables — never from in-memory cache.
+    """
+    from app.hoc.cus.hoc_spine.authority.onboarding_policy import check_activation_predicate
+    from app.hoc.cus.hoc_spine.orchestrator.operation_registry import sql_text
+
+    has_project = True  # Tenant existence is pre-validated
+
+    try:
+        row = sync_session.execute(
+            sql_text("SELECT COUNT(*) AS cnt FROM api_keys WHERE tenant_id = :tid AND revoked_at IS NULL"),
+            {"tid": tenant_id},
+        ).mappings().first()
+        has_api_key = (row["cnt"] > 0) if row else False
+    except Exception:
+        has_api_key = False
+
+    # Connectors: may not have a persistent table yet — resilient check
+    has_validated_connector = False
+    try:
+        row = sync_session.execute(
+            sql_text("SELECT COUNT(*) AS cnt FROM cus_integrations WHERE tenant_id = :tid AND status = 'enabled'"),
+            {"tid": tenant_id},
+        ).mappings().first()
+        has_validated_connector = (row["cnt"] > 0) if row else False
+    except Exception:
+        pass
+
+    # SDK attestation: table may not exist yet (migration pending)
+    has_sdk_attestation = False
+    try:
+        row = sync_session.execute(
+            sql_text("SELECT 1 FROM sdk_attestations WHERE tenant_id = :tid LIMIT 1"),
+            {"tid": tenant_id},
+        ).first()
+        has_sdk_attestation = row is not None
+    except Exception:
+        pass
+
+    passed, missing = check_activation_predicate(has_project, has_api_key, has_validated_connector, has_sdk_attestation)
+    logger.info(
+        "activation_predicate_evaluated",
+        extra={
+            "tenant_id": tenant_id,
+            "source": "db_only",
+            "evidence": {
+                "project_ready": has_project,
+                "key_ready": has_api_key,
+                "connector_validated": has_validated_connector,
+                "sdk_attested": has_sdk_attestation,
+            },
+            "passed": passed,
+            "missing": missing,
+        },
+    )
+    return passed, missing
+
+
+async def _async_check_activation_conditions(session, tenant_id: str) -> tuple[bool, list[str]]:
+    """
+    Async: Check activation conditions via raw SQL, then call predicate.
+    Used by async_advance_onboarding() helper.
+
+    All evidence is from persistent DB tables — never from in-memory cache.
+    """
+    from app.hoc.cus.hoc_spine.authority.onboarding_policy import check_activation_predicate
+    from app.hoc.cus.hoc_spine.orchestrator.operation_registry import sql_text
+
+    has_project = True  # Tenant existence is pre-validated
+
+    try:
+        row = (await session.execute(
+            sql_text("SELECT COUNT(*) AS cnt FROM api_keys WHERE tenant_id = :tid AND revoked_at IS NULL"),
+            {"tid": tenant_id},
+        )).mappings().first()
+        has_api_key = (row["cnt"] > 0) if row else False
+    except Exception:
+        has_api_key = False
+
+    has_validated_connector = False
+    try:
+        row = (await session.execute(
+            sql_text("SELECT COUNT(*) AS cnt FROM cus_integrations WHERE tenant_id = :tid AND status = 'enabled'"),
+            {"tid": tenant_id},
+        )).mappings().first()
+        has_validated_connector = (row["cnt"] > 0) if row else False
+    except Exception:
+        pass
+
+    has_sdk_attestation = False
+    try:
+        row = (await session.execute(
+            sql_text("SELECT 1 FROM sdk_attestations WHERE tenant_id = :tid LIMIT 1"),
+            {"tid": tenant_id},
+        )).first()
+        has_sdk_attestation = row is not None
+    except Exception:
+        pass
+
+    passed, missing = check_activation_predicate(has_project, has_api_key, has_validated_connector, has_sdk_attestation)
+    logger.info(
+        "activation_predicate_evaluated",
+        extra={
+            "tenant_id": tenant_id,
+            "source": "db_only",
+            "evidence": {
+                "project_ready": has_project,
+                "key_ready": has_api_key,
+                "connector_validated": has_validated_connector,
+                "sdk_attested": has_sdk_attestation,
+            },
+            "passed": passed,
+            "missing": missing,
+        },
+    )
+    return passed, missing
 
 
 def register(registry: OperationRegistry) -> None:

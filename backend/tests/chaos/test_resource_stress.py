@@ -237,7 +237,7 @@ class TestDiskIOChaos:
     def test_registry_persistence_under_disk_stress(self):
         """Registry persistence handles disk I/O stress."""
         from app.skills.registry_v2 import SkillRegistry
-        from app.worker.runtime.core import SkillDescriptor
+        from app.hoc.int.worker.runtime.core import SkillDescriptor
 
         with tempfile.TemporaryDirectory() as temp_dir:
             stressor = DiskStressor(temp_dir)

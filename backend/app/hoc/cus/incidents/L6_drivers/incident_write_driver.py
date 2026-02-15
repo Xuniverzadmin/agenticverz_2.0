@@ -45,6 +45,7 @@
 # create_incident_event       | Timeline event creation
 # refresh_incident            | Post-commit refresh
 # commit                      | Transaction commit
+# fetch_recurrence_group     | Query by recurrence_signature
 # ============================================================================
 # This is the SINGLE persistence authority for incident domain writes.
 # Do NOT create competing drivers. Extend this file.
@@ -120,6 +121,9 @@ class IncidentWriteDriver:
         resolved_at: datetime,
         resolved_by: str,
         resolution_method: str | None = None,
+        resolution_type: str | None = None,
+        resolution_summary: str | None = None,
+        postmortem_artifact_id: str | None = None,
     ) -> None:
         """
         Update incident to resolved status.
@@ -129,6 +133,9 @@ class IncidentWriteDriver:
             resolved_at: Timestamp of resolution
             resolved_by: Who resolved
             resolution_method: How it was resolved (optional)
+            resolution_type: Resolution classification (migration 129)
+            resolution_summary: Free-text resolution summary (migration 129)
+            postmortem_artifact_id: Link to postmortem artifact (migration 129)
         """
         incident.status = IncidentStatus.RESOLVED
         incident.resolved_at = resolved_at
@@ -136,6 +143,23 @@ class IncidentWriteDriver:
         if resolution_method:
             incident.resolution_method = resolution_method
         self._session.add(incident)
+
+        # Persist migration 129 resolution fields via raw SQL
+        # (ORM model may not have these columns yet — use UPDATE directly)
+        updates = {}
+        if resolution_type:
+            updates["resolution_type"] = resolution_type
+        if resolution_summary:
+            updates["resolution_summary"] = resolution_summary
+        if postmortem_artifact_id:
+            updates["postmortem_artifact_id"] = postmortem_artifact_id
+        if updates:
+            set_clauses = ", ".join(f"{k} = :{k}" for k in updates)
+            updates["incident_id"] = str(incident.id)
+            self._session.execute(
+                text(f"UPDATE incidents SET {set_clauses} WHERE id = :incident_id"),
+                updates,
+            )
 
     def create_incident_event(
         self,
@@ -198,6 +222,8 @@ class IncidentWriteDriver:
         agent_id: Optional[str] = None,
         is_synthetic: bool = False,
         synthetic_scenario_id: Optional[str] = None,
+        recurrence_signature: Optional[str] = None,
+        signature_version: Optional[str] = None,
     ) -> bool:
         """
         Insert a new incident record.
@@ -231,14 +257,16 @@ class IncidentWriteDriver:
                     source_run_id, source_type, category, description,
                     error_code, error_message, impact_scope,
                     affected_agent_id, affected_count,
-                    is_synthetic, synthetic_scenario_id
+                    is_synthetic, synthetic_scenario_id,
+                    recurrence_signature, signature_version
                 ) VALUES (
                     :id, :tenant_id, :title, :severity, :status,
                     :trigger_type, :started_at, :created_at, :updated_at,
                     :source_run_id, :source_type, :category, :description,
                     :error_code, :error_message, :impact_scope,
                     :affected_agent_id, :affected_count,
-                    :is_synthetic, :synthetic_scenario_id
+                    :is_synthetic, :synthetic_scenario_id,
+                    :recurrence_signature, :signature_version
                 )
                 ON CONFLICT (id) DO NOTHING
                 RETURNING id
@@ -264,6 +292,8 @@ class IncidentWriteDriver:
                 "affected_count": 1,
                 "is_synthetic": is_synthetic,
                 "synthetic_scenario_id": synthetic_scenario_id,
+                "recurrence_signature": recurrence_signature,
+                "signature_version": signature_version,
             },
         )
         row = result.fetchone()
@@ -595,6 +625,88 @@ class IncidentWriteDriver:
         )
         row = result.fetchone()
         return row is not None
+
+    # =========================================================================
+    # RESOLUTION + RECURRENCE (Migration 129, UC-MON-05)
+    # =========================================================================
+
+    def fetch_recurrence_group(
+        self,
+        tenant_id: str,
+        recurrence_signature: str,
+        limit: int = 50,
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch all incidents sharing a recurrence signature for deterministic group linking.
+
+        Args:
+            tenant_id: Tenant scope
+            recurrence_signature: Versioned recurrence signature
+            limit: Max results
+
+        Returns:
+            List of incident dicts with resolution fields
+        """
+        result = self._session.execute(
+            text("""
+                SELECT id, category, severity, status, created_at,
+                       resolution_type, resolution_summary, postmortem_artifact_id,
+                       recurrence_signature, signature_version
+                FROM incidents
+                WHERE tenant_id = :tenant_id
+                  AND recurrence_signature = :recurrence_signature
+                ORDER BY created_at DESC
+                LIMIT :limit
+            """),
+            {
+                "tenant_id": tenant_id,
+                "recurrence_signature": recurrence_signature,
+                "limit": limit,
+            },
+        )
+        return [
+            {
+                "id": row[0],
+                "category": row[1],
+                "severity": row[2],
+                "status": row[3],
+                "created_at": row[4].isoformat() if row[4] else None,
+                "resolution_type": row[5],
+                "resolution_summary": row[6],
+                "postmortem_artifact_id": row[7],
+                "recurrence_signature": row[8],
+                "signature_version": row[9],
+            }
+            for row in result
+        ]
+
+    def create_postmortem_stub(
+        self,
+        incident_id: str,
+        tenant_id: str,
+        now: datetime,
+    ) -> str:
+        """
+        Create a postmortem stub artifact and link it to the incident.
+
+        Returns the postmortem artifact ID.
+        """
+        import uuid
+        artifact_id = f"pm-{uuid.uuid4().hex[:16]}"
+        # Link postmortem to incident
+        self._session.execute(
+            text("""
+                UPDATE incidents
+                SET postmortem_artifact_id = :artifact_id
+                WHERE id = :incident_id AND tenant_id = :tenant_id
+            """),
+            {
+                "artifact_id": artifact_id,
+                "incident_id": incident_id,
+                "tenant_id": tenant_id,
+            },
+        )
+        return artifact_id
 
     # REMOVED: commit() helper — L6 DOES NOT COMMIT (L4 coordinator owns transaction boundary)
 

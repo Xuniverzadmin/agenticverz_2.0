@@ -7,6 +7,23 @@
 
 ---
 
+## Reality Delta (2026-02-11)
+
+- Canonical L2 API key modules are:
+- `backend/app/hoc/api/cus/api_keys/aos_api_key.py`
+- `backend/app/hoc/api/cus/api_keys/api_key_writes.py`
+- Legacy onboarding wrappers under `backend/app/hoc/api/cus/policies/` were removed.
+- Domain authority is preserved despite split URL policy:
+- read: `/api-keys`
+- write: `/tenant/api-keys`
+- L4 handling remains through `api_keys_handler` with DB-backed authority checks.
+
+## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
+
+- Wave-4 target scope for api_keys is fully classified: `9` scripts (`5 UC_LINKED`, `4 NON_UC_SUPPORT`, `0 UNLINKED` in target scope).
+- UC-linked api_keys scripts are linked to `UC-002` in `HOC_USECASE_CODE_LINKAGE.md`.
+- Deterministic gates remain clean after Wave-4 execution (`6/6` pass; governance tests `308` passing).
+
 ## Consolidation Actions (2026-01-31)
 
 ### Naming Violations — None

@@ -9,7 +9,7 @@ enforcement checks are never skipped.
 """
 
 import pytest
-from app.worker.enforcement.enforcement_guard import (
+from app.hoc.int.worker.enforcement.enforcement_guard import (
     enforcement_guard,
     EnforcementSkippedError,
 )

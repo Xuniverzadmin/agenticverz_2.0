@@ -9,6 +9,13 @@
 
 ---
 
+## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
+
+- Wave-4 target-scope classification for `hoc_spine` is complete:
+- `78` scripts total (`33 UC_LINKED`, `45 NON_UC_SUPPORT`, `0 UNLINKED` in target scope).
+- `UC_LINKED` coverage is mapped through `HOC_USECASE_CODE_LINKAGE.md` to existing UC ownership (including `UC-001`, `UC-002`, `UC-024`, `UC-025`, `UC-026`, `UC-027`, `UC-MON-*`).
+- Deterministic gate suite remains clean post-wave (`6/6` pass, governance suite `308` passing tests).
+
 ## Preamble
 
 This document is the **authoritative guide** for evaluating every file, function, and class

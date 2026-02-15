@@ -17,13 +17,13 @@ Features:
 
 Usage:
     # Run as worker (continuous)
-    python -m app.worker.outbox_processor
+    python -m app.hoc.int.worker.outbox_processor
 
     # One-time processing
-    python -m app.worker.outbox_processor --once
+    python -m app.hoc.int.worker.outbox_processor --once
 
     # With custom batch size
-    python -m app.worker.outbox_processor --batch-size 50
+    python -m app.hoc.int.worker.outbox_processor --batch-size 50
 
 Environment Variables:
     DATABASE_URL: PostgreSQL connection URL

@@ -46,7 +46,7 @@ from app.hoc.cus.analytics.L5_engines.costsim_models import (
     V2SimulationResult,
 )
 from app.hoc.cus.analytics.L5_engines.v2_adapter import CostSimV2Adapter
-from app.worker.simulate import CostSimulator, SimulationResult
+from app.hoc.int.worker.simulate import CostSimulator, SimulationResult
 
 logger = logging.getLogger("nova.costsim.sandbox")
 

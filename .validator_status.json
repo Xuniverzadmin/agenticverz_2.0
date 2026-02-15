@@ -1,6 +1,6 @@
 {
   "status": "VIOLATIONS",
-  "last_check": "2026-02-09T11:00:04.562143",
+  "last_check": "2026-02-15T08:30:02.930572",
   "violations": [
     {
       "file": "/root/agenticverz2.0/backend/alembic/versions/001_create_workflow_checkpoints.py",
@@ -815,6 +815,69 @@
       "code": ""
     },
     {
+      "file": "/root/agenticverz2.0/backend/alembic/versions/124_prevention_records_run_id.py",
+      "line": 1,
+      "rule": "MIG-001",
+      "message": "Missing MIGRATION_CONTRACT header",
+      "code": ""
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/alembic/versions/125_drop_origin_system_id_default.py",
+      "line": 1,
+      "rule": "MIG-001",
+      "message": "Missing MIGRATION_CONTRACT header",
+      "code": ""
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/alembic/versions/126_s6_trace_completion_allowed.py",
+      "line": 1,
+      "rule": "MIG-001",
+      "message": "Missing MIGRATION_CONTRACT header",
+      "code": ""
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/alembic/versions/127_create_sdk_attestations.py",
+      "line": 1,
+      "rule": "MIG-001",
+      "message": "Missing MIGRATION_CONTRACT header",
+      "code": ""
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/alembic/versions/128_monitoring_activity_feedback_contracts.py",
+      "line": 1,
+      "rule": "MIG-001",
+      "message": "Missing MIGRATION_CONTRACT header",
+      "code": ""
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/alembic/versions/129_monitoring_incident_resolution_recurrence.py",
+      "line": 1,
+      "rule": "MIG-001",
+      "message": "Missing MIGRATION_CONTRACT header",
+      "code": ""
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/alembic/versions/130_monitoring_controls_binding_fields.py",
+      "line": 1,
+      "rule": "MIG-001",
+      "message": "Missing MIGRATION_CONTRACT header",
+      "code": ""
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/alembic/versions/131_monitoring_analytics_reproducibility_fields.py",
+      "line": 1,
+      "rule": "MIG-001",
+      "message": "Missing MIGRATION_CONTRACT header",
+      "code": ""
+    },
+    {
+      "file": "/root/agenticverz2.0/backend/alembic/versions/132_monitoring_logs_replay_mode_fields.py",
+      "line": 1,
+      "rule": "MIG-001",
+      "message": "Missing MIGRATION_CONTRACT header",
+      "code": ""
+    },
+    {
       "file": "/root/agenticverz2.0/backend/alembic/versions/c8213cda2be4_add_uuid_constraint_to_tenant_id.py",
       "line": 1,
       "rule": "MIG-001",
@@ -836,7 +899,7 @@
       "code": "ttl_remaining: Optional[int] = Field(default=None, descripti"
     }
   ],
-  "files_scanned": 172,
-  "checks_run": 172,
+  "files_scanned": 181,
+  "checks_run": 181,
   "scanner": "agen_internal_system_scan"
 }

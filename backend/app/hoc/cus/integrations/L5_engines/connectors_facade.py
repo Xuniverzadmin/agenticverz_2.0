@@ -130,27 +130,27 @@ class ConnectorsFacade:
     This is the ONLY entry point for L2 APIs and SDK to interact with
     connector services.
 
-    Layer: L4 (Domain Logic)
-    Callers: connectors.py (L2), aos_sdk
+    Layer: L5 (Domain Engine)
+    Callers: L4 integrations handler
     """
 
-    def __init__(self):
-        """Initialize facade with lazy-loaded services."""
-        self._registry = None
-        self._http_connector = None
-        self._sql_connector = None
-        self._mcp_connector = None
+    def __init__(self, session=None):
+        """Initialize facade with L6 driver delegation.
 
-        # In-memory store for demo (would be database in production)
-        self._connectors: Dict[str, ConnectorInfo] = {}
+        Args:
+            session: Database session from L4 handler (optional for now,
+                     required when DB-backed persistence is added).
+        """
+        self._session = session
+        self._registry = None
 
     @property
     def registry(self):
-        """Lazy-load ConnectorRegistry."""
+        """Lazy-load ConnectorRegistry from L6 driver."""
         if self._registry is None:
             try:
-                from app.hoc.cus.integrations.L6_drivers.connector_registry_driver import ConnectorRegistry
-                self._registry = ConnectorRegistry()
+                from app.hoc.cus.integrations.L6_drivers.connector_registry_driver import get_connector_registry
+                self._registry = get_connector_registry()
             except ImportError:
                 logger.warning("ConnectorRegistry not available")
         return self._registry
@@ -167,57 +167,66 @@ class ConnectorsFacade:
         limit: int = 100,
         offset: int = 0,
     ) -> List[ConnectorInfo]:
-        """
-        List connectors for a tenant.
-
-        Args:
-            tenant_id: Tenant ID to filter by
-            connector_type: Optional type filter
-            status: Optional status filter
-            limit: Maximum results
-            offset: Pagination offset
-
-        Returns:
-            List of ConnectorInfo
-        """
+        """List connectors for a tenant via L6 driver registry."""
         logger.debug(
             "facade.list_connectors",
             extra={"tenant_id": tenant_id, "type": connector_type}
         )
 
-        # Filter connectors
-        results = []
-        for connector in self._connectors.values():
-            if connector.tenant_id != tenant_id:
-                continue
-            if connector_type and connector.connector_type != connector_type:
-                continue
-            if status and connector.status != status:
-                continue
-            results.append(connector)
+        if not self.registry:
+            return []
 
-        # Apply pagination
-        return results[offset:offset + limit]
+        # Delegate to L6 driver
+        raw = self.registry.list(tenant_id=tenant_id, limit=limit, offset=offset)
+        results = []
+        for c in raw:
+            if connector_type and c.connector_type.value != connector_type:
+                continue
+            if status and c.status.value != status:
+                continue
+            results.append(ConnectorInfo(
+                id=c.connector_id,
+                name=c.name,
+                connector_type=c.connector_type.value,
+                status=c.status.value,
+                capabilities=[cap.value for cap in c.capabilities],
+                endpoint=c.config.endpoint if c.config else None,
+                tenant_id=c.tenant_id,
+                created_at=c.created_at,
+                updated_at=c.updated_at,
+                last_used_at=c.last_connected,
+                config=c.config.to_dict() if c.config else {},
+                metadata=c.metadata,
+            ))
+        return results
 
     async def get_connector(
         self,
         connector_id: str,
         tenant_id: str,
     ) -> Optional[ConnectorInfo]:
-        """
-        Get a specific connector.
+        """Get a specific connector via L6 driver registry."""
+        if not self.registry:
+            return None
 
-        Args:
-            connector_id: Connector ID
-            tenant_id: Tenant ID for authorization
+        c = self.registry.get(connector_id)
+        if not c or c.tenant_id != tenant_id:
+            return None
 
-        Returns:
-            ConnectorInfo or None if not found
-        """
-        connector = self._connectors.get(connector_id)
-        if connector and connector.tenant_id == tenant_id:
-            return connector
-        return None
+        return ConnectorInfo(
+            id=c.connector_id,
+            name=c.name,
+            connector_type=c.connector_type.value,
+            status=c.status.value,
+            capabilities=[cap.value for cap in c.capabilities],
+            endpoint=c.config.endpoint if c.config else None,
+            tenant_id=c.tenant_id,
+            created_at=c.created_at,
+            updated_at=c.updated_at,
+            last_used_at=c.last_connected,
+            config=c.config.to_dict() if c.config else {},
+            metadata=c.metadata,
+        )
 
     async def register_connector(
         self,
@@ -228,20 +237,7 @@ class ConnectorsFacade:
         config: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> ConnectorInfo:
-        """
-        Register a new connector.
-
-        Args:
-            tenant_id: Tenant ID
-            name: Connector name
-            connector_type: Type (http, sql, mcp, etc.)
-            endpoint: Connection endpoint
-            config: Connector configuration
-            metadata: Additional metadata
-
-        Returns:
-            ConnectorInfo for the new connector
-        """
+        """Register a new connector via L6 driver registry."""
         logger.info(
             "facade.register_connector",
             extra={
@@ -251,13 +247,54 @@ class ConnectorsFacade:
             }
         )
 
+        from app.hoc.cus.integrations.L6_drivers.connector_registry_driver import (
+            ConnectorConfig as DriverConfig,
+            ConnectorType as DriverType,
+            BaseConnector,
+        )
+
         connector_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc)
 
-        # Determine capabilities based on type
+        # Build L6 config
+        driver_config = DriverConfig(endpoint=endpoint, **(config or {})) if endpoint or config else DriverConfig()
+
+        # Map string type to enum
+        try:
+            driver_type = DriverType(connector_type)
+        except ValueError:
+            driver_type = DriverType.CUSTOM
+
+        # Use registry factory methods where available, fallback to generic register
+        if self.registry:
+            if driver_type == DriverType.VECTOR:
+                base = self.registry.create_vector_connector(
+                    tenant_id=tenant_id, name=name, config=driver_config, connector_id=connector_id,
+                )
+            elif driver_type == DriverType.FILE:
+                base = self.registry.create_file_connector(
+                    tenant_id=tenant_id, name=name, config=driver_config, connector_id=connector_id,
+                )
+            elif driver_type == DriverType.SERVERLESS:
+                base = self.registry.create_serverless_connector(
+                    tenant_id=tenant_id, name=name, config=driver_config, connector_id=connector_id,
+                )
+            else:
+                # Generic registration via a minimal concrete connector
+                from app.hoc.cus.integrations.L6_drivers.connector_registry_driver import VectorConnector
+                generic = VectorConnector(
+                    connector_id=connector_id, tenant_id=tenant_id, name=name,
+                    config=driver_config, vector_dimension=0,
+                )
+                generic.connector_type = driver_type
+                base = self.registry.register(generic)
+
+            if metadata:
+                base.metadata = metadata
+
         capabilities = self._get_capabilities_for_type(connector_type)
 
-        connector = ConnectorInfo(
+        return ConnectorInfo(
             id=connector_id,
             name=name,
             connector_type=connector_type,
@@ -270,9 +307,6 @@ class ConnectorsFacade:
             metadata=metadata or {},
         )
 
-        self._connectors[connector_id] = connector
-        return connector
-
     async def update_connector(
         self,
         connector_id: str,
@@ -282,125 +316,85 @@ class ConnectorsFacade:
         config: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Optional[ConnectorInfo]:
-        """
-        Update a connector.
+        """Update a connector via L6 driver registry."""
+        if not self.registry:
+            return None
 
-        Args:
-            connector_id: Connector ID
-            tenant_id: Tenant ID for authorization
-            name: New name (optional)
-            endpoint: New endpoint (optional)
-            config: New config (optional)
-            metadata: New metadata (optional)
-
-        Returns:
-            Updated ConnectorInfo or None if not found
-        """
-        connector = self._connectors.get(connector_id)
-        if not connector or connector.tenant_id != tenant_id:
+        c = self.registry.get(connector_id)
+        if not c or c.tenant_id != tenant_id:
             return None
 
         if name:
-            connector.name = name
-        if endpoint:
-            connector.endpoint = endpoint
-        if config:
-            connector.config = config
+            c.name = name
+        if endpoint and c.config:
+            c.config.endpoint = endpoint
         if metadata:
-            connector.metadata = metadata
+            c.metadata = metadata
+        c.updated_at = datetime.now(timezone.utc)
 
-        connector.updated_at = datetime.now(timezone.utc)
-        return connector
+        return ConnectorInfo(
+            id=c.connector_id,
+            name=c.name,
+            connector_type=c.connector_type.value,
+            status=c.status.value,
+            capabilities=[cap.value for cap in c.capabilities],
+            endpoint=c.config.endpoint if c.config else None,
+            tenant_id=c.tenant_id,
+            created_at=c.created_at,
+            updated_at=c.updated_at,
+            last_used_at=c.last_connected,
+            config=c.config.to_dict() if c.config else {},
+            metadata=c.metadata,
+        )
 
     async def delete_connector(
         self,
         connector_id: str,
         tenant_id: str,
     ) -> bool:
-        """
-        Delete a connector.
-
-        Args:
-            connector_id: Connector ID
-            tenant_id: Tenant ID for authorization
-
-        Returns:
-            True if deleted, False if not found
-        """
-        connector = self._connectors.get(connector_id)
-        if not connector or connector.tenant_id != tenant_id:
+        """Delete a connector via L6 driver registry."""
+        if not self.registry:
             return False
 
-        del self._connectors[connector_id]
-        logger.info(
-            "facade.delete_connector",
-            extra={"connector_id": connector_id}
-        )
-        return True
+        c = self.registry.get(connector_id)
+        if not c or c.tenant_id != tenant_id:
+            return False
+
+        result = self.registry.delete(connector_id)
+        if result:
+            logger.info("facade.delete_connector", extra={"connector_id": connector_id})
+        return result
 
     async def test_connector(
         self,
         connector_id: str,
         tenant_id: str,
     ) -> TestResult:
-        """
-        Test a connector connection.
-
-        Args:
-            connector_id: Connector ID
-            tenant_id: Tenant ID for authorization
-
-        Returns:
-            TestResult with connection test outcome
-        """
+        """Test a connector connection via L6 driver registry."""
         import time
 
-        connector = self._connectors.get(connector_id)
-        if not connector or connector.tenant_id != tenant_id:
-            return TestResult(
-                success=False,
-                connector_id=connector_id,
-                error="Connector not found",
-            )
+        if not self.registry:
+            return TestResult(success=False, connector_id=connector_id, error="Registry not available")
+
+        c = self.registry.get(connector_id)
+        if not c or c.tenant_id != tenant_id:
+            return TestResult(success=False, connector_id=connector_id, error="Connector not found")
 
         start_time = time.time()
-
         try:
-            # Simulate connection test based on type
-            # In production, this would actually test the connection
-            if connector.connector_type == "http":
-                # Would test HTTP endpoint
-                pass
-            elif connector.connector_type == "sql":
-                # Would test SQL connection
-                pass
-            elif connector.connector_type == "mcp":
-                # Would test MCP server
-                pass
-
+            success = c.health_check()
             elapsed_ms = int((time.time() - start_time) * 1000)
 
-            # Update last used
-            connector.last_used_at = datetime.now(timezone.utc)
-            connector.status = "connected"
-
-            return TestResult(
-                success=True,
-                connector_id=connector_id,
-                latency_ms=elapsed_ms,
-                details={"status": "ok"},
-            )
+            if success:
+                c.record_connection()
+                return TestResult(success=True, connector_id=connector_id, latency_ms=elapsed_ms, details={"status": "ok"})
+            else:
+                return TestResult(success=False, connector_id=connector_id, latency_ms=elapsed_ms, error="Health check failed")
 
         except Exception as e:
             elapsed_ms = int((time.time() - start_time) * 1000)
-            connector.status = "error"
-
-            return TestResult(
-                success=False,
-                connector_id=connector_id,
-                latency_ms=elapsed_ms,
-                error=str(e),
-            )
+            c.record_error(str(e))
+            return TestResult(success=False, connector_id=connector_id, latency_ms=elapsed_ms, error=str(e))
 
     def _get_capabilities_for_type(self, connector_type: str) -> List[str]:
         """Get default capabilities for connector type."""
@@ -423,17 +417,19 @@ class ConnectorsFacade:
 _facade_instance: Optional[ConnectorsFacade] = None
 
 
-def get_connectors_facade() -> ConnectorsFacade:
+def get_connectors_facade(session=None) -> ConnectorsFacade:
     """
     Get the connectors facade instance.
 
-    This is the recommended way to access connector operations
-    from L2 APIs and the SDK.
+    Args:
+        session: Optional database session from L4 handler.
+                 Currently unused (L6 ConnectorRegistry is in-memory).
+                 Accepted for forward-compatibility when DB persistence is added.
 
     Returns:
-        ConnectorsFacade instance
+        ConnectorsFacade singleton instance.
     """
     global _facade_instance
     if _facade_instance is None:
-        _facade_instance = ConnectorsFacade()
+        _facade_instance = ConnectorsFacade(session=session)
     return _facade_instance

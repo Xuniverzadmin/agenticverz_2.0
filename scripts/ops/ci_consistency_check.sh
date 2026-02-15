@@ -595,12 +595,12 @@ check_m1_runtime_interfaces() {
     section "M1: Runtime Interfaces [PIN-009]"
     local issues=0
 
-    if [[ -d "$BACKEND_DIR/app/worker/runtime" ]]; then
+    if [[ -d "$BACKEND_DIR/app/hoc/int/worker/runtime" ]]; then
         log_ok "M1: Runtime module exists"
 
         # Semantic checks for runtime interfaces
-        check_func "$BACKEND_DIR/app/worker/runtime" "execute" "M1" || issues=$((issues+1))
-        check_func "$BACKEND_DIR/app/worker/runtime" "query" "M1" || true
+        check_func "$BACKEND_DIR/app/hoc/int/worker/runtime" "execute" "M1" || issues=$((issues+1))
+        check_func "$BACKEND_DIR/app/hoc/int/worker/runtime" "query" "M1" || true
         check_func "$BACKEND_DIR/app/api" "describe_skill\|get_skill" "M1" || true
     else
         log_warn "M1: No runtime module"

@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.worker.runtime.core import Runtime, SkillDescriptor
+from app.hoc.int.worker.runtime.core import Runtime, SkillDescriptor
 
 # Test fixtures and helpers
 
@@ -110,8 +110,8 @@ class TestMetricsWiring:
         runtime.register_skill(descriptor, mock_skill)
 
         # Patch the metrics functions
-        with patch("app.worker.runtime.core.record_step_duration") as mock_record_duration:
-            with patch("app.worker.runtime.core.METRICS_AVAILABLE", True):
+        with patch("app.hoc.int.worker.runtime.core.record_step_duration") as mock_record_duration:
+            with patch("app.hoc.int.worker.runtime.core.METRICS_AVAILABLE", True):
                 outcome = await runtime.execute("test_skill", {"param": "value"})
 
                 # Verify skill executed successfully
@@ -135,8 +135,8 @@ class TestMetricsWiring:
         descriptor = _make_descriptor("failing_skill", "Failing Skill", "A skill that fails", 0)
         runtime.register_skill(descriptor, failing_skill)
 
-        with patch("app.worker.runtime.core.record_step_duration") as mock_record_duration:
-            with patch("app.worker.runtime.core.METRICS_AVAILABLE", True):
+        with patch("app.hoc.int.worker.runtime.core.record_step_duration") as mock_record_duration:
+            with patch("app.hoc.int.worker.runtime.core.METRICS_AVAILABLE", True):
                 outcome = await runtime.execute("failing_skill", {})
 
                 # Verify skill failed but didn't throw
@@ -161,8 +161,8 @@ class TestMetricsWiring:
         descriptor = _make_descriptor("slow_skill", "Slow Skill", "A slow skill", 0)
         runtime.register_skill(descriptor, slow_skill)
 
-        with patch("app.worker.runtime.core.record_step_duration") as mock_record_duration:
-            with patch("app.worker.runtime.core.METRICS_AVAILABLE", True):
+        with patch("app.hoc.int.worker.runtime.core.record_step_duration") as mock_record_duration:
+            with patch("app.hoc.int.worker.runtime.core.METRICS_AVAILABLE", True):
                 outcome = await runtime.execute("slow_skill", {}, timeout_s=0.05)
 
                 # Verify timeout occurred
@@ -186,8 +186,8 @@ class TestMetricsWiring:
         descriptor = _make_descriptor("cost_skill", "Cost Skill", "A skill with cost", 25)
         runtime.register_skill(descriptor, cost_skill)
 
-        with patch("app.worker.runtime.core.record_cost_simulation_drift") as mock_record_drift:
-            with patch("app.worker.runtime.core.METRICS_AVAILABLE", True):
+        with patch("app.hoc.int.worker.runtime.core.record_cost_simulation_drift") as mock_record_drift:
+            with patch("app.hoc.int.worker.runtime.core.METRICS_AVAILABLE", True):
                 outcome = await runtime.execute("cost_skill", {})
 
                 assert outcome.ok is True
@@ -211,8 +211,8 @@ class TestMetricsWiring:
         descriptor = _make_descriptor("free_skill", "Free Skill", "A free skill", 0)
         runtime.register_skill(descriptor, free_skill)
 
-        with patch("app.worker.runtime.core.record_cost_simulation_drift") as mock_record_drift:
-            with patch("app.worker.runtime.core.METRICS_AVAILABLE", True):
+        with patch("app.hoc.int.worker.runtime.core.record_cost_simulation_drift") as mock_record_drift:
+            with patch("app.hoc.int.worker.runtime.core.METRICS_AVAILABLE", True):
                 outcome = await runtime.execute("free_skill", {})
 
                 assert outcome.ok is True
@@ -232,9 +232,9 @@ class TestMetricsWiring:
         runtime.register_skill(descriptor, simple_skill)
 
         # Test with METRICS_AVAILABLE = False
-        with patch("app.worker.runtime.core.METRICS_AVAILABLE", False):
-            with patch("app.worker.runtime.core.record_step_duration", None):
-                with patch("app.worker.runtime.core.record_cost_simulation_drift", None):
+        with patch("app.hoc.int.worker.runtime.core.METRICS_AVAILABLE", False):
+            with patch("app.hoc.int.worker.runtime.core.record_step_duration", None):
+                with patch("app.hoc.int.worker.runtime.core.record_cost_simulation_drift", None):
                     # Should not crash
                     outcome = await runtime.execute("simple_skill", {})
                     assert outcome.ok is True
@@ -308,7 +308,7 @@ class TestMetricsModuleIntegration:
     @pytest.mark.asyncio
     async def test_full_execution_with_real_metrics_module(self):
         """End-to-end test with real metrics module (if available)."""
-        from app.worker.runtime.core import METRICS_AVAILABLE
+        from app.hoc.int.worker.runtime.core import METRICS_AVAILABLE
 
         runtime = Runtime()
 
@@ -350,8 +350,8 @@ class TestMetricsModuleIntegration:
         descriptor = _make_descriptor("expensive_skill", "Expensive Skill", "Very expensive", 100)
         runtime.register_skill(descriptor, expensive_skill)
 
-        with patch("app.worker.runtime.core.record_cost_simulation_drift") as mock_record_drift:
-            with patch("app.worker.runtime.core.METRICS_AVAILABLE", True):
+        with patch("app.hoc.int.worker.runtime.core.record_cost_simulation_drift") as mock_record_drift:
+            with patch("app.hoc.int.worker.runtime.core.METRICS_AVAILABLE", True):
                 outcome = await runtime.execute("expensive_skill", {})
 
                 # Should fail due to budget

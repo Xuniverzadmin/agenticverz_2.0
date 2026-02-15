@@ -6,6 +6,19 @@
 
 ---
 
+## Reality Delta (2026-02-11)
+
+- Project-create onboarding path is active under canonical account domain:
+- `backend/app/hoc/api/cus/account/aos_accounts.py` (`POST /accounts/projects`).
+- SDK attestation evidence path is active:
+- handshake route writes attestation through `account.sdk_attestation`.
+- activation checks include `sdk_attested` from persistent table `sdk_attestations`.
+- Onboarding activation authority is DB-only in `onboarding_handler.py`:
+- `api_keys` (active key)
+- `cus_integrations` (enabled integration evidence)
+- `sdk_attestations` (attestation exists)
+- Cache-only sources are excluded by CI check 35.
+
 ## Reality Delta (2026-02-08)
 
 - L2 purity preserved: account L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5).

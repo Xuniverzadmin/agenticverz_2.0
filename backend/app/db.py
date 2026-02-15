@@ -310,8 +310,7 @@ class Run(SQLModel, table=True):
     # origin_system_id: Where the run originated
     # Per AOS_SDK_ATTRIBUTION_CONTRACT: origin_system_id is REQUIRED
     origin_system_id: str = Field(
-        default="legacy-migration",
-        description="Originating system identifier for accountability"
+        description="Originating system identifier for accountability (REQUIRED — no default)"
     )
 
     goal: str

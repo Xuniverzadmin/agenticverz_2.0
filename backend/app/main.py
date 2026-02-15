@@ -560,7 +560,7 @@ async def lifespan(app: FastAPI):
         # NOTE: This MUST fail-open - missing Redis should NOT crash the server
         idempotency_store = None
         try:
-            from .traces.idempotency import get_idempotency_store
+            from app.hoc.cus.logs.L6_drivers.idempotency_driver import get_idempotency_store
 
             idempotency_store = await get_idempotency_store()
             logger.info(
@@ -1405,6 +1405,7 @@ async def post_goal(
             status="queued",
             idempotency_key=payload.idempotency_key,
             tenant_id=tenant_id,
+            origin_system_id="api-endpoint",
         )
         session.add(run)
         session.commit()

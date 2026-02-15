@@ -13,6 +13,30 @@
 - Execution boundary (pairing): `PYTHONPATH=. python3 backend/scripts/ops/l5_spine_pairing_gap_detector.py --json` reports `total_l5_engines: 69`, `wired_via_l4: 69`, `direct_l2_to_l5: 0`, `orphaned: 0`.
 - Strict T0 invariant: controls `L6_drivers/` contain no `hoc_spine` imports.
 
+## Reality Delta (2026-02-11)
+
+- Canonical UC alignment now includes `UC-004`, `UC-005`, `UC-014`, and `UC-015` as architecture `GREEN`.
+- Controls evaluation evidence contract is now part of UC-MON storage/event verification (`control_set_version`, `override_ids_applied`, `resolver_version`, `decision`).
+- Override lifecycle closure is now tracked in canonical usecase linkage and batch evidence docs.
+
+## Reality Delta (2026-02-12)
+
+- Controls participates in expanded closure via `UC-021` (policies limits query lifecycle) through `controls/L6_drivers/limits_read_driver.py`.
+- Cross-domain usage for that flow remains orchestrated at L4 with no direct L2->L6 bypass.
+- Architecture closure for `UC-021` is reflected in canonical usecase registry/linkage, while production readiness remains tracked separately.
+
+## Reality Delta (2026-02-12, Wave-3 Script Coverage Audit)
+
+- Wave-3 script coverage (`controls + account`) has been independently audited and reconciled.
+- Controls target-scope classification is complete:
+- `8` scripts marked `UC_LINKED`
+- `15` scripts marked `NON_UC_SUPPORT`
+- `0` target-scope residual scripts in Wave-3 controls target list.
+- Deterministic gates remain clean post-wave and governance suite now runs `250` passing tests in `test_uc018_uc032_expansion.py`.
+- Canonical audit artifacts:
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_3_implemented.md`
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_3_AUDIT_2026-02-12.md`
+
 ## Script Registry
 
 Each script's unique contribution and canonical function.

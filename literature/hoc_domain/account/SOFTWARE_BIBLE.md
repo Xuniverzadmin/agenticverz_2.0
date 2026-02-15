@@ -7,6 +7,20 @@
 
 ---
 
+## Reality Delta (2026-02-11)
+
+- Account onboarding write capability includes project creation via canonical L2:
+- `backend/app/hoc/api/cus/account/aos_accounts.py` (`POST /accounts/projects`)
+- Path verified across layers:
+- L2 `aos_accounts.py` -> L4 `account_handler.py` -> L5 `accounts_facade.py` -> L6 `accounts_facade_driver.py`.
+- SDK attestation persistence is integrated:
+- L2 handshake in `backend/app/hoc/api/int/general/sdk.py` dispatches `account.sdk_attestation` with real `sync_session`.
+- L6 attestation persistence driver:
+- `backend/app/hoc/cus/account/L6_drivers/sdk_attestation_driver.py`
+- DB migration added:
+- `backend/alembic/versions/127_create_sdk_attestations.py`
+- Onboarding activation predicate is enforced at L4 for COMPLETE transitions in `onboarding_handler.py`.
+
 ## Reality Correction (2026-02-06)
 
 This domain has been refactored under PIN-520 / strict HOC topology:
@@ -29,6 +43,25 @@ The authoritative memory-pins feature chains are corrected below.
 **Onboarding SSOT (Phase A2):** persisted onboarding state is `Tenant.onboarding_state` and the canonical enum + transition metadata lives in `backend/app/hoc/cus/account/L5_schemas/onboarding_state.py` (legacy `backend/app/auth/onboarding_state.py` and the interim mirror `backend/app/hoc/cus/account/L5_schemas/onboarding_enums.py` were deleted after rewiring).
 
 **Note (Scope):** `backend/app/hoc/cus/account/logs/CRM/audit/audit_engine.py` is CRM governance-job audit (contract/job evidence → verdict), executed via L4 operation `governance.audit_job`.
+
+## Reality Delta (2026-02-12)
+
+- Cross-domain validator correction completed for SDK attestation driver:
+- `backend/app/hoc/cus/account/L6_drivers/sdk_attestation_driver.py` now imports `sql_text` from SQLAlchemy instead of `hoc_spine.orchestrator.operation_registry`.
+- Post-fix validator state is clean (`HOC-CROSS-DOMAIN-001`: `count=0`).
+- This closes the previously reported `E2 HIGH` L6 cross-domain import violation for account domain.
+
+## Reality Delta (2026-02-12, Wave-3 Script Coverage Audit)
+
+- Wave-3 script coverage (`controls + account`) has been independently audited and reconciled.
+- Account target-scope classification is complete:
+- `13` scripts marked `UC_LINKED`
+- `18` scripts marked `NON_UC_SUPPORT`
+- `0` target-scope residual scripts in Wave-3 account target list.
+- Deterministic gates remain clean post-wave and governance suite now runs `250` passing tests in `test_uc018_uc032_expansion.py`.
+- Canonical audit artifacts:
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_3_implemented.md`
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_3_AUDIT_2026-02-12.md`
 
 ## Script Registry
 

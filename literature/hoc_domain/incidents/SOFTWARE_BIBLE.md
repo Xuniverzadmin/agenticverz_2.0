@@ -20,6 +20,33 @@
 
 **Legacy note:** References to `prevention_engine` and `incident_severity_engine` in historical sections below are legacy; current incidents domain uses `policy_violation_engine` + `recovery_rule_engine`, and severity logic lives in `L5_schemas/severity_policy.py`.
 
+## Reality Delta (2026-02-11)
+
+- Canonical UC alignment now includes `UC-007`, `UC-011`, and `UC-012` (incident lifecycle, resolution/postmortem, recurrence grouping).
+- Architecture status for incident-aligned UCs is now `GREEN` in canonical usecase registry/linkage docs.
+- Storage contracts for resolution and recurrence fields are in place and validated via UC-MON storage verifier.
+
+## Reality Delta (2026-02-12)
+
+- Incidents expansion pack `UC-029..UC-031` is now architecture `GREEN`:
+- recovery-rule evaluation lifecycle (`UC-029`)
+- policy-violation truth pipeline (`UC-030`)
+- pattern + postmortem learnings lifecycle (`UC-031`)
+- Canonical registry/linkage reflects closure with per-UC evidence sections.
+- Production readiness for these UCs is tracked separately in `backend/app/hoc/docs/architecture/usecases/PROD_READINESS_TRACKER.md`.
+
+## Reality Delta (2026-02-12, Wave-2 Script Coverage Audit)
+
+- Wave-2 script coverage (`analytics + incidents + activity`) has been independently audited and reconciled.
+- Incidents core-scope classification is complete:
+- `24` scripts marked `UC_LINKED`
+- `13` scripts marked `NON_UC_SUPPORT`
+- Core incidents residual is `0` in Wave-2 target scope.
+- Deterministic gates remain clean post-wave and governance suite now runs `219` passing tests in `test_uc018_uc032_expansion.py`.
+- Canonical audit artifacts:
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_2_implemented.md`
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_2_AUDIT_2026-02-12.md`
+
 ## Script Registry
 
 Each script's unique contribution and canonical function.

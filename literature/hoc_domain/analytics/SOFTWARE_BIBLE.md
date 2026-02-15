@@ -14,6 +14,35 @@
 - Remaining coherence debt (execution boundary): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain analytics --json` reports 9 orphaned L5 entry modules: `ai_console_panel_engine.py`, `alert_worker_engine.py`, `coordinator_engine.py`, `cost_model_engine.py`, `cost_write_engine.py`, `costsim_models_engine.py`, `pattern_detection_engine.py`, `provenance_engine.py`, `v2_adapter_engine.py`.
 - Plan: `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`.
 
+## Reality Delta (2026-02-11)
+
+- Canonical UC alignment now includes `UC-008` and `UC-016`, both architecture `GREEN`.
+- Analytics reproducibility artifact contract (`dataset_version`, `input_window_hash`, `compute_code_version`, `as_of`) is now covered by UC-MON storage/event validation.
+- Deterministic read baseline for priority analytics surfaces is now passing strict validation.
+
+## Reality Delta (2026-02-12)
+
+- Analytics expansion pack `UC-024..UC-028` is now architecture `GREEN`:
+- anomaly detection lifecycle (`UC-024`)
+- prediction cycle lifecycle (`UC-025`)
+- dataset validation lifecycle (`UC-026`)
+- snapshot/baseline job lifecycle (`UC-027`)
+- cost write lifecycle (`UC-028`)
+- Canonical usecase registry/linkage now include these closures with evidence references.
+- Production readiness for these UCs is tracked separately in `backend/app/hoc/docs/architecture/usecases/PROD_READINESS_TRACKER.md` and remains independent from architecture status.
+
+## Reality Delta (2026-02-12, Wave-2 Script Coverage Audit)
+
+- Wave-2 script coverage (`analytics + incidents + activity`) has been independently audited and reconciled.
+- Analytics core-scope classification is complete:
+- `22` scripts marked `UC_LINKED`
+- `19` scripts marked `NON_UC_SUPPORT`
+- Core analytics residual is `0` in Wave-2 target scope.
+- Deterministic gates remain clean post-wave and governance suite now runs `219` passing tests in `test_uc018_uc032_expansion.py`.
+- Canonical audit artifacts:
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_2_implemented.md`
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_2_AUDIT_2026-02-12.md`
+
 ## Script Registry
 
 Each script's unique contribution and canonical function.

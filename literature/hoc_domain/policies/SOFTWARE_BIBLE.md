@@ -20,6 +20,36 @@
 
 **Runtime Call Path Added:** `SandboxService.execute` is now exercised via L4 operation `policies.sandbox_execute` (handler: `hoc_spine/orchestrator/handlers/policies_sandbox_handler.py`).
 
+## Reality Delta (2026-02-11)
+
+- Canonical policy authority is now tightened for proposal lifecycle: proposal generation does not directly mutate runtime enforcement.
+- Usecase alignment includes policy-related `UC-009` and `UC-013` with architecture status `GREEN`.
+- UC-MON authority checks now validate proposal endpoint behavior and pass in strict mode.
+
+## Reality Delta (2026-02-12)
+
+- UC expansion closure adds policy-focused `UC-018` through `UC-023` as architecture `GREEN`:
+- snapshot lifecycle/integrity (`UC-018`)
+- proposals query lifecycle (`UC-019`)
+- rules query lifecycle (`UC-020`)
+- limits query lifecycle (`UC-021`)
+- sandbox definition + execution telemetry (`UC-022`)
+- conflict-resolution explainability (`UC-023`)
+- Cross-domain validator audit correction landed for account attestation path (`sdk_attestation_driver.py` import fix); HOC cross-domain gate now returns `status=CLEAN, count=0`.
+- Production readiness remains tracked separately in `backend/app/hoc/docs/architecture/usecases/PROD_READINESS_TRACKER.md` (architecture `GREEN` does not imply go-live ready).
+
+## Reality Delta (2026-02-12, Wave-1 Script Coverage Audit)
+
+- Wave-1 script coverage (`policies + logs`) has been independently audited and reconciled.
+- Policies scope classification is complete:
+- `25` scripts marked `UC_LINKED`
+- `75` scripts marked `NON_UC_SUPPORT`
+- `0` policies scripts remain unclassified in Wave-1 scope.
+- Deterministic gates remain clean after Wave-1 updates (`cross-domain`, `layer boundaries`, `init hygiene`, `pairing`, `UC-MON strict`, governance tests).
+- Canonical audit artifacts:
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_1_implemented.md`
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_1_AUDIT_2026-02-12.md`
+
 ## Script Registry
 
 Each script's unique contribution and canonical function.

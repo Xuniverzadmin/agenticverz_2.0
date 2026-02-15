@@ -18,11 +18,47 @@ Routes incidents domain operations to the L5 IncidentsFacade.
 Registered as "incidents.query" in the OperationRegistry.
 """
 
+import logging
+import uuid as _uuid
+
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     OperationRegistry,
     OperationResult,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def _emit_incident_event(
+    event_type: str,
+    tenant_id: str,
+    incident_id: str,
+    actor_id: str,
+    extra: dict | None = None,
+) -> None:
+    """Emit a validated incident domain event."""
+    from app.hoc.cus.hoc_spine.authority.event_schema_contract import (
+        CURRENT_SCHEMA_VERSION,
+        validate_event_payload,
+    )
+
+    event = {
+        "event_id": str(_uuid.uuid4()),
+        "event_type": event_type,
+        "tenant_id": tenant_id,
+        "project_id": "__system__",
+        "actor_type": "user" if actor_id != "system" else "system",
+        "actor_id": actor_id,
+        "decision_owner": "incidents",
+        "sequence_no": 0,
+        "schema_version": CURRENT_SCHEMA_VERSION,
+        "incident_id": incident_id,
+    }
+    if extra:
+        event.update(extra)
+    validate_event_payload(event)
+    logger.info("incident_lifecycle_event", extra=event)
 
 
 class IncidentsQueryHandler:
@@ -160,6 +196,38 @@ class IncidentsWriteHandler:
         # L4 owns transaction boundary (PIN-520)
         with ctx.session.begin():
             data = method(**kwargs)
+
+        # Emit incident lifecycle events (UC-MON-05)
+        incident_id = str(kwargs.get("incident", {}).id) if hasattr(kwargs.get("incident"), "id") else kwargs.get("incident_id", "unknown")
+        actor_id = kwargs.get("acknowledged_by") or kwargs.get("resolved_by") or kwargs.get("closed_by", "system")
+        if method_name == "acknowledge_incident":
+            _emit_incident_event(
+                "incidents.IncidentAcknowledged",
+                ctx.tenant_id,
+                incident_id,
+                actor_id,
+                extra={"incident_state": "ACKNOWLEDGED"},
+            )
+        elif method_name == "resolve_incident":
+            _emit_incident_event(
+                "incidents.IncidentResolved",
+                ctx.tenant_id,
+                incident_id,
+                actor_id,
+                extra={
+                    "incident_state": "RESOLVED",
+                    "resolution_type": kwargs.get("resolution_type"),
+                },
+            )
+        elif method_name == "manual_close_incident":
+            _emit_incident_event(
+                "incidents.IncidentManuallyClosed",
+                ctx.tenant_id,
+                incident_id,
+                actor_id,
+                extra={"incident_state": "RESOLVED", "resolution_method": "manual_closure"},
+            )
+
         return OperationResult.ok(data)
 
 
@@ -374,6 +442,67 @@ class CostGuardQueryHandler:
             return OperationResult.fail(str(e), "QUERY_ERROR")
 
 
+class IncidentsRecurrenceHandler:
+    """
+    Handler for incidents.recurrence operations (UC-MON-05).
+
+    Dispatches recurrence group queries to IncidentWriteDriver (L6).
+    Supports deterministic recurrence linking via versioned signatures.
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.incidents.L6_drivers.incident_write_driver import (
+            get_incident_write_driver,
+        )
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail(
+                "Missing 'method' in params", "MISSING_METHOD"
+            )
+
+        if method_name == "get_recurrence_group":
+            recurrence_signature = ctx.params.get("recurrence_signature")
+            if not recurrence_signature:
+                return OperationResult.fail(
+                    "Missing 'recurrence_signature'", "MISSING_SIGNATURE"
+                )
+            driver = get_incident_write_driver(ctx.session)
+            data = driver.fetch_recurrence_group(
+                tenant_id=ctx.tenant_id,
+                recurrence_signature=recurrence_signature,
+                limit=ctx.params.get("limit", 50),
+            )
+            return OperationResult.ok({"incidents": data, "count": len(data)})
+
+        elif method_name == "create_postmortem_stub":
+            incident_id = ctx.params.get("incident_id")
+            if not incident_id:
+                return OperationResult.fail(
+                    "Missing 'incident_id'", "MISSING_INCIDENT_ID"
+                )
+            from datetime import datetime, timezone
+            driver = get_incident_write_driver(ctx.session)
+            with ctx.session.begin():
+                artifact_id = driver.create_postmortem_stub(
+                    incident_id=incident_id,
+                    tenant_id=ctx.tenant_id,
+                    now=datetime.now(timezone.utc),
+                )
+            _emit_incident_event(
+                "incidents.PostmortemCreated",
+                ctx.tenant_id,
+                incident_id,
+                "system",
+                extra={"postmortem_artifact_id": artifact_id},
+            )
+            return OperationResult.ok({"postmortem_artifact_id": artifact_id})
+
+        return OperationResult.fail(
+            f"Unknown recurrence method: {method_name}", "UNKNOWN_METHOD"
+        )
+
+
 def register(registry: OperationRegistry) -> None:
     """Register incidents operations with the registry."""
     registry.register("incidents.query", IncidentsQueryHandler())
@@ -383,3 +512,5 @@ def register(registry: OperationRegistry) -> None:
     registry.register("incidents.recovery_rules", IncidentsRecoveryRuleHandler())
     # Cost guard queries (extracted from L2 cost_guard.py)
     registry.register("incidents.cost_guard", CostGuardQueryHandler())
+    # UC-MON-05: Recurrence grouping + postmortem stubs
+    registry.register("incidents.recurrence", IncidentsRecurrenceHandler())

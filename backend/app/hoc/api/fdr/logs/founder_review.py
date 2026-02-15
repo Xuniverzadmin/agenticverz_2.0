@@ -72,7 +72,7 @@ def emit_review_audit_event(
     try:
         # Log to standard audit table
         session.execute(
-            text(
+            sql_text(
                 """
                 INSERT INTO audit_events (
                     event_type, actor_id, actor_type, resource_type,
@@ -92,7 +92,7 @@ def emit_review_audit_event(
                 "details": str(details) if details else "{}",
             },
         )
-        session.commit()
+        # NO COMMIT — L4 coordinator owns transaction boundary (PIN-520)
     except Exception as e:
         # Audit failure should not block the read operation
         logger.warning(f"Failed to emit review audit event: {e}")

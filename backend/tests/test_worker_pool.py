@@ -15,7 +15,7 @@ class TestRunRunner:
         # Set DATABASE_URL for import (won't actually connect in this test)
         os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost/test")
 
-        from app.worker.runner import RunRunner
+        from app.hoc.int.worker.runner import RunRunner
 
         # Create runner with test run_id
         runner = RunRunner(run_id="run-test-1")
@@ -32,7 +32,7 @@ class TestWorkerPool:
 
         os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost/test")
 
-        from app.worker.pool import WorkerPool
+        from app.hoc.int.worker.pool import WorkerPool
 
         pool = WorkerPool()
         assert pool.concurrency == 4  # Default from WORKER_CONCURRENCY
@@ -44,7 +44,7 @@ class TestWorkerPool:
 
         os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost/test")
 
-        from app.worker.pool import WorkerPool
+        from app.hoc.int.worker.pool import WorkerPool
 
         pool = WorkerPool(concurrency=8)
         assert pool.concurrency == 8

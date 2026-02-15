@@ -5,7 +5,7 @@
 #   Execution: sync (dispatch loop) + ThreadPoolExecutor (worker threads)
 # Role: Worker pool dispatch (polls DB, dispatches to RunRunner via ROK)
 # Authority: Run claim (pending → running via ThreadPool dispatch)
-# Callers: Standalone process (`python -m app.worker.pool`)
+# Callers: Standalone process (`python -m app.hoc.int.worker.pool`)
 # Allowed Imports: L5 (orchestration), L6
 # Forbidden Imports: L1, L2, L3, L4
 # Contract: EXECUTION_SEMANTIC_CONTRACT.md (Guarantee 3: At-Least-Once Worker Dispatch)
@@ -14,7 +14,7 @@
 
 """
 Worker pool: polls runs table and dispatches runs to runner workers.
-Designed to be launched as a separate process: `python -m app.worker.pool`
+Designed to be launched as a separate process: `python -m app.hoc.int.worker.pool`
 
 Supports graceful shutdown via SIGTERM/SIGINT - waits for running tasks to complete.
 
@@ -213,7 +213,7 @@ class WorkerPool:
         try:
             # PIN-454: Initialize ROK and declare expectations
             if ROK_ENABLED:
-                from app.worker.orchestration import create_rok
+                from app.hoc.int.worker.orchestration import create_rok
 
                 rok = create_rok(run_id)
                 rok.declare_expectations()

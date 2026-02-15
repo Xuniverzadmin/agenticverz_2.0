@@ -7,6 +7,25 @@
 
 ---
 
+## Reality Delta (2026-02-11)
+
+- UC alignment: activity-related usecases are now tracked as `UC-006` and `UC-010` in canonical usecase docs and marked architecture `GREEN`.
+- Determinism alignment: priority activity read surfaces include `as_of` contract enforcement in verifier suite (`uc_mon_deterministic_read_check.py`).
+- Lifecycle closure: activity feedback lifecycle (ack/suppress/ttl/expiry/reopen/bulk) is now part of the canonical closure pack and reflected in linkage docs.
+- Validation baseline: UC-MON strict validation now passes with `0 WARN` / `0 FAIL`.
+
+## Reality Delta (2026-02-12, Wave-2 Script Coverage Audit)
+
+- Wave-2 script coverage (`analytics + incidents + activity`) has been independently audited and reconciled.
+- Activity core-scope classification is complete:
+- `7` scripts marked `UC_LINKED`
+- `13` scripts marked `NON_UC_SUPPORT`
+- Core activity residual is `0` in Wave-2 target scope.
+- Deterministic gates remain clean post-wave and governance suite now runs `219` passing tests in `test_uc018_uc032_expansion.py`.
+- Canonical audit artifacts:
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_2_implemented.md`
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_2_AUDIT_2026-02-12.md`
+
 ## Script Registry
 
 Each script's unique contribution and canonical function.

@@ -13,6 +13,27 @@
 - L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain analytics --json --advisory` reports 0 blocking, 0 advisory.
 - Remaining coherence debt (execution boundary): 9 orphaned L5 entry modules remain in `backend/app/hoc/cus/analytics/L5_engines/` (see `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`).
 
+## Reality Delta (2026-02-11)
+
+- UC mapping now includes analytics-focused `UC-008` and `UC-016` as architecture `GREEN`.
+- Reproducibility artifact persistence and verifier coverage are now part of UC-MON strict baseline.
+- Canonical linkage docs now include analytics artifact evidence query patterns for audit closure.
+
+## Reality Delta (2026-02-12)
+
+- UC expansion closure promotes analytics `UC-024..UC-028` to architecture `GREEN` in canonical registry/linkage.
+- Closure scope covers anomaly, prediction, dataset validation, scheduled snapshot baseline jobs, and cost write lifecycle.
+- Architecture closure is complete; production rollout evidence remains tracked separately in `backend/app/hoc/docs/architecture/usecases/PROD_READINESS_TRACKER.md`.
+
+## Reality Delta (2026-02-12, Wave-2 Script Coverage Audit)
+
+- Wave-2 script classification for `analytics` is now canonically audited and reconciled.
+- Analytics classification state in Wave-2 scope:
+- `22` scripts as `UC_LINKED`
+- `19` scripts as `NON_UC_SUPPORT`
+- `0` core-scope residual scripts.
+- Deterministic architecture gates remain passing post-wave, with governance suite now at `219` tests.
+
 ## Consolidation Actions (2026-01-31)
 
 ### Naming Violations Fixed (18 renames)

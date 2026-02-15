@@ -23,11 +23,50 @@ Registers five operations:
   - activity.discovery → Discovery Ledger (emit_signal, get_signals) — PIN-520
 """
 
+import logging
+import uuid
+
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     OperationRegistry,
     OperationResult,
 )
+
+logger = logging.getLogger("nova.hoc_spine.handlers.activity_handler")
+
+
+def _emit_feedback_event(
+    event_type: str,
+    tenant_id: str,
+    signal_id: str,
+    actor_id: str,
+    extra: dict | None = None,
+) -> None:
+    """Emit a validated feedback event (UC-MON activity events)."""
+    try:
+        from app.hoc.cus.hoc_spine.authority.event_schema_contract import (
+            CURRENT_SCHEMA_VERSION,
+            validate_event_payload,
+        )
+
+        event = {
+            "event_id": str(uuid.uuid4()),
+            "event_type": event_type,
+            "tenant_id": tenant_id,
+            "project_id": "__system__",
+            "actor_type": "user" if actor_id != "system" else "system",
+            "actor_id": actor_id,
+            "decision_owner": "activity",
+            "sequence_no": 0,
+            "schema_version": CURRENT_SCHEMA_VERSION,
+            "signal_id": signal_id,
+        }
+        if extra:
+            event.update(extra)
+        validate_event_payload(event)
+        logger.info("activity_feedback_event", extra=event)
+    except Exception as e:
+        logger.warning(f"Failed to emit activity feedback event: {e}")
 
 
 class ActivityQueryHandler:
@@ -145,13 +184,124 @@ class ActivitySignalFeedbackHandler:
             )
 
         service = SignalFeedbackService()
+        _STRIP_PARAMS = {"method", "sync_session"}
 
         if method_name == "get_bulk_feedback":
             signal_ids = ctx.params.get("signal_ids", [])
             result = await service.get_bulk_signal_feedback(
-                ctx.tenant_id, signal_ids
+                ctx.session, ctx.tenant_id, signal_ids
             )
             return OperationResult.ok(result)
+
+        if method_name == "acknowledge":
+            async with ctx.session.begin():
+                result = await service.acknowledge_signal(
+                    ctx.session,
+                    ctx.tenant_id,
+                    ctx.params.get("signal_fingerprint", ""),
+                    acknowledged_by=ctx.params.get("acknowledged_by"),
+                    as_of=ctx.params.get("as_of"),
+                )
+            _emit_feedback_event(
+                "activity.SignalAcknowledged",
+                ctx.tenant_id,
+                result.signal_id,
+                ctx.params.get("acknowledged_by") or "system",
+                {"feedback_state": "ACKNOWLEDGED", "as_of": ctx.params.get("as_of")},
+            )
+            return OperationResult.ok({
+                "signal_id": result.signal_id,
+                "acknowledged": result.acknowledged,
+                "acknowledged_at": str(result.acknowledged_at),
+                "acknowledged_by": result.acknowledged_by,
+                "message": result.message,
+            })
+
+        if method_name == "suppress":
+            async with ctx.session.begin():
+                result = await service.suppress_signal(
+                    ctx.session,
+                    ctx.tenant_id,
+                    ctx.params.get("signal_fingerprint", ""),
+                    suppressed_by=ctx.params.get("suppressed_by"),
+                    duration_minutes=ctx.params.get("duration_minutes", 1440),
+                    reason=ctx.params.get("reason"),
+                    as_of=ctx.params.get("as_of"),
+                    bulk_action_id=ctx.params.get("bulk_action_id"),
+                    target_set_hash=ctx.params.get("target_set_hash"),
+                    target_count=ctx.params.get("target_count"),
+                )
+            event_extra = {
+                "feedback_state": "SUPPRESSED",
+                "as_of": ctx.params.get("as_of"),
+                "ttl_seconds": ctx.params.get("duration_minutes", 1440) * 60,
+                "expires_at": str(result.suppressed_until) if result.suppressed_until else None,
+            }
+            if ctx.params.get("bulk_action_id"):
+                event_extra["bulk_action_id"] = ctx.params["bulk_action_id"]
+                event_extra["target_set_hash"] = ctx.params.get("target_set_hash")
+                event_extra["target_count"] = ctx.params.get("target_count")
+            _emit_feedback_event(
+                "activity.SignalSuppressed",
+                ctx.tenant_id,
+                result.signal_id,
+                ctx.params.get("suppressed_by") or "system",
+                event_extra,
+            )
+            return OperationResult.ok({
+                "signal_id": result.signal_id,
+                "suppressed": result.suppressed,
+                "suppressed_until": str(result.suppressed_until) if result.suppressed_until else None,
+                "reason": result.reason,
+                "message": result.message,
+            })
+
+        if method_name == "reopen":
+            signal_fp = ctx.params.get("signal_fingerprint", "")
+            async with ctx.session.begin():
+                result = await service.reopen_signal(
+                    ctx.session,
+                    ctx.tenant_id,
+                    signal_fp,
+                    reopened_by=ctx.params.get("reopened_by"),
+                    as_of=ctx.params.get("as_of"),
+                )
+            _emit_feedback_event(
+                "activity.SignalReopened",
+                ctx.tenant_id,
+                signal_fp,
+                ctx.params.get("reopened_by") or "system",
+                {"feedback_state": "REOPENED", "as_of": ctx.params.get("as_of")},
+            )
+            return OperationResult.ok(result)
+
+        if method_name == "get_feedback_status":
+            result = await service.get_signal_feedback_status(
+                ctx.session,
+                ctx.tenant_id,
+                ctx.params.get("signal_fingerprint", ""),
+            )
+            return OperationResult.ok(result)
+
+        if method_name == "evaluate_expired":
+            async with ctx.session.begin():
+                count = await service.evaluate_expired(
+                    ctx.session,
+                    as_of=ctx.params.get("as_of"),
+                )
+            if count > 0:
+                _emit_feedback_event(
+                    "activity.SignalFeedbackEvaluated",
+                    ctx.tenant_id,
+                    "__batch__",
+                    "system",
+                    {
+                        "feedback_state": "EVALUATED",
+                        "as_of": ctx.params.get("as_of"),
+                        "evaluated_count": count,
+                    },
+                )
+            return OperationResult.ok({"evaluated_count": count})
 
         return OperationResult.fail(
             f"Unknown method: {method_name}", "UNKNOWN_METHOD"

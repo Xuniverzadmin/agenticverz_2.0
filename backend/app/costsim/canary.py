@@ -49,7 +49,7 @@ from app.costsim.models import (
 )
 from app.costsim.provenance import get_provenance_logger
 from app.costsim.v2_adapter import CostSimV2Adapter
-from app.worker.simulate import CostSimulator
+from app.hoc.int.worker.simulate import CostSimulator
 
 logger = logging.getLogger("nova.costsim.canary")
 

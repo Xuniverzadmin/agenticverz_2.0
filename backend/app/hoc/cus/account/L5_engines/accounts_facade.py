@@ -453,6 +453,42 @@ class AccountsFacade:
             updated_at=tenant.updated_at,
         )
 
+    async def create_project(
+        self,
+        session: AsyncSession,
+        tenant_id: str,
+        *,
+        name: str,
+        description: Optional[str] = None,
+    ) -> ProjectDetailResult:
+        """Create a new project under the tenant.
+
+        Delegates to L6 driver for persistence. L4 owns transaction.
+        """
+        tenant = await self._driver.insert_project(
+            session, tenant_id=tenant_id, name=name, description=description,
+        )
+        return ProjectDetailResult(
+            project_id=tenant.id,
+            name=tenant.name,
+            slug=tenant.slug,
+            description=description,
+            status=tenant.status.upper(),
+            plan=tenant.plan.upper(),
+            max_workers=tenant.max_workers,
+            max_runs_per_day=tenant.max_runs_per_day,
+            max_concurrent_runs=tenant.max_concurrent_runs,
+            max_tokens_per_month=tenant.max_tokens_per_month,
+            max_api_keys=tenant.max_api_keys,
+            runs_today=getattr(tenant, "runs_today", 0),
+            runs_this_month=getattr(tenant, "runs_this_month", 0),
+            tokens_this_month=getattr(tenant, "tokens_this_month", 0),
+            onboarding_state=getattr(tenant, "onboarding_state", None),
+            onboarding_complete=getattr(tenant, "onboarding_complete", False),
+            created_at=tenant.created_at,
+            updated_at=tenant.updated_at,
+        )
+
     # -------------------------------------------------------------------------
     # Users Operations
     # -------------------------------------------------------------------------

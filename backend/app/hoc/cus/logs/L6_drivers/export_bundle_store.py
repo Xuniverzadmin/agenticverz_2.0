@@ -44,7 +44,7 @@ from sqlmodel import Session, select
 # L7 models live under app.models/ by design (HOC Topology V2.0.0).
 from app.db import Run, engine
 from app.models.killswitch import Incident
-from app.traces.store import TraceStore
+from app.hoc.cus.logs.L6_drivers.trace_store import TraceStore
 
 
 # =============================================================================

@@ -146,7 +146,7 @@ else
         # Path-specific checks are prohibited unless the path is itself contractual.
         # Check for TraceStore integration anywhere in worker code (not path-specific)
         if ! docker compose exec -T worker \
-             sh -c 'grep -R "PostgresTraceStore" /app/app/worker >/dev/null 2>&1'; then
+             sh -c 'grep -R "PostgresTraceStore" /app/app/hoc/int/worker >/dev/null 2>&1'; then
             echo -e "${RED}[SR-3 FAIL] TraceStore integration not found in worker code${NC}"
             echo "Rebuild container: docker compose up -d --build worker"
             exit 3

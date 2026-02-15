@@ -18,7 +18,7 @@ echo "=================================="
 
 # Define forbidden paths (where predictions must not be imported)
 FORBIDDEN_PATHS=(
-    "app/worker/runtime"
+    "app/hoc/int/worker/runtime"
     "app/replay"
     "app/control"
 )

@@ -32,6 +32,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.auth.gateway_middleware import get_auth_context
+from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
+    OperationContext,
+    get_operation_registry,
+    get_sync_session_dep,
+)
 
 logger = logging.getLogger("nova.api.sdk")
 
@@ -116,6 +121,7 @@ async def _maybe_advance_to_sdk_connected(tenant_id: str) -> Optional[str]:
 async def sdk_handshake(
     request: Request,
     body: HandshakeRequest,
+    session=Depends(get_sync_session_dep),
 ):
     """
     SDK handshake endpoint.
@@ -156,6 +162,31 @@ async def sdk_handshake(
 
     # Trigger onboarding transition
     new_state = await _maybe_advance_to_sdk_connected(tenant_id)
+
+    # UC-002: Persist SDK attestation via L4 dispatch (with real sync session)
+    try:
+        _registry = get_operation_registry()
+        _att_result = await _registry.execute(
+            "account.sdk_attestation",
+            OperationContext(
+                session=None,
+                tenant_id=tenant_id,
+                params={
+                    "method": "write",
+                    "sync_session": session,
+                    "sdk_version": body.sdk_version,
+                    "sdk_language": body.sdk_language,
+                    "client_id": body.client_id,
+                },
+            ),
+        )
+        if not _att_result.success:
+            logger.error(
+                "sdk_attestation_write_failed",
+                extra={"tenant_id": tenant_id, "error": _att_result.error},
+            )
+    except Exception as _e:
+        logger.error(f"SDK attestation persistence failed: {_e}", exc_info=True)
 
     # Get current state for response (Phase A2: Onboarding SSOT)
     from app.hoc.cus.hoc_spine.orchestrator.handlers.onboarding_handler import (

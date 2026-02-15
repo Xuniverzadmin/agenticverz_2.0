@@ -26,6 +26,28 @@ The **policies** domain is the largest and most complex domain in the HOC archit
 
 **Strict T0 wiring fix:** policy plan generation now imports `get_planner` from `app.planners` (not `hoc.int.platform` facades) to preserve authority boundaries.
 
+### Reality Delta (2026-02-11)
+
+- Policy-proposal authority boundary is now explicitly validated in UC-MON strict checks.
+- Canonical UC alignment includes `UC-009` and `UC-013` as architecture `GREEN`.
+- Enforcement mutation path is constrained to canonical accept/activation flows in usecase governance docs.
+
+### Reality Delta (2026-02-12)
+
+- Policy expansion pack `UC-018..UC-023` is now recorded as architecture `GREEN` in canonical usecase registry/linkage docs.
+- Coverage now includes snapshot integrity lifecycle, query lifecycle surfaces, sandbox execution telemetry, and conflict-resolution explainability.
+- Cross-domain validator correction (account L6 import) is complete and validator now reports clean baseline (`count=0`).
+- Production rollout state is intentionally separate and mapped in `backend/app/hoc/docs/architecture/usecases/PROD_READINESS_TRACKER.md`.
+
+### Reality Delta (2026-02-12, Wave-1 Script Coverage Audit)
+
+- Wave-1 script classification for `policies + logs` is now canonically audited and reconciled.
+- Policies classification state:
+- `25` scripts as `UC_LINKED`
+- `75` scripts as `NON_UC_SUPPORT`
+- `0` unclassified scripts in Wave-1 policies scope.
+- Deterministic architecture gates and governance tests remain passing post-wave.
+
 ### Knowledge Access (RAG) — Policy-Governed Plane Authorization
 
 - Knowledge access must be treated as an **explicit authorization gate**, not as a prompt-side behavior.

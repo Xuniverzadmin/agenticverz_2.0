@@ -12,7 +12,7 @@ import math
 
 import pytest
 
-from app.worker.simulate import CostSimulator, FeasibilityStatus
+from app.hoc.int.worker.simulate import CostSimulator, FeasibilityStatus
 
 
 class TestIterationsCostCalculation:

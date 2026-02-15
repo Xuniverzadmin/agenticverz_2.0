@@ -30,7 +30,7 @@ NC='\033[0m' # No Color
 API_BASE="${API_BASE:-http://localhost:8000}"
 API_KEY="${AOS_API_KEY:-edf7eeb8df7ed639b9d1d8bcac572cea5b8cf97e1dffa00d0d3c5ded0f728aaf}"
 API_HEADER="X-AOS-Key"
-DATABASE_URL="${DATABASE_URL:-postgresql://neondb_owner:npg_cVfk6XMYdt4G@ep-long-surf-a1n0hv91-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require}"
+DATABASE_URL="${DATABASE_URL:-postgresql://nova:novapass@localhost:6432/nova_aos}"
 BACKEND_DIR="/root/agenticverz2.0/backend"
 
 # Counter for failures

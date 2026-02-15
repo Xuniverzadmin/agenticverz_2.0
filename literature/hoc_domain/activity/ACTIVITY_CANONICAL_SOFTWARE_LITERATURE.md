@@ -10,6 +10,21 @@
 
 ---
 
+## Reality Delta (2026-02-11)
+
+- Canonical UC mapping: activity domain now aligns to `UC-006` (Activity Stream + Feedback) and `UC-010` (Feedback Lifecycle).
+- Architecture state: both mapped UCs are now marked `GREEN` in `backend/app/hoc/docs/architecture/usecases/INDEX.md` and `HOC_USECASE_CODE_LINKAGE.md`.
+- Determinism contract: `as_of` endpoint-level wiring is enforced by UC-MON deterministic verifier checks (strict pass).
+
+## Reality Delta (2026-02-12, Wave-2 Script Coverage Audit)
+
+- Wave-2 script classification for `activity` is now canonically audited and reconciled.
+- Activity classification state in Wave-2 scope:
+- `7` scripts as `UC_LINKED`
+- `13` scripts as `NON_UC_SUPPORT`
+- `0` core-scope residual scripts.
+- Deterministic architecture gates remain passing post-wave, with governance suite now at `219` tests.
+
 ## Table of Contents
 
 1. [Domain Architecture](#1-domain-architecture)

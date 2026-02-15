@@ -14,13 +14,13 @@ import pytest
 sys.path.insert(0, "/root/agenticverz2.0/backend")
 
 from app.runtime.replay import ReplayEngine, validate_determinism
-from app.traces.models import (
+from app.hoc.cus.logs.L5_schemas import (
     TraceRecord,
     TraceStatus,
     TraceStep,
     compare_traces,
 )
-from app.traces.store import InMemoryTraceStore, generate_correlation_id, generate_run_id
+from app.hoc.cus.logs.L6_drivers.trace_store import InMemoryTraceStore, generate_correlation_id, generate_run_id
 
 
 class TestTraceDeterminism:

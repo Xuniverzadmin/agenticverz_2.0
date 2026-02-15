@@ -14,7 +14,7 @@
 #   Models: aos_traces, aos_trace_steps
 # Role: PostgreSQL trace storage
 # Callers: trace store abstraction
-# Allowed Imports: L6, L7 (models)
+# Allowed Imports: L6, L7 (models), L5_schemas (PIN-521)
 # Reference: PIN-470, Trace System
 #
 # INTENT FREEZE (2026-01-24):
@@ -48,8 +48,13 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from .models import TraceRecord, TraceStatus, TraceStep, TraceSummary
-from .redact import redact_trace_data
+from app.hoc.cus.logs.L5_schemas import (
+    TraceRecord,
+    TraceStatus,
+    TraceStep,
+    TraceSummary,
+)
+from app.hoc.cus.logs.L6_drivers.redact import redact_trace_data
 
 
 def _status_to_level(status: str) -> str:
@@ -121,6 +126,11 @@ class PostgresTraceStore:
         is_synthetic: bool = False,
         synthetic_scenario_id: str | None = None,
         incident_id: str | None = None,
+        # Replay mode columns (migration 132, UC-MON)
+        replay_mode: str | None = None,
+        replay_attempt_id: str | None = None,
+        replay_artifact_version: str | None = None,
+        trace_completeness_status: str | None = None,
     ) -> str:
         """Start a new trace record (for replay compatibility).
 
@@ -148,8 +158,9 @@ class PostgresTraceStore:
                 INSERT INTO aos_traces (
                     trace_id, run_id, correlation_id, tenant_id, agent_id,
                     root_hash, plan, trace, schema_version, status, started_at, created_at,
-                    is_synthetic, synthetic_scenario_id, incident_id
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                    is_synthetic, synthetic_scenario_id, incident_id,
+                    replay_mode, replay_attempt_id, replay_artifact_version, trace_completeness_status
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
                 ON CONFLICT (trace_id) DO NOTHING
                 """,
                 trace_id,  # trace_id
@@ -167,6 +178,10 @@ class PostgresTraceStore:
                 is_synthetic,  # is_synthetic (SDSR)
                 synthetic_scenario_id,  # synthetic_scenario_id (SDSR)
                 incident_id,  # incident_id (cross-domain correlation)
+                replay_mode,  # replay_mode (UC-MON)
+                replay_attempt_id,  # replay_attempt_id (UC-MON)
+                replay_artifact_version,  # replay_artifact_version (UC-MON)
+                trace_completeness_status,  # trace_completeness_status (UC-MON)
             )
 
         return trace_id  # PIN-404: Return for consistent use in record_step
@@ -337,6 +352,11 @@ class PostgresTraceStore:
         is_synthetic: bool = False,
         synthetic_scenario_id: str | None = None,
         incident_id: str | None = None,
+        # Replay mode columns (migration 132, UC-MON)
+        replay_mode: str | None = None,
+        replay_attempt_id: str | None = None,
+        replay_artifact_version: str | None = None,
+        trace_completeness_status: str | None = None,
     ) -> str:
         """
         Store a trace from SDK or simulation.
@@ -367,6 +387,12 @@ class PostgresTraceStore:
         synthetic_scenario_id = trace.get("synthetic_scenario_id", synthetic_scenario_id)
         incident_id = trace.get("incident_id", incident_id)
 
+        # Replay: Allow trace dict to override parameters
+        replay_mode = trace.get("replay_mode", replay_mode)
+        replay_attempt_id = trace.get("replay_attempt_id", replay_attempt_id)
+        replay_artifact_version = trace.get("replay_artifact_version", replay_artifact_version)
+        trace_completeness_status = trace.get("trace_completeness_status", trace_completeness_status)
+
         # Redact PII before storage
         if redact_pii:
             trace = redact_trace_data(trace)
@@ -380,8 +406,9 @@ class PostgresTraceStore:
                     plan_id, seed, frozen_timestamp, root_hash, plan_hash,
                     schema_version, plan, trace, metadata, status,
                     started_at, completed_at, stored_by,
-                    is_synthetic, synthetic_scenario_id, incident_id
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+                    is_synthetic, synthetic_scenario_id, incident_id,
+                    replay_mode, replay_attempt_id, replay_artifact_version, trace_completeness_status
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
                 ON CONFLICT (trace_id) DO NOTHING
                 """,
                 trace_id,
@@ -405,6 +432,10 @@ class PostgresTraceStore:
                 is_synthetic,  # SDSR
                 synthetic_scenario_id,  # SDSR
                 incident_id,  # Cross-domain correlation
+                replay_mode,  # UC-MON replay determinism
+                replay_attempt_id,  # UC-MON replay determinism
+                replay_artifact_version,  # UC-MON replay determinism
+                trace_completeness_status,  # UC-MON replay determinism
             )
 
             # Store steps separately for efficient querying
@@ -518,6 +549,11 @@ class PostgresTraceStore:
                 seed=row["seed"] or 42,
                 frozen_timestamp=row["frozen_timestamp"],
                 root_hash=row["root_hash"],
+                # Replay mode fields (migration 132, UC-MON)
+                replay_mode=row.get("replay_mode"),
+                replay_attempt_id=row.get("replay_attempt_id"),
+                replay_artifact_version=row.get("replay_artifact_version"),
+                trace_completeness_status=row.get("trace_completeness_status"),
             )
 
     async def get_trace_by_root_hash(

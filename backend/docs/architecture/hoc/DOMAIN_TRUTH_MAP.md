@@ -144,7 +144,7 @@ Sorted by DB violation count (highest first):
 1. `app/hoc/api/cus/incidents/incidents.py` — **22 DB violations**, wiring: REGISTRY
 1. `app/hoc/api/cus/activity/activity.py` — **21 DB violations**, wiring: REGISTRY
 1. `app/hoc/api/cus/policies/M25_integrations.py` — **20 DB violations**, wiring: NONE
-1. `app/hoc/api/cus/policies/aos_accounts.py` — **19 DB violations**, wiring: REGISTRY
+1. `app/hoc/api/cus/account/aos_accounts.py` — **19 DB violations**, wiring: REGISTRY
 1. `app/hoc/api/cus/policies/logs.py` — **19 DB violations**, wiring: REGISTRY
 1. `app/hoc/api/cus/policies/policies.py` — **16 DB violations**, wiring: REGISTRY
 1. `app/hoc/api/cus/analytics/costsim.py` — **13 DB violations**, wiring: REGISTRY
@@ -161,7 +161,7 @@ Sorted by DB violation count (highest first):
 1. `app/hoc/api/cus/policies/override.py` — **6 DB violations**, wiring: REGISTRY
 1. `app/hoc/api/cus/policies/workers.py` — **6 DB violations**, wiring: DIRECT
 1. `app/hoc/api/fdr/incidents/ops.py` — **6 DB violations**, wiring: NONE
-1. `app/hoc/api/cus/policies/aos_api_key.py` — **4 DB violations**, wiring: REGISTRY
+1. `app/hoc/api/cus/api_keys/aos_api_key.py` — **4 DB violations**, wiring: REGISTRY
 1. `app/hoc/api/cus/policies/customer_visibility.py` — **4 DB violations**, wiring: NONE
 1. `app/hoc/api/cus/policies/policy_rules_crud.py` — **4 DB violations**, wiring: REGISTRY
 1. `app/hoc/api/cus/recovery/recovery_ingest.py` — **4 DB violations**, wiring: BRIDGE
@@ -184,4 +184,4 @@ Sorted by DB violation count (highest first):
 1. `app/hoc/api/cus/policies/rbac_api.py` — **2 DB violations**, wiring: DIRECT
 1. `app/hoc/api/cus/policies/status_history.py` — **2 DB violations**, wiring: NONE
 1. `app/hoc/api/cus/general/debug_auth.py` — **1 DB violations**, wiring: NONE
-1. `app/hoc/api/int/account/aos_cli.py` — **1 DB violations**, wiring: NONE
+1. `app/hoc/int/integrations/int_cli.py` — **1 DB violations**, wiring: NONE

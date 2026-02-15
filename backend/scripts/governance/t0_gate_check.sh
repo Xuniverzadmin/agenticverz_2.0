@@ -70,9 +70,9 @@ declare -A T0_MODULES=(
     # GAP-070: Degraded Mode
     ["GAP-070"]="app/policy/degraded_mode.py"
     # GAP-016: Step Enforcement
-    ["GAP-016"]="app/worker/enforcement/step_enforcement.py"
+    ["GAP-016"]="app/hoc/int/worker/enforcement/step_enforcement.py"
     # GAP-030: Enforcement Guard
-    ["GAP-030"]="app/worker/enforcement/enforcement_guard.py"
+    ["GAP-030"]="app/hoc/int/worker/enforcement/enforcement_guard.py"
     # GAP-046: EventReactor Initialization
     ["GAP-046"]="app/events/reactor_initializer.py"
     # GAP-067: SPINE Validation
@@ -258,7 +258,7 @@ else
 fi
 
 # Check runner.py has enforcement guard
-if grep -q "enforcement_guard" app/worker/runner.py 2>/dev/null; then
+if grep -q "enforcement_guard" app/hoc/int/worker/runner.py 2>/dev/null; then
     log_info "runner.py: Enforcement guard wired"
     ((PASSED++))
 else

@@ -1,0 +1,565 @@
+[
+  {
+    "uc_id": "UC-006",
+    "operation_name": "activity.signal_feedback",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/activity_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/activity/L5_engines/signal_feedback_engine.py"],
+    "test_refs": ["tests/test_activity_facade_introspection.py:172"],
+    "decision_type": "ASSIGN"
+  },
+  {
+    "uc_id": "UC-006",
+    "operation_name": "activity.signal_feedback (L6 driver)",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/activity_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/activity/L6_drivers/signal_feedback_driver.py"],
+    "test_refs": [
+      "scripts/verification/uc_mon_storage_contract_check.py:311",
+      "scripts/verification/uc_mon_storage_contract_check.py:313",
+      "scripts/verification/uc_mon_storage_contract_check.py:322"
+    ],
+    "decision_type": "ASSIGN"
+  },
+  {
+    "uc_id": "UC-008",
+    "operation_name": "analytics.artifacts",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/analytics/L6_drivers/analytics_artifacts_driver.py"],
+    "test_refs": [
+      "scripts/verification/uc_mon_storage_contract_check.py:401",
+      "scripts/verification/uc_mon_storage_contract_check.py:403",
+      "scripts/verification/uc_mon_storage_contract_check.py:410",
+      "scripts/verification/uc_mon_storage_contract_check.py:412",
+      "scripts/verification/uc_mon_storage_contract_check.py:419",
+      "scripts/verification/uc_mon_storage_contract_check.py:421"
+    ],
+    "decision_type": "ASSIGN"
+  },
+  {
+    "uc_id": "UC-004",
+    "operation_name": "controls.evaluation_evidence",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/controls_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/controls/L6_drivers/evaluation_evidence_driver.py"],
+    "test_refs": [
+      "scripts/verification/uc_mon_storage_contract_check.py:330",
+      "scripts/verification/uc_mon_storage_contract_check.py:332",
+      "scripts/verification/uc_mon_storage_contract_check.py:341",
+      "scripts/verification/uc_mon_storage_contract_check.py:350"
+    ],
+    "decision_type": "ASSIGN"
+  },
+  {
+    "uc_id": "UC-002",
+    "operation_name": "account.onboarding.advance",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/onboarding_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/authority/onboarding_policy.py"],
+    "test_refs": [
+      "tests/governance/t4/test_activation_predicate_authority.py:30",
+      "tests/governance/t4/test_activation_predicate_authority.py:39",
+      "tests/governance/t4/test_activation_predicate_authority.py:48",
+      "tests/governance/t4/test_activation_predicate_authority.py:58",
+      "tests/governance/t4/test_activation_predicate_authority.py:160",
+      "tests/governance/t4/test_activation_predicate_authority.py:178",
+      "tests/governance/t4/test_activation_predicate_authority.py:222",
+      "tests/governance/t4/test_activation_predicate_authority.py:261"
+    ],
+    "decision_type": "ASSIGN"
+  },
+  {
+    "uc_id": "UC-002",
+    "operation_name": "account.onboarding.query|account.onboarding.advance",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/onboarding_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/handlers/onboarding_handler.py"],
+    "test_refs": [
+      "scripts/verification/uc001_uc002_validation.py:104",
+      "scripts/verification/uc_mon_event_contract_check.py:142",
+      "tests/governance/t4/test_activation_predicate_authority.py:12",
+      "tests/governance/t4/test_activation_predicate_authority.py:72",
+      "tests/governance/t4/test_activation_predicate_authority.py:85",
+      "tests/governance/t4/test_activation_predicate_authority.py:127"
+    ],
+    "decision_type": "ASSIGN"
+  },
+  {
+    "uc_id": "UC-002",
+    "operation_name": "integrations.connector_registry (L6 runtime cache for onboarding)",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/onboarding_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/integrations/L6_drivers/connector_registry_driver.py"],
+    "test_refs": [
+      "scripts/verification/uc001_uc002_validation.py:119",
+      "tests/governance/t4/test_activation_predicate_authority.py:12",
+      "tests/governance/t4/test_activation_predicate_authority.py:73",
+      "tests/governance/t4/test_activation_predicate_authority.py:97",
+      "tests/governance/t4/test_activation_predicate_authority.py:193",
+      "tests/governance/t4/test_activation_predicate_authority.py:202",
+      "tests/governance/t4/test_activation_predicate_authority.py:254",
+      "tests/governance/t4/test_activation_predicate_authority.py:264"
+    ],
+    "decision_type": "ASSIGN"
+  },
+  {
+    "uc_id": "UC-001",
+    "operation_name": "event_schema_contract (shared authority)",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/activity_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/authority/event_schema_contract.py"],
+    "test_refs": [
+      "scripts/verification/uc_mon_event_contract_check.py:78",
+      "scripts/verification/uc_mon_event_contract_check.py:98",
+      "scripts/verification/uc_mon_event_contract_check.py:137",
+      "scripts/verification/uc_mon_event_contract_check.py:157",
+      "scripts/verification/uc_mon_validation.py:73",
+      "scripts/verification/uc_mon_validation.py:99",
+      "scripts/verification/uc_mon_validation.py:103",
+      "tests/governance/t4/test_event_schema_contract.py:15"
+    ],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-002",
+    "operation_name": "event_schema_contract (shared authority)",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/activity_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/authority/event_schema_contract.py"],
+    "test_refs": [
+      "scripts/verification/uc_mon_event_contract_check.py:78",
+      "scripts/verification/uc_mon_event_contract_check.py:98",
+      "scripts/verification/uc_mon_event_contract_check.py:137",
+      "scripts/verification/uc_mon_event_contract_check.py:157",
+      "scripts/verification/uc_mon_validation.py:73",
+      "scripts/verification/uc_mon_validation.py:99",
+      "scripts/verification/uc_mon_validation.py:103",
+      "tests/governance/t4/test_event_schema_contract.py:15"
+    ],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-001",
+    "operation_name": "activity.query|activity.telemetry|activity.orphan_recovery",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/activity_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/handlers/activity_handler.py"],
+    "test_refs": ["scripts/verification/uc_mon_event_contract_check.py:143"],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-006",
+    "operation_name": "activity.signal_feedback",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/activity_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/handlers/activity_handler.py"],
+    "test_refs": ["scripts/verification/uc_mon_event_contract_check.py:143"],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-010",
+    "operation_name": "activity.signal_fingerprint|activity.discovery",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/activity_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/handlers/activity_handler.py"],
+    "test_refs": ["scripts/verification/uc_mon_event_contract_check.py:143"],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-004",
+    "operation_name": "controls.query|controls.circuit_breaker|controls.killswitch.read|controls.killswitch.write|controls.evaluation_evidence",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/controls_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/handlers/controls_handler.py"],
+    "test_refs": ["scripts/verification/uc_mon_event_contract_check.py:144"],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-021",
+    "operation_name": "controls.thresholds|controls.overrides",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/controls_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/handlers/controls_handler.py"],
+    "test_refs": ["scripts/verification/uc_mon_event_contract_check.py:144"],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-007",
+    "operation_name": "incidents.query|incidents.write|incidents.cost_guard|incidents.recurrence",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/incidents_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/handlers/incidents_handler.py"],
+    "test_refs": [
+      "scripts/verification/uc_mon_event_contract_check.py:145",
+      "scripts/verification/uc_mon_event_contract_check.py:240",
+      "scripts/verification/uc_mon_event_contract_check.py:242",
+      "tests/governance/t4/test_uc018_uc032_expansion.py:862"
+    ],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-011",
+    "operation_name": "incidents.export",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/incidents_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/handlers/incidents_handler.py"],
+    "test_refs": [
+      "scripts/verification/uc_mon_event_contract_check.py:145",
+      "scripts/verification/uc_mon_event_contract_check.py:240",
+      "scripts/verification/uc_mon_event_contract_check.py:242",
+      "tests/governance/t4/test_uc018_uc032_expansion.py:862"
+    ],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-031",
+    "operation_name": "incidents.recovery_rules",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/incidents_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/handlers/incidents_handler.py"],
+    "test_refs": [
+      "scripts/verification/uc_mon_event_contract_check.py:145",
+      "scripts/verification/uc_mon_event_contract_check.py:240",
+      "scripts/verification/uc_mon_event_contract_check.py:242",
+      "tests/governance/t4/test_uc018_uc032_expansion.py:862"
+    ],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-018",
+    "operation_name": "policies.query|policies.rules|policies.proposals_query|policies.rules_query|policies.policy_facade|policies.approval",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:160"],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-019",
+    "operation_name": "policies.enforcement|policies.enforcement_write|policies.health|policies.guard_read|policies.sync_guard_read|policies.workers",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:160"],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-020",
+    "operation_name": "policies.governance|rbac.audit",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:160"],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-021",
+    "operation_name": "policies.limits|policies.limits_query|policies.rate_limits",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:160"],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-022",
+    "operation_name": "policies.lessons|policies.recovery.match|policies.recovery.write|policies.recovery.read",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:160"],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-023",
+    "operation_name": "policies.simulate|policies.customer_visibility|policies.replay",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:160"],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-003",
+    "operation_name": "list_traces|store_trace|get_trace|delete_trace|cleanup_old_traces",
+    "route_path": "logs.traces_api",
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/logs_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/logs/L5_engines/trace_api_engine.py"],
+    "test_refs": [
+      "scripts/verification/uc_mon_event_contract_check.py:203",
+      "scripts/verification/uc_mon_event_contract_check.py:210"
+    ],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-017",
+    "operation_name": "get_trace_by_root_hash|compare_traces|check_idempotency",
+    "route_path": "logs.traces_api",
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/logs_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/logs/L5_engines/trace_api_engine.py"],
+    "test_refs": [
+      "scripts/verification/uc_mon_event_contract_check.py:203",
+      "scripts/verification/uc_mon_event_contract_check.py:210"
+    ],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-003",
+    "operation_name": "start_trace|record_step|complete_trace|store_trace|get_trace|search_traces|list_traces|delete_trace|get_trace_count|cleanup_old_traces|mark_trace_aborted",
+    "route_path": "logs.traces_api",
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/logs_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/logs/L6_drivers/pg_store.py"],
+    "test_refs": [
+      "scripts/verification/uc_mon_event_contract_check.py:191",
+      "scripts/verification/uc_mon_event_contract_check.py:192",
+      "scripts/verification/uc_mon_event_contract_check.py:193",
+      "scripts/verification/uc_mon_event_contract_check.py:194",
+      "scripts/verification/uc_mon_event_contract_check.py:199",
+      "scripts/verification/uc_mon_storage_contract_check.py:284",
+      "scripts/verification/uc_mon_storage_contract_check.py:285",
+      "scripts/verification/uc_mon_storage_contract_check.py:286"
+    ],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-017",
+    "operation_name": "get_trace_by_root_hash|check_idempotency_key",
+    "route_path": "logs.traces_api",
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/logs_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/logs/L6_drivers/pg_store.py"],
+    "test_refs": [
+      "scripts/verification/uc_mon_event_contract_check.py:191",
+      "scripts/verification/uc_mon_event_contract_check.py:192",
+      "scripts/verification/uc_mon_event_contract_check.py:193",
+      "scripts/verification/uc_mon_event_contract_check.py:194",
+      "scripts/verification/uc_mon_event_contract_check.py:199",
+      "scripts/verification/uc_mon_storage_contract_check.py:284",
+      "scripts/verification/uc_mon_storage_contract_check.py:285",
+      "scripts/verification/uc_mon_storage_contract_check.py:286"
+    ],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-017",
+    "operation_name": "base lifecycle methods|get_trace_by_root_hash|search_traces",
+    "route_path": "logs.traces_api",
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/logs_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/logs/L6_drivers/trace_store.py"],
+    "test_refs": [
+      "tests/runtime/test_runtime_determinism.py:23",
+      "tests/runtime/test_runtime_determinism.py:374",
+      "tests/runtime/test_runtime_determinism.py:379",
+      "tests/runtime/test_runtime_determinism.py:381",
+      "tests/runtime/test_runtime_determinism.py:392",
+      "tests/runtime/test_runtime_determinism.py:396",
+      "tests/runtime/test_runtime_determinism.py:404",
+      "tests/runtime/test_runtime_determinism.py:418"
+    ],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "UC-032",
+    "operation_name": "find_matching_traces|update_trace_determinism",
+    "route_path": "logs.traces_api",
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/logs_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/logs/L6_drivers/trace_store.py"],
+    "test_refs": [
+      "tests/runtime/test_runtime_determinism.py:23",
+      "tests/runtime/test_runtime_determinism.py:374",
+      "tests/runtime/test_runtime_determinism.py:379",
+      "tests/runtime/test_runtime_determinism.py:381",
+      "tests/runtime/test_runtime_determinism.py:392",
+      "tests/runtime/test_runtime_determinism.py:396",
+      "tests/runtime/test_runtime_determinism.py:404",
+      "tests/runtime/test_runtime_determinism.py:418"
+    ],
+    "decision_type": "SPLIT"
+  },
+  {
+    "uc_id": "HOLD",
+    "operation_name": "activity_facade (L5 facade)",
+    "route_path": "activity.query",
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/activity_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/activity/L5_engines/activity_facade.py"],
+    "test_refs": [
+      "tests/governance/t4/test_uc018_uc032_expansion.py:644",
+      "tests/test_activity_facade_introspection.py:19",
+      "tests/test_activity_facade_introspection.py:326",
+      "tests/test_activity_facade_introspection.py:328",
+      "tests/test_activity_facade_introspection.py:330",
+      "tests/test_activity_facade_introspection.py:333",
+      "tests/test_activity_facade_introspection.py:338",
+      "tests/test_activity_facade_introspection.py:342"
+    ],
+    "decision_type": "HOLD",
+    "hold_status": "NON_UC_SUPPORT"
+  },
+  {
+    "uc_id": "HOLD",
+    "operation_name": "cus_telemetry_engine",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/activity_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/activity/L5_engines/cus_telemetry_engine.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:645"],
+    "decision_type": "HOLD",
+    "hold_status": "EVIDENCE_PENDING"
+  },
+  {
+    "uc_id": "HOLD",
+    "operation_name": "activity_read_driver",
+    "route_path": "activity.query",
+    "handler_file": null,
+    "engine_or_driver_files": ["app/hoc/cus/activity/L6_drivers/activity_read_driver.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:667"],
+    "decision_type": "HOLD",
+    "hold_status": "NON_UC_SUPPORT"
+  },
+  {
+    "uc_id": "HOLD",
+    "operation_name": "cus_telemetry_driver",
+    "route_path": null,
+    "handler_file": null,
+    "engine_or_driver_files": ["app/hoc/cus/activity/L6_drivers/cus_telemetry_driver.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:668"],
+    "decision_type": "HOLD",
+    "hold_status": "EVIDENCE_PENDING"
+  },
+  {
+    "uc_id": "HOLD",
+    "operation_name": "customer_activity_adapter",
+    "route_path": null,
+    "handler_file": null,
+    "engine_or_driver_files": ["app/hoc/cus/activity/adapters/customer_activity_adapter.py"],
+    "test_refs": [
+      "tests/contracts/test_l2_l3_contracts.py:356",
+      "tests/contracts/test_l2_l3_contracts.py:390",
+      "tests/contracts/test_l2_l3_contracts.py:406",
+      "tests/contracts/test_l2_l3_contracts.py:434",
+      "tests/contracts/test_l2_l3_contracts.py:449",
+      "tests/contracts/test_l2_l3_contracts.py:471",
+      "tests/contracts/test_l2_l3_contracts.py:498",
+      "tests/contracts/test_l2_l3_contracts.py:503"
+    ],
+    "decision_type": "HOLD",
+    "hold_status": "NON_UC_SUPPORT"
+  },
+  {
+    "uc_id": "HOLD",
+    "operation_name": "feedback_read_engine",
+    "route_path": "analytics.feedback|analytics.prediction_read",
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/analytics/L5_engines/feedback_read_engine.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:650"],
+    "decision_type": "HOLD",
+    "hold_status": "EVIDENCE_PENDING"
+  },
+  {
+    "uc_id": "HOLD",
+    "operation_name": "feedback_read_driver",
+    "route_path": "analytics.feedback|analytics.prediction_read",
+    "handler_file": null,
+    "engine_or_driver_files": ["app/hoc/cus/analytics/L6_drivers/feedback_read_driver.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:674"],
+    "decision_type": "HOLD",
+    "hold_status": "EVIDENCE_PENDING"
+  },
+  {
+    "uc_id": "HOLD",
+    "operation_name": "signal_feedback_coordinator",
+    "route_path": null,
+    "handler_file": null,
+    "engine_or_driver_files": ["app/hoc/cus/hoc_spine/orchestrator/coordinators/signal_feedback_coordinator.py"],
+    "test_refs": [
+      "tests/governance/t4/test_uc018_uc032_expansion.py:887",
+      "tests/test_activity_facade_introspection.py:231",
+      "tests/test_activity_facade_introspection.py:309",
+      "tests/test_run_introspection_coordinators.py:307",
+      "tests/test_run_introspection_coordinators.py:341"
+    ],
+    "decision_type": "HOLD",
+    "hold_status": "EVIDENCE_PENDING"
+  },
+  {
+    "uc_id": "HOLD",
+    "operation_name": "anomaly_bridge",
+    "route_path": null,
+    "handler_file": null,
+    "engine_or_driver_files": ["app/hoc/cus/incidents/L5_engines/anomaly_bridge.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:655"],
+    "decision_type": "HOLD",
+    "hold_status": "EVIDENCE_PENDING"
+  },
+  {
+    "uc_id": "HOLD",
+    "operation_name": "incident_engine",
+    "route_path": null,
+    "handler_file": null,
+    "engine_or_driver_files": ["app/hoc/cus/incidents/L5_engines/incident_engine.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:658"],
+    "decision_type": "HOLD",
+    "hold_status": "EVIDENCE_PENDING"
+  },
+  {
+    "uc_id": "HOLD",
+    "operation_name": "incidents_facade",
+    "route_path": "incidents.query",
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/incidents_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/incidents/L5_engines/incidents_facade.py"],
+    "test_refs": [
+      "tests/governance/t4/test_uc018_uc032_expansion.py:661",
+      "tests/governance/t4/test_uc018_uc032_expansion.py:683"
+    ],
+    "decision_type": "HOLD",
+    "hold_status": "NON_UC_SUPPORT"
+  },
+  {
+    "uc_id": "HOLD",
+    "operation_name": "cost_guard_driver",
+    "route_path": null,
+    "handler_file": "app/hoc/cus/hoc_spine/orchestrator/handlers/incidents_handler.py",
+    "engine_or_driver_files": ["app/hoc/cus/incidents/L6_drivers/cost_guard_driver.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:677"],
+    "decision_type": "HOLD",
+    "hold_status": "EVIDENCE_PENDING"
+  },
+  {
+    "uc_id": "HOLD",
+    "operation_name": "incident_aggregator",
+    "route_path": null,
+    "handler_file": null,
+    "engine_or_driver_files": ["app/hoc/cus/incidents/L6_drivers/incident_aggregator.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:679"],
+    "decision_type": "HOLD",
+    "hold_status": "EVIDENCE_PENDING"
+  },
+  {
+    "uc_id": "HOLD",
+    "operation_name": "incidents_facade_driver",
+    "route_path": "incidents.query",
+    "handler_file": null,
+    "engine_or_driver_files": ["app/hoc/cus/incidents/L6_drivers/incidents_facade_driver.py"],
+    "test_refs": ["tests/governance/t4/test_uc018_uc032_expansion.py:683"],
+    "decision_type": "HOLD",
+    "hold_status": "NON_UC_SUPPORT"
+  },
+  {
+    "uc_id": "HOLD",
+    "operation_name": "customer_incidents_adapter",
+    "route_path": null,
+    "handler_file": null,
+    "engine_or_driver_files": ["app/hoc/cus/incidents/adapters/customer_incidents_adapter.py"],
+    "test_refs": [
+      "tests/contracts/test_l2_l3_contracts.py:106",
+      "tests/contracts/test_l2_l3_contracts.py:108",
+      "tests/contracts/test_l2_l3_contracts.py:285",
+      "tests/contracts/test_l2_l3_contracts.py:291",
+      "tests/contracts/test_l2_l3_contracts.py:292",
+      "tests/contracts/test_l2_l3_contracts.py:303",
+      "tests/contracts/test_l2_l3_contracts.py:327",
+      "tests/contracts/test_l2_l3_contracts.py:330"
+    ],
+    "decision_type": "HOLD",
+    "hold_status": "NON_UC_SUPPORT"
+  }
+]

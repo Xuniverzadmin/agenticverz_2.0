@@ -7,6 +7,12 @@
 
 ---
 
+## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
+
+- Wave-4 target scope for overview is fully classified: `5` scripts (`2 UC_LINKED`, `3 NON_UC_SUPPORT`, `0 UNLINKED`).
+- `UC_LINKED` mapping is to `UC-001` in `HOC_USECASE_CODE_LINKAGE.md`.
+- Architecture gates remain deterministic and clean in Wave-4 audit, with governance suite at `308` passing tests.
+
 ## Consolidation Actions (2026-01-31)
 
 ### Naming Violations — None

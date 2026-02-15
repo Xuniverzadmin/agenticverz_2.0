@@ -10,15 +10,20 @@ This file is a lightweight project memory guide for the agent. It defines:
 Use this to explicitly load context before tasks:
 
 ```
-Load project context and follow governance: codex_agents_agenticverz2.md, project_aware_agenticverz2.md, vision_mission_self_audit.md. When needed, consult docs/architecture/topology/HOC_LAYER_TOPOLOGY_V2.0.0.md, docs/architecture/architecture_core/LAYER_MODEL.md, and docs/architecture/architecture_core/DRIVER_ENGINE_PATTERN_LOCKED.md. For domain work, read literature/hoc_domain/<domain>/SOFTWARE_BIBLE.md and DOMAIN_CAPABILITY.md. Task: <your task>
+Load project context and follow governance: codex_agents_agenticverz2.md, project_aware_agenticverz2.md, vision_mission_self_audit.md. Run scripts/ops/hoc_session_bootstrap.sh --strict first (add --gates core when closure verification is needed). When needed, consult docs/architecture/topology/HOC_LAYER_TOPOLOGY_V2.0.0.md, docs/architecture/architecture_core/LAYER_MODEL.md, and docs/architecture/architecture_core/DRIVER_ENGINE_PATTERN_LOCKED.md. For domain work, read literature/hoc_domain/<domain>/SOFTWARE_BIBLE.md and DOMAIN_CAPABILITY.md. Task: <your task>
 ```
 
 ## Load Order (When Starting a Task)
-1. `codex_agents_agenticverz2.md` (governance + architecture)
-2. `docs/architecture/topology/HOC_LAYER_TOPOLOGY_V2.0.0.md` (binding topology)
-3. `docs/architecture/architecture_core/LAYER_MODEL.md`
-4. `docs/architecture/architecture_core/DRIVER_ENGINE_PATTERN_LOCKED.md`
-5. `docs/architecture/hoc/INDEX.md` (HOC domain index)
+1. `hoc-session-bootstrap` wrapper preflight:
+- `scripts/ops/hoc_session_bootstrap.sh --strict`
+- Optional: `scripts/ops/hoc_session_bootstrap.sh --strict --gates core`
+2. `codex_agents_agenticverz2.md` (governance + architecture)
+3. `docs/architecture/topology/HOC_LAYER_TOPOLOGY_V2.0.0.md` (binding topology)
+4. `docs/architecture/architecture_core/LAYER_MODEL.md`
+5. `docs/architecture/architecture_core/DRIVER_ENGINE_PATTERN_LOCKED.md`
+6. `docs/architecture/hoc/INDEX.md` (HOC domain index)
+7. `backend/app/hoc/docs/architecture/usecases/INDEX.md` (usecase registry)
+8. `backend/app/hoc/docs/architecture/usecases/HOC_USECASE_CODE_LINKAGE.md` (usecase-to-code audit map)
 
 ## Working Memory Checklist
 Track this context per task:
@@ -101,12 +106,37 @@ Ask before:
 - HOC topology: `docs/architecture/topology/`
 - Layer rules: `docs/architecture/architecture_core/`
 - HOC audits: `docs/architecture/hoc/`
+- HOC usecase registry: `backend/app/hoc/docs/architecture/usecases/INDEX.md`
+- HOC usecase linkage map: `backend/app/hoc/docs/architecture/usecases/HOC_USECASE_CODE_LINKAGE.md`
 - HOC runtime/API: `backend/app/hoc/`
  - CUS L2 → hoc_spine coverage report: `docs/architecture/hoc/CUS_HOC_SPINE_COMPONENT_COVERAGE.md`
  - CUS hoc_spine import matrix (L5/L6/L5_schemas): `docs/architecture/hoc/HOC_SPINE_IMPORT_MATRIX_CUS.md`
 
 ## Canonical CUS Domains (Do Not Miss)
 overview, activity, incidents, policies, controls, logs, analytics, integrations, api_keys, account
+
+## Canonical Domain Authority (Onboarding Intent Lock)
+Use this as the authority baseline for onboarding audits and implementation decisions.
+
+- `integrations` authority:
+- Owns customer LLM integration lifecycle.
+- Captures BYOK or Agenticverz-managed LLM selection.
+- Stores/validates credential references and integration config.
+- Owns customer environment/connectors (env, DB, RAG, MCP, related runtime access).
+- Owns AOS SDK install/connect confirmation for monitored execution readiness.
+- Owns project-level integration setup lifecycle (including create/delete project integration context).
+
+- `accounts` authority:
+- Owns signup/onboarding identity, subscription/billing plan, and team/sub-tenant membership.
+- Owns account/user lifecycle and tenant-level account governance.
+
+- `api_keys` authority:
+- Owns Agenticverz access key lifecycle for authenticated platform actions.
+- Covers issuance/revocation/rotation/use controls for operational access use cases (including console/automation flows such as Neon-style operations).
+
+- `policies` authority:
+- Owns run-time LLM governance policy lifecycle only.
+- Explicitly out of scope for customer onboarding setup flow.
 
 ## Canonical Audiences (Do Not Add New)
 Within `backend/app/hoc/api/`, the only canonical audience roots are:
@@ -116,3 +146,35 @@ Within `backend/app/hoc/api/`, the only canonical audience roots are:
 
 ### Known Misalignments (Track as TODO, Not Exemptions)
 - `backend/app/hoc/api/int/**` now includes real L2 routers (re-homed from `cus/`) as part of the audience cleansing workstream. The remaining gap is to design the **canonical** internal surface and ensure it is intentionally shaped (not just moved).
+
+## Usecase Procedure (Canonical)
+Follow this procedure for every HOC usecase (`UC-###`) and keep architecture closure separate from go-live readiness.
+
+### A) Architecture Closure Track
+1. Register/update usecase status in:
+- `backend/app/hoc/docs/architecture/usecases/INDEX.md`
+2. Maintain detailed evidence in:
+- `backend/app/hoc/docs/architecture/usecases/HOC_USECASE_CODE_LINKAGE.md`
+3. Use status semantics:
+- `RED`: authority/flow broken or unverified.
+- `YELLOW`: major blockers fixed; residual closure items remain.
+- `GREEN`: code + tests + CI + documentation fully synchronized.
+4. Every status promotion must include:
+- explicit file-level evidence,
+- verifier/test command outputs,
+- synchronized status in both index and linkage docs.
+
+### B) Production Readiness Track (Separate)
+1. Track live validation in:
+- `backend/app/hoc/docs/architecture/usecases/PROD_READINESS_TRACKER.md`
+2. Never mix prod-live checks into architecture status criteria.
+3. Prod readiness requires real-world evidence (provider/env/SDK/replay/rotation/failure drills).
+4. Use readiness states:
+- `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `READY_FOR_GO_LIVE`.
+
+### C) Execution Pattern (Required)
+1. Define usecase + acceptance criteria.
+2. Create plan doc and implementation evidence doc.
+3. Implement and run verification scripts/tests.
+4. Promote architecture status (`RED -> YELLOW -> GREEN`) only with passing evidence.
+5. Execute prod-readiness checklist independently before rollout approval.

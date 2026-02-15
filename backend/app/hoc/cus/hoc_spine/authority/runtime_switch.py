@@ -258,22 +258,42 @@ def _emit_governance_event(event_type: str, reason: str, actor: str) -> None:
     """
     Emit governance state change event.
 
+    Enriches payload with event schema contract fields and validates
+    before emission. Non-blocking: logs error on failure.
+
     Args:
         event_type: Type of event (governance_disabled, governance_enabled, etc.)
         reason: Reason for the change
         actor: Who triggered the change
     """
     try:
+        import uuid
+
+        from app.hoc.cus.hoc_spine.authority.event_schema_contract import (
+            CURRENT_SCHEMA_VERSION,
+            validate_event_payload,
+        )
+
+        event = {
+            "event_id": str(uuid.uuid4()),
+            "event_type": f"governance.{event_type}",
+            "tenant_id": "__system__",
+            "project_id": "__system__",
+            "actor_type": "system",
+            "actor_id": actor,
+            "decision_owner": "governance",
+            "sequence_no": 0,
+            "schema_version": CURRENT_SCHEMA_VERSION,
+            "reason": reason,
+            "timestamp": utc_now().isoformat(),
+        }
+        validate_event_payload(event)
+
         from app.events.subscribers import get_event_reactor
 
         reactor = get_event_reactor()
         if reactor and hasattr(reactor, 'emit'):
-            reactor.emit("governance_state_changed", {
-                "event_type": event_type,
-                "reason": reason,
-                "actor": actor,
-                "timestamp": utc_now().isoformat(),
-            })
+            reactor.emit("governance_state_changed", event)
     except Exception as e:
         # Don't fail on event emission - just log
         logger.error("governance.event_emit_failed", extra={"error": str(e)})

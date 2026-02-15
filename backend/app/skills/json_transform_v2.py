@@ -23,7 +23,7 @@ _backend = Path(__file__).parent.parent.parent
 if str(_backend) not in sys.path:
     sys.path.insert(0, str(_backend))
 
-from app.worker.runtime.core import SkillDescriptor, StructuredOutcome
+from app.hoc.int.worker.runtime.core import SkillDescriptor, StructuredOutcome
 
 logger = logging.getLogger("nova.skills.json_transform_v2")
 

@@ -67,7 +67,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
-from app.worker.orchestration.phases import (
+from app.hoc.int.worker.orchestration.phases import (
     PhaseStateMachine,
     PhaseTransitionError,
     RunPhase,

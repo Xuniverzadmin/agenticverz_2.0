@@ -100,8 +100,13 @@ class DataSourcesFacade:
     Callers: datasources.py (L2), aos_sdk
     """
 
-    def __init__(self):
-        """Initialize facade."""
+    def __init__(self, session=None):
+        """Initialize facade.
+
+        Args:
+            session: Optional database session from L4 handler.
+        """
+        self._session = session
         self._registry: Optional[DataSourceRegistry] = None
 
     @property
@@ -435,17 +440,19 @@ class DataSourcesFacade:
 _facade_instance: Optional[DataSourcesFacade] = None
 
 
-def get_datasources_facade() -> DataSourcesFacade:
+def get_datasources_facade(session=None) -> DataSourcesFacade:
     """
     Get the data sources facade instance.
 
-    This is the recommended way to access data source operations
-    from L2 APIs and the SDK.
+    Args:
+        session: Optional database session from L4 handler.
 
     Returns:
-        DataSourcesFacade instance
+        DataSourcesFacade instance (singleton, session updated per request)
     """
     global _facade_instance
     if _facade_instance is None:
-        _facade_instance = DataSourcesFacade()
+        _facade_instance = DataSourcesFacade(session=session)
+    elif session is not None:
+        _facade_instance._session = session
     return _facade_instance

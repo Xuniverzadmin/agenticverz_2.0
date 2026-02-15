@@ -42,9 +42,37 @@ from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
 )
 from app.schemas.response import wrap_dict
 
+from datetime import datetime
+
 logger = logging.getLogger("nova.api.predictions")
 
 router = APIRouter(prefix="/predictions", tags=["predictions", "pb-s5", "read-only"])
+
+
+# =============================================================================
+# UC-MON Determinism: as_of Contract
+# =============================================================================
+
+
+def _normalize_as_of(as_of: Optional[str]) -> str:
+    """
+    Normalize as_of deterministic read watermark.
+
+    UC-MON Contract:
+    - If provided: validate ISO-8601 UTC format
+    - If absent: generate once per request (server timestamp)
+    - Same as_of + same filters = stable results
+    """
+    if as_of is not None:
+        try:
+            datetime.fromisoformat(as_of.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "invalid_as_of", "message": "as_of must be ISO-8601 UTC"},
+            )
+        return as_of
+    return datetime.utcnow().isoformat() + "Z"
 
 
 # =============================================================================
@@ -110,6 +138,8 @@ async def list_predictions(
     include_expired: bool = Query(False, description="Include expired predictions"),
     limit: int = Query(50, ge=1, le=200, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
+    # UC-MON Determinism
+    as_of: Optional[str] = Query(None, description="Deterministic read watermark (ISO-8601 UTC)"),
     session=Depends(get_session_dep),
     auth: AuthorityResult = Depends(require_predictions_read),
 ):
@@ -120,6 +150,8 @@ async def list_predictions(
     No execution data is modified by this query.
     All predictions are ADVISORY only.
     """
+    effective_as_of = _normalize_as_of(as_of)
+
     # Emit authority audit for capability access
     await emit_authority_audit(auth, "predictions", subject_id="list")
 
@@ -131,6 +163,7 @@ async def list_predictions(
             tenant_id=tenant_id or "system",
             params={
                 "method": "list",
+                "as_of": effective_as_of,
                 "prediction_type": prediction_type,
                 "subject_type": subject_type,
                 "subject_id": subject_id,

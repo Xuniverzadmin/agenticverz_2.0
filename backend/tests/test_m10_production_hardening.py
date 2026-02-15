@@ -426,7 +426,7 @@ class TestOutboxE2E:
         from sqlalchemy import text
         from sqlmodel import Session
 
-        from app.worker.outbox_processor import OutboxProcessor
+        from app.hoc.int.worker.outbox_processor import OutboxProcessor
 
         engine = self.get_engine()
         aggregate_id = str(uuid.uuid4())

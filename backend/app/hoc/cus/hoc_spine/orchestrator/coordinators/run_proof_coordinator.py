@@ -69,7 +69,12 @@ class RunProofCoordinator:
         trace_store = logs_bridge.traces_store_capability()
 
         # Fetch trace for this run
-        trace = await trace_store.get_trace(run_id)
+        # Pass tenant_id for multi-tenant isolation (PostgresTraceStore supports it;
+        # SQLiteTraceStore does not — TypeError fallback handles dev mode)
+        try:
+            trace = await trace_store.get_trace(run_id, tenant_id=tenant_id)
+        except TypeError:
+            trace = await trace_store.get_trace(run_id)
 
         if trace is None:
             # No trace found - return UNSUPPORTED

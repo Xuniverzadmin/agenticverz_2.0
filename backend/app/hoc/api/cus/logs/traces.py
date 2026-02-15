@@ -42,15 +42,6 @@ from pydantic import BaseModel, Field
 # Use PostgreSQL store in production, SQLite for dev/test
 USE_POSTGRES = os.getenv("USE_POSTGRES_TRACES", "false").lower() == "true"
 
-if USE_POSTGRES:
-    from app.traces.pg_store import PostgresTraceStore, get_postgres_trace_store
-
-    TraceStoreType = PostgresTraceStore
-else:
-    from app.traces.store import SQLiteTraceStore
-
-    TraceStoreType = SQLiteTraceStore
-
 # JWT Authentication
 from app.auth.jwt_auth import JWTAuthDependency, JWTConfig, TokenPayload
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
@@ -60,7 +51,6 @@ from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     get_session_dep,
 )
 from app.schemas.response import wrap_dict
-from app.traces.redact import redact_trace_data
 
 # Import handler registration (ensures handlers are registered at import time)
 from app.hoc.cus.hoc_spine.orchestrator.handlers.traces_handler import (
@@ -130,21 +120,54 @@ def require_role(user: User, role: str) -> bool:
 
 
 # =============================================================================
-# Store Dependency
+# Operation Helper (L2 -> L4)
 # =============================================================================
 
-_trace_store: Optional[TraceStoreType] = None
+
+async def _execute_traces_op(user: User, method: str, params: dict) -> object:
+    registry = get_operation_registry()
+    async with get_async_session_context() as session:
+        result = await registry.execute(
+            "logs.traces_api",
+            OperationContext(
+                session=session,
+                tenant_id=user.tenant_id,
+                params={"method": method, **params},
+            ),
+        )
+
+    if not result.success:
+        raise HTTPException(status_code=500, detail=result.error)
+
+    return result.data
 
 
-def get_trace_store() -> TraceStoreType:
-    """Get the trace store instance."""
-    global _trace_store
-    if _trace_store is None:
-        if USE_POSTGRES:
-            _trace_store = get_postgres_trace_store()
-        else:
-            _trace_store = SQLiteTraceStore()
-    return _trace_store
+# =============================================================================
+# UC-MON Determinism: as_of Contract
+# =============================================================================
+
+
+def _normalize_as_of(as_of: Optional[str]) -> str:
+    """
+    Normalize as_of deterministic read watermark.
+
+    UC-MON Contract:
+    - If provided: validate ISO-8601 UTC format
+    - If absent: generate once per request (server timestamp)
+    - Same as_of + same filters = stable results
+    """
+    from datetime import datetime
+
+    if as_of is not None:
+        try:
+            datetime.fromisoformat(as_of.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "invalid_as_of", "message": "as_of must be ISO-8601 UTC"},
+            )
+        return as_of
+    return datetime.utcnow().isoformat() + "Z"
 
 
 # =============================================================================
@@ -257,7 +280,8 @@ async def list_traces(
     to_date: Optional[str] = Query(None, description="Filter to date (ISO8601)"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    store: TraceStoreType = Depends(get_trace_store),
+    # UC-MON Determinism
+    as_of: Optional[str] = Query(None, description="Deterministic read watermark (ISO-8601 UTC)"),
     user: User = Depends(get_current_user),
 ):
     """
@@ -265,6 +289,8 @@ async def list_traces(
 
     RBAC: Users can only see traces from their tenant unless admin.
     """
+    effective_as_of = _normalize_as_of(as_of)
+
     # RBAC: Enforce tenant isolation
     if tenant_id and tenant_id != user.tenant_id and not user.has_role("admin"):
         raise HTTPException(status_code=403, detail="Cannot access other tenant's traces")
@@ -273,20 +299,26 @@ async def list_traces(
     if not tenant_id and not user.has_role("admin"):
         tenant_id = user.tenant_id
 
-    traces = await store.search_traces(
-        tenant_id=tenant_id,
-        agent_id=agent_id,
-        root_hash=root_hash,
-        plan_hash=plan_hash,
-        seed=seed,
-        status=status,
-        from_date=from_date,
-        to_date=to_date,
-        limit=limit,
-        offset=offset,
+    data = await _execute_traces_op(
+        user,
+        "list_traces",
+        {
+            "as_of": effective_as_of,
+            "tenant_id": tenant_id,
+            "agent_id": agent_id,
+            "root_hash": root_hash,
+            "plan_hash": plan_hash,
+            "seed": seed,
+            "status": status,
+            "from_date": from_date,
+            "to_date": to_date,
+            "limit": limit,
+            "offset": offset,
+        },
     )
 
-    total = await store.get_trace_count(tenant_id)
+    traces = data["traces"]
+    total = data["total"]
 
     return TraceListResponse(
         traces=[
@@ -315,7 +347,6 @@ async def list_traces(
 @router.post("", status_code=201)
 async def store_trace(
     request: StoreTraceRequest,
-    store: TraceStoreType = Depends(get_trace_store),
     user: User = Depends(get_current_user),
 ):
     """
@@ -329,34 +360,18 @@ async def store_trace(
     if not trace.get("run_id") and not trace.get("trace_id"):
         raise HTTPException(status_code=400, detail="trace must have run_id or trace_id")
 
-    # Redact PII
-    redacted_trace = redact_trace_data(trace)
+    data = await _execute_traces_op(
+        user,
+        "store_trace",
+        {
+            "trace": trace,
+            "tenant_id": user.tenant_id,
+            "stored_by": user.user_id,
+            "use_postgres": USE_POSTGRES,
+        },
+    )
 
-    # Store using PostgreSQL if available
-    if USE_POSTGRES:
-        trace_id = await store.store_trace(
-            trace=redacted_trace,
-            tenant_id=user.tenant_id,
-            stored_by=user.user_id,
-            redact_pii=False,  # Already redacted
-        )
-    else:
-        # SQLite path - start trace and record steps
-        run_id = trace.get("run_id") or trace.get("trace_id")
-        await store.start_trace(
-            run_id=run_id,
-            correlation_id=trace.get("correlation_id", run_id),
-            tenant_id=user.tenant_id,
-            agent_id=trace.get("agent_id"),
-            plan=trace.get("plan", []),
-        )
-        trace_id = run_id
-
-    return wrap_dict({
-        "trace_id": trace_id,
-        "root_hash": trace.get("root_hash"),
-        "stored": True,
-    })
+    return wrap_dict(data)
 
 
 # =============================================================================
@@ -406,7 +421,6 @@ async def list_all_mismatches(
 @router.get("/{run_id}", response_model=TraceDetailResponse)
 async def get_trace(
     run_id: str,
-    store: TraceStoreType = Depends(get_trace_store),
     user: User = Depends(get_current_user),
 ):
     """
@@ -414,17 +428,19 @@ async def get_trace(
 
     RBAC: Users can only access their tenant's traces.
     """
-    # Get trace with tenant check for PostgreSQL
-    if USE_POSTGRES:
-        if user.has_role("admin"):
-            trace = await store.get_trace(run_id)
-        else:
-            trace = await store.get_trace(run_id, tenant_id=user.tenant_id)
-    else:
-        trace = await store.get_trace(run_id)
-        # Manual tenant check for SQLite
-        if trace and trace.tenant_id != user.tenant_id and not user.has_role("admin"):
-            raise HTTPException(status_code=403, detail="Access denied")
+    tenant_filter = None
+    if USE_POSTGRES and not user.has_role("admin"):
+        tenant_filter = user.tenant_id
+
+    trace = await _execute_traces_op(
+        user,
+        "get_trace",
+        {"run_id": run_id, "tenant_id": tenant_filter},
+    )
+
+    # Manual tenant check for SQLite
+    if not USE_POSTGRES and trace and trace.tenant_id != user.tenant_id and not user.has_role("admin"):
+        raise HTTPException(status_code=403, detail="Access denied")
 
     if not trace:
         raise HTTPException(status_code=404, detail=f"Trace {run_id} not found")
@@ -464,7 +480,6 @@ async def get_trace(
 @router.get("/by-hash/{root_hash}", response_model=TraceDetailResponse)
 async def get_trace_by_hash(
     root_hash: str,
-    store: TraceStoreType = Depends(get_trace_store),
     user: User = Depends(get_current_user),
 ):
     """
@@ -472,15 +487,18 @@ async def get_trace_by_hash(
 
     Useful for replay verification.
     """
-    if USE_POSTGRES:
-        if user.has_role("admin"):
-            trace = await store.get_trace_by_root_hash(root_hash)
-        else:
-            trace = await store.get_trace_by_root_hash(root_hash, tenant_id=user.tenant_id)
-    else:
-        trace = await store.get_trace_by_root_hash(root_hash)
-        if trace and trace.tenant_id != user.tenant_id and not user.has_role("admin"):
-            raise HTTPException(status_code=403, detail="Access denied")
+    tenant_filter = None
+    if USE_POSTGRES and not user.has_role("admin"):
+        tenant_filter = user.tenant_id
+
+    trace = await _execute_traces_op(
+        user,
+        "get_trace_by_root_hash",
+        {"root_hash": root_hash, "tenant_id": tenant_filter},
+    )
+
+    if not USE_POSTGRES and trace and trace.tenant_id != user.tenant_id and not user.has_role("admin"):
+        raise HTTPException(status_code=403, detail="Access denied")
 
     if not trace:
         raise HTTPException(status_code=404, detail=f"No trace found with root_hash {root_hash}")
@@ -521,7 +539,6 @@ async def get_trace_by_hash(
 async def compare_traces(
     run_id1: str,
     run_id2: str,
-    store: TraceStoreType = Depends(get_trace_store),
     user: User = Depends(get_current_user),
 ):
     """
@@ -529,8 +546,13 @@ async def compare_traces(
 
     Compares root_hash and step hashes to verify replay parity.
     """
-    trace1 = await store.get_trace(run_id1)
-    trace2 = await store.get_trace(run_id2)
+    data = await _execute_traces_op(
+        user,
+        "compare_traces",
+        {"run_id1": run_id1, "run_id2": run_id2},
+    )
+    trace1 = data["trace1"]
+    trace2 = data["trace2"]
 
     if not trace1:
         raise HTTPException(status_code=404, detail=f"Trace {run_id1} not found")
@@ -625,7 +647,6 @@ async def compare_traces(
 @router.delete("/{run_id}")
 async def delete_trace(
     run_id: str,
-    store: TraceStoreType = Depends(get_trace_store),
     user: User = Depends(get_current_user),
 ):
     """
@@ -636,10 +657,11 @@ async def delete_trace(
     if not user.has_role("admin") and not user.has_role("operator"):
         raise HTTPException(status_code=403, detail="Requires admin or operator role")
 
-    if USE_POSTGRES:
-        deleted = await store.delete_trace(run_id)
-    else:
-        deleted = await store.delete_trace(run_id)
+    deleted = await _execute_traces_op(
+        user,
+        "delete_trace",
+        {"run_id": run_id},
+    )
 
     if not deleted:
         raise HTTPException(status_code=404, detail=f"Trace {run_id} not found")
@@ -650,7 +672,6 @@ async def delete_trace(
 @router.post("/cleanup")
 async def cleanup_old_traces(
     days: int = Query(30, ge=1, le=365, description="Delete traces older than N days"),
-    store: TraceStoreType = Depends(get_trace_store),
     user: User = Depends(get_current_user),
 ):
     """
@@ -661,7 +682,11 @@ async def cleanup_old_traces(
     if not user.has_role("admin"):
         raise HTTPException(status_code=403, detail="Requires admin role")
 
-    count = await store.cleanup_old_traces(days)
+    count = await _execute_traces_op(
+        user,
+        "cleanup_old_traces",
+        {"days": days},
+    )
     return wrap_dict({
         "deleted_count": count,
         "retention_days": days,
@@ -676,7 +701,6 @@ async def cleanup_old_traces(
 @router.get("/idempotency/{idempotency_key}")
 async def check_idempotency(
     idempotency_key: str,
-    store: TraceStoreType = Depends(get_trace_store),
     user: User = Depends(get_current_user),
 ):
     """
@@ -687,7 +711,11 @@ async def check_idempotency(
     if not USE_POSTGRES:
         raise HTTPException(status_code=501, detail="Idempotency check requires PostgreSQL store")
 
-    result = await store.check_idempotency_key(idempotency_key, user.tenant_id)
+    result = await _execute_traces_op(
+        user,
+        "check_idempotency",
+        {"idempotency_key": idempotency_key, "tenant_id": user.tenant_id},
+    )
 
     if result:
         return wrap_dict({
@@ -777,7 +805,6 @@ async def bulk_report_mismatches(
 async def report_mismatch(
     trace_id: str,
     payload: MismatchReport,
-    store: TraceStoreType = Depends(get_trace_store),
     user: User = Depends(get_current_user),
 ):
     """

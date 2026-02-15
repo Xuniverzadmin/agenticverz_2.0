@@ -67,7 +67,7 @@ from app.hoc.cus.analytics.L5_engines.costsim_models import (
 )
 from app.hoc.cus.analytics.L5_engines.provenance import get_provenance_logger
 from app.hoc.cus.analytics.L5_engines.v2_adapter import CostSimV2Adapter
-from app.worker.simulate import CostSimulator
+from app.hoc.int.worker.simulate import CostSimulator
 
 logger = logging.getLogger("nova.costsim.canary")
 

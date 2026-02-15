@@ -474,6 +474,32 @@ def get_tenant_id_from_auth(request: Request) -> str:
 
 
 # =============================================================================
+# UC-MON Determinism: as_of Contract
+# =============================================================================
+
+
+def _normalize_as_of(as_of: Optional[str]) -> str:
+    """
+    Normalize as_of deterministic read watermark.
+
+    UC-MON Contract:
+    - If provided: validate ISO-8601 UTC format
+    - If absent: generate once per request (server timestamp)
+    - Same as_of + same filters = stable results
+    """
+    if as_of is not None:
+        try:
+            datetime.fromisoformat(as_of.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "invalid_as_of", "message": "as_of must be ISO-8601 UTC"},
+            )
+        return as_of
+    return datetime.utcnow().isoformat() + "Z"
+
+
+# =============================================================================
 # GET /incidents - DEPRECATED (Phase 5 Migration Lockdown)
 # =============================================================================
 # WARNING: This endpoint is DEPRECATED and should NOT be used by UI panels.
@@ -896,11 +922,14 @@ async def list_active_incidents(
     # Sorting
     sort_by: Annotated[SortField, Query(description="Field to sort by")] = SortField.CREATED_AT,
     sort_order: Annotated[SortOrder, Query(description="Sort direction")] = SortOrder.DESC,
+    # UC-MON Determinism
+    as_of: Annotated[str | None, Query(description="Deterministic read watermark (ISO-8601 UTC)")] = None,
     # Dependencies
     session=Depends(get_session_dep),
 ) -> IncidentListResponse:
     """List ACTIVE incidents. Topic enforced at endpoint boundary."""
     tenant_id = get_tenant_id_from_auth(request)
+    effective_as_of = _normalize_as_of(as_of)
 
     try:
         registry = get_operation_registry()
@@ -911,6 +940,7 @@ async def list_active_incidents(
                 tenant_id=tenant_id,
                 params={
                     "method": "list_active_incidents",
+                    "as_of": effective_as_of,
                     "severity": severity.value if severity else None,
                     "category": category,
                     "cause_type": cause_type.value if cause_type else None,
@@ -1001,11 +1031,14 @@ async def list_resolved_incidents(
     # Sorting
     sort_by: Annotated[SortField, Query(description="Field to sort by")] = SortField.RESOLVED_AT,
     sort_order: Annotated[SortOrder, Query(description="Sort direction")] = SortOrder.DESC,
+    # UC-MON Determinism
+    as_of: Annotated[str | None, Query(description="Deterministic read watermark (ISO-8601 UTC)")] = None,
     # Dependencies
     session=Depends(get_session_dep),
 ) -> IncidentListResponse:
     """List RESOLVED incidents. Topic enforced at endpoint boundary."""
     tenant_id = get_tenant_id_from_auth(request)
+    effective_as_of = _normalize_as_of(as_of)
 
     try:
         registry = get_operation_registry()
@@ -1016,6 +1049,7 @@ async def list_resolved_incidents(
                 tenant_id=tenant_id,
                 params={
                     "method": "list_resolved_incidents",
+                    "as_of": effective_as_of,
                     "severity": severity.value if severity else None,
                     "category": category,
                     "cause_type": cause_type.value if cause_type else None,
@@ -1104,11 +1138,14 @@ async def list_historical_incidents(
     # Sorting
     sort_by: Annotated[SortField, Query(description="Field to sort by")] = SortField.RESOLVED_AT,
     sort_order: Annotated[SortOrder, Query(description="Sort direction")] = SortOrder.DESC,
+    # UC-MON Determinism
+    as_of: Annotated[str | None, Query(description="Deterministic read watermark (ISO-8601 UTC)")] = None,
     # Dependencies
     session=Depends(get_session_dep),
 ) -> IncidentListResponse:
     """List HISTORICAL incidents (resolved beyond retention). Topic enforced."""
     tenant_id = get_tenant_id_from_auth(request)
+    effective_as_of = _normalize_as_of(as_of)
 
     try:
         registry = get_operation_registry()
@@ -1119,6 +1156,7 @@ async def list_historical_incidents(
                 tenant_id=tenant_id,
                 params={
                     "method": "list_historical_incidents",
+                    "as_of": effective_as_of,
                     "retention_days": retention_days,
                     "severity": severity.value if severity else None,
                     "category": category,

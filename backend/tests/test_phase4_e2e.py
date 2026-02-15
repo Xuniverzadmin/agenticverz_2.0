@@ -240,7 +240,7 @@ class TestBudgetDeduction:
 
     def test_cost_calculation(self):
         """LLM cost calculation is accurate."""
-        from app.worker.runner import calculate_llm_cost_cents
+        from app.hoc.int.worker.runner import calculate_llm_cost_cents
 
         # 539 input, 170 output tokens (from our real test)
         # Sonnet 4: $3/1M input, $15/1M output

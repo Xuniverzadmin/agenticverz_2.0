@@ -21,7 +21,7 @@ import pytest
 # Set test environment
 os.environ.setdefault(
     "DATABASE_URL",
-    "postgresql://neondb_owner:npg_cVfk6XMYdt4G@ep-long-surf-a1n0hv91-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
+    "postgresql://nova:novapass@localhost:6432/nova_aos",
 )
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 

@@ -82,7 +82,7 @@ AUDIENCE_PATTERNS = [
     (r"^app/security/", "INTERNAL"),
 
     # Worker/jobs - internal infrastructure
-    (r"^app/worker/", "INTERNAL"),
+    (r"^app/hoc/int/worker/", "INTERNAL"),
     (r"^app/workers/", "INTERNAL"),
     (r"^app/jobs/", "INTERNAL"),
     (r"^app/tasks/", "INTERNAL"),
@@ -219,7 +219,7 @@ LAYER_PATTERNS = [
     (r"/engines/[^/]+\.py$", "L5", "In engines/ dir"),
     (r"/workers/[^/]+\.py$", "L5", "In workers/ dir"),
     (r"^app/workers/", "L5", "In workers/ dir"),
-    (r"^app/worker/", "L5", "In worker/ dir"),
+    (r"^app/hoc/int/worker/", "L5", "In worker/ dir"),
     (r"^app/jobs/", "L5", "In jobs/ dir"),
     (r"^app/tasks/", "L5", "In tasks/ dir"),
 
@@ -336,7 +336,6 @@ LAYER_PATTERNS = [
 
     # CLI tools
     (r"_cli\.py$", "L2", "CLI tool"),
-    (r"^app/aos_cli\.py$", "L2", "AOS CLI"),
 
     # Catch-all: __init__.py files
     (r"__init__\.py$", "L5", "Package init"),

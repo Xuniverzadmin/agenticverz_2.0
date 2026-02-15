@@ -6,6 +6,17 @@
 
 ---
 
+## Reality Delta (2026-02-11)
+
+- API key domain now owns both read and write lifecycles at L2 under:
+- `backend/app/hoc/api/cus/api_keys/`
+- Write operations are no longer hosted in `logs/tenants.py`; they are in:
+- `backend/app/hoc/api/cus/api_keys/api_key_writes.py`
+- Active lifecycle endpoints:
+- `GET /api-keys`, `GET /api-keys/{id}` (read)
+- `GET/POST/DELETE /tenant/api-keys` (write/revoke/list)
+- Onboarding transition hook on first key create remains active and DB-backed.
+
 ## 1. Domain Purpose
 
 Manages API key lifecycle — creation, rotation, revocation, and usage tracking for machine-native access.

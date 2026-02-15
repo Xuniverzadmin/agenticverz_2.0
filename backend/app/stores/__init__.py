@@ -225,7 +225,7 @@ async def get_idempotency_store():
     """
     Get or create idempotency store based on environment configuration.
 
-    Re-exports the existing factory from app.traces.idempotency which already
+    Re-exports the existing factory from HOC logs idempotency driver which already
     has proper REDIS_URL-based auto-detection.
 
     Environment:

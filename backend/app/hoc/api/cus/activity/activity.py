@@ -768,6 +768,32 @@ def get_tenant_id_from_auth(request: Request) -> str:
 
 
 # =============================================================================
+# UC-MON Determinism: as_of Contract
+# =============================================================================
+
+
+def _normalize_as_of(as_of: str | None) -> str:
+    """
+    Normalize as_of deterministic read watermark.
+
+    UC-MON Contract:
+    - If provided: validate ISO-8601 UTC format
+    - If absent: generate once per request (server timestamp)
+    - Same as_of + same filters = stable results
+    """
+    if as_of is not None:
+        try:
+            datetime.fromisoformat(as_of.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "invalid_as_of", "message": "as_of must be ISO-8601 UTC"},
+            )
+        return as_of
+    return datetime.utcnow().isoformat() + "Z"
+
+
+# =============================================================================
 # GET /runs - O2 List
 # =============================================================================
 
@@ -1718,6 +1744,8 @@ async def list_live_runs(
     # Pagination
     limit: Annotated[int, Query(ge=1, le=200, description="Max runs to return")] = 50,
     offset: Annotated[int, Query(ge=0, description="Number of runs to skip")] = 0,
+    # UC-MON Determinism
+    as_of: Annotated[str | None, Query(description="Deterministic read watermark (ISO-8601 UTC)")] = None,
     # Dependencies
     session = Depends(get_session_dep),
 ) -> LiveRunsResponse:
@@ -1729,6 +1757,7 @@ async def list_live_runs(
     """
 
     tenant_id = get_tenant_id_from_auth(request)
+    effective_as_of = _normalize_as_of(as_of)
 
     # Route through L4 registry — state=LIVE hardcoded in L5 facade
     registry = get_operation_registry()
@@ -1739,6 +1768,7 @@ async def list_live_runs(
             tenant_id=tenant_id,
             params={
                 "method": "get_live_runs",
+                "as_of": effective_as_of,
                 "project_id": project_id,
                 "risk_level": [r.value for r in risk_level] if risk_level else None,
                 "evidence_health": [e.value for e in evidence_health] if evidence_health else None,
@@ -1804,6 +1834,8 @@ async def list_completed_runs(
     # Sort
     sort_by: Annotated[SortField, Query(description="Field to sort by")] = SortField.COMPLETED_AT,
     sort_order: Annotated[SortOrder, Query(description="Sort direction")] = SortOrder.DESC,
+    # UC-MON Determinism
+    as_of: Annotated[str | None, Query(description="Deterministic read watermark (ISO-8601 UTC)")] = None,
     # Dependencies
     session = Depends(get_session_dep),
 ) -> CompletedRunsResponse:
@@ -1815,6 +1847,7 @@ async def list_completed_runs(
     """
 
     tenant_id = get_tenant_id_from_auth(request)
+    effective_as_of = _normalize_as_of(as_of)
 
     # Route through L4 registry — state=COMPLETED hardcoded in L5 facade
     registry = get_operation_registry()
@@ -1825,6 +1858,7 @@ async def list_completed_runs(
             tenant_id=tenant_id,
             params={
                 "method": "get_completed_runs",
+                "as_of": effective_as_of,
                 "project_id": project_id,
                 "status": status,
                 "risk_level": [r.value for r in risk_level] if risk_level else None,
@@ -1885,6 +1919,8 @@ async def list_signals(
     severity: Annotated[str | None, Query(description="Filter by severity (HIGH, MEDIUM, LOW)")] = None,
     # Pagination
     limit: Annotated[int, Query(ge=1, le=100, description="Max signals to return")] = 20,
+    # UC-MON Determinism
+    as_of: Annotated[str | None, Query(description="Deterministic read watermark (ISO-8601 UTC)")] = None,
     # Dependencies
     session = Depends(get_session_dep),
 ) -> SignalsResponse:
@@ -1896,6 +1932,7 @@ async def list_signals(
     """
 
     tenant_id = get_tenant_id_from_auth(request)
+    effective_as_of = _normalize_as_of(as_of)
 
     # Route through L4 registry — signal synthesis handled by L5 facade
     registry = get_operation_registry()
@@ -1906,6 +1943,7 @@ async def list_signals(
             tenant_id=tenant_id,
             params={
                 "method": "get_signals",
+                "as_of": effective_as_of,
                 "project_id": project_id,
                 "signal_type": signal_type,
                 "severity": severity,

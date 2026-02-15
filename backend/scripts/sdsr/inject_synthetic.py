@@ -131,7 +131,7 @@ EXIT_IDENTITY_REUSE = 7  # RG-SDSR-01: run_id already exists (LOCKED contract)
 # These are the CANONICAL terminal statuses from runs.status.
 # SDSR observes this vocabulary; it does NOT impose its own.
 #
-# Source of truth: backend/app/worker/runner.py (status mutations)
+# Source of truth: backend/app/hoc/int/worker/runner.py (status mutations)
 # Source of truth: backend/app/db.py (Run model status field)
 
 TERMINAL_RUN_STATUSES = frozenset({"succeeded", "failed", "halted"})

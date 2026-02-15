@@ -7,6 +7,12 @@
 
 ---
 
+## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
+
+- Wave-4 UC script coverage audited `hoc/cus/ops` scope as:
+- `4` scripts total (`0 UC_LINKED`, `4 NON_UC_SUPPORT`, `0 UNLINKED` in target scope).
+- This document remains focused on `fdr/ops` canonicalization; this note anchors CUS script-coverage state for cross-domain documentation coherence.
+
 ## File Registry
 
 ### L2 APIs

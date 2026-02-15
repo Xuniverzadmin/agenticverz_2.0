@@ -8,7 +8,7 @@ from app.hoc.api.cus.integrations.cus_telemetry import router as cus_telemetry_r
 from app.hoc.api.cus.integrations.mcp_servers import router as mcp_servers_router
 from app.hoc.api.cus.integrations.session_context import router as session_context_router
 from app.hoc.api.cus.integrations.v1_proxy import router as v1_proxy_router
-from app.hoc.api.cus.policies.aos_cus_integrations import router as aos_cus_integrations_router
+from app.hoc.api.cus.integrations.aos_cus_integrations import router as aos_cus_integrations_router
 
 DOMAIN = "integrations"
 ROUTERS: list[APIRouter] = [

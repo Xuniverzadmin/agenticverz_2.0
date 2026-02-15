@@ -148,7 +148,7 @@ def check_job_executor_exists(repo_root: Path) -> tuple[bool, list[Path]]:
     possible_paths = [
         "backend/app/services/governance/job_executor.py",
         "backend/app/services/governance/executor.py",
-        "backend/app/worker/governance_executor.py",
+        "backend/app/hoc/int/worker/governance_executor.py",
     ]
     found = []
     for path in possible_paths:

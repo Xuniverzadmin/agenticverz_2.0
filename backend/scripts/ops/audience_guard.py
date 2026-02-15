@@ -48,7 +48,7 @@ SCAN_DIRS = [
     "app/api",
     "app/services",
     "app/adapters",
-    "app/worker",
+    "app/hoc/int/worker",
     "app/core",
 ]
 

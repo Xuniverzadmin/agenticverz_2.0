@@ -41,9 +41,37 @@ from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
 )
 from app.schemas.response import wrap_dict
 
+from datetime import datetime
+
 logger = logging.getLogger("nova.api.feedback")
 
 router = APIRouter(prefix="/feedback", tags=["feedback", "pb-s3", "read-only"])
+
+
+# =============================================================================
+# UC-MON Determinism: as_of Contract
+# =============================================================================
+
+
+def _normalize_as_of(as_of: Optional[str]) -> str:
+    """
+    Normalize as_of deterministic read watermark.
+
+    UC-MON Contract:
+    - If provided: validate ISO-8601 UTC format
+    - If absent: generate once per request (server timestamp)
+    - Same as_of + same filters = stable results
+    """
+    if as_of is not None:
+        try:
+            datetime.fromisoformat(as_of.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "invalid_as_of", "message": "as_of must be ISO-8601 UTC"},
+            )
+        return as_of
+    return datetime.utcnow().isoformat() + "Z"
 
 
 # =============================================================================
@@ -111,6 +139,8 @@ async def list_feedback(
     acknowledged: Optional[bool] = Query(None, description="Filter by acknowledgement status"),
     limit: int = Query(50, ge=1, le=200, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
+    # UC-MON Determinism
+    as_of: Optional[str] = Query(None, description="Deterministic read watermark (ISO-8601 UTC)"),
     _: str = Depends(verify_api_key),
 ):
     """
@@ -119,6 +149,8 @@ async def list_feedback(
     READ-ONLY: This endpoint only reads data.
     No execution data is modified by this query.
     """
+    effective_as_of = _normalize_as_of(as_of)
+
     async with get_async_session_context() as session:
         registry = get_operation_registry()
         result = await registry.execute(
@@ -128,6 +160,7 @@ async def list_feedback(
                 tenant_id=tenant_id or "system",
                 params={
                     "method": "list_feedback",
+                    "as_of": effective_as_of,
                     "pattern_type": pattern_type,
                     "severity": severity,
                     "acknowledged": acknowledged,

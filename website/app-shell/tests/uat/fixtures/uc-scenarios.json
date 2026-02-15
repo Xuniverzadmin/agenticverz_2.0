@@ -1,0 +1,101 @@
+{
+  "_meta": {
+    "type": "uat_scenario_fixtures",
+    "version": "1.0.0",
+    "generated_at": "2026-02-15T00:00:00.000Z",
+    "purpose": "Playwright UAT test fixtures for UC scenario validation"
+  },
+  "scenarios": [
+    {
+      "uc_id": "UC-002",
+      "test_id": "UAT-UC002-001",
+      "test_name": "Onboarding query operation registered",
+      "expected_status": "PASS",
+      "evidence_fields": ["operation_name", "handler_file"]
+    },
+    {
+      "uc_id": "UC-002",
+      "test_id": "UAT-UC002-002",
+      "test_name": "Onboarding advance operation registered",
+      "expected_status": "PASS",
+      "evidence_fields": ["operation_name", "handler_file"]
+    },
+    {
+      "uc_id": "UC-002",
+      "test_id": "UAT-UC002-003",
+      "test_name": "Onboarding policy exports",
+      "expected_status": "PASS",
+      "evidence_fields": ["operation_name", "engine_or_driver_files"]
+    },
+    {
+      "uc_id": "UC-004",
+      "test_id": "UAT-UC004-001",
+      "test_name": "Controls evaluation evidence registered",
+      "expected_status": "PASS",
+      "evidence_fields": ["operation_name", "handler_file"]
+    },
+    {
+      "uc_id": "UC-004",
+      "test_id": "UAT-UC004-002",
+      "test_name": "Evaluation evidence driver methods",
+      "expected_status": "PASS",
+      "evidence_fields": ["operation_name", "engine_or_driver_files"]
+    },
+    {
+      "uc_id": "UC-006",
+      "test_id": "UAT-UC006-001",
+      "test_name": "Signal feedback operation registered",
+      "expected_status": "PASS",
+      "evidence_fields": ["operation_name", "handler_file"]
+    },
+    {
+      "uc_id": "UC-006",
+      "test_id": "UAT-UC006-002",
+      "test_name": "Signal feedback service methods",
+      "expected_status": "PASS",
+      "evidence_fields": ["operation_name", "engine_or_driver_files"]
+    },
+    {
+      "uc_id": "UC-008",
+      "test_id": "UAT-UC008-001",
+      "test_name": "Analytics artifacts operation registered",
+      "expected_status": "PASS",
+      "evidence_fields": ["operation_name", "handler_file"]
+    },
+    {
+      "uc_id": "UC-008",
+      "test_id": "UAT-UC008-002",
+      "test_name": "Analytics artifacts driver methods",
+      "expected_status": "PASS",
+      "evidence_fields": ["operation_name", "engine_or_driver_files"]
+    },
+    {
+      "uc_id": "UC-017",
+      "test_id": "UAT-UC017-001",
+      "test_name": "Trace API engine methods",
+      "expected_status": "PASS",
+      "evidence_fields": ["operation_name", "engine_or_driver_files"]
+    },
+    {
+      "uc_id": "UC-017",
+      "test_id": "UAT-UC017-002",
+      "test_name": "Postgres trace store methods",
+      "expected_status": "PASS",
+      "evidence_fields": ["operation_name", "engine_or_driver_files"]
+    },
+    {
+      "uc_id": "UC-032",
+      "test_id": "UAT-UC032-001",
+      "test_name": "Trace store required methods",
+      "expected_status": "PASS",
+      "evidence_fields": ["operation_name", "engine_or_driver_files"]
+    },
+    {
+      "uc_id": "UC-032",
+      "test_id": "UAT-UC032-002",
+      "test_name": "Redact module exists",
+      "expected_status": "PASS",
+      "evidence_fields": ["operation_name", "engine_or_driver_files"]
+    }
+  ]
+}

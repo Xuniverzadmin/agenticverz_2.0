@@ -20,6 +20,27 @@
 
 **Strict T0 invariant:** incidents `L6_drivers/` contain no `hoc_spine` imports; any cross-domain coordination is wired at L4.
 
+## Reality Delta (2026-02-11)
+
+- Usecase closure alignment: `UC-007`, `UC-011`, and `UC-012` are now documented as architecture `GREEN`.
+- Incident closure pack now includes explicit resolution payload + postmortem stub requirements and recurrence signature/version persistence.
+- Validation alignment: UC-MON strict validation suite and storage/event contract verifiers pass with no blocking findings.
+
+## Reality Delta (2026-02-12)
+
+- Incident expansion closure promotes `UC-029`, `UC-030`, and `UC-031` to architecture `GREEN`.
+- Closure extends incidents evidence beyond baseline lifecycle into recovery-rule decisioning and violation-truth workflow paths.
+- Production rollout remains a separate track in `backend/app/hoc/docs/architecture/usecases/PROD_READINESS_TRACKER.md`.
+
+## Reality Delta (2026-02-12, Wave-2 Script Coverage Audit)
+
+- Wave-2 script classification for `incidents` is now canonically audited and reconciled.
+- Incidents classification state in Wave-2 scope:
+- `24` scripts as `UC_LINKED`
+- `13` scripts as `NON_UC_SUPPORT`
+- `0` core-scope residual scripts.
+- Deterministic architecture gates remain passing post-wave, with governance suite now at `219` tests.
+
 ## Table of Contents
 
 1. [Domain Architecture](#1-domain-architecture)

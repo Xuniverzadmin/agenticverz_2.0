@@ -31,7 +31,7 @@ for p in [_backend_path, _app_path, _runtime_path]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from app.worker.runtime.core import (
+from app.hoc.int.worker.runtime.core import (
     ErrorCategory,
     ResourceContract,
     Runtime,

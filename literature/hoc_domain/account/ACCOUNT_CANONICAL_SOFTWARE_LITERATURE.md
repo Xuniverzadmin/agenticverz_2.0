@@ -7,6 +7,16 @@
 
 ---
 
+## Reality Delta (2026-02-11)
+
+- Canonical account onboarding write surface includes project creation at:
+- `backend/app/hoc/api/cus/account/aos_accounts.py` (`POST /accounts/projects`)
+- SDK attestation persistence is wired from L2 handshake to L4/L6:
+- `backend/app/hoc/api/int/general/sdk.py` -> `account.sdk_attestation` -> `sdk_attestation_driver.py`.
+- Migration for attestation storage is present:
+- `backend/alembic/versions/127_create_sdk_attestations.py`.
+- Onboarding completion (COMPLETE) is gated by activation predicate in `onboarding_handler.py` with persistent evidence only.
+
 ## Reality Delta (2026-02-08)
 
 - Execution topology: account L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5 gaps).
@@ -18,6 +28,21 @@
 **Onboarding SSOT (Phase A2):** persisted onboarding state is `Tenant.onboarding_state` and the canonical enum + transition metadata lives in `backend/app/hoc/cus/account/L5_schemas/onboarding_state.py` (legacy `backend/app/auth/onboarding_state.py` and the interim mirror `backend/app/hoc/cus/account/L5_schemas/onboarding_enums.py` were deleted after rewiring).
 
 **Note (Scope):** `backend/app/hoc/cus/account/logs/CRM/audit/audit_engine.py` is CRM governance-job audit (contract/job evidence → verdict), executed via L4 operation `governance.audit_job`.
+
+## Reality Delta (2026-02-12)
+
+- SDK attestation driver cross-domain import issue is remediated.
+- `sdk_attestation_driver.py` no longer imports `sql_text` from hoc_spine orchestrator; it uses SQLAlchemy local import, preserving L6 isolation.
+- Cross-domain validator now returns clean status (`count=0`) for this previously failing path.
+
+## Reality Delta (2026-02-12, Wave-3 Script Coverage Audit)
+
+- Wave-3 script classification for `account` is now canonically audited and reconciled.
+- Account classification state in Wave-3 target scope:
+- `13` scripts as `UC_LINKED`
+- `18` scripts as `NON_UC_SUPPORT`
+- `0` target-scope residual scripts.
+- Deterministic architecture gates remain passing post-wave, with governance suite now at `250` tests.
 
 ## Consolidation Actions (2026-01-31)
 

@@ -12,6 +12,7 @@
 - L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain logs --json --advisory` reports 0 blocking, 0 advisory.
 - Execution boundary (pairing): `python3 scripts/ops/l5_spine_pairing_gap_detector.py --domain logs --json` reports 0 orphaned L5 entry modules (`total_l5_engines: 6`, `wired_via_l4: 6`, `direct_l2_to_l5: 0`).
 - Plan: `docs/architecture/hoc/DOMAIN_EXECUTION_BOUNDARY_REMEDIATION_PLAN.md`.
+- Trace API endpoints route through L4 `logs.traces_api` → L5 `trace_api_engine` (no L2→L6 trace store imports).
 
 **Note (Scope):** The CRM governance auditor lives in `backend/app/hoc/cus/account/logs/CRM/audit/audit_engine.py` and is invoked by L4 operation `governance.audit_job`. It is not part of the LLM-runs logs retrieval APIs.
 
@@ -106,7 +107,7 @@ Structured logging and log analysis — log ingestion, search, filtering, alerti
 | `redact_json_string` | redact | No (gap) | L2:traces | pure |
 | `redact_list` | redact | No (gap) | L2:traces | pure |
 | `redact_string_value` | redact | No (gap) | L2:traces | pure |
-| `redact_trace_data` | redact | No (gap) | L2:traces | pure |
+| `redact_trace_data` | redact | Yes | L4:logs.traces_api | pure |
 
 ## 3. Internal Functions
 

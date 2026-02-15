@@ -163,7 +163,7 @@ class CapabilitiesResponse(BaseModel):
 def _get_cost_simulator():
     """Get CostSimulator instance."""
     try:
-        from app.worker.simulate import CostSimulator
+        from app.hoc.int.worker.simulate import CostSimulator
 
         return CostSimulator()
     except ImportError as e:

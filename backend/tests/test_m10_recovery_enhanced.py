@@ -333,7 +333,7 @@ class TestRecoveryEvaluator:
     @pytest.mark.asyncio
     async def test_failure_event_creation(self):
         """Test FailureEvent dataclass."""
-        from app.worker.recovery_evaluator import FailureEvent
+        from app.hoc.int.worker.recovery_evaluator import FailureEvent
 
         event = FailureEvent(
             failure_match_id=str(uuid4()),
@@ -350,7 +350,7 @@ class TestRecoveryEvaluator:
     @pytest.mark.asyncio
     async def test_hooks_registration(self):
         """Test hook registration and triggering."""
-        from app.worker.recovery_evaluator import RecoveryHooks
+        from app.hoc.int.worker.recovery_evaluator import RecoveryHooks
 
         hooks = RecoveryHooks()
 
@@ -369,7 +369,7 @@ class TestRecoveryEvaluator:
     @pytest.mark.asyncio
     async def test_hooks_async_callback(self):
         """Test async hook callback."""
-        from app.worker.recovery_evaluator import RecoveryHooks
+        from app.hoc.int.worker.recovery_evaluator import RecoveryHooks
 
         hooks = RecoveryHooks()
 
@@ -388,7 +388,7 @@ class TestRecoveryEvaluator:
     @pytest.mark.asyncio
     async def test_hooks_unregister(self):
         """Test hook unregistration."""
-        from app.worker.recovery_evaluator import RecoveryHooks
+        from app.hoc.int.worker.recovery_evaluator import RecoveryHooks
 
         hooks = RecoveryHooks()
 
@@ -406,13 +406,13 @@ class TestRecoveryEvaluator:
         # Need to reimport to pick up env change
         import importlib
 
-        import app.worker.recovery_evaluator as evaluator_module
+        import app.hoc.int.worker.recovery_evaluator as evaluator_module
 
         importlib.reload(evaluator_module)
 
         # Phase R-1: RecoveryEvaluator renamed to RecoveryExecutor
         from app.services.recovery_evaluation_engine import RecoveryDecision
-        from app.worker.recovery_evaluator import (
+        from app.hoc.int.worker.recovery_evaluator import (
             FailureEvent,
             RecoveryExecutor,
         )

@@ -262,9 +262,9 @@ class WorkersReadDriver:
         await self._session.execute(
             text(
                 "INSERT INTO runs (id, agent_id, goal, status, parent_run_id, "
-                "tenant_id, max_attempts, priority, created_at) "
+                "tenant_id, max_attempts, priority, created_at, origin_system_id) "
                 "VALUES (:id, :agent_id, :goal, :status, :parent_run_id, "
-                ":tenant_id, :max_attempts, :priority, :created_at)"
+                ":tenant_id, :max_attempts, :priority, :created_at, :origin_system_id)"
             ),
             {
                 "id": new_run_id,
@@ -276,6 +276,7 @@ class WorkersReadDriver:
                 "max_attempts": max_attempts,
                 "priority": priority,
                 "created_at": created_at,
+                "origin_system_id": "policy-retry",
             },
         )
 

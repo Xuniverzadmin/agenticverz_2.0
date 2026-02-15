@@ -38,7 +38,7 @@ class LogsBridge:
             from app.hoc.cus.logs.L6_drivers.pg_store import PostgresTraceStore
             return PostgresTraceStore()
 
-        from app.traces.store import SQLiteTraceStore
+        from app.hoc.cus.logs.L6_drivers.trace_store import SQLiteTraceStore
         return SQLiteTraceStore()
 
     def audit_ledger_read_capability(self, session):

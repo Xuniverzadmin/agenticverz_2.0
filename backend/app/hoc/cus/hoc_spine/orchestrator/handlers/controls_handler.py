@@ -24,11 +24,49 @@ Registers operations:
   - controls.killswitch.write → GuardWriteDriver (freeze/unfreeze)
 """
 
+import logging
+import uuid
+
 from app.hoc.cus.hoc_spine.orchestrator.operation_registry import (
     OperationContext,
     OperationRegistry,
     OperationResult,
 )
+
+logger = logging.getLogger("nova.hoc_spine.handlers.controls_handler")
+
+
+def _emit_controls_event(
+    event_type: str,
+    tenant_id: str,
+    run_id: str,
+    extra: dict | None = None,
+) -> None:
+    """Emit a validated controls event (UC-MON controls evaluation)."""
+    try:
+        from app.hoc.cus.hoc_spine.authority.event_schema_contract import (
+            CURRENT_SCHEMA_VERSION,
+            validate_event_payload,
+        )
+
+        event = {
+            "event_id": str(uuid.uuid4()),
+            "event_type": event_type,
+            "tenant_id": tenant_id,
+            "project_id": "__system__",
+            "actor_type": "system",
+            "actor_id": "controls_engine",
+            "decision_owner": "controls",
+            "sequence_no": 0,
+            "schema_version": CURRENT_SCHEMA_VERSION,
+            "run_id": run_id,
+        }
+        if extra:
+            event.update(extra)
+        validate_event_payload(event)
+        logger.info("controls_event", extra=event)
+    except Exception as e:
+        logger.warning(f"Failed to emit controls event: {e}")
 
 
 class ControlsQueryHandler:
@@ -148,6 +186,9 @@ class ControlsOverrideHandler:
             "list_overrides": service.list_overrides,
             "get_override": service.get_override,
             "cancel_override": service.cancel_override,
+            "approve_override": service.approve_override,
+            "reject_override": service.reject_override,
+            "expire_overrides": service.expire_overrides,
         }
         method = dispatch.get(method_name)
         if method is None:
@@ -509,6 +550,69 @@ class KillswitchWriteHandler:
             return OperationResult.fail(str(e), "KILLSWITCH_WRITE_ERROR")
 
 
+class ControlsEvaluationEvidenceHandler:
+    """
+    Handler for controls.evaluation_evidence operations.
+
+    Records per-run control binding fields (UC-MON):
+      - record: Persist evaluation evidence (control_set_version, overrides, resolver, decision)
+      - query: List evaluation evidence with filters
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.controls.L6_drivers.evaluation_evidence_driver import (
+            ControlsEvaluationEvidenceDriver,
+        )
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail("Missing 'method' in params", "MISSING_METHOD")
+
+        driver = ControlsEvaluationEvidenceDriver()
+
+        if method_name == "record":
+            run_id = ctx.params.get("run_id", "")
+            control_set_version = ctx.params.get("control_set_version", "")
+            resolver_version = ctx.params.get("resolver_version", "")
+            decision = ctx.params.get("decision", "")
+            override_ids = ctx.params.get("override_ids_applied", [])
+            async with ctx.session.begin():
+                result = await driver.record_evidence(
+                    ctx.session,
+                    tenant_id=ctx.tenant_id,
+                    run_id=run_id,
+                    control_set_version=control_set_version,
+                    override_ids_applied=override_ids,
+                    resolver_version=resolver_version,
+                    decision=decision,
+                )
+            _emit_controls_event(
+                "controls.EvaluationRecorded",
+                ctx.tenant_id,
+                run_id,
+                {
+                    "control_set_version": control_set_version,
+                    "resolver_version": resolver_version,
+                    "decision": decision,
+                },
+            )
+            return OperationResult.ok(result)
+
+        if method_name == "query":
+            result = await driver.query_evidence(
+                ctx.session,
+                tenant_id=ctx.tenant_id,
+                run_id=ctx.params.get("run_id"),
+                control_set_version=ctx.params.get("control_set_version"),
+                limit=ctx.params.get("limit", 100),
+            )
+            return OperationResult.ok({"evidence": result, "count": len(result)})
+
+        return OperationResult.fail(
+            f"Unknown evaluation evidence method: {method_name}", "UNKNOWN_METHOD"
+        )
+
+
 def register(registry: OperationRegistry) -> None:
     """Register controls operations with the registry."""
     registry.register("controls.query", ControlsQueryHandler())
@@ -519,3 +623,5 @@ def register(registry: OperationRegistry) -> None:
     # Killswitch operations (v1_killswitch.py L2 refactoring)
     registry.register("controls.killswitch.read", KillswitchReadHandler())
     registry.register("controls.killswitch.write", KillswitchWriteHandler())
+    # UC-MON: Per-run control binding fields evidence
+    registry.register("controls.evaluation_evidence", ControlsEvaluationEvidenceHandler())

@@ -240,6 +240,11 @@ class TraceRecord:
     seed: int = 42
     frozen_timestamp: str | None = None
     root_hash: str | None = None
+    # Replay mode fields (migration 132, UC-MON replay determinism)
+    replay_mode: str | None = None  # "FULL" or "TRACE_ONLY"
+    replay_attempt_id: str | None = None
+    replay_artifact_version: str | None = None
+    trace_completeness_status: str | None = None
 
     @property
     def total_cost_cents(self) -> float:
@@ -280,6 +285,11 @@ class TraceRecord:
             "seed": self.seed,
             "frozen_timestamp": self.frozen_timestamp,
             "root_hash": self.root_hash,
+            # Replay mode fields (migration 132)
+            "replay_mode": self.replay_mode,
+            "replay_attempt_id": self.replay_attempt_id,
+            "replay_artifact_version": self.replay_artifact_version,
+            "trace_completeness_status": self.trace_completeness_status,
             # Integrity checksum (PIN-126)
             "checksum": self.determinism_signature(),
         }
@@ -302,6 +312,11 @@ class TraceRecord:
             seed=data.get("seed", 42),
             frozen_timestamp=data.get("frozen_timestamp"),
             root_hash=data.get("root_hash"),
+            # Replay mode fields (migration 132)
+            replay_mode=data.get("replay_mode"),
+            replay_attempt_id=data.get("replay_attempt_id"),
+            replay_artifact_version=data.get("replay_artifact_version"),
+            trace_completeness_status=data.get("trace_completeness_status"),
         )
 
     def to_summary(self) -> TraceSummary:

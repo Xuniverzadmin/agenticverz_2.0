@@ -28,7 +28,7 @@ from app.costsim.models import (
     V2SimulationResult,
 )
 from app.costsim.v2_adapter import CostSimV2Adapter
-from app.worker.simulate import CostSimulator, SimulationResult
+from app.hoc.int.worker.simulate import CostSimulator, SimulationResult
 
 logger = logging.getLogger("nova.costsim.sandbox")
 

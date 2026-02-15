@@ -27,7 +27,7 @@ from ..metrics import (
     m11_skill_idempotency_conflicts_total,
     m11_skill_idempotency_hits_total,
 )
-from ..traces.idempotency import (
+from app.hoc.cus.logs.L6_drivers.idempotency_driver import (
     IdempotencyResult,
     get_idempotency_store,
 )

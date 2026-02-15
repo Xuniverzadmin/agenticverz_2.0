@@ -7,6 +7,28 @@
 
 ---
 
+## Reality Delta (2026-02-11)
+
+- Canonical API key ownership is consolidated under:
+- `backend/app/hoc/api/cus/api_keys/`
+- Read surface:
+- `aos_api_key.py` (`/api-keys`)
+- Write surface:
+- `api_key_writes.py` (`/tenant/api-keys`)
+- URL policy decision is split-read/split-write for backward compatibility, while keeping single domain ownership (`api_keys`).
+- Legacy onboarding wrappers under `api/cus/policies/` for api keys were deleted.
+- Onboarding state advancement on first key creation is retained in `api_key_writes.py` via `_maybe_advance_to_api_key_created`.
+
+## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
+
+- Wave-4 target-scope classification for api_keys is complete:
+- `9` scripts total (`5 UC_LINKED`, `4 NON_UC_SUPPORT`, `0 UNLINKED` in target scope).
+- UC-linked api_keys scripts are mapped to `UC-002` in canonical linkage docs.
+- Deterministic gates remain clean post-wave and governance suite reports `308` passing tests.
+- Audit artifacts:
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_4_implemented.md`
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_4_AUDIT_2026-02-12.md`
+
 ## Script Registry
 
 Each script's unique contribution and canonical function.

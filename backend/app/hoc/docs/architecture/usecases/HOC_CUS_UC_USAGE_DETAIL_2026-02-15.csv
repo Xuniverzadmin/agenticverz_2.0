@@ -1,0 +1,207 @@
+uc_id,uc_name,script_path,domain,layer_bucket,uc_linkage_status,study_status,path_exists,notes
+UC-001,LLM Run Monitoring,app/hoc/cus/controls/L5_engines/threshold_engine.py,controls,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/controls/L6_drivers/threshold_driver.py,controls,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/hoc_spine/orchestrator/coordinators/evidence_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/hoc_spine/orchestrator/coordinators/execution_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/hoc_spine/orchestrator/coordinators/replay_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/hoc_spine/orchestrator/coordinators/run_evidence_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/hoc_spine/orchestrator/coordinators/run_proof_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/hoc_spine/orchestrator/coordinators/signal_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/hoc_spine/orchestrator/handlers/agent_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/hoc_spine/orchestrator/handlers/logs_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/hoc_spine/orchestrator/handlers/orphan_recovery_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/hoc_spine/orchestrator/handlers/overview_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/hoc_spine/orchestrator/handlers/policy_governance_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/hoc_spine/orchestrator/handlers/run_governance_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/hoc_spine/orchestrator/handlers/traces_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/overview/L5_engines/overview_facade.py,overview,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-001,LLM Run Monitoring,app/hoc/cus/overview/L6_drivers/overview_facade_driver.py,overview,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/account/L5_engines/accounts_facade.py,account,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-002,Customer Onboarding,app/hoc/cus/account/L5_engines/memory_pins_engine.py,account,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-002,Customer Onboarding,app/hoc/cus/account/L5_engines/notifications_facade.py,account,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-002,Customer Onboarding,app/hoc/cus/account/L5_engines/onboarding_engine.py,account,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-002,Customer Onboarding,app/hoc/cus/account/L5_engines/tenant_engine.py,account,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-002,Customer Onboarding,app/hoc/cus/account/L5_engines/tenant_lifecycle_engine.py,account,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-002,Customer Onboarding,app/hoc/cus/account/L6_drivers/accounts_facade_driver.py,account,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-002,Customer Onboarding,app/hoc/cus/account/L6_drivers/memory_pins_driver.py,account,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-002,Customer Onboarding,app/hoc/cus/account/L6_drivers/onboarding_driver.py,account,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-002,Customer Onboarding,app/hoc/cus/account/L6_drivers/sdk_attestation_driver.py,account,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-002,Customer Onboarding,app/hoc/cus/account/L6_drivers/tenant_driver.py,account,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-002,Customer Onboarding,app/hoc/cus/account/L6_drivers/tenant_lifecycle_driver.py,account,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-002,Customer Onboarding,app/hoc/cus/account/L6_drivers/user_write_driver.py,account,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-002,Customer Onboarding,app/hoc/cus/api_keys/L5_engines/api_keys_facade.py,api_keys,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/api_keys/L5_engines/keys_engine.py,api_keys,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/api_keys/L6_drivers/api_keys_facade_driver.py,api_keys,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/api_keys/L6_drivers/keys_driver.py,api_keys,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/api_keys/adapters/customer_keys_adapter.py,api_keys,ADAPTER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/hoc_spine/orchestrator/handlers/account_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/hoc_spine/orchestrator/handlers/api_keys_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/hoc_spine/orchestrator/handlers/integration_bootstrap_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/hoc_spine/orchestrator/handlers/integrations_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/hoc_spine/orchestrator/handlers/lifecycle_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/hoc_spine/orchestrator/handlers/mcp_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/integrations/L5_engines/connectors_facade.py,integrations,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/integrations/L5_engines/cus_health_engine.py,integrations,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/integrations/L5_engines/cus_integration_engine.py,integrations,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/integrations/L5_engines/integrations_facade.py,integrations,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/integrations/L6_drivers/bridges_driver.py,integrations,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/integrations/L6_drivers/cus_health_driver.py,integrations,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-002,Customer Onboarding,app/hoc/cus/integrations/L6_drivers/cus_integration_driver.py,integrations,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-003,Ingest Run + Deterministic Trace,app/hoc/cus/logs/L5_engines/logs_read_engine.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-003,Ingest Run + Deterministic Trace,app/hoc/cus/logs/L5_engines/trace_mismatch_engine.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-003,Ingest Run + Deterministic Trace,app/hoc/cus/logs/L5_schemas/traces_models.py,logs,L5_SCHEMA,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-003,Ingest Run + Deterministic Trace,app/hoc/cus/logs/L6_drivers/idempotency_driver.py,logs,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-003,Ingest Run + Deterministic Trace,app/hoc/cus/logs/L6_drivers/trace_mismatch_driver.py,logs,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-003,Ingest Run + Deterministic Trace,app/hoc/cus/logs/adapters/customer_logs_adapter.py,logs,ADAPTER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-009,Controls/Policies Proposals,app/hoc/cus/policies/L5_engines/cus_enforcement_engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-009,Controls/Policies Proposals,app/hoc/cus/policies/L5_engines/engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-009,Controls/Policies Proposals,app/hoc/cus/policies/L5_engines/policy_proposal_engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-009,Controls/Policies Proposals,app/hoc/cus/policies/L6_drivers/cus_enforcement_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-009,Controls/Policies Proposals,app/hoc/cus/policies/L6_drivers/policy_enforcement_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-009,Controls/Policies Proposals,app/hoc/cus/policies/L6_drivers/policy_enforcement_write_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-009,Controls/Policies Proposals,app/hoc/cus/policies/L6_drivers/policy_engine_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-009,Controls/Policies Proposals,app/hoc/cus/policies/L6_drivers/prevention_records_read_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-017,Logs Replay Mode + Integrity Versioning,app/hoc/cus/logs/L5_engines/certificate.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-017,Logs Replay Mode + Integrity Versioning,app/hoc/cus/logs/L5_engines/completeness_checker.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-017,Logs Replay Mode + Integrity Versioning,app/hoc/cus/logs/L5_engines/evidence_facade.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-017,Logs Replay Mode + Integrity Versioning,app/hoc/cus/logs/L5_engines/evidence_report.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-017,Logs Replay Mode + Integrity Versioning,app/hoc/cus/logs/L5_engines/mapper.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-017,Logs Replay Mode + Integrity Versioning,app/hoc/cus/logs/L5_engines/pdf_renderer.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-017,Logs Replay Mode + Integrity Versioning,app/hoc/cus/logs/L5_engines/replay_determinism.py,logs,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-017,Logs Replay Mode + Integrity Versioning,app/hoc/cus/logs/L5_schemas/determinism_types.py,logs,L5_SCHEMA,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-017,Logs Replay Mode + Integrity Versioning,app/hoc/cus/logs/L6_drivers/export_bundle_store.py,logs,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-017,Logs Replay Mode + Integrity Versioning,app/hoc/cus/logs/L6_drivers/integrity_driver.py,logs,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-017,Logs Replay Mode + Integrity Versioning,app/hoc/cus/logs/L6_drivers/replay_driver.py,logs,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-018,Policy Snapshot Lifecycle + Integrity,app/hoc/cus/policies/L5_engines/deterministic_engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-019,Policies Proposals Query Lifecycle,app/hoc/cus/policies/L6_drivers/policy_proposal_read_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-019,Policies Proposals Query Lifecycle,app/hoc/cus/policies/L6_drivers/policy_proposal_write_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-021,Policies Limits Query Lifecycle,app/hoc/cus/controls/L5_engines/controls_facade.py,controls,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-021,Policies Limits Query Lifecycle,app/hoc/cus/controls/L6_drivers/override_driver.py,controls,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-021,Policies Limits Query Lifecycle,app/hoc/cus/controls/L6_drivers/policy_limits_driver.py,controls,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-023,Policy Conflict Resolution Explainability,app/hoc/cus/policies/L5_engines/lessons_engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-024,Analytics Cost Anomaly Detection Lifecycle,app/hoc/cus/analytics/L5_engines/analytics_facade.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-024,Analytics Cost Anomaly Detection Lifecycle,app/hoc/cus/analytics/L5_engines/detection_facade.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-024,Analytics Cost Anomaly Detection Lifecycle,app/hoc/cus/analytics/L6_drivers/analytics_read_driver.py,analytics,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-024,Analytics Cost Anomaly Detection Lifecycle,app/hoc/cus/analytics/L6_drivers/cost_anomaly_read_driver.py,analytics,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-024,Analytics Cost Anomaly Detection Lifecycle,app/hoc/cus/hoc_spine/orchestrator/coordinators/anomaly_incident_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-024,Analytics Cost Anomaly Detection Lifecycle,app/hoc/cus/hoc_spine/orchestrator/coordinators/leadership_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-024,Analytics Cost Anomaly Detection Lifecycle,app/hoc/cus/hoc_spine/orchestrator/coordinators/provenance_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-024,Analytics Cost Anomaly Detection Lifecycle,app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_config_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-024,Analytics Cost Anomaly Detection Lifecycle,app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-024,Analytics Cost Anomaly Detection Lifecycle,app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_metrics_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-025,Analytics Prediction Cycle Lifecycle,app/hoc/cus/analytics/L5_engines/prediction_read_engine.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-025,Analytics Prediction Cycle Lifecycle,app/hoc/cus/analytics/L6_drivers/prediction_read_driver.py,analytics,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-025,Analytics Prediction Cycle Lifecycle,app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_prediction_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-026,Analytics Dataset Validation Lifecycle,app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_validation_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-027,Analytics Snapshot + Baseline Job Lifecycle,app/hoc/cus/analytics/L5_engines/canary_engine.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-027,Analytics Snapshot + Baseline Job Lifecycle,app/hoc/cus/analytics/L5_engines/sandbox_engine.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-027,Analytics Snapshot + Baseline Job Lifecycle,app/hoc/cus/analytics/L5_engines/v2_adapter.py,analytics,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-027,Analytics Snapshot + Baseline Job Lifecycle,app/hoc/cus/analytics/L6_drivers/canary_report_driver.py,analytics,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-027,Analytics Snapshot + Baseline Job Lifecycle,app/hoc/cus/analytics/L6_drivers/cost_snapshots_driver.py,analytics,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-027,Analytics Snapshot + Baseline Job Lifecycle,app/hoc/cus/hoc_spine/orchestrator/coordinators/canary_coordinator.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-027,Analytics Snapshot + Baseline Job Lifecycle,app/hoc/cus/hoc_spine/orchestrator/coordinators/snapshot_scheduler.py,hoc_spine,L4_COORDINATOR,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-027,Analytics Snapshot + Baseline Job Lifecycle,app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_sandbox_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-027,Analytics Snapshot + Baseline Job Lifecycle,app/hoc/cus/hoc_spine/orchestrator/handlers/analytics_snapshot_handler.py,hoc_spine,L4_HANDLER,UC_LINKED,COMPLETE,YES,Wave-4 classification
+UC-029,Incidents Recovery Rule Evaluation Lifecycle,app/hoc/cus/controls/L6_drivers/scoped_execution_driver.py,controls,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-3 classification
+UC-029,Incidents Recovery Rule Evaluation Lifecycle,app/hoc/cus/policies/L5_engines/recovery_evaluation_engine.py,policies,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-029,Incidents Recovery Rule Evaluation Lifecycle,app/hoc/cus/policies/L6_drivers/recovery_matcher.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-029,Incidents Recovery Rule Evaluation Lifecycle,app/hoc/cus/policies/L6_drivers/recovery_read_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-029,Incidents Recovery Rule Evaluation Lifecycle,app/hoc/cus/policies/L6_drivers/recovery_write_driver.py,policies,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-1 classification
+UC-030,Incidents Policy Violation Truth Pipeline,app/hoc/cus/incidents/L5_engines/hallucination_detector.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-031,Incidents Pattern + Postmortem Learnings Lifecycle,app/hoc/cus/incidents/L5_engines/export_engine.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-031,Incidents Pattern + Postmortem Learnings Lifecycle,app/hoc/cus/incidents/L5_engines/incident_read_engine.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-031,Incidents Pattern + Postmortem Learnings Lifecycle,app/hoc/cus/incidents/L5_engines/incident_write_engine.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-031,Incidents Pattern + Postmortem Learnings Lifecycle,app/hoc/cus/incidents/L5_engines/recurrence_analysis.py,incidents,L5_ENGINE,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-031,Incidents Pattern + Postmortem Learnings Lifecycle,app/hoc/cus/incidents/L6_drivers/export_bundle_driver.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-031,Incidents Pattern + Postmortem Learnings Lifecycle,app/hoc/cus/incidents/L6_drivers/incident_read_driver.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-031,Incidents Pattern + Postmortem Learnings Lifecycle,app/hoc/cus/incidents/L6_drivers/incident_run_read_driver.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-031,Incidents Pattern + Postmortem Learnings Lifecycle,app/hoc/cus/incidents/L6_drivers/incident_write_driver.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-031,Incidents Pattern + Postmortem Learnings Lifecycle,app/hoc/cus/incidents/L6_drivers/recurrence_analysis_driver.py,incidents,L6_DRIVER,UC_LINKED,COMPLETE,YES,Wave-2 classification
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/auth_wiring.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/orchestrator/constraint_checker.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/orchestrator/execution/job_executor.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/orchestrator/governance_orchestrator.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/orchestrator/operation_registry.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/orchestrator/phase_status_invariants.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/orchestrator/plan_generation_engine.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/orchestrator/run_governance_facade.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/agent.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/anomaly_types.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/artifact.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/authority_decision.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/common.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/domain_enums.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/knowledge_plane_harness.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/lifecycle_harness.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/plan.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/protocols.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/rac_models.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/response.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/retry.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/run_introspection_protocols.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/skill.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/schemas/threshold_types.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/tests/conftest.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-033,Spine Operation Governance + Contracts,app/hoc/cus/hoc_spine/tests/test_operation_registry.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-034,Spine Lifecycle Orchestration,app/hoc/cus/hoc_spine/orchestrator/lifecycle/drivers/execution.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-034,Spine Lifecycle Orchestration,app/hoc/cus/hoc_spine/orchestrator/lifecycle/drivers/knowledge_plane.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-034,Spine Lifecycle Orchestration,app/hoc/cus/hoc_spine/orchestrator/lifecycle/engines/offboarding.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-034,Spine Lifecycle Orchestration,app/hoc/cus/hoc_spine/orchestrator/lifecycle/engines/onboarding.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-034,Spine Lifecycle Orchestration,app/hoc/cus/hoc_spine/orchestrator/lifecycle/engines/pool_manager.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-034,Spine Lifecycle Orchestration,app/hoc/cus/hoc_spine/orchestrator/lifecycle/stages.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/drivers/alert_driver.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/drivers/alert_emitter.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/drivers/cross_domain.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/drivers/dag_executor.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/drivers/decisions.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/drivers/governance_signal_driver.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/drivers/guard_cache.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/drivers/guard_write_driver.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/drivers/idempotency.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/drivers/knowledge_plane_registry_driver.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/drivers/ledger.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/drivers/retrieval_evidence_driver.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/drivers/schema_parity.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/drivers/transaction_coordinator.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/drivers/worker_write_driver_async.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/utilities/recovery_decisions.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-035,Spine Execution Safety + Driver Integrity,app/hoc/cus/hoc_spine/utilities/s1_retry_backoff.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/consequences/pipeline.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/consequences/ports.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/alert_delivery.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/alerts_facade.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/audit_durability.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/audit_store.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/canonical_json.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/compliance_facade.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/control_registry.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/costsim_config.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/costsim_metrics.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/cross_domain_gateway.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/cus_credential_engine.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/dag_sorter.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/db_helpers.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/deterministic.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/dispatch_audit.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/fatigue_controller.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/guard.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/input_sanitizer.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/knowledge_plane_connector_registry_engine.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/lifecycle_facade.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/lifecycle_stages_base.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/metrics_helpers.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/monitors_facade.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/rate_limiter.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/retrieval_evidence_engine.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/retrieval_facade.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/retrieval_mediator.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/retrieval_policy_checker_engine.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/scheduler_facade.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/time.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-036,"Spine Signals, Evidence, and Alerting",app/hoc/cus/hoc_spine/services/webhook_verify.py,hoc_spine,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-037,Integrations Secret Vault Lifecycle,app/hoc/cus/integrations/L5_vault/drivers/vault.py,integrations,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-037,Integrations Secret Vault Lifecycle,app/hoc/cus/integrations/L5_vault/engines/service.py,integrations,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-037,Integrations Secret Vault Lifecycle,app/hoc/cus/integrations/L5_vault/engines/vault_rule_check.py,integrations,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-038,Integrations Notification Channel Lifecycle,app/hoc/cus/integrations/L5_notifications/engines/channel_engine.py,integrations,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-039,Integrations CLI Operational Bootstrap,app/hoc/cus/integrations/cus_cli.py,integrations,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)
+UC-040,Account CRM Audit Trail Lifecycle,app/hoc/cus/account/logs/CRM/audit/audit_engine.py,account,OTHER,UC_LINKED,COMPLETE,YES,UC-033..UC-040 expansion (2026-02-13)

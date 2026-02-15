@@ -1,7 +1,7 @@
 # Logs — Domain Summary
 
 **Domain:** logs  
-**Total files:** 30
+**Total files:** 31
 
 ---
 
@@ -9,7 +9,7 @@
 
 | Folder | Files |
 |--------|-------|
-| L5_engines | 17 |
+| L5_engines | 18 |
 | L5_support | 1 |
 | L6_drivers | 12 |
 
@@ -32,6 +32,7 @@
 | [redact.py](L5_engines/hoc_cus_logs_L5_engines_redact.md) | L5_engines | 8 | 0 | _pending_ |
 | [replay_determinism.py](L5_engines/hoc_cus_logs_L5_engines_replay_determinism.md) | L5_engines | 0 | 8 | _pending_ |
 | [trace_facade.py](L5_engines/hoc_cus_logs_L5_engines_trace_facade.md) | L5_engines | 1 | 1 | _pending_ |
+| [trace_api_engine.py](L5_engines/hoc_cus_logs_L5_engines_trace_api_engine.md) | L5_engines | 1 | 1 | _pending_ |
 | [traces_metrics.py](L5_engines/hoc_cus_logs_L5_engines_traces_metrics.md) | L5_engines | 4 | 1 | _pending_ |
 | [traces_models.py](L5_engines/hoc_cus_logs_L5_engines_traces_models.md) | L5_engines | 2 | 5 | _pending_ |
 | [audit_engine.py](L5_support/hoc_cus_logs_L5_support_audit_engine.md) | L5_support | 2 | 7 | _pending_ |

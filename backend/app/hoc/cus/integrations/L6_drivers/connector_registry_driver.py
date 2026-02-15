@@ -26,6 +26,22 @@ Provides a unified registry for:
 - Connector instance management
 - Capability discovery
 - Status monitoring
+
+AUTHORITY CONTRACT (UC-002):
+    This module is a RUNTIME CACHE ONLY. The in-memory stores
+    (_connectors, _tenant_connectors) hold live connector instances
+    (VectorConnector, FileConnector, ServerlessConnector) with active
+    connect()/disconnect()/health_check() methods.
+
+    These stores are NOT the source of truth for activation decisions.
+    The authoritative persistent evidence is:
+        - cus_integrations table (status = 'enabled')
+        - sdk_attestations table (attestation rows)
+        - api_keys table (revoked_at IS NULL)
+
+    Onboarding activation predicates MUST query the DB tables above,
+    NEVER this in-memory registry. See CI check 35
+    (check_activation_no_cache_import) for enforcement.
 """
 
 from abc import ABC, abstractmethod

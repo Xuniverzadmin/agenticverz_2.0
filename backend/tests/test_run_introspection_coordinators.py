@@ -226,6 +226,78 @@ class TestRunProofCoordinator:
             assert result.integrity.failure_reason == "No steps to verify"
 
 
+    @pytest.mark.asyncio
+    async def test_passes_tenant_id_to_trace_store(self):
+        """Coordinator passes tenant_id to get_trace for multi-tenant isolation."""
+        from app.hoc.cus.hoc_spine.orchestrator.coordinators.run_proof_coordinator import (
+            RunProofCoordinator,
+        )
+
+        coordinator = RunProofCoordinator()
+        session = AsyncMock()
+
+        mock_trace = MagicMock()
+        mock_trace.run_id = "run-abc"
+        mock_trace.status = MagicMock(value="completed")
+        mock_trace.started_at = datetime.now(timezone.utc)
+        mock_trace.completed_at = datetime.now(timezone.utc)
+
+        mock_step = MagicMock()
+        mock_step.step_index = 0
+        mock_step.skill_name = "skill_a"
+        mock_step.status = MagicMock(value="completed")
+        mock_step.duration_ms = 50.0
+        mock_step.cost_cents = 0.1
+        mock_trace.steps = [mock_step]
+
+        with patch(
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.logs_bridge.get_logs_bridge"
+        ) as mock_bridge:
+            trace_store = AsyncMock()
+            trace_store.get_trace.return_value = mock_trace
+            mock_bridge.return_value.traces_store_capability.return_value = trace_store
+
+            result = await coordinator.get_run_proof(session, "tenant-abc", "run-abc")
+
+            # Verify tenant_id was passed as kwarg
+            trace_store.get_trace.assert_called_once_with("run-abc", tenant_id="tenant-abc")
+            assert result.integrity.verification_status == "VERIFIED"
+
+    @pytest.mark.asyncio
+    async def test_falls_back_when_store_rejects_tenant_id(self):
+        """Coordinator falls back to get_trace(run_id) when store raises TypeError."""
+        from app.hoc.cus.hoc_spine.orchestrator.coordinators.run_proof_coordinator import (
+            RunProofCoordinator,
+        )
+
+        coordinator = RunProofCoordinator()
+        session = AsyncMock()
+
+        mock_trace = MagicMock()
+        mock_trace.run_id = "run-dev"
+        mock_trace.status = MagicMock(value="completed")
+        mock_trace.started_at = datetime.now(timezone.utc)
+        mock_trace.completed_at = datetime.now(timezone.utc)
+        mock_trace.steps = []
+
+        with patch(
+            "app.hoc.cus.hoc_spine.orchestrator.coordinators.bridges.logs_bridge.get_logs_bridge"
+        ) as mock_bridge:
+            trace_store = MagicMock()
+            # First call (with tenant_id) raises TypeError, second call (without) succeeds
+            trace_store.get_trace = AsyncMock(side_effect=[TypeError("unexpected kwarg"), mock_trace])
+            mock_bridge.return_value.traces_store_capability.return_value = trace_store
+
+            result = await coordinator.get_run_proof(session, "tenant-dev", "run-dev")
+
+            # Verify fallback: called twice — once with tenant_id (TypeError), once without
+            assert trace_store.get_trace.call_count == 2
+            trace_store.get_trace.assert_any_call("run-dev", tenant_id="tenant-dev")
+            trace_store.get_trace.assert_any_call("run-dev")
+            # Trace has no steps → UNSUPPORTED
+            assert result.integrity.verification_status == "UNSUPPORTED"
+
+
 class TestSignalFeedbackCoordinator:
     """Tests for SignalFeedbackCoordinator."""
 

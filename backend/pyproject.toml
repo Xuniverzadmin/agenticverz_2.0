@@ -58,8 +58,8 @@ ignore = [
 
 # Worker modules with deferred imports
 "app/workers/business_builder/worker.py" = ["E402"]
-"app/worker/runtime/integrated_runtime.py" = ["E402"]
-"app/worker/recovery_evaluator.py" = ["E402"]
+"app/hoc/int/worker/runtime/integrated_runtime.py" = ["E402"]
+"app/hoc/int/worker/recovery_evaluator.py" = ["E402"]
 
 # Skills modules with conditional imports
 "app/skills/*.py" = ["I001", "E402", "F401", "F841", "ASYNC101"]
@@ -168,7 +168,8 @@ ignore = [
 "app/traces/*.py" = ["I001", "E402"]
 
 # CLI with deferred imports
-"app/aos_cli.py" = ["E402"]
+"app/hoc/cus/integrations/cus_cli.py" = ["E402"]
+"app/hoc/int/integrations/int_cli.py" = ["E402"]
 
 # DB module
 "app/db.py" = ["E402", "F401"]
@@ -192,7 +193,7 @@ ignore = [
 "app/utils/*.py" = ["I001", "E402", "F401", "F841"]
 
 # Worker modules - E711 for SQLAlchemy None comparison, F821 for forward references
-"app/worker/*.py" = ["I001", "E402", "F401", "F841", "E711", "F821"]
+"app/hoc/int/worker/*.py" = ["I001", "E402", "F401", "F841", "E711", "F821"]
 "app/workers/**/*.py" = ["I001", "E402", "F401", "F841"]
 
 # Workflow modules - E721 for intentional type checks,  for file I/O

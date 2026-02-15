@@ -89,9 +89,9 @@
 | `app/hoc/api/cus/policies/M25_integrations.py` | cus/policies | `/integration` | 17 | NONE | 20 | db_violations=20 |
 | `app/hoc/api/cus/policies/alerts.py` | cus/policies | `/alerts` | 13 | NONE | 0 |  |
 | `app/hoc/api/cus/policies/analytics.py` | cus/policies | `/analytics` | 8 | REGISTRY | 10 | db_violations=10 |
-| `app/hoc/api/cus/policies/aos_accounts.py` | cus/policies | `/api/v1/accounts` | 17 | REGISTRY | 19 | db_violations=19 |
-| `app/hoc/api/cus/policies/aos_api_key.py` | cus/policies | `/api/v1/api-keys` | 2 | REGISTRY | 4 | db_violations=4 |
-| `app/hoc/api/cus/policies/aos_cus_integrations.py` | cus/policies | `/api/v1/integrations` | 10 | REGISTRY | 0 |  |
+| `app/hoc/api/cus/account/aos_accounts.py` | cus/account | `/api/v1/accounts` | 17 | REGISTRY | 19 | db_violations=19 |
+| `app/hoc/api/cus/api_keys/aos_api_key.py` | cus/api_keys | `/api/v1/api-keys` | 2 | REGISTRY | 4 | db_violations=4 |
+| `app/hoc/api/cus/integrations/aos_cus_integrations.py` | cus/integrations | `/api/v1/integrations` | 10 | REGISTRY | 0 |  |
 | `app/hoc/api/cus/policies/billing_dependencies.py` | cus/policies | `UNKNOWN` | 2 | BRIDGE | 0 |  |
 | `app/hoc/api/cus/policies/compliance.py` | cus/policies | `/compliance` | 6 | NONE | 0 |  |
 | `app/hoc/api/cus/policies/connectors.py` | cus/policies | `/connectors` | 6 | REGISTRY | 0 |  |
@@ -139,7 +139,7 @@
 | `app/hoc/api/infrastructure/slow_requests.py` | infrastructure/slow_requests.py | `UNKNOWN` | 0 | NONE | 0 |  |
 | `app/hoc/api/infrastructure/tenancy.py` | infrastructure/tenancy.py | `UNKNOWN` | 0 | NONE | 0 |  |
 | `app/hoc/api/infrastructure/tenant.py` | infrastructure/tenant.py | `UNKNOWN` | 1 | NONE | 0 |  |
-| `app/hoc/api/int/account/aos_cli.py` | int/account | `UNKNOWN` | 0 | NONE | 1 | db_violations=1 |
+| `app/hoc/int/integrations/int_cli.py` | int/integrations | `UNKNOWN` | 0 | NONE | 1 | db_violations=1 |
 | `app/hoc/api/int/general/founder_auth.py` | int/general | `UNKNOWN` | 1 | NONE | 0 |  |
 | `app/hoc/api/int/general/protection_gate.py` | int/general | `UNKNOWN` | 0 | NONE | 0 |  |
 | `app/hoc/api/int/policies/billing_gate.py` | int/policies | `UNKNOWN` | 0 | BRIDGE | 0 |  |
@@ -192,7 +192,7 @@
 - `app/hoc/api/fdr/logs/founder_review.py` (fdr/logs, 3 routes, 3 DB violations)
 - `app/hoc/api/fdr/logs/founder_timeline.py` (fdr/logs, 4 routes, 7 DB violations)
 - `app/hoc/api/fdr/ops/founder_actions.py` (fdr/ops, 9 routes, 3 DB violations)
-- `app/hoc/api/int/account/aos_cli.py` (int/account, 0 routes, 1 DB violations)
+- `app/hoc/int/integrations/int_cli.py` (int/integrations, 0 routes, 1 DB violations)
 - `app/hoc/api/int/general/founder_auth.py` (int/general, 1 routes, 0 DB violations)
 - `app/hoc/api/int/general/protection_gate.py` (int/general, 0 routes, 0 DB violations)
 - `app/hoc/api/infrastructure/rate_limit.py` (infrastructure/rate_limit.py, 1 routes, 0 DB violations)
@@ -217,8 +217,8 @@
 - `app/hoc/api/cus/integrations/mcp_servers.py` (cus/integrations, 11 DB lines)
 - `app/hoc/api/cus/overview/overview.py` (cus/overview, 7 DB lines)
 - `app/hoc/api/cus/policies/analytics.py` (cus/policies, 10 DB lines)
-- `app/hoc/api/cus/policies/aos_accounts.py` (cus/policies, 19 DB lines)
-- `app/hoc/api/cus/policies/aos_api_key.py` (cus/policies, 4 DB lines)
+- `app/hoc/api/cus/account/aos_accounts.py` (cus/account, 19 DB lines)
+- `app/hoc/api/cus/api_keys/aos_api_key.py` (cus/api_keys, 4 DB lines)
 - `app/hoc/api/cus/policies/logs.py` (cus/policies, 19 DB lines)
 - `app/hoc/api/cus/policies/override.py` (cus/policies, 6 DB lines)
 - `app/hoc/api/cus/policies/policies.py` (cus/policies, 16 DB lines)

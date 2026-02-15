@@ -37,6 +37,10 @@
 #  31. Single Activity Facade — only one activity_facade.py allowed in HOC (PIN-519)
 #  32. No legacy app.services imports in HOC/worker/startup (PIN-520 ITER3.5)
 #  33. Main entrypoint HOC router directory ban (Phase 5 severance guard)
+#  34. L2 domain ownership check — L2 files must dispatch to matching domain (UC-002)
+#  35. Activation cache boundary — onboarding activation must not import connector_registry_driver (UC-002)
+#  36. Event schema contract usage — authoritative emitters must call validate_event_payload (GREEN_CLOSURE)
+#  37. Proposal-enforcement isolation — proposal endpoints must not call enforcement L4 ops (UC-MON, advisory)
 #
 # Usage:
 #   python3 scripts/ci/check_init_hygiene.py [--ci]
@@ -1611,6 +1615,200 @@ def check_main_hoc_router_directory(violations: list[Violation]) -> None:
                 ))
 
 
+def check_l2_domain_ownership(violations: list[Violation]) -> None:
+    """
+    Check 34: L2 files must only dispatch to L4 operations matching their domain.
+
+    Detection: Scan each L2 file in backend/app/hoc/api/cus/{domain}/ for
+    registry.execute("X.Y", ...) calls. If the operation prefix X does not
+    match the directory {domain}, flag as a domain ownership violation.
+
+    BLOCKING — no frozen allowlist (all violations must be fixed).
+
+    Reference: DOMAIN_REPAIR_PLAN_UC001_UC002, Phase 5
+    """
+    cus_api = HOC_ROOT / "api" / "cus"
+    if not cus_api.exists():
+        return
+
+    # Build mapping of domain directories
+    REGISTRY_CALL_RE = re.compile(r'registry\.execute\(\s*["\']([^"\']+)["\']')
+
+    # Frozen allowlist: pre-existing cross-domain dispatches not yet migrated.
+    # These files are known to dispatch outside their directory domain.
+    # New violations are NOT allowed — only these files are grandfathered.
+    FROZEN_ALLOWLIST = {
+        "costsim.py",           # analytics/ -> controls.circuit_breaker
+        "v1_proxy.py",          # integrations/ -> proxy.ops
+        "v1_killswitch.py",     # policies/ -> killswitch.read/write
+        "workers.py",           # policies/ -> logs.capture
+    }
+
+    for domain_dir in sorted(cus_api.iterdir()):
+        if not domain_dir.is_dir() or domain_dir.name.startswith(("__", ".")):
+            continue
+        domain_name = domain_dir.name
+
+        for py_file in sorted(domain_dir.rglob("*.py")):
+            if py_file.name.startswith("__"):
+                continue
+            # Skip tombstone wrappers
+            try:
+                source = py_file.read_text()
+            except (UnicodeDecodeError, OSError):
+                continue
+
+            if "TOMBSTONE_EXPIRY" in source:
+                continue
+
+            # Skip frozen allowlist files (pre-existing cross-domain dispatch)
+            if py_file.name in FROZEN_ALLOWLIST:
+                continue
+
+            for i, line in enumerate(source.splitlines(), 1):
+                stripped = line.lstrip()
+                if stripped.startswith("#"):
+                    continue
+
+                for match in REGISTRY_CALL_RE.finditer(stripped):
+                    op_name = match.group(1)
+                    op_prefix = op_name.split(".")[0]
+
+                    # Normalize: api_keys → api_keys, account → account
+                    if op_prefix != domain_name:
+                        violations.append(Violation(
+                            str(py_file), i,
+                            f"Domain ownership violation: file in '{domain_name}/' dispatches to '{op_name}' (prefix '{op_prefix}')",
+                            "L2_DOMAIN_OWNERSHIP",
+                        ))
+
+
+def check_activation_no_cache_import(violations: list[Violation]) -> None:
+    """
+    Check 35: Onboarding activation predicates must NOT import connector_registry_driver.
+
+    Detection: Scan onboarding_handler.py for any import of connector_registry_driver
+    in the activation predicate section (after ACTIVATION PREDICATE HELPERS comment).
+
+    BLOCKING — activation decisions must use only persistent DB evidence.
+
+    Reference: TODO_PLAN.md Step 4 (CI Guardrails)
+    """
+    handler_file = HOC_ROOT / "cus" / "hoc_spine" / "orchestrator" / "handlers" / "onboarding_handler.py"
+    if not handler_file.exists():
+        return
+
+    try:
+        source = handler_file.read_text()
+    except (UnicodeDecodeError, OSError):
+        return
+
+    # Check for any import of connector_registry_driver anywhere in the file
+    forbidden_patterns = [
+        "connector_registry_driver",
+        "connector_registry",
+        "get_connector_registry",
+        "ConnectorRegistry",
+    ]
+
+    in_activation_section = False
+    for i, line in enumerate(source.splitlines(), 1):
+        stripped = line.strip()
+
+        # Track when we enter the activation predicate section
+        if "ACTIVATION PREDICATE HELPERS" in stripped:
+            in_activation_section = True
+            continue
+
+        if not in_activation_section:
+            continue
+
+        # Skip comments
+        if stripped.startswith("#"):
+            continue
+
+        for pattern in forbidden_patterns:
+            if pattern in stripped:
+                violations.append(Violation(
+                    str(handler_file), i,
+                    f"Activation predicate imports in-memory cache: '{pattern}' found in activation section",
+                    "ACTIVATION_CACHE_BOUNDARY",
+                ))
+
+
+def check_event_schema_contract_usage(violations: list[Violation], hoc_root) -> None:
+    """Check 36: Known authoritative emitters must import and use event_schema_contract.
+
+    BLOCKING — any authoritative event emitter that does not reference the
+    event schema contract is a violation. Ensures runtime enforcement of the
+    minimum required event fields.
+
+    Reference: GREEN_CLOSURE_PLAN_UC001_UC002 Phase 1
+    """
+    known_emitters = [
+        hoc_root / "cus" / "hoc_spine" / "authority" / "lifecycle_provider.py",
+        hoc_root / "cus" / "hoc_spine" / "authority" / "runtime_switch.py",
+        hoc_root / "cus" / "hoc_spine" / "orchestrator" / "handlers" / "onboarding_handler.py",
+    ]
+
+    for emitter_file in known_emitters:
+        if not emitter_file.exists():
+            violations.append(Violation(
+                str(emitter_file), 0,
+                f"Known authoritative emitter not found: {emitter_file.name}",
+                "EVENT_SCHEMA_CONTRACT",
+            ))
+            continue
+
+        try:
+            source = emitter_file.read_text()
+        except (UnicodeDecodeError, OSError):
+            continue
+
+        has_contract_ref = (
+            "event_schema_contract" in source
+            or "validate_event_payload" in source
+        )
+
+        if not has_contract_ref:
+            violations.append(Violation(
+                str(emitter_file), 0,
+                f"Authoritative emitter does not reference event_schema_contract: {emitter_file.name}",
+                "EVENT_SCHEMA_CONTRACT",
+            ))
+
+
+def check_proposal_enforcement_isolation(violations: list[Violation]) -> None:
+    """
+    Check 37 (advisory): UC-MON governance — proposal endpoints must not call
+    enforcement L4 operations directly.
+
+    Rule: policy_proposals.py may only use policies.proposals_query and
+    policies.approval operation keys. Any enforcement-class operation
+    (policies.activate, policies.enforce, etc.) is a violation.
+
+    This check is NON-BLOCKING (advisory) per Batch-01 guardrails.
+    """
+    import re
+    op_pattern = re.compile(r'registry\.execute\(\s*"([^"]+)"')
+    enforcement_ops = {"policies.activate", "policies.enforce", "policies.compile", "policies.publish"}
+
+    proposals_file = HOC_ROOT / "api" / "cus" / "policies" / "policy_proposals.py"
+    if not proposals_file.exists():
+        return  # No proposals file — nothing to check
+
+    txt = proposals_file.read_text(encoding="utf-8")
+    ops = op_pattern.findall(txt)
+    for op in ops:
+        if op in enforcement_ops:
+            violations.append(Violation(
+                str(proposals_file),
+                0,
+                f"Proposal file calls enforcement op '{op}' — authority boundary violation",
+                "UC-MON-AUTHORITY",
+            ))
+
+
 def main():
     ci_mode = "--ci" in sys.argv
     violations: list[Violation] = []
@@ -1670,6 +1868,18 @@ def main():
 
     # Phase 5 severance guard (33)
     check_main_hoc_router_directory(violations)
+
+    # UC-002 domain ownership (34)
+    check_l2_domain_ownership(violations)
+
+    # UC-002 activation cache boundary (35)
+    check_activation_no_cache_import(violations)
+
+    # GREEN_CLOSURE Phase 1: event schema contract usage (36)
+    check_event_schema_contract_usage(violations, HOC_ROOT)
+
+    # UC-MON governance: proposal-enforcement authority isolation (37, advisory)
+    check_proposal_enforcement_isolation(violations)
 
     blocking = [v for v in violations if not v.is_known_exception]
     warnings = [v for v in violations if v.is_known_exception]

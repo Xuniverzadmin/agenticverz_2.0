@@ -257,6 +257,107 @@ class LimitOverrideService:
 
         return self._to_response(override, limit_name)
 
+    async def approve_override(
+        self,
+        tenant_id: str,
+        override_id: str,
+        approved_by: str,
+        adjusted_value: Decimal | None = None,
+        adjusted_duration_hours: int | None = None,
+    ) -> LimitOverrideResponse:
+        """Approve a pending override. Moves to APPROVED or ACTIVE."""
+        stmt = (
+            select(LimitOverride, Limit.name)
+            .join(Limit, LimitOverride.limit_id == Limit.id)
+            .where(
+                and_(
+                    LimitOverride.id == override_id,
+                    LimitOverride.tenant_id == tenant_id,
+                )
+            )
+        )
+        row = (await self.session.execute(stmt)).one_or_none()
+        if not row:
+            raise OverrideNotFoundError(f"Override {override_id} not found")
+
+        override, limit_name = row
+
+        if override.status != OverrideStatus.PENDING.value:
+            raise OverrideValidationError("Only PENDING overrides can be approved")
+
+        now = datetime.now(timezone.utc)
+        override.approved_at = now
+        override.approved_by = approved_by
+
+        if adjusted_value is not None:
+            override.override_value = adjusted_value
+        if adjusted_duration_hours is not None:
+            starts_at = override.starts_at or now
+            override.expires_at = starts_at + timedelta(hours=adjusted_duration_hours)
+
+        # Activate immediately if starts_at is in the past or now
+        if override.starts_at and override.starts_at <= now:
+            override.status = OverrideStatus.ACTIVE.value
+        else:
+            override.status = OverrideStatus.APPROVED.value
+
+        await self.session.flush()
+        return self._to_response(override, limit_name)
+
+    async def reject_override(
+        self,
+        tenant_id: str,
+        override_id: str,
+        rejected_by: str,
+        rejection_reason: str,
+    ) -> LimitOverrideResponse:
+        """Reject a pending override."""
+        stmt = (
+            select(LimitOverride, Limit.name)
+            .join(Limit, LimitOverride.limit_id == Limit.id)
+            .where(
+                and_(
+                    LimitOverride.id == override_id,
+                    LimitOverride.tenant_id == tenant_id,
+                )
+            )
+        )
+        row = (await self.session.execute(stmt)).one_or_none()
+        if not row:
+            raise OverrideNotFoundError(f"Override {override_id} not found")
+
+        override, limit_name = row
+
+        if override.status != OverrideStatus.PENDING.value:
+            raise OverrideValidationError("Only PENDING overrides can be rejected")
+
+        override.status = OverrideStatus.REJECTED.value
+        override.rejection_reason = rejection_reason
+        override.approved_by = rejected_by  # Record who acted
+        override.approved_at = datetime.now(timezone.utc)
+        await self.session.flush()
+
+        return self._to_response(override, limit_name)
+
+    async def expire_overrides(self) -> int:
+        """Mark expired ACTIVE overrides as EXPIRED. Returns count updated."""
+        from sqlalchemy import update
+
+        now = datetime.now(timezone.utc)
+        stmt = (
+            update(LimitOverride)
+            .where(
+                and_(
+                    LimitOverride.status == OverrideStatus.ACTIVE.value,
+                    LimitOverride.expires_at.isnot(None),
+                    LimitOverride.expires_at <= now,
+                )
+            )
+            .values(status=OverrideStatus.EXPIRED.value)
+        )
+        result = await self.session.execute(stmt)
+        return result.rowcount
+
     async def _get_limit(self, tenant_id: str, limit_id: str) -> Limit:
         """Get limit by ID with tenant check."""
         stmt = select(Limit).where(

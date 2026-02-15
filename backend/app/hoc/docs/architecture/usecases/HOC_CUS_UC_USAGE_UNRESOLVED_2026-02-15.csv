@@ -1,0 +1,59 @@
+script_path,domain,layer_bucket,uc_id_raw,bucket,notes
+app/hoc/cus/activity/L5_engines/signal_feedback_engine.py,activity,L5_ENGINE,,BLANK,
+app/hoc/cus/activity/L6_drivers/signal_feedback_driver.py,activity,L6_DRIVER,,BLANK,
+app/hoc/cus/analytics/L5_engines/cost_anomaly_detector_engine.py,analytics,L5_ENGINE,,BLANK,
+app/hoc/cus/analytics/L5_engines/cost_snapshots_engine.py,analytics,L5_ENGINE,,BLANK,
+app/hoc/cus/analytics/L5_engines/cost_write.py,analytics,L5_ENGINE,,BLANK,
+app/hoc/cus/analytics/L5_engines/datasets_engine.py,analytics,L5_ENGINE,,BLANK,
+app/hoc/cus/analytics/L5_engines/prediction_engine.py,analytics,L5_ENGINE,,BLANK,
+app/hoc/cus/analytics/L6_drivers/analytics_artifacts_driver.py,analytics,L6_DRIVER,,BLANK,
+app/hoc/cus/analytics/L6_drivers/cost_anomaly_driver.py,analytics,L6_DRIVER,,BLANK,
+app/hoc/cus/analytics/L6_drivers/cost_write_driver.py,analytics,L6_DRIVER,,BLANK,
+app/hoc/cus/analytics/L6_drivers/prediction_driver.py,analytics,L6_DRIVER,,BLANK,
+app/hoc/cus/controls/L6_drivers/evaluation_evidence_driver.py,controls,L6_DRIVER,,BLANK,
+app/hoc/cus/controls/L6_drivers/limits_read_driver.py,controls,L6_DRIVER,,BLANK,
+app/hoc/cus/hoc_spine/authority/event_schema_contract.py,hoc_spine,AUTHORITY,,BLANK,
+app/hoc/cus/hoc_spine/authority/onboarding_policy.py,hoc_spine,AUTHORITY,,BLANK,
+app/hoc/cus/hoc_spine/orchestrator/handlers/activity_handler.py,hoc_spine,L4_HANDLER,,BLANK,
+app/hoc/cus/hoc_spine/orchestrator/handlers/controls_handler.py,hoc_spine,L4_HANDLER,,BLANK,
+app/hoc/cus/hoc_spine/orchestrator/handlers/onboarding_handler.py,hoc_spine,L4_HANDLER,,BLANK,
+app/hoc/cus/hoc_spine/orchestrator/handlers/policies_handler.py,hoc_spine,L4_HANDLER,,BLANK,
+app/hoc/cus/hoc_spine/orchestrator/handlers/policies_sandbox_handler.py,hoc_spine,L4_HANDLER,,BLANK,
+app/hoc/cus/incidents/L5_engines/incident_pattern.py,incidents,L5_ENGINE,,BLANK,
+app/hoc/cus/incidents/L5_engines/policy_violation_engine.py,incidents,L5_ENGINE,,BLANK,
+app/hoc/cus/incidents/L5_engines/postmortem.py,incidents,L5_ENGINE,,BLANK,
+app/hoc/cus/incidents/L5_engines/recovery_rule_engine.py,incidents,L5_ENGINE,,BLANK,
+app/hoc/cus/incidents/L6_drivers/incident_pattern_driver.py,incidents,L6_DRIVER,,BLANK,
+app/hoc/cus/incidents/L6_drivers/policy_violation_driver.py,incidents,L6_DRIVER,,BLANK,
+app/hoc/cus/incidents/L6_drivers/postmortem_driver.py,incidents,L6_DRIVER,,BLANK,
+app/hoc/cus/integrations/L6_drivers/connector_registry_driver.py,integrations,L6_DRIVER,,BLANK,
+app/hoc/cus/logs/L5_engines/redact.py,logs,L5_ENGINE,,BLANK,
+app/hoc/cus/logs/L5_engines/trace_api_engine.py,logs,L5_ENGINE,,BLANK,
+app/hoc/cus/logs/L6_drivers/pg_store.py,logs,L6_DRIVER,,BLANK,
+app/hoc/cus/logs/L6_drivers/redact.py,logs,L6_DRIVER,,BLANK,
+app/hoc/cus/logs/L6_drivers/trace_store.py,logs,L6_DRIVER,,BLANK,
+app/hoc/cus/policies/L5_engines/policies_limits_query_engine.py,policies,L5_ENGINE,,BLANK,
+app/hoc/cus/policies/L5_engines/policies_proposals_query_engine.py,policies,L5_ENGINE,,BLANK,
+app/hoc/cus/policies/L5_engines/policies_rules_query_engine.py,policies,L5_ENGINE,,BLANK,
+app/hoc/cus/policies/L5_engines/policy_conflict_resolver.py,policies,L5_ENGINE,,BLANK,
+app/hoc/cus/policies/L5_engines/sandbox_engine.py,policies,L5_ENGINE,,BLANK,
+app/hoc/cus/policies/L5_engines/snapshot_engine.py,policies,L5_ENGINE,,BLANK,
+app/hoc/cus/policies/L6_drivers/optimizer_conflict_resolver.py,policies,L6_DRIVER,,BLANK,
+app/hoc/cus/policies/L6_drivers/policy_rules_read_driver.py,policies,L6_DRIVER,,BLANK,
+app/hoc/cus/policies/L6_drivers/proposals_read_driver.py,policies,L6_DRIVER,,BLANK,
+app/hoc/cus/activity/L5_engines/activity_facade.py,activity,L5_ENGINE,UC-MON-01,UC_MON_LEGACY,Wave-2 classification
+app/hoc/cus/activity/L5_engines/cus_telemetry_engine.py,activity,L5_ENGINE,UC-MON-05,UC_MON_LEGACY,Wave-2 classification
+app/hoc/cus/activity/L6_drivers/activity_read_driver.py,activity,L6_DRIVER,UC-MON-01,UC_MON_LEGACY,Wave-2 classification
+app/hoc/cus/activity/L6_drivers/cus_telemetry_driver.py,activity,L6_DRIVER,UC-MON-05,UC_MON_LEGACY,Wave-2 classification
+app/hoc/cus/activity/adapters/customer_activity_adapter.py,activity,ADAPTER,UC-MON-01,UC_MON_LEGACY,Wave-2 classification
+app/hoc/cus/analytics/L5_engines/feedback_read_engine.py,analytics,L5_ENGINE,UC-MON-04,UC_MON_LEGACY,Wave-2 classification
+app/hoc/cus/analytics/L6_drivers/feedback_read_driver.py,analytics,L6_DRIVER,UC-MON-04,UC_MON_LEGACY,Wave-2 classification
+app/hoc/cus/hoc_spine/orchestrator/coordinators/signal_feedback_coordinator.py,hoc_spine,L4_COORDINATOR,UC-MON-04,UC_MON_LEGACY,Wave-4 classification
+app/hoc/cus/hoc_spine/orchestrator/handlers/incidents_handler.py,hoc_spine,L4_HANDLER,UC-MON-07,UC_MON_LEGACY,Wave-4 classification
+app/hoc/cus/incidents/L5_engines/anomaly_bridge.py,incidents,L5_ENGINE,UC-MON-07,UC_MON_LEGACY,Wave-2 classification
+app/hoc/cus/incidents/L5_engines/incident_engine.py,incidents,L5_ENGINE,UC-MON-07,UC_MON_LEGACY,Wave-2 classification
+app/hoc/cus/incidents/L5_engines/incidents_facade.py,incidents,L5_ENGINE,UC-MON-07,UC_MON_LEGACY,Wave-2 classification
+app/hoc/cus/incidents/L6_drivers/cost_guard_driver.py,incidents,L6_DRIVER,UC-MON-07,UC_MON_LEGACY,Wave-2 classification
+app/hoc/cus/incidents/L6_drivers/incident_aggregator.py,incidents,L6_DRIVER,UC-MON-07,UC_MON_LEGACY,Wave-2 classification
+app/hoc/cus/incidents/L6_drivers/incidents_facade_driver.py,incidents,L6_DRIVER,UC-MON-07,UC_MON_LEGACY,Wave-2 classification
+app/hoc/cus/incidents/adapters/customer_incidents_adapter.py,incidents,ADAPTER,UC-MON-07,UC_MON_LEGACY,Wave-2 classification

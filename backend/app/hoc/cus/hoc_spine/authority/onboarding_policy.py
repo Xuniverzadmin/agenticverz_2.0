@@ -81,7 +81,13 @@ ENDPOINT_STATE_REQUIREMENTS: dict[str, OnboardingState] = {
     "/onboarding/verify": OnboardingState.CREATED,
 
     # Section 3: Identity Verified (IDENTITY_VERIFIED)
+    # API KEY SURFACE POLICY (UC-002, closed — not deferred):
+    # Both /api-keys (read) and /tenant/api-keys (write) require IDENTITY_VERIFIED.
+    # Split preserves domain authority (both under api_keys/ directory)
+    # while maintaining URL backward compatibility.
+    # Reference: GREEN_CLOSURE_PLAN_UC001_UC002 Phase 3
     "/api-keys": OnboardingState.IDENTITY_VERIFIED,
+    "/tenant/api-keys": OnboardingState.IDENTITY_VERIFIED,
     "/sdk/instructions": OnboardingState.IDENTITY_VERIFIED,
     "/onboarding/advance/api-key": OnboardingState.IDENTITY_VERIFIED,
 
@@ -94,6 +100,7 @@ ENDPOINT_STATE_REQUIREMENTS: dict[str, OnboardingState] = {
 ENDPOINT_PATTERN_REQUIREMENTS: list[Tuple[re.Pattern, OnboardingState]] = [
     # Section 3: Identity Verified
     (re.compile(r"^/api-keys/[^/]+$"), OnboardingState.IDENTITY_VERIFIED),
+    (re.compile(r"^/tenant/api-keys(/.*)?$"), OnboardingState.IDENTITY_VERIFIED),
 
     # Section 5: SDK Connected — customer console and SDK business endpoints
     (re.compile(r"^/guard(/.*)?$"), OnboardingState.SDK_CONNECTED),
@@ -175,6 +182,37 @@ def get_required_state(path: str) -> Optional[OnboardingState]:
     return OnboardingState.COMPLETE
 
 
+# =============================================================================
+# ACTIVATION PREDICATE (UC-002)
+# =============================================================================
+
+ACTIVATION_REQUIREMENTS = {
+    "project_ready": "Tenant has at least one active project",
+    "key_ready": "At least one active API key exists",
+    "connector_validated": "At least one connector passed validation",
+    "sdk_attested": "SDK handshake completed and persisted",
+}
+
+
+def check_activation_predicate(
+    has_project: bool,
+    has_api_key: bool,
+    has_validated_connector: bool,
+    has_sdk_attestation: bool,
+) -> tuple[bool, list[str]]:
+    """Check whether all activation conditions are met. Returns (pass, missing)."""
+    missing = []
+    if not has_project:
+        missing.append("project_ready")
+    if not has_api_key:
+        missing.append("key_ready")
+    if not has_validated_connector:
+        missing.append("connector_validated")
+    if not has_sdk_attestation:
+        missing.append("sdk_attested")
+    return (len(missing) == 0, missing)
+
+
 __all__ = [
     "AUTH_EXEMPT_PREFIXES",
     "NON_TENANT_PREFIXES",
@@ -182,4 +220,6 @@ __all__ = [
     "ENDPOINT_STATE_REQUIREMENTS",
     "ENDPOINT_PATTERN_REQUIREMENTS",
     "get_required_state",
+    "ACTIVATION_REQUIREMENTS",
+    "check_activation_predicate",
 ]

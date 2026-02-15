@@ -7,6 +7,13 @@
 
 ---
 
+## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
+
+- Wave-4 target scope for apis is fully classified:
+- `2` scripts total (`0 UC_LINKED`, `2 NON_UC_SUPPORT`, `0 UNLINKED` in target scope).
+- These scripts are retained as support infrastructure and are intentionally not mapped to standalone UC ownership.
+- Deterministic gates remain clean in Wave-4 audit, with governance suite at `308` passing tests.
+
 ## Script Registry
 
 Each script's unique contribution and canonical function.

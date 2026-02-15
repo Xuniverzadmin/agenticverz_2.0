@@ -101,7 +101,7 @@ await facade.complete_trace(
 The ObservabilityGuard at L5 can use the TraceFacade for trace operations:
 
 ```python
-from app.worker.observability_guard import get_observability_guard
+from app.hoc.int.worker.observability_guard import get_observability_guard
 from app.services.observability import get_trace_facade
 
 guard = get_observability_guard(mode="DEGRADED")

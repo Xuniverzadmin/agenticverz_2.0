@@ -1,0 +1,14 @@
+# HOC CUS Core-6 Domain UC Gap — UNLINKED Scripts
+# Updated: 2026-02-13
+# Status: ALL RESOLVED — 0 core-6 UNLINKED scripts remaining
+#
+# Core-6 domains: account, activity, agent, analytics, api_keys, integrations
+#
+# History:
+#   2026-02-12: Initial gap assessment
+#   2026-02-13: All core-6 scripts classified via Waves 1-4 + UC-033..UC-040 expansion
+#               - UC-037 (vault): 3 scripts linked (integrations)
+#               - UC-038 (notifications): 1 script linked (integrations)
+#               - UC-039 (CLI bootstrap): 1 script linked (integrations)
+#               - UC-040 (CRM audit): 1 script linked (account)
+#               - Remaining __init__.py → NON_UC_SUPPORT

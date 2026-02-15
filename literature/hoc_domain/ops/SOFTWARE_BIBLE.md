@@ -9,6 +9,12 @@
 
 ---
 
+## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
+
+- Wave-4 UC script coverage audited `hoc/cus/ops` scope as:
+- `4` scripts total (`0 UC_LINKED`, `4 NON_UC_SUPPORT`, `0 UNLINKED` in target scope).
+- This file documents `fdr/ops` draft internals; the Wave-4 note above is a CUS coverage-state annotation for registry consistency.
+
 ## Layer Inventory
 
 ### L5 Engines (`hoc/fdr/ops/engines/`)

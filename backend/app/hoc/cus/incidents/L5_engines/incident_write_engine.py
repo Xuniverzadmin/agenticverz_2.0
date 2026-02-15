@@ -156,6 +156,9 @@ class IncidentWriteService:
         resolution_method: Optional[str] = None,
         actor_type: ActorType = ActorType.HUMAN,
         reason: Optional[str] = None,
+        resolution_type: Optional[str] = None,
+        resolution_summary: Optional[str] = None,
+        postmortem_artifact_id: Optional[str] = None,
     ) -> "Incident":
         """
         Resolve an incident and create a timeline event.
@@ -189,12 +192,15 @@ class IncidentWriteService:
             description += f": {resolution_notes}"
 
         # ATOMIC BLOCK: L4 owns transaction boundary (PIN-520)
-        # Delegate DB operations to driver
+        # Delegate DB operations to driver (with migration 129 resolution fields)
         self._driver.update_incident_resolved(
             incident=incident,
             resolved_at=now,
             resolved_by=resolved_by,
             resolution_method=resolution_method,
+            resolution_type=resolution_type,
+            resolution_summary=resolution_summary,
+            postmortem_artifact_id=postmortem_artifact_id,
         )
 
         # Delegate event creation to driver
@@ -210,6 +216,8 @@ class IncidentWriteService:
             after_state = {"status": "resolved"}
             if resolution_method:
                 after_state["resolution_method"] = resolution_method
+            if resolution_type:
+                after_state["resolution_type"] = resolution_type
             if incident.source_run_id:
                 after_state["run_id"] = incident.source_run_id
             self._audit.incident_resolved(

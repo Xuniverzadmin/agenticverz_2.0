@@ -66,7 +66,7 @@ ZONE_C_FLEXIBLE = [
     "app/utils/",  # All utils (except deterministic/canonical in Zone A)
     "app/config/",
     "app/logging_config.py",
-    "app/worker/",
+    "app/hoc/int/worker/",
     "app/workers/",
     "app/cli.py",
     "app/schemas/",

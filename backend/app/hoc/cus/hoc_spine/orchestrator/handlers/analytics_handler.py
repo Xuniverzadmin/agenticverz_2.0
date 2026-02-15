@@ -464,6 +464,133 @@ class CostsimDatasetsHandler:
             )
 
 
+# =============================================================================
+# UC-MON-06: Analytics Artifacts Reproducibility Handler
+# =============================================================================
+
+import logging
+import uuid as _uuid
+
+logger = logging.getLogger(__name__)
+
+
+def _emit_analytics_event(
+    event_type: str,
+    tenant_id: str,
+    dataset_id: str,
+    extra: dict | None = None,
+) -> None:
+    """Emit a validated analytics domain event."""
+    from app.hoc.cus.hoc_spine.authority.event_schema_contract import (
+        CURRENT_SCHEMA_VERSION,
+        validate_event_payload,
+    )
+
+    event = {
+        "event_id": str(_uuid.uuid4()),
+        "event_type": event_type,
+        "tenant_id": tenant_id,
+        "project_id": "__system__",
+        "actor_type": "system",
+        "actor_id": "analytics",
+        "decision_owner": "analytics",
+        "sequence_no": 0,
+        "schema_version": CURRENT_SCHEMA_VERSION,
+        "dataset_id": dataset_id,
+    }
+    if extra:
+        event.update(extra)
+    validate_event_payload(event)
+    logger.info("analytics_event", extra=event)
+
+
+class AnalyticsArtifactsHandler:
+    """
+    Handler for analytics.artifacts operations.
+
+    Dispatches to AnalyticsArtifactsDriver for reproducibility persistence.
+    Supports UC-MON-06 reproducibility contract (migration 131).
+
+    Methods:
+      - save: Persist analytics artifact metadata
+      - get: Query artifacts by dataset_id
+      - list: List all artifacts for tenant
+    """
+
+    async def execute(self, ctx: OperationContext) -> OperationResult:
+        from app.hoc.cus.analytics.L6_drivers.analytics_artifacts_driver import (
+            AnalyticsArtifactsDriver,
+        )
+
+        method_name = ctx.params.get("method")
+        if not method_name:
+            return OperationResult.fail(
+                "Missing 'method' in params", "MISSING_METHOD"
+            )
+
+        driver = AnalyticsArtifactsDriver()
+
+        if method_name == "save":
+            required = ["dataset_id", "dataset_version", "input_window_hash",
+                        "as_of", "compute_code_version"]
+            missing = [f for f in required if not ctx.params.get(f)]
+            if missing:
+                return OperationResult.fail(
+                    f"Missing required fields: {', '.join(missing)}", "MISSING_FIELDS"
+                )
+
+            async with ctx.session.begin():
+                data = await driver.save_artifact(
+                    ctx.session,
+                    tenant_id=ctx.tenant_id,
+                    dataset_id=ctx.params["dataset_id"],
+                    dataset_version=ctx.params["dataset_version"],
+                    input_window_hash=ctx.params["input_window_hash"],
+                    as_of=ctx.params["as_of"],
+                    compute_code_version=ctx.params["compute_code_version"],
+                )
+
+            _emit_analytics_event(
+                "analytics.ArtifactRecorded",
+                ctx.tenant_id,
+                ctx.params["dataset_id"],
+                extra={
+                    "dataset_version": ctx.params["dataset_version"],
+                    "input_window_hash": ctx.params["input_window_hash"],
+                    "as_of": ctx.params["as_of"],
+                    "compute_code_version": ctx.params["compute_code_version"],
+                },
+            )
+
+            return OperationResult.ok(data)
+
+        elif method_name == "get":
+            dataset_id = ctx.params.get("dataset_id")
+            if not dataset_id:
+                return OperationResult.fail(
+                    "Missing 'dataset_id'", "MISSING_DATASET_ID"
+                )
+            data = await driver.get_artifact(
+                ctx.session,
+                tenant_id=ctx.tenant_id,
+                dataset_id=dataset_id,
+                dataset_version=ctx.params.get("dataset_version"),
+            )
+            return OperationResult.ok(data)
+
+        elif method_name == "list":
+            data = await driver.list_artifacts(
+                ctx.session,
+                tenant_id=ctx.tenant_id,
+                limit=ctx.params.get("limit", 100),
+            )
+            return OperationResult.ok(data)
+
+        return OperationResult.fail(
+            f"Unknown artifacts method: {method_name}", "UNKNOWN_METHOD"
+        )
+
+
 def register(registry: OperationRegistry) -> None:
     """Register analytics operations with the registry."""
     registry.register("analytics.feedback", FeedbackReadHandler())
@@ -476,3 +603,5 @@ def register(registry: OperationRegistry) -> None:
     registry.register("analytics.costsim.simulate", CostsimSimulateHandler())
     registry.register("analytics.costsim.divergence", CostsimDivergenceHandler())
     registry.register("analytics.costsim.datasets", CostsimDatasetsHandler())
+    # UC-MON-06: Analytics artifacts reproducibility
+    registry.register("analytics.artifacts", AnalyticsArtifactsHandler())

@@ -24,7 +24,7 @@ class TestFailClosedTraceSemantics:
     @pytest.mark.asyncio
     async def test_mark_trace_aborted_updates_status(self):
         """Test that mark_trace_aborted sets status to 'aborted' with reason."""
-        from app.traces.pg_store import PostgresTraceStore
+        from app.hoc.cus.logs.L6_drivers.pg_store import PostgresTraceStore
 
         # Create store with mocked pool
         store = PostgresTraceStore()
@@ -57,7 +57,7 @@ class TestFailClosedTraceSemantics:
     @pytest.mark.asyncio
     async def test_mark_trace_aborted_only_affects_running_traces(self):
         """Test that mark_trace_aborted only updates traces with status='running'."""
-        from app.traces.pg_store import PostgresTraceStore
+        from app.hoc.cus.logs.L6_drivers.pg_store import PostgresTraceStore
 
         store = PostgresTraceStore()
         mock_pool = AsyncMock()
@@ -91,7 +91,7 @@ class TestRunnerFailClosedIntegration:
 
     def test_runner_imports_mark_trace_aborted(self):
         """Verify runner can access mark_trace_aborted method."""
-        from app.traces.pg_store import PostgresTraceStore
+        from app.hoc.cus.logs.L6_drivers.pg_store import PostgresTraceStore
 
         store = PostgresTraceStore()
         assert hasattr(store, "mark_trace_aborted")

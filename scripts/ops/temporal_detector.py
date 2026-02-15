@@ -103,7 +103,7 @@ LAYER_PATH_PATTERNS = {
     "backend/app/engines": "L4",
     "backend/app/policy": "L4",
     # L5: Workers/Execution
-    "backend/app/worker": "L5",
+    "backend/app/hoc/int/worker": "L5",
     "backend/app/execution": "L5",
     "backend/app/jobs": "L5",
     # L6: Platform

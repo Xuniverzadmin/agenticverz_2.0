@@ -49,7 +49,7 @@ from app.hoc.cus.analytics.L5_engines.costsim_models import (
     V2SimulationStatus,
 )
 from app.hoc.cus.analytics.L5_engines.provenance import get_provenance_logger
-from app.worker.simulate import CostSimulator, SimulationResult
+from app.hoc.int.worker.simulate import CostSimulator, SimulationResult
 
 logger = logging.getLogger("nova.costsim.v2_adapter")
 

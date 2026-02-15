@@ -7,6 +7,16 @@
 
 ---
 
+## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
+
+- Wave-4 target-scope classification for overview is complete:
+- `5` scripts total (`2 UC_LINKED`, `3 NON_UC_SUPPORT`, `0 UNLINKED` in target scope).
+- UC-linked overview scripts are mapped to `UC-001` in canonical linkage docs.
+- Deterministic gates remain clean post-wave and governance suite reports `308` passing tests.
+- Audit artifacts:
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_4_implemented.md`
+- `backend/app/hoc/docs/architecture/usecases/UC_SCRIPT_COVERAGE_WAVE_4_AUDIT_2026-02-12.md`
+
 ## Script Registry
 
 Each script's unique contribution and canonical function.

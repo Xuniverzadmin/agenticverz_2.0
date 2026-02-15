@@ -35,8 +35,8 @@ Reference: PIN-281 (L3 Adapter Closure - PHASE 1)
 from typing import List, Optional
 
 # L6 imports (allowed)
-from app.traces.models import TraceRecord, TraceSummary
-from app.traces.pg_store import PostgresTraceStore, get_postgres_trace_store
+from app.hoc.cus.logs.L5_schemas import TraceRecord, TraceSummary
+from app.hoc.cus.logs.L6_drivers.pg_store import PostgresTraceStore, get_postgres_trace_store
 
 
 class LogsReadService:

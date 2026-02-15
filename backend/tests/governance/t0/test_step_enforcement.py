@@ -9,7 +9,7 @@ policies after each step completion.
 """
 
 import pytest
-from app.worker.enforcement.step_enforcement import (
+from app.hoc.int.worker.enforcement.step_enforcement import (
     enforce_before_step_completion,
     EnforcementResult,
     EnforcementHaltReason,

@@ -1728,7 +1728,7 @@ def get_taxonomy_permissions() -> set:
 # -----------------------------------------------------------------------------
 
 WORKER_FILES = {
-    "backend/app/worker/",
+    "backend/app/hoc/int/worker/",
     "backend/app/workers/",
     "backend/app/agents/workers/",
     "workers/",

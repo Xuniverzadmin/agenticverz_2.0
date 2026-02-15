@@ -428,14 +428,14 @@ class TestCLI:
 
     def test_cli_list_agents(self):
         """CLI list-agents works."""
-        from app.aos_cli import list_agents
+        from app.hoc.cus.integrations.cus_cli import list_agents
 
         agents = list_agents()
         assert isinstance(agents, list)
 
     def test_cli_create_agent(self):
         """CLI create-agent works."""
-        from app.aos_cli import create_agent
+        from app.hoc.cus.integrations.cus_cli import create_agent
 
         agent_id = create_agent(f"cli-test-{uuid.uuid4().hex[:8]}")
         assert agent_id is not None

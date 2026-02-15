@@ -104,7 +104,7 @@ def calculate_cost_cents(model: str, input_tokens: int, output_tokens: int) -> i
 
     Reference: PIN-258 Phase F-3 (F-W-RULE-1: No semantic changes)
     """
-    from app.worker.runner import calculate_llm_cost_cents
+    from app.hoc.int.worker.runner import calculate_llm_cost_cents
 
     return calculate_llm_cost_cents(model, input_tokens, output_tokens)
 

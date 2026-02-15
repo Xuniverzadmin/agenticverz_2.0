@@ -35,7 +35,7 @@ from app.contracts.decisions import (
     _check_budget_enforcement_exists,
     emit_budget_enforcement_decision,
 )
-from app.worker.runner import BudgetContext
+from app.hoc.int.worker.runner import BudgetContext
 
 # =============================================================================
 # Test Fixtures

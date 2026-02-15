@@ -344,7 +344,7 @@ async def evaluate_and_execute(
     Reference: PIN-257 Phase R-1 (L5→L4 Violation Fix)
     """
     # Import L5 executor (L4→L5 import is allowed)
-    from app.worker.recovery_evaluator import (
+    from app.hoc.int.worker.recovery_evaluator import (
         FailureEvent,
         RecoveryExecutor,
     )

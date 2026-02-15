@@ -1,0 +1,41 @@
+uc_id,uc_name,index_status,linked_script_count,unique_domains,layer_buckets,all_paths_exist
+UC-001,LLM Run Monitoring,GREEN,17,controls;hoc_spine;overview,L4_COORDINATOR;L4_HANDLER;L5_ENGINE;L6_DRIVER,YES
+UC-002,Customer Onboarding,GREEN,31,account;api_keys;hoc_spine;integrations,ADAPTER;L4_HANDLER;L5_ENGINE;L6_DRIVER,YES
+UC-003,Ingest Run + Deterministic Trace,GREEN,6,logs,ADAPTER;L5_ENGINE;L5_SCHEMA;L6_DRIVER,YES
+UC-004,Runtime Controls Evaluation,GREEN,0,,,YES
+UC-005,Baseline Monitoring (No Controls),GREEN,0,,,YES
+UC-006,Activity Stream + Feedback,GREEN,0,,,YES
+UC-007,Incident Lifecycle from Signals,GREEN,0,,,YES
+UC-008,Reproducible Analytics Artifacts,GREEN,0,,,YES
+UC-009,Controls/Policies Proposals,GREEN,8,policies,L5_ENGINE;L6_DRIVER,YES
+UC-010,Activity Feedback Lifecycle,GREEN,0,,,YES
+UC-011,Incident Resolution + Postmortem,GREEN,0,,,YES
+UC-012,Incident Recurrence Grouping,GREEN,0,,,YES
+UC-013,Policy Proposal Canonical Accept,GREEN,0,,,YES
+UC-014,Controls Override Lifecycle,GREEN,0,,,YES
+UC-015,Threshold Resolver Version Binding,GREEN,0,,,YES
+UC-016,Analytics Reproducibility Contract,GREEN,0,,,YES
+UC-017,Logs Replay Mode + Integrity Versioning,GREEN,11,logs,L5_ENGINE;L5_SCHEMA;L6_DRIVER,YES
+UC-018,Policy Snapshot Lifecycle + Integrity,GREEN,1,policies,L5_ENGINE,YES
+UC-019,Policies Proposals Query Lifecycle,GREEN,2,policies,L6_DRIVER,YES
+UC-020,Policies Rules Query Lifecycle,GREEN,0,,,YES
+UC-021,Policies Limits Query Lifecycle,GREEN,3,controls,L5_ENGINE;L6_DRIVER,YES
+UC-022,Policies Sandbox Definition + Execution Telemetry,GREEN,0,,,YES
+UC-023,Policy Conflict Resolution Explainability,GREEN,1,policies,L5_ENGINE,YES
+UC-024,Analytics Cost Anomaly Detection Lifecycle,GREEN,10,analytics;hoc_spine,L4_COORDINATOR;L4_HANDLER;L5_ENGINE;L6_DRIVER,YES
+UC-025,Analytics Prediction Cycle Lifecycle,GREEN,3,analytics;hoc_spine,L4_HANDLER;L5_ENGINE;L6_DRIVER,YES
+UC-026,Analytics Dataset Validation Lifecycle,GREEN,1,hoc_spine,L4_HANDLER,YES
+UC-027,Analytics Snapshot + Baseline Job Lifecycle,GREEN,9,analytics;hoc_spine,L4_COORDINATOR;L4_HANDLER;L5_ENGINE;L6_DRIVER,YES
+UC-028,Analytics Cost Write Lifecycle,GREEN,0,,,YES
+UC-029,Incidents Recovery Rule Evaluation Lifecycle,GREEN,5,controls;policies,L5_ENGINE;L6_DRIVER,YES
+UC-030,Incidents Policy Violation Truth Pipeline,GREEN,1,incidents,L5_ENGINE,YES
+UC-031,Incidents Pattern + Postmortem Learnings Lifecycle,GREEN,9,incidents,L5_ENGINE;L6_DRIVER,YES
+UC-032,Logs Redaction Governance + Trace-Safe Export,GREEN,0,,,YES
+UC-033,Spine Operation Governance + Contracts,GREEN,26,hoc_spine,OTHER,YES
+UC-034,Spine Lifecycle Orchestration,GREEN,6,hoc_spine,OTHER,YES
+UC-035,Spine Execution Safety + Driver Integrity,GREEN,17,hoc_spine,OTHER,YES
+UC-036,"Spine Signals, Evidence, and Alerting",GREEN,33,hoc_spine,OTHER,YES
+UC-037,Integrations Secret Vault Lifecycle,GREEN,3,integrations,OTHER,YES
+UC-038,Integrations Notification Channel Lifecycle,GREEN,1,integrations,OTHER,YES
+UC-039,Integrations CLI Operational Bootstrap,GREEN,1,integrations,OTHER,YES
+UC-040,Account CRM Audit Trail Lifecycle,GREEN,1,account,OTHER,YES
