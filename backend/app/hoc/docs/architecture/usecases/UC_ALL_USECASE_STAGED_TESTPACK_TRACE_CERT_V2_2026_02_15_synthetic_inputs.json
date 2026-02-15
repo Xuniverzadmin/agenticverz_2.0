@@ -1,0 +1,1353 @@
+{
+  "created_at": "2026-02-15 17:58:57 UTC",
+  "base": "UC_ALL_USECASE_STAGED_TESTPACK_TRACE_CERT_V2_2026_02_15",
+  "cases": [
+    {
+      "case_id": "TC-UC-001-001",
+      "uc_id": "UC-001",
+      "operation_name": "event_schema_contract (shared authority)",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-001-001",
+        "trace_id": "syn-trace-tc-uc-001-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-001-001",
+        "operation_name": "event_schema_contract (shared authority)",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-001-002",
+      "uc_id": "UC-001",
+      "operation_name": "activity.query|activity.telemetry|activity.orphan_recovery",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-001-002",
+        "trace_id": "syn-trace-tc-uc-001-002",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-001-002",
+        "operation_name": "activity.query|activity.telemetry|activity.orphan_recovery",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-002-001",
+      "uc_id": "UC-002",
+      "operation_name": "account.onboarding.advance",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-002-001",
+        "trace_id": "syn-trace-tc-uc-002-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-002-001",
+        "operation_name": "account.onboarding.advance",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-002-002",
+      "uc_id": "UC-002",
+      "operation_name": "account.onboarding.query|account.onboarding.advance",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-002-002",
+        "trace_id": "syn-trace-tc-uc-002-002",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-002-002",
+        "operation_name": "account.onboarding.query|account.onboarding.advance",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-002-003",
+      "uc_id": "UC-002",
+      "operation_name": "integrations.connector_registry (L6 runtime cache for onboarding)",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-002-003",
+        "trace_id": "syn-trace-tc-uc-002-003",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-002-003",
+        "operation_name": "integrations.connector_registry (L6 runtime cache for onboarding)",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-002-004",
+      "uc_id": "UC-002",
+      "operation_name": "event_schema_contract (shared authority)",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-002-004",
+        "trace_id": "syn-trace-tc-uc-002-004",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-002-004",
+        "operation_name": "event_schema_contract (shared authority)",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-003-001",
+      "uc_id": "UC-003",
+      "operation_name": "list_traces|store_trace|get_trace|delete_trace|cleanup_old_traces",
+      "preferred_route": {
+        "method": "UNKNOWN",
+        "path": "logs.traces_api"
+      },
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-003-001",
+        "trace_id": "syn-trace-tc-uc-003-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-003-001",
+        "operation_name": "list_traces|store_trace|get_trace|delete_trace|cleanup_old_traces",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-003-002",
+      "uc_id": "UC-003",
+      "operation_name": "start_trace|record_step|complete_trace|store_trace|get_trace|search_traces|list_traces|delete_trace|get_trace_count|cleanup_old_traces|mark_trace_aborted",
+      "preferred_route": {
+        "method": "UNKNOWN",
+        "path": "logs.traces_api"
+      },
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-003-002",
+        "trace_id": "syn-trace-tc-uc-003-002",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-003-002",
+        "operation_name": "start_trace|record_step|complete_trace|store_trace|get_trace|search_traces|list_traces|delete_trace|get_trace_count|cleanup_old_traces|mark_trace_aborted",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-004-001",
+      "uc_id": "UC-004",
+      "operation_name": "controls.evaluation_evidence",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-004-001",
+        "trace_id": "syn-trace-tc-uc-004-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-004-001",
+        "operation_name": "controls.evaluation_evidence",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-004-002",
+      "uc_id": "UC-004",
+      "operation_name": "controls.query|controls.circuit_breaker|controls.killswitch.read|controls.killswitch.write|controls.evaluation_evidence",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-004-002",
+        "trace_id": "syn-trace-tc-uc-004-002",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-004-002",
+        "operation_name": "controls.query|controls.circuit_breaker|controls.killswitch.read|controls.killswitch.write|controls.evaluation_evidence",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-005-001",
+      "uc_id": "UC-005",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-005-001",
+        "trace_id": "syn-trace-tc-uc-005-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-005-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-006-001",
+      "uc_id": "UC-006",
+      "operation_name": "activity.signal_feedback",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-006-001",
+        "trace_id": "syn-trace-tc-uc-006-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-006-001",
+        "operation_name": "activity.signal_feedback",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-006-002",
+      "uc_id": "UC-006",
+      "operation_name": "activity.signal_feedback (L6 driver)",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-006-002",
+        "trace_id": "syn-trace-tc-uc-006-002",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-006-002",
+        "operation_name": "activity.signal_feedback (L6 driver)",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-006-003",
+      "uc_id": "UC-006",
+      "operation_name": "activity.signal_feedback",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-006-003",
+        "trace_id": "syn-trace-tc-uc-006-003",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-006-003",
+        "operation_name": "activity.signal_feedback",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-007-001",
+      "uc_id": "UC-007",
+      "operation_name": "incidents.query|incidents.write|incidents.cost_guard|incidents.recurrence",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-007-001",
+        "trace_id": "syn-trace-tc-uc-007-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-007-001",
+        "operation_name": "incidents.query|incidents.write|incidents.cost_guard|incidents.recurrence",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-008-001",
+      "uc_id": "UC-008",
+      "operation_name": "analytics.artifacts",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-008-001",
+        "trace_id": "syn-trace-tc-uc-008-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-008-001",
+        "operation_name": "analytics.artifacts",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-009-001",
+      "uc_id": "UC-009",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-009-001",
+        "trace_id": "syn-trace-tc-uc-009-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-009-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-010-001",
+      "uc_id": "UC-010",
+      "operation_name": "activity.signal_fingerprint|activity.discovery",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-010-001",
+        "trace_id": "syn-trace-tc-uc-010-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-010-001",
+        "operation_name": "activity.signal_fingerprint|activity.discovery",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-011-001",
+      "uc_id": "UC-011",
+      "operation_name": "incidents.export",
+      "preferred_route": {
+        "method": "POST",
+        "path": "/{incident_id}/export/evidence"
+      },
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-011-001",
+        "trace_id": "syn-trace-tc-uc-011-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-011-001",
+        "operation_name": "incidents.export",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-012-001",
+      "uc_id": "UC-012",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-012-001",
+        "trace_id": "syn-trace-tc-uc-012-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-012-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-013-001",
+      "uc_id": "UC-013",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-013-001",
+        "trace_id": "syn-trace-tc-uc-013-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-013-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-014-001",
+      "uc_id": "UC-014",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-014-001",
+        "trace_id": "syn-trace-tc-uc-014-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-014-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-015-001",
+      "uc_id": "UC-015",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-015-001",
+        "trace_id": "syn-trace-tc-uc-015-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-015-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-016-001",
+      "uc_id": "UC-016",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-016-001",
+        "trace_id": "syn-trace-tc-uc-016-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-016-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-017-001",
+      "uc_id": "UC-017",
+      "operation_name": "get_trace_by_root_hash|compare_traces|check_idempotency",
+      "preferred_route": {
+        "method": "UNKNOWN",
+        "path": "logs.traces_api"
+      },
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-017-001",
+        "trace_id": "syn-trace-tc-uc-017-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-017-001",
+        "operation_name": "get_trace_by_root_hash|compare_traces|check_idempotency",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-017-002",
+      "uc_id": "UC-017",
+      "operation_name": "get_trace_by_root_hash|check_idempotency_key",
+      "preferred_route": {
+        "method": "UNKNOWN",
+        "path": "logs.traces_api"
+      },
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-017-002",
+        "trace_id": "syn-trace-tc-uc-017-002",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-017-002",
+        "operation_name": "get_trace_by_root_hash|check_idempotency_key",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-017-003",
+      "uc_id": "UC-017",
+      "operation_name": "base lifecycle methods|get_trace_by_root_hash|search_traces",
+      "preferred_route": {
+        "method": "UNKNOWN",
+        "path": "logs.traces_api"
+      },
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-017-003",
+        "trace_id": "syn-trace-tc-uc-017-003",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-017-003",
+        "operation_name": "base lifecycle methods|get_trace_by_root_hash|search_traces",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-018-001",
+      "uc_id": "UC-018",
+      "operation_name": "policies.query|policies.rules|policies.proposals_query|policies.rules_query|policies.policy_facade|policies.approval",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-018-001",
+        "trace_id": "syn-trace-tc-uc-018-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-018-001",
+        "operation_name": "policies.query|policies.rules|policies.proposals_query|policies.rules_query|policies.policy_facade|policies.approval",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-019-001",
+      "uc_id": "UC-019",
+      "operation_name": "policies.enforcement|policies.enforcement_write|policies.health|policies.guard_read|policies.sync_guard_read|policies.workers",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-019-001",
+        "trace_id": "syn-trace-tc-uc-019-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-019-001",
+        "operation_name": "policies.enforcement|policies.enforcement_write|policies.health|policies.guard_read|policies.sync_guard_read|policies.workers",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-020-001",
+      "uc_id": "UC-020",
+      "operation_name": "policies.governance|rbac.audit",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-020-001",
+        "trace_id": "syn-trace-tc-uc-020-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-020-001",
+        "operation_name": "policies.governance|rbac.audit",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-021-001",
+      "uc_id": "UC-021",
+      "operation_name": "controls.thresholds|controls.overrides",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-021-001",
+        "trace_id": "syn-trace-tc-uc-021-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-021-001",
+        "operation_name": "controls.thresholds|controls.overrides",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-021-002",
+      "uc_id": "UC-021",
+      "operation_name": "policies.limits|policies.limits_query|policies.rate_limits",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-021-002",
+        "trace_id": "syn-trace-tc-uc-021-002",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-021-002",
+        "operation_name": "policies.limits|policies.limits_query|policies.rate_limits",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-022-001",
+      "uc_id": "UC-022",
+      "operation_name": "policies.lessons|policies.recovery.match|policies.recovery.write|policies.recovery.read",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-022-001",
+        "trace_id": "syn-trace-tc-uc-022-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-022-001",
+        "operation_name": "policies.lessons|policies.recovery.match|policies.recovery.write|policies.recovery.read",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-023-001",
+      "uc_id": "UC-023",
+      "operation_name": "policies.simulate|policies.customer_visibility|policies.replay",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-023-001",
+        "trace_id": "syn-trace-tc-uc-023-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-023-001",
+        "operation_name": "policies.simulate|policies.customer_visibility|policies.replay",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-024-001",
+      "uc_id": "UC-024",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-024-001",
+        "trace_id": "syn-trace-tc-uc-024-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-024-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-025-001",
+      "uc_id": "UC-025",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-025-001",
+        "trace_id": "syn-trace-tc-uc-025-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-025-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-026-001",
+      "uc_id": "UC-026",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-026-001",
+        "trace_id": "syn-trace-tc-uc-026-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-026-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-027-001",
+      "uc_id": "UC-027",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-027-001",
+        "trace_id": "syn-trace-tc-uc-027-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-027-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-028-001",
+      "uc_id": "UC-028",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-028-001",
+        "trace_id": "syn-trace-tc-uc-028-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-028-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-029-001",
+      "uc_id": "UC-029",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-029-001",
+        "trace_id": "syn-trace-tc-uc-029-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-029-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-030-001",
+      "uc_id": "UC-030",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-030-001",
+        "trace_id": "syn-trace-tc-uc-030-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-030-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-031-001",
+      "uc_id": "UC-031",
+      "operation_name": "incidents.recovery_rules",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-031-001",
+        "trace_id": "syn-trace-tc-uc-031-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-031-001",
+        "operation_name": "incidents.recovery_rules",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-032-001",
+      "uc_id": "UC-032",
+      "operation_name": "find_matching_traces|update_trace_determinism",
+      "preferred_route": {
+        "method": "UNKNOWN",
+        "path": "logs.traces_api"
+      },
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-032-001",
+        "trace_id": "syn-trace-tc-uc-032-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-032-001",
+        "operation_name": "find_matching_traces|update_trace_determinism",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-033-001",
+      "uc_id": "UC-033",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-033-001",
+        "trace_id": "syn-trace-tc-uc-033-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-033-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-034-001",
+      "uc_id": "UC-034",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-034-001",
+        "trace_id": "syn-trace-tc-uc-034-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-034-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-035-001",
+      "uc_id": "UC-035",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-035-001",
+        "trace_id": "syn-trace-tc-uc-035-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-035-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-036-001",
+      "uc_id": "UC-036",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-036-001",
+        "trace_id": "syn-trace-tc-uc-036-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-036-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-037-001",
+      "uc_id": "UC-037",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-037-001",
+        "trace_id": "syn-trace-tc-uc-037-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-037-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-038-001",
+      "uc_id": "UC-038",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-038-001",
+        "trace_id": "syn-trace-tc-uc-038-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-038-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-039-001",
+      "uc_id": "UC-039",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-039-001",
+        "trace_id": "syn-trace-tc-uc-039-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-039-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    },
+    {
+      "case_id": "TC-UC-040-001",
+      "uc_id": "UC-040",
+      "operation_name": "UNMAPPED",
+      "preferred_route": null,
+      "synthetic_context": {
+        "tenant_id": "syn-tenant-001",
+        "project_id": "syn-project-001",
+        "run_id": "syn-run-tc-uc-040-001",
+        "trace_id": "syn-trace-tc-uc-040-001",
+        "actor_id": "syn-user-001"
+      },
+      "payload_template": {
+        "case_id": "TC-UC-040-001",
+        "operation_name": "UNMAPPED",
+        "input": "fill operation-specific synthetic payload before execution"
+      },
+      "veracity_assertions": [
+        "response contains required schema fields",
+        "semantic values align with synthetic_context"
+      ],
+      "determinism_assertions": [
+        "same payload replay yields equivalent key outputs",
+        "stable evidence identifier/hash across repeated run"
+      ]
+    }
+  ]
+}

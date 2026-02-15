@@ -28,9 +28,33 @@ class TestActivityFacadeIntrospection:
     """Integration tests for activity facade introspection methods."""
 
     @pytest.fixture
-    def facade(self):
-        """Create ActivityFacade instance."""
-        return ActivityFacade()
+    def run_evidence_coordinator(self):
+        """Mock coordinator injected into ActivityFacade (PIN-520)."""
+        return AsyncMock()
+
+    @pytest.fixture
+    def run_proof_coordinator(self):
+        """Mock coordinator injected into ActivityFacade (PIN-520)."""
+        return AsyncMock()
+
+    @pytest.fixture
+    def signal_feedback_coordinator(self):
+        """Mock coordinator injected into ActivityFacade (PIN-520)."""
+        return AsyncMock()
+
+    @pytest.fixture
+    def facade(
+        self,
+        run_evidence_coordinator,
+        run_proof_coordinator,
+        signal_feedback_coordinator,
+    ):
+        """Create ActivityFacade with explicit coordinator injection."""
+        return ActivityFacade(
+            run_evidence_coordinator=run_evidence_coordinator,
+            run_proof_coordinator=run_proof_coordinator,
+            signal_feedback_coordinator=signal_feedback_coordinator,
+        )
 
     @pytest.fixture
     def mock_session(self):
@@ -38,7 +62,12 @@ class TestActivityFacadeIntrospection:
         return AsyncMock()
 
     @pytest.mark.asyncio
-    async def test_get_run_evidence_delegates_to_coordinator(self, facade, mock_session):
+    async def test_get_run_evidence_delegates_to_coordinator(
+        self,
+        facade,
+        mock_session,
+        run_evidence_coordinator,
+    ):
         """get_run_evidence() should delegate to L4 RunEvidenceCoordinator."""
         from app.hoc.cus.hoc_spine.schemas.run_introspection_protocols import (
             RunEvidenceResult as L4RunEvidenceResult,
@@ -78,28 +107,28 @@ class TestActivityFacadeIntrospection:
             ],
         )
 
-        with patch(
-            "app.hoc.cus.hoc_spine.orchestrator.coordinators.run_evidence_coordinator.get_run_evidence_coordinator"
-        ) as mock_get_coordinator:
-            coordinator = AsyncMock()
-            coordinator.get_run_evidence.return_value = mock_result
-            mock_get_coordinator.return_value = coordinator
+        run_evidence_coordinator.get_run_evidence.return_value = mock_result
 
-            result = await facade.get_run_evidence(mock_session, "tenant-123", "run-123")
+        result = await facade.get_run_evidence(mock_session, "tenant-123", "run-123")
 
-            # Verify coordinator was called
-            coordinator.get_run_evidence.assert_called_once_with(
-                mock_session, "tenant-123", "run-123"
-            )
+        # Verify coordinator was called
+        run_evidence_coordinator.get_run_evidence.assert_called_once_with(
+            mock_session, "tenant-123", "run-123"
+        )
 
-            # Verify result structure
-            assert result.run_id == "run-123"
-            assert len(result.policies_triggered) == 1
-            assert result.policies_triggered[0]["policy_name"] == "Cost Limit"
-            assert len(result.traces_linked) == 1  # limits_hit maps to traces_linked
+        # Verify result structure
+        assert result.run_id == "run-123"
+        assert len(result.policies_triggered) == 1
+        assert result.policies_triggered[0]["policy_name"] == "Cost Limit"
+        assert len(result.traces_linked) == 1  # limits_hit maps to traces_linked
 
     @pytest.mark.asyncio
-    async def test_get_run_proof_delegates_to_coordinator(self, facade, mock_session):
+    async def test_get_run_proof_delegates_to_coordinator(
+        self,
+        facade,
+        mock_session,
+        run_proof_coordinator,
+    ):
         """get_run_proof() should delegate to L4 RunProofCoordinator."""
         from app.hoc.cus.hoc_spine.schemas.run_introspection_protocols import (
             RunProofResult as L4RunProofResult,
@@ -139,32 +168,32 @@ class TestActivityFacadeIntrospection:
             raw_logs=None,
         )
 
-        with patch(
-            "app.hoc.cus.hoc_spine.orchestrator.coordinators.run_proof_coordinator.get_run_proof_coordinator"
-        ) as mock_get_coordinator:
-            coordinator = AsyncMock()
-            coordinator.get_run_proof.return_value = mock_result
-            mock_get_coordinator.return_value = coordinator
+        run_proof_coordinator.get_run_proof.return_value = mock_result
 
-            result = await facade.get_run_proof(
-                mock_session, "tenant-123", "run-123", include_payloads=False
-            )
+        result = await facade.get_run_proof(
+            mock_session, "tenant-123", "run-123", include_payloads=False
+        )
 
-            # Verify coordinator was called
-            coordinator.get_run_proof.assert_called_once_with(
-                mock_session, "tenant-123", "run-123", False
-            )
+        # Verify coordinator was called
+        run_proof_coordinator.get_run_proof.assert_called_once_with(
+            mock_session, "tenant-123", "run-123", False
+        )
 
-            # Verify result structure
-            assert result.run_id == "run-123"
-            assert result.integrity["verification_status"] == "VERIFIED"
-            assert result.integrity["model"] == "HASH_CHAIN"
-            assert result.integrity["root_hash"] == "abc123def456"
-            assert len(result.aos_traces) == 1
-            assert len(result.aos_trace_steps) == 1
+        # Verify result structure
+        assert result.run_id == "run-123"
+        assert result.integrity["verification_status"] == "VERIFIED"
+        assert result.integrity["model"] == "HASH_CHAIN"
+        assert result.integrity["root_hash"] == "abc123def456"
+        assert len(result.aos_traces) == 1
+        assert len(result.aos_trace_steps) == 1
 
     @pytest.mark.asyncio
-    async def test_signals_include_feedback(self, facade, mock_session):
+    async def test_signals_include_feedback(
+        self,
+        facade,
+        mock_session,
+        signal_feedback_coordinator,
+    ):
         """get_signals() should include feedback from audit ledger."""
         from app.hoc.cus.hoc_spine.schemas.run_introspection_protocols import (
             SignalFeedbackResult,
@@ -225,26 +254,20 @@ class TestActivityFacadeIntrospection:
             escalated_at=None,
         )
 
-        with patch.object(
-            facade, "_get_driver", return_value=mock_driver
-        ), patch(
-            "app.hoc.cus.hoc_spine.orchestrator.coordinators.signal_feedback_coordinator.get_signal_feedback_coordinator"
-        ) as mock_get_coordinator:
-            coordinator = AsyncMock()
-            coordinator.get_signal_feedback.return_value = mock_feedback
-            mock_get_coordinator.return_value = coordinator
+        signal_feedback_coordinator.get_signal_feedback.return_value = mock_feedback
 
+        with patch.object(facade, "_get_driver", return_value=mock_driver):
             result = await facade.get_signals(mock_session, "tenant-123")
 
-            # Verify signals were fetched
-            assert isinstance(result, SignalsResult)
-            assert len(result.signals) == 1
+        # Verify signals were fetched
+        assert isinstance(result, SignalsResult)
+        assert len(result.signals) == 1
 
-            # Verify feedback was included
-            signal = result.signals[0]
-            assert signal.feedback is not None
-            assert signal.feedback.acknowledged is True
-            assert signal.feedback.acknowledged_by == "user-123"
+        # Verify feedback was included
+        signal = result.signals[0]
+        assert signal.feedback is not None
+        assert signal.feedback.acknowledged is True
+        assert signal.feedback.acknowledged_by == "user-123"
 
 
 class TestActivityFacadeNoCoordinatorFallback:

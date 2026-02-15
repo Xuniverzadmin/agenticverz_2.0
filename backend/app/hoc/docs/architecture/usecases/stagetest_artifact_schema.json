@@ -7,7 +7,8 @@
     "run_id", "case_id", "uc_id", "stage", "operation_name",
     "route_path", "api_method", "request_fields", "response_fields",
     "synthetic_input", "observed_output", "assertions", "status",
-    "determinism_hash", "signature", "evidence_files", "api_calls_used"
+    "determinism_hash", "signature", "evidence_files", "api_calls_used",
+    "execution_trace", "db_writes"
   ],
   "properties": {
     "run_id": { "type": "string", "minLength": 1 },
@@ -64,6 +65,52 @@
           "operation": { "type": "string" },
           "status_code": { "type": "integer" },
           "duration_ms": { "type": "number" }
+        }
+      }
+    },
+    "execution_trace": {
+      "type": "array",
+      "description": "Ordered runtime sequence captured during test execution",
+      "items": {
+        "type": "object",
+        "required": [
+          "seq", "ts_utc", "event_type", "layer",
+          "component", "operation", "trigger", "status", "detail"
+        ],
+        "properties": {
+          "seq": { "type": "integer", "minimum": 1 },
+          "ts_utc": { "type": "string", "minLength": 1 },
+          "event_type": { "type": "string", "minLength": 1 },
+          "layer": { "type": "string", "minLength": 1 },
+          "component": { "type": "string", "minLength": 1 },
+          "operation": { "type": "string", "minLength": 1 },
+          "trigger": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "minLength": 1 },
+          "detail": { "type": "object" }
+        }
+      }
+    },
+    "db_writes": {
+      "type": "array",
+      "description": "Observed SQL DML writes captured during test execution",
+      "items": {
+        "type": "object",
+        "required": [
+          "seq", "ts_utc", "layer", "component", "operation", "table",
+          "sql_op", "rowcount", "statement_fingerprint", "success", "detail"
+        ],
+        "properties": {
+          "seq": { "type": "integer", "minimum": 1 },
+          "ts_utc": { "type": "string", "minLength": 1 },
+          "layer": { "type": "string", "minLength": 1 },
+          "component": { "type": "string", "minLength": 1 },
+          "operation": { "type": "string", "minLength": 1 },
+          "table": { "type": "string", "minLength": 1 },
+          "sql_op": { "type": "string", "minLength": 1 },
+          "rowcount": { "type": "integer" },
+          "statement_fingerprint": { "type": "string", "minLength": 1 },
+          "success": { "type": "boolean" },
+          "detail": { "type": "object" }
         }
       }
     }

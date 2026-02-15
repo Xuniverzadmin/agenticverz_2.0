@@ -288,6 +288,8 @@ test.describe('Stagetest Evidence Console', () => {
       'synthetic-input-table',
       'produced-output-table',
       'apis-used-table',
+      'execution-trace-table',
+      'db-writes-table',
       'assertions-table',
       'determinism-hash',
       'signature',

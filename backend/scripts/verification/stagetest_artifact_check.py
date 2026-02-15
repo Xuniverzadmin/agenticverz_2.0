@@ -86,6 +86,32 @@ def _validate_case(case_data: dict, schema: dict, strict: bool, release_sig: boo
                 for fld in ("method", "path", "operation", "status_code", "duration_ms"):
                     if fld not in call:
                         errors.append(f"api_calls_used[{i}] missing field: {fld}")
+        # execution_trace must be a non-empty list with required fields
+        execution_trace = case_data.get("execution_trace")
+        if not execution_trace or not isinstance(execution_trace, list):
+            errors.append("Stage 1.2 case has empty or missing execution_trace")
+        else:
+            last_seq = 0
+            for i, event in enumerate(execution_trace):
+                for fld in ("seq", "ts_utc", "event_type", "layer", "component", "operation", "trigger", "status", "detail"):
+                    if fld not in event:
+                        errors.append(f"execution_trace[{i}] missing field: {fld}")
+                seq = event.get("seq")
+                if isinstance(seq, int):
+                    if seq <= last_seq:
+                        errors.append("execution_trace seq values must be strictly increasing")
+                    last_seq = seq
+                else:
+                    errors.append(f"execution_trace[{i}].seq must be int")
+        # db_writes must exist (can be empty list for non-write scenarios)
+        db_writes = case_data.get("db_writes")
+        if db_writes is None or not isinstance(db_writes, list):
+            errors.append("Stage 1.2 case missing db_writes list")
+        else:
+            for i, write in enumerate(db_writes):
+                for fld in ("seq", "ts_utc", "layer", "component", "operation", "table", "sql_op", "rowcount", "statement_fingerprint", "success", "detail"):
+                    if fld not in write:
+                        errors.append(f"db_writes[{i}] missing field: {fld}")
 
     # Non-empty assertions
     if not case_data.get("assertions"):

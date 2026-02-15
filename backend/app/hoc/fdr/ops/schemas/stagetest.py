@@ -28,6 +28,32 @@ class ApiCallUsed(BaseModel):
     duration_ms: float
 
 
+class ExecutionTraceEvent(BaseModel):
+    seq: int
+    ts_utc: str
+    event_type: str
+    layer: str
+    component: str
+    operation: str
+    trigger: str
+    status: str
+    detail: dict
+
+
+class DbWriteEvent(BaseModel):
+    seq: int
+    ts_utc: str
+    layer: str
+    component: str
+    operation: str
+    table: str
+    sql_op: str
+    rowcount: int
+    statement_fingerprint: str
+    success: bool
+    detail: dict
+
+
 class CaseSummary(BaseModel):
     case_id: str
     uc_id: str
@@ -55,6 +81,8 @@ class CaseDetail(BaseModel):
     signature: str
     evidence_files: list[str]
     api_calls_used: list[ApiCallUsed] = []
+    execution_trace: list[ExecutionTraceEvent] = []
+    db_writes: list[DbWriteEvent] = []
 
 
 class RunSummary(BaseModel):

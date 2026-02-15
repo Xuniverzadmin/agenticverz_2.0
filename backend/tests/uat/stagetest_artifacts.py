@@ -73,6 +73,8 @@ class StagetestEmitter:
         status: str = "PASS",
         evidence_files: list[str] | None = None,
         api_calls_used: list[dict] | None = None,
+        execution_trace: list[dict] | None = None,
+        db_writes: list[dict] | None = None,
     ) -> dict:
         """Emit a single case artifact file and return the case data."""
         request_fields = request_fields or {}
@@ -82,6 +84,8 @@ class StagetestEmitter:
         assertions = assertions or []
         evidence_files = evidence_files or []
         api_calls_used = api_calls_used or []
+        execution_trace = execution_trace or []
+        db_writes = db_writes or []
 
         # Compute determinism hash over the canonical payload
         hash_payload = {
@@ -113,6 +117,8 @@ class StagetestEmitter:
             "signature": "UNSIGNED_LOCAL",
             "evidence_files": evidence_files,
             "api_calls_used": api_calls_used,
+            "execution_trace": execution_trace,
+            "db_writes": db_writes,
         }
 
         # Write case file

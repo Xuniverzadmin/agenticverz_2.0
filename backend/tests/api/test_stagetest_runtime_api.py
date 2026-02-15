@@ -60,6 +60,47 @@ API_CALLS_USED = [
     {"method": "POST", "path": "/hoc/api/cus/onboarding/advance", "operation": "account.onboarding.advance", "status_code": 200, "duration_ms": 45},
 ]
 
+EXECUTION_TRACE = [
+    {
+        "seq": 1,
+        "ts_utc": "2026-02-15T12:00:00Z",
+        "event_type": "test.start",
+        "layer": "TEST",
+        "component": "pytest",
+        "operation": OP_NAME,
+        "trigger": "pytest_runtest_setup",
+        "status": "STARTED",
+        "detail": {"case_id": CASE_ID},
+    },
+    {
+        "seq": 2,
+        "ts_utc": "2026-02-15T12:00:01Z",
+        "event_type": "dispatch.end",
+        "layer": "L4",
+        "component": "OperationRegistry",
+        "operation": OP_NAME,
+        "trigger": "registry.execute",
+        "status": "PASS",
+        "detail": {"duration_ms": 12.3},
+    },
+]
+
+DB_WRITES = [
+    {
+        "seq": 3,
+        "ts_utc": "2026-02-15T12:00:01Z",
+        "layer": "DB",
+        "component": "sqlalchemy.Engine",
+        "operation": OP_NAME,
+        "table": "aos_onboarding",
+        "sql_op": "INSERT",
+        "rowcount": 1,
+        "statement_fingerprint": "1a2b3c4d5e6f7a8b",
+        "success": True,
+        "detail": {"duration_ms": 4.2},
+    },
+]
+
 CASE_DATA = {
     "run_id": RUN_ID,
     "case_id": CASE_ID,
@@ -78,6 +119,8 @@ CASE_DATA = {
     "signature": "UNSIGNED_LOCAL",
     "evidence_files": [],
     "api_calls_used": API_CALLS_USED,
+    "execution_trace": EXECUTION_TRACE,
+    "db_writes": DB_WRITES,
 }
 
 ALL_HASHES = sorted([DET_HASH])
@@ -230,3 +273,22 @@ class TestStagetestRuntimeAPI:
         assert calls[0]["method"] == "POST"
         assert calls[0]["path"] == "/hoc/api/cus/onboarding/advance"
         assert calls[0]["status_code"] == 200
+
+    def test_case_detail_has_execution_trace_and_db_writes(self, client):
+        """Case detail includes runtime execution_trace and db_writes structures."""
+        resp = client.get(f"/hoc/api/stagetest/runs/{RUN_ID}/cases/{CASE_ID}")
+        assert resp.status_code == 200
+        data = resp.json()
+
+        trace = data.get("execution_trace")
+        assert isinstance(trace, list), "execution_trace must be a list"
+        assert len(trace) >= 1, "execution_trace should include at least one event"
+        for event in trace:
+            for fld in ("seq", "ts_utc", "event_type", "layer", "component", "operation", "trigger", "status", "detail"):
+                assert fld in event, f"execution_trace entry missing {fld}"
+
+        writes = data.get("db_writes")
+        assert isinstance(writes, list), "db_writes must be a list"
+        for write in writes:
+            for fld in ("seq", "ts_utc", "layer", "component", "operation", "table", "sql_op", "rowcount", "statement_fingerprint", "success", "detail"):
+                assert fld in write, f"db_writes entry missing {fld}"

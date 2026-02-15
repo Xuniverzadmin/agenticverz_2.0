@@ -1,0 +1,1747 @@
+{
+  "executed_file": "/root/agenticverz2.0/backend/app/hoc/docs/architecture/usecases/UC_ALL_USECASE_STAGED_TESTPACK_TRACE_CERT_V2_2026_02_15_executed.md",
+  "generated_at": "2026-02-15 18:08:30 UTC",
+  "stage_status": {
+    "Stage 1.1": "COMPLETED",
+    "Stage 1.2": "COMPLETED",
+    "Stage 2": "COMPLETED"
+  },
+  "case_counts": {
+    "total_cases": 51,
+    "stage_1_1": {
+      "BLOCKED": 28,
+      "SKIPPED": 22,
+      "FAIL": 1
+    },
+    "stage_1_2": {
+      "BLOCKED": 51
+    },
+    "stage_2": {
+      "BLOCKED": 51
+    }
+  },
+  "metric_status": {
+    "quality": "PARTIAL",
+    "quantity": "OBSERVED",
+    "velocity": "NOT_APPLICABLE",
+    "veracity": "PARTIAL",
+    "determinism": "PARTIAL",
+    "execution_trace_coverage": "BLOCKED",
+    "db_write_observability": "BLOCKED"
+  },
+  "usecase_tally": {
+    "UC-001": {
+      "total_cases": 2,
+      "stage_1_1": {
+        "BLOCKED": 2
+      },
+      "stage_1_2": {
+        "BLOCKED": 2
+      },
+      "stage_2": {
+        "BLOCKED": 2
+      },
+      "blocking_rows": 6,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-002": {
+      "total_cases": 4,
+      "stage_1_1": {
+        "BLOCKED": 4
+      },
+      "stage_1_2": {
+        "BLOCKED": 4
+      },
+      "stage_2": {
+        "BLOCKED": 4
+      },
+      "blocking_rows": 12,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-003": {
+      "total_cases": 2,
+      "stage_1_1": {
+        "BLOCKED": 2
+      },
+      "stage_1_2": {
+        "BLOCKED": 2
+      },
+      "stage_2": {
+        "BLOCKED": 2
+      },
+      "blocking_rows": 6,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-004": {
+      "total_cases": 2,
+      "stage_1_1": {
+        "BLOCKED": 2
+      },
+      "stage_1_2": {
+        "BLOCKED": 2
+      },
+      "stage_2": {
+        "BLOCKED": 2
+      },
+      "blocking_rows": 6,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-005": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-006": {
+      "total_cases": 3,
+      "stage_1_1": {
+        "FAIL": 1,
+        "BLOCKED": 2
+      },
+      "stage_1_2": {
+        "BLOCKED": 3
+      },
+      "stage_2": {
+        "BLOCKED": 3
+      },
+      "blocking_rows": 9,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-007": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "BLOCKED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-008": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "BLOCKED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-009": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-010": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "BLOCKED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-011": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "BLOCKED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-012": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-013": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-014": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-015": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-016": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-017": {
+      "total_cases": 3,
+      "stage_1_1": {
+        "BLOCKED": 3
+      },
+      "stage_1_2": {
+        "BLOCKED": 3
+      },
+      "stage_2": {
+        "BLOCKED": 3
+      },
+      "blocking_rows": 9,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-018": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "BLOCKED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-019": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "BLOCKED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-020": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "BLOCKED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-021": {
+      "total_cases": 2,
+      "stage_1_1": {
+        "BLOCKED": 2
+      },
+      "stage_1_2": {
+        "BLOCKED": 2
+      },
+      "stage_2": {
+        "BLOCKED": 2
+      },
+      "blocking_rows": 6,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-022": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "BLOCKED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-023": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "BLOCKED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-024": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-025": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-026": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-027": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-028": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-029": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-030": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-031": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "BLOCKED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-032": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "BLOCKED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-033": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-034": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-035": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-036": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-037": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-038": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-039": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-040": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "SKIPPED": 1
+      },
+      "stage_1_2": {
+        "BLOCKED": 1
+      },
+      "stage_2": {
+        "BLOCKED": 1
+      },
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    }
+  },
+  "blocking_cases": [
+    {
+      "case_id": "TC-UC-001-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-001-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-001-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-001-002",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-001-002",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-001-002",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-002-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-002-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-002-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-002-002",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-002-002",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-002-002",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-002-003",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-002-003",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-002-003",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-002-004",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-002-004",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-002-004",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-003-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-003-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-003-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-003-002",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-003-002",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-003-002",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-004-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-004-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-004-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-004-002",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-004-002",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-004-002",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-005-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-005-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-006-001",
+      "stage": "Stage 1.1",
+      "status": "FAIL"
+    },
+    {
+      "case_id": "TC-UC-006-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-006-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-006-002",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-006-002",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-006-002",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-006-003",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-006-003",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-006-003",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-007-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-007-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-007-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-008-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-008-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-008-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-009-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-009-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-010-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-010-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-010-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-011-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-011-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-011-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-012-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-012-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-013-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-013-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-014-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-014-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-015-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-015-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-016-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-016-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-017-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-017-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-017-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-017-002",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-017-002",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-017-002",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-017-003",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-017-003",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-017-003",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-018-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-018-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-018-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-019-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-019-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-019-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-020-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-020-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-020-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-021-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-021-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-021-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-021-002",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-021-002",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-021-002",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-022-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-022-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-022-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-023-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-023-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-023-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-024-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-024-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-025-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-025-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-026-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-026-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-027-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-027-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-028-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-028-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-029-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-029-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-030-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-030-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-031-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-031-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-031-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-032-001",
+      "stage": "Stage 1.1",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-032-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-032-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-033-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-033-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-034-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-034-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-035-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-035-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-036-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-036-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-037-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-037-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-038-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-038-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-039-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-039-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-040-001",
+      "stage": "Stage 1.2",
+      "status": "BLOCKED"
+    },
+    {
+      "case_id": "TC-UC-040-001",
+      "stage": "Stage 2",
+      "status": "BLOCKED"
+    }
+  ],
+  "pending_cases": [],
+  "trace_db": {
+    "rows": 51,
+    "trace_pending": 0,
+    "db_pending": 0,
+    "trace_evidence_rows": 51,
+    "db_evidence_rows": 51
+  },
+  "trace_policy": {
+    "required_for_pass": true,
+    "pass_without_debugger_trace_count": 0,
+    "violations": []
+  },
+  "frontend_publish_readiness": {
+    "UC-001": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 2,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 6,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-002": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 4,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 12,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-003": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 2,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 6,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-004": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 2,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 6,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-005": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-006": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 3,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 9,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-007": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-008": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-009": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-010": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-011": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-012": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-013": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-014": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-015": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-016": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-017": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 3,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 9,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-018": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-019": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-020": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-021": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 2,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 6,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-022": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-023": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-024": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-025": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-026": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-027": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-028": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-029": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-030": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-031": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-032": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 3,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-033": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-034": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-035": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-036": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-037": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-038": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-039": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    },
+    "UC-040": {
+      "label": "HOLD",
+      "reason": "Insufficient stage pass coverage or blocking/pending rows remain.",
+      "total_cases": 1,
+      "s1_1_pass": 0,
+      "s1_2_pass": 0,
+      "s2_pass": 0,
+      "blocking_rows": 2,
+      "pending_rows": 0,
+      "trace_policy_violations": 0
+    }
+  }
+}

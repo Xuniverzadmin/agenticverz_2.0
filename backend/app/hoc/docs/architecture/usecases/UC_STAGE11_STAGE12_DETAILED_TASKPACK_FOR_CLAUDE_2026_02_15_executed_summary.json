@@ -1,0 +1,185 @@
+{
+  "executed_file": "/root/agenticverz2.0/backend/app/hoc/docs/architecture/usecases/UC_STAGE11_STAGE12_DETAILED_TASKPACK_FOR_CLAUDE_2026_02_15_executed.md",
+  "generated_at": "2026-02-15 17:42:19 UTC",
+  "stage_status": {
+    "Stage 1.1": "PASS",
+    "Stage 1.2": "PASS",
+    "Stage 2": "SKIPPED"
+  },
+  "case_counts": {
+    "total_cases": 14,
+    "stage_1_1": {
+      "PASS": 14
+    },
+    "stage_1_2": {
+      "PASS": 14
+    },
+    "stage_2": {
+      "SKIPPED": 14
+    }
+  },
+  "metric_status": {
+    "quality": "PASS",
+    "quantity": "PASS",
+    "velocity": "PASS",
+    "veracity": "PASS",
+    "determinism": "PASS"
+  },
+  "usecase_tally": {
+    "UC-002": {
+      "total_cases": 4,
+      "stage_1_1": {
+        "PASS": 4
+      },
+      "stage_1_2": {
+        "PASS": 4
+      },
+      "stage_2": {
+        "SKIPPED": 4
+      },
+      "blocking_rows": 0,
+      "pending_rows": 0
+    },
+    "UC-004": {
+      "total_cases": 2,
+      "stage_1_1": {
+        "PASS": 2
+      },
+      "stage_1_2": {
+        "PASS": 2
+      },
+      "stage_2": {
+        "SKIPPED": 2
+      },
+      "blocking_rows": 0,
+      "pending_rows": 0
+    },
+    "UC-006": {
+      "total_cases": 3,
+      "stage_1_1": {
+        "PASS": 3
+      },
+      "stage_1_2": {
+        "PASS": 3
+      },
+      "stage_2": {
+        "SKIPPED": 3
+      },
+      "blocking_rows": 0,
+      "pending_rows": 0
+    },
+    "UC-008": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "PASS": 1
+      },
+      "stage_1_2": {
+        "PASS": 1
+      },
+      "stage_2": {
+        "SKIPPED": 1
+      },
+      "blocking_rows": 0,
+      "pending_rows": 0
+    },
+    "UC-017": {
+      "total_cases": 3,
+      "stage_1_1": {
+        "PASS": 3
+      },
+      "stage_1_2": {
+        "PASS": 3
+      },
+      "stage_2": {
+        "SKIPPED": 3
+      },
+      "blocking_rows": 0,
+      "pending_rows": 0
+    },
+    "UC-032": {
+      "total_cases": 1,
+      "stage_1_1": {
+        "PASS": 1
+      },
+      "stage_1_2": {
+        "PASS": 1
+      },
+      "stage_2": {
+        "SKIPPED": 1
+      },
+      "blocking_rows": 0,
+      "pending_rows": 0
+    }
+  },
+  "blocking_cases": [],
+  "pending_cases": [],
+  "trace_db": {
+    "rows": 0,
+    "trace_pending": 0,
+    "db_pending": 0,
+    "trace_evidence_rows": 0,
+    "db_evidence_rows": 0
+  },
+  "frontend_publish_readiness": {
+    "UC-002": {
+      "label": "UAT_READY",
+      "reason": "Stage 1.1 and 1.2 fully PASS with no blocking rows; Stage 2 pending/partial.",
+      "total_cases": 4,
+      "s1_1_pass": 4,
+      "s1_2_pass": 4,
+      "s2_pass": 0,
+      "blocking_rows": 0,
+      "pending_rows": 0
+    },
+    "UC-004": {
+      "label": "UAT_READY",
+      "reason": "Stage 1.1 and 1.2 fully PASS with no blocking rows; Stage 2 pending/partial.",
+      "total_cases": 2,
+      "s1_1_pass": 2,
+      "s1_2_pass": 2,
+      "s2_pass": 0,
+      "blocking_rows": 0,
+      "pending_rows": 0
+    },
+    "UC-006": {
+      "label": "UAT_READY",
+      "reason": "Stage 1.1 and 1.2 fully PASS with no blocking rows; Stage 2 pending/partial.",
+      "total_cases": 3,
+      "s1_1_pass": 3,
+      "s1_2_pass": 3,
+      "s2_pass": 0,
+      "blocking_rows": 0,
+      "pending_rows": 0
+    },
+    "UC-008": {
+      "label": "UAT_READY",
+      "reason": "Stage 1.1 and 1.2 fully PASS with no blocking rows; Stage 2 pending/partial.",
+      "total_cases": 1,
+      "s1_1_pass": 1,
+      "s1_2_pass": 1,
+      "s2_pass": 0,
+      "blocking_rows": 0,
+      "pending_rows": 0
+    },
+    "UC-017": {
+      "label": "UAT_READY",
+      "reason": "Stage 1.1 and 1.2 fully PASS with no blocking rows; Stage 2 pending/partial.",
+      "total_cases": 3,
+      "s1_1_pass": 3,
+      "s1_2_pass": 3,
+      "s2_pass": 0,
+      "blocking_rows": 0,
+      "pending_rows": 0
+    },
+    "UC-032": {
+      "label": "UAT_READY",
+      "reason": "Stage 1.1 and 1.2 fully PASS with no blocking rows; Stage 2 pending/partial.",
+      "total_cases": 1,
+      "s1_1_pass": 1,
+      "s1_2_pass": 1,
+      "s2_pass": 0,
+      "blocking_rows": 0,
+      "pending_rows": 0
+    }
+  }
+}

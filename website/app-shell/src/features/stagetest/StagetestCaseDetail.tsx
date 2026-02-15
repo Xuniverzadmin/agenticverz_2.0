@@ -144,6 +144,78 @@ export function StagetestCaseDetail({ runId, caseId, onBack }: Props) {
         )}
       </Section>
 
+      {/* Execution Trace */}
+      <Section title={`Execution Trace (${detail.execution_trace?.length ?? 0})`}>
+        {(!detail.execution_trace || detail.execution_trace.length === 0) ? (
+          <p className="text-gray-500 text-xs">No execution trace recorded.</p>
+        ) : (
+          <table className="w-full text-xs" data-testid="execution-trace-table">
+            <thead>
+              <tr className="text-left text-gray-500 border-b border-gray-700">
+                <th className="pb-1 pr-3">Seq</th>
+                <th className="pb-1 pr-3">Time (UTC)</th>
+                <th className="pb-1 pr-3">Layer</th>
+                <th className="pb-1 pr-3">Component</th>
+                <th className="pb-1 pr-3">Event</th>
+                <th className="pb-1 pr-3">Status</th>
+                <th className="pb-1">Trigger</th>
+              </tr>
+            </thead>
+            <tbody>
+              {detail.execution_trace.map((event, i) => (
+                <tr key={i} className="border-b border-gray-800">
+                  <td className="py-1 pr-3 font-mono text-gray-400">{event.seq}</td>
+                  <td className="py-1 pr-3 font-mono text-gray-400">{event.ts_utc}</td>
+                  <td className="py-1 pr-3 text-blue-300">{event.layer}</td>
+                  <td className="py-1 pr-3 text-gray-300">{event.component}</td>
+                  <td className="py-1 pr-3 text-gray-300">{event.event_type}</td>
+                  <td className="py-1 pr-3">
+                    <span className={event.status === 'PASS' ? 'text-green-400' : event.status === 'FAIL' ? 'text-red-400' : 'text-gray-400'}>
+                      {event.status}
+                    </span>
+                  </td>
+                  <td className="py-1 font-mono text-gray-400">{event.trigger}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Section>
+
+      {/* DB Writes */}
+      <Section title={`DB Writes (${detail.db_writes?.length ?? 0})`}>
+        {(!detail.db_writes || detail.db_writes.length === 0) ? (
+          <p className="text-gray-500 text-xs">No DB writes recorded.</p>
+        ) : (
+          <table className="w-full text-xs" data-testid="db-writes-table">
+            <thead>
+              <tr className="text-left text-gray-500 border-b border-gray-700">
+                <th className="pb-1 pr-3">Seq</th>
+                <th className="pb-1 pr-3">Table</th>
+                <th className="pb-1 pr-3">Op</th>
+                <th className="pb-1 pr-3">Rows</th>
+                <th className="pb-1 pr-3">Layer</th>
+                <th className="pb-1 pr-3">Component</th>
+                <th className="pb-1">Fingerprint</th>
+              </tr>
+            </thead>
+            <tbody>
+              {detail.db_writes.map((write, i) => (
+                <tr key={i} className="border-b border-gray-800">
+                  <td className="py-1 pr-3 font-mono text-gray-400">{write.seq}</td>
+                  <td className="py-1 pr-3 font-mono text-gray-300">{write.table}</td>
+                  <td className="py-1 pr-3 text-amber-300">{write.sql_op}</td>
+                  <td className="py-1 pr-3 font-mono text-gray-300">{write.rowcount}</td>
+                  <td className="py-1 pr-3 text-blue-300">{write.layer}</td>
+                  <td className="py-1 pr-3 text-gray-400">{write.component}</td>
+                  <td className="py-1 font-mono text-gray-500">{write.statement_fingerprint}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Section>
+
       {/* Assertions */}
       <Section title={`Assertions (${detail.assertions.length})`}>
         {detail.assertions.length === 0 ? (

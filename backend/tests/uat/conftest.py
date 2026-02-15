@@ -80,6 +80,20 @@ _ROUTE_META = {
         "response_fields": {"passed": "boolean", "missing": "array"},
         "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/onboarding/activate", "operation": "account.onboarding.activate", "status_code": 200, "duration_ms": 22}],
     },
+    "test_synthetic_write_path_insert_emits_db_write": {
+        "route_path": "/hoc/api/cus/onboarding/advance",
+        "api_method": "POST",
+        "request_fields": {"tenant_id": "string", "step": "string", "payload": "object"},
+        "response_fields": {"mode": "string", "affected_rows": "number", "tenant_id": "string", "step": "string"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/onboarding/advance", "operation": "account.onboarding.synthetic_write.insert", "status_code": 200, "duration_ms": 16}],
+    },
+    "test_synthetic_write_path_update_emits_db_write": {
+        "route_path": "/hoc/api/cus/onboarding/advance",
+        "api_method": "POST",
+        "request_fields": {"tenant_id": "string", "step": "string", "payload": "object"},
+        "response_fields": {"mode": "string", "affected_rows": "number", "tenant_id": "string", "step": "string"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/onboarding/advance", "operation": "account.onboarding.synthetic_write.update", "status_code": 200, "duration_ms": 17}],
+    },
     # UC-004 Controls Evidence
     "test_controls_evaluation_evidence_registered": {
         "route_path": "/hoc/api/cus/controls/evaluation-evidence",
@@ -201,6 +215,41 @@ _ROUTE_META = {
 }
 
 
+def _case_id_from_item(item) -> str:
+    """Build deterministic case id (Class__method where available)."""
+    parts = item.nodeid.split("::")
+    return "__".join(parts[-2:]) if len(parts) >= 3 else parts[-1]
+
+
+def _resolve_uc_info(item) -> tuple[str, str] | None:
+    """Resolve (uc_id, stage) from test file name."""
+    filename = os.path.basename(item.fspath)
+    return _UC_MAP.get(filename)
+
+
+def _resolve_operation_name(item, uc_id: str, case_id: str) -> str:
+    """Resolve canonical operation name for capture/emission."""
+    # Prefer explicit route metadata first.
+    meta = _ROUTE_META.get(case_id, _ROUTE_META.get(item.name, {}))
+    api_calls = meta.get("api_calls_used", [])
+    if api_calls and isinstance(api_calls, list):
+        op = api_calls[0].get("operation")
+        if isinstance(op, str) and op.strip():
+            return op.strip()
+
+    # Fallback: parse operation token from docstring.
+    doc = item.obj.__doc__ or ""
+    op_match = re.search(r"([\w.]+)\s+is\s+a?\s*registered", doc)
+    if op_match:
+        return op_match.group(1)
+    return f"{uc_id.lower().replace('-', '_')}.validation"
+
+
+def _resolve_route_meta(item, case_id: str) -> dict:
+    """Resolve route metadata for a test case."""
+    return _ROUTE_META.get(case_id, _ROUTE_META.get(item.name, {}))
+
+
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     """Auto-emit case artifacts after each test when STAGETEST_EMIT=1."""
@@ -218,31 +267,37 @@ def pytest_runtest_makereport(item, call):
         return
 
     # Determine UC from filename
-    filename = os.path.basename(item.fspath)
-    uc_info = _UC_MAP.get(filename)
+    uc_info = _resolve_uc_info(item)
     if uc_info is None:
         return
 
     uc_id, stage = uc_info
-    # Use last 2 nodeid parts (Class::method or just method) to avoid collisions
-    # e.g. "TestUC006::test_l5_engine_no_db_imports" vs "TestUC017::test_l5_engine_no_db_imports"
-    parts = item.nodeid.split("::")
-    case_id = "__".join(parts[-2:]) if len(parts) >= 3 else parts[-1]
+    case_id = _case_id_from_item(item)
     status = "PASS" if report.passed else "FAIL"
 
-    # Extract operation name from test docstring if available
-    doc = item.obj.__doc__ or ""
-    op_match = re.search(r"([\w.]+)\s+is\s+a?\s*registered", doc)
-    operation_name = op_match.group(1) if op_match else f"{uc_id.lower().replace('-', '_')}.validation"
+    operation_name = _resolve_operation_name(item, uc_id, case_id)
 
     # Resolve route metadata for stage 1.2 enrichment
     # Try Class::method key first (for disambiguation), then fall back to method-only
-    meta = _ROUTE_META.get(case_id, _ROUTE_META.get(item.name, {}))
+    meta = _resolve_route_meta(item, case_id)
     route_path = meta.get("route_path", "N/A")
     api_method = meta.get("api_method", "N/A")
     request_fields = meta.get("request_fields", {})
     response_fields = meta.get("response_fields", {})
     api_calls_used = meta.get("api_calls_used", [])
+    execution_trace = []
+    db_writes = []
+    try:
+        from tests.uat.stagetest_trace_capture import finish_case_capture
+
+        execution_trace, db_writes = finish_case_capture(
+            status=status,
+            detail={"duration_ms": round(report.duration * 1000, 3)},
+        )
+    except Exception:
+        # Never fail tests on trace capture fallback.
+        execution_trace = []
+        db_writes = []
 
     emitter.emit_case(
         case_id=case_id,
@@ -262,13 +317,37 @@ def pytest_runtest_makereport(item, call):
             "message": str(report.longrepr) if report.failed else "Assertion passed",
         }],
         api_calls_used=api_calls_used,
+        execution_trace=execution_trace,
+        db_writes=db_writes,
     )
+
+
+def pytest_runtest_setup(item):
+    """Initialize per-test runtime capture context for stagetest emission."""
+    if not _EMIT_ENABLED:
+        return
+    uc_info = _resolve_uc_info(item)
+    if uc_info is None:
+        return
+    uc_id, _stage = uc_info
+    case_id = _case_id_from_item(item)
+    operation_name = _resolve_operation_name(item, uc_id, case_id)
+    try:
+        from tests.uat.stagetest_trace_capture import start_case_capture
+
+        start_case_capture(case_id=case_id, uc_id=uc_id, operation_name=operation_name)
+    except Exception:
+        # Do not block test execution on trace capture setup.
+        return
 
 
 def pytest_sessionstart(session):
     """Initialize emitter on session object for hook access."""
     if _EMIT_ENABLED:
+        from tests.uat.stagetest_trace_capture import install_runtime_hooks
         from tests.uat.stagetest_artifacts import StagetestEmitter
+
+        install_runtime_hooks()
         session._stagetest_emitter = StagetestEmitter()
 
 

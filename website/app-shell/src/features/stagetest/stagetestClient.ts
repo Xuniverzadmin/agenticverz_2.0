@@ -36,6 +36,32 @@ export interface ApiCallUsed {
   duration_ms: number;
 }
 
+export interface ExecutionTraceEvent {
+  seq: number;
+  ts_utc: string;
+  event_type: string;
+  layer: string;
+  component: string;
+  operation: string;
+  trigger: string;
+  status: string;
+  detail: Record<string, unknown>;
+}
+
+export interface DbWriteEvent {
+  seq: number;
+  ts_utc: string;
+  layer: string;
+  component: string;
+  operation: string;
+  table: string;
+  sql_op: string;
+  rowcount: number;
+  statement_fingerprint: string;
+  success: boolean;
+  detail: Record<string, unknown>;
+}
+
 export interface CaseDetail {
   run_id: string;
   case_id: string;
@@ -54,6 +80,8 @@ export interface CaseDetail {
   signature: string;
   evidence_files: string[];
   api_calls_used?: ApiCallUsed[];
+  execution_trace?: ExecutionTraceEvent[];
+  db_writes?: DbWriteEvent[];
 }
 
 export interface RunSummary {
