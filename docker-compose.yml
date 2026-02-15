@@ -33,6 +33,8 @@ services:
       - ./backend/app/auth:/app/app/auth:ro
       # PIN-391: Mount design folder for RBAC_RULES.yaml runtime access
       - ./design:/design:ro
+      # Stagetest artifacts (read-only, host-emitted)
+      - ./backend/artifacts:/app/artifacts:ro
     environment:
       # NOTE: Using Neon PostgreSQL (managed, pooled) - M8 migration
       DATABASE_URL: ${DATABASE_URL}

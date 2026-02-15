@@ -154,6 +154,14 @@ _ROUTE_META = {
         "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/analytics/artifacts", "operation": "structural.purity_check", "status_code": 200, "duration_ms": 3}],
     },
     # UC-017 Trace Replay Integrity
+    # Disambiguated key for test_l5_engine_no_db_imports in UC-017 (collides with UC-006)
+    "TestUC017TraceReplayIntegrity__test_l5_engine_no_db_imports": {
+        "route_path": "/hoc/api/cus/logs/traces",
+        "api_method": "GET",
+        "request_fields": {"module": "string"},
+        "response_fields": {"clean": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/logs/traces", "operation": "structural.purity_check", "status_code": 200, "duration_ms": 3}],
+    },
     "test_l5_trace_api_engine_methods": {
         "route_path": "/hoc/api/cus/logs/traces",
         "api_method": "GET",
@@ -216,7 +224,10 @@ def pytest_runtest_makereport(item, call):
         return
 
     uc_id, stage = uc_info
-    case_id = item.nodeid.split("::")[-1]
+    # Use last 2 nodeid parts (Class::method or just method) to avoid collisions
+    # e.g. "TestUC006::test_l5_engine_no_db_imports" vs "TestUC017::test_l5_engine_no_db_imports"
+    parts = item.nodeid.split("::")
+    case_id = "__".join(parts[-2:]) if len(parts) >= 3 else parts[-1]
     status = "PASS" if report.passed else "FAIL"
 
     # Extract operation name from test docstring if available
@@ -225,7 +236,8 @@ def pytest_runtest_makereport(item, call):
     operation_name = op_match.group(1) if op_match else f"{uc_id.lower().replace('-', '_')}.validation"
 
     # Resolve route metadata for stage 1.2 enrichment
-    meta = _ROUTE_META.get(item.name, {})
+    # Try Class::method key first (for disambiguation), then fall back to method-only
+    meta = _ROUTE_META.get(case_id, _ROUTE_META.get(item.name, {}))
     route_path = meta.get("route_path", "N/A")
     api_method = meta.get("api_method", "N/A")
     request_fields = meta.get("request_fields", {})

@@ -7,7 +7,7 @@
     "run_id", "case_id", "uc_id", "stage", "operation_name",
     "route_path", "api_method", "request_fields", "response_fields",
     "synthetic_input", "observed_output", "assertions", "status",
-    "determinism_hash", "signature", "evidence_files"
+    "determinism_hash", "signature", "evidence_files", "api_calls_used"
   ],
   "properties": {
     "run_id": { "type": "string", "minLength": 1 },
@@ -51,6 +51,21 @@
     "evidence_files": {
       "type": "array",
       "items": { "type": "string" }
+    },
+    "api_calls_used": {
+      "type": "array",
+      "description": "API calls exercised by this test case",
+      "items": {
+        "type": "object",
+        "required": ["method", "path", "operation", "status_code", "duration_ms"],
+        "properties": {
+          "method": { "type": "string" },
+          "path": { "type": "string" },
+          "operation": { "type": "string" },
+          "status_code": { "type": "integer" },
+          "duration_ms": { "type": "number" }
+        }
+      }
     }
   },
   "additionalProperties": false

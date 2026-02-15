@@ -48,24 +48,30 @@
 ## 3. Pinned-Run Gate Proof
 
 ```
-PINNED_RUN_ID=20260215T151252Z
-emit_exit=0 (5 passed)
-check_exit=0 (15/15 checks)
-GATE: PASSED (deterministic, pinned run_id=20260215T151252Z)
+PINNED_RUN_ID=20260215T164112Z
+emit_exit=0 (21 passed)
+check_exit=0 (31/31 checks)
+GATE: 20 PASS, 1 FAIL (Playwright Chromium missing), 1 WARN (non-blocking)
 ```
 
-Gate stages in `hoc_uc_validation_uat_gate.sh`:
+Gate stages in `hoc_uc_validation_uat_gate.sh` (re-verified 2026-02-15T16:41Z after findings remediation):
 
 | Stage | Result |
 |-------|--------|
 | Stagetest: Route Prefix Guard | PASS (0 forbidden refs) |
 | Stagetest: API Structural Tests | PASS (8 tests) |
 | Stagetest: Governance Tests | PASS (3 tests) |
-| Stagetest: Emit Fresh Run | PASS (run_id=20260215T151252Z) |
-| Stagetest: Artifact Integrity (pinned) | PASS (15/15 checks, `--run-id 20260215T151252Z`) |
+| Stagetest: Emit Fresh Run | PASS (run_id=20260215T164112Z, 21 cases) |
+| Stagetest: Artifact Integrity (pinned) | PASS (31/31 checks, `--run-id 20260215T164112Z`) |
 | Stagetest: Runtime API Tests | PASS (10 tests) |
 
 **Key change:** `--latest-run` replaced by `--run-id $PINNED_RUN_ID` — gate is now deterministic and self-contained.
+
+**Post-audit fixes (2026-02-15T16:39Z):**
+- V3 taskpack doc added to route-guard ALLOW_FILES (Finding #1)
+- case_id now includes Class prefix to prevent collision (Finding #2, 21 unique files)
+- `stagetest_artifact_schema.json` synced with `api_calls_used` field (Finding #4)
+- Gate re-verified: all stagetest stages PASS
 
 ---
 
@@ -128,7 +134,9 @@ All 21 cases emitted across 6 UCs:
 - UC-017: 3 cases (trace replay)
 - UC-032: 3 cases (redaction export)
 
-Strict artifact check: **30/30 checks passed** (all cases validated for metadata completeness + `api_calls_used`)
+Strict artifact check: **31/31 checks passed** (21 unique case files, all validated for metadata completeness + `api_calls_used`)
+
+**Post-audit fix:** case_id now includes `Class__method` to prevent filename collisions (was `method` only, causing 20 unique files for 21 cases).
 
 ---
 
