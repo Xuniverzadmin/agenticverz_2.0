@@ -41,7 +41,15 @@
   "required_data_testids": [
     "stagetest-page",
     "stagetest-stats",
-    "stagetest-run-list"
+    "stagetest-run-list",
+    "api-request-fields-table",
+    "api-response-fields-table",
+    "synthetic-input-table",
+    "produced-output-table",
+    "apis-used-table",
+    "assertions-table",
+    "determinism-hash",
+    "signature"
   ],
   "required_components": [
     "StagetestPage.tsx",

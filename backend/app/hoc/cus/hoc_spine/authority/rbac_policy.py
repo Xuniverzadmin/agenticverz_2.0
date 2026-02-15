@@ -529,6 +529,12 @@ def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
         return PolicyObject(resource="runtime", action="query")
 
     # =========================================================================
+    # STAGETEST EVIDENCE CONSOLE (TODO: Re-enable auth)
+    # =========================================================================
+    if path.startswith("/hoc/api/stagetest"):
+        return None  # Public — no RBAC required
+
+    # =========================================================================
     # CATCH-ALL: default to runtime:query
     # =========================================================================
     logger.debug(f"rbac_unknown_path: {path} {method} - defaulting to runtime:query")

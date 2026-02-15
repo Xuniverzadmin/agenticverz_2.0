@@ -28,6 +28,14 @@ export interface CaseSummary {
   determinism_hash: string;
 }
 
+export interface ApiCallUsed {
+  method: string;
+  path: string;
+  operation: string;
+  status_code: number;
+  duration_ms: number;
+}
+
 export interface CaseDetail {
   run_id: string;
   case_id: string;
@@ -45,6 +53,7 @@ export interface CaseDetail {
   determinism_hash: string;
   signature: string;
   evidence_files: string[];
+  api_calls_used?: ApiCallUsed[];
 }
 
 export interface RunSummary {

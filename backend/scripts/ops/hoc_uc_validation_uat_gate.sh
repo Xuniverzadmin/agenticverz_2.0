@@ -98,6 +98,49 @@ run_stage "UAT: UC-032 Redaction Export Safety" \
     python3 -m pytest tests/uat/test_uc032_redaction_export_safety.py -v --tb=short
 
 # ============================================================
+# STAGE 3.5: Stagetest Evidence Pipeline (deterministic pinned run)
+# ============================================================
+
+run_stage "Stagetest: Route Prefix Guard" \
+    python3 scripts/verification/stagetest_route_prefix_guard.py
+
+run_stage "Stagetest: API Structural Tests" \
+    python3 -m pytest tests/api/test_stagetest_read_api.py -v --tb=short
+
+run_stage "Stagetest: Governance Tests" \
+    python3 -m pytest tests/governance/t4/test_stagetest_route_prefix_guard.py -v --tb=short
+
+# Deterministic emission: generate a fresh run and capture its run_id
+echo ""
+echo "============================================================"
+echo "STAGE: Stagetest: Emit Fresh Run"
+echo "============================================================"
+STAGETEST_EMIT=1 python3 -m pytest tests/uat/test_uc002_onboarding_flow.py -q 2>&1
+EMIT_EXIT=$?
+if [ "$EMIT_EXIT" -ne 0 ]; then
+    RESULTS+=("FAIL  Stagetest: Emit Fresh Run (exit $EMIT_EXIT)")
+    FAIL=$((FAIL + 1))
+else
+    # Capture the most recent run_id (newest directory name)
+    PINNED_RUN_ID="$(ls -1d artifacts/stagetest/*/ 2>/dev/null | sort | tail -1 | xargs -I{} basename {})"
+    if [ -z "$PINNED_RUN_ID" ]; then
+        RESULTS+=("FAIL  Stagetest: Emit Fresh Run (no run_id found)")
+        FAIL=$((FAIL + 1))
+    else
+        RESULTS+=("PASS  Stagetest: Emit Fresh Run (run_id=$PINNED_RUN_ID)")
+        PASS=$((PASS + 1))
+        echo "PINNED_RUN_ID=$PINNED_RUN_ID"
+
+        # Validate that exact run id (not --latest-run)
+        run_stage "Stagetest: Artifact Integrity (pinned run_id=$PINNED_RUN_ID)" \
+            python3 scripts/verification/stagetest_artifact_check.py --strict --run-id "$PINNED_RUN_ID"
+    fi
+fi
+
+run_stage "Stagetest: Runtime API Tests" \
+    python3 -m pytest tests/api/test_stagetest_runtime_api.py -v --tb=short
+
+# ============================================================
 # STAGE 4: App-Shell Guardrails
 # ============================================================
 

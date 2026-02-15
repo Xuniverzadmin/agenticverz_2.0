@@ -15,7 +15,7 @@ normalized dicts that the router maps to response schemas.
 import json
 from pathlib import Path
 
-ARTIFACTS_ROOT = Path(__file__).resolve().parents[4] / "artifacts" / "stagetest"
+ARTIFACTS_ROOT = Path(__file__).resolve().parents[5] / "artifacts" / "stagetest"
 
 
 def list_runs() -> list[dict]:

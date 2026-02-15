@@ -202,11 +202,11 @@ export default function StagetestPage() {
 
       {/* API Endpoint Snapshot (collapsed by default) */}
       {apis.length > 0 && (
-        <details className="mt-6" data-testid="api-snapshot">
-          <summary className="text-sm text-gray-400 cursor-pointer hover:text-gray-200">
+        <div className="mt-6" data-testid="api-snapshot">
+          <h2 className="text-sm text-gray-400 mb-2">
             API Endpoint Snapshot ({apis.length} endpoints)
-          </summary>
-          <div className="mt-2 bg-gray-800/30 rounded-lg p-4 overflow-x-auto">
+          </h2>
+          <div className="bg-gray-800/30 rounded-lg p-4 overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-700">
@@ -226,7 +226,7 @@ export default function StagetestPage() {
               </tbody>
             </table>
           </div>
-        </details>
+        </div>
       )}
     </div>
   );

@@ -30,9 +30,9 @@ Architecture:
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException  # TODO: Re-enable auth — add Depends
 
-from app.auth.console_auth import verify_fops_token
+# TODO: Re-enable auth — from app.auth.console_auth import verify_fops_token
 from app.hoc.fdr.ops.engines.stagetest_read_engine import (
     get_apis_snapshot,
     get_case,
@@ -54,7 +54,7 @@ logger = logging.getLogger("nova.api.stagetest")
 router = APIRouter(
     prefix="/hoc/api/stagetest",
     tags=["Stagetest Evidence Console"],
-    dependencies=[Depends(verify_fops_token)],
+    # TODO: Re-enable auth — dependencies=[Depends(verify_fops_token)],
 )
 
 

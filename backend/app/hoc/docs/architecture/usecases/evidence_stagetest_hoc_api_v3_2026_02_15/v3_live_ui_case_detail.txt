@@ -1,0 +1,16 @@
+STATUS: BLOCKED (screenshot requires authenticated browser session)
+
+Source-Level Proof (substitute for screenshot):
+
+1. StagetestCaseDetail.tsx renders all 5 required table sections
+2. Built JS chunk (StagetestPage-*.js) contains all 5 testids:
+   - api-request-fields-table: PRESENT
+   - api-response-fields-table: PRESENT
+   - synthetic-input-table: PRESENT
+   - produced-output-table: PRESENT
+   - apis-used-table: PRESENT
+3. Playwright spec test 9 asserts all testids present in source
+4. Vite build succeeds (12.87 kB chunk)
+5. stagetest.agenticverz.com serves the built JS (HTTP 200)
+
+Mitigation: Open https://stagetest.agenticverz.com/fops/stagetest in authenticated browser to capture screenshot manually.

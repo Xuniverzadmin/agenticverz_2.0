@@ -20,6 +20,14 @@ class AssertionItem(BaseModel):
     message: str
 
 
+class ApiCallUsed(BaseModel):
+    method: str
+    path: str
+    operation: str
+    status_code: int
+    duration_ms: float
+
+
 class CaseSummary(BaseModel):
     case_id: str
     uc_id: str
@@ -46,6 +54,7 @@ class CaseDetail(BaseModel):
     determinism_hash: str
     signature: str
     evidence_files: list[str]
+    api_calls_used: list[ApiCallUsed] = []
 
 
 class RunSummary(BaseModel):

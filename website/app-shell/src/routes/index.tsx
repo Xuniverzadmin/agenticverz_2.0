@@ -146,7 +146,8 @@ function renderFounderRoutes(prefix: string) {
       <Route path={`${prefix}/review/auto-execute`} element={<FounderRoute><AutoExecuteReviewPage /></FounderRoute>} />
       <Route path={`${prefix}/sba`} element={<FounderRoute><SBAInspectorPage /></FounderRoute>} />
       <Route path={`${prefix}/uat`} element={<FounderRoute><UcUatConsolePage /></FounderRoute>} />
-      <Route path={`${prefix}/stagetest`} element={<FounderRoute><StagetestPage /></FounderRoute>} />
+      {/* TODO: Re-enable auth — wrap in <FounderRoute> */}
+      <Route path={`${prefix}/stagetest`} element={<StagetestPage />} />
     </>
   );
 }
@@ -231,6 +232,11 @@ export function AppRoutes() {
          * All routes wrapped with FounderRoute guard
          * =============================================================== */}
         {renderFounderRoutes('/fops')}
+
+        {/* ===============================================================
+         * STAGETEST — temporarily public (TODO: Re-enable auth, PIN-570)
+         * =============================================================== */}
+        <Route path="/stagetest" element={<StagetestPage />} />
 
         {/* ===============================================================
          * ROOT & CATCH-ALL

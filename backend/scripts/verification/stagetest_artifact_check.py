@@ -53,7 +53,7 @@ def _validate_required_fields(case_data: dict, schema: dict) -> list[str]:
     return errors
 
 
-def _validate_case(case_data: dict, schema: dict, strict: bool) -> list[str]:
+def _validate_case(case_data: dict, schema: dict, strict: bool, release_sig: bool = False) -> list[str]:
     """Validate a single case artifact."""
     errors = []
 
@@ -62,12 +62,30 @@ def _validate_case(case_data: dict, schema: dict, strict: bool) -> list[str]:
     if errors:
         return errors  # Can't continue without required fields
 
-    # Stage 1.2 must have non-empty synthetic_input and observed_output
+    # Stage 1.2 must have non-empty fields
     if case_data.get("stage") == "1.2":
         if not case_data.get("synthetic_input"):
             errors.append("Stage 1.2 case has empty synthetic_input")
         if not case_data.get("observed_output"):
             errors.append("Stage 1.2 case has empty observed_output")
+        if not case_data.get("request_fields"):
+            errors.append("Stage 1.2 case has empty request_fields")
+        if not case_data.get("response_fields"):
+            errors.append("Stage 1.2 case has empty response_fields")
+        # Reject placeholder N/A values
+        if case_data.get("route_path") in ("N/A", "", None):
+            errors.append("Stage 1.2 case has invalid route_path (N/A or empty)")
+        if case_data.get("api_method") in ("N/A", "", None):
+            errors.append("Stage 1.2 case has invalid api_method (N/A or empty)")
+        # api_calls_used must be a non-empty list with required fields
+        api_calls = case_data.get("api_calls_used")
+        if not api_calls or not isinstance(api_calls, list):
+            errors.append("Stage 1.2 case has empty or missing api_calls_used")
+        else:
+            for i, call in enumerate(api_calls):
+                for fld in ("method", "path", "operation", "status_code", "duration_ms"):
+                    if fld not in call:
+                        errors.append(f"api_calls_used[{i}] missing field: {fld}")
 
     # Non-empty assertions
     if not case_data.get("assertions"):
@@ -83,6 +101,8 @@ def _validate_case(case_data: dict, schema: dict, strict: bool) -> list[str]:
     sig = case_data.get("signature", "")
     if strict and sig == "":
         errors.append("Missing signature field")
+    if strict and sig == "UNSIGNED_LOCAL" and release_sig:
+        errors.append("Release signature required but found UNSIGNED_LOCAL")
 
     # Status must be valid
     if case_data.get("status") not in ("PASS", "FAIL", "SKIPPED"):
@@ -91,7 +111,7 @@ def _validate_case(case_data: dict, schema: dict, strict: bool) -> list[str]:
     return errors
 
 
-def validate_run(run_dir: Path, strict: bool = False) -> dict:
+def validate_run(run_dir: Path, strict: bool = False, release_sig: bool = False) -> dict:
     """Validate a complete stagetest run directory."""
     checks_passed = 0
     checks_failed = 0
@@ -147,7 +167,7 @@ def validate_run(run_dir: Path, strict: bool = False) -> dict:
             for cf in case_files:
                 try:
                     case_data = json.loads(cf.read_text())
-                    case_errors = _validate_case(case_data, schema, strict)
+                    case_errors = _validate_case(case_data, schema, strict, release_sig)
                     if case_errors:
                         checks_failed += 1
                         for e in case_errors:
@@ -186,6 +206,8 @@ def main():
     parser.add_argument("--strict", action="store_true", help="Strict mode (all fields required)")
     parser.add_argument("--latest-run", action="store_true", help="Validate the latest run")
     parser.add_argument("--run-id", type=str, help="Specific run ID to validate")
+    parser.add_argument("--release-signature-required", action="store_true",
+                        help="Reject UNSIGNED_LOCAL signatures (release gate)")
     args = parser.parse_args()
 
     print("Stagetest Artifact Integrity Check")
@@ -214,7 +236,7 @@ def main():
     print(f"Strict mode: {args.strict}")
     print()
 
-    result = validate_run(run_dir, strict=args.strict)
+    result = validate_run(run_dir, strict=args.strict, release_sig=args.release_signature_required)
 
     print(f"Checks passed: {result['checks_passed']}")
     print(f"Checks failed: {result['checks_failed']}")

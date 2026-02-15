@@ -93,21 +93,55 @@ export function StagetestCaseDetail({ runId, caseId, onBack }: Props) {
 
       {/* API Fields */}
       <Section title="Request Fields">
-        <JsonBlock data={detail.request_fields} testId="request-fields" />
+        <KeyValueTable data={detail.request_fields} testId="api-request-fields-table" />
       </Section>
 
       <Section title="Response Fields">
-        <JsonBlock data={detail.response_fields} testId="response-fields" />
+        <KeyValueTable data={detail.response_fields} testId="api-response-fields-table" />
       </Section>
 
       {/* Synthetic Input */}
       <Section title="Synthetic Input">
-        <JsonBlock data={detail.synthetic_input} testId="synthetic-input" />
+        <KeyValueTable data={detail.synthetic_input} testId="synthetic-input-table" />
       </Section>
 
-      {/* Observed Output */}
-      <Section title="Observed Output">
-        <JsonBlock data={detail.observed_output} testId="observed-output" />
+      {/* Produced Output */}
+      <Section title="Produced Output">
+        <KeyValueTable data={detail.observed_output} testId="produced-output-table" />
+      </Section>
+
+      {/* APIs Used */}
+      <Section title={`APIs Used (${detail.api_calls_used?.length ?? 0})`}>
+        {(!detail.api_calls_used || detail.api_calls_used.length === 0) ? (
+          <p className="text-gray-500 text-xs">No API calls recorded.</p>
+        ) : (
+          <table className="w-full text-xs" data-testid="apis-used-table">
+            <thead>
+              <tr className="text-left text-gray-500 border-b border-gray-700">
+                <th className="pb-1 pr-3">Method</th>
+                <th className="pb-1 pr-3">Path</th>
+                <th className="pb-1 pr-3">Operation</th>
+                <th className="pb-1 pr-3">Status</th>
+                <th className="pb-1">Duration (ms)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {detail.api_calls_used.map((call, i) => (
+                <tr key={i} className="border-b border-gray-800">
+                  <td className="py-1 pr-3 font-mono text-blue-400">{call.method}</td>
+                  <td className="py-1 pr-3 font-mono text-gray-300">{call.path}</td>
+                  <td className="py-1 pr-3 text-gray-400">{call.operation}</td>
+                  <td className="py-1 pr-3">
+                    <span className={call.status_code < 400 ? 'text-green-400' : 'text-red-400'}>
+                      {call.status_code}
+                    </span>
+                  </td>
+                  <td className="py-1 font-mono text-gray-400">{call.duration_ms}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </Section>
 
       {/* Assertions */}
@@ -189,14 +223,29 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function JsonBlock({ data, testId }: { data: Record<string, unknown>; testId: string }) {
-  const json = JSON.stringify(data, null, 2);
+function KeyValueTable({ data, testId }: { data: Record<string, unknown>; testId: string }) {
+  const entries = Object.entries(data);
+  if (entries.length === 0) {
+    return <p className="text-gray-500 text-xs" data-testid={testId}>No data.</p>;
+  }
   return (
-    <pre
-      className="bg-gray-900 rounded p-2 text-xs text-gray-300 overflow-x-auto max-h-48"
-      data-testid={testId}
-    >
-      {json}
-    </pre>
+    <table className="w-full text-xs" data-testid={testId}>
+      <thead>
+        <tr className="text-left text-gray-500 border-b border-gray-700">
+          <th className="pb-1 pr-4">Field</th>
+          <th className="pb-1">Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {entries.map(([key, val]) => (
+          <tr key={key} className="border-b border-gray-800">
+            <td className="py-1 pr-4 font-mono text-gray-400">{key}</td>
+            <td className="py-1 font-mono text-gray-300">
+              {typeof val === 'object' ? JSON.stringify(val) : String(val)}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }

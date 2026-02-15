@@ -1,0 +1,9 @@
+{
+    "status": "BLOCKED",
+    "reason": "Founder auth (Clerk JWT via verify_fops_token) required. No founder JWT available in CLI context.",
+    "endpoint": "GET /hoc/api/stagetest/runs",
+    "unauthenticated_response": {"error": "missing_auth", "message": "Authentication required"},
+    "localhost_status": 401,
+    "remote_status": 401,
+    "mitigation": "Authenticate via Clerk in browser at https://stagetest.agenticverz.com/fops/stagetest"
+}

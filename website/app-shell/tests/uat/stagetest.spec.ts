@@ -269,4 +269,39 @@ test.describe('Stagetest Evidence Console', () => {
     expect(source).toContain('/hoc/api/stagetest');
     expect(source).not.toContain('/api/v1/stagetest');
   });
+
+  // ========================================================================
+  // 9. Case Detail Uses Table Testids (v2 W5 — UI field/table visibility)
+  // ========================================================================
+
+  test('StagetestCaseDetail uses explicit table testids instead of JSON blocks', () => {
+    const detailPath = path.resolve(
+      __dirname,
+      '../../src/features/stagetest/StagetestCaseDetail.tsx',
+    );
+    const source = fs.readFileSync(detailPath, 'utf8');
+
+    // Required table testids (must be present) — V3 requires all 5 table sections
+    const requiredTestids = [
+      'api-request-fields-table',
+      'api-response-fields-table',
+      'synthetic-input-table',
+      'produced-output-table',
+      'apis-used-table',
+      'assertions-table',
+      'determinism-hash',
+      'signature',
+    ];
+
+    for (const tid of requiredTestids) {
+      expect(
+        source,
+        `Missing data-testid="${tid}" in StagetestCaseDetail.tsx`,
+      ).toContain(`"${tid}"`);
+    }
+
+    // Verify KeyValueTable is used (not JsonBlock) for field display
+    expect(source).toContain('KeyValueTable');
+    expect(source).not.toContain('JsonBlock');
+  });
 });

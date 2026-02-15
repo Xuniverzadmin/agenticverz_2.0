@@ -537,6 +537,9 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-565](PIN-565-uat-findings-clearance-detour-3-findings-closed-e1-e5.md) | **UAT Findings Clearance Detour — 3 Findings Closed (E1-E5)** | Architecture | **✅ COMPLETE** | 2026-02-15 |
 | [PIN-566](PIN-566-uat-hardening-reality-closure-and-ops-literature-canonicalization.md) | **UAT Hardening Reality Closure + Ops Literature Canonicalization** | Architecture / Validation / Documentation | **✅ COMPLETE** | 2026-02-15 |
 | [PIN-567](PIN-567-uc-testcase-generator-skill-lazy-bootstrap-reference.md) | **UC Testcase Generator Skill + Lazy Bootstrap Reference** | Architecture / Skills / Validation | **✅ COMPLETE** | 2026-02-15 |
+| [PIN-568](PIN-568-stage-1112-taskpack-execution-1414-pass-292-checks-3-findings-remediated.md) | **Stage 1.1/1.2 Taskpack Execution — 14/14 PASS, 292 checks, 3 findings remediated** | Architecture | **✅ COMPLETE** | 2026-02-15 |
+| [PIN-569](PIN-569-pin-569-stagetest-hoc-api-evidence-console-w0-w6-complete-deployed-to-stagetestagenticverzcom.md) | **PIN-569: Stagetest HOC API Evidence Console — W0-W6 complete, deployed to stagetest.agenticverz.com** | Architecture | **✅ COMPLETE** | 2026-02-15 |
+| [PIN-570](PIN-570-stagetest-auth-bypass-temporary.md) | **Stagetest Auth Bypass (Temporary)** | Auth | **✅ COMPLETE** | 2026-02-15 |
 
 ---
 
@@ -1306,6 +1309,9 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-15 | **PIN-570 Stagetest Auth Bypass (Temporary)** - Created via memory_trail. |
+| 2026-02-15 | **PIN-569 PIN-569: Stagetest HOC API Evidence Console — W0-W6 complete, deployed to stagetest.agenticverz.com** - Created via memory_trail. |
+| 2026-02-15 | **PIN-568 Stage 1.1/1.2 Taskpack Execution — 14/14 PASS, 292 checks, 3 findings remediated** - Created via memory_trail. |
 | 2026-02-15 | **PIN-567 UC Testcase Generator Skill + Lazy Bootstrap Reference** - Created via memory_trail. |
 | 2026-02-15 | **PIN-566 UAT Hardening Reality Closure + Ops Literature Canonicalization** - Created via memory_trail. |
 | 2026-02-15 | **PIN-565 UAT Findings Clearance Detour — 3 Findings Closed (E1-E5)** - Created via memory_trail. |

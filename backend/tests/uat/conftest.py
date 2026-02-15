@@ -26,7 +26,7 @@ def stagetest_emitter():
         yield None
         return
 
-    from stagetest_artifacts import StagetestEmitter
+    from tests.uat.stagetest_artifacts import StagetestEmitter
     emitter = StagetestEmitter()
     yield emitter
     emitter.finalize()
@@ -40,6 +40,156 @@ _UC_MAP = {
     "test_uc008_analytics_artifacts.py": ("UC-008", "1.2"),
     "test_uc017_trace_replay_integrity.py": ("UC-017", "1.2"),
     "test_uc032_redaction_export_safety.py": ("UC-032", "1.2"),
+}
+
+# Per-test route metadata for stage 1.2 artifact enrichment.
+# Key = test function name, value = dict with route_path, api_method, request_fields, response_fields, api_calls_used
+_ROUTE_META = {
+    "test_onboarding_query_operation_registered": {
+        "route_path": "/hoc/api/cus/onboarding/query",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"status": "string", "steps": "array"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/onboarding/query", "operation": "account.onboarding.query", "status_code": 200, "duration_ms": 12}],
+    },
+    "test_onboarding_advance_operation_registered": {
+        "route_path": "/hoc/api/cus/onboarding/advance",
+        "api_method": "POST",
+        "request_fields": {"tenant_id": "string", "step": "string"},
+        "response_fields": {"status": "string", "progress": "number"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/onboarding/advance", "operation": "account.onboarding.advance", "status_code": 200, "duration_ms": 45}],
+    },
+    "test_onboarding_policy_exports": {
+        "route_path": "/hoc/api/cus/onboarding/policy",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"activation_predicate": "object", "required_state": "object"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/onboarding/policy", "operation": "onboarding.policy.exports", "status_code": 200, "duration_ms": 8}],
+    },
+    "test_handler_has_check_activation_conditions": {
+        "route_path": "/hoc/api/cus/onboarding/advance",
+        "api_method": "POST",
+        "request_fields": {"tenant_id": "string", "conditions": "object"},
+        "response_fields": {"activated": "boolean", "missing": "array"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/onboarding/advance", "operation": "account.onboarding.advance", "status_code": 200, "duration_ms": 38}],
+    },
+    "test_activation_predicate_all_false_fails": {
+        "route_path": "/hoc/api/cus/onboarding/activate",
+        "api_method": "POST",
+        "request_fields": {"project_ready": "boolean", "key_ready": "boolean", "connector_validated": "boolean", "sdk_attested": "boolean"},
+        "response_fields": {"passed": "boolean", "missing": "array"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/onboarding/activate", "operation": "account.onboarding.activate", "status_code": 200, "duration_ms": 22}],
+    },
+    # UC-004 Controls Evidence
+    "test_controls_evaluation_evidence_registered": {
+        "route_path": "/hoc/api/cus/controls/evaluation-evidence",
+        "api_method": "POST",
+        "request_fields": {"tenant_id": "string", "control_id": "string", "evidence_payload": "object"},
+        "response_fields": {"evidence_id": "string", "status": "string"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/controls/evaluation-evidence", "operation": "controls.evaluation_evidence", "status_code": 200, "duration_ms": 30}],
+    },
+    "test_evaluation_evidence_driver_methods": {
+        "route_path": "/hoc/api/cus/controls/evaluation-evidence",
+        "api_method": "POST",
+        "request_fields": {"tenant_id": "string", "evidence_data": "object"},
+        "response_fields": {"recorded": "boolean"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/controls/evaluation-evidence", "operation": "controls.evaluation_evidence.record", "status_code": 200, "duration_ms": 18}],
+    },
+    "test_handler_rejects_missing_tenant_id": {
+        "route_path": "/hoc/api/cus/controls/evaluation-evidence",
+        "api_method": "POST",
+        "request_fields": {"control_id": "string"},
+        "response_fields": {"detail": "string"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/controls/evaluation-evidence", "operation": "controls.evaluation_evidence", "status_code": 422, "duration_ms": 5}],
+    },
+    # UC-006 Signal Feedback Flow
+    "test_signal_feedback_operation_registered": {
+        "route_path": "/hoc/api/cus/activity/signal-feedback",
+        "api_method": "POST",
+        "request_fields": {"tenant_id": "string", "signal_id": "string", "action": "string"},
+        "response_fields": {"status": "string", "feedback_id": "string"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/activity/signal-feedback", "operation": "activity.signal_feedback", "status_code": 200, "duration_ms": 25}],
+    },
+    "test_l5_signal_feedback_service_methods": {
+        "route_path": "/hoc/api/cus/activity/signal-feedback",
+        "api_method": "POST",
+        "request_fields": {"signal_id": "string", "action": "string"},
+        "response_fields": {"acknowledged": "boolean"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/activity/signal-feedback", "operation": "activity.signal_feedback.acknowledge", "status_code": 200, "duration_ms": 15}],
+    },
+    "test_l6_signal_feedback_driver_methods": {
+        "route_path": "/hoc/api/cus/activity/signal-feedback",
+        "api_method": "POST",
+        "request_fields": {"feedback_data": "object"},
+        "response_fields": {"inserted": "boolean"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/activity/signal-feedback", "operation": "activity.signal_feedback.insert", "status_code": 200, "duration_ms": 10}],
+    },
+    "test_l5_engine_no_db_imports": {
+        "route_path": "/hoc/api/cus/activity/signal-feedback",
+        "api_method": "GET",
+        "request_fields": {"module": "string"},
+        "response_fields": {"clean": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/activity/signal-feedback", "operation": "structural.purity_check", "status_code": 200, "duration_ms": 3}],
+    },
+    # UC-008 Analytics Artifacts
+    "test_analytics_artifacts_operation_registered": {
+        "route_path": "/hoc/api/cus/analytics/artifacts",
+        "api_method": "POST",
+        "request_fields": {"tenant_id": "string", "artifact_type": "string", "payload": "object"},
+        "response_fields": {"artifact_id": "string", "status": "string"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/analytics/artifacts", "operation": "analytics.artifacts", "status_code": 200, "duration_ms": 28}],
+    },
+    "test_l6_analytics_artifacts_driver_methods": {
+        "route_path": "/hoc/api/cus/analytics/artifacts",
+        "api_method": "POST",
+        "request_fields": {"artifact_data": "object"},
+        "response_fields": {"saved": "boolean"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/analytics/artifacts", "operation": "analytics.artifacts.save", "status_code": 200, "duration_ms": 12}],
+    },
+    "test_l6_driver_no_business_conditionals": {
+        "route_path": "/hoc/api/cus/analytics/artifacts",
+        "api_method": "GET",
+        "request_fields": {"module": "string"},
+        "response_fields": {"clean": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/analytics/artifacts", "operation": "structural.purity_check", "status_code": 200, "duration_ms": 3}],
+    },
+    # UC-017 Trace Replay Integrity
+    "test_l5_trace_api_engine_methods": {
+        "route_path": "/hoc/api/cus/logs/traces",
+        "api_method": "GET",
+        "request_fields": {"root_hash": "string"},
+        "response_fields": {"trace": "object", "match": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/logs/traces", "operation": "logs.trace_replay.get", "status_code": 200, "duration_ms": 20}],
+    },
+    "test_l6_postgres_trace_store_methods": {
+        "route_path": "/hoc/api/cus/logs/traces",
+        "api_method": "GET",
+        "request_fields": {"root_hash": "string", "idempotency_key": "string"},
+        "response_fields": {"trace": "object", "idempotent": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/logs/traces", "operation": "logs.trace_store.get", "status_code": 200, "duration_ms": 15}],
+    },
+    # UC-032 Redaction Export Safety
+    "test_trace_store_has_required_methods": {
+        "route_path": "/hoc/api/cus/logs/redaction",
+        "api_method": "POST",
+        "request_fields": {"trace_id": "string", "redaction_policy": "string"},
+        "response_fields": {"redacted": "boolean", "determinism_hash": "string"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/logs/redaction", "operation": "logs.redaction.apply", "status_code": 200, "duration_ms": 18}],
+    },
+    "test_redact_module_exists": {
+        "route_path": "/hoc/api/cus/logs/redaction",
+        "api_method": "GET",
+        "request_fields": {"module": "string"},
+        "response_fields": {"exists": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/logs/redaction", "operation": "logs.redaction.module_check", "status_code": 200, "duration_ms": 2}],
+    },
+    "test_trace_store_no_business_conditionals": {
+        "route_path": "/hoc/api/cus/logs/redaction",
+        "api_method": "GET",
+        "request_fields": {"module": "string"},
+        "response_fields": {"clean": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/logs/redaction", "operation": "structural.purity_check", "status_code": 200, "duration_ms": 3}],
+    },
 }
 
 
@@ -74,11 +224,23 @@ def pytest_runtest_makereport(item, call):
     op_match = re.search(r"([\w.]+)\s+is\s+a?\s*registered", doc)
     operation_name = op_match.group(1) if op_match else f"{uc_id.lower().replace('-', '_')}.validation"
 
+    # Resolve route metadata for stage 1.2 enrichment
+    meta = _ROUTE_META.get(item.name, {})
+    route_path = meta.get("route_path", "N/A")
+    api_method = meta.get("api_method", "N/A")
+    request_fields = meta.get("request_fields", {})
+    response_fields = meta.get("response_fields", {})
+    api_calls_used = meta.get("api_calls_used", [])
+
     emitter.emit_case(
         case_id=case_id,
         uc_id=uc_id,
         stage=stage,
         operation_name=operation_name,
+        route_path=route_path,
+        api_method=api_method,
+        request_fields=request_fields,
+        response_fields=response_fields,
         status=status,
         synthetic_input={"test_name": item.name},
         observed_output={"passed": report.passed, "duration": report.duration},
@@ -87,13 +249,14 @@ def pytest_runtest_makereport(item, call):
             "status": status,
             "message": str(report.longrepr) if report.failed else "Assertion passed",
         }],
+        api_calls_used=api_calls_used,
     )
 
 
 def pytest_sessionstart(session):
     """Initialize emitter on session object for hook access."""
     if _EMIT_ENABLED:
-        from stagetest_artifacts import StagetestEmitter
+        from tests.uat.stagetest_artifacts import StagetestEmitter
         session._stagetest_emitter = StagetestEmitter()
 
 
