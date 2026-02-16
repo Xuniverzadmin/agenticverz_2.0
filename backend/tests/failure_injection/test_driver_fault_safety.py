@@ -564,3 +564,366 @@ class TestPolicyFaultInjection:
 
         assert result["error"] is False
         assert result["data"]["status"] == "inactive"
+
+
+# ===================================================================
+# Incident-specific fault-injection tests (INC-DELTA-05)
+# ===================================================================
+
+_VALID_INCIDENT_SEVERITIES = ("CRITICAL", "HIGH", "MEDIUM", "LOW")
+
+
+def _safe_incident_create(
+    driver: _MockDriver, session: _MockSession,
+    tenant_id: str | None, severity: str | None,
+) -> dict:
+    """Simulates an L4 handler for incident.create with field validation."""
+    if not tenant_id:
+        return {
+            "error": True,
+            "code": "MISSING_TENANT",
+            "message": "tenant_id is required but missing",
+            "safe": True,
+        }
+    if not severity:
+        return {
+            "error": True,
+            "code": "MISSING_SEVERITY",
+            "message": "severity is required but missing",
+            "safe": True,
+        }
+    if severity not in _VALID_INCIDENT_SEVERITIES:
+        return {
+            "error": True,
+            "code": "INVALID_SEVERITY",
+            "message": f"severity must be one of {_VALID_INCIDENT_SEVERITIES}, got '{severity}'",
+            "safe": True,
+        }
+    return _safe_call(driver, session, tenant_id=tenant_id, severity=severity)
+
+
+def _safe_incident_resolve(
+    driver: _MockDriver, session: _MockSession,
+    incident_exists: bool, current_status: str | None,
+) -> dict:
+    """Simulates an L4 handler for incident.resolve with existence + status validation."""
+    if not incident_exists:
+        return {
+            "error": True,
+            "code": "NOT_FOUND",
+            "message": "incident does not exist",
+            "safe": True,
+        }
+    if current_status == "RESOLVED":
+        return {
+            "error": True,
+            "code": "CONFLICT",
+            "message": "incident is already resolved; cannot resolve again",
+            "safe": True,
+        }
+    return _safe_call(driver, session, current_status=current_status)
+
+
+class TestIncidentFaultInjection:
+    """INC-DELTA-05: Incident-domain-specific fault-injection proofs."""
+
+    # ---------------------------------------------------------------
+    # IFI-001  Incident driver DB timeout
+    # ---------------------------------------------------------------
+    def test_incident_driver_timeout_returns_safe_error(self):
+        """Incident driver raises TimeoutError → structured error, no crash."""
+        driver = _MockDriver(side_effect=TimeoutError("incident table lock timeout"))
+        session = _MockSession()
+
+        result = _safe_incident_create(driver, session, tenant_id="t-1", severity="HIGH")
+
+        assert result["error"] is True
+        assert result["code"] == "TIMEOUT"
+        assert result["safe"] is True
+        assert result["retryable"] is True
+        assert session.rolled_back is True
+
+    # ---------------------------------------------------------------
+    # IFI-002  Incident create missing tenant_id
+    # ---------------------------------------------------------------
+    def test_incident_create_missing_tenant_returns_structured_error(self):
+        """incident.create with no tenant_id → structured error, not crash."""
+        driver = _MockDriver(return_value={"incident_id": "inc-1"})
+        session = _MockSession()
+
+        result = _safe_incident_create(driver, session, tenant_id=None, severity="HIGH")
+
+        assert result["error"] is True
+        assert result["code"] == "MISSING_TENANT"
+        assert "tenant_id" in result["message"]
+        assert result["safe"] is True
+        assert session.begun is False
+
+    # ---------------------------------------------------------------
+    # IFI-003  Incident create missing severity
+    # ---------------------------------------------------------------
+    def test_incident_create_missing_severity_returns_structured_error(self):
+        """incident.create with no severity → structured error, not crash."""
+        driver = _MockDriver(return_value={"incident_id": "inc-1"})
+        session = _MockSession()
+
+        result = _safe_incident_create(driver, session, tenant_id="t-1", severity=None)
+
+        assert result["error"] is True
+        assert result["code"] == "MISSING_SEVERITY"
+        assert "severity" in result["message"]
+        assert result["safe"] is True
+        assert session.begun is False
+
+    # ---------------------------------------------------------------
+    # IFI-004  Incident create invalid severity
+    # ---------------------------------------------------------------
+    def test_incident_create_invalid_severity_returns_structured_error(self):
+        """incident.create with invalid severity → structured error."""
+        driver = _MockDriver(return_value={"incident_id": "inc-1"})
+        session = _MockSession()
+
+        result = _safe_incident_create(driver, session, tenant_id="t-1", severity="EXTREME")
+
+        assert result["error"] is True
+        assert result["code"] == "INVALID_SEVERITY"
+        assert "EXTREME" in result["message"]
+        assert result["safe"] is True
+        assert session.begun is False
+
+    # ---------------------------------------------------------------
+    # IFI-005  Incident resolve on non-existent
+    # ---------------------------------------------------------------
+    def test_incident_resolve_non_existent_returns_not_found(self):
+        """incident.resolve on non-existent → NOT_FOUND."""
+        driver = _MockDriver(return_value={"incident_id": "inc-1"})
+        session = _MockSession()
+
+        result = _safe_incident_resolve(
+            driver, session, incident_exists=False, current_status="OPEN"
+        )
+
+        assert result["error"] is True
+        assert result["code"] == "NOT_FOUND"
+        assert "does not exist" in result["message"]
+        assert result["safe"] is True
+        assert session.begun is False
+
+    # ---------------------------------------------------------------
+    # IFI-006  Incident resolve already resolved (stale/concurrent)
+    # ---------------------------------------------------------------
+    def test_incident_resolve_already_resolved_returns_conflict(self):
+        """incident.resolve on already-resolved → CONFLICT."""
+        driver = _MockDriver(return_value={"incident_id": "inc-1"})
+        session = _MockSession()
+
+        result = _safe_incident_resolve(
+            driver, session, incident_exists=True, current_status="RESOLVED"
+        )
+
+        assert result["error"] is True
+        assert result["code"] == "CONFLICT"
+        assert "already resolved" in result["message"]
+        assert result["safe"] is True
+        assert session.begun is False
+
+    # ---------------------------------------------------------------
+    # IFI-007  Incident driver connection refused
+    # ---------------------------------------------------------------
+    def test_incident_driver_connection_refused(self):
+        """Incident driver raises ConnectionRefusedError → SERVICE_UNAVAILABLE."""
+        driver = _MockDriver(side_effect=ConnectionRefusedError("port 5432"))
+        session = _MockSession()
+
+        result = _safe_incident_create(driver, session, tenant_id="t-1", severity="HIGH")
+
+        assert result["error"] is True
+        assert result["code"] == "SERVICE_UNAVAILABLE"
+        assert result["safe"] is True
+        assert result["retryable"] is True
+        assert session.rolled_back is True
+
+    # ---------------------------------------------------------------
+    # IFI-008  Happy paths
+    # ---------------------------------------------------------------
+    def test_incident_create_happy_path(self):
+        """incident.create with valid fields → success."""
+        driver = _MockDriver(return_value={"incident_id": "inc-1", "status": "open"})
+        session = _MockSession()
+
+        result = _safe_incident_create(driver, session, tenant_id="t-1", severity="HIGH")
+
+        assert result["error"] is False
+        assert result["data"]["status"] == "open"
+
+    def test_incident_resolve_happy_path(self):
+        """incident.resolve on valid INVESTIGATING incident → success."""
+        driver = _MockDriver(return_value={"incident_id": "inc-1", "status": "resolved"})
+        session = _MockSession()
+
+        result = _safe_incident_resolve(
+            driver, session, incident_exists=True, current_status="INVESTIGATING"
+        )
+
+        assert result["error"] is False
+        assert result["data"]["status"] == "resolved"
+
+
+# ===================================================================
+# Tenant-specific fault-injection tests (TEN-DELTA-05)
+# ===================================================================
+
+
+def _safe_tenant_create(
+    driver: _MockDriver, session: _MockSession,
+    org_id: str | None, tenant_name: str | None,
+) -> dict:
+    """Simulates an L4 handler for tenant.create with field validation."""
+    if not org_id:
+        return {
+            "error": True,
+            "code": "MISSING_ORG",
+            "message": "org_id is required but missing",
+            "safe": True,
+        }
+    if not tenant_name or (isinstance(tenant_name, str) and not tenant_name.strip()):
+        return {
+            "error": True,
+            "code": "MISSING_TENANT_NAME",
+            "message": "tenant_name is required and must be non-empty",
+            "safe": True,
+        }
+    return _safe_call(driver, session, org_id=org_id, tenant_name=tenant_name)
+
+
+def _safe_tenant_delete(
+    driver: _MockDriver, session: _MockSession,
+    tenant_exists: bool = True, tenant_status: str = "ACTIVE",
+) -> dict:
+    """Simulates an L4 handler for tenant.delete with existence/status checks."""
+    if not tenant_exists:
+        return {
+            "error": True,
+            "code": "NOT_FOUND",
+            "message": "tenant does not exist",
+            "safe": True,
+        }
+    if tenant_status == "CREATING":
+        return {
+            "error": True,
+            "code": "INVALID_STATE",
+            "message": "cannot delete tenant in CREATING state",
+            "safe": True,
+        }
+    return _safe_call(driver, session, tenant_exists=tenant_exists, tenant_status=tenant_status)
+
+
+class TestTenantFaultInjection:
+    """TEN-DELTA-05: Fault-injection tests for tenant create/delete paths."""
+
+    # TFI-001  Tenant create driver timeout
+    @pytest.mark.parametrize("exc", [TimeoutError("driver timeout")])
+    def test_tenant_create_driver_timeout_returns_structured_error(self, exc):
+        """tenant.create driver timeout → structured error, not crash."""
+        driver = _MockDriver(side_effect=exc)
+        session = _MockSession()
+
+        result = _safe_tenant_create(driver, session, org_id="org-1", tenant_name="Test")
+
+        assert result["error"] is True
+        assert result["safe"] is True
+
+    # TFI-002  Tenant create missing org_id
+    @pytest.mark.parametrize("org_id", [None, ""])
+    def test_tenant_create_missing_org_returns_structured_error(self, org_id):
+        """tenant.create with no org_id → structured error, not crash."""
+        driver = _MockDriver(return_value={"tenant_id": "t-1"})
+        session = _MockSession()
+
+        result = _safe_tenant_create(driver, session, org_id=org_id, tenant_name="Test")
+
+        assert result["error"] is True
+        assert "org_id" in result["message"]
+
+    # TFI-003  Tenant create missing tenant_name
+    def test_tenant_create_missing_name_returns_structured_error(self):
+        """tenant.create with no tenant_name → structured error."""
+        driver = _MockDriver(return_value={"tenant_id": "t-1"})
+        session = _MockSession()
+
+        result = _safe_tenant_create(driver, session, org_id="org-1", tenant_name=None)
+
+        assert result["error"] is True
+        assert "tenant_name" in result["message"]
+
+    # TFI-004  Tenant create empty tenant_name (whitespace)
+    def test_tenant_create_empty_name_returns_structured_error(self):
+        """tenant.create with whitespace-only tenant_name → structured error."""
+        driver = _MockDriver(return_value={"tenant_id": "t-1"})
+        session = _MockSession()
+
+        result = _safe_tenant_create(driver, session, org_id="org-1", tenant_name="   ")
+
+        assert result["error"] is True
+        assert "tenant_name" in result["message"]
+
+    # TFI-005  Tenant delete non-existent
+    def test_tenant_delete_non_existent_returns_structured_error(self):
+        """tenant.delete on non-existent tenant → structured error."""
+        driver = _MockDriver(return_value={"tenant_id": "t-1"})
+        session = _MockSession()
+
+        result = _safe_tenant_delete(driver, session, tenant_exists=False)
+
+        assert result["error"] is True
+        assert "does not exist" in result["message"]
+
+    # TFI-006  Tenant delete CREATING state
+    def test_tenant_delete_creating_state_returns_structured_error(self):
+        """tenant.delete on CREATING tenant → structured error."""
+        driver = _MockDriver(return_value={"tenant_id": "t-1"})
+        session = _MockSession()
+
+        result = _safe_tenant_delete(
+            driver, session, tenant_exists=True, tenant_status="CREATING"
+        )
+
+        assert result["error"] is True
+        assert "CREATING" in result["message"]
+
+    # TFI-007  Tenant delete driver connection refused
+    def test_tenant_delete_connection_refused_returns_structured_error(self):
+        """tenant.delete with connection refused → structured error."""
+        driver = _MockDriver(side_effect=ConnectionRefusedError("connection refused"))
+        session = _MockSession()
+
+        result = _safe_tenant_delete(
+            driver, session, tenant_exists=True, tenant_status="ACTIVE"
+        )
+
+        assert result["error"] is True
+        assert result["safe"] is True
+
+    # TFI-008  Tenant create happy path
+    def test_tenant_create_happy_path(self):
+        """tenant.create with valid fields → success."""
+        driver = _MockDriver(return_value={"tenant_id": "t-new", "status": "CREATING"})
+        session = _MockSession()
+
+        result = _safe_tenant_create(driver, session, org_id="org-1", tenant_name="Test Tenant")
+
+        assert result["error"] is False
+        assert result["data"]["status"] == "CREATING"
+
+    # TFI-009  Tenant delete happy path
+    def test_tenant_delete_happy_path(self):
+        """tenant.delete on valid ACTIVE tenant → success."""
+        driver = _MockDriver(return_value={"tenant_id": "t-del", "status": "DELETED"})
+        session = _MockSession()
+
+        result = _safe_tenant_delete(
+            driver, session, tenant_exists=True, tenant_status="ACTIVE"
+        )
+
+        assert result["error"] is False
+        assert result["data"]["status"] == "DELETED"

@@ -1,0 +1,20 @@
+{
+  "replay_id": "REPLAY-003",
+  "operation": "tenant.delete",
+  "input_context": {
+    "tenant_id": "t-golden-003",
+    "project_id": "__none__",
+    "actor_type": "founder",
+    "params": {"reason": "tenant_offboarding", "cascade": true}
+  },
+  "expected_decision": {
+    "outcome": "ALLOW",
+    "reason": "No matching invariants; structurally valid (tenant scoped)",
+    "invariants_checked": ["BI-TENANT-003"]
+  },
+  "metadata": {
+    "captured_at": "2026-02-16T00:00:00Z",
+    "baseline_commit": "golden",
+    "severity": "CRITICAL"
+  }
+}

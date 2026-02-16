@@ -90,6 +90,35 @@ BUSINESS_INVARIANTS: dict[str, Invariant] = {
             "with a 404/409 and do not create the project."
         ),
     ),
+    "BI-TENANT-002": Invariant(
+        invariant_id="BI-TENANT-002",
+        operation="tenant.create",
+        severity="HIGH",
+        condition_description=(
+            "Tenant creation requires a valid org_id and non-empty tenant_name. "
+            "A tenant without an org scope is un-ownable and violates the "
+            "organizational scoping boundary."
+        ),
+        remediation=(
+            "Validate org_id presence and tenant_name non-emptiness before "
+            "proceeding. If either is missing, reject with 400."
+        ),
+    ),
+    "BI-TENANT-003": Invariant(
+        invariant_id="BI-TENANT-003",
+        operation="tenant.delete",
+        severity="HIGH",
+        condition_description=(
+            "Tenant deletion requires the tenant to exist and not be in CREATING "
+            "state. Deleting a tenant mid-creation causes orphaned resources. "
+            "Deleting a non-existent tenant is a no-op violation."
+        ),
+        remediation=(
+            "Verify tenant existence and confirm status is not CREATING before "
+            "proceeding. If tenant does not exist, reject with 404. If tenant "
+            "is in CREATING state, reject with 409."
+        ),
+    ),
     # --- Onboarding ---
     "BI-ONBOARD-001": Invariant(
         invariant_id="BI-ONBOARD-001",
@@ -204,6 +233,40 @@ BUSINESS_INVARIANTS: dict[str, Invariant] = {
             "reject with 409 and instruct the caller to reopen first."
         ),
     ),
+    "BI-INCIDENT-002": Invariant(
+        invariant_id="BI-INCIDENT-002",
+        operation="incident.create",
+        severity="HIGH",
+        condition_description=(
+            "An incident must be scoped to a valid tenant_id and must have "
+            "a non-empty severity classification. Incidents without tenant "
+            "scoping break multi-tenancy isolation. Incidents without severity "
+            "prevent triage prioritization and SLA enforcement."
+        ),
+        remediation=(
+            "Validate that tenant_id is present and non-empty, and that "
+            "severity is one of the accepted values (CRITICAL, HIGH, MEDIUM, "
+            "LOW) before creating the incident. Return 422 if either is "
+            "missing or invalid."
+        ),
+    ),
+    "BI-INCIDENT-003": Invariant(
+        invariant_id="BI-INCIDENT-003",
+        operation="incident.resolve",
+        severity="HIGH",
+        condition_description=(
+            "An incident can only be resolved if it exists and is not already "
+            "in RESOLVED state. Resolving a non-existent incident is a no-op "
+            "that masks data loss. Resolving an already-resolved incident "
+            "overwrites the original resolution context and corrupts the "
+            "audit trail."
+        ),
+        remediation=(
+            "Verify the incident exists and its current status is not "
+            "RESOLVED before applying resolution. Return 404 if the incident "
+            "does not exist, 409 if already resolved."
+        ),
+    ),
     # --- Activity ---
     "BI-ACTIVITY-001": Invariant(
         invariant_id="BI-ACTIVITY-001",
@@ -276,6 +339,24 @@ def _default_check(invariant: Invariant, context: dict[str, Any]) -> tuple[bool,
     """
     operation = invariant.operation
 
+    if operation == "tenant.create":
+        org_id = context.get("org_id")
+        tenant_name = context.get("tenant_name")
+        if not org_id:
+            return False, "org_id is required but missing from context"
+        if not tenant_name or (isinstance(tenant_name, str) and not tenant_name.strip()):
+            return False, "tenant_name is required and must be non-empty"
+        return True, "ok"
+
+    if operation == "tenant.delete":
+        tenant_exists = context.get("tenant_exists", True)
+        tenant_status = context.get("tenant_status")
+        if not tenant_exists:
+            return False, "tenant does not exist"
+        if tenant_status == "CREATING":
+            return False, "cannot delete tenant in CREATING state; wait for creation to complete"
+        return True, "ok"
+
     if operation == "project.create":
         tenant_id = context.get("tenant_id")
         tenant_status = context.get("tenant_status")
@@ -338,6 +419,27 @@ def _default_check(invariant: Invariant, context: dict[str, Any]) -> tuple[bool,
             return False, f"threshold must be numeric, got {type(threshold).__name__}"
         if threshold < 0:
             return False, f"threshold must be non-negative, got {threshold}"
+        return True, "ok"
+
+    if operation == "incident.create":
+        tenant_id = context.get("tenant_id")
+        severity = context.get("severity")
+        if not tenant_id:
+            return False, "tenant_id is required but missing from context"
+        valid_severities = ("CRITICAL", "HIGH", "MEDIUM", "LOW")
+        if not severity:
+            return False, "severity is required but missing from context"
+        if severity not in valid_severities:
+            return False, f"severity must be one of {valid_severities}, got '{severity}'"
+        return True, "ok"
+
+    if operation == "incident.resolve":
+        incident_exists = context.get("incident_exists", True)
+        current_status = context.get("current_status")
+        if not incident_exists:
+            return False, "incident does not exist"
+        if current_status == "RESOLVED":
+            return False, "incident is already resolved; cannot resolve again"
         return True, "ok"
 
     if operation == "incident.transition":
