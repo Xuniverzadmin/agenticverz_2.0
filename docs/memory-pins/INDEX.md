@@ -547,6 +547,8 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-576](PIN-576-ba-n6-six-step-execution-audit-pass-2026-02-16.md) | **BA-N6 Six-Step Execution Audit PASS — runtime-verified, 16/16 gates, 41/41 CI checks** | Architecture / Assurance / Audit | **✅ COMPLETE** | 2026-02-16 |
 | [PIN-577](PIN-577-runs-facade-contract-drift-fix-determinism.md) | **Runs Facade Contract Drift Fix (Deterministic Pagination)** | Architecture / API Contract / Determinism | **✅ COMPLETE** | 2026-02-16 |
 | [PIN-578](PIN-578-incidents-list-facade-pr2-contract-hardening.md) | **Incidents List Facade PR-2 Contract Hardening** | Architecture / API Contract / Frontend Enablement | **✅ COMPLETE** | 2026-02-16 |
+| [PIN-586](PIN-586-incidents-domain-delta-runtime-correctness-audit-pass-2026-02-16.md) | **Incidents Domain Delta Runtime Correctness Audit PASS — runtime-verified, 16/16 gates, replay/data-quality strict clean** | Architecture / Assurance / Audit | **✅ COMPLETE** | 2026-02-16 |
+| [PIN-588](PIN-588-account-users-list-facade-pr10-contract-hardening.md) | **Account Users List Facade PR-10 Contract Hardening** | Architecture / API Contract / Frontend Enablement | **✅ COMPLETE** | 2026-02-16 |
 
 ---
 
@@ -1316,6 +1318,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-16 | **PIN-586 Incidents Domain Delta Runtime Correctness Audit PASS** - Independent audit confirmed INC-DELTA completion with runtime evidence: mutation 76.7% (115/150), replay 15/15 MATCH (0 DRIFT), data-quality 202/202, and gatepack 16/16 PASS. |
 | 2026-02-16 | **PIN-578 Incidents List Facade PR-2 Contract Hardening** - Added `/cus/incidents/list` read-only facade with strict topic allowlists, single-dispatch mapping, deterministic pagination semantics, acceptance tests, and linked frontend scaffold contract doc. |
 | 2026-02-16 | **PIN-577 Runs Facade Contract Drift Fix (Deterministic Pagination)** - Locked facade-side `has_more` derivation to contract math, added regression test, and recorded issue ledger evidence for frontend-safe pagination behavior. |
 | 2026-02-16 | **PIN-576 BA-N6 Six-Step Execution Audit PASS** - Independent audit confirmed BA-N6 completion with runtime evidence: mutation 76.7% (115/150), CI hygiene 41/41, gatepack 16/16 PASS, fail-close behavior validated for mutation and data-quality gates. |
@@ -2146,3 +2149,19 @@ When resuming work on this project:
 | 2026-01-21 | **PIN-462 DB_ROLE Migration Governance Model** - Fixed migration governance by introducing `DB_ROLE` semantic. Local staging migrations now allowed (`DB_ROLE=staging`). Production requires confirmation (`CONFIRM_PROD_MIGRATIONS=true`). Updated `env.py`, `ENVIRONMENT_CONTRACT.md`, `DB_AUTHORITY.md`. |
 | 2026-01-22 | **PIN-463 L4 Facade Architecture Pattern** - Comprehensive reference documentation for creating L4 domain facades. Covers file naming (`aos_{domain}.py`, `{domain}_facade.py`), singleton pattern, result dataclasses, tenant isolation, response wrapping, error handling, router registration, and architecture documentation standards. |
 | 2026-02-01 | **PIN-507 Law 5 Remediation Complete** - Replaced 31+ `getattr()` reflection calls across all 9 L4 handler files (18 handler classes) with explicit dispatch maps. Eliminated all `asyncio.iscoroutinefunction()` calls via explicit sync/async split. Replaced 13 `__import__("sqlalchemy").text()` calls in `cost_snapshots_engine.py` with proper `from sqlalchemy import text`. Law 5 grade upgraded D→A. |
+| 2026-02-16 | **PIN-579 Policies List Facade PR-3 Contract Hardening** - Added `GET /cus/policies/list` strict read facade, deterministic pagination boundary, and L6 rule-order tie-break (`PolicyRule.id.desc()`). |
+| 2026-02-16 | Memory pin file: `PIN-579-policies-list-facade-pr3-contract-hardening.md` |
+| 2026-02-16 | **PIN-580 Controls List Facade PR-4 Contract Hardening** - Added `GET /cus/controls/list` strict read facade, exact one-dispatch paging contract, and deterministic controls ordering tie-break `(name, id)`. |
+| 2026-02-16 | Memory pin file: `PIN-580-controls-list-facade-pr4-contract-hardening.md` |
+| 2026-02-16 | **PIN-581 Logs Replay Feed Facade PR-5 Contract Hardening** - Added `GET /cus/logs/list` strict read facade, topic-scoped single-dispatch to `logs.query`, and L6 ordering tie-break hardening (`created_at desc, id desc`). |
+| 2026-02-16 | Memory pin file: `PIN-581-logs-replay-feed-facade-pr5-contract-hardening.md` |
+| 2026-02-16 | **PIN-582 Overview Highlights Facade PR-6 Contract Hardening** - Added `GET /cus/overview/highlights` strict read facade with one-dispatch to `overview.query` and trace/meta propagation. |
+| 2026-02-16 | Memory pin file: `PIN-582-overview-highlights-facade-pr6-contract-hardening.md` |
+| 2026-02-16 | **PIN-584 Analytics Usage Facade PR-7 Contract Hardening** - Added `GET /cus/analytics/statistics/usage` strict read facade with one-dispatch to `analytics.query`, window validation, and trace/meta propagation. |
+| 2026-02-16 | Memory pin file: `PIN-584-analytics-usage-facade-pr7-contract-hardening.md` |
+| 2026-02-16 | **PIN-585 Integrations List Facade PR-8 Contract Hardening** - Added `GET /cus/integrations/list` strict read facade with one-dispatch to `integrations.query`, boundary validation, and deterministic list tie-break hardening (`created_at desc, id desc`). |
+| 2026-02-16 | Memory pin file: `PIN-585-integrations-list-facade-pr8-contract-hardening.md` |
+| 2026-02-16 | **PIN-587 API Keys List Facade PR-9 Contract Hardening** - Added `GET /cus/api_keys/list` strict read facade with one-dispatch to `api_keys.query`, boundary validation, and deterministic list tie-break hardening (`created_at desc, id desc`). |
+| 2026-02-16 | Memory pin file: `PIN-587-api-keys-list-facade-pr9-contract-hardening.md` |
+| 2026-02-16 | **PIN-588 Account Users List Facade PR-10 Contract Hardening** - Added `GET /cus/account/users/list` strict read facade with one-dispatch to `account.query`, boundary validation, and deterministic list tie-break hardening (`email asc, id asc`). |
+| 2026-02-16 | Memory pin file: `PIN-588-account-users-list-facade-pr10-contract-hardening.md` |

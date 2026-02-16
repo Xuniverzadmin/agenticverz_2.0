@@ -16,6 +16,23 @@
 - app.py -> app.hoc.api.facades.cus -> domain facade bundle -> account_public.py -> L4 registry.execute(...)
 - Current status: account_public.py remains scaffold-only (no behavior change yet); existing domain routers stay active during incremental rollout.
 
+## Reality Delta (2026-02-16, PR-10 Account Users Facade Contract Hardening)
+
+- Read-only account users list facade is now implemented at:
+- `backend/app/hoc/api/cus/account/account_public.py`
+- Endpoint contract:
+- `GET /cus/account/users/list` (gateway: `/hoc/api/cus/account/users/list`)
+- L4 dispatch path:
+- `account_public.py` -> `registry.execute("account.query", method="list_users", ...)`
+- Boundary guarantees:
+- strict allowlist validation (`role`, `status`, `limit`, `offset`)
+- unknown-param rejection
+- `as_of` explicitly unsupported (PR-10)
+- request-id/correlation-id propagation in response meta
+- Determinism hardening:
+- L6 users query ordering now uses stable keys `email asc, id asc` in:
+- `backend/app/hoc/cus/account/L6_drivers/accounts_facade_driver.py`
+
 ## Reality Delta (2026-02-11)
 
 - Project-create onboarding path is active under canonical account domain:
