@@ -216,6 +216,35 @@ BUSINESS_INVARIANTS: dict[str, Invariant] = {
             "if the value is invalid."
         ),
     ),
+    "BI-CTRL-002": Invariant(
+        invariant_id="BI-CTRL-002",
+        operation="killswitch.activate",
+        severity="HIGH",
+        condition_description=(
+            "Killswitch activation requires a valid entity_id. Activating a "
+            "killswitch on a non-existent entity creates a phantom freeze that "
+            "silently blocks operations. An already-frozen entity must not be "
+            "double-frozen to avoid audit trail corruption."
+        ),
+        remediation=(
+            "Verify entity_id is present and non-empty. Check entity_frozen "
+            "status before applying. If already frozen, reject with 409."
+        ),
+    ),
+    "BI-CTRL-003": Invariant(
+        invariant_id="BI-CTRL-003",
+        operation="override.apply",
+        severity="HIGH",
+        condition_description=(
+            "A limit override requires a valid limit_id and a non-negative "
+            "override value. Overriding a non-existent limit creates orphaned "
+            "records. Negative override values invert safety constraints."
+        ),
+        remediation=(
+            "Validate limit_id presence, limit_exists flag, and that override "
+            "value is numeric and >= 0. Reject with 400/404 as appropriate."
+        ),
+    ),
     # --- Incidents ---
     "BI-INCIDENT-001": Invariant(
         invariant_id="BI-INCIDENT-001",
@@ -419,6 +448,31 @@ def _default_check(invariant: Invariant, context: dict[str, Any]) -> tuple[bool,
             return False, f"threshold must be numeric, got {type(threshold).__name__}"
         if threshold < 0:
             return False, f"threshold must be non-negative, got {threshold}"
+        return True, "ok"
+
+    if operation == "killswitch.activate":
+        entity_id = context.get("entity_id")
+        already_frozen = context.get("entity_frozen", False)
+        if not entity_id:
+            return False, "entity_id is required but missing from context"
+        if already_frozen:
+            return False, "entity is already frozen; cannot double-freeze"
+        return True, "ok"
+
+    if operation == "override.apply":
+        limit_id = context.get("limit_id")
+        limit_exists = context.get("limit_exists", True)
+        override_value = context.get("override_value")
+        if not limit_id:
+            return False, "limit_id is required but missing from context"
+        if not limit_exists:
+            return False, f"limit_id '{limit_id}' does not exist"
+        if override_value is None:
+            return False, "override_value is required but missing from context"
+        if not isinstance(override_value, (int, float)):
+            return False, f"override_value must be numeric, got {type(override_value).__name__}"
+        if override_value < 0:
+            return False, f"override_value must be non-negative, got {override_value}"
         return True, "ok"
 
     if operation == "incident.create":
