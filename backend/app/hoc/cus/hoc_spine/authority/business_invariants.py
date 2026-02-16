@@ -156,6 +156,21 @@ BUSINESS_INVARIANTS: dict[str, Invariant] = {
             "activation with a 422 if schema validation fails."
         ),
     ),
+    "BI-POLICY-002": Invariant(
+        invariant_id="BI-POLICY-002",
+        operation="policy.deactivate",
+        severity="HIGH",
+        condition_description=(
+            "A system-level policy must not be deactivated by a tenant-scoped "
+            "caller. System policies are platform-wide and their deactivation "
+            "requires founder or platform authority."
+        ),
+        remediation=(
+            "Check that the policy is not system-level, or that the caller "
+            "has founder/platform authority. Reject deactivation with a 403 "
+            "if a tenant-scoped caller attempts to deactivate a system policy."
+        ),
+    ),
     # --- Controls ---
     "BI-CTRL-001": Invariant(
         invariant_id="BI-CTRL-001",
@@ -303,6 +318,16 @@ def _default_check(invariant: Invariant, context: dict[str, Any]) -> tuple[bool,
             return False, "policy_schema is required but missing or empty"
         if not isinstance(schema, (str, dict)):
             return False, f"policy_schema must be str or dict, got {type(schema).__name__}"
+        return True, "ok"
+
+    if operation == "policy.deactivate":
+        is_system = context.get("is_system_policy", False)
+        caller_type = context.get("actor_type", "user")
+        if is_system and caller_type not in ("founder", "platform"):
+            return (
+                False,
+                f"system policy cannot be deactivated by '{caller_type}' caller",
+            )
         return True, "ok"
 
     if operation == "control.set_threshold":

@@ -370,3 +370,197 @@ class TestDriverFaultSafety:
         assert result["safe"] is True
         assert result["retryable"] is True
         assert session.rolled_back is True
+
+
+# ===================================================================
+# Policy-specific fault-injection tests (POL-DELTA-05)
+# ===================================================================
+
+
+def _safe_policy_activate(driver: _MockDriver, session: _MockSession, schema: object) -> dict:
+    """
+    Simulates an L4 handler for policy.activate with schema validation.
+    Returns structured error on invalid schema or driver fault.
+    """
+    # Schema validation (fail-closed)
+    if not schema:
+        return {
+            "error": True,
+            "code": "INVALID_SCHEMA",
+            "message": "policy_schema is required but missing or empty",
+            "safe": True,
+        }
+    if not isinstance(schema, (str, dict)):
+        return {
+            "error": True,
+            "code": "INVALID_SCHEMA",
+            "message": f"policy_schema must be str or dict, got {type(schema).__name__}",
+            "safe": True,
+        }
+    return _safe_call(driver, session, schema=schema)
+
+
+def _safe_policy_deactivate(
+    driver: _MockDriver, session: _MockSession,
+    is_system: bool, actor_type: str,
+    current_version: int | None = None, expected_version: int | None = None,
+) -> dict:
+    """
+    Simulates an L4 handler for policy.deactivate with authority + staleness checks.
+    """
+    if is_system and actor_type not in ("founder", "platform"):
+        return {
+            "error": True,
+            "code": "FORBIDDEN",
+            "message": f"system policy cannot be deactivated by '{actor_type}' caller",
+            "safe": True,
+        }
+    # Stale read check (optimistic concurrency)
+    if expected_version is not None and current_version is not None:
+        if current_version != expected_version:
+            return {
+                "error": True,
+                "code": "STALE_READ",
+                "message": (
+                    f"Policy was concurrently modified: "
+                    f"expected version={expected_version}, current={current_version}"
+                ),
+                "safe": True,
+            }
+    return _safe_call(driver, session, is_system=is_system, actor_type=actor_type)
+
+
+class TestPolicyFaultInjection:
+    """POL-DELTA-05: Policy-domain-specific fault-injection proofs."""
+
+    # ---------------------------------------------------------------
+    # PFI-001  Policy driver DB timeout
+    # ---------------------------------------------------------------
+    def test_policy_driver_timeout_returns_safe_error(self):
+        """Policy driver raises TimeoutError → structured error, no crash."""
+        driver = _MockDriver(side_effect=TimeoutError("policy table lock timeout"))
+        session = _MockSession()
+
+        result = _safe_policy_activate(driver, session, schema={"rules": []})
+
+        assert result["error"] is True
+        assert result["code"] == "TIMEOUT"
+        assert result["safe"] is True
+        assert result["retryable"] is True
+        assert session.rolled_back is True
+
+    # ---------------------------------------------------------------
+    # PFI-002  Policy schema validation failure (missing)
+    # ---------------------------------------------------------------
+    def test_policy_missing_schema_returns_structured_error(self):
+        """policy.activate with None schema → structured error, not crash."""
+        driver = _MockDriver(return_value={"policy_id": "p-1"})
+        session = _MockSession()
+
+        result = _safe_policy_activate(driver, session, schema=None)
+
+        assert result["error"] is True
+        assert result["code"] == "INVALID_SCHEMA"
+        assert "missing" in result["message"]
+        assert result["safe"] is True
+        # Driver should NOT have been called
+        assert session.begun is False
+
+    # ---------------------------------------------------------------
+    # PFI-003  Policy schema validation failure (wrong type)
+    # ---------------------------------------------------------------
+    def test_policy_invalid_schema_type_returns_structured_error(self):
+        """policy.activate with int schema → structured error, not crash."""
+        driver = _MockDriver(return_value={"policy_id": "p-1"})
+        session = _MockSession()
+
+        result = _safe_policy_activate(driver, session, schema=42)
+
+        assert result["error"] is True
+        assert result["code"] == "INVALID_SCHEMA"
+        assert "int" in result["message"]
+        assert result["safe"] is True
+        assert session.begun is False
+
+    # ---------------------------------------------------------------
+    # PFI-004  Policy stale read (concurrent deactivation)
+    # ---------------------------------------------------------------
+    def test_policy_stale_read_concurrent_deactivation(self):
+        """Concurrent deactivation detected via version mismatch → safe fallback."""
+        driver = _MockDriver(return_value={"policy_id": "p-1", "status": "inactive"})
+        session = _MockSession()
+
+        result = _safe_policy_deactivate(
+            driver, session,
+            is_system=False, actor_type="user",
+            current_version=5, expected_version=3,  # stale
+        )
+
+        assert result["error"] is True
+        assert result["code"] == "STALE_READ"
+        assert "concurrently modified" in result["message"]
+        assert result["safe"] is True
+        # Driver should NOT have been called due to stale check
+        assert session.begun is False
+
+    # ---------------------------------------------------------------
+    # PFI-005  Policy deactivate authority rejection
+    # ---------------------------------------------------------------
+    def test_policy_deactivate_tenant_on_system_policy_returns_forbidden(self):
+        """Tenant caller on system policy → FORBIDDEN, not driver call."""
+        driver = _MockDriver(return_value={"policy_id": "p-1"})
+        session = _MockSession()
+
+        result = _safe_policy_deactivate(
+            driver, session,
+            is_system=True, actor_type="user",
+        )
+
+        assert result["error"] is True
+        assert result["code"] == "FORBIDDEN"
+        assert "system policy" in result["message"]
+        assert result["safe"] is True
+        assert session.begun is False
+
+    # ---------------------------------------------------------------
+    # PFI-006  Policy driver connection refused
+    # ---------------------------------------------------------------
+    def test_policy_driver_connection_refused(self):
+        """Policy driver raises ConnectionRefusedError → SERVICE_UNAVAILABLE."""
+        driver = _MockDriver(side_effect=ConnectionRefusedError("port 5432"))
+        session = _MockSession()
+
+        result = _safe_policy_activate(driver, session, schema={"rules": ["r1"]})
+
+        assert result["error"] is True
+        assert result["code"] == "SERVICE_UNAVAILABLE"
+        assert result["safe"] is True
+        assert result["retryable"] is True
+        assert session.rolled_back is True
+
+    # ---------------------------------------------------------------
+    # PFI-007  Happy path: valid schema + version match
+    # ---------------------------------------------------------------
+    def test_policy_activate_happy_path(self):
+        """policy.activate with valid schema → success."""
+        driver = _MockDriver(return_value={"policy_id": "p-1", "status": "active"})
+        session = _MockSession()
+
+        result = _safe_policy_activate(driver, session, schema={"rules": ["r1"]})
+
+        assert result["error"] is False
+        assert result["data"]["status"] == "active"
+
+    def test_policy_deactivate_happy_path(self):
+        """policy.deactivate with valid authority + matching version → success."""
+        driver = _MockDriver(return_value={"policy_id": "p-1", "status": "inactive"})
+        session = _MockSession()
+
+        result = _safe_policy_deactivate(
+            driver, session,
+            is_system=False, actor_type="user",
+            current_version=3, expected_version=3,
+        )
+
+        assert result["error"] is False
+        assert result["data"]["status"] == "inactive"

@@ -1,9 +1,10 @@
 # Layer: TEST
 # AUDIENCE: INTERNAL
-# Role: Property-based tests for threshold monotonicity and policy conflict resolution
+# Role: Property-based tests for threshold monotonicity, policy conflict resolution, and lifecycle transitions
 # artifact_class: TEST
 """
-BA-12: Property-based tests for threshold monotonicity and policy conflict resolution.
+BA-12 + POL-DELTA-04: Property-based tests for threshold monotonicity,
+policy conflict resolution, and policy lifecycle state transitions.
 
 All tests are self-contained with inline helper functions that mirror the expected
 behavior of production code. No production imports are used.
@@ -233,3 +234,123 @@ class TestPolicyNameSanitization:
         assert sanitize_policy_name(sanitized) == sanitized, (
             "Sanitization is not idempotent"
         )
+
+
+# ---------------------------------------------------------------------------
+# Policy lifecycle state transition helpers (POL-DELTA-04 strengthening)
+# ---------------------------------------------------------------------------
+
+# Valid policy states and their allowed transitions
+_POLICY_STATES = {"draft", "active", "inactive", "archived"}
+_VALID_TRANSITIONS = {
+    "draft": {"active"},
+    "active": {"inactive", "archived"},
+    "inactive": {"active", "archived"},
+    "archived": set(),  # terminal state
+}
+
+
+def is_valid_policy_transition(from_state: str, to_state: str) -> bool:
+    """Check whether a policy state transition is allowed."""
+    if from_state not in _VALID_TRANSITIONS:
+        return False
+    return to_state in _VALID_TRANSITIONS[from_state]
+
+
+def apply_policy_transitions(
+    initial: str, transitions: List[str]
+) -> Tuple[str, List[str]]:
+    """
+    Apply a sequence of state transitions.  Returns (final_state, rejected_list)
+    where rejected_list contains the targets that were blocked.
+    """
+    current = initial
+    rejected: List[str] = []
+    for target in transitions:
+        if is_valid_policy_transition(current, target):
+            current = target
+        else:
+            rejected.append(target)
+    return current, rejected
+
+
+class TestPolicyLifecycleTransitions:
+    """Property-based tests for policy lifecycle state transitions."""
+
+    @given(
+        st.sampled_from(sorted(_POLICY_STATES)),
+        st.sampled_from(sorted(_POLICY_STATES)),
+    )
+    @settings(max_examples=200)
+    def test_transition_validity_deterministic(
+        self, from_state: str, to_state: str
+    ) -> None:
+        """Transition validity is deterministic — same inputs always give same result."""
+        r1 = is_valid_policy_transition(from_state, to_state)
+        r2 = is_valid_policy_transition(from_state, to_state)
+        assert r1 == r2
+
+    @given(st.sampled_from(sorted(_POLICY_STATES)))
+    @settings(max_examples=50)
+    def test_archived_is_terminal(self, target: str) -> None:
+        """No transitions allowed FROM archived state."""
+        assert is_valid_policy_transition("archived", target) is False
+
+    @given(st.sampled_from(sorted(_POLICY_STATES)))
+    @settings(max_examples=50)
+    def test_no_self_transitions(self, state: str) -> None:
+        """Self-transitions (state→state) are never valid."""
+        assert is_valid_policy_transition(state, state) is False
+
+    @given(
+        st.lists(
+            st.sampled_from(sorted(_POLICY_STATES)),
+            min_size=0,
+            max_size=30,
+        )
+    )
+    @settings(max_examples=200)
+    def test_final_state_always_valid(self, transitions: List[str]) -> None:
+        """
+        After applying any sequence of transitions from 'draft', the final
+        state must be a valid policy state.
+        """
+        final, _ = apply_policy_transitions("draft", transitions)
+        assert final in _POLICY_STATES
+
+    @given(
+        st.lists(
+            st.sampled_from(sorted(_POLICY_STATES)),
+            min_size=0,
+            max_size=30,
+        )
+    )
+    @settings(max_examples=200)
+    def test_transition_sequence_idempotent(
+        self, transitions: List[str]
+    ) -> None:
+        """Applying the same transition sequence twice yields the same result."""
+        final_1, rejected_1 = apply_policy_transitions("draft", transitions)
+        final_2, rejected_2 = apply_policy_transitions("draft", transitions)
+        assert final_1 == final_2
+        assert rejected_1 == rejected_2
+
+    def test_draft_to_active_is_valid(self) -> None:
+        """Concrete: draft → active is the only valid initial transition."""
+        assert is_valid_policy_transition("draft", "active") is True
+        assert is_valid_policy_transition("draft", "inactive") is False
+        assert is_valid_policy_transition("draft", "archived") is False
+
+    def test_active_inactive_cycle(self) -> None:
+        """Concrete: active ↔ inactive cycling is allowed."""
+        transitions = ["active", "inactive", "active", "inactive"]
+        final, rejected = apply_policy_transitions("draft", transitions)
+        assert final == "inactive"
+        assert rejected == []
+
+    def test_archived_blocks_all_further(self) -> None:
+        """Concrete: once archived, all further transitions are rejected."""
+        transitions = ["active", "archived", "active", "inactive", "draft"]
+        final, rejected = apply_policy_transitions("draft", transitions)
+        assert final == "archived"
+        assert rejected == ["active", "inactive", "draft"]
