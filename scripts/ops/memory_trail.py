@@ -53,12 +53,45 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-# Paths
+# =============================================================================
+# CANONICAL PATHS — All memory PINs MUST live under docs/memory-pins/.
+#
+# There is exactly ONE authoritative memory-pins directory in this repository:
+#
+#     <repo-root>/docs/memory-pins/
+#
+# Do NOT create or write PINs to any other location, including:
+#   - <repo-root>/memory-pins/          (STALE — deleted 2026-02-16)
+#   - backend/docs/memory-pins/         (STALE — deleted 2026-02-16)
+#   - backend/app/hoc/docs/memory-pins/ (NEVER existed, do not create)
+#
+# If you need to move a PIN here from elsewhere, rename with a _1 / _2 suffix
+# to avoid serial-number collisions, then delete the source copy.
+# =============================================================================
 ROOT_DIR = Path(__file__).parent.parent.parent
 PINS_DIR = ROOT_DIR / "docs" / "memory-pins"
 INDEX_PATH = PINS_DIR / "INDEX.md"
 REPORTS_DIR = ROOT_DIR / "docs" / "test_reports"
 REGISTER_PATH = REPORTS_DIR / "REGISTER.md"
+
+
+def _assert_canonical_path():
+    """Fail fast if PINS_DIR does not resolve to the canonical location."""
+    expected_suffix = str(Path("docs") / "memory-pins")
+    resolved = str(PINS_DIR.resolve())
+    if not resolved.endswith(expected_suffix):
+        print(
+            f"FATAL: PINS_DIR resolved to '{resolved}' which does not end with "
+            f"'{expected_suffix}'. Memory PINs must only be written to the "
+            f"canonical <repo-root>/docs/memory-pins/ directory."
+        )
+        sys.exit(1)
+    if not PINS_DIR.is_dir():
+        print(f"FATAL: Canonical memory-pins directory does not exist: {PINS_DIR}")
+        sys.exit(1)
+
+
+_assert_canonical_path()
 
 
 def get_next_pin_number() -> int:

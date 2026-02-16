@@ -50,7 +50,7 @@ _ROUTE_META = {
         "api_method": "GET",
         "request_fields": {"tenant_id": "string"},
         "response_fields": {"status": "string", "steps": "array"},
-        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/onboarding/query", "operation": "account.onboarding.query", "status_code": 200, "duration_ms": 12}],
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/onboarding/query", "operation": "account.onboarding.query/account.onboarding.advance", "status_code": 200, "duration_ms": 12}],
     },
     "test_onboarding_advance_operation_registered": {
         "route_path": "/hoc/api/cus/onboarding/advance",
@@ -80,6 +80,20 @@ _ROUTE_META = {
         "response_fields": {"passed": "boolean", "missing": "array"},
         "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/onboarding/activate", "operation": "account.onboarding.activate", "status_code": 200, "duration_ms": 22}],
     },
+    "test_connector_registry_cache_boundary_is_enforced": {
+        "route_path": "/hoc/api/cus/onboarding/advance",
+        "api_method": "POST",
+        "request_fields": {"tenant_id": "string", "activation_context": "object"},
+        "response_fields": {"cache_boundary": "string", "enforced": "boolean"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/onboarding/advance", "operation": "integrations.connector_registry (L6 runtime cache for onboarding)", "status_code": 200, "duration_ms": 9}],
+    },
+    "test_onboarding_transition_event_uses_schema_contract": {
+        "route_path": "/hoc/api/cus/onboarding/advance",
+        "api_method": "POST",
+        "request_fields": {"tenant_id": "string", "from_state": "string", "to_state": "string"},
+        "response_fields": {"event_type": "string", "schema_validated": "boolean"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/onboarding/advance", "operation": "event_schema_contract (shared authority)", "status_code": 200, "duration_ms": 10}],
+    },
     "test_synthetic_write_path_insert_emits_db_write": {
         "route_path": "/hoc/api/cus/onboarding/advance",
         "api_method": "POST",
@@ -107,7 +121,7 @@ _ROUTE_META = {
         "api_method": "POST",
         "request_fields": {"tenant_id": "string", "evidence_data": "object"},
         "response_fields": {"recorded": "boolean"},
-        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/controls/evaluation-evidence", "operation": "controls.evaluation_evidence.record", "status_code": 200, "duration_ms": 18}],
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/controls/evaluation-evidence", "operation": "controls.query/controls.circuit_breaker/controls.killswitch.read/controls.killswitch.write/controls.evaluation_evidence", "status_code": 200, "duration_ms": 18}],
     },
     "test_handler_rejects_missing_tenant_id": {
         "route_path": "/hoc/api/cus/controls/evaluation-evidence",
@@ -136,7 +150,7 @@ _ROUTE_META = {
         "api_method": "POST",
         "request_fields": {"feedback_data": "object"},
         "response_fields": {"inserted": "boolean"},
-        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/activity/signal-feedback", "operation": "activity.signal_feedback.insert", "status_code": 200, "duration_ms": 10}],
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/activity/signal-feedback", "operation": "activity.signal_feedback (L6 driver)", "status_code": 200, "duration_ms": 10}],
     },
     "test_l5_engine_no_db_imports": {
         "route_path": "/hoc/api/cus/activity/signal-feedback",
@@ -174,21 +188,21 @@ _ROUTE_META = {
         "api_method": "GET",
         "request_fields": {"module": "string"},
         "response_fields": {"clean": "boolean"},
-        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/logs/traces", "operation": "structural.purity_check", "status_code": 200, "duration_ms": 3}],
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/logs/traces", "operation": "base lifecycle methods/get_trace_by_root_hash/search_traces", "status_code": 200, "duration_ms": 3}],
     },
     "test_l5_trace_api_engine_methods": {
         "route_path": "/hoc/api/cus/logs/traces",
         "api_method": "GET",
         "request_fields": {"root_hash": "string"},
         "response_fields": {"trace": "object", "match": "boolean"},
-        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/logs/traces", "operation": "logs.trace_replay.get", "status_code": 200, "duration_ms": 20}],
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/logs/traces", "operation": "get_trace_by_root_hash/compare_traces/check_idempotency", "status_code": 200, "duration_ms": 20}],
     },
     "test_l6_postgres_trace_store_methods": {
         "route_path": "/hoc/api/cus/logs/traces",
         "api_method": "GET",
         "request_fields": {"root_hash": "string", "idempotency_key": "string"},
         "response_fields": {"trace": "object", "idempotent": "boolean"},
-        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/logs/traces", "operation": "logs.trace_store.get", "status_code": 200, "duration_ms": 15}],
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/logs/traces", "operation": "get_trace_by_root_hash/check_idempotency_key", "status_code": 200, "duration_ms": 15}],
     },
     # UC-032 Redaction Export Safety
     "test_trace_store_has_required_methods": {
@@ -196,7 +210,7 @@ _ROUTE_META = {
         "api_method": "POST",
         "request_fields": {"trace_id": "string", "redaction_policy": "string"},
         "response_fields": {"redacted": "boolean", "determinism_hash": "string"},
-        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/logs/redaction", "operation": "logs.redaction.apply", "status_code": 200, "duration_ms": 18}],
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/logs/redaction", "operation": "find_matching_traces/update_trace_determinism", "status_code": 200, "duration_ms": 18}],
     },
     "test_redact_module_exists": {
         "route_path": "/hoc/api/cus/logs/redaction",
@@ -212,6 +226,142 @@ _ROUTE_META = {
         "response_fields": {"clean": "boolean"},
         "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/logs/redaction", "operation": "structural.purity_check", "status_code": 200, "duration_ms": 3}],
     },
+    # Stage 1.2 in-process runtime harness for mapped UCs
+    "TestUC001MonitoringHarness__test_event_schema_contract_shared_authority_anchor": {
+        "uc_id": "UC-001",
+        "stage": "1.2",
+        "route_path": "/hoc/api/cus/activity/runs",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"schema_contract": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/activity/runs", "operation": "event_schema_contract (shared authority)", "status_code": 200, "duration_ms": 6}],
+    },
+    "TestUC001MonitoringHarness__test_activity_query_telemetry_orphan_recovery_anchor": {
+        "uc_id": "UC-001",
+        "stage": "1.2",
+        "route_path": "/hoc/api/cus/activity/runs",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"query_ready": "boolean", "telemetry_ready": "boolean", "orphan_recovery_ready": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/activity/runs", "operation": "activity.query/activity.telemetry/activity.orphan_recovery", "status_code": 200, "duration_ms": 7}],
+    },
+    "TestUC003TraceIngestHarness__test_logs_traces_core_operations_anchor": {
+        "uc_id": "UC-003",
+        "stage": "1.2",
+        "route_path": "/hoc/api/cus/traces",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"core_ops_ready": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/traces", "operation": "list_traces/store_trace/get_trace/delete_trace/cleanup_old_traces", "status_code": 200, "duration_ms": 8}],
+    },
+    "TestUC003TraceIngestHarness__test_trace_lifecycle_operations_anchor": {
+        "uc_id": "UC-003",
+        "stage": "1.2",
+        "route_path": "/hoc/api/cus/traces",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"lifecycle_ops_ready": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/traces", "operation": "start_trace/record_step/complete_trace/store_trace/get_trace/search_traces/list_traces/delete_trace/get_trace_count/cleanup_old_traces/mark_trace_aborted", "status_code": 200, "duration_ms": 8}],
+    },
+    "TestUC007IncidentLifecycleHarness__test_incidents_query_write_recurrence_anchor": {
+        "uc_id": "UC-007",
+        "stage": "1.2",
+        "route_path": "/hoc/api/cus/incidents",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"incident_ops_ready": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/incidents", "operation": "incidents.query/incidents.write/incidents.cost_guard/incidents.recurrence", "status_code": 200, "duration_ms": 7}],
+    },
+    "TestUC010ActivityFeedbackLifecycleHarness__test_activity_signal_fingerprint_discovery_anchor": {
+        "uc_id": "UC-010",
+        "stage": "1.2",
+        "route_path": "/hoc/api/cus/activity/signals",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"signal_ops_ready": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/activity/signals", "operation": "activity.signal_fingerprint/activity.discovery", "status_code": 200, "duration_ms": 7}],
+    },
+    "TestUC011IncidentResolutionHarness__test_incidents_export_anchor": {
+        "uc_id": "UC-011",
+        "stage": "1.2",
+        "route_path": "/hoc/api/cus/incidents/{incident_id}/export/evidence",
+        "api_method": "POST",
+        "request_fields": {"incident_id": "string"},
+        "response_fields": {"export_ready": "boolean"},
+        "api_calls_used": [{"method": "POST", "path": "/hoc/api/cus/incidents/{incident_id}/export/evidence", "operation": "incidents.export", "status_code": 200, "duration_ms": 9}],
+    },
+    "TestUC018PolicySnapshotHarness__test_policies_query_rules_approval_anchor": {
+        "uc_id": "UC-018",
+        "stage": "1.2",
+        "route_path": "/hoc/api/cus/policies",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"policy_query_ops_ready": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/policies", "operation": "policies.query/policies.rules/policies.proposals_query/policies.rules_query/policies.policy_facade/policies.approval", "status_code": 200, "duration_ms": 9}],
+    },
+    "TestUC019PolicyEnforcementHarness__test_policies_enforcement_health_workers_anchor": {
+        "uc_id": "UC-019",
+        "stage": "1.2",
+        "route_path": "/hoc/api/cus/policies",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"policy_enforcement_ops_ready": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/policies", "operation": "policies.enforcement/policies.enforcement_write/policies.health/policies.guard_read/policies.sync_guard_read/policies.workers", "status_code": 200, "duration_ms": 9}],
+    },
+    "TestUC020PolicyGovernanceHarness__test_policies_governance_rbac_anchor": {
+        "uc_id": "UC-020",
+        "stage": "1.2",
+        "route_path": "/hoc/api/cus/policies",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"policy_governance_ops_ready": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/policies", "operation": "policies.governance/rbac.audit", "status_code": 200, "duration_ms": 9}],
+    },
+    "TestUC021LimitsAndThresholdsHarness__test_controls_thresholds_overrides_anchor": {
+        "uc_id": "UC-021",
+        "stage": "1.2",
+        "route_path": "/hoc/api/cus/controls",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"control_threshold_ops_ready": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/controls", "operation": "controls.thresholds/controls.overrides", "status_code": 200, "duration_ms": 8}],
+    },
+    "TestUC021LimitsAndThresholdsHarness__test_policies_limits_rate_limits_anchor": {
+        "uc_id": "UC-021",
+        "stage": "1.2",
+        "route_path": "/hoc/api/cus/policies",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"policy_limit_ops_ready": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/policies", "operation": "policies.limits/policies.limits_query/policies.rate_limits", "status_code": 200, "duration_ms": 8}],
+    },
+    "TestUC022RecoveryLessonsHarness__test_policies_lessons_recovery_anchor": {
+        "uc_id": "UC-022",
+        "stage": "1.2",
+        "route_path": "/hoc/api/cus/policies",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"policy_recovery_ops_ready": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/policies", "operation": "policies.lessons/policies.recovery.match/policies.recovery.write/policies.recovery.read", "status_code": 200, "duration_ms": 8}],
+    },
+    "TestUC023PolicyConflictHarness__test_policies_simulate_visibility_replay_anchor": {
+        "uc_id": "UC-023",
+        "stage": "1.2",
+        "route_path": "/hoc/api/cus/policies",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"policy_conflict_ops_ready": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/policies", "operation": "policies.simulate/policies.customer_visibility/policies.replay", "status_code": 200, "duration_ms": 8}],
+    },
+    "TestUC031IncidentPatternsHarness__test_incidents_recovery_rules_anchor": {
+        "uc_id": "UC-031",
+        "stage": "1.2",
+        "route_path": "/hoc/api/cus/incidents",
+        "api_method": "GET",
+        "request_fields": {"tenant_id": "string"},
+        "response_fields": {"incident_recovery_rule_ops_ready": "boolean"},
+        "api_calls_used": [{"method": "GET", "path": "/hoc/api/cus/incidents", "operation": "incidents.recovery_rules", "status_code": 200, "duration_ms": 8}],
+    },
 }
 
 
@@ -222,7 +372,13 @@ def _case_id_from_item(item) -> str:
 
 
 def _resolve_uc_info(item) -> tuple[str, str] | None:
-    """Resolve (uc_id, stage) from test file name."""
+    """Resolve (uc_id, stage) from metadata first, then test file name fallback."""
+    case_id = _case_id_from_item(item)
+    meta = _resolve_route_meta(item, case_id)
+    uc_id = meta.get("uc_id")
+    stage = meta.get("stage")
+    if isinstance(uc_id, str) and uc_id.strip() and isinstance(stage, str) and stage.strip():
+        return uc_id.strip(), stage.strip()
     filename = os.path.basename(item.fspath)
     return _UC_MAP.get(filename)
 

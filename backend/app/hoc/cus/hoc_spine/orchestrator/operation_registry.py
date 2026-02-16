@@ -314,6 +314,11 @@ class OperationRegistry:
             timestamp=utc_now().isoformat(),
         )
 
+        # --- Pre-dispatch: invariant preconditions (BA-04) ---
+        self._evaluate_invariants_safe(
+            operation, enriched_ctx, phase="pre"
+        )
+
         # --- Execute handler ---
         try:
             result = await handler.execute(enriched_ctx)
@@ -333,6 +338,11 @@ class OperationRegistry:
                 error_code=f"HANDLER_EXCEPTION:{type(exc).__name__}",
             )
 
+        # --- Post-dispatch: invariant postconditions (BA-04) ---
+        self._evaluate_invariants_safe(
+            operation, enriched_ctx, phase="post"
+        )
+
         # --- Post-dispatch: audit ---
         duration_ms = (time.monotonic() - start) * 1000
         result.operation = operation
@@ -340,6 +350,52 @@ class OperationRegistry:
         self._audit_dispatch(operation, ctx, result, duration_ms, authority_decision)
 
         return result
+
+    # =========================================================================
+    # Invariant Evaluation (BA-04)
+    # =========================================================================
+
+    def _evaluate_invariants_safe(
+        self,
+        operation: str,
+        ctx: OperationContext,
+        phase: str,
+    ) -> None:
+        """
+        Evaluate business invariants for *operation* in MONITOR mode.
+
+        Phase is "pre" (before handler) or "post" (after handler).
+        Runs in MONITOR mode: logs results, never blocks dispatch.
+        Failures here must never break the operation pipeline.
+
+        BA-04: Wired into execute() path for all dispatched operations.
+        """
+        try:
+            from app.hoc.cus.hoc_spine.authority.invariant_evaluator import (
+                InvariantMode,
+                evaluate_preconditions,
+                evaluate_postconditions,
+            )
+
+            # Build invariant context from OperationContext
+            invariant_context = {
+                "tenant_id": ctx.tenant_id,
+                "operation": operation,
+                **ctx.params,
+            }
+
+            if phase == "pre":
+                evaluate_preconditions(operation, invariant_context, InvariantMode.MONITOR)
+            else:
+                evaluate_postconditions(operation, invariant_context, InvariantMode.MONITOR)
+
+        except Exception:
+            # Invariant evaluation must NEVER block operations
+            logger.debug(
+                "invariant_evaluation_error",
+                extra={"operation": operation, "phase": phase},
+                exc_info=True,
+            )
 
     # =========================================================================
     # Authority

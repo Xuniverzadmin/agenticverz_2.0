@@ -1,0 +1,20 @@
+{
+  "replay_id": "REPLAY-002",
+  "operation": "incident.resolve",
+  "input_context": {
+    "tenant_id": "t-golden-002",
+    "project_id": "p-001",
+    "actor_type": "user",
+    "params": {"incident_id": "inc-001", "current_state": "resolved"}
+  },
+  "expected_decision": {
+    "outcome": "DENY",
+    "reason": "Cannot resolve already-resolved incident",
+    "invariants_checked": ["INV-INC-001"]
+  },
+  "metadata": {
+    "captured_at": "2026-02-16T00:00:00Z",
+    "baseline_commit": "golden",
+    "severity": "MEDIUM"
+  }
+}

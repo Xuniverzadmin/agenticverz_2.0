@@ -328,6 +328,74 @@ class TestUC002OnboardingFlow:
             "_check_activation_conditions"
         )
 
+    def test_connector_registry_cache_boundary_is_enforced(self) -> None:
+        """UAT-UC002-008: onboarding activation path enforces connector-registry cache boundary."""
+        test_id = "UAT-UC002-008"
+
+        with open(_ONBOARDING_HANDLER_PATH) as f:
+            source = f.read()
+
+        tree = ast.parse(source)
+        imported_modules: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imported_modules.add(alias.name)
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                imported_modules.add(node.module)
+
+        # UC-002 boundary: activation checks must not import/query connector registry cache.
+        assert not any("connector_registry_driver" in mod for mod in imported_modules), (
+            f"{test_id}: onboarding handler imports connector_registry_driver "
+            "which violates activation boundary."
+        )
+        assert "NEVER import or query connector_registry_driver" in source, (
+            f"{test_id}: expected explicit connector registry boundary guard comment."
+        )
+
+        print(
+            f"EVIDENCE: {test_id} PASS — connector registry cache boundary is enforced "
+            "in onboarding handler activation path"
+        )
+
+    def test_onboarding_transition_event_uses_schema_contract(self) -> None:
+        """UAT-UC002-009: onboarding transition events are validated via event schema contract."""
+        test_id = "UAT-UC002-009"
+
+        with open(_ONBOARDING_HANDLER_PATH) as f:
+            source = f.read()
+
+        tree = ast.parse(source)
+        has_contract_import = False
+        has_validate_call = False
+        has_schema_version_ref = False
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module == "app.hoc.cus.hoc_spine.authority.event_schema_contract":
+                imported = {alias.name for alias in node.names}
+                if "validate_event_payload" in imported and "CURRENT_SCHEMA_VERSION" in imported:
+                    has_contract_import = True
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "validate_event_payload":
+                has_validate_call = True
+            if isinstance(node, ast.Name) and node.id == "CURRENT_SCHEMA_VERSION":
+                has_schema_version_ref = True
+
+        assert has_contract_import, (
+            f"{test_id}: onboarding handler missing event_schema_contract imports "
+            "(validate_event_payload, CURRENT_SCHEMA_VERSION)."
+        )
+        assert has_validate_call, (
+            f"{test_id}: onboarding handler does not call validate_event_payload for transition event."
+        )
+        assert has_schema_version_ref, (
+            f"{test_id}: onboarding transition event does not reference CURRENT_SCHEMA_VERSION."
+        )
+
+        print(
+            f"EVIDENCE: {test_id} PASS — onboarding transition events are validated "
+            "through event schema contract"
+        )
+
     # -----------------------------------------------------------------
     # Fail path: activation predicate with all-false inputs
     # -----------------------------------------------------------------

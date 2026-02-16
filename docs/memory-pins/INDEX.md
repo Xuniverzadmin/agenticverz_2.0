@@ -540,6 +540,9 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-568](PIN-568-stage-1112-taskpack-execution-1414-pass-292-checks-3-findings-remediated.md) | **Stage 1.1/1.2 Taskpack Execution — 14/14 PASS, 292 checks, 3 findings remediated** | Architecture | **✅ COMPLETE** | 2026-02-15 |
 | [PIN-569](PIN-569-pin-569-stagetest-hoc-api-evidence-console-w0-w6-complete-deployed-to-stagetestagenticverzcom.md) | **PIN-569: Stagetest HOC API Evidence Console — W0-W6 complete, deployed to stagetest.agenticverz.com** | Architecture | **✅ COMPLETE** | 2026-02-15 |
 | [PIN-570](PIN-570-stagetest-auth-bypass-temporary.md) | **Stagetest Auth Bypass (Temporary)** | Auth | **✅ COMPLETE** | 2026-02-15 |
+| [PIN-573](PIN-573-frontend-rebuild-strategy-lock-pr-0-and-pr-1.md) | **Frontend Rebuild Strategy Lock: PR-0 and PR-1** | Architecture Strategy | **🏗️ LOCKED** | 2026-02-16 |
+| [PIN-572](PIN-572-business-assurance-guardrails-framework.md) | **Business Assurance Guardrails Framework — 30/30 tasks, 63 tests, 8 scripts** | Architecture / Assurance | **✅ COMPLETE** | 2026-02-16 |
+| [PIN-574](PIN-574-ba-delta-reconciliation-2026-02-16.md) | **BA Delta Reconciliation — 5 deltas resolved, 16/16 gates PASS** | Architecture / Assurance | **✅ COMPLETE** | 2026-02-16 |
 
 ---
 
@@ -1309,6 +1312,9 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-16 | **PIN-574 BA Delta Reconciliation** - 5 deltas resolved: invariant evaluator wired into runtime dispatch (MONITOR mode), gate count 15→16, operation ownership 7→0 violations, transaction boundaries 7→0 violations, data quality 57→0 FAIL. All 16 gatepack gates PASS. 72/72 tests PASS. |
+| 2026-02-16 | **PIN-572 Business Assurance Guardrails Framework** - Full BA framework: 10 workstreams, 30 artifacts, 63 tests, 8 verification scripts, 5 architecture docs, 3 authority modules. |
+| 2026-02-16 | **PIN-573 Frontend Rebuild Strategy Lock: PR-0 and PR-1** - Created via memory_trail. |
 | 2026-02-15 | **PIN-570 Stagetest Auth Bypass (Temporary)** - Created via memory_trail. |
 | 2026-02-15 | **PIN-569 PIN-569: Stagetest HOC API Evidence Console — W0-W6 complete, deployed to stagetest.agenticverz.com** - Created via memory_trail. |
 | 2026-02-15 | **PIN-568 Stage 1.1/1.2 Taskpack Execution — 14/14 PASS, 292 checks, 3 findings remediated** - Created via memory_trail. |

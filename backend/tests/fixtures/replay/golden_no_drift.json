@@ -1,0 +1,20 @@
+{
+  "replay_id": "REPLAY-001",
+  "operation": "tenant.create",
+  "input_context": {
+    "tenant_id": "t-golden-001",
+    "project_id": "__none__",
+    "actor_type": "founder",
+    "params": {"org_id": "org-001", "tenant_name": "Golden Test Tenant"}
+  },
+  "expected_decision": {
+    "outcome": "ALLOW",
+    "reason": "All preconditions satisfied",
+    "invariants_checked": ["INV-TENANT-001"]
+  },
+  "metadata": {
+    "captured_at": "2026-02-16T00:00:00Z",
+    "baseline_commit": "golden",
+    "severity": "HIGH"
+  }
+}

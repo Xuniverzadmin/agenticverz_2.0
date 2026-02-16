@@ -122,7 +122,11 @@ class SQLiteTraceStore(TraceStore):
         self._init_db()
 
     def _init_db(self) -> None:
-        """Initialize database schema."""
+        """Initialize database schema.
+
+        Note: sqlite3 context manager auto-commits on clean exit,
+        so no explicit conn.commit() is needed (PIN-520 purity).
+        """
         with sqlite3.connect(self.db_path) as conn:
             conn.executescript(
                 """
@@ -183,7 +187,6 @@ class SQLiteTraceStore(TraceStore):
                 CREATE INDEX IF NOT EXISTS idx_steps_idempotency ON trace_steps(idempotency_key);
             """
             )
-            conn.commit()
 
     def _get_conn(self) -> sqlite3.Connection:
         """Get a database connection."""
@@ -217,7 +220,6 @@ class SQLiteTraceStore(TraceStore):
                         datetime.now(timezone.utc).isoformat(),
                     ),
                 )
-                conn.commit()
 
         await asyncio.to_thread(_insert)
 
@@ -261,7 +263,6 @@ class SQLiteTraceStore(TraceStore):
                         datetime.now(timezone.utc).isoformat(),
                     ),
                 )
-                conn.commit()
 
         await asyncio.to_thread(_insert)
 
@@ -283,7 +284,6 @@ class SQLiteTraceStore(TraceStore):
                     """,
                     (datetime.now(timezone.utc).isoformat(), status, json.dumps(metadata or {}), run_id),
                 )
-                conn.commit()
 
         await asyncio.to_thread(_update)
 
@@ -407,7 +407,6 @@ class SQLiteTraceStore(TraceStore):
         def _delete():
             with self._get_conn() as conn:
                 cursor = conn.execute("DELETE FROM traces WHERE run_id = ?", (run_id,))
-                conn.commit()
                 return cursor.rowcount > 0
 
         return await asyncio.to_thread(_delete)
@@ -437,7 +436,6 @@ class SQLiteTraceStore(TraceStore):
                     """,
                     (f"-{days} days",),
                 )
-                conn.commit()
                 return cursor.rowcount
 
         return await asyncio.to_thread(_cleanup)
@@ -600,7 +598,6 @@ class SQLiteTraceStore(TraceStore):
                     """,
                     (seed, frozen_timestamp, root_hash, plan_hash, run_id),
                 )
-                conn.commit()
 
         await asyncio.to_thread(_update)
 

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Replay Contract Schema",
+  "description": "Defines the input format for differential replay verification",
+  "type": "object",
+  "required": ["replay_id", "operation", "input_context", "expected_decision"],
+  "properties": {
+    "replay_id": {"type": "string", "description": "Unique replay case identifier"},
+    "operation": {"type": "string", "description": "Operation name (e.g., 'onboarding.complete')"},
+    "input_context": {
+      "type": "object",
+      "description": "Input context dict passed to the operation",
+      "properties": {
+        "tenant_id": {"type": "string"},
+        "project_id": {"type": "string"},
+        "actor_type": {"type": "string", "enum": ["user", "system", "sdk", "founder"]},
+        "params": {"type": "object"}
+      },
+      "required": ["tenant_id"]
+    },
+    "expected_decision": {
+      "type": "object",
+      "description": "Expected decision output",
+      "properties": {
+        "outcome": {"type": "string", "enum": ["ALLOW", "DENY", "DEFERRED"]},
+        "reason": {"type": "string"},
+        "invariants_checked": {"type": "array", "items": {"type": "string"}}
+      },
+      "required": ["outcome"]
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "captured_at": {"type": "string", "format": "date-time"},
+        "baseline_commit": {"type": "string"},
+        "severity": {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]}
+      }
+    }
+  }
+}
