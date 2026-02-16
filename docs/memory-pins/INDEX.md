@@ -547,6 +547,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-576](PIN-576-pr2-runs-realdata-auth-rollout-iteration-2-predeploy-evidence.md) | **PR2 Runs Real-Data Auth Rollout — Iteration 2 (pre-deploy evidence)** | Frontend / Auth / Stagetest Validation | **🚧 IN PROGRESS** | 2026-02-18 |
 | [PIN-577](PIN-577-pr2-runs-postdeploy-verification-harness.md) | **PR2 Runs Post-Deploy Verification Harness** | Verification / Stagetest / Auth Rollout | **🚧 IN PROGRESS** | 2026-02-18 |
 | [PIN-578](PIN-578-pr2-runs-postdeploy-auth-enforcement-evidence.md) | **PR2 Runs Post-Deploy Auth Enforcement Evidence** | Verification / Stagetest / Auth Rollout | **🚧 IN PROGRESS** | 2026-02-18 |
+| [PIN-588](PIN-588-account-users-list-facade-pr10-contract-hardening.md) | **Account Users List Facade PR-10 Contract Hardening** | Architecture / API Contract / Frontend Enablement | **✅ COMPLETE** | 2026-02-16 |
 
 ---
 
@@ -1316,6 +1317,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-16 | **PIN-588 Account Users List Facade PR-10 Contract Hardening** - Added `GET /cus/account/users/list` strict read facade with one-dispatch to `account.query`, boundary validation, and deterministic list tie-break hardening (`email asc, id asc`). |
 | 2026-02-18 | **PIN-578 PR2 Runs Post-Deploy Auth Enforcement Evidence** - Captured post-deploy stagetest results after merged-main rollout: live/completed return 401 without auth and also 401 with legacy fixture headers, confirming fixture bypass retirement at runtime. |
 | 2026-02-18 | **PIN-577 PR2 Runs Post-Deploy Verification Harness** - Added deterministic verification script (`scripts/ops/verify_pr2_runs_auth_rollout.sh`) and post-deploy checklist for auth-path rollout closure evidence capture. |
 | 2026-02-18 | **PIN-576 PR2 Runs Real-Data Auth Rollout — Iteration 2** - Captured pre-deploy stagetest evidence: no-header requests return 401, fixture-header requests still return 200 (legacy runtime). Confirmed deployment still pending for full bypass retirement. |
