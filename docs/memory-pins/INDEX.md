@@ -546,6 +546,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-575](PIN-575-cus-l21-facade-package-form-standardization.md) | **CUS L2.1 Facade Package-Form Standardization (10/10 domains)** | Architecture / Topology / Naming | **✅ COMPLETE** | 2026-02-16 |
 | [PIN-576](PIN-576-ba-n6-six-step-execution-audit-pass-2026-02-16.md) | **BA-N6 Six-Step Execution Audit PASS — runtime-verified, 16/16 gates, 41/41 CI checks** | Architecture / Assurance / Audit | **✅ COMPLETE** | 2026-02-16 |
 | [PIN-577](PIN-577-runs-facade-contract-drift-fix-determinism.md) | **Runs Facade Contract Drift Fix (Deterministic Pagination)** | Architecture / API Contract / Determinism | **✅ COMPLETE** | 2026-02-16 |
+| [PIN-578](PIN-578-incidents-list-facade-pr2-contract-hardening.md) | **Incidents List Facade PR-2 Contract Hardening** | Architecture / API Contract / Frontend Enablement | **✅ COMPLETE** | 2026-02-16 |
 
 ---
 
@@ -1315,6 +1316,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-16 | **PIN-578 Incidents List Facade PR-2 Contract Hardening** - Added `/cus/incidents/list` read-only facade with strict topic allowlists, single-dispatch mapping, deterministic pagination semantics, acceptance tests, and linked frontend scaffold contract doc. |
 | 2026-02-16 | **PIN-577 Runs Facade Contract Drift Fix (Deterministic Pagination)** - Locked facade-side `has_more` derivation to contract math, added regression test, and recorded issue ledger evidence for frontend-safe pagination behavior. |
 | 2026-02-16 | **PIN-576 BA-N6 Six-Step Execution Audit PASS** - Independent audit confirmed BA-N6 completion with runtime evidence: mutation 76.7% (115/150), CI hygiene 41/41, gatepack 16/16 PASS, fail-close behavior validated for mutation and data-quality gates. |
 | 2026-02-16 | **PIN-575 CUS L2.1 Facade Package-Form Standardization** - Canonicalized all 10 CUS facades to `facades/cus/<domain>/<domain>_fac.py`; updated topology and domain literature references. |
