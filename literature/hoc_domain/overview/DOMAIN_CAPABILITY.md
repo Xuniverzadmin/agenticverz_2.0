@@ -6,6 +6,16 @@
 
 ---
 
+## Reality Delta (2026-02-16, L2.1 Facade Activation Wiring)
+
+- Public facade activation path for overview is now explicitly wired at L2.1:
+- backend/app/hoc/api/facades/cus/overview/overview_fac.py
+- L2 public boundary module for domain-scoped facade entry is present at:
+- backend/app/hoc/api/cus/overview/overview_public.py
+- Runtime chain is fixed as:
+- app.py -> app.hoc.api.facades.cus -> domain facade bundle -> overview_public.py -> L4 registry.execute(...)
+- Current status: overview_public.py remains scaffold-only (no behavior change yet); existing domain routers stay active during incremental rollout.
+
 ## 1. Domain Purpose
 
 Customer dashboard overview — aggregated health status, key metrics, and quick-access navigation across all domains.

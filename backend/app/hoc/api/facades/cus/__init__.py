@@ -9,16 +9,16 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from .account import ROUTERS as ACCOUNT_ROUTERS
-from .activity import ROUTERS as ACTIVITY_ROUTERS
-from .analytics import ROUTERS as ANALYTICS_ROUTERS
-from .api_keys import ROUTERS as API_KEYS_ROUTERS
-from .controls import ROUTERS as CONTROLS_ROUTERS
-from .incidents import ROUTERS as INCIDENTS_ROUTERS
-from .integrations import ROUTERS as INTEGRATIONS_ROUTERS
-from .logs import ROUTERS as LOGS_ROUTERS
-from .overview import ROUTERS as OVERVIEW_ROUTERS
-from .policies import ROUTERS as POLICIES_ROUTERS
+from .account.account_fac import ROUTERS as ACCOUNT_ROUTERS
+from .activity.activity_fac import ROUTERS as ACTIVITY_ROUTERS
+from .analytics.analytics_fac import ROUTERS as ANALYTICS_ROUTERS
+from .api_keys.api_keys_fac import ROUTERS as API_KEYS_ROUTERS
+from .controls.controls_fac import ROUTERS as CONTROLS_ROUTERS
+from .incidents.incidents_fac import ROUTERS as INCIDENTS_ROUTERS
+from .integrations.integrations_fac import ROUTERS as INTEGRATIONS_ROUTERS
+from .logs.logs_fac import ROUTERS as LOGS_ROUTERS
+from .overview.overview_fac import ROUTERS as OVERVIEW_ROUTERS
+from .policies.policies_fac import ROUTERS as POLICIES_ROUTERS
 
 CANONICAL_CUS_DOMAINS: tuple[str, ...] = (
     "overview",
@@ -45,4 +45,3 @@ ALL_CUS_ROUTERS: list[APIRouter] = [
     *API_KEYS_ROUTERS,
     *ACCOUNT_ROUTERS,
 ]
-

@@ -97,7 +97,16 @@ Audience runtimes must be wired intentionally via L2.1 facades and explicit hand
 
 ### L2.1 — FACADE (Organizer)
 
-**Location:** `hoc/api/facades/{audience}/{domain}.py` where `{audience}` ∈ `{cus,int,fdr}`
+**Location:** `hoc/api/facades/{audience}/{domain}.py` (default) or
+`hoc/api/facades/{audience}/{domain}/{domain}_fac.py` (domain-scoped package form).
+Current canonical package-form examples: `hoc/api/facades/cus/account/account_fac.py`,
+`hoc/api/facades/cus/policies/policies_fac.py`.
+`{audience}` ∈ `{cus,int,fdr}`
+
+**Topology Note (2026-02-16 / PIN-575):**
+All canonical CUS L2.1 facades are now standardized to package-form:
+`hoc/api/facades/cus/<domain>/<domain>_fac.py`.
+Use package-form as the constitutional default for new CUS facade activation.
 
 **Responsibility:** Groups L2 routers by audience and domain. Conceals API structure from outside world.
 
@@ -109,7 +118,7 @@ Audience runtimes must be wired intentionally via L2.1 facades and explicit hand
 
 **Example:**
 ```python
-# hoc/api/facades/cus/policies.py
+# hoc/api/facades/cus/policies/policies_fac.py
 from hoc.api.cus.policies import limits, rules, proposals, enforcement
 
 routers = [
@@ -490,8 +499,15 @@ backend/app/hoc/
 │
 ├── api/                              ← L2 HTTP LAYER
 │   ├── facades/cus/                  ← L2.1 Facades
-│   │   ├── overview.py
-│   │   ├── policies.py
+│   │   ├── overview/overview_fac.py
+│   │   ├── activity/activity_fac.py
+│   │   ├── incidents/incidents_fac.py
+│   │   ├── policies/policies_fac.py
+│   │   ├── controls/controls_fac.py
+│   │   ├── logs/logs_fac.py
+│   │   ├── analytics/analytics_fac.py
+│   │   ├── integrations/integrations_fac.py
+│   │   ├── api_keys/api_keys_fac.py
 │   │   └── ...
 │   └── cus/{domain}/                 ← L2 Route handlers
 │

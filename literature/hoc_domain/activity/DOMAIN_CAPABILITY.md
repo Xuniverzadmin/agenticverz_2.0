@@ -6,6 +6,16 @@
 
 ---
 
+## Reality Delta (2026-02-16, L2.1 Facade Activation Wiring)
+
+- Public facade activation path for activity is now explicitly wired at L2.1:
+- backend/app/hoc/api/facades/cus/activity/activity_fac.py
+- L2 public boundary module for domain-scoped facade entry remains:
+- backend/app/hoc/api/cus/activity/runs_facade.py and backend/app/hoc/api/cus/activity/activity.py
+- Runtime chain is fixed as:
+- app.py -> app.hoc.api.facades.cus -> domain facade bundle -> activity routers -> L4 registry.execute(...)
+- Current status: activity routes are live (not scaffold-only) and preserve existing behavior while package-form facade naming is standardized.
+
 ## 1. Domain Purpose
 
 Tracks and surfaces user and system activity streams. Provides audit trail and activity feeds for the customer console.

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from app.hoc.api.cus.policies.policies_public import router as policies_public_router
 from app.hoc.api.cus.policies.M25_integrations import router as m25_integration_router
 from app.hoc.api.cus.policies.alerts import router as alerts_router
 from app.hoc.api.cus.policies.compliance import router as compliance_router
@@ -40,6 +41,7 @@ from app.hoc.api.cus.policies.workers import router as workers_router
 
 DOMAIN = "policies"
 ROUTERS: list[APIRouter] = [
+    policies_public_router,
     # Core / policy CRUD
     policy_router,
     policies_router,
@@ -79,4 +81,3 @@ ROUTERS: list[APIRouter] = [
     replay_router,
     m25_integration_router,
 ]
-

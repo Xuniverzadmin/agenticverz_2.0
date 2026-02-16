@@ -7,6 +7,16 @@
 
 ---
 
+## Reality Delta (2026-02-16, L2.1 Facade Activation Wiring)
+
+- Public facade activation path for analytics is now explicitly wired at L2.1:
+- backend/app/hoc/api/facades/cus/analytics/analytics_fac.py
+- L2 public boundary module for domain-scoped facade entry is present at:
+- backend/app/hoc/api/cus/analytics/analytics_public.py
+- Runtime chain is fixed as:
+- app.py -> app.hoc.api.facades.cus -> domain facade bundle -> analytics_public.py -> L4 registry.execute(...)
+- Current status: analytics_public.py remains scaffold-only (no behavior change yet); existing domain routers stay active during incremental rollout.
+
 ## Reality Delta (2026-02-07)
 
 - Execution topology: analytics L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5 gaps).

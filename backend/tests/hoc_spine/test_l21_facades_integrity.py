@@ -39,6 +39,19 @@ CANONICAL_10 = (
     "account",
 )
 
+CANONICAL_FACADE_FILES = {
+    "overview": "overview/overview_fac.py",
+    "activity": "activity/activity_fac.py",
+    "incidents": "incidents/incidents_fac.py",
+    "policies": "policies/policies_fac.py",
+    "controls": "controls/controls_fac.py",
+    "logs": "logs/logs_fac.py",
+    "analytics": "analytics/analytics_fac.py",
+    "integrations": "integrations/integrations_fac.py",
+    "api_keys": "api_keys/api_keys_fac.py",
+    "account": "account/account_fac.py",
+}
+
 
 class TestL21FacadesIntegrity:
     """L2.1 facade integrity: canonical 10 CUS domains."""
@@ -46,7 +59,7 @@ class TestL21FacadesIntegrity:
     @pytest.mark.parametrize("domain", CANONICAL_10)
     def test_facade_file_exists(self, domain: str):
         """Test A: Each canonical domain facade file must exist on disk."""
-        facade_file = FACADES_DIR / f"{domain}.py"
+        facade_file = FACADES_DIR / CANONICAL_FACADE_FILES[domain]
         assert facade_file.is_file(), (
             f"Missing L2.1 facade: {facade_file.relative_to(FACADES_DIR.parent.parent.parent.parent.parent)}"
         )
