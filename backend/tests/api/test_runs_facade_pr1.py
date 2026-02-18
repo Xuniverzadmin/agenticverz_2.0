@@ -289,3 +289,137 @@ def test_has_more_derived_from_total_and_page_math(client_with_registry):
     body = response.json()
     assert body["has_more"] is True
     assert body["pagination"]["next_offset"] == 1
+
+
+def test_pr1_live_fixture_payload_header_returns_contract_shape(client_with_registry, monkeypatch):
+    client, registry = client_with_registry
+    monkeypatch.setenv("HOC_PR1_RUNS_SCAFFOLD_FIXTURE_ENABLED", "true")
+    monkeypatch.setenv("AOS_MODE", "test")
+
+    response = client.get(
+        "/cus/activity/runs?topic=live&limit=2&offset=0",
+        headers={"X-HOC-Scaffold-Fixture": "pr1-runs-live-v1"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["topic"] == "live"
+    assert body["total"] == 3
+    assert body["pagination"]["limit"] == 2
+    assert body["pagination"]["offset"] == 0
+    assert body["pagination"]["next_offset"] == 2
+    assert body["runs"][0]["run_id"] == "run_live_003"
+    assert body["runs"][0]["policy_context"]["policy_id"] == "pol_cost_guard_01"
+    assert body["meta"]["request_id"] == "req-test-123"
+    assert len(registry.calls) == 0
+
+
+def test_pr1_completed_fixture_payload_header_returns_contract_shape(client_with_registry, monkeypatch):
+    client, registry = client_with_registry
+    monkeypatch.setenv("HOC_PR1_RUNS_SCAFFOLD_FIXTURE_ENABLED", "true")
+    monkeypatch.setenv("AOS_MODE", "test")
+
+    response = client.get(
+        "/cus/activity/runs?topic=completed&limit=2&offset=0",
+        headers={"X-HOC-Scaffold-Fixture": "pr1-runs-completed-v1"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["topic"] == "completed"
+    assert body["total"] == 3
+    assert body["pagination"]["limit"] == 2
+    assert body["pagination"]["offset"] == 0
+    assert body["pagination"]["next_offset"] == 2
+    assert body["runs"][0]["run_id"] == "run_comp_003"
+    assert body["runs"][0]["completed_at"] == "2026-02-18T05:47:30Z"
+    assert body["meta"]["request_id"] == "req-test-123"
+    assert len(registry.calls) == 0
+
+
+def test_unknown_fixture_key_is_rejected_with_invalid_query(client_with_registry):
+    client, registry = client_with_registry
+
+    response = client.get(
+        "/cus/activity/runs?topic=live&limit=2&offset=0",
+        headers={"X-HOC-Scaffold-Fixture": "unknown-fixture-key"},
+    )
+
+    assert response.status_code == 400
+    body = response.json()
+    assert body["detail"]["code"] == "INVALID_QUERY"
+    assert len(registry.calls) == 0
+
+
+def test_pr1_live_fixture_header_rejects_non_live_topic():
+    app = FastAPI()
+
+    @app.middleware("http")
+    async def request_id_middleware(request, call_next):
+        request.state.request_id = "req-test-123"
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = "req-test-123"
+        return response
+
+    app.include_router(runs_facade.router)
+    app.dependency_overrides[runs_facade.get_session_dep] = lambda: object()
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/cus/activity/runs?topic=completed",
+            headers={"X-HOC-Scaffold-Fixture": "pr1-runs-live-v1"},
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "INVALID_QUERY"
+
+
+def test_pr1_completed_fixture_header_rejects_non_completed_topic():
+    app = FastAPI()
+
+    @app.middleware("http")
+    async def request_id_middleware(request, call_next):
+        request.state.request_id = "req-test-123"
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = "req-test-123"
+        return response
+
+    app.include_router(runs_facade.router)
+    app.dependency_overrides[runs_facade.get_session_dep] = lambda: object()
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/cus/activity/runs?topic=live",
+            headers={"X-HOC-Scaffold-Fixture": "pr1-runs-completed-v1"},
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "INVALID_QUERY"
+
+
+def test_fixture_header_with_fixture_mode_disabled_stays_on_auth_path(monkeypatch):
+    app = FastAPI()
+
+    @app.middleware("http")
+    async def request_id_middleware(request, call_next):
+        request.state.request_id = "req-test-123"
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = "req-test-123"
+        return response
+
+    app.include_router(runs_facade.router)
+    app.dependency_overrides[runs_facade.get_session_dep] = lambda: object()
+
+    monkeypatch.delenv("HOC_PR1_RUNS_SCAFFOLD_FIXTURE_ENABLED", raising=False)
+    monkeypatch.setenv("AOS_MODE", "test")
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/cus/activity/runs?topic=live&limit=2&offset=0",
+            headers={"X-HOC-Scaffold-Fixture": "pr1-runs-live-v1"},
+        )
+
+    assert response.status_code == 401
+    assert response.json()["detail"]["error"] == "not_authenticated"
