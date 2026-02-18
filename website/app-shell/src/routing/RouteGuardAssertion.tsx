@@ -84,6 +84,8 @@ const EXEMPT_PATHS = [
   '/onboarding',
   '/health',
   '/credits',  // Shared credits page
+  '/stagetest', // Stagetest evidence console
+  '/page',      // Stagetest scaffold pages
 ] as const;
 
 // =============================================================================
