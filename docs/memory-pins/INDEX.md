@@ -546,6 +546,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-575](PIN-575-pr2-runs-realdata-auth-rollout-iteration-1.md) | **PR2 Runs Real-Data Auth Rollout — Iteration 1 (bypass retirement)** | Frontend / Auth / RBAC | **🚧 IN PROGRESS** | 2026-02-18 |
 | [PIN-576](PIN-576-pr2-runs-realdata-auth-rollout-iteration-2-predeploy-evidence.md) | **PR2 Runs Real-Data Auth Rollout — Iteration 2 (pre-deploy evidence)** | Frontend / Auth / Stagetest Validation | **🚧 IN PROGRESS** | 2026-02-18 |
 | [PIN-577](PIN-577-pr2-runs-postdeploy-verification-harness.md) | **PR2 Runs Post-Deploy Verification Harness** | Verification / Stagetest / Auth Rollout | **🚧 IN PROGRESS** | 2026-02-18 |
+| [PIN-578](PIN-578-pr2-runs-postdeploy-auth-enforcement-evidence.md) | **PR2 Runs Post-Deploy Auth Enforcement Evidence** | Verification / Stagetest / Auth Rollout | **🚧 IN PROGRESS** | 2026-02-18 |
 
 ---
 
@@ -1315,6 +1316,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-18 | **PIN-578 PR2 Runs Post-Deploy Auth Enforcement Evidence** - Captured post-deploy stagetest results after merged-main rollout: live/completed return 401 without auth and also 401 with legacy fixture headers, confirming fixture bypass retirement at runtime. |
 | 2026-02-18 | **PIN-577 PR2 Runs Post-Deploy Verification Harness** - Added deterministic verification script (`scripts/ops/verify_pr2_runs_auth_rollout.sh`) and post-deploy checklist for auth-path rollout closure evidence capture. |
 | 2026-02-18 | **PIN-576 PR2 Runs Real-Data Auth Rollout — Iteration 2** - Captured pre-deploy stagetest evidence: no-header requests return 401, fixture-header requests still return 200 (legacy runtime). Confirmed deployment still pending for full bypass retirement. |
 | 2026-02-18 | **PIN-575 PR2 Runs Real-Data Auth Rollout — Iteration 1** - Removed temporary runs scaffold RBAC public rule, removed fixture compose toggle, removed scaffold fixture headers, and logged PR2 rollout iteration plan. |

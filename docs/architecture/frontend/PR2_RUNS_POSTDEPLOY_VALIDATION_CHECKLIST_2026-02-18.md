@@ -30,6 +30,16 @@ AUTH_COOKIE='session=<cookie-value>' scripts/ops/verify_pr2_runs_auth_rollout.sh
 - Markdown summary: `artifacts/pr2_runs_rollout/pr2_runs_rollout_<timestamp>.md`
 - Raw headers/body files in same directory.
 
+## Execution Snapshot (2026-02-18T08:21:00Z)
+
+- Artifact: `artifacts/pr2_runs_rollout/pr2_runs_rollout_20260218T082100Z.md`
+- `live_no_header` -> `401`
+- `completed_no_header` -> `401`
+- `live_with_fixture_header` -> `401`
+- `completed_with_fixture_header` -> `401`
+- `live_authenticated` -> not executed (no `AUTH_COOKIE` supplied)
+- `completed_authenticated` -> not executed (no `AUTH_COOKIE` supplied)
+
 ## Closure Criteria
 
 - Fixture header path no longer returns scaffold fixture payloads on stagetest.
