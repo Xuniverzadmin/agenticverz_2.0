@@ -23,6 +23,12 @@
 - Removed PR1 scaffold probe fixture headers from `/page/activity/runs-live` and `/page/activity/runs-completed`.
 
 ### Iteration 2 (next)
+- Captured pre-deploy stagetest evidence on 2026-02-18:
+  - no fixture header -> `401` for both live and completed
+  - manual fixture headers still return `200` fixture payloads (legacy runtime still deployed)
+- Recorded in `docs/memory-pins/PIN-576-pr2-runs-realdata-auth-rollout-iteration-2-predeploy-evidence.md`.
+
+### Iteration 3 (next)
 1. Backend dispatch to real data
 - Keep `GET /cus/activity/runs` contract shape unchanged.
 - Validate `topic=live|completed` + existing query validation behavior.
