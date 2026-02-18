@@ -17,15 +17,20 @@
 - Broader domain expansion beyond activity runs live/completed.
 
 ## Implementation Steps
+### Iteration 1 (completed 2026-02-18)
+- Removed temporary RBAC public scaffold rule for `/cus/activity/runs`.
+- Removed fixture toggle env from compose (`HOC_PR1_RUNS_SCAFFOLD_FIXTURE_ENABLED`).
+- Removed PR1 scaffold probe fixture headers from `/page/activity/runs-live` and `/page/activity/runs-completed`.
+
+### Iteration 2 (next)
 1. Backend dispatch to real data
 - Keep `GET /cus/activity/runs` contract shape unchanged.
 - Validate `topic=live|completed` + existing query validation behavior.
 - Ensure dispatch uses authenticated tenant context and real registry methods.
 
-2. Fixture mode demotion
-- Restrict fixture mode to explicit dev/test only.
-- Do not allow fixture path in production modes.
-- Keep unknown fixture key and topic/fixture mismatch as hard `400 INVALID_QUERY`.
+2. Fixture mode policy
+- Keep fixture behavior disabled on stagetest/production paths.
+- If fixture code is reintroduced for local testing, keep it local/test-only and non-routable in production.
 
 3. RBAC cleanup
 - Remove temporary rule `CUS_ACTIVITY_RUNS_SCAFFOLD_PREFLIGHT` from `design/auth/RBAC_RULES.yaml`.

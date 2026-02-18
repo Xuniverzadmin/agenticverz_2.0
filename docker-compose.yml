@@ -94,8 +94,6 @@ services:
       AOS_MODE: ${AOS_MODE:-prod}
       DB_AUTHORITY: ${DB_AUTHORITY:-neon}
       CUSTOMER_SANDBOX_ENABLED: ${CUSTOMER_SANDBOX_ENABLED:-false}
-      # PR1 scaffold fixture mode (stagetest/dev only, route-level guarded)
-      HOC_PR1_RUNS_SCAFFOLD_FIXTURE_ENABLED: ${HOC_PR1_RUNS_SCAFFOLD_FIXTURE_ENABLED:-true}
       # Trace Storage (M8)
       USE_POSTGRES_TRACES: "true"
       # GitHub Integration (M8 - Mismatch Issue Automation)

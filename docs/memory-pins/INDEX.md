@@ -543,6 +543,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-573](PIN-573-frontend-rebuild-strategy-lock-pr-0-and-pr-1.md) | **Frontend Rebuild Strategy Lock: PR-0 and PR-1** | Architecture Strategy | **🏗️ LOCKED** | 2026-02-16 |
 | [PIN-572](PIN-572-business-assurance-guardrails-framework.md) | **Business Assurance Guardrails Framework — 30/30 tasks, 63 tests, 8 scripts** | Architecture / Assurance | **✅ COMPLETE** | 2026-02-16 |
 | [PIN-574](PIN-574-ba-delta-reconciliation-2026-02-16.md) | **BA Delta Reconciliation — 5 deltas resolved, 16/16 gates PASS** | Architecture / Assurance | **✅ COMPLETE** | 2026-02-16 |
+| [PIN-575](PIN-575-pr2-runs-realdata-auth-rollout-iteration-1.md) | **PR2 Runs Real-Data Auth Rollout — Iteration 1 (bypass retirement)** | Frontend / Auth / RBAC | **🚧 IN PROGRESS** | 2026-02-18 |
 
 ---
 
@@ -1312,6 +1313,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-18 | **PIN-575 PR2 Runs Real-Data Auth Rollout — Iteration 1** - Removed temporary runs scaffold RBAC public rule, removed fixture compose toggle, removed scaffold fixture headers, and logged PR2 rollout iteration plan. |
 | 2026-02-16 | **PIN-574 BA Delta Reconciliation** - 5 deltas resolved: invariant evaluator wired into runtime dispatch (MONITOR mode), gate count 15→16, operation ownership 7→0 violations, transaction boundaries 7→0 violations, data quality 57→0 FAIL. All 16 gatepack gates PASS. 72/72 tests PASS. |
 | 2026-02-16 | **PIN-572 Business Assurance Guardrails Framework** - Full BA framework: 10 workstreams, 30 artifacts, 63 tests, 8 verification scripts, 5 architecture docs, 3 authority modules. |
 | 2026-02-16 | **PIN-573 Frontend Rebuild Strategy Lock: PR-0 and PR-1** - Created via memory_trail. |
