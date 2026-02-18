@@ -22,43 +22,31 @@
 - Removed fixture toggle env from compose (`HOC_PR1_RUNS_SCAFFOLD_FIXTURE_ENABLED`).
 - Removed PR1 scaffold probe fixture headers from `/page/activity/runs-live` and `/page/activity/runs-completed`.
 
-### Iteration 2 (next)
-- Captured pre-deploy stagetest evidence on 2026-02-18:
+### Iteration 2 (completed 2026-02-18, pre-deploy evidence)
+- Captured pre-deploy stagetest evidence:
   - no fixture header -> `401` for both live and completed
   - manual fixture headers still return `200` fixture payloads (legacy runtime still deployed)
 - Recorded in `docs/memory-pins/PIN-576-pr2-runs-realdata-auth-rollout-iteration-2-predeploy-evidence.md`.
 
-### Iteration 3 (next)
-1. Backend dispatch to real data
-- Keep `GET /cus/activity/runs` contract shape unchanged.
-- Validate `topic=live|completed` + existing query validation behavior.
-- Ensure dispatch uses authenticated tenant context and real registry methods.
+### Iteration 3 (completed 2026-02-18, post-deploy enforcement evidence)
+- Deployed backend from merged `main` (`a7121076`) and reran rollout verifier on stagetest.
+- Captured post-deploy evidence:
+  - no fixture header -> `401` for live and completed
+  - legacy fixture headers -> `401` for live and completed (no bypass)
+- Recorded in `docs/memory-pins/PIN-578-pr2-runs-postdeploy-auth-enforcement-evidence.md`.
 
-2. Fixture mode policy
-- Keep fixture behavior disabled on stagetest/production paths.
-- If fixture code is reintroduced for local testing, keep it local/test-only and non-routable in production.
+### Iteration 4 (next)
+1. Authenticated positive-path evidence
+- Run verifier with `AUTH_COOKIE` to capture `200` contract-shaped real payload for:
+  - `topic=live`
+  - `topic=completed`
 
-3. RBAC cleanup
-- Remove temporary rule `CUS_ACTIVITY_RUNS_SCAFFOLD_PREFLIGHT` from `design/auth/RBAC_RULES.yaml`.
-- Confirm normal auth path is required for `/cus/activity/runs`.
+2. Acceptance closure updates
+- Update PR2 acceptance artifacts with authenticated success evidence.
+- Mark PR2 rollout complete when both topics pass authenticated checks.
 
-4. Frontend probe behavior
-- Keep same `/page/<domain>/<subpage>` URLs.
-- Remove fixture headers from PR1 runs entries once real data path is verified.
-- Ensure probe still shows clear `401` when unauthenticated and contract JSON when authenticated.
-
-5. Tests and verification
-- Backend:
-  - facade tests for live/completed with authenticated context
-  - negative tests for invalid query params
-- Environment:
-  - stagetest probe: unauthenticated `401`, authenticated `200` with real payload
-- Frontend:
-  - build + route rendering checks
-
-6. Documentation updates
-- Update PR1 live/completed slice docpacks to mark fixture-based evidence as superseded.
-- Add PR2 acceptance evidence for authenticated real-data behavior.
+3. PR3 kickoff
+- Start next scope after PR2 closure evidence is complete.
 
 ## Acceptance Criteria
 - `/hoc/api/cus/activity/runs?topic=live` returns:
@@ -68,7 +56,7 @@
   - unauthenticated: `401`
   - authenticated: `200` contract-shaped real payload
 - Temporary preflight RBAC scaffold rule removed.
-- No fixture header required for normal stagetest validation.
+- Legacy fixture header path no longer yields fixture payloads.
 
 ## Rollback
 1. Re-enable fixture mode only in controlled test environments if regression blocks validation.
