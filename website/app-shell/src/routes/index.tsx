@@ -102,6 +102,9 @@ const FounderReviewPage = lazy(() => import('@fops/pages/founder/FounderReviewPa
 const UcUatConsolePage = lazy(() => import('@/features/uat/UcUatConsolePage'));
 // Stagetest Evidence Console — Audit-ready test artifact viewer
 const StagetestPage = lazy(() => import('@/features/stagetest/StagetestPage'));
+// Stagetest PR scaffold pages — /page/<domain>/<subpage>
+const ScaffoldCatalogPage = lazy(() => import('@/features/scaffold/ScaffoldCatalogPage'));
+const ScaffoldSlicePage = lazy(() => import('@/features/scaffold/ScaffoldSlicePage'));
 
 // =============================================================================
 // ONBOARDING PAGES
@@ -237,6 +240,8 @@ export function AppRoutes() {
          * STAGETEST — temporarily public (TODO: Re-enable auth, PIN-570)
          * =============================================================== */}
         <Route path="/stagetest" element={<StagetestPage />} />
+        <Route path="/page" element={<ScaffoldCatalogPage />} />
+        <Route path="/page/:domain/:subpage" element={<ScaffoldSlicePage />} />
 
         {/* ===============================================================
          * ROOT & CATCH-ALL
