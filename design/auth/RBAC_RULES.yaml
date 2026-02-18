@@ -620,6 +620,24 @@ rules:
       SDSR Customer API for preflight validation.
       TEMPORARY - must be SESSION tier in production.
 
+  - rule_id: CUS_ACTIVITY_RUNS_SCAFFOLD_PREFLIGHT
+    pin: PIN-591
+    path_prefix: /cus/activity/runs
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-15"
+    query_authority:
+      include_synthetic: true
+      max_rows: 200
+      max_time_range_days: 7
+      aggregation: "BASIC"
+    description: >
+      Temporary PR1 scaffold probe path for stagetest evidence validation.
+      Auth is bypassed only for preflight environment and fixture-gated flow.
+
   # ===========================================================================
   # LOGS DOMAIN V2 (LOGS_DOMAIN_V2_CONTRACT.md)
   # ===========================================================================
