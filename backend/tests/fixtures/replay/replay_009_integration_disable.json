@@ -1,0 +1,25 @@
+{
+  "replay_id": "REPLAY-009",
+  "operation": "integration.disable",
+  "input_context": {
+    "tenant_id": "t-golden-009",
+    "project_id": "p-009",
+    "actor_type": "user",
+    "params": {
+      "connector_type": "slack",
+      "disable_reason": "maintenance",
+      "integration_exists": true,
+      "current_status": "enabled"
+    }
+  },
+  "expected_decision": {
+    "outcome": "ALLOW",
+    "reason": "BI-INTEG-002 checked: integration exists and is enabled; disable permitted",
+    "invariants_checked": ["BI-INTEG-002"]
+  },
+  "metadata": {
+    "captured_at": "2026-02-16T00:00:00Z",
+    "baseline_commit": "golden",
+    "severity": "MEDIUM"
+  }
+}

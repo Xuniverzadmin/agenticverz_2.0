@@ -169,6 +169,38 @@ BUSINESS_INVARIANTS: dict[str, Invariant] = {
             "guide the caller to register the connector first."
         ),
     ),
+    "BI-INTEG-002": Invariant(
+        invariant_id="BI-INTEG-002",
+        operation="integration.disable",
+        severity="HIGH",
+        condition_description=(
+            "An integration can only be disabled if it exists and is currently "
+            "in 'enabled' status. Disabling a non-existent integration is a "
+            "no-op that masks data loss. Disabling an already-disabled "
+            "integration overwrites the disable timestamp and corrupts the "
+            "audit trail."
+        ),
+        remediation=(
+            "Verify the integration exists and its current status is 'enabled' "
+            "before applying the disable. Return 404 if the integration does "
+            "not exist, 409 if already disabled."
+        ),
+    ),
+    "BI-INTEG-003": Invariant(
+        invariant_id="BI-INTEG-003",
+        operation="integrations.query",
+        severity="MEDIUM",
+        condition_description=(
+            "An integrations query must be scoped to a valid, non-empty "
+            "tenant_id. Queries without tenant scoping break multi-tenancy "
+            "isolation and may return cross-tenant data."
+        ),
+        remediation=(
+            "Validate that tenant_id is present and non-empty in the "
+            "operation context before dispatching the query. Return 400 "
+            "if tenant_id is missing or empty."
+        ),
+    ),
     # --- Policies ---
     "BI-POLICY-001": Invariant(
         invariant_id="BI-POLICY-001",
@@ -420,6 +452,27 @@ def _default_check(invariant: Invariant, context: dict[str, Any]) -> tuple[bool,
             return False, "connector_type is required but missing from context"
         if not registered:
             return False, f"connector_type '{connector_type}' is not registered"
+        return True, "ok"
+
+    if operation == "integration.disable":
+        integration_exists = context.get("integration_exists")
+        current_status = context.get("current_status")
+        if integration_exists is None:
+            return False, "integration_exists is required but missing from context"
+        if not integration_exists:
+            return False, "integration does not exist"
+        if not current_status:
+            return False, "current_status is required but missing from context"
+        if current_status == "disabled":
+            return False, "integration is already disabled; cannot disable again"
+        if current_status != "enabled":
+            return False, f"integration must be in 'enabled' status to disable, got '{current_status}'"
+        return True, "ok"
+
+    if operation == "integrations.query":
+        tenant_id = context.get("tenant_id")
+        if not tenant_id:
+            return False, "tenant_id is required but missing from context"
         return True, "ok"
 
     if operation == "policy.activate":

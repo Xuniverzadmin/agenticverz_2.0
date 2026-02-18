@@ -35,10 +35,24 @@ class IntegrationsQueryHandler:
 
     Dispatches to IntegrationsFacade methods (list_integrations, get_integration,
     create_integration, update_integration, delete_integration, etc.).
+
+    Sub-operation invariant evaluation (INT-DELTA audit fix):
+        Write methods that have dedicated business invariants (BI-INTEG-001,
+        BI-INTEG-002) are evaluated BEFORE facade dispatch via
+        _METHOD_INVARIANT_MAP. This ensures invariants fire on the real
+        production path (integrations.query + method dispatch), not only
+        on synthetic operation names.
     """
 
     # Transport-level params that must NOT leak to facade method kwargs
-    _STRIP_PARAMS = {"method", "sync_session"}
+    _STRIP_PARAMS = {"method", "sync_session", "_invariant_mode"}
+
+    # Method-to-sub-operation mapping for invariant evaluation.
+    # Only write methods with dedicated invariants are listed here.
+    _METHOD_INVARIANT_MAP = {
+        "enable_integration": "integration.enable",
+        "disable_integration": "integration.disable",
+    }
 
     async def execute(self, ctx: OperationContext) -> OperationResult:
         from app.hoc.cus.integrations.L5_engines.integrations_facade import (
@@ -50,6 +64,15 @@ class IntegrationsQueryHandler:
             return OperationResult.fail(
                 "Missing 'method' in params", "MISSING_METHOD"
             )
+
+        # --- Sub-operation invariant evaluation (INT-DELTA audit fix) ---
+        # The registry evaluates invariants for "integrations.query" (BI-INTEG-003).
+        # Write methods with dedicated invariants need ADDITIONAL evaluation
+        # under their sub-operation name so BI-INTEG-001/002 fire on the
+        # real production path.
+        sub_operation = self._METHOD_INVARIANT_MAP.get(method_name)
+        if sub_operation:
+            self._evaluate_sub_operation_invariants(sub_operation, ctx)
 
         # L4 handler passes session to L5 facade (PIN-520 transaction ownership)
         facade = get_integrations_facade(session=ctx.params.get("sync_session") or ctx.session)
@@ -71,9 +94,43 @@ class IntegrationsQueryHandler:
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
             )
 
-        kwargs = {k: v for k, v in ctx.params.items() if k not in self._STRIP_PARAMS}
+        # Exclude tenant_id from kwargs since handler passes it explicitly
+        exclude = self._STRIP_PARAMS | {"tenant_id"}
+        kwargs = {k: v for k, v in ctx.params.items()
+                  if k not in exclude and not k.startswith("_")}
         data = await method(tenant_id=ctx.tenant_id, **kwargs)
         return OperationResult.ok(data)
+
+    @staticmethod
+    def _evaluate_sub_operation_invariants(
+        sub_operation: str, ctx: OperationContext
+    ) -> None:
+        """
+        Evaluate business invariants for a sub-operation (e.g., integration.disable).
+
+        Reads the invariant mode from ctx.params["_invariant_mode"] (injected
+        by the registry at dispatch time). Raises BusinessInvariantViolation
+        in ENFORCE/STRICT mode on failure. In MONITOR mode, logs only.
+        """
+        from app.hoc.cus.hoc_spine.authority.invariant_evaluator import (
+            InvariantMode,
+            evaluate_invariants,
+        )
+
+        mode_value = ctx.params.get("_invariant_mode")
+        if isinstance(mode_value, InvariantMode):
+            mode = mode_value
+        else:
+            mode = InvariantMode.MONITOR
+
+        invariant_context = {
+            "tenant_id": ctx.tenant_id,
+            "operation": sub_operation,
+            **{k: v for k, v in ctx.params.items()
+               if not k.startswith("_") and k not in ("method", "sync_session")},
+        }
+
+        evaluate_invariants(sub_operation, invariant_context, mode)
 
 
 class IntegrationsConnectorsHandler:
@@ -113,7 +170,9 @@ class IntegrationsConnectorsHandler:
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
             )
 
-        kwargs = {k: v for k, v in ctx.params.items() if k not in self._STRIP_PARAMS}
+        exclude = self._STRIP_PARAMS | {"tenant_id"}
+        kwargs = {k: v for k, v in ctx.params.items()
+                  if k not in exclude and not k.startswith("_")}
         data = await method(tenant_id=ctx.tenant_id, **kwargs)
         return OperationResult.ok(data)
 
@@ -158,7 +217,9 @@ class IntegrationsDataSourcesHandler:
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
             )
 
-        kwargs = {k: v for k, v in ctx.params.items() if k not in self._STRIP_PARAMS}
+        exclude = self._STRIP_PARAMS | {"tenant_id"}
+        kwargs = {k: v for k, v in ctx.params.items()
+                  if k not in exclude and not k.startswith("_")}
         data = await method(tenant_id=ctx.tenant_id, **kwargs)
         return OperationResult.ok(data)
 

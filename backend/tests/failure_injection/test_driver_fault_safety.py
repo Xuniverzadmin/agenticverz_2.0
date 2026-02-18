@@ -1167,3 +1167,235 @@ class TestControlsFaultInjection:
 
         assert result["error"] is False
         assert result["data"]["status"] == "applied"
+
+
+# ===================================================================
+# Integrations-specific fault-injection tests (INT-DELTA-05)
+# ===================================================================
+
+
+def _safe_integration_enable(
+    driver: _MockDriver, session: _MockSession,
+    connector_type: str | None = None, connector_registered: bool = False,
+) -> dict:
+    """Simulates an L4 handler for integration.enable with validation."""
+    if not connector_type:
+        return {
+            "error": True,
+            "code": "MISSING_CONNECTOR_TYPE",
+            "message": "connector_type is required but missing",
+            "safe": True,
+        }
+    if not connector_registered:
+        return {
+            "error": True,
+            "code": "UNREGISTERED_CONNECTOR",
+            "message": f"connector_type '{connector_type}' is not registered",
+            "safe": True,
+        }
+    return _safe_call(driver, session, connector_type=connector_type)
+
+
+def _safe_integration_disable(
+    driver: _MockDriver, session: _MockSession,
+    integration_exists: bool = True, current_status: str = "enabled",
+) -> dict:
+    """Simulates an L4 handler for integration.disable with validation."""
+    if not integration_exists:
+        return {
+            "error": True,
+            "code": "NOT_FOUND",
+            "message": "integration does not exist",
+            "safe": True,
+        }
+    if current_status == "disabled":
+        return {
+            "error": True,
+            "code": "ALREADY_DISABLED",
+            "message": "integration is already disabled; cannot disable again",
+            "safe": True,
+        }
+    if current_status != "enabled":
+        return {
+            "error": True,
+            "code": "INVALID_STATE",
+            "message": f"integration must be 'enabled' to disable, got '{current_status}'",
+            "safe": True,
+        }
+    return _safe_call(driver, session, current_status=current_status)
+
+
+def _safe_integration_list(
+    driver: _MockDriver, session: _MockSession,
+    tenant_id: str | None = None,
+) -> dict:
+    """Simulates an L4 handler for integrations.query:list_integrations."""
+    if not tenant_id:
+        return {
+            "error": True,
+            "code": "MISSING_TENANT",
+            "message": "tenant_id is required but missing",
+            "safe": True,
+        }
+    return _safe_call(driver, session, tenant_id=tenant_id)
+
+
+class TestIntegrationsFaultInjection:
+    """INT-DELTA-05: Fault-injection tests for integrations operations."""
+
+    # INTFI-001  Enable driver timeout
+    @pytest.mark.parametrize("exc", [TimeoutError("driver timeout")])
+    def test_enable_driver_timeout_returns_structured_error(self, exc):
+        """integration.enable driver timeout → structured error, not crash."""
+        driver = _MockDriver(side_effect=exc)
+        session = _MockSession()
+
+        result = _safe_integration_enable(
+            driver, session, connector_type="openai", connector_registered=True
+        )
+
+        assert result["error"] is True
+        assert result["safe"] is True
+
+    # INTFI-002  Enable missing connector_type
+    @pytest.mark.parametrize("ct", [None, ""])
+    def test_enable_missing_connector_type_returns_structured_error(self, ct):
+        """integration.enable with no connector_type → structured error."""
+        driver = _MockDriver(return_value={"status": "enabled"})
+        session = _MockSession()
+
+        result = _safe_integration_enable(driver, session, connector_type=ct, connector_registered=True)
+
+        assert result["error"] is True
+        assert "connector_type" in result["message"]
+
+    # INTFI-003  Enable unregistered connector
+    def test_enable_unregistered_connector_returns_structured_error(self):
+        """integration.enable with unregistered connector → structured error."""
+        driver = _MockDriver(return_value={"status": "enabled"})
+        session = _MockSession()
+
+        result = _safe_integration_enable(
+            driver, session, connector_type="unknown_provider", connector_registered=False
+        )
+
+        assert result["error"] is True
+        assert "not registered" in result["message"]
+
+    # INTFI-004  Disable non-existent integration
+    def test_disable_non_existent_returns_structured_error(self):
+        """integration.disable on non-existent integration → structured error."""
+        driver = _MockDriver(return_value={"status": "disabled"})
+        session = _MockSession()
+
+        result = _safe_integration_disable(
+            driver, session, integration_exists=False
+        )
+
+        assert result["error"] is True
+        assert "does not exist" in result["message"]
+
+    # INTFI-005  Disable already-disabled integration
+    def test_disable_already_disabled_returns_conflict(self):
+        """integration.disable on already-disabled → structured error."""
+        driver = _MockDriver(return_value={"status": "disabled"})
+        session = _MockSession()
+
+        result = _safe_integration_disable(
+            driver, session, integration_exists=True, current_status="disabled"
+        )
+
+        assert result["error"] is True
+        assert "already disabled" in result["message"]
+
+    # INTFI-006  Disable from error state
+    def test_disable_from_error_state_returns_invalid_state(self):
+        """integration.disable from 'error' state → structured error."""
+        driver = _MockDriver(return_value={"status": "disabled"})
+        session = _MockSession()
+
+        result = _safe_integration_disable(
+            driver, session, integration_exists=True, current_status="error"
+        )
+
+        assert result["error"] is True
+        assert "enabled" in result["message"]
+
+    # INTFI-007  Disable driver connection refused
+    def test_disable_connection_refused_returns_structured_error(self):
+        """integration.disable with connection refused → structured error."""
+        driver = _MockDriver(side_effect=ConnectionRefusedError("connection refused"))
+        session = _MockSession()
+
+        result = _safe_integration_disable(
+            driver, session, integration_exists=True, current_status="enabled"
+        )
+
+        assert result["error"] is True
+        assert result["safe"] is True
+
+    # INTFI-008  List missing tenant_id
+    @pytest.mark.parametrize("tid", [None, ""])
+    def test_list_missing_tenant_returns_structured_error(self, tid):
+        """integrations.query:list with no tenant_id → structured error."""
+        driver = _MockDriver(return_value={"integrations": [], "total": 0})
+        session = _MockSession()
+
+        result = _safe_integration_list(driver, session, tenant_id=tid)
+
+        assert result["error"] is True
+        assert "tenant_id" in result["message"]
+
+    # INTFI-009  List driver timeout
+    def test_list_driver_timeout_returns_structured_error(self):
+        """integrations.query:list driver timeout → structured error."""
+        driver = _MockDriver(side_effect=TimeoutError("driver timeout"))
+        session = _MockSession()
+
+        result = _safe_integration_list(driver, session, tenant_id="t-001")
+
+        assert result["error"] is True
+        assert result["safe"] is True
+
+    # INTFI-010  Enable happy path
+    def test_enable_happy_path(self):
+        """integration.enable with valid connector → success."""
+        driver = _MockDriver(
+            return_value={"integration_id": "int-1", "status": "enabled", "connector_type": "openai"}
+        )
+        session = _MockSession()
+
+        result = _safe_integration_enable(
+            driver, session, connector_type="openai", connector_registered=True
+        )
+
+        assert result["error"] is False
+        assert result["data"]["status"] == "enabled"
+
+    # INTFI-011  Disable happy path
+    def test_disable_happy_path(self):
+        """integration.disable on enabled integration → success."""
+        driver = _MockDriver(
+            return_value={"integration_id": "int-1", "status": "disabled"}
+        )
+        session = _MockSession()
+
+        result = _safe_integration_disable(
+            driver, session, integration_exists=True, current_status="enabled"
+        )
+
+        assert result["error"] is False
+        assert result["data"]["status"] == "disabled"
+
+    # INTFI-012  List happy path
+    def test_list_happy_path(self):
+        """integrations.query:list with valid tenant → success."""
+        driver = _MockDriver(
+            return_value={"integrations": [{"id": "int-1"}], "total": 1}
+        )
+        session = _MockSession()
+
+        result = _safe_integration_list(driver, session, tenant_id="t-001")
+
+        assert result["error"] is False
+        assert result["data"]["total"] == 1
