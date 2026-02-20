@@ -37,7 +37,9 @@ jobs:
 
     env:
       API_BASE: http://localhost:8000
-      DATABASE_URL: ${{ secrets.NEON_DSN }}
+      DATABASE_URL: ${{ secrets.NEON_DSN != '' && secrets.NEON_DSN || 'postgresql://nova:novapass@127.0.0.1:5433/nova_aos' }}
+      DB_AUTHORITY: local
+      DB_ROLE: staging
       AOS_API_KEY: ${{ secrets.AOS_API_KEY }}
       VALID_TENANT: demo-tenant
       INVALID_TENANT: __invalid_tenant__

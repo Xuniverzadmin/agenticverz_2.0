@@ -35,6 +35,8 @@ on:
 
 env:
   PYTHONPATH: backend
+  DB_AUTHORITY: local
+  DB_ROLE: staging
 
 jobs:
   # ============================================================================

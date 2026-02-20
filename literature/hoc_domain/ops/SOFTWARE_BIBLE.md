@@ -54,6 +54,25 @@
 - Added CI workflow env `DB_ROLE=staging` to satisfy Alembic DB role gate in migration jobs.
 - Hardened migration `128_monitoring_activity_feedback_contracts` for legacy schema collision: preserves pre-existing `signal_feedback` table as `signal_feedback_legacy*`, creates UC-MON table only when absent, and uses idempotent index DDL.
 
+## Reality Delta (2026-02-20, Skeptical CI Audit Remediation Pass)
+
+- Extended DB role governance env into non-`ci.yml` workflows that execute Alembic in local/service DB contexts:
+  - `c1-telemetry-guard.yml`, `c2-regression.yml`, `integration-integrity.yml`
+  - standardized on `DB_AUTHORITY=local`, `DB_ROLE=staging`
+- Hardened `truth-preflight.yml` startup env for CI portability:
+  - added fallback `DATABASE_URL` (`postgresql://nova:novapass@127.0.0.1:5433/nova_aos`) when `NEON_DSN` secret is absent
+  - added `DB_AUTHORITY=local`, `DB_ROLE=staging`
+- Fixed deterministic suite collection break in `backend/tests/workflow/test_replay_certification.py` (indentation defect on `sys.path.insert`).
+- Tightened SQLModel DETACH002 detector in `scripts/ops/lint_sqlmodel_patterns.py`:
+  - bounded detection window to avoid cross-function/docstring overreach
+  - ignored non-ORM read-path matches (no `session.get`/`session.exec`)
+- Skeptical gatepass evidence:
+  - full audit gatepass rerun passed (`9/9`) at `artifacts/codebase_audit_gatepass/20260220T142258Z/`.
+- Residual blockers explicitly revalidated as separate debt workstreams:
+  - `layer_segregation_guard --ci` still reports historical `99` violations.
+  - import-hygiene relative-import rule still flags legacy `from ..` surfaces in `backend/app`.
+  - capability-linkage guard still requires explicit `capability_id` mapping for WS-A changed files.
+
 ## Reality Delta (2026-02-15, UAT Hardening Closure)
 
 - UC/UAT closure artifacts are complete (`PIN-564`, `PIN-565`) and ops founder route now includes UAT console under `/prefops/uat` and `/fops/uat`.
