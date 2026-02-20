@@ -26,6 +26,7 @@ from app.hoc.api.cus.policies.policy import router as policy_router
 from app.hoc.api.cus.policies.policy_layer import router as policy_layer_router
 from app.hoc.api.cus.policies.policy_limits_crud import router as policy_limits_crud_router
 from app.hoc.api.cus.policies.policy_proposals import router as policy_proposals_router
+from app.hoc.api.cus.policies.policies_public import router as policies_public_router
 from app.hoc.api.cus.policies.policy_rules_crud import router as policy_rules_crud_router
 from app.hoc.api.cus.policies.rate_limits import router as rate_limits_router
 from app.hoc.api.cus.policies.rbac_api import router as rbac_router
@@ -47,6 +48,7 @@ ROUTERS: list[APIRouter] = [
     policy_limits_crud_router,
     policy_rules_crud_router,
     policy_proposals_router,
+    policies_public_router,
     status_history_router,
     rbac_router,
     runtime_router,
@@ -79,4 +81,3 @@ ROUTERS: list[APIRouter] = [
     replay_router,
     m25_integration_router,
 ]
-
