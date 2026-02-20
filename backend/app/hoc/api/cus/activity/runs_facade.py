@@ -129,10 +129,14 @@ def _single_value(query_params, name: str, field_errors: list[dict[str, str]]) -
 
 
 def _parse_topic(query_params, field_errors: list[dict[str, str]]) -> RunsTopic | None:
-    raw = _single_value(query_params, "topic", field_errors)
-    if raw is None:
+    values = query_params.getlist("topic")
+    if not values:
         field_errors.append({"field": "topic", "reason": "is required"})
         return None
+    if len(values) > 1:
+        field_errors.append({"field": "topic", "reason": "must be provided once"})
+        return None
+    raw = values[0]
     try:
         return RunsTopic(raw)
     except ValueError:
@@ -330,7 +334,8 @@ async def list_runs_facade(
         )
 
     total = int(getattr(result, "total", 0))
-    has_more = bool(getattr(result, "has_more", False))
+    # PR-1 contract: derive has_more from page math, not backend-provided flags.
+    has_more = (offset + len(runs)) < total
     next_offset = offset + len(runs) if has_more else None
 
     request_id = getattr(request.state, "request_id", None)
