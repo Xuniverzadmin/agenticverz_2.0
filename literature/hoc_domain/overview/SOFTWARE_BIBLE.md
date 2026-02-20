@@ -7,6 +7,16 @@
 
 ---
 
+## Reality Delta (2026-02-16, L2.1 Facade Activation Wiring)
+
+- Public facade activation path for overview is now explicitly wired at L2.1:
+- backend/app/hoc/api/facades/cus/overview/overview_fac.py
+- L2 public boundary module for domain-scoped facade entry is present at:
+- backend/app/hoc/api/cus/overview/overview_public.py
+- Runtime chain is fixed as:
+- app.py -> app.hoc.api.facades.cus -> domain facade bundle -> overview_public.py -> L4 registry.execute(...)
+- Current status: overview_public.py now implements `GET /cus/overview/highlights` read facade with strict boundary validation, one-dispatch mapping to `overview.query`, and trace/meta propagation; existing domain routers remain active during incremental rollout.
+
 ## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
 
 - Wave-4 target-scope classification for overview is complete:
