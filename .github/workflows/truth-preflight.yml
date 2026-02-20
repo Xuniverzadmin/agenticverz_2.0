@@ -58,8 +58,23 @@ jobs:
         run: |
           docker compose up -d backend
           echo "Waiting for backend to be ready..."
-          sleep 15
-          curl -s http://localhost:8000/health || echo "Health check failed, continuing..."
+          for i in {1..45}; do
+            if curl -sf http://localhost:8000/health > /tmp/truth-preflight-health.json 2>/dev/null; then
+              echo "Backend is ready."
+              cat /tmp/truth-preflight-health.json
+              exit 0
+            fi
+            echo "Attempt $i/45: backend not ready yet"
+            if [ "$i" -eq 20 ]; then
+              echo "=== Backend logs (mid-startup) ==="
+              docker compose logs --tail=150 backend || true
+            fi
+            sleep 2
+          done
+          echo "=== Backend logs (startup failure) ==="
+          docker compose logs --tail=300 backend || true
+          echo "Backend failed readiness check at http://localhost:8000/health"
+          exit 1
         working-directory: ${{ github.workspace }}
 
       - name: Run Truth Preflight (FAIL-CLOSED)

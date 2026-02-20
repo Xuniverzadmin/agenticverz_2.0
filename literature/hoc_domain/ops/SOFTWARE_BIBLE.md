@@ -23,6 +23,12 @@
 - Hard-fail migration correctness checks remain intact (for example multiple migration heads).
 - This removes false-positive baseline preflight failures caused by legacy revision naming while preserving active migration integrity gates.
 
+## Reality Delta (2026-02-20, Truth Preflight Readiness Hardening)
+
+- Truth preflight startup now uses bounded health-readiness loops instead of fixed sleep timing.
+- Backend startup diagnostics were added in workflow startup path to dump compose logs on slow/failed boot.
+- `truth_preflight.sh` Check 1 now retries `/health` deterministically and resolves backend path from repository root (no hardcoded runner path dependency).
+
 ## Reality Delta (2026-02-15, UAT Hardening Closure)
 
 - UC/UAT closure artifacts are complete (`PIN-564`, `PIN-565`) and ops founder route now includes UAT console under `/prefops/uat` and `/fops/uat`.
