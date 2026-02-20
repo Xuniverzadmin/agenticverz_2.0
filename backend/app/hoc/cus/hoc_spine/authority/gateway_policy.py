@@ -93,7 +93,7 @@ PUBLIC_PATHS: list[str] = [
     "/billing/status",
     "/rbac/audit",
     "/rbac/audit/",
-    "/cus/",
+    # "/cus/" removed — PR2: CUS endpoints require gateway auth (PIN-578)
     # -----------------------------------------------------------------------
     # Founder routes (FOPS auth via gateway, PIN-336/398)
     # -----------------------------------------------------------------------

@@ -620,6 +620,9 @@ rules:
       SDSR Customer API for preflight validation.
       TEMPORARY - must be SESSION tier in production.
 
+  # CUS_ACTIVITY_RUNS_SCAFFOLD_PREFLIGHT removed — PR2: CUS runs require auth (PIN-578)
+  # Was: path_prefix: /cus/activity/runs, access_tier: PUBLIC, temporary: true
+
   # ===========================================================================
   # LOGS DOMAIN V2 (LOGS_DOMAIN_V2_CONTRACT.md)
   # ===========================================================================
