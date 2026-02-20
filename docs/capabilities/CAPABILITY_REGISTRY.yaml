@@ -172,6 +172,7 @@ capabilities:
         - "/backend/app/hoc/cus/incidents/L5_schemas/severity_policy.py"
         - "/backend/app/hoc/cus/incidents/L5_schemas/__init__.py"
         - "/backend/app/hoc/cus/incidents/L5_schemas/incident_decision_port.py"
+        - "/backend/app/hoc/int/analytics/engines/authority.py"
 
       l2_api:
         - "/backend/app/api/guard.py:replay_call"
@@ -497,6 +498,14 @@ capabilities:
         - "/backend/app/auth/clerk_provider.py"   # JWT verification
         - "/backend/app/auth/api_key_service.py"  # API key verification
         - "/backend/app/auth/session_store.py"    # Session revocation (Redis)
+        - "/backend/app/hoc/int/general/drivers/contexts.py"
+        - "/backend/app/hoc/int/general/drivers/gateway_types.py"
+        - "/backend/app/hoc/int/general/drivers/session_store.py"
+        - "/backend/app/hoc/int/general/engines/gateway.py"
+        - "/backend/app/hoc/int/general/engines/gateway_config.py"
+        - "/backend/app/hoc/int/general/engines/invariants.py"
+        - "/backend/app/hoc/int/general/engines/route_planes.py"
+        - "/backend/app/hoc/int/integrations/engines/gateway_middleware.py"
       l2_api:
         - "/backend/app/auth/gateway_middleware.py"  # FastAPI middleware
         - "/backend/app/auth/gateway_config.py"      # Gateway initialization
@@ -1377,6 +1386,8 @@ capabilities:
         - "/backend/app/api/recovery.py"              # M10 Recovery Suggestion Engine
         - "/backend/app/api/recovery_ingest.py"       # Recovery ingest endpoints
         - "/backend/app/hoc/api/cus/policies/M25_integrations.py"
+        - "/backend/app/hoc/api/int/recovery/recovery.py"
+        - "/backend/app/hoc/api/int/recovery/recovery_ingest.py"
 
     gaps: []  # No gaps - CLOSED
 

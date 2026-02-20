@@ -64,6 +64,7 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 - Layer segregation (`--scope hoc`): **0** violations (Wave 2 residual closure complete)
 - Import hygiene (`backend/app/hoc/**`): **0** files with relative imports (Wave 2 complete)
 - Capability linkage (`MISSING_CAPABILITY_ID` in hoc files, full sweep): **550** files (after CUS Wave C3)
+- Capability warnings (`MISSING_EVIDENCE` in hoc files, full sweep): **0** (after CUS Wave C4)
 
 ### HOC Layer-Segregation File Set (0 files)
 | File |
