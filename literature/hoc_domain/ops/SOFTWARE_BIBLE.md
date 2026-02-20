@@ -131,6 +131,19 @@
 - Frontend cross-surface sync artifact:
   - `docs/architecture/frontend/CUS_FRONTEND_BACKEND_STABILITY_SYNC_WAVE2_2026-02-20.md`
 
+## Reality Delta (2026-02-20, HOC Import-Hygiene Wave 2 Batch 2 API/Auth Stabilization)
+
+- Wave 2 batch 2 targeted HOC API/auth-adjacent files (`api/cus`, `api/int`, `int/agent`, `int/general`).
+- Converted 5 files from relative imports to canonical absolute imports.
+- Measured result:
+  - HOC relative-import file backlog: `30 -> 25`
+- Capability-linkage metadata + registry evidence were synchronized for:
+  - `CAP-014` (`memory_system`)
+  - `CAP-008` (`multi_agent`)
+  - `CAP-007` (`authorization`)
+- Wave artifact:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH2_API_AUTH_STABILIZATION_2026-02-20.md`
+
 ## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
 
 - Wave-4 UC script coverage audited `hoc/cus/ops` scope as:

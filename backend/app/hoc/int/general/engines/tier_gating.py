@@ -8,6 +8,7 @@
 # Allowed Imports: L5, L6
 # Forbidden Imports: L1, L2, L3
 # Reference: Auth System
+# capability_id: CAP-007
 
 """
 Tier-Based Feature Gating (M32 Implementation)
@@ -43,7 +44,7 @@ from typing import Callable, Optional
 
 from fastapi import Depends, HTTPException, Request, status
 
-from ..utils.metrics_helpers import get_or_create_counter
+from app.utils.metrics_helpers import get_or_create_counter
 
 logger = logging.getLogger("nova.auth.tier_gating")
 

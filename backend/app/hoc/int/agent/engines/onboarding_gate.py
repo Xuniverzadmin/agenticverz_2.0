@@ -9,6 +9,7 @@
 # Allowed Imports: L4, L6
 # Forbidden Imports: L1, L2, L5
 # Reference: PIN-399 (Onboarding State Machine v1), ONBOARDING_ENDPOINT_MAP_V1.md
+# capability_id: CAP-007
 
 
 """
@@ -298,8 +299,8 @@ class OnboardingGateMiddleware(BaseHTTPMiddleware):
         Returns CREATED if tenant not found (fail-safe).
         """
         try:
-            from ..db import get_session
-            from ..models.tenant import Tenant
+            from app.db import get_session
+            from app.models.tenant import Tenant
 
             session = next(get_session())
             try:

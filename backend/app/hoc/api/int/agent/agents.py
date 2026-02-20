@@ -22,6 +22,7 @@
 # - POST /sba/register - Register agent with SBA
 # - GET /sba/{agent_id} - Get agent SBA
 # - GET /sba - List agents with SBA status
+# capability_id: CAP-008
 
 import logging
 from typing import Any, Dict, List, Optional
@@ -1600,7 +1601,7 @@ async def check_agent_health(
 
 # M17: CARE imports
 try:
-    from ..routing import (
+    from app.routing import (
         CAREEngine,
         DifficultyLevel,
         OrchestratorMode,
@@ -1968,7 +1969,7 @@ async def get_routing_stats(
 
 # M18: CARE-L and SBA Evolution imports
 try:
-    from ..agents.sba import (
+    from app.agents.sba import (
         AdjustmentType,
         BoundaryViolation,
         DriftSignal,
@@ -1977,7 +1978,7 @@ try:
         ViolationType,
         get_evolution_engine,
     )
-    from ..routing import (
+    from app.routing import (
         AgentReputation,
         BatchLearningResult,
         QuarantineState,

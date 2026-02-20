@@ -8,6 +8,7 @@
 # Allowed Imports: L4, L6
 # Forbidden Imports: L1, L2, L5
 # Reference: PIN-399 Phase-5 (Post-Onboarding Permissions & Roles)
+# capability_id: CAP-007
 
 """
 Phase-5 Role Guard — Dependency-Based Authorization
@@ -68,7 +69,7 @@ def get_user_role_in_tenant(
 
     INVARIANT: This is a read-only operation. Never mutates.
     """
-    from ..models.tenant import TenantMembership
+    from app.models.tenant import TenantMembership
 
     statement = select(TenantMembership).where(
         TenantMembership.tenant_id == tenant_id,
@@ -102,7 +103,7 @@ def get_tenant_onboarding_state(
 
     Returns None if tenant not found.
     """
-    from ..models.tenant import Tenant
+    from app.models.tenant import Tenant
 
     tenant = session.get(Tenant, tenant_id)
     if tenant is None:
@@ -119,7 +120,7 @@ def count_owners_in_tenant(session: Session, tenant_id: str) -> int:
     """
     from sqlmodel import func
 
-    from ..models.tenant import TenantMembership
+    from app.models.tenant import TenantMembership
 
     statement = select(func.count()).where(
         TenantMembership.tenant_id == tenant_id,
@@ -149,7 +150,7 @@ def validate_owner_invariant(
     Raises:
         OwnerInvariantViolation: If operation would leave tenant with no OWNER
     """
-    from ..models.tenant import TenantMembership
+    from app.models.tenant import TenantMembership
 
     # Count current OWNERs
     owner_count = count_owners_in_tenant(session, tenant_id)
@@ -237,7 +238,7 @@ def require_role(*allowed_roles: TenantRole) -> Callable:
         Returns the actor's TenantRole if authorized.
         Raises RoleViolationError if not.
         """
-        from ..db import get_session
+        from app.db import get_session
 
         # Get auth context from gateway middleware
         auth_context = get_auth_context(request)
@@ -378,7 +379,7 @@ def require_permission(permission: str) -> Callable:
         """
         Check if actor has a specific permission.
         """
-        from ..db import get_session
+        from app.db import get_session
 
         auth_context = get_auth_context(request)
 

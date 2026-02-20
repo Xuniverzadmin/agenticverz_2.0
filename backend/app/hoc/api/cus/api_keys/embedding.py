@@ -9,6 +9,7 @@
 # Allowed Imports: L3, L4, L5, L6
 # Forbidden Imports: L1
 # Reference: PIN-047, PIN-082
+# capability_id: CAP-014
 
 # Embedding API Endpoints
 """
@@ -156,7 +157,7 @@ async def embedding_cache_stats(
 
     Returns cache configuration and entry count.
     """
-    from ..memory.embedding_cache import get_embedding_cache
+    from app.memory.embedding_cache import get_embedding_cache
 
     cache = get_embedding_cache()
     return await cache.stats()
@@ -171,7 +172,7 @@ async def clear_embedding_cache(
 
     Returns number of entries cleared.
     """
-    from ..memory.embedding_cache import get_embedding_cache
+    from app.memory.embedding_cache import get_embedding_cache
 
     cache = get_embedding_cache()
     cleared = await cache.clear_all()
@@ -323,7 +324,7 @@ async def compose_embedding(
     Supported instructions: summarize, extract, analyze, rewrite, qa,
     compare, classify, generate, route, default
     """
-    from ..memory.iaec import get_iaec
+    from app.memory.iaec import get_iaec
 
     iaec = await get_iaec()
     result = await iaec.compose(
@@ -412,7 +413,7 @@ async def decompose_embedding(
     """
     import numpy as np
 
-    from ..memory.iaec import get_iaec
+    from app.memory.iaec import get_iaec
 
     iaec = await get_iaec()
     vec = np.array(request.vector, dtype=np.float32)
@@ -438,7 +439,7 @@ async def get_iaec_instructions(
     """
     Get available IAEC instruction types and their weights.
     """
-    from ..memory.iaec import INSTRUCTION_PROMPTS, INSTRUCTION_WEIGHTS
+    from app.memory.iaec import INSTRUCTION_PROMPTS, INSTRUCTION_WEIGHTS
 
     return wrap_dict({
         "instructions": [
@@ -465,7 +466,7 @@ async def get_iaec_segment_info(
 
     Returns slot layout, dimensions, and temporal signature info.
     """
-    from ..memory.iaec import get_iaec
+    from app.memory.iaec import get_iaec
 
     iaec = await get_iaec()
     return iaec.get_segment_info()
@@ -492,7 +493,7 @@ async def check_mismatch(
     - message: Human-readable guidance
     - corrective_action: Prescriptive action with confidence (v3.1)
     """
-    from ..memory.iaec import check_instruction_query_match
+    from app.memory.iaec import check_instruction_query_match
 
     result = await check_instruction_query_match(instruction, query)
 
