@@ -98,6 +98,7 @@ class PoliciesFacadeDriver:
             .order_by(
                 enforcement_stats_subq.c.last_triggered_at.desc().nullslast(),
                 PolicyRule.created_at.desc(),
+                PolicyRule.id.desc(),
             )
         )
 

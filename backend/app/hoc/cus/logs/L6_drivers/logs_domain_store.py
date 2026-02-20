@@ -182,7 +182,7 @@ class LogsDomainStore:
         stmt = (
             select(LLMRunRecord)
             .where(LLMRunRecord.tenant_id == tenant_id)
-            .order_by(LLMRunRecord.created_at.desc())
+            .order_by(LLMRunRecord.created_at.desc(), LLMRunRecord.id.desc())
         )
 
         if run_id:
@@ -388,7 +388,7 @@ class LogsDomainStore:
             .where(
                 (SystemRecord.tenant_id == tenant_id) | (SystemRecord.tenant_id.is_(None))
             )
-            .order_by(SystemRecord.created_at.desc())
+            .order_by(SystemRecord.created_at.desc(), SystemRecord.id.desc())
         )
 
         if component:

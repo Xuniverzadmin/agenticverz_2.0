@@ -113,7 +113,7 @@ class APIKeysFacadeDriver:
             select(APIKey)
             .where(APIKey.tenant_id == tenant_id)
             .where(APIKey.is_synthetic == False)  # noqa: E712
-            .order_by(APIKey.created_at.desc())
+            .order_by(APIKey.created_at.desc(), APIKey.id.desc())
         )
 
         if status is not None:

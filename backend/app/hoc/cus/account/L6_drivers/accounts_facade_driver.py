@@ -392,7 +392,7 @@ class AccountsFacadeDriver:
             )
             .join(TenantMembership, TenantMembership.user_id == User.id)
             .where(TenantMembership.tenant_id == tenant_id)
-            .order_by(User.email)
+            .order_by(User.email.asc(), User.id.asc())
         )
 
         if role is not None:

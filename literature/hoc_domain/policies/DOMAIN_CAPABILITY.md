@@ -6,6 +6,16 @@
 
 ---
 
+## Reality Delta (2026-02-16, L2.1 Facade Activation Wiring)
+
+- Public facade activation path for policies is now explicitly wired at L2.1:
+- backend/app/hoc/api/facades/cus/policies/policies_fac.py
+- L2 public boundary module for domain-scoped facade entry is present at:
+- backend/app/hoc/api/cus/policies/policies_public.py
+- Runtime chain is fixed as:
+- app.py -> app.hoc.api.facades.cus -> domain facade bundle -> policies_public.py -> L4 registry.execute(...)
+- Current status: policies_public.py remains scaffold-only (no behavior change yet); existing domain routers stay active during incremental rollout.
+
 ## Reality Delta (2026-02-08)
 
 - L2 purity preserved: policies L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5).
