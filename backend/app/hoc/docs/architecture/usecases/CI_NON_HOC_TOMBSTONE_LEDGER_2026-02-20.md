@@ -61,11 +61,11 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 | `scripts/ops/lint_sqlmodel_patterns.py` | missing capability ID header |
 
 ## Active HOC Backlog (Still Blocking)
-- Layer segregation (`--scope hoc`): **93** violations
+- Layer segregation (`--scope hoc`): **14** violations (after Wave 1 hotspot remediation)
 - Import hygiene (`backend/app/hoc/**`): **0** files with relative imports (Wave 2 complete)
-- Capability linkage (`MISSING_CAPABILITY_ID` in hoc files): **0** files (resolved in Wave 1)
+- Capability linkage (`MISSING_CAPABILITY_ID` in hoc files, full sweep): **965** files (after Wave 1 hotspot remediation)
 
-### HOC Layer-Segregation File Set (15 files)
+### HOC Layer-Segregation File Set (8 files)
 | File |
 |---|
 | `backend/app/hoc/fdr/account/engines/explorer_engine.py` |
@@ -74,13 +74,6 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 | `backend/app/hoc/fdr/logs/engines/timeline_engine.py` |
 | `backend/app/hoc/fdr/ops/engines/founder_action_write_engine.py` |
 | `backend/app/hoc/fdr/ops/engines/ops_incident_engine.py` |
-| `backend/app/hoc/int/agent/engines/credit_engine.py` |
-| `backend/app/hoc/int/agent/engines/governance_engine.py` |
-| `backend/app/hoc/int/agent/engines/invoke_audit_engine.py` |
-| `backend/app/hoc/int/agent/engines/job_engine.py` |
-| `backend/app/hoc/int/agent/engines/message_engine.py` |
-| `backend/app/hoc/int/agent/engines/registry_engine.py` |
-| `backend/app/hoc/int/agent/engines/worker_engine.py` |
 | `backend/app/hoc/int/platform/drivers/memory_driver.py` |
 | `backend/app/hoc/int/platform/engines/sandbox_engine.py` |
 
@@ -89,10 +82,15 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 |---|
 | _None (Wave 2 batch 4 remediation completed on 2026-02-20)_ |
 
-### HOC Capability-Linkage Missing ID File Set (0 files, resolved)
-| File |
-|---|
-| _None (Wave 1 remediation completed on 2026-02-20)_ |
+### HOC Capability-Linkage Missing ID Hot Clusters (965 files total)
+| Cluster Prefix | Missing `capability_id` Files |
+|---|---:|
+| `backend/app/hoc/cus/hoc_spine/orchestrator/**` | 83 |
+| `backend/app/hoc/cus/policies/L5_engines/**` | 59 |
+| `backend/app/hoc/int/platform/drivers/**` | 39 |
+| `backend/app/hoc/api/cus/policies/**` | 35 |
+| `backend/app/hoc/int/agent/engines/**` | 28 |
+| `backend/app/hoc/cus/hoc_spine/services/**` | 32 |
 
 ## Reproduction Commands
 ```bash

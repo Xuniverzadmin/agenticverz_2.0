@@ -487,6 +487,13 @@ capabilities:
         - "/backend/app/hoc/int/agent/drivers/blackboard_ops.py"
         - "/backend/app/hoc/int/agent/drivers/worker_registry_driver.py"
         - "/backend/app/hoc/int/agent/engines/agent_invoke.py"
+        - "/backend/app/hoc/int/agent/engines/job_engine.py"
+        - "/backend/app/hoc/int/agent/engines/worker_engine.py"
+        - "/backend/app/hoc/int/agent/engines/credit_engine.py"
+        - "/backend/app/hoc/int/agent/engines/message_engine.py"
+        - "/backend/app/hoc/int/agent/engines/registry_engine.py"
+        - "/backend/app/hoc/int/agent/engines/governance_engine.py"
+        - "/backend/app/hoc/int/agent/engines/invoke_audit_engine.py"
 
     gaps: []  # No gaps - CLOSED (internal capability)
 

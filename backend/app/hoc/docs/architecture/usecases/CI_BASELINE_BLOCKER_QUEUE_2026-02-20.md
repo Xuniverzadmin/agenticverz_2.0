@@ -71,8 +71,14 @@ Baseline blockers on `origin/main` after merge commit `da89f8d479bae9c1930be25e5
   - Capability-linkage metadata and registry evidence synchronized (CAP-007, CAP-009, CAP-010, CAP-012, CAP-014).
   - Evidence updated in:
     - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH4_REMAINING_CLUSTER_2026-02-20.md`
+- HOC layer/capability remediation Wave 1 (INT/agent engine hotspot) is complete:
+  - Replaced 7 DB-heavy HOC engine modules with compatibility wrappers to canonical service/driver implementations.
+  - Layer-segregation backlog reduced from `93` to `14` violation instances.
+  - Full HOC capability sweep reduced from `972` to `965` blocking `MISSING_CAPABILITY_ID`.
+  - Evidence updated in:
+    - `backend/app/hoc/docs/architecture/usecases/HOC_LAYER_CAPABILITY_REMEDIATION_WAVE1_IMPLEMENTED_2026-02-20.md`
 
 ## Notes
 - This queue is baseline debt on `main`, not introduced solely by PR #7.
 - Lane A should address P0 first, then P1 in smallest reviewable PRs.
-- Skeptical audit (2026-02-20) confirms changed-file capability linkage is clear for HOC remediation PRs, while full HOC-wide capability scan still reports `972` historical `MISSING_CAPABILITY_ID` blockers outside current CI changed-file contract.
+- Skeptical audit (2026-02-20) confirms changed-file capability linkage is clear for HOC remediation PRs; after Wave 1, full HOC-wide capability scan remains a separate backlog at `965` blocking `MISSING_CAPABILITY_ID` outside current CI changed-file contract.
