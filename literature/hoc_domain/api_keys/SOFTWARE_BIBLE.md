@@ -7,6 +7,31 @@
 
 ---
 
+## Reality Delta (2026-02-16, L2.1 Facade Activation Wiring)
+
+- Public facade activation path for api_keys is now explicitly wired at L2.1:
+- backend/app/hoc/api/facades/cus/api_keys/api_keys_fac.py
+- L2 public boundary module for domain-scoped facade entry is present at:
+- backend/app/hoc/api/cus/api_keys/api_keys_public.py
+- Runtime chain is fixed as:
+- app.py -> app.hoc.api.facades.cus -> domain facade bundle -> api_keys_public.py -> L4 registry.execute(...)
+- Current status: api_keys_public.py remains scaffold-only (no behavior change yet); existing domain routers stay active during incremental rollout.
+
+## Reality Delta (2026-02-16, PR-9 API Keys List Facade Contract Hardening)
+
+- API keys public facade now implements a concrete read slice at:
+- `backend/app/hoc/api/cus/api_keys/api_keys_public.py`
+- Endpoint added:
+- `GET /cus/api_keys/list` (gateway: `/hoc/api/cus/api_keys/list`)
+- Boundary contract now enforces:
+- strict query allowlist (`status`, `limit`, `offset`)
+- explicit `as_of` rejection in PR-9
+- single dispatch path:
+- `api_keys_public.py -> registry.execute("api_keys.query", method="list_api_keys", ...)`
+- Deterministic list ordering hardened in L6 at:
+- `backend/app/hoc/cus/api_keys/L6_drivers/api_keys_facade_driver.py`
+- with ordering: `created_at desc, id desc`.
+
 ## Reality Delta (2026-02-11)
 
 - Canonical API key ownership is consolidated under:
