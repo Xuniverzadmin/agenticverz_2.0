@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 #!/usr/bin/env python3
 """
 Outbox Processor Worker

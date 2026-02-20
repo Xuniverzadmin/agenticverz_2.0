@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L6 — Driver
 # AUDIENCE: CUSTOMER
 # Role: Enforce boot-fail policy for SPINE components

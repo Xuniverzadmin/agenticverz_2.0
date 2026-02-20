@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # NOVA Worker Package
 # Worker pool and runner for async run execution
 #

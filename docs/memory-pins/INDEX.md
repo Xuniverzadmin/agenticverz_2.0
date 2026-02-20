@@ -560,6 +560,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-600](PIN-600-wave2-import-hygiene-batch4-final-clear.md) | **Wave 2 Import Hygiene Batch 4 — Final Residual Clear** | Governance / CI / Runtime Hygiene | **✅ COMPLETE** | 2026-02-20 |
 | [PIN-601](PIN-601-cus-capability-sweep-c1-c4-closure.md) | **CUS Capability Sweep C1-C4 Closure** | Governance / CI / Capability Linkage | **✅ COMPLETE** | 2026-02-20 |
 | [PIN-602](PIN-602-hoc-blocker-queue-wave-w2-int-platform-agent-clearance.md) | **HOC Blocker Queue Wave W2 — INT Platform + Agent Clearance** | Governance / CI / Capability Linkage | **✅ COMPLETE** | 2026-02-20 |
+| [PIN-603](PIN-603-hoc-blocker-queue-wave-w3-int-general-worker-policies-clearance.md) | **HOC Blocker Queue Wave W3 — INT General + Worker + Policies Clearance** | Governance / CI / Capability Linkage | **✅ COMPLETE** | 2026-02-20 |
 
 ---
 
@@ -1329,6 +1330,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-20 | **PIN-603 HOC Blocker Queue Wave W3 — INT General + Worker + Policies Clearance** - Executed W3 remediation for `backend/app/hoc/int/general/**` + `backend/app/hoc/int/worker/**` + `backend/app/hoc/int/policies/**` (`78` files), synchronized CAP-006/CAP-009/CAP-012 registry evidence, and reduced full-HOC capability backlog (`358 -> 280`) with warnings held at `0`. |
 | 2026-02-20 | **PIN-602 HOC Blocker Queue Wave W2 — INT Platform + Agent Clearance** - Executed W2 remediation for `backend/app/hoc/int/platform/**` + `backend/app/hoc/int/agent/**` (`91` files), synchronized CAP-008/CAP-012 registry evidence, and reduced full-HOC capability backlog (`449 -> 358`) with warnings held at `0`. |
 | 2026-02-20 | **PIN-601 CUS Capability Sweep C1-C4 Closure** - Completed Wave C1/C2/C3/C4 capability remediation and warning cleanup, reducing full-HOC capability backlog from `929 + 13` to `550 + 0` with changed-file gates remaining green. |
 | 2026-02-20 | **PIN-600 Wave 2 Import Hygiene Batch 4 — Final Residual Clear** - Remediated final 10 HOC residual files, synchronized CAP-007/CAP-009/CAP-010/CAP-012/CAP-014 evidence linkage, and reduced HOC import-hygiene backlog (`10 -> 0`) with CUS remaining `0`. |

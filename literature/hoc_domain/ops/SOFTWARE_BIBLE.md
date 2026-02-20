@@ -228,6 +228,26 @@
   - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W2_INT_PLATFORM_AGENT_IMPLEMENTED_2026-02-20.md`
   - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
 
+## Reality Delta (2026-02-20, HOC Blocker Queue Wave W3 int/general + int/worker + int/policies Clearance)
+
+- Wave W3 remediated capability-linkage backlog in:
+  - `backend/app/hoc/int/general/**`
+  - `backend/app/hoc/int/worker/**`
+  - `backend/app/hoc/int/policies/**`
+  - (`78` files total)
+- Capability mapping applied:
+  - `CAP-006` for `int/general/**`
+  - `CAP-012` for `int/worker/**`
+  - `CAP-009` for `int/policies/**`
+- Capability registry evidence was synchronized for CAP-006/CAP-009/CAP-012 entries.
+- Measured result:
+  - full HOC blocking backlog: `358 -> 280`
+  - full HOC warnings: `0 -> 0`
+- Tracking artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W3_INT_GENERAL_WORKER_POLICIES_IMPLEMENTED_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+
 ## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
 
 - Wave-4 UC script coverage audited `hoc/cus/ops` scope as:

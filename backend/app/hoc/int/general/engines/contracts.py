@@ -1,3 +1,4 @@
+# capability_id: CAP-006
 # Layer: L5 — Domain Engine
 # AUDIENCE: INTERNAL
 # Role: Contract Dataclasses for Machine-Native Runtime

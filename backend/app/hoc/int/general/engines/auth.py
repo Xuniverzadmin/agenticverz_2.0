@@ -1,3 +1,4 @@
+# capability_id: CAP-006
 # Layer: L2 — API
 # AUDIENCE: CUSTOMER
 # Role: API key verification dependency for FastAPI routes

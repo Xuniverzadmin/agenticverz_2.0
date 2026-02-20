@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L5 — Domain Engine
 # AUDIENCE: INTERNAL
 # Role: LimitEnforcer contract - defines interface for limit enforcement

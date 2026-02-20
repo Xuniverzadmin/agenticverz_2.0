@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L6 — Driver
 # AUDIENCE: INTERNAL
 # Role: Enforce usage limits and monitor health in runner

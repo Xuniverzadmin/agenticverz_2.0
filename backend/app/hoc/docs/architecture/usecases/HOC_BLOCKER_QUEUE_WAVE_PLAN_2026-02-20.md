@@ -25,7 +25,7 @@ Reduce HOC capability-linkage blockers from `550` to `0` under `backend/app/hoc/
 | 1 | W0 | Baseline snapshot + cluster map | - | lock deterministic starting point | DONE |
 | 2 | W1 | `backend/app/hoc/cus/hoc_spine/**` | 101 | clear largest CUS spine cluster | DONE (`550 -> 449`, warnings `0 -> 0`) |
 | 3 | W2 | `backend/app/hoc/int/platform/**` + `backend/app/hoc/int/agent/**` | 91 | clear platform/agent integration cluster | DONE (`449 -> 358`, warnings `0 -> 0`) |
-| 4 | W3 | `backend/app/hoc/int/general/**` + `backend/app/hoc/int/worker/**` + `backend/app/hoc/int/policies/**` | 78 | clear INT runtime/policy cluster | PENDING |
+| 4 | W3 | `backend/app/hoc/int/general/**` + `backend/app/hoc/int/worker/**` + `backend/app/hoc/int/policies/**` | 78 | clear INT runtime/policy cluster | DONE (`358 -> 280`, warnings `0 -> 0`) |
 | 5 | W4 | CUS business domains: `cus/account/**`, `cus/activity/**`, `cus/controls/**`, `cus/policies/**`, `cus/api_keys/**`, `cus/overview/**`, `cus/ops/**`, `cus/agent/**`, `cus/apis/**`, `cus/__init__.py` | 123 | clear remaining CUS domain internals | PENDING |
 | 6 | W5 | API lanes: `api/cus/**`, `api/facades/**`, `api/int/**`, `api/fdr/**` | 83 | clear API/facade linkage debt | PENDING |
 | 7 | W6 | residual long-tail: `int/recovery/**`, `int/logs/**`, `int/integrations/**`, `int/incidents/**`, `int/analytics/**`, `int/activity/**`, `int/account/**`, `int/__init__.py`, `fdr/ops/**`, `fdr/logs/**`, `fdr/agent/**`, `fdr/account/**`, `fdr/platform/**`, `fdr/__init__.py` | 74 | clear long-tail and reach zero | PENDING |
@@ -80,3 +80,23 @@ Reduce HOC capability-linkage blockers from `550` to `0` under `backend/app/hoc/
   - Import hygiene (`backend/app/hoc/**`, strict relative-import): `0`
 - Artifact:
   - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W2_INT_PLATFORM_AGENT_IMPLEMENTED_2026-02-20.md`
+
+## W3 Execution Result
+- Scope remediated:
+  - `backend/app/hoc/int/general/**`
+  - `backend/app/hoc/int/worker/**`
+  - `backend/app/hoc/int/policies/**`
+  - (`78` files)
+- Capability header mapping:
+  - `CAP-006`: `int/general/**`
+  - `CAP-012`: `int/worker/**`
+  - `CAP-009`: `int/policies/**`
+- Registry evidence synchronized:
+  - `docs/capabilities/CAPABILITY_REGISTRY.yaml` (CAP-006/CAP-009/CAP-012 evidence)
+- Audit results:
+  - W3 changed-file capability check: `✅ All checks passed`
+  - Full HOC sweep: blocking `358 -> 280`, warnings `0 -> 0`
+  - Layer segregation (`--scope hoc`): `PASS (0 violations)`
+  - Import hygiene (`backend/app/hoc/**`, strict relative-import): `0`
+- Artifact:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W3_INT_GENERAL_WORKER_POLICIES_IMPLEMENTED_2026-02-20.md`
