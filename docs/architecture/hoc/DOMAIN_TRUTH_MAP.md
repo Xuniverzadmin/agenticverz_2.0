@@ -1,1 +1,1 @@
-/root/agenticverz2.0/backend/docs/architecture/hoc/DOMAIN_TRUTH_MAP.md
+../../../backend/docs/architecture/hoc/DOMAIN_TRUTH_MAP.md

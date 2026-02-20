@@ -29,11 +29,11 @@ PRIORITY-5 FILES (CRITICAL BLAST RADIUS)
 ----------------------------------------
 
 Worker Layer:
-  - worker/runner.py                 RECOVERABLE_OPERATION + SAFE
-  - worker/outbox_processor.py       RECOVERABLE_OPERATION + SAFE
-  - worker/pool.py                   STATE_MUTATION + SAFE
-  - worker/recovery_claim_worker.py  RECOVERABLE_OPERATION + SAFE
-  - worker/recovery_evaluator.py     RECOVERABLE_OPERATION + SAFE
+  - hoc/int/worker/runner.py                 RECOVERABLE_OPERATION + SAFE
+  - hoc/int/worker/outbox_processor.py       RECOVERABLE_OPERATION + SAFE
+  - hoc/int/worker/pool.py                   STATE_MUTATION + SAFE
+  - hoc/int/worker/recovery_claim_worker.py  RECOVERABLE_OPERATION + SAFE
+  - hoc/int/worker/recovery_evaluator.py     RECOVERABLE_OPERATION + SAFE
 
 Circuit Breaker:
   - costsim/circuit_breaker.py       STATE_MUTATION + SAFE
@@ -43,7 +43,7 @@ Circuit Breaker:
 Recovery Services:
   - services/orphan_recovery.py      STATE_MUTATION + SAFE
   - services/recovery_matcher.py     EXTERNAL_SIDE_EFFECT + NEVER
-  - services/recovery_write_service.py STATE_MUTATION + SAFE
+  - hoc/cus/policies/L6_drivers/recovery_write_driver.py STATE_MUTATION + SAFE
   - tasks/recovery_queue_stream.py   RECOVERABLE_OPERATION + SAFE
 
 USAGE
@@ -66,17 +66,17 @@ from typing import Dict, Optional, Tuple
 # Priority-5 files with expected intent declarations
 # Format: (path relative to app/, (FeatureIntent, RetryPolicy))
 PRIORITY_5_FILES: Dict[str, Tuple[str, str]] = {
-    "worker/runner.py": ("RECOVERABLE_OPERATION", "SAFE"),
-    "worker/outbox_processor.py": ("RECOVERABLE_OPERATION", "SAFE"),
-    "worker/pool.py": ("STATE_MUTATION", "SAFE"),
-    "worker/recovery_claim_worker.py": ("RECOVERABLE_OPERATION", "SAFE"),
-    "worker/recovery_evaluator.py": ("RECOVERABLE_OPERATION", "SAFE"),
+    "hoc/int/worker/runner.py": ("RECOVERABLE_OPERATION", "SAFE"),
+    "hoc/int/worker/outbox_processor.py": ("RECOVERABLE_OPERATION", "SAFE"),
+    "hoc/int/worker/pool.py": ("STATE_MUTATION", "SAFE"),
+    "hoc/int/worker/recovery_claim_worker.py": ("RECOVERABLE_OPERATION", "SAFE"),
+    "hoc/int/worker/recovery_evaluator.py": ("RECOVERABLE_OPERATION", "SAFE"),
     "costsim/circuit_breaker.py": ("STATE_MUTATION", "SAFE"),
     "costsim/circuit_breaker_async.py": ("STATE_MUTATION", "SAFE"),
     "costsim/alert_worker.py": ("EXTERNAL_SIDE_EFFECT", "NEVER"),
     "services/orphan_recovery.py": ("STATE_MUTATION", "SAFE"),
     "services/recovery_matcher.py": ("EXTERNAL_SIDE_EFFECT", "NEVER"),
-    "services/recovery_write_service.py": ("STATE_MUTATION", "SAFE"),
+    "hoc/cus/policies/L6_drivers/recovery_write_driver.py": ("STATE_MUTATION", "SAFE"),
     "tasks/recovery_queue_stream.py": ("RECOVERABLE_OPERATION", "SAFE"),
 }
 

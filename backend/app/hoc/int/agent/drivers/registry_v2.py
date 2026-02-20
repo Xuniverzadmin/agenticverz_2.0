@@ -18,10 +18,8 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
-import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -31,11 +29,7 @@ from typing import (
     Optional,
 )
 
-_runtime_path = str(Path(__file__).parent.parent / "worker" / "runtime")
-
-    sys.path.insert(0, _runtime_path)
-
-from core import SkillDescriptor
+from app.hoc.int.worker.runtime.core import SkillDescriptor
 
 logger = logging.getLogger("aos.skills.registry")
 

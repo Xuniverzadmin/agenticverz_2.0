@@ -38,8 +38,9 @@ jobs:
       - name: Run SQLModel Pattern Linter (Full Scope)
         env:
           CHECK_SCOPE: full
+          DB_AUTHORITY: local
         run: |
-          echo "Running SQLModel Pattern Linter with CHECK_SCOPE=full"
+          echo "Running SQLModel Pattern Linter with CHECK_SCOPE=full, DB_AUTHORITY=local"
           echo "This includes CI-only rules: DETACH002, DETACH003, SCOPE001, CONC001, TEST001, CACHE001"
           python scripts/ops/lint_sqlmodel_patterns.py backend/app/
 

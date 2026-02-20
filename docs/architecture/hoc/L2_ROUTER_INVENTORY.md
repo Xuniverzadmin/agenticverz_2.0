@@ -1,1 +1,1 @@
-/root/agenticverz2.0/backend/docs/architecture/hoc/L2_ROUTER_INVENTORY.md
+../../../backend/docs/architecture/hoc/L2_ROUTER_INVENTORY.md

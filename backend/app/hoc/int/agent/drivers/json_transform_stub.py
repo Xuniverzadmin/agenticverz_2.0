@@ -18,16 +18,10 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import sys
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Dict, List
 
-_runtime_path = str(Path(__file__).parent.parent.parent / "worker" / "runtime")
-
-    sys.path.insert(0, _runtime_path)
-
-from core import SkillDescriptor
+from app.hoc.int.worker.runtime.core import SkillDescriptor
 
 # Descriptor for json_transform stub
 JSON_TRANSFORM_STUB_DESCRIPTOR = SkillDescriptor(

@@ -30,3 +30,9 @@ Each script's unique contribution and canonical function.
 - New scripts: `collapse_tombstones.py`, `new_l5_engine.py`, `new_l6_driver.py`
 - `app/services/__init__.py` now emits DeprecationWarning
 - Reference: `docs/memory-pins/PIN-509-tooling-hardening.md`
+
+## CI Portability Delta (2026-02-20)
+
+- Remediated host-bound absolute symlinks under `docs/architecture/hoc/` that pointed to `/root/agenticverz2.0/...`.
+- Converted to repository-relative symlink targets (`../../../backend/docs/architecture/hoc/...`).
+- This removes CI runner `EACCES` failures during workflow filesystem traversal/caching steps.

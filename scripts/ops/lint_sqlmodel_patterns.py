@@ -148,7 +148,7 @@ UNSAFE_PATTERNS = [
     },
     {
         "id": "DETACH002",
-        "regex": r"with\s+Session\([^)]*\)\s+as\s+session:\s*\n(?:[^\n]*\n)*?\s*return\s+(?!{)(?!\[)(?!None)(?!True)(?!False)(?!\d)(\w+)\s*$",
+        "regex": r"with\s+Session\([^)]*\)\s+as\s+session:\s*\n(?:[^\n]*\n){0,20}?\s*return\s+(?!{)(?!\[)(?!None)(?!True)(?!False)(?!\d)(\w+)\s*$",
         "message": "Returning variable from 'with Session()' block - potential DetachedInstanceError",
         "suggestion": "Extract values to dict before returning: return {'id': obj.id, 'name': obj.name, ...}",
         "severity": Severity.ERROR,
@@ -440,6 +440,7 @@ def lint_file(
 
         for match in re.finditer(regex, content, flags):
             line_num = content[: match.start()].count("\n") + 1
+            match_text = match.group()
 
             # Check for exclusions
             if "exclude_if_followed_by" in pattern_def:
@@ -452,11 +453,16 @@ def lint_file(
                 if not check_with_session_block(content, match.start()):
                     continue
 
+            # DETACH002 only applies to ORM-bearing read paths.
+            # Raw SQL/session.add patterns and docstring examples are false positives.
+            if rule_id == "DETACH002" and ("session.exec(" not in match_text and "session.get(" not in match_text):
+                continue
+
             # Check if in safe context
             if is_safe_context(content, match.start(), match.end()):
                 continue
 
-            pattern_text = match.group()
+            pattern_text = match_text
             if len(pattern_text) > 80:
                 pattern_text = pattern_text[:80] + "..."
 
