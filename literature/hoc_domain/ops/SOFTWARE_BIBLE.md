@@ -17,6 +17,12 @@
   - `ci_consistency_check.sh` invokes linter with `DB_AUTHORITY=local CHECK_SCOPE=full`.
 - This closes CI/runtime drift where linter entrypoints could fail fast under `scripts._db_guard` with DB-AUTH-001.
 
+## Reality Delta (2026-02-20, Alembic Revision-Length Baseline Policy)
+
+- CI consistency checks now treat historical Alembic revision IDs over 32 chars as grandfathered warning debt.
+- Hard-fail migration correctness checks remain intact (for example multiple migration heads).
+- This removes false-positive baseline preflight failures caused by legacy revision naming while preserving active migration integrity gates.
+
 ## Reality Delta (2026-02-15, UAT Hardening Closure)
 
 - UC/UAT closure artifacts are complete (`PIN-564`, `PIN-565`) and ops founder route now includes UAT console under `/prefops/uat` and `/fops/uat`.
