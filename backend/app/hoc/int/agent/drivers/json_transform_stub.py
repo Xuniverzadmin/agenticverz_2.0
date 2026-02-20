@@ -1,5 +1,7 @@
 # Layer: L6 — Driver
 # skills/stubs/json_transform_stub.py
+# Reference: PIN-306 (Capability Registry), CAP-016 (Skill System)
+# capability_id: CAP-016
 """
 JSON Transform Stub (M2)
 

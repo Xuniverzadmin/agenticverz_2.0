@@ -810,6 +810,10 @@ capabilities:
         - "/backend/app/skills/llm_invoke.py"
         - "/backend/app/skills/http_call.py"
         - "/backend/app/skills/json_transform.py"
+        - "/backend/app/hoc/int/agent/drivers/registry_v2.py"
+        - "/backend/app/hoc/int/agent/drivers/json_transform_stub.py"
+        - "/backend/app/hoc/int/agent/engines/http_call_stub.py"
+        - "/backend/app/hoc/int/agent/engines/llm_invoke_stub.py"
       adapters:
         - "/backend/app/skills/adapters/claude_adapter.py"
         - "/backend/app/skills/adapters/openai_adapter.py"
@@ -902,6 +906,7 @@ capabilities:
         - "/backend/app/integrations/graduation_engine.py"
         - "/backend/app/integrations/learning_proof.py"
         - "/backend/app/integrations/L3_adapters.py"
+        - "/backend/app/hoc/cus/integrations/cus_cli.py"
       l2_api:
         - "/backend/app/api/integration.py"           # M25 Integration API (17 endpoints)
         - "/backend/app/api/recovery.py"              # M10 Recovery Suggestion Engine

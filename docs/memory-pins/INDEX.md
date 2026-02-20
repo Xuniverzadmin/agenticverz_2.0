@@ -553,6 +553,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-593](PIN-593-hoc-workstream-scope-lock-and-pr10-snapshot.md) | **HOC Workstream Scope Lock and PR10 Snapshot** | Governance / CI / Execution Snapshot | **✅ COMPLETE** | 2026-02-20 |
 | [PIN-594](PIN-594-pr1-pr10-step6-recovery-audit-with-pr2-evidence.md) | **PR1-PR10 Step 6 Recovery Audit (With PR-2 Evidence)** | Governance / Recovery / Audit | **✅ COMPLETE** | 2026-02-20 |
 | [PIN-595](PIN-595-pr1-pr10-step7-frontend-ledger-sync-post-merge.md) | **PR1-PR10 Step 7 Frontend Ledger Sync (Post-Merge)** | Governance / Frontend / Audit | **✅ COMPLETE** | 2026-02-20 |
+| [PIN-596](PIN-596-hoc-capability-linkage-wave1-remediation.md) | **HOC Capability-Linkage Wave 1 Remediation** | Governance / CI / HOC Debt Reduction | **✅ COMPLETE** | 2026-02-20 |
 
 ---
 
@@ -1322,6 +1323,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-20 | **PIN-596 HOC Capability-Linkage Wave 1 Remediation** - Reduced HOC `MISSING_CAPABILITY_ID` blockers from 5 to 0, synchronized capability evidence mapping (CAP-016/CAP-018), and recorded Wave 1 closure artifact. |
 | 2026-02-20 | **PIN-595 PR1-PR10 Step 7 Frontend Ledger Sync (Post-Merge)** - Marked Step 7 complete, synchronized PR-1 frontend slice ledgers to post-PR2 auth-enforced behavior, and captured merge-backed evidence mapping. |
 | 2026-02-20 | **PIN-594 PR1-PR10 Step 6 Recovery Audit (With PR-2 Evidence)** - Recorded final slice matrix (#8, #11-#19), explicit PR-2 test evidence (17 passed), and skeptical wiring findings/resolutions. |
 | 2026-02-20 | **PIN-593 HOC Workstream Scope Lock and PR10 Snapshot** - Captured clean-branch PR #10 state, commit set, and skeptical blocker counts under HOC-only remediation scope. |

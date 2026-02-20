@@ -9,6 +9,7 @@
 # Allowed Imports: L4, L5, L6
 # Forbidden Imports: L1, L2, L3
 # Reference: CLI Tools
+# capability_id: CAP-018
 
 #!/usr/bin/env python3
 """
