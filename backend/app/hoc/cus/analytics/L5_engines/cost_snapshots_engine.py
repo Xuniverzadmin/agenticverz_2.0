@@ -52,7 +52,7 @@ import hashlib
 import logging
 from datetime import datetime, timedelta, timezone
 
-from ..L5_schemas.cost_snapshot_schemas import (
+from app.hoc.cus.analytics.L5_schemas.cost_snapshot_schemas import (
     SEVERITY_THRESHOLDS,
     AnomalyEvaluation,
     CostSnapshot,

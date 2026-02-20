@@ -47,6 +47,11 @@ Baseline blockers on `origin/main` after merge commit `da89f8d479bae9c1930be25e5
   - `MISSING_CAPABILITY_ID` in `backend/app/hoc/**` reduced from `5` to `0`.
   - Evidence + registry linkage updated in:
     - `backend/app/hoc/docs/architecture/usecases/HOC_CAPABILITY_LINKAGE_WAVE1_REMEDIATION_2026-02-20.md`
+- HOC import-hygiene remediation Wave 2 (CUS scope batch) is complete:
+  - Relative imports in `backend/app/hoc/cus/**` reduced from `4` to `0`.
+  - HOC total relative-import backlog reduced from `34` files to `30` files.
+  - Evidence updated in:
+    - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_CUS_STABILIZATION_2026-02-20.md`
 
 ## Notes
 - This queue is baseline debt on `main`, not introduced solely by PR #7.

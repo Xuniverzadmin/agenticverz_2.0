@@ -31,7 +31,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from ..drivers.vault import (
+from app.hoc.cus.integrations.L5_vault.drivers.vault import (
     CredentialData,
     CredentialMetadata,
     CredentialType,

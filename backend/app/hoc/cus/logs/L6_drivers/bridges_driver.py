@@ -39,8 +39,8 @@ from datetime import datetime, timezone
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..schemas.audit_schemas import PolicyActivationAudit
-from ..schemas.loop_events import ConfidenceCalculator
+from app.hoc.cus.integrations.L5_schemas.audit_schemas import PolicyActivationAudit
+from app.hoc.cus.integrations.L5_schemas.loop_events import ConfidenceCalculator
 
 logger = logging.getLogger(__name__)
 

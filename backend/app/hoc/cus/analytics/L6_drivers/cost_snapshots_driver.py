@@ -33,7 +33,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..L5_schemas.cost_snapshot_schemas import (
+from app.hoc.cus.analytics.L5_schemas.cost_snapshot_schemas import (
     AnomalyEvaluation,
     CostSnapshot,
     EntityType,

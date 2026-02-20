@@ -62,7 +62,7 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 
 ## Active HOC Backlog (Still Blocking)
 - Layer segregation (`--scope hoc`): **93** violations
-- Import hygiene (`backend/app/hoc/**`): **34** files with relative imports
+- Import hygiene (`backend/app/hoc/**`): **30** files with relative imports
 - Capability linkage (`MISSING_CAPABILITY_ID` in hoc files): **0** files (resolved in Wave 1)
 
 ### HOC Layer-Segregation File Set (15 files)
@@ -84,15 +84,11 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 | `backend/app/hoc/int/platform/drivers/memory_driver.py` |
 | `backend/app/hoc/int/platform/engines/sandbox_engine.py` |
 
-### HOC Relative-Import File Set (34 files)
+### HOC Relative-Import File Set (30 files)
 | File |
 |---|
 | `backend/app/hoc/api/cus/api_keys/embedding.py` |
 | `backend/app/hoc/api/int/agent/agents.py` |
-| `backend/app/hoc/cus/analytics/L5_engines/cost_snapshots_engine.py` |
-| `backend/app/hoc/cus/analytics/L6_drivers/cost_snapshots_driver.py` |
-| `backend/app/hoc/cus/integrations/L5_vault/engines/service.py` |
-| `backend/app/hoc/cus/logs/L6_drivers/bridges_driver.py` |
 | `backend/app/hoc/int/agent/drivers/agent_spawn.py` |
 | `backend/app/hoc/int/agent/drivers/blackboard_ops.py` |
 | `backend/app/hoc/int/agent/drivers/kv_store.py` |
