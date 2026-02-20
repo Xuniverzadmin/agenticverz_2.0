@@ -52,6 +52,7 @@
 - Realigned `check_priority5_intent.py` file map to post-refactor runtime paths (`hoc/int/worker/*`, `hoc/cus/policies/L6_drivers/recovery_write_driver.py`), removing stale `FILE_MISSING` regressions.
 - Repaired skill test/runtime import scaffolding in registry/stub modules and tests; local `pytest tests/skills` now passes (`283 passed`).
 - Added CI workflow env `DB_ROLE=staging` to satisfy Alembic DB role gate in migration jobs.
+- Hardened migration `128_monitoring_activity_feedback_contracts` for legacy schema collision: preserves pre-existing `signal_feedback` table as `signal_feedback_legacy*`, creates UC-MON table only when absent, and uses idempotent index DDL.
 
 ## Reality Delta (2026-02-15, UAT Hardening Closure)
 

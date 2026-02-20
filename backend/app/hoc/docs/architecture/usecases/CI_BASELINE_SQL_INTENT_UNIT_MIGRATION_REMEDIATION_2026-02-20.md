@@ -18,7 +18,8 @@ Fresh CI failures on PR run `22223767346` were traced to four concrete issues:
 - Skill test modules had broken import scaffolding (undefined `_skills_path`, stale import paths, and malformed path-insert blocks).
 
 4. `run-migrations`
-- Alembic DB role gate blocked CI because `DB_ROLE` was not set in workflow environment.
+- Initial failure: Alembic DB role gate blocked CI because `DB_ROLE` was not set in workflow environment.
+- Follow-up failure after role fix: migration `128_monitoring_activity_feedback_contracts` attempted to create `signal_feedback` even when legacy migration `071_create_signal_feedback` had already created it.
 
 ## Remediation
 
@@ -55,6 +56,15 @@ Fresh CI failures on PR run `22223767346` were traced to four concrete issues:
   - `DB_ROLE: staging`
 - This satisfies Alembic role-gate requirements in CI migration steps.
 
+### E. Signal feedback migration collision hardening
+
+- Updated `backend/alembic/versions/128_monitoring_activity_feedback_contracts.py` to handle legacy schema collision safely:
+  - Detect existing `signal_feedback` with legacy shape.
+  - Rename legacy table to `signal_feedback_legacy*` instead of failing on duplicate table creation.
+  - Create UC-MON `signal_feedback` table only when absent.
+  - Create indexes with `IF NOT EXISTS`.
+  - Use `DROP ... IF EXISTS` in downgrade for idempotence.
+
 ## Validation
 
 Executed locally:
@@ -76,4 +86,4 @@ Executed locally:
 
 ## Result
 
-The CI failures for `sql-misuse-guard`, `priority5-intent-guard`, `unit-tests` (skill tests), and `run-migrations` are remediated in code and validated locally with deterministic commands.
+The CI failures for `sql-misuse-guard`, `priority5-intent-guard`, `unit-tests` (skill tests), and the migration role/schema blockers in `run-migrations` are remediated in code with deterministic local validation and migration hardening.
