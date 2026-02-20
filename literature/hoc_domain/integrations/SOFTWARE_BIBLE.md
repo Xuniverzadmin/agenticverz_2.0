@@ -7,6 +7,31 @@
 
 ---
 
+## Reality Delta (2026-02-16, L2.1 Facade Activation Wiring)
+
+- Public facade activation path for integrations is now explicitly wired at L2.1:
+- backend/app/hoc/api/facades/cus/integrations/integrations_fac.py
+- L2 public boundary module for domain-scoped facade entry is present at:
+- backend/app/hoc/api/cus/integrations/integrations_public.py
+- Runtime chain is fixed as:
+- app.py -> app.hoc.api.facades.cus -> domain facade bundle -> integrations_public.py -> L4 registry.execute(...)
+- Current status: integrations_public.py remains scaffold-only (no behavior change yet); existing domain routers stay active during incremental rollout.
+
+## Reality Delta (2026-02-16, PR-8 Integrations List Facade Contract Hardening)
+
+- Integrations public facade now implements a concrete read slice at:
+- `backend/app/hoc/api/cus/integrations/integrations_public.py`
+- Endpoint added:
+- `GET /cus/integrations/list` (gateway: `/hoc/api/cus/integrations/list`)
+- Boundary contract now enforces:
+- strict query allowlist (`status`, `provider_type`, `limit`, `offset`)
+- explicit `as_of` rejection in PR-8
+- single dispatch path:
+- `integrations_public.py -> registry.execute("integrations.query", method="list_integrations", ...)`
+- Deterministic list ordering hardened in L6 at:
+- `backend/app/hoc/cus/integrations/L6_drivers/cus_integration_driver.py`
+- with ordering: `created_at desc, id desc`.
+
 ## Reality Delta (2026-02-11)
 
 - Canonical L2 integration routes now live at:
