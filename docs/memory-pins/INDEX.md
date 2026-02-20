@@ -549,6 +549,10 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-578](PIN-578-incidents-list-facade-pr2-contract-hardening.md) | **Incidents List Facade PR-2 Contract Hardening** | Architecture / API Contract / Frontend Enablement | **✅ COMPLETE** | 2026-02-16 |
 | [PIN-586](PIN-586-incidents-domain-delta-runtime-correctness-audit-pass-2026-02-16.md) | **Incidents Domain Delta Runtime Correctness Audit PASS — runtime-verified, 16/16 gates, replay/data-quality strict clean** | Architecture / Assurance / Audit | **✅ COMPLETE** | 2026-02-16 |
 | [PIN-588](PIN-588-account-users-list-facade-pr10-contract-hardening.md) | **Account Users List Facade PR-10 Contract Hardening** | Architecture / API Contract / Frontend Enablement | **✅ COMPLETE** | 2026-02-16 |
+| [PIN-589](PIN-589-tenant-domain-delta-runtime-correctness-audit-pass-2026-02-16.md) | **Tenant Domain Delta Runtime Correctness Audit PASS — runtime-verified, 16/16 gates, replay/data-quality strict clean** | Architecture / Assurance / Audit | **✅ COMPLETE** | 2026-02-16 |
+| [PIN-590](PIN-590-controls-domain-delta-runtime-correctness-audit-pass-2026-02-16.md) | **Controls Domain Delta Runtime Correctness Audit PASS — runtime-verified, 16/16 gates, replay/data-quality strict clean** | Architecture / Assurance / Audit | **✅ COMPLETE** | 2026-02-16 |
+| [PIN-591](PIN-591-frontend-gate-plan-baseline-and-slice-docops-skill-activation.md) | **Frontend Gate Plan Baseline and Slice DocOps Skill Activation** | Frontend Governance | **✅ COMPLETE** | 2026-02-18 |
+| [PIN-592](PIN-592-hoc-only-governance-scope-and-non-hoc-tombstone-ledger.md) | **HOC-Only Governance Scope and Non-HOC Tombstone Ledger** | Governance / CI / Legacy Debt | **✅ COMPLETE** | 2026-02-20 |
 
 ---
 
@@ -1318,6 +1322,10 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-20 | **PIN-592 HOC-Only Governance Scope and Non-HOC Tombstone Ledger** - Scoped blocker enforcement to `backend/app/hoc/**`, tombstoned non-HOC violations, and recorded ledger/evidence for Layer Guard, Import Hygiene, and Capability Linkage. |
+| 2026-02-18 | **PIN-591 Frontend Gate Plan Baseline and Slice DocOps Skill Activation** - Created via memory_trail. |
+| 2026-02-16 | **PIN-590 Controls Domain Delta Runtime Correctness Audit PASS** - Independent audit confirmed CTRL-DELTA completion with runtime evidence: mutation 76.7% (115/150), controls dispatch 22/22, controls properties 13/13, replay 15/15 MATCH (0 DRIFT), data-quality 202/202, and gatepack 16/16 PASS. |
+| 2026-02-16 | **PIN-589 Tenant Domain Delta Runtime Correctness Audit PASS** - Independent audit confirmed TEN-DELTA completion with runtime evidence: mutation 76.7% (115/150), replay 15/15 MATCH (0 DRIFT), data-quality 202/202, and gatepack 16/16 PASS. |
 | 2026-02-16 | **PIN-586 Incidents Domain Delta Runtime Correctness Audit PASS** - Independent audit confirmed INC-DELTA completion with runtime evidence: mutation 76.7% (115/150), replay 15/15 MATCH (0 DRIFT), data-quality 202/202, and gatepack 16/16 PASS. |
 | 2026-02-16 | **PIN-578 Incidents List Facade PR-2 Contract Hardening** - Added `/cus/incidents/list` read-only facade with strict topic allowlists, single-dispatch mapping, deterministic pagination semantics, acceptance tests, and linked frontend scaffold contract doc. |
 | 2026-02-16 | **PIN-577 Runs Facade Contract Drift Fix (Deterministic Pagination)** - Locked facade-side `has_more` derivation to contract math, added regression test, and recorded issue ledger evidence for frontend-safe pagination behavior. |

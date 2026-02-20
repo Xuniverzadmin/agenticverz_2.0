@@ -20,6 +20,17 @@
   - explicit preflight for Playwright Chromium browser binary with actionable remediation
 - UI hygiene checker now recognizes dynamic imports for orphan-page detection (prevents lazy-route false positives).
 
+## Reality Delta (2026-02-20, CI Scope Split and Tombstone Ledger)
+
+- CI baseline remediation scope was constrained to `backend/app/hoc/**` for active blocker closure.
+- Non-`hoc/*` legacy debt is tombstoned and tracked in:
+  - `backend/app/hoc/docs/architecture/usecases/CI_NON_HOC_TOMBSTONE_LEDGER_2026-02-20.md`
+- Guard/workflow scope updates:
+  - `scripts/ops/layer_segregation_guard.py` supports `--scope hoc`
+  - `.github/workflows/layer-segregation.yml` runs HOC-scoped enforcement
+  - `.github/workflows/import-hygiene.yml` relative-import and hygiene checks are HOC-scoped
+  - `.github/workflows/capability-registry.yml` capability-linkage changed-file selection is HOC-scoped for backend python
+
 ## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
 
 - Wave-4 UC script coverage audited `hoc/cus/ops` scope as:

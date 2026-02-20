@@ -207,6 +207,12 @@ def main():
     parser.add_argument("--ci", action="store_true", help="CI mode - exit 1 on violations")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument("--strict", action="store_true", help="Strict mode - include service file ban")
+    parser.add_argument(
+        "--scope",
+        choices=["all", "hoc"],
+        default="all",
+        help="Scan scope: all (hoc + services) or hoc only",
+    )
     args = parser.parse_args()
 
     base_path = Path(__file__).parent.parent.parent / "backend"
@@ -218,8 +224,11 @@ def main():
     print("=" * 60)
     print("LAYER SEGREGATION GUARD")
     print("Reference: DRIVER_ENGINE_PATTERN_LOCKED.md")
+    print(f"Scope: {args.scope}")
     print("=" * 60)
     print()
+
+    include_services = args.scope == "all"
 
     # Check 1: Engine DB violations
     print("### Check 1: Engine DB Access Violations")
@@ -230,10 +239,11 @@ def main():
         base_path, "engines", "*_engine.py", ENGINE_FORBIDDEN_PATTERNS
     )
 
-    # Also check app/services/*_engine.py
-    engine_violations.update(scan_services_directory(
-        base_path, "*_engine.py", ENGINE_FORBIDDEN_PATTERNS
-    ))
+    if include_services:
+        # Also check app/services/*_engine.py
+        engine_violations.update(scan_services_directory(
+            base_path, "*_engine.py", ENGINE_FORBIDDEN_PATTERNS
+        ))
 
     if engine_violations:
         for filepath, violations in engine_violations.items():
@@ -256,10 +266,11 @@ def main():
         base_path, "drivers", "*_driver.py", DRIVER_FORBIDDEN_PATTERNS
     )
 
-    # Also check app/services/*_driver.py
-    driver_violations.update(scan_services_directory(
-        base_path, "*_driver.py", DRIVER_FORBIDDEN_PATTERNS
-    ))
+    if include_services:
+        # Also check app/services/*_driver.py
+        driver_violations.update(scan_services_directory(
+            base_path, "*_driver.py", DRIVER_FORBIDDEN_PATTERNS
+        ))
 
     if driver_violations:
         for filepath, violations in driver_violations.items():
@@ -282,10 +293,11 @@ def main():
         base_path, "drivers", "*_driver.py", DRIVER_IMPORT_FORBIDDEN_PATTERNS
     )
 
-    # Also check app/services/*_driver.py
-    driver_import_violations.update(scan_services_directory(
-        base_path, "*_driver.py", DRIVER_IMPORT_FORBIDDEN_PATTERNS
-    ))
+    if include_services:
+        # Also check app/services/*_driver.py
+        driver_import_violations.update(scan_services_directory(
+            base_path, "*_driver.py", DRIVER_IMPORT_FORBIDDEN_PATTERNS
+        ))
 
     if driver_import_violations:
         for filepath, violations in driver_import_violations.items():
