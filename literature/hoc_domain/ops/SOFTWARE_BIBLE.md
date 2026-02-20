@@ -40,6 +40,12 @@
 - `integration-integrity` LIT/BIT output counters now avoid malformed `GITHUB_OUTPUT` writes by removing fallback echo duplication in `grep -c` pipelines.
 - Together these changes convert false-negative/format failures into deterministic gate behavior.
 
+## Reality Delta (2026-02-20, DB Dual-Pattern Guard Scope Tightening)
+
+- `db-authority-guard` dual-connection anti-pattern step now scans only script execution surfaces (`backend/scripts`, `scripts`) instead of all repository Python files.
+- Dual-pattern detection now requires DB-specific signals (Neon/local DB host mix or DB fallback-to-local behavior) and no longer matches generic non-DB `fallback local` text.
+- Enforcement remains baseline-aware (`BASELINE_DUAL_VIOLATIONS=0`) and blocks only net-new regressions.
+
 ## Reality Delta (2026-02-15, UAT Hardening Closure)
 
 - UC/UAT closure artifacts are complete (`PIN-564`, `PIN-565`) and ops founder route now includes UAT console under `/prefops/uat` and `/fops/uat`.

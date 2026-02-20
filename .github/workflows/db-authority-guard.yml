@@ -124,33 +124,52 @@ jobs:
       - name: Check for dual-connection anti-patterns
         id: check_dual
         run: |
-          echo "=== Checking for dual-connection anti-patterns ==="
+          echo "=== Checking for dual-connection DB anti-patterns ==="
 
-          # Pattern: scripts that reference both neon.tech AND localhost/docker
-          DUAL_PATTERN="(neon\.tech.*localhost|localhost.*neon\.tech|neon\.tech.*127\.0\.0\.1|127\.0\.0\.1.*neon\.tech)"
+          # DB-specific dual-host usage (Neon + local host references in the same script)
+          DUAL_PATTERN="(neon\\.tech.*(localhost|127\\.0\\.0\\.1)|(localhost|127\\.0\\.0\\.1).*(neon\\.tech))"
+          # DB fallback behavior (retry/except/fallback from Neon/DB URL to local DB endpoints)
+          FALLBACK_DB_PATTERN="(fallback|except|retry).*(database|db|postgres|postgresql|neon|database_url|sqlalchemy).*(localhost|127\\.0\\.0\\.1|local)"
 
+          # Current script-scope baseline: zero known dual-connection anti-pattern violations.
+          BASELINE_DUAL_VIOLATIONS=0
           VIOLATIONS=0
+          VIOLATION_FILES=""
 
-          for script in $(find . -name "*.py" -type f 2>/dev/null | grep -v __pycache__ | grep -v ".venv"); do
-            # Check for dual connection strings in same file
-            if grep -qE "$DUAL_PATTERN" "$script" 2>/dev/null; then
-              echo "VIOLATION: $script contains dual-connection pattern"
-              VIOLATIONS=$((VIOLATIONS + 1))
-            fi
+          scan_dir() {
+            local dir="$1"
+            [ -d "$dir" ] || return 0
+            while IFS= read -r script; do
+              if grep -qiE "$DUAL_PATTERN" "$script" 2>/dev/null; then
+                echo "VIOLATION: $script contains mixed Neon/local DB host references"
+                VIOLATIONS=$((VIOLATIONS + 1))
+                VIOLATION_FILES="$VIOLATION_FILES $script"
+              fi
+              if grep -qiE "$FALLBACK_DB_PATTERN" "$script" 2>/dev/null; then
+                echo "VIOLATION: $script contains DB fallback-to-local anti-pattern"
+                VIOLATIONS=$((VIOLATIONS + 1))
+                VIOLATION_FILES="$VIOLATION_FILES $script"
+              fi
+            done < <(find "$dir" -name "*.py" -type f 2>/dev/null)
+          }
 
-            # Check for "try neon, fallback local" patterns
-            if grep -qE "try.*neon.*except.*local|fallback.*local|retry.*different.*db" "$script" 2>/dev/null; then
-              echo "VIOLATION: $script contains fallback anti-pattern"
-              VIOLATIONS=$((VIOLATIONS + 1))
-            fi
-          done
+          # Keep scope aligned to script execution surfaces guarded by DB-AUTH-001.
+          scan_dir backend/scripts
+          scan_dir scripts
 
-          if [ $VIOLATIONS -gt 0 ]; then
-            echo "::error::DB-AUTH-001 VIOLATION: Dual-connection anti-pattern detected"
+          echo "Dual-pattern violations found: $VIOLATIONS"
+          echo "Dual-pattern baseline: $BASELINE_DUAL_VIOLATIONS"
+
+          if [ $VIOLATIONS -gt $BASELINE_DUAL_VIOLATIONS ]; then
+            DELTA=$((VIOLATIONS - BASELINE_DUAL_VIOLATIONS))
+            echo "::error::DB-AUTH-001 VIOLATION: $DELTA NEW dual-connection anti-pattern(s) detected"
+            echo "Files:$VIOLATION_FILES"
             exit 1
+          elif [ $VIOLATIONS -lt $BASELINE_DUAL_VIOLATIONS ]; then
+            echo "PROGRESS: $((BASELINE_DUAL_VIOLATIONS - VIOLATIONS)) dual-pattern violation(s) fixed"
+          else
+            echo "OK: No net-new dual-connection anti-pattern violations"
           fi
-
-          echo "OK: No dual-connection anti-patterns found"
 
       - name: Validate _db_guard.py exists
         run: |
