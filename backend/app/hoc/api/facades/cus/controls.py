@@ -5,7 +5,10 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.hoc.api.cus.controls.controls import router as controls_router
+from app.hoc.api.cus.controls.controls_public import router as controls_public_router
 
 DOMAIN = "controls"
-ROUTERS: list[APIRouter] = [controls_router]
-
+ROUTERS: list[APIRouter] = [
+    controls_router,
+    controls_public_router,
+]

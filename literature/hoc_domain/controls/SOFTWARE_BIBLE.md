@@ -7,6 +7,16 @@
 
 ---
 
+## Reality Delta (2026-02-16, L2.1 Facade Activation Wiring)
+
+- Public facade activation path for controls is now explicitly wired at L2.1:
+- backend/app/hoc/api/facades/cus/controls/controls_fac.py
+- L2 public boundary module for domain-scoped facade entry is present at:
+- backend/app/hoc/api/cus/controls/controls_public.py
+- Runtime chain is fixed as:
+- app.py -> app.hoc.api.facades.cus -> domain facade bundle -> controls_public.py -> L4 registry.execute(...)
+- Current status: controls_public.py now implements `GET /cus/controls/list` read facade with strict boundary validation, one-dispatch mapping to `controls.query`, deterministic paging metadata, and trace/meta propagation; existing domain routers remain active during incremental rollout.
+
 ## Reality Delta (2026-02-08)
 
 - L5/L6 purity: `PYTHONPATH=. python3 backend/scripts/ops/hoc_l5_l6_purity_audit.py --domain controls --json --advisory` reports 0 blocking, 0 advisory.

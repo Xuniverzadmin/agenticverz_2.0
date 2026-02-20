@@ -164,8 +164,11 @@ class CusIntegrationDriver:
         count_query = select(func.count()).select_from(query.subquery())
         total = self._session.exec(count_query).one()
 
-        # Apply pagination and ordering
-        query = query.order_by(col(CusIntegration.created_at).desc())
+        # Apply pagination and deterministic ordering (stable tie-break on id)
+        query = query.order_by(
+            col(CusIntegration.created_at).desc(),
+            col(CusIntegration.id).desc(),
+        )
         query = query.offset(offset).limit(limit)
 
         integrations = list(self._session.exec(query).all())

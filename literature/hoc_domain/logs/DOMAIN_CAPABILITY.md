@@ -6,6 +6,16 @@
 
 ---
 
+## Reality Delta (2026-02-16, L2.1 Facade Activation Wiring)
+
+- Public facade activation path for logs is now explicitly wired at L2.1:
+- backend/app/hoc/api/facades/cus/logs/logs_fac.py
+- L2 public boundary module for domain-scoped facade entry is present at:
+- backend/app/hoc/api/cus/logs/logs_public.py
+- Runtime chain is fixed as:
+- app.py -> app.hoc.api.facades.cus -> domain facade bundle -> logs_public.py -> L4 registry.execute(...)
+- Current status: logs_public.py now implements `GET /cus/logs/list` replay-feed facade with strict boundary validation, one-dispatch mapping to `logs.query`, deterministic paging metadata, and trace/meta propagation; existing domain routers remain active during incremental rollout.
+
 ## Reality Delta (2026-02-08)
 
 - L2 purity preserved: logs L2 routes dispatch via L4 `OperationRegistry` (0 direct L2→L5).

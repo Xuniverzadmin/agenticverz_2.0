@@ -4,12 +4,40 @@
 - Date: 2026-02-16
 - Scope: PR-1 contract lock for Runs Facade implementation
 - Applies to: backend facade endpoint only (no frontend implementation)
+- Version: v1.3-draft
+
+## Source-of-Truth Hierarchy (Authoritative Precedence)
+When implementation and docs disagree, use this precedence order:
+
+1. Governance + topology lock docs:
+   - `codex_agents_agenticverz2.md`
+   - `project_aware_agenticverz2.md`
+   - `vision_mission_self_audit.md`
+   - `docs/architecture/topology/HOC_LAYER_TOPOLOGY_V2.0.0.md`
+   - `docs/architecture/architecture_core/LAYER_MODEL.md`
+   - `docs/architecture/architecture_core/DRIVER_ENGINE_PATTERN_LOCKED.md`
+2. L4 hoc_spine constitutional/contracts literature:
+   - `literature/hoc_spine/HOC_SPINE_CONSTITUTION.md`
+   - `backend/app/hoc/cus/hoc_spine/orchestrator/operation_registry.py` (L4 dispatch contract)
+3. Domain literature for activity:
+   - `literature/hoc_domain/activity/SOFTWARE_BIBLE.md`
+   - `literature/hoc_domain/activity/DOMAIN_CAPABILITY.md`
+4. Runtime wiring + code reality:
+   - L2.1 package-form facade wiring
+   - L2 API boundary handler behavior
+   - Existing middleware/header conventions
+5. This PR addendum (frozen PR-1 contract)
+6. Acceptance tests as executable proof
+
+Conflict resolution rule:
+- If runtime behavior conflicts with governance/L4/domain contracts, treat runtime behavior as drift and align implementation to governance-first authority.
 
 ## 0. Facade Artifact and Dispatch Map
 - PR-1 introduces facade router module:
   - `backend/app/hoc/api/cus/activity/runs_facade.py`
 - Router registration:
-  - `backend/app/hoc/api/facades/cus/activity.py`
+  - `backend/app/hoc/api/facades/cus/activity/activity_fac.py`
+  - Included through `backend/app/hoc/api/facades/cus/__init__.py` and `backend/app/hoc/app.py`
 - Facade endpoint:
   - `GET /cus/activity/runs`
   - Gateway exposure: `/hoc/api/cus/activity/runs`

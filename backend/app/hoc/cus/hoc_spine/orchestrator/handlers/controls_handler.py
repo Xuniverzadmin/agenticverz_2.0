@@ -89,6 +89,7 @@ class ControlsQueryHandler:
         facade = get_controls_facade()
         dispatch = {
             "list_controls": facade.list_controls,
+            "list_controls_page": facade.list_controls_page,
             "get_status": facade.get_status,
             "get_control": facade.get_control,
             "update_control": facade.update_control,
