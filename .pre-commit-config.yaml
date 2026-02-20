@@ -54,7 +54,7 @@ repos:
         # - Only checks staged files (pass_filenames: true)
         # - Skips CI-only rules (DETACH002, SCOPE001, etc.)
         # Full validation runs in CI with CHECK_SCOPE=full
-        entry: env CHECK_SCOPE=staged python scripts/ops/lint_sqlmodel_patterns.py
+        entry: env CHECK_SCOPE=staged DB_AUTHORITY=local python scripts/ops/lint_sqlmodel_patterns.py
         language: python
         types: [python]
         pass_filenames: true

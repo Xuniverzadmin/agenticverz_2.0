@@ -26,12 +26,17 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+
 # Configuration
 API_BASE="${API_BASE:-http://localhost:8000}"
 API_KEY="${AOS_API_KEY:-edf7eeb8df7ed639b9d1d8bcac572cea5b8cf97e1dffa00d0d3c5ded0f728aaf}"
 API_HEADER="X-AOS-Key"
 DATABASE_URL="${DATABASE_URL:-postgresql://nova:novapass@localhost:6432/nova_aos}"
-BACKEND_DIR="/root/agenticverz2.0/backend"
+BACKEND_DIR="${BACKEND_DIR:-${REPO_ROOT}/backend}"
+PREFLIGHT_HEALTH_ATTEMPTS="${PREFLIGHT_HEALTH_ATTEMPTS:-30}"
+PREFLIGHT_HEALTH_INTERVAL="${PREFLIGHT_HEALTH_INTERVAL:-2}"
 
 # Counter for failures
 FAILURES=0
@@ -45,13 +50,38 @@ echo "Date: $(date -Iseconds)"
 echo "Purpose: Block scenario execution until truth infrastructure verified"
 echo ""
 
+fetch_health() {
+    curl -s --max-time 5 "${API_BASE}/health" 2>/dev/null || echo "FAILED"
+}
+
 # ============================================================================
 # CHECK 1: Runtime DB is Neon (not local)
 # ============================================================================
 echo -e "${YELLOW}[CHECK 1] Runtime Database Target${NC}"
 
-# Get health endpoint to verify database
-HEALTH_RESPONSE=$(curl -s "${API_BASE}/health" 2>/dev/null || echo "FAILED")
+# Get health endpoint to verify database (retry to avoid startup race flake)
+HEALTH_RESPONSE="FAILED"
+STATUS="unknown"
+for ((i=1; i<=PREFLIGHT_HEALTH_ATTEMPTS; i++)); do
+    HEALTH_RESPONSE=$(fetch_health)
+    if [[ "$HEALTH_RESPONSE" == "FAILED" ]]; then
+        if (( i == 1 || i % 5 == 0 )); then
+            echo "       Waiting for backend (${i}/${PREFLIGHT_HEALTH_ATTEMPTS})..."
+        fi
+        sleep "$PREFLIGHT_HEALTH_INTERVAL"
+        continue
+    fi
+
+    STATUS=$(echo "$HEALTH_RESPONSE" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
+    if [[ "$STATUS" == "healthy" ]]; then
+        break
+    fi
+
+    if (( i % 5 == 0 )); then
+        echo "       Backend reachable but status='$STATUS' (${i}/${PREFLIGHT_HEALTH_ATTEMPTS})"
+    fi
+    sleep "$PREFLIGHT_HEALTH_INTERVAL"
+done
 
 if [[ "$HEALTH_RESPONSE" == "FAILED" ]]; then
     echo -e "  ${RED}FAIL: Cannot reach backend at ${API_BASE}${NC}"
@@ -59,7 +89,6 @@ if [[ "$HEALTH_RESPONSE" == "FAILED" ]]; then
     FAILURES=$((FAILURES + 1))
 else
     # Check if backend is healthy
-    STATUS=$(echo "$HEALTH_RESPONSE" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
     VERSION=$(echo "$HEALTH_RESPONSE" | jq -r '.version // "unknown"' 2>/dev/null || echo "unknown")
 
     if [[ "$STATUS" == "healthy" ]]; then

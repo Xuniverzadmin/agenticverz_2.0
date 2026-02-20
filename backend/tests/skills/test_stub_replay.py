@@ -13,28 +13,18 @@ Key properties tested:
 """
 
 import json
-import sys
 from pathlib import Path
 from typing import Any, Dict
 
 import pytest
 
-# Add paths
-_backend_path = str(Path(__file__).parent.parent.parent)
-_runtime_path = str(Path(__file__).parent.parent.parent / "app" / "worker" / "runtime")
-
-
-for p in [_backend_path, _runtime_path, _skills_path]:
-    if p not in sys.path:
-        sys.path.insert(0, p)
-
-from stubs.http_call_stub import (
-    HttpCallStub,
-)
-from stubs.json_transform_stub import (
+from app.hoc.int.agent.drivers.json_transform_stub import (
     JsonTransformStub,
 )
-from stubs.llm_invoke_stub import (
+from app.hoc.int.agent.engines.http_call_stub import (
+    HttpCallStub,
+)
+from app.hoc.int.agent.engines.llm_invoke_stub import (
     LlmInvokeStub,
 )
 
@@ -138,7 +128,7 @@ class TestLlmInvokeStubReplay:
     @pytest.mark.asyncio
     async def test_custom_response_override(self, stub):
         """Custom responses can be configured."""
-        from stubs.llm_invoke_stub import MockLlmResponse
+        from app.hoc.int.agent.engines.llm_invoke_stub import MockLlmResponse
 
         stub.add_response("analyze", MockLlmResponse(content="Custom analysis result", output_tokens=5))
 

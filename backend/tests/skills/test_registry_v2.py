@@ -10,22 +10,11 @@ Tests for:
 """
 
 import os
-import sys
 import tempfile
-from pathlib import Path
 
 import pytest
 
-# Direct paths to avoid pydantic-dependent imports through __init__.py
-_runtime_path = str(Path(__file__).parent.parent.parent / "app" / "worker" / "runtime")
-
-
-    sys.path.insert(0, _runtime_path)
-
-
-
-from core import SkillDescriptor
-from registry_v2 import (
+from app.hoc.int.agent.drivers.registry_v2 import (
     SkillRegistry,
     SkillVersion,
     get_global_registry,
@@ -33,6 +22,7 @@ from registry_v2 import (
     register_skill,
     set_global_registry,
 )
+from app.hoc.int.worker.runtime.core import SkillDescriptor
 
 # ============================================================================
 # Fixtures

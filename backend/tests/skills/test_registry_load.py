@@ -11,7 +11,6 @@ Performance tests for SkillRegistry v2 with:
 These tests ensure the registry can handle production-scale deployments.
 """
 
-import sys
 import tempfile
 import time
 from pathlib import Path
@@ -19,22 +18,13 @@ from typing import Any, Dict
 
 import pytest
 
-# Add paths
-_backend_path = str(Path(__file__).parent.parent.parent)
-_runtime_path = str(Path(__file__).parent.parent.parent / "app" / "worker" / "runtime")
-
-
-for p in [_backend_path, _runtime_path, _skills_path]:
-    if p not in sys.path:
-        sys.path.insert(0, p)
-
-from core import SkillDescriptor
-from registry_v2 import (
+from app.hoc.int.agent.drivers.registry_v2 import (
     SkillRegistry,
     diff_contracts,
     is_version_compatible,
     resolve_skill_with_version,
 )
+from app.hoc.int.worker.runtime.core import SkillDescriptor
 
 
 def create_test_descriptor(
