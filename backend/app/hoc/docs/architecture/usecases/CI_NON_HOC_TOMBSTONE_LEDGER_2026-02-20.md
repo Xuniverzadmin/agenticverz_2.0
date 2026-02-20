@@ -65,6 +65,72 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 - Import hygiene (`backend/app/hoc/**`): **34** files with relative imports
 - Capability linkage (`MISSING_CAPABILITY_ID` in hoc files): **5** files
 
+### HOC Layer-Segregation File Set (15 files)
+| File |
+|---|
+| `backend/app/hoc/fdr/account/engines/explorer_engine.py` |
+| `backend/app/hoc/fdr/incidents/engines/ops_incident_engine.py` |
+| `backend/app/hoc/fdr/logs/engines/review_engine.py` |
+| `backend/app/hoc/fdr/logs/engines/timeline_engine.py` |
+| `backend/app/hoc/fdr/ops/engines/founder_action_write_engine.py` |
+| `backend/app/hoc/fdr/ops/engines/ops_incident_engine.py` |
+| `backend/app/hoc/int/agent/engines/credit_engine.py` |
+| `backend/app/hoc/int/agent/engines/governance_engine.py` |
+| `backend/app/hoc/int/agent/engines/invoke_audit_engine.py` |
+| `backend/app/hoc/int/agent/engines/job_engine.py` |
+| `backend/app/hoc/int/agent/engines/message_engine.py` |
+| `backend/app/hoc/int/agent/engines/registry_engine.py` |
+| `backend/app/hoc/int/agent/engines/worker_engine.py` |
+| `backend/app/hoc/int/platform/drivers/memory_driver.py` |
+| `backend/app/hoc/int/platform/engines/sandbox_engine.py` |
+
+### HOC Relative-Import File Set (34 files)
+| File |
+|---|
+| `backend/app/hoc/api/cus/api_keys/embedding.py` |
+| `backend/app/hoc/api/int/agent/agents.py` |
+| `backend/app/hoc/cus/analytics/L5_engines/cost_snapshots_engine.py` |
+| `backend/app/hoc/cus/analytics/L6_drivers/cost_snapshots_driver.py` |
+| `backend/app/hoc/cus/integrations/L5_vault/engines/service.py` |
+| `backend/app/hoc/cus/logs/L6_drivers/bridges_driver.py` |
+| `backend/app/hoc/int/agent/drivers/agent_spawn.py` |
+| `backend/app/hoc/int/agent/drivers/blackboard_ops.py` |
+| `backend/app/hoc/int/agent/drivers/kv_store.py` |
+| `backend/app/hoc/int/agent/drivers/sdsr_fail_trigger.py` |
+| `backend/app/hoc/int/agent/drivers/worker_registry_driver.py` |
+| `backend/app/hoc/int/agent/engines/agent_invoke.py` |
+| `backend/app/hoc/int/agent/engines/email_send.py` |
+| `backend/app/hoc/int/agent/engines/executor.py` |
+| `backend/app/hoc/int/agent/engines/http_call.py` |
+| `backend/app/hoc/int/agent/engines/llm_invoke.py` |
+| `backend/app/hoc/int/agent/engines/onboarding_gate.py` |
+| `backend/app/hoc/int/agent/engines/skills_base.py` |
+| `backend/app/hoc/int/agent/engines/slack_send.py` |
+| `backend/app/hoc/int/agent/engines/voyage_embed.py` |
+| `backend/app/hoc/int/agent/engines/webhook_send.py` |
+| `backend/app/hoc/int/analytics/engines/runner.py` |
+| `backend/app/hoc/int/general/drivers/artifact.py` |
+| `backend/app/hoc/int/general/engines/role_guard.py` |
+| `backend/app/hoc/int/general/engines/tier_gating.py` |
+| `backend/app/hoc/int/logs/drivers/pool.py` |
+| `backend/app/hoc/int/logs/engines/gateway_audit.py` |
+| `backend/app/hoc/int/logs/engines/shadow_audit.py` |
+| `backend/app/hoc/int/platform/drivers/care.py` |
+| `backend/app/hoc/int/platform/drivers/memory_store.py` |
+| `backend/app/hoc/int/platform/drivers/policies.py` |
+| `backend/app/hoc/int/platform/drivers/probes.py` |
+| `backend/app/hoc/int/policies/engines/rbac_middleware.py` |
+| `backend/app/hoc/int/worker/runner.py` |
+
+### HOC Capability-Linkage Missing ID File Set (5 files)
+| File |
+|---|
+| `backend/app/hoc/cus/integrations/cus_cli.py` |
+| `backend/app/hoc/int/agent/drivers/json_transform_stub.py` |
+| `backend/app/hoc/int/agent/drivers/registry_v2.py` |
+| `backend/app/hoc/int/agent/engines/http_call_stub.py` |
+| `backend/app/hoc/int/agent/engines/llm_invoke_stub.py` |
+
 ## Reproduction Commands
 ```bash
 python3 scripts/ops/layer_segregation_guard.py --check
