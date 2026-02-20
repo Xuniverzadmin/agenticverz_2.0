@@ -21,7 +21,7 @@ Baseline blockers on `origin/main` after merge commit `da89f8d479bae9c1930be25e5
 | P0 | DB Authority Guard / DB-AUTH-001 | `.env.example` missing `DB_AUTHORITY` | add `DB_AUTHORITY=` to `.env.example` (and align env files) |
 | P0 | Truth Preflight / Truth Preflight (BLOCKING) | cannot reach backend at `http://localhost:8000`; script exits fail-closed | stabilize backend startup wait/health probing and truth-preflight preconditions |
 | P1 | Layer Segregation Guard / Enforce L4/L6 Boundaries | `Run Layer Segregation Guard` fails (99 violations baseline) | clear violations under `backend/app/hoc/**`; tombstone non-hoc legacy files |
-| P1 | Import Hygiene Check / Import Hygiene | `Check no relative imports` fails | clear relative imports under `backend/app/hoc/**`; tombstone non-hoc legacy files |
+| P1 | Import Hygiene Check / Import Hygiene | **RESOLVED (Wave 2 complete):** HOC relative imports reduced to `0` | keep non-HOC relative-import debt tombstoned and prevent regressions |
 | P1 | SQLModel Pattern Linter / SQLModel Pattern Lint (Full) | DB guard violation in linter execution context | fix linter invocation env/DB_AUTHORITY contract |
 | P1 | Mypy Autofix / Mypy Type Safety | fails during `Set up Python` (workflow/tooling path) | repair workflow/tool bootstrap |
 | P1 | CI / run-migrations | `DB ROLE GATE: BLOCKED` in alembic migration job | align CI migration role/auth setup to expected DB role gate |
@@ -64,7 +64,15 @@ Baseline blockers on `origin/main` after merge commit `da89f8d479bae9c1930be25e5
   - Capability-linkage metadata wired for remediated files (CAP-008, CAP-016) and registry evidence synchronized.
   - Evidence updated in:
     - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH3_INT_AGENT_CLUSTER_2026-02-20.md`
+- HOC import-hygiene remediation Wave 2 (remaining residual cluster batch) is complete:
+  - Relative imports remediated in final 10 HOC files (`int/analytics`, `int/general`, `int/logs`, `int/platform`, `int/policies`).
+  - HOC total relative-import backlog reduced from `10` files to `0` files.
+  - CUS relative-import backlog remains `0`.
+  - Capability-linkage metadata and registry evidence synchronized (CAP-007, CAP-009, CAP-010, CAP-012, CAP-014).
+  - Evidence updated in:
+    - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH4_REMAINING_CLUSTER_2026-02-20.md`
 
 ## Notes
 - This queue is baseline debt on `main`, not introduced solely by PR #7.
 - Lane A should address P0 first, then P1 in smallest reviewable PRs.
+- Skeptical audit (2026-02-20) confirms changed-file capability linkage is clear for HOC remediation PRs, while full HOC-wide capability scan still reports `972` historical `MISSING_CAPABILITY_ID` blockers outside current CI changed-file contract.

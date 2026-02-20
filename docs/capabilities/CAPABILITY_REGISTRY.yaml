@@ -372,7 +372,9 @@ capabilities:
       authority:
         - "/backend/app/auth/invariants.py"       # Invariant guards (I1-I5)
         - "/backend/app/auth/route_planes.py"     # Route plane declarations
-      audit: "/backend/app/auth/gateway_audit.py"
+      audit:
+        - "/backend/app/auth/gateway_audit.py"
+        - "/backend/app/hoc/int/logs/engines/gateway_audit.py"
 
     gaps: []  # No gaps - CLOSED
 
@@ -420,11 +422,14 @@ capabilities:
         - "/backend/app/hoc/int/agent/engines/onboarding_gate.py"
         - "/backend/app/hoc/int/general/engines/role_guard.py"
         - "/backend/app/hoc/int/general/engines/tier_gating.py"
+        - "/backend/app/hoc/int/policies/engines/rbac_middleware.py"
       l2_api:
         - "/backend/app/auth/rbac_middleware.py"
         - "/backend/app/api/rbac_api.py"                 # PIN-311: RBAC management API
         - "/backend/app/api/authz_status.py"             # PIN-311: Authorization status endpoint
-      audit: "/backend/app/auth/shadow_audit.py"
+      audit:
+        - "/backend/app/auth/shadow_audit.py"
+        - "/backend/app/hoc/int/logs/engines/shadow_audit.py"
 
     gaps: []  # No gaps - CLOSED
 
@@ -518,7 +523,9 @@ capabilities:
       founder_approval_required: true
 
     evidence:
-      engine: "/backend/app/policy/"
+      engine:
+        - "/backend/app/policy/"
+        - "/backend/app/hoc/int/platform/drivers/policies.py"
       l2_api:
         - "/backend/app/api/policy.py"
         - "/backend/app/api/policy_layer.py"
@@ -566,6 +573,8 @@ capabilities:
         - "/backend/app/routing/learning.py"
         - "/backend/app/routing/feedback.py"
         - "/backend/app/routing/probes.py"
+        - "/backend/app/hoc/int/platform/drivers/care.py"
+        - "/backend/app/hoc/int/platform/drivers/probes.py"
 
     gaps: []  # No gaps - CLOSED (internal capability)
 
@@ -652,6 +661,9 @@ capabilities:
         - "/backend/app/workflow/checkpoint.py"
         - "/backend/app/workflow/golden.py"
         - "/backend/app/workflow/policies.py"
+        - "/backend/app/hoc/int/analytics/engines/runner.py"
+        - "/backend/app/hoc/int/logs/drivers/pool.py"
+        - "/backend/app/hoc/int/general/drivers/artifact.py"
 
     gaps: []  # No gaps - CLOSED
 
@@ -735,6 +747,7 @@ capabilities:
         - "/backend/app/memory/store.py"
         - "/backend/app/memory/vector_store.py"
         - "/backend/app/memory/drift_detector.py"
+        - "/backend/app/hoc/int/platform/drivers/memory_store.py"
       l2_api:
         - "/backend/app/api/memory_pins.py"
         - "/backend/app/api/embedding.py"                # PIN-311: Unmapped file resolution

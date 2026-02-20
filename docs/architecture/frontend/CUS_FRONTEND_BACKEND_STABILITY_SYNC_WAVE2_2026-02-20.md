@@ -13,6 +13,8 @@ Wave 2 focused on backend CUS import-hygiene remediation for stability. Frontend
   - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH2_API_AUTH_STABILIZATION_2026-02-20.md`
 - Backend Wave 2 batch-3 artifact:
   - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH3_INT_AGENT_CLUSTER_2026-02-20.md`
+- Backend Wave 2 batch-4 artifact:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH4_REMAINING_CLUSTER_2026-02-20.md`
 - Auth enforcement reference:
   - `backend/app/hoc/docs/architecture/usecases/PR2_AUTH_CLOSURE_EVIDENCE.md`
 
@@ -26,4 +28,4 @@ Wave 2 focused on backend CUS import-hygiene remediation for stability. Frontend
    - authenticated context required for `200` payload evidence
 
 ## Outcome
-Frontend CUS slice stability is preserved while backend CUS hygiene debt is reduced in Wave 2.
+Frontend CUS slice stability is preserved and Wave 2 backend import-hygiene debt is fully cleared for HOC scope (`backend/app/hoc/**` relative imports: `0`).

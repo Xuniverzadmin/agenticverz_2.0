@@ -11,6 +11,7 @@
 # Contract: EXECUTION_SEMANTIC_CONTRACT.md (Guarantee 3: At-Least-Once Worker Dispatch)
 # Pattern: Sync dispatch loop with ThreadPoolExecutor for worker isolation
 # Reference: PIN-454 (Cross-Domain Orchestration Audit)
+# capability_id: CAP-012
 
 """
 Worker pool: polls runs table and dispatches runs to runner workers.
@@ -42,17 +43,17 @@ if __name__ == "__main__":
 
 from app.infra import FeatureIntent, RetryPolicy
 
-from ..db import Run, engine
-from ..events import get_publisher
-from ..metrics import nova_worker_pool_size
-from ..models.logs_records import (
+from app.db import Run, engine
+from app.events.publisher import get_publisher
+from app.metrics import nova_worker_pool_size
+from app.models.logs_records import (
     SystemCausedBy,
     SystemComponent,
     SystemEventType,
     SystemRecord,
     SystemSeverity,
 )
-from .runner import RunRunner
+from app.hoc.int.worker.runner import RunRunner
 
 # PIN-454: Run Orchestration Kernel for lifecycle management
 ROK_ENABLED = os.getenv("ROK_ENABLED", "true").lower() == "true"
@@ -312,7 +313,7 @@ def main():
         sys.exit(1)
 
     # Initialize skills registry (required for skill execution)
-    from ..skills import list_skills, load_all_skills
+    from app.skills import list_skills, load_all_skills
 
     load_all_skills()
     registered_skills = [s["name"] for s in list_skills()]

@@ -8,6 +8,7 @@
 # Allowed Imports: L6
 # Forbidden Imports: L1, L2, L3, L5
 # Reference: M18 CARE-L
+# capability_id: CAP-010
 
 # M17 CARE - Cascade-Aware Routing Engine
 # Strategic router that routes based on agent Strategy Cascade
@@ -1174,7 +1175,7 @@ class CAREEngine:
 
         # Get agents from SBA registry
         try:
-            from ..agents.sba import get_sba_service
+            from app.agents.sba.service import get_sba_service
 
             sba_service = get_sba_service()
             agents = sba_service.list_agents(
@@ -1485,7 +1486,7 @@ class CAREEngine:
 
         Used by POST /routing/cascade-evaluate
         """
-        from ..agents.sba import get_sba_service
+        from app.agents.sba.service import get_sba_service
 
         sba_service = get_sba_service()
 

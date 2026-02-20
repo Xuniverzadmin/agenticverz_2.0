@@ -210,7 +210,7 @@ async def _write_to_db(event: GatewayAuditEvent) -> None:
         # Import here to avoid circular dependency
         import asyncio
 
-        from ..db import engine
+        from app.db import engine
 
         # Run in thread pool to avoid blocking
         loop = asyncio.get_event_loop()
@@ -229,7 +229,7 @@ def _sync_write_audit_log(engine, event: GatewayAuditEvent) -> None:
     """Synchronous audit log write."""
     from sqlmodel import Session
 
-    from ..models.tenant import AuditLog
+    from app.models.tenant import AuditLog
 
     try:
         with Session(engine) as session:

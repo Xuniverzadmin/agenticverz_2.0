@@ -62,7 +62,7 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 
 ## Active HOC Backlog (Still Blocking)
 - Layer segregation (`--scope hoc`): **93** violations
-- Import hygiene (`backend/app/hoc/**`): **11** files with relative imports
+- Import hygiene (`backend/app/hoc/**`): **0** files with relative imports (Wave 2 complete)
 - Capability linkage (`MISSING_CAPABILITY_ID` in hoc files): **0** files (resolved in Wave 1)
 
 ### HOC Layer-Segregation File Set (15 files)
@@ -84,20 +84,10 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 | `backend/app/hoc/int/platform/drivers/memory_driver.py` |
 | `backend/app/hoc/int/platform/engines/sandbox_engine.py` |
 
-### HOC Relative-Import File Set (11 files)
+### HOC Relative-Import File Set (0 files)
 | File |
 |---|
-| `backend/app/hoc/int/analytics/engines/runner.py` |
-| `backend/app/hoc/int/general/drivers/artifact.py` |
-| `backend/app/hoc/int/logs/drivers/pool.py` |
-| `backend/app/hoc/int/logs/engines/gateway_audit.py` |
-| `backend/app/hoc/int/logs/engines/shadow_audit.py` |
-| `backend/app/hoc/int/platform/drivers/care.py` |
-| `backend/app/hoc/int/platform/drivers/memory_store.py` |
-| `backend/app/hoc/int/platform/drivers/policies.py` |
-| `backend/app/hoc/int/platform/drivers/probes.py` |
-| `backend/app/hoc/int/policies/engines/rbac_middleware.py` |
-| `backend/app/hoc/int/worker/runner.py` |
+| _None (Wave 2 batch 4 remediation completed on 2026-02-20)_ |
 
 ### HOC Capability-Linkage Missing ID File Set (0 files, resolved)
 | File |
