@@ -141,7 +141,10 @@ capabilities:
       founder_approval_required: false
 
     evidence:
-      engine: "/backend/app/costsim/"
+      engine:
+        - "/backend/app/costsim/"
+        - "/backend/app/hoc/cus/analytics/L5_engines/cost_snapshots_engine.py"
+        - "/backend/app/hoc/cus/analytics/L6_drivers/cost_snapshots_driver.py"
       l2_api:
         - "/backend/app/api/costsim.py"
         - "/backend/app/api/cost_guard.py"              # PIN-311: Unmapped file resolution
@@ -907,6 +910,8 @@ capabilities:
         - "/backend/app/integrations/learning_proof.py"
         - "/backend/app/integrations/L3_adapters.py"
         - "/backend/app/hoc/cus/integrations/cus_cli.py"
+        - "/backend/app/hoc/cus/integrations/L5_vault/engines/service.py"
+        - "/backend/app/hoc/cus/logs/L6_drivers/bridges_driver.py"
       l2_api:
         - "/backend/app/api/integration.py"           # M25 Integration API (17 endpoints)
         - "/backend/app/api/recovery.py"              # M10 Recovery Suggestion Engine

@@ -18,6 +18,7 @@
 # Forbidden Imports: L1, L2, L3, L4, L5
 # Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
 # Reference: PIN-470, PIN-520 (L6 Purity)
+# capability_id: CAP-018
 
 """
 M25 Bridges Driver
@@ -39,8 +40,8 @@ from datetime import datetime, timezone
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..schemas.audit_schemas import PolicyActivationAudit
-from ..schemas.loop_events import ConfidenceCalculator
+from app.hoc.cus.integrations.L5_schemas.audit_schemas import PolicyActivationAudit
+from app.hoc.cus.integrations.L5_schemas.loop_events import ConfidenceCalculator
 
 logger = logging.getLogger(__name__)
 

@@ -13,6 +13,7 @@
 # Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
 # Reference: PIN-508 Phase 1A
 # artifact_class: CODE
+# capability_id: CAP-002
 
 """
 Cost Snapshots Driver (L6)
@@ -33,7 +34,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..L5_schemas.cost_snapshot_schemas import (
+from app.hoc.cus.analytics.L5_schemas.cost_snapshot_schemas import (
     AnomalyEvaluation,
     CostSnapshot,
     EntityType,

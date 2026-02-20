@@ -119,6 +119,18 @@
 - Wave artifact:
   - `backend/app/hoc/docs/architecture/usecases/HOC_CAPABILITY_LINKAGE_WAVE1_REMEDIATION_2026-02-20.md`
 
+## Reality Delta (2026-02-20, HOC Import-Hygiene Wave 2 CUS Stabilization)
+
+- Wave 2 targeted `backend/app/hoc/cus/**` for relative-import remediation.
+- Converted 4 CUS files from legacy relative imports to canonical absolute `app.hoc...` imports.
+- Measured results:
+  - CUS relative-import count: `4 -> 0`
+  - HOC relative-import file backlog: `34 -> 30`
+- Wave artifact:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_CUS_STABILIZATION_2026-02-20.md`
+- Frontend cross-surface sync artifact:
+  - `docs/architecture/frontend/CUS_FRONTEND_BACKEND_STABILITY_SYNC_WAVE2_2026-02-20.md`
+
 ## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
 
 - Wave-4 UC script coverage audited `hoc/cus/ops` scope as:
