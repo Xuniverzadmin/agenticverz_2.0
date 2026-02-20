@@ -13,18 +13,16 @@ Track active blocking governance debt under `backend/app/hoc/**` only.
 |---|---:|---|
 | Layer segregation (`--scope hoc`) | `0` violations | green |
 | Import hygiene (`backend/app/hoc/**`) | `0` files (`^\\s*from \\..`) | green |
-| Capability linkage (`MISSING_CAPABILITY_ID`) | `449` files | active blocker lane |
+| Capability linkage (`MISSING_CAPABILITY_ID`) | `358` files | active blocker lane |
 | Capability warnings (`MISSING_EVIDENCE`) | `0` | green |
 
-## Capability Missing-ID Distribution (449 total)
+## Capability Missing-ID Distribution (358 total)
 | Cluster Prefix | Missing `capability_id` Files |
 |---|---:|
-| `backend/app/hoc/int/platform/**` | 66 |
 | `backend/app/hoc/cus/account/**` | 37 |
 | `backend/app/hoc/api/cus/**` | 34 |
 | `backend/app/hoc/int/worker/**` | 28 |
 | `backend/app/hoc/int/general/**` | 28 |
-| `backend/app/hoc/int/agent/**` | 25 |
 | `backend/app/hoc/cus/controls/**` | 24 |
 | `backend/app/hoc/int/policies/**` | 22 |
 | `backend/app/hoc/api/facades/**` | 22 |
@@ -57,6 +55,11 @@ Track active blocking governance debt under `backend/app/hoc/**` only.
 - W1 (`hoc_spine`) completed:
   - `backend/app/hoc/cus/hoc_spine/**`: `101 -> 0`
   - full HOC backlog: `550 -> 449`
+  - warnings remain `0`
+- W2 (`int/platform` + `int/agent`) completed:
+  - `backend/app/hoc/int/platform/**`: `66 -> 0`
+  - `backend/app/hoc/int/agent/**`: `25 -> 0`
+  - full HOC backlog: `449 -> 358`
   - warnings remain `0`
 
 ## Execution Plan Link

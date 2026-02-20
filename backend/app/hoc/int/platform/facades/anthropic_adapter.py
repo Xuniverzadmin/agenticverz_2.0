@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L3 — Boundary Adapter
 # Product: system-wide
 # Temporal:

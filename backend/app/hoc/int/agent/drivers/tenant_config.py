@@ -1,3 +1,4 @@
+# capability_id: CAP-008
 # Per-Tenant LLM Configuration (M11)
 # Layer: L6 — Driver
 # Product: system-wide

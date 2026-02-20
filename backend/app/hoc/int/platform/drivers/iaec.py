@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L6 — Domain Driver
 # AUDIENCE: INTERNAL
 # Role: Deterministic embedding combiner with 4-slot architecture:

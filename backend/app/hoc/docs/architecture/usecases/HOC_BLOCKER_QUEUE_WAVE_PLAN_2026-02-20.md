@@ -24,7 +24,7 @@ Reduce HOC capability-linkage blockers from `550` to `0` under `backend/app/hoc/
 |---|---|---|---:|---|---|
 | 1 | W0 | Baseline snapshot + cluster map | - | lock deterministic starting point | DONE |
 | 2 | W1 | `backend/app/hoc/cus/hoc_spine/**` | 101 | clear largest CUS spine cluster | DONE (`550 -> 449`, warnings `0 -> 0`) |
-| 3 | W2 | `backend/app/hoc/int/platform/**` + `backend/app/hoc/int/agent/**` | 91 | clear platform/agent integration cluster | PENDING |
+| 3 | W2 | `backend/app/hoc/int/platform/**` + `backend/app/hoc/int/agent/**` | 91 | clear platform/agent integration cluster | DONE (`449 -> 358`, warnings `0 -> 0`) |
 | 4 | W3 | `backend/app/hoc/int/general/**` + `backend/app/hoc/int/worker/**` + `backend/app/hoc/int/policies/**` | 78 | clear INT runtime/policy cluster | PENDING |
 | 5 | W4 | CUS business domains: `cus/account/**`, `cus/activity/**`, `cus/controls/**`, `cus/policies/**`, `cus/api_keys/**`, `cus/overview/**`, `cus/ops/**`, `cus/agent/**`, `cus/apis/**`, `cus/__init__.py` | 123 | clear remaining CUS domain internals | PENDING |
 | 6 | W5 | API lanes: `api/cus/**`, `api/facades/**`, `api/int/**`, `api/fdr/**` | 83 | clear API/facade linkage debt | PENDING |
@@ -62,3 +62,21 @@ Reduce HOC capability-linkage blockers from `550` to `0` under `backend/app/hoc/
   - Import hygiene (`backend/app/hoc/**`, strict relative-import): `0`
 - Artifact:
   - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W1_HOC_SPINE_IMPLEMENTED_2026-02-20.md`
+
+## W2 Execution Result
+- Scope remediated:
+  - `backend/app/hoc/int/platform/**`
+  - `backend/app/hoc/int/agent/**`
+  - (`91` files)
+- Capability header mapping:
+  - `CAP-008`: `int/agent/**`
+  - `CAP-012`: `int/platform/**`
+- Registry evidence synchronized:
+  - `docs/capabilities/CAPABILITY_REGISTRY.yaml` (CAP-008/CAP-012 evidence)
+- Audit results:
+  - W2 changed-file capability check: `✅ All checks passed`
+  - Full HOC sweep: blocking `449 -> 358`, warnings `0 -> 0`
+  - Layer segregation (`--scope hoc`): `PASS (0 violations)`
+  - Import hygiene (`backend/app/hoc/**`, strict relative-import): `0`
+- Artifact:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W2_INT_PLATFORM_AGENT_IMPLEMENTED_2026-02-20.md`

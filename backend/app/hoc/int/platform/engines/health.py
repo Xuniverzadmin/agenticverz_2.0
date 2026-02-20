@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L2 — API
 # AUDIENCE: CUSTOMER
 # Role: Workflow health checks and status
