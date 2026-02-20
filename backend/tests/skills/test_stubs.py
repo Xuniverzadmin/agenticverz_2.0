@@ -8,25 +8,26 @@ Tests for deterministic stub implementations:
 - json_transform_stub
 """
 
-import sys
-from pathlib import Path
-
 import pytest
 
-# Direct path to stubs to avoid pydantic-dependent imports through skills/__init__.py
-
-
-    sys.path.insert(0, _stubs_path)
-
-from http_call_stub import (
+from app.hoc.int.agent.drivers.json_transform_stub import (
+    JSON_TRANSFORM_STUB_DESCRIPTOR,
+    JsonTransformStub,
+    json_transform_stub_handler,
+)
+from app.hoc.int.agent.engines.http_call_stub import (
     HTTP_CALL_STUB_DESCRIPTOR,
     HttpCallStub,
     MockResponse,
     configure_http_call_stub,
     http_call_stub_handler,
 )
-from json_transform_stub import JSON_TRANSFORM_STUB_DESCRIPTOR, JsonTransformStub, json_transform_stub_handler
-from llm_invoke_stub import LLM_INVOKE_STUB_DESCRIPTOR, LlmInvokeStub, MockLlmResponse, llm_invoke_stub_handler
+from app.hoc.int.agent.engines.llm_invoke_stub import (
+    LLM_INVOKE_STUB_DESCRIPTOR,
+    LlmInvokeStub,
+    MockLlmResponse,
+    llm_invoke_stub_handler,
+)
 
 # ============================================================================
 # Test: HTTP Call Stub

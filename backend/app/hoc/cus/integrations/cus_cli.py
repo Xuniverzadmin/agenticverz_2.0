@@ -87,14 +87,14 @@ def _maybe_backfill_trace_steps(
 
     try:
         with Session(engine) as session:
-            trace_row = session.exec(
+            trace_row = session.execute(
                 text("SELECT trace_id FROM aos_traces WHERE run_id = :run_id"),
                 {"run_id": run_id},
             ).first()
             if not trace_row:
                 return
             trace_id = trace_row[0]
-            step_count_row = session.exec(
+            step_count_row = session.execute(
                 text("SELECT COUNT(*) FROM aos_trace_steps WHERE trace_id = :trace_id"),
                 {"trace_id": trace_id},
             ).first()

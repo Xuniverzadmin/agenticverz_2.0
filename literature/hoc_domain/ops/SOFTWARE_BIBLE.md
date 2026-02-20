@@ -46,6 +46,13 @@
 - Dual-pattern detection now requires DB-specific signals (Neon/local DB host mix or DB fallback-to-local behavior) and no longer matches generic non-DB `fallback local` text.
 - Enforcement remains baseline-aware (`BASELINE_DUAL_VIOLATIONS=0`) and blocks only net-new regressions.
 
+## Reality Delta (2026-02-20, CI Guard Pack: SQL/Intent/Skill Tests/Migration Role)
+
+- Fixed SQL misuse guard violation by replacing raw SQL `session.exec(text(...))` with `session.execute(text(...))` in CUS CLI trace backfill.
+- Realigned `check_priority5_intent.py` file map to post-refactor runtime paths (`hoc/int/worker/*`, `hoc/cus/policies/L6_drivers/recovery_write_driver.py`), removing stale `FILE_MISSING` regressions.
+- Repaired skill test/runtime import scaffolding in registry/stub modules and tests; local `pytest tests/skills` now passes (`283 passed`).
+- Added CI workflow env `DB_ROLE=staging` to satisfy Alembic DB role gate in migration jobs.
+
 ## Reality Delta (2026-02-15, UAT Hardening Closure)
 
 - UC/UAT closure artifacts are complete (`PIN-564`, `PIN-565`) and ops founder route now includes UAT console under `/prefops/uat` and `/fops/uat`.
