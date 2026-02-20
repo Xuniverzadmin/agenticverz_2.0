@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L4 — HOC Spine (Schemas)
 # AUDIENCE: SHARED
 # Product: system-wide

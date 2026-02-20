@@ -60,31 +60,11 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 | `backend/scripts/ci/check_priority5_intent.py` | missing capability ID header |
 | `scripts/ops/lint_sqlmodel_patterns.py` | missing capability ID header |
 
-## Active HOC Backlog (Still Blocking)
-- Layer segregation (`--scope hoc`): **0** violations (Wave 2 residual closure complete)
-- Import hygiene (`backend/app/hoc/**`): **0** files with relative imports (Wave 2 complete)
-- Capability linkage (`MISSING_CAPABILITY_ID` in hoc files, full sweep): **550** files (after CUS Wave C3)
-- Capability warnings (`MISSING_EVIDENCE` in hoc files, full sweep): **0** (after CUS Wave C4)
+## Active HOC Backlog
+Active `backend/app/hoc/**` blocker tracking has been split out to:
 
-### HOC Layer-Segregation File Set (0 files)
-| File |
-|---|
-| _None (Wave 2 closure complete on 2026-02-20)_ |
-
-### HOC Relative-Import File Set (0 files)
-| File |
-|---|
-| _None (Wave 2 batch 4 remediation completed on 2026-02-20)_ |
-
-### HOC Capability-Linkage Missing ID Hot Clusters (550 files total)
-| Cluster Prefix | Missing `capability_id` Files |
-|---|---:|
-| `backend/app/hoc/int/platform/drivers/**` | 38 |
-| `backend/app/hoc/cus/hoc_spine/services/**` | 32 |
-| `backend/app/hoc/int/platform/engines/**` | 18 |
-| `backend/app/hoc/int/agent/drivers/**` | 18 |
-| `backend/app/hoc/cus/hoc_spine/authority/**` | 18 |
-| `backend/app/hoc/cus/hoc_spine/schemas/**` | 17 |
+- `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+- `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
 
 ## Reproduction Commands
 ```bash
@@ -96,11 +76,6 @@ grep -r "from \\.\\." backend/app/hoc --include='*.py' | cut -d: -f1 | sort -u
 
 python3 scripts/ops/capability_registry_enforcer.py check-pr --files \
   backend/alembic/versions/128_monitoring_activity_feedback_contracts.py \
-  backend/app/hoc/cus/integrations/cus_cli.py \
-  backend/app/hoc/int/agent/drivers/json_transform_stub.py \
-  backend/app/hoc/int/agent/drivers/registry_v2.py \
-  backend/app/hoc/int/agent/engines/http_call_stub.py \
-  backend/app/hoc/int/agent/engines/llm_invoke_stub.py \
   backend/app/skills/registry_v2.py \
   backend/scripts/ci/check_priority5_intent.py \
   scripts/ops/lint_sqlmodel_patterns.py

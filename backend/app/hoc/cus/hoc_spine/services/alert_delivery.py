@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L5 — HOC Spine (Services)
 # Relocated: 2026-01-30 from hoc_spine/adapters/alert_delivery.py
 # AUDIENCE: CUSTOMER

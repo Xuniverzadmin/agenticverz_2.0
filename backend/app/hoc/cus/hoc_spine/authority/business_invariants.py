@@ -1,3 +1,4 @@
+# capability_id: CAP-011
 # Layer: L4 — hoc_spine Authority
 # AUDIENCE: SHARED
 # Role: Business invariant model — runtime-checkable domain invariants (BA-03)

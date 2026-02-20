@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L4 — HOC Spine (Schemas)
 # AUDIENCE: CUSTOMER
 # Role: Protocol interfaces for run introspection — dependency inversion contracts

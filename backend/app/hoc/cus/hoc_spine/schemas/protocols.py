@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L4 — HOC Spine (Schemas)
 # AUDIENCE: INTERNAL
 # Role: Protocol interfaces for L1 re-wiring — dependency inversion contracts

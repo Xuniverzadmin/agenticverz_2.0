@@ -1,3 +1,4 @@
+# capability_id: CAP-011
 # Layer: L4 — HOC Spine (Authority)
 # AUDIENCE: CUSTOMER
 # Product: AI Console (Guard)

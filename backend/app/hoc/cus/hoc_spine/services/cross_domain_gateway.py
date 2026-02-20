@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L4 — HOC Spine (Service)
 # AUDIENCE: INTERNAL
 # Role: Cross-domain gateway — L5 engines import here instead of reaching

@@ -89,6 +89,10 @@
 - CI baseline remediation scope was constrained to `backend/app/hoc/**` for active blocker closure.
 - Non-`hoc/*` legacy debt is tombstoned and tracked in:
   - `backend/app/hoc/docs/architecture/usecases/CI_NON_HOC_TOMBSTONE_LEDGER_2026-02-20.md`
+- Active `hoc/*` blocker backlog is tracked separately in:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+- Active `hoc/*` wave execution plan is tracked in:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
 - Guard/workflow scope updates:
   - `scripts/ops/layer_segregation_guard.py` supports `--scope hoc`
   - `.github/workflows/layer-segregation.yml` runs HOC-scoped enforcement
@@ -187,7 +191,24 @@
   - `backend/app/hoc/docs/architecture/usecases/HOC_CUS_CAPABILITY_SWEEP_WAVES_PLAN_2026-02-20.md`
   - `backend/app/hoc/docs/architecture/usecases/CI_BASELINE_BLOCKER_QUEUE_2026-02-20.md`
   - `backend/app/hoc/docs/architecture/usecases/CI_NON_HOC_TOMBSTONE_LEDGER_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
   - `docs/memory-pins/PIN-601-cus-capability-sweep-c1-c4-closure.md`
+
+## Reality Delta (2026-02-20, HOC Blocker Queue Wave W1 hoc_spine Clearance)
+
+- Wave W1 remediated `backend/app/hoc/cus/hoc_spine/**` capability-linkage backlog (`101` files).
+- Capability mapping applied:
+  - `CAP-011` for `auth_wiring.py` + `authority/**`
+  - `CAP-012` for the remaining `hoc_spine/**` files
+- Capability registry evidence was synchronized for CAP-011/CAP-012 engine evidence entries.
+- Measured result:
+  - full HOC blocking backlog: `550 -> 449`
+  - full HOC warnings: `0 -> 0`
+- Tracking artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W1_HOC_SPINE_IMPLEMENTED_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
 
 ## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
 

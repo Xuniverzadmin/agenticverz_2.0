@@ -37,6 +37,10 @@ Baseline blockers on `origin/main` after merge commit `da89f8d479bae9c1930be25e5
 - Active cleanup scope is now `backend/app/hoc/**`.
 - Non-`hoc/*` violations are explicitly tombstoned as legacy debt and tracked in:
   - `backend/app/hoc/docs/architecture/usecases/CI_NON_HOC_TOMBSTONE_LEDGER_2026-02-20.md`
+- Active `hoc/*` blocker queue is tracked in:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+- Active `hoc/*` wave execution plan is tracked in:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
 - Enforcement updates for this split:
   - `.github/workflows/layer-segregation.yml` runs `layer_segregation_guard.py --scope hoc`
   - `.github/workflows/import-hygiene.yml` scans `backend/app/hoc/**` only
@@ -122,8 +126,21 @@ Baseline blockers on `origin/main` after merge commit `da89f8d479bae9c1930be25e5
   - Full HOC capability blocking remains `550` (`MISSING_CAPABILITY_ID` backlog).
   - Plan updated in:
     - `backend/app/hoc/docs/architecture/usecases/HOC_CUS_CAPABILITY_SWEEP_WAVES_PLAN_2026-02-20.md`
+- HOC blocker queue Wave W1 (`hoc_spine`) is complete:
+  - Scope: `backend/app/hoc/cus/hoc_spine/**` (`101` files).
+  - Capability header wiring:
+    - `CAP-011` (`auth_wiring.py` + `authority/**`)
+    - `CAP-012` (remaining `hoc_spine/**`)
+  - Registry evidence synchronized for CAP-011/CAP-012 in:
+    - `docs/capabilities/CAPABILITY_REGISTRY.yaml`
+  - Full HOC capability sweep reduced from `550` to `449` blocking `MISSING_CAPABILITY_ID`.
+  - Full HOC capability warnings remain `0`.
+  - Plan/artifacts updated in:
+    - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
+    - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W1_HOC_SPINE_IMPLEMENTED_2026-02-20.md`
+    - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
 
 ## Notes
 - This queue is baseline debt on `main`, not introduced solely by PR #7.
 - Lane A should address P0 first, then P1 in smallest reviewable PRs.
-- Skeptical audit (2026-02-20) confirms changed-file capability linkage is clear for HOC remediation PRs; after CUS Wave C4, full HOC-wide capability scan remains a separate backlog at `550` blocking `MISSING_CAPABILITY_ID` (warnings now `0`) outside current CI changed-file contract.
+- Skeptical audit (2026-02-20) confirms changed-file capability linkage is clear for HOC remediation PRs; after blocker Wave W1, full HOC-wide capability scan remains a separate backlog at `449` blocking `MISSING_CAPABILITY_ID` (warnings `0`) outside current CI changed-file contract.

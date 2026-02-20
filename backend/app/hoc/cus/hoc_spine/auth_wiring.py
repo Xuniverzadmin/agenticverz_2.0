@@ -1,3 +1,4 @@
+# capability_id: CAP-011
 # Layer: L4 — HOC Spine (Wiring)
 # Product: system-wide
 # Temporal:

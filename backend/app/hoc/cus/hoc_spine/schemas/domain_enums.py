@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L4 — Shared Schema
 # AUDIENCE: CUSTOMER
 # Product: system-wide

@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L4 — HOC Spine (Service)
 # AUDIENCE: CUSTOMER
 # Role: Storage for audit expectations and acknowledgments (RAC)
