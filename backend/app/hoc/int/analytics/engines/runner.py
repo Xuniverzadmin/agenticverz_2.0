@@ -10,6 +10,7 @@
 # Forbidden Imports: L1, L2, L3
 # Contract: EXECUTION_SEMANTIC_CONTRACT.md (Guarantee 3: At-Least-Once Worker Dispatch)
 # Pattern: Sync-over-async per contract (ThreadPool requires sync callable)
+# capability_id: CAP-012
 
 """
 Runner: executes a single run's plan steps, handles retries and backoff.
@@ -35,45 +36,45 @@ from app.infra import FeatureIntent, RetryPolicy
 # BudgetEnforcementEngine. L5 runner publishes run.halted events and
 # L4 background task processes pending decisions.
 # Reference: PIN-257 Phase R-3 (L5→L4 Violation Fix)
-from ..db import Agent, Memory, Provenance, Run, engine
-from ..events import get_publisher
-from ..models.logs_records import ExecutionStatus, LLMRunRecord, RecordSource
-from ..metrics import (
+from app.db import Agent, Memory, Provenance, Run, engine
+from app.events.publisher import get_publisher
+from app.models.logs_records import ExecutionStatus, LLMRunRecord, RecordSource
+from app.metrics import (
     nova_runs_failed_total,
     nova_runs_total,
     nova_skill_attempts_total,
     nova_skill_duration_seconds,
 )
 # L4 Domain Facades (PIN-454 FIX-002: L5 must use facades, not direct engine imports)
-from ..services.incidents.facade import get_incident_facade
-from ..services.governance.run_governance_facade import get_run_governance_facade
+from app.services.incidents import get_incident_facade
+from app.services.governance.run_governance_facade import get_run_governance_facade
 # PIN-454 FIX-001: Transaction Coordinator for atomic cross-domain writes
-from ..services.governance.transaction_coordinator import (
+from app.services.governance.transaction_coordinator import (
     get_transaction_coordinator,
     TransactionFailed,
     TRANSACTION_COORDINATOR_ENABLED,
 )
-from ..skills import get_skill_config
-from ..skills.executor import (
+from app.skills import get_skill_config
+from app.skills.executor import (
     SkillExecutionError,
     SkillExecutor,
 )
-from ..traces.pg_store import PostgresTraceStore
-from ..utils.budget_tracker import deduct_budget
+from app.hoc.cus.logs.L6_drivers.pg_store import PostgresTraceStore
+from app.utils.budget_tracker import deduct_budget
 
 # GAP-030: Enforcement guard to ensure enforcement is never skipped
-from ..worker.enforcement.enforcement_guard import (
+from app.hoc.int.worker.enforcement.enforcement_guard import (
     enforcement_guard,
     EnforcementSkippedError,
 )
 # GAP-016: Step enforcement integration
-from ..worker.enforcement.step_enforcement import (
+from app.hoc.int.worker.enforcement.step_enforcement import (
     enforce_before_step_completion,
     EnforcementResult,
 )
 
 # Evidence Architecture v1.1: ExecutionCursor structural authority
-from ..core.execution_context import ExecutionCursor, ExecutionPhase, EvidenceSource
+from app.core.execution_context import ExecutionCursor, ExecutionPhase, EvidenceSource
 from app.hoc.cus.logs.L6_drivers.capture_driver import capture_integrity_evidence
 
 # Phase-2.3: Feature Intent Declaration

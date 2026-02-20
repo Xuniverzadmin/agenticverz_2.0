@@ -8,6 +8,7 @@
 # Allowed Imports: L5, L6
 # Forbidden Imports: L1, L2, L3
 # Reference: Auth System
+# capability_id: CAP-007
 
 """
 Shadow Audit Logging - M7-M28 RBAC Integration (PIN-169)
@@ -479,7 +480,7 @@ shadow_audit = ShadowAuditLogger()
 # ============================================================================
 
 try:
-    from ..utils.metrics_helpers import get_or_create_counter
+    from app.utils.metrics_helpers import get_or_create_counter
 
     SHADOW_AUDIT_DECISIONS = get_or_create_counter(
         "rbac_shadow_audit_total",

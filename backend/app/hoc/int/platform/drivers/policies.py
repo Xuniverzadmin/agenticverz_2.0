@@ -8,6 +8,7 @@
 # Allowed Imports: L5, L6
 # Forbidden Imports: L1, L2, L3
 # Reference: Workflow System
+# capability_id: CAP-009
 
 # Policy Enforcer (M4)
 """
@@ -407,7 +408,7 @@ class PolicyEnforcer:
             PolicyCheckResult with allowed status
         """
         try:
-            from ..utils.budget_tracker import BudgetCheckResult, enforce_budget
+            from app.utils.budget_tracker import BudgetCheckResult, enforce_budget
 
             result: BudgetCheckResult = enforce_budget(
                 agent_id=agent_id,

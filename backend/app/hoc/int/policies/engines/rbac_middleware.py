@@ -8,6 +8,7 @@
 # Allowed Imports: None
 # Forbidden Imports: L1, L2, L3, L4, L5
 # Reference: Auth Infrastructure
+# capability_id: CAP-007
 
 """
 RBAC Middleware with PolicyObject - M7/M8 Implementation
@@ -41,7 +42,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from ..utils.metrics_helpers import get_or_create_counter, get_or_create_histogram
+from app.utils.metrics_helpers import get_or_create_counter, get_or_create_histogram
 from .contexts import (
     FounderAuthContext,
     HumanAuthContext,

@@ -1,6 +1,7 @@
 # Layer: L6 — Domain Driver
 # AUDIENCE: INTERNAL
 # Role: Protocol for memory storage backends.
+# capability_id: CAP-014
 # Memory Store
 # Provides storage interface for agent memories
 
@@ -9,7 +10,7 @@ from typing import Any, Dict, List, Optional, Protocol, cast
 
 from sqlmodel import Session, desc, select
 
-from ..db import Memory, engine
+from app.db import Memory, engine
 
 logger = logging.getLogger("nova.memory.store")
 

@@ -156,6 +156,23 @@
 - Wave artifact:
   - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH3_INT_AGENT_CLUSTER_2026-02-20.md`
 
+## Reality Delta (2026-02-20, HOC Import-Hygiene Wave 2 Batch 4 Final Residual Clear)
+
+- Wave 2 batch 4 remediated the final HOC relative-import residual cluster (`10` files):
+  - `int/analytics/engines/runner.py`
+  - `int/general/drivers/artifact.py`
+  - `int/logs/{drivers/pool.py,engines/gateway_audit.py,engines/shadow_audit.py}`
+  - `int/platform/drivers/{care.py,memory_store.py,policies.py,probes.py}`
+  - `int/policies/engines/rbac_middleware.py`
+- Measured result:
+  - HOC relative-import backlog: `10 -> 0`
+  - CUS relative-import backlog remains: `0`
+- Capability linkage and evidence synchronization included:
+  - Added file-level `capability_id` metadata (CAP-007/CAP-009/CAP-010/CAP-012/CAP-014)
+  - Updated capability evidence mapping in `docs/capabilities/CAPABILITY_REGISTRY.yaml`
+- Wave artifact:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH4_REMAINING_CLUSTER_2026-02-20.md`
+
 ## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
 
 - Wave-4 UC script coverage audited `hoc/cus/ops` scope as:

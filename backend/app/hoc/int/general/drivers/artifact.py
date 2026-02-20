@@ -8,6 +8,7 @@
 # Allowed Imports: None (foundational)
 # Forbidden Imports: L1, L2, L3, L4, L5
 # Reference: Storage System
+# capability_id: CAP-012
 
 # Artifact Storage
 # Provides storage backends for run artifacts (files, blobs, etc.)
@@ -24,7 +25,7 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
 
-from ..schemas.artifact import ArtifactType, StorageBackend
+from app.schemas.artifact import ArtifactType, StorageBackend
 
 logger = logging.getLogger("nova.storage.artifact")
 

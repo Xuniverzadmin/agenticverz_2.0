@@ -8,6 +8,7 @@
 # Allowed Imports: L6
 # Forbidden Imports: L1, L2, L3, L5
 # Reference: M18 CARE-L
+# capability_id: CAP-010
 
 # M17 CARE - Capability Probes
 # Real-time capability checking with Redis caching
@@ -358,7 +359,7 @@ class CapabilityProber:
 
         start = time.time()
         try:
-            from ..agents.sba import get_sba_service
+            from app.agents.sba.service import get_sba_service
 
             sba_service = get_sba_service()
             agent = sba_service.get_agent(agent_id)
