@@ -89,14 +89,19 @@ def get_async_database_url() -> str:
     else:
         raise RuntimeError(f"Unsupported DATABASE_URL scheme: {url}")
 
-    # Remove sslmode from URL (will be added as connect_args)
-    # Handle both ?sslmode=require and &sslmode=require
-    if "sslmode=require" in async_url:
-        async_url = async_url.replace("?sslmode=require", "")
-        async_url = async_url.replace("&sslmode=require", "")
-        # Clean up trailing ? if no other params
-        if async_url.endswith("?"):
-            async_url = async_url[:-1]
+    # Strip all query parameters that asyncpg 0.31+ does not accept.
+    # asyncpg rejects unknown kwargs like sslmode, connect_timeout, etc.
+    # We handle ssl separately via connect_args in get_async_engine().
+    from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+
+    parsed = urlparse(async_url)
+    if parsed.query:
+        params = parse_qs(parsed.query, keep_blank_values=True)
+        # Remove params that asyncpg does not accept
+        for bad_param in ("sslmode", "connect_timeout"):
+            params.pop(bad_param, None)
+        clean_query = urlencode(params, doseq=True)
+        async_url = urlunparse(parsed._replace(query=clean_query))
 
     return async_url
 
@@ -116,7 +121,12 @@ def get_async_engine():
         # Determine if SSL is required
         needs_ssl = "sslmode=require" in original_url
 
-        connect_args = {}
+        connect_args = {
+            # Required for PgBouncer in transaction mode — asyncpg's prepared
+            # statement cache is incompatible with PgBouncer.
+            "prepared_statement_cache_size": 0,
+            "statement_cache_size": 0,
+        }
         if needs_ssl:
             connect_args["ssl"] = "require"
 
