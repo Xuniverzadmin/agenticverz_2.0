@@ -1543,7 +1543,7 @@ check_sqlmodel_patterns() {
     fi
 
     # Run the linter
-    if python3 "$LINT_SCRIPT" "$BACKEND_DIR/app/api/" 2>/dev/null; then
+    if CHECK_SCOPE=full DB_AUTHORITY=local python3 "$LINT_SCRIPT" "$BACKEND_DIR/app/api/" 2>/dev/null; then
         log_ok "No unsafe SQLModel patterns"
     else
         log_warn "SQLModel pattern issues detected (run lint_sqlmodel_patterns.py)"

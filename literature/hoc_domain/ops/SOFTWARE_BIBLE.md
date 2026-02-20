@@ -4,10 +4,18 @@
 **Status:** DRAFT — canonicalization in progress  
 **L2 Features:** 3 backend founder routers + founder UAT route  
 **Scripts:** 2 operational gate/hygiene scripts in active use  
-**Updated:** 2026-02-15  
+**Updated:** 2026-02-20  
 **References:** PIN-564, PIN-565, PIN-566
 
 ---
+
+## Reality Delta (2026-02-20, DB-AUTH-001 Tooling Contract)
+
+- SQLModel linter execution is now authority-explicit across automation surfaces:
+  - GitHub Actions workflow sets `DB_AUTHORITY=local` for full-scope linter run.
+  - Pre-commit staged hook sets `DB_AUTHORITY=local`.
+  - `ci_consistency_check.sh` invokes linter with `DB_AUTHORITY=local CHECK_SCOPE=full`.
+- This closes CI/runtime drift where linter entrypoints could fail fast under `scripts._db_guard` with DB-AUTH-001.
 
 ## Reality Delta (2026-02-15, UAT Hardening Closure)
 

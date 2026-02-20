@@ -81,7 +81,7 @@ def query_<new_pattern>(session: Session, ...) -> <return_type>:
 
 ```bash
 # Test the linter catches the issue
-python scripts/ops/lint_sqlmodel_patterns.py backend/app/
+DB_AUTHORITY=local CHECK_SCOPE=full python scripts/ops/lint_sqlmodel_patterns.py backend/app/
 
 # Run full CI check
 bash scripts/ops/ci_consistency_check.sh
@@ -204,10 +204,20 @@ For checks that should run before every commit:
   hooks:
     - id: <new-check-id>
       name: <New Check Name>
-      entry: python scripts/ops/<new_check>.py
+      entry: env DB_AUTHORITY=local python scripts/ops/<new_check>.py
       language: python
       types: [python]
       pass_filenames: false
+```
+
+### DB Authority Contract for Linters
+
+Any script that imports `scripts._db_guard` must run with explicit authority.
+
+Use this pattern in local hooks and CI:
+
+```bash
+DB_AUTHORITY=local CHECK_SCOPE=full python scripts/ops/lint_sqlmodel_patterns.py backend/app/
 ```
 
 ## Quarterly Review
@@ -228,5 +238,5 @@ When in doubt about whether to add a prevention pattern:
 
 ---
 
-*Last updated: 2025-12-19*
+*Last updated: 2026-02-20*
 *Prevention system version: 1.0*
