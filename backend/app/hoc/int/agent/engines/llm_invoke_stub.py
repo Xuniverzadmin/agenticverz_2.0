@@ -2,6 +2,8 @@
 # AUDIENCE: INTERNAL
 # Role: LLM Invoke Stub (M2)
 # skills/stubs/llm_invoke_stub.py
+# Reference: PIN-306 (Capability Registry), CAP-016 (Skill System)
+# capability_id: CAP-016
 """
 LLM Invoke Stub (M2)
 

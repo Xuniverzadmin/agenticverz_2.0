@@ -1,5 +1,7 @@
 # Layer: L6 — Driver
 # skills/registry_v2.py
+# Reference: PIN-306 (Capability Registry), CAP-016 (Skill System)
+# capability_id: CAP-016
 """
 Skill Registry v2 (M2)
 

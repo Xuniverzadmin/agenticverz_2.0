@@ -63,7 +63,7 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 ## Active HOC Backlog (Still Blocking)
 - Layer segregation (`--scope hoc`): **93** violations
 - Import hygiene (`backend/app/hoc/**`): **34** files with relative imports
-- Capability linkage (`MISSING_CAPABILITY_ID` in hoc files): **5** files
+- Capability linkage (`MISSING_CAPABILITY_ID` in hoc files): **0** files (resolved in Wave 1)
 
 ### HOC Layer-Segregation File Set (15 files)
 | File |
@@ -122,14 +122,10 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 | `backend/app/hoc/int/policies/engines/rbac_middleware.py` |
 | `backend/app/hoc/int/worker/runner.py` |
 
-### HOC Capability-Linkage Missing ID File Set (5 files)
+### HOC Capability-Linkage Missing ID File Set (0 files, resolved)
 | File |
 |---|
-| `backend/app/hoc/cus/integrations/cus_cli.py` |
-| `backend/app/hoc/int/agent/drivers/json_transform_stub.py` |
-| `backend/app/hoc/int/agent/drivers/registry_v2.py` |
-| `backend/app/hoc/int/agent/engines/http_call_stub.py` |
-| `backend/app/hoc/int/agent/engines/llm_invoke_stub.py` |
+| _None (Wave 1 remediation completed on 2026-02-20)_ |
 
 ## Reproduction Commands
 ```bash

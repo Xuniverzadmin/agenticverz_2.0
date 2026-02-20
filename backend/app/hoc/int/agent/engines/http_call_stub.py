@@ -2,6 +2,8 @@
 # AUDIENCE: INTERNAL
 # Role: HTTP Call Stub (M2)
 # skills/stubs/http_call_stub.py
+# Reference: PIN-306 (Capability Registry), CAP-016 (Skill System)
+# capability_id: CAP-016
 """
 HTTP Call Stub (M2)
 

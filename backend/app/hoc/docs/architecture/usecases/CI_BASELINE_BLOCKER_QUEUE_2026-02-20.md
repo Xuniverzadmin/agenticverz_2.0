@@ -42,6 +42,12 @@ Baseline blockers on `origin/main` after merge commit `da89f8d479bae9c1930be25e5
   - `.github/workflows/import-hygiene.yml` scans `backend/app/hoc/**` only
   - `.github/workflows/capability-registry.yml` capability-linkage scans `backend/app/hoc/**/*.py` only
 
+## Wave Progress (2026-02-20)
+- HOC capability-linkage remediation Wave 1 is complete:
+  - `MISSING_CAPABILITY_ID` in `backend/app/hoc/**` reduced from `5` to `0`.
+  - Evidence + registry linkage updated in:
+    - `backend/app/hoc/docs/architecture/usecases/HOC_CAPABILITY_LINKAGE_WAVE1_REMEDIATION_2026-02-20.md`
+
 ## Notes
 - This queue is baseline debt on `main`, not introduced solely by PR #7.
 - Lane A should address P0 first, then P1 in smallest reviewable PRs.

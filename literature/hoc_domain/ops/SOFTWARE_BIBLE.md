@@ -105,6 +105,20 @@
 - Step-7 execution artifact added:
   - `backend/app/hoc/docs/architecture/usecases/PR1_PR10_STEP7_FRONTEND_LEDGER_SYNC_2026-02-20.md`
 
+## Reality Delta (2026-02-20, HOC Capability-Linkage Wave 1 Closure)
+
+- HOC-only capability linkage blockers (`MISSING_CAPABILITY_ID`) were remediated from `5` to `0`.
+- Added explicit capability IDs:
+  - `backend/app/hoc/cus/integrations/cus_cli.py` -> `CAP-018`
+  - `backend/app/hoc/int/agent/drivers/json_transform_stub.py` -> `CAP-016`
+  - `backend/app/hoc/int/agent/drivers/registry_v2.py` -> `CAP-016`
+  - `backend/app/hoc/int/agent/engines/http_call_stub.py` -> `CAP-016`
+  - `backend/app/hoc/int/agent/engines/llm_invoke_stub.py` -> `CAP-016`
+- Capability evidence mapping was synchronized in:
+  - `docs/capabilities/CAPABILITY_REGISTRY.yaml`
+- Wave artifact:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_CAPABILITY_LINKAGE_WAVE1_REMEDIATION_2026-02-20.md`
+
 ## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
 
 - Wave-4 UC script coverage audited `hoc/cus/ops` scope as:
