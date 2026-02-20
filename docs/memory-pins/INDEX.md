@@ -548,6 +548,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-577](PIN-577-pr2-runs-postdeploy-verification-harness.md) | **PR2 Runs Post-Deploy Verification Harness** | Verification / Stagetest / Auth Rollout | **🚧 IN PROGRESS** | 2026-02-18 |
 | [PIN-578](PIN-578-pr2-runs-postdeploy-auth-enforcement-evidence.md) | **PR2 Runs Post-Deploy Auth Enforcement Evidence** | Verification / Stagetest / Auth Rollout | **🚧 IN PROGRESS** | 2026-02-18 |
 | [PIN-592](PIN-592-hoc-only-governance-scope-and-non-hoc-tombstone-ledger.md) | **HOC-Only Governance Scope and Non-HOC Tombstone Ledger** | Governance / CI / Legacy Debt | **✅ COMPLETE** | 2026-02-20 |
+| [PIN-593](PIN-593-hoc-workstream-scope-lock-and-pr10-snapshot.md) | **HOC Workstream Scope Lock and PR10 Snapshot** | Governance / CI / Execution Snapshot | **✅ COMPLETE** | 2026-02-20 |
 
 ---
 
@@ -1317,6 +1318,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-20 | **PIN-593 HOC Workstream Scope Lock and PR10 Snapshot** - Captured clean-branch PR #10 state, commit set, and skeptical blocker counts under HOC-only remediation scope. |
 | 2026-02-20 | **PIN-592 HOC-Only Governance Scope and Non-HOC Tombstone Ledger** - Scoped blocker enforcement to `backend/app/hoc/**`, tombstoned non-HOC violations, and recorded ledger/evidence for Layer Guard, Import Hygiene, and Capability Linkage. |
 | 2026-02-18 | **PIN-578 PR2 Runs Post-Deploy Auth Enforcement Evidence** - Captured post-deploy stagetest results after merged-main rollout: live/completed return 401 without auth and also 401 with legacy fixture headers, confirming fixture bypass retirement at runtime. |
 | 2026-02-18 | **PIN-577 PR2 Runs Post-Deploy Verification Harness** - Added deterministic verification script (`scripts/ops/verify_pr2_runs_auth_rollout.sh`) and post-deploy checklist for auth-path rollout closure evidence capture. |
