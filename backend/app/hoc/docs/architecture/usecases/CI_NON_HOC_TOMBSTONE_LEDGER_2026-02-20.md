@@ -63,7 +63,7 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 ## Active HOC Backlog (Still Blocking)
 - Layer segregation (`--scope hoc`): **0** violations (Wave 2 residual closure complete)
 - Import hygiene (`backend/app/hoc/**`): **0** files with relative imports (Wave 2 complete)
-- Capability linkage (`MISSING_CAPABILITY_ID` in hoc files, full sweep): **929** files (after Wave 2 residual closure)
+- Capability linkage (`MISSING_CAPABILITY_ID` in hoc files, full sweep): **851** files (after CUS Wave C1)
 
 ### HOC Layer-Segregation File Set (0 files)
 | File |
@@ -75,15 +75,15 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 |---|
 | _None (Wave 2 batch 4 remediation completed on 2026-02-20)_ |
 
-### HOC Capability-Linkage Missing ID Hot Clusters (929 files total)
+### HOC Capability-Linkage Missing ID Hot Clusters (851 files total)
 | Cluster Prefix | Missing `capability_id` Files |
 |---|---:|
-| `backend/app/hoc/cus/hoc_spine/orchestrator/**` | 83 |
 | `backend/app/hoc/cus/policies/L5_engines/**` | 59 |
 | `backend/app/hoc/int/platform/drivers/**` | 38 |
 | `backend/app/hoc/api/cus/policies/**` | 35 |
 | `backend/app/hoc/cus/hoc_spine/services/**` | 32 |
 | `backend/app/hoc/cus/policies/L6_drivers/**` | 29 |
+| `backend/app/hoc/cus/integrations/adapters/**` | 20 |
 
 ## Reproduction Commands
 ```bash

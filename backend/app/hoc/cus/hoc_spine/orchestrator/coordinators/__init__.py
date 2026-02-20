@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L4 — HOC Spine (Orchestrator)
 # AUDIENCE: INTERNAL
 # Role: Coordinator package — cross-domain mediation (C4 Loop Model)

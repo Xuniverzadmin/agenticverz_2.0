@@ -85,8 +85,16 @@ Baseline blockers on `origin/main` after merge commit `da89f8d479bae9c1930be25e5
   - Wave plans updated in:
     - `backend/app/hoc/docs/architecture/usecases/HOC_LAYER_SEGREGATION_SCOPE_HOC_PLAN_2026-02-20.md`
     - `backend/app/hoc/docs/architecture/usecases/HOC_CAPABILITY_SWEEP_PLAN_2026-02-20.md`
+- HOC CUS capability sweep Wave C1 is complete:
+  - Scope: `cus/hoc_spine/orchestrator/**` + `cus/hoc_spine/authority/contracts/**`.
+  - Capability header wiring: `CAP-012` (orchestrator), `CAP-011` (authority contracts).
+  - Full HOC capability sweep reduced from `929` to `851` blocking `MISSING_CAPABILITY_ID`.
+  - Full HOC capability warnings remain `13`.
+  - Changed-file capability check passed for all C1 remediated files.
+  - Plan updated in:
+    - `backend/app/hoc/docs/architecture/usecases/HOC_CUS_CAPABILITY_SWEEP_WAVES_PLAN_2026-02-20.md`
 
 ## Notes
 - This queue is baseline debt on `main`, not introduced solely by PR #7.
 - Lane A should address P0 first, then P1 in smallest reviewable PRs.
-- Skeptical audit (2026-02-20) confirms changed-file capability linkage is clear for HOC remediation PRs; after Wave 2, full HOC-wide capability scan remains a separate backlog at `929` blocking `MISSING_CAPABILITY_ID` outside current CI changed-file contract.
+- Skeptical audit (2026-02-20) confirms changed-file capability linkage is clear for HOC remediation PRs; after CUS Wave C1, full HOC-wide capability scan remains a separate backlog at `851` blocking `MISSING_CAPABILITY_ID` outside current CI changed-file contract.
