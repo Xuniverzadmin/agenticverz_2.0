@@ -1,3 +1,4 @@
+# capability_id: CAP-018
 # Layer: L3 — Boundary Adapter (Translation)
 # AUDIENCE: CUSTOMER
 # Product: system-wide

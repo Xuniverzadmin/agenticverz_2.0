@@ -1,3 +1,4 @@
+# capability_id: CAP-001
 # Layer: L6 — Driver
 # AUDIENCE: CUSTOMER
 # Role: Data access drivers for incidents domain

@@ -1,3 +1,4 @@
+# capability_id: CAP-002
 # Layer: L6 — Data Access Driver
 # AUDIENCE: INTERNAL
 # Temporal:

@@ -104,8 +104,19 @@ Baseline blockers on `origin/main` after merge commit `da89f8d479bae9c1930be25e5
   - Changed-file capability check passed for all C2 remediated files.
   - Plan updated in:
     - `backend/app/hoc/docs/architecture/usecases/HOC_CUS_CAPABILITY_SWEEP_WAVES_PLAN_2026-02-20.md`
+- HOC CUS capability sweep Wave C3 is complete:
+  - Scope: `cus/logs/**` + `cus/analytics/**` + `cus/incidents/**` + `cus/integrations/**`.
+  - Capability header wiring:
+    - `CAP-001` for logs and incidents surfaces.
+    - `CAP-002` for analytics surfaces.
+    - `CAP-018` for integrations surfaces.
+  - Full HOC capability sweep reduced from `728` to `550` blocking `MISSING_CAPABILITY_ID`.
+  - Full HOC capability warnings remain `11`.
+  - Changed-file capability check passed for all C3 remediated files.
+  - Plan updated in:
+    - `backend/app/hoc/docs/architecture/usecases/HOC_CUS_CAPABILITY_SWEEP_WAVES_PLAN_2026-02-20.md`
 
 ## Notes
 - This queue is baseline debt on `main`, not introduced solely by PR #7.
 - Lane A should address P0 first, then P1 in smallest reviewable PRs.
-- Skeptical audit (2026-02-20) confirms changed-file capability linkage is clear for HOC remediation PRs; after CUS Wave C2, full HOC-wide capability scan remains a separate backlog at `728` blocking `MISSING_CAPABILITY_ID` outside current CI changed-file contract.
+- Skeptical audit (2026-02-20) confirms changed-file capability linkage is clear for HOC remediation PRs; after CUS Wave C3, full HOC-wide capability scan remains a separate backlog at `550` blocking `MISSING_CAPABILITY_ID` outside current CI changed-file contract.

@@ -1,3 +1,4 @@
+# capability_id: CAP-002
 # Layer: L5 — Domain Schema
 # AUDIENCE: CUSTOMER
 # Role: Analytics query type definitions (enums shared across L2 and L5)

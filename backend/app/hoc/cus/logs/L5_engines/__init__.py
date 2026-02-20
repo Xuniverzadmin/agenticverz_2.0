@@ -1,3 +1,4 @@
+# capability_id: CAP-001
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
 # Role: logs domain - engines package

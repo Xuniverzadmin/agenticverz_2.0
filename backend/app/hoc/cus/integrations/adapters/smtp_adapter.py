@@ -1,3 +1,4 @@
+# capability_id: CAP-018
 # Layer: L2 — Adapter
 # AUDIENCE: CUSTOMER
 # Product: system-wide

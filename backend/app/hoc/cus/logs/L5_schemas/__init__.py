@@ -1,3 +1,4 @@
+# capability_id: CAP-001
 # Layer: L5 — Domain Schemas
 # AUDIENCE: CUSTOMER
 # Role: logs domain - schemas (data models for L6 drivers)

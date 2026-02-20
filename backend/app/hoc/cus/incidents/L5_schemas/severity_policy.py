@@ -1,3 +1,4 @@
+# capability_id: CAP-001
 # Layer: L5 — Domain Schema (Policy)
 # AUDIENCE: CUSTOMER
 # Product: ai-console

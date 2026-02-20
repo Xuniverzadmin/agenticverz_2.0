@@ -1,3 +1,4 @@
+# capability_id: CAP-001
 # Layer: L5 — Domain Engine
 # NOTE: Renamed audit_ledger_service.py → audit_ledger_engine.py (2026-01-31)
 # AUDIENCE: CUSTOMER

@@ -1,3 +1,4 @@
+# capability_id: CAP-018
 # Layer: L3 — cus/integrations/adapters
 # AUDIENCE: CUSTOMER
 # PHASE: W0

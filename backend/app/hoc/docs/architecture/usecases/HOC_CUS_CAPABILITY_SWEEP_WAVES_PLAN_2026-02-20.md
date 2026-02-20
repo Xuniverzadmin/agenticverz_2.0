@@ -23,7 +23,7 @@ Reduce full-HOC capability backlog by clearing CUS-domain `MISSING_CAPABILITY_ID
 | 1 | Prep | establish backlog snapshots + hot clusters | lock deterministic baseline and target list | DONE | baseline `929 + 13` captured |
 | 2 | C1 | `cus/hoc_spine/orchestrator/**`, `cus/hoc_spine/services/**`, `cus/hoc_spine/authority/**` | remove largest orchestration cluster debt | DONE | C1 scope blocking cleared (`78 -> 0`), full sweep `929 -> 851`, warnings `13 -> 13` |
 | 3 | C2 | `cus/policies/L5_engines/**`, `cus/policies/L6_drivers/**`, `api/cus/policies/**` | clear policy domain capability metadata debt | DONE | C2 scope blocking cleared (`123 -> 0`), full sweep `851 -> 728`, warnings `13 -> 11` |
-| 4 | C3 | `cus/logs/**`, `cus/analytics/**`, `cus/incidents/**`, `cus/integrations/**` | clear remaining CUS domain clusters | TODO | pre/post sweep deltas |
+| 4 | C3 | `cus/logs/**`, `cus/analytics/**`, `cus/incidents/**`, `cus/integrations/**` | clear remaining CUS domain clusters | DONE | C3 scope blocking cleared (`178 -> 0`), full sweep `728 -> 550`, warnings `11 -> 11` |
 | 5 | C4 | warning cleanup (`MISSING_EVIDENCE`) for CAP-001/CAP-006/CAP-018 | reduce warnings `13 -> 0` where ratified | TODO | warning delta report |
 | 6 | Closure | refresh trackers + publish pin | formalize residual backlog and next lane | TODO | queue/ledger + PIN update |
 
@@ -73,7 +73,19 @@ Reduce full-HOC capability backlog by clearing CUS-domain `MISSING_CAPABILITY_ID
 - Audit results:
   - C2 changed-file capability check: PASS.
   - C2 scope check: blocking `123 -> 0`.
-  - Full HOC sweep: blocking `851 -> 728` (`-123`), warnings `13 -> 11`.
+- Full HOC sweep: blocking `851 -> 728` (`-123`), warnings `13 -> 11`.
+
+## C3 Result Snapshot
+- Scope audited: `backend/app/hoc/cus/logs/**`, `backend/app/hoc/cus/analytics/**`, `backend/app/hoc/cus/incidents/**`, `backend/app/hoc/cus/integrations/**`.
+- Header mapping applied:
+  - `CAP-001` for logs + incidents clusters.
+  - `CAP-002` for analytics cluster.
+  - `CAP-018` for integrations cluster.
+- Registry evidence synced in `docs/capabilities/CAPABILITY_REGISTRY.yaml`.
+- Audit results:
+  - C3 changed-file capability check: PASS.
+  - C3 scope check: blocking `178 -> 0`.
+  - Full HOC sweep: blocking `728 -> 550` (`-178`), warnings `11 -> 11`.
 
 ## Approval Gate
 - If approved, execute Wave C1 first and open a focused PR with:

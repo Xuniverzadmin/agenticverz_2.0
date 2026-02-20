@@ -1,3 +1,4 @@
+# capability_id: CAP-002
 # Layer: L5 — Domain Engine
 # NOTE: Extracted from app/costsim/v2_adapter.py (PIN-513 Phase C TRANSITIONAL resolution)
 # AUDIENCE: CUSTOMER

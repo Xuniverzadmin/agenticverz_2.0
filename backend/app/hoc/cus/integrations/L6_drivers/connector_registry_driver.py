@@ -1,3 +1,4 @@
+# capability_id: CAP-018
 # Layer: L6 — Domain Driver
 # NOTE: Renamed connector_registry.py → connector_registry_driver.py (2026-01-31) per BANNED_NAMING rule
 # AUDIENCE: CUSTOMER

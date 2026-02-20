@@ -1,3 +1,4 @@
+# capability_id: CAP-018
 # Layer: L5 — Domain Engine
 # AUDIENCE: INTERNAL
 # Temporal:

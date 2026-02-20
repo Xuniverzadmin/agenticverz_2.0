@@ -1,3 +1,4 @@
+# capability_id: CAP-002
 # Layer: L5 — Domain Engines
 # AUDIENCE: CUSTOMER
 # Product: system-wide

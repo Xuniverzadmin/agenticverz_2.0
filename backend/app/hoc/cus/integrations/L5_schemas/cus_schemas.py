@@ -1,3 +1,4 @@
+# capability_id: CAP-018
 # Layer: L6 — Platform Substrate (Schemas)
 # AUDIENCE: CUSTOMER
 # Product: ai-console (Customer Console)

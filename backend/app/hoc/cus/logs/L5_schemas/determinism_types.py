@@ -1,3 +1,4 @@
+# capability_id: CAP-001
 # Layer: L5 — Domain Schema
 # AUDIENCE: CUSTOMER
 # Role: Determinism level definitions (shared across L2 and L5)

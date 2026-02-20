@@ -1,3 +1,4 @@
+# capability_id: CAP-018
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
 # Role: Customer Integration Engine
