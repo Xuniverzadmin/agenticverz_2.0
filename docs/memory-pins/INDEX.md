@@ -546,9 +546,13 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-575](PIN-575-pr2-runs-realdata-auth-rollout-iteration-1.md) | **PR2 Runs Real-Data Auth Rollout — Iteration 1 (bypass retirement)** | Frontend / Auth / RBAC | **🚧 IN PROGRESS** | 2026-02-18 |
 | [PIN-576](PIN-576-pr2-runs-realdata-auth-rollout-iteration-2-predeploy-evidence.md) | **PR2 Runs Real-Data Auth Rollout — Iteration 2 (pre-deploy evidence)** | Frontend / Auth / Stagetest Validation | **🚧 IN PROGRESS** | 2026-02-18 |
 | [PIN-577](PIN-577-pr2-runs-postdeploy-verification-harness.md) | **PR2 Runs Post-Deploy Verification Harness** | Verification / Stagetest / Auth Rollout | **🚧 IN PROGRESS** | 2026-02-18 |
-| [PIN-578](PIN-578-pr2-runs-postdeploy-auth-enforcement-evidence.md) | **PR2 Runs Post-Deploy Auth Enforcement Evidence** | Verification / Stagetest / Auth Rollout | **🚧 IN PROGRESS** | 2026-02-18 |
+| [PIN-578](PIN-578-pr2-runs-postdeploy-auth-enforcement-evidence.md) | **PR2 Runs Post-Deploy Auth Enforcement Evidence** | Verification / Stagetest / Auth Rollout | **✅ COMPLETE** | 2026-02-20 |
 | [PIN-579](PIN-579-ws-a-ci-baseline-pr2-auth-closure-remediation-snapshot.md) | **WS-A CI Baseline + PR2 Auth Closure Remediation Snapshot** | CI / Auth / Migration / Documentation | **🚧 IN PROGRESS** | 2026-02-20 |
 | [PIN-588](PIN-588-account-users-list-facade-pr10-contract-hardening.md) | **Account Users List Facade PR-10 Contract Hardening** | Architecture / API Contract / Frontend Enablement | **✅ COMPLETE** | 2026-02-16 |
+| [PIN-592](PIN-592-hoc-only-governance-scope-and-non-hoc-tombstone-ledger.md) | **HOC-Only Governance Scope and Non-HOC Tombstone Ledger** | Governance / CI / Legacy Debt | **✅ COMPLETE** | 2026-02-20 |
+| [PIN-593](PIN-593-hoc-workstream-scope-lock-and-pr10-snapshot.md) | **HOC Workstream Scope Lock and PR10 Snapshot** | Governance / CI / Execution Snapshot | **✅ COMPLETE** | 2026-02-20 |
+| [PIN-594](PIN-594-pr1-pr10-step6-recovery-audit-with-pr2-evidence.md) | **PR1-PR10 Step 6 Recovery Audit (With PR-2 Evidence)** | Governance / Recovery / Audit | **✅ COMPLETE** | 2026-02-20 |
+| [PIN-595](PIN-595-pr1-pr10-step7-frontend-ledger-sync-post-merge.md) | **PR1-PR10 Step 7 Frontend Ledger Sync (Post-Merge)** | Governance / Frontend / Audit | **✅ COMPLETE** | 2026-02-20 |
 
 ---
 
@@ -1318,6 +1322,10 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-20 | **PIN-595 PR1-PR10 Step 7 Frontend Ledger Sync (Post-Merge)** - Marked Step 7 complete, synchronized PR-1 frontend slice ledgers to post-PR2 auth-enforced behavior, and captured merge-backed evidence mapping. |
+| 2026-02-20 | **PIN-594 PR1-PR10 Step 6 Recovery Audit (With PR-2 Evidence)** - Recorded final slice matrix (#8, #11-#19), explicit PR-2 test evidence (17 passed), and skeptical wiring findings/resolutions. |
+| 2026-02-20 | **PIN-593 HOC Workstream Scope Lock and PR10 Snapshot** - Captured clean-branch PR #10 state, commit set, and skeptical blocker counts under HOC-only remediation scope. |
+| 2026-02-20 | **PIN-592 HOC-Only Governance Scope and Non-HOC Tombstone Ledger** - Scoped blocker enforcement to `backend/app/hoc/**`, tombstoned non-HOC violations, and recorded ledger/evidence for Layer Guard, Import Hygiene, and Capability Linkage. |
 | 2026-02-20 | **PIN-579 WS-A CI Baseline + PR2 Auth Closure Remediation Snapshot** - Consolidated PR2 closure context (auth-positive path via tenant API key, evidence correction, key revocation verification) and WS-A CI stabilization status (guard fixes, migration collision hardening, rerun pending at handoff). |
 | 2026-02-16 | **PIN-588 Account Users List Facade PR-10 Contract Hardening** - Added `GET /cus/account/users/list` strict read facade with one-dispatch to `account.query`, boundary validation, and deterministic list tie-break hardening (`email asc, id asc`). |
 | 2026-02-18 | **PIN-578 PR2 Runs Post-Deploy Auth Enforcement Evidence** - Captured post-deploy stagetest results after merged-main rollout: live/completed return 401 without auth and also 401 with legacy fixture headers, confirming fixture bypass retirement at runtime. |

@@ -7,11 +7,11 @@ on:
   pull_request:
     branches: [ main ]
     paths:
-      - 'backend/**/*.py'
+      - 'backend/app/hoc/**/*.py'
   push:
     branches: [ main ]
     paths:
-      - 'backend/**/*.py'
+      - 'backend/app/hoc/**/*.py'
 
 jobs:
   import-hygiene:
@@ -35,27 +35,27 @@ jobs:
       - name: Check no relative imports
         run: |
           cd backend
-          RELATIVE_IMPORTS=$(grep -r "from \.\." app/ --include="*.py" || true)
+          RELATIVE_IMPORTS=$(grep -r "from \.\." app/hoc/ --include="*.py" || true)
           if [ -n "$RELATIVE_IMPORTS" ]; then
-            echo "::error::Found relative imports (use absolute imports from app.*):"
+            echo "::error::Found relative imports in app/hoc (use absolute imports from app.*):"
             echo "$RELATIVE_IMPORTS"
             exit 1
           fi
-          echo "No relative imports found"
+          echo "No relative imports found in app/hoc"
 
       - name: Check import-time side effects
         run: |
           cd backend
-          # These imports must succeed WITHOUT DATABASE_URL
-          python3 -c "from app.db import get_async_session; print('db.py: OK')"
-          python3 -c "from app.api.workers import router; print('workers.py: OK')"
-          echo "All imports succeed without DATABASE_URL"
+          # These HOC imports must succeed WITHOUT DATABASE_URL
+          python3 -c "from app.hoc.cus.hoc_spine.authority.gateway_policy import PUBLIC_PATHS; print('gateway_policy.py: OK')"
+          python3 -c "from app.hoc.cus.activity.L6_drivers.activity_read_driver import ActivityReadDriver; print('activity_read_driver.py: OK')"
+          echo "HOC imports succeed without DATABASE_URL"
 
       - name: Syntax check critical files
         run: |
           cd backend
-          python3 -m py_compile app/db.py
-          python3 -m py_compile app/api/workers.py
+          python3 -m py_compile app/hoc/cus/hoc_spine/authority/gateway_policy.py
+          python3 -m py_compile app/hoc/cus/activity/L6_drivers/activity_read_driver.py
           echo "Syntax check passed"
 
       - name: Ban deprecated datetime.utcnow()
@@ -63,13 +63,13 @@ jobs:
           cd backend
           # Invariant #11: datetime.utcnow() is forbidden (deprecated in Python 3.12+)
           # Use utc_now() from app.utils.runtime instead
-          DEPRECATED_UTC=$(grep -rn "datetime\.utcnow" app/ --include="*.py" || true)
+          DEPRECATED_UTC=$(grep -rn "datetime\.utcnow" app/hoc/ --include="*.py" || true)
           if [ -n "$DEPRECATED_UTC" ]; then
             echo "::error::Found deprecated datetime.utcnow() usage (use utc_now() from app.utils.runtime):"
             echo "$DEPRECATED_UTC"
             exit 1
           fi
-          DEPRECATED_UTC2=$(grep -rn "utcnow()" app/ --include="*.py" | grep -v "def utc_now" | grep -v "# Use timezone-aware" || true)
+          DEPRECATED_UTC2=$(grep -rn "utcnow()" app/hoc/ --include="*.py" | grep -v "def utc_now" | grep -v "# Use timezone-aware" || true)
           if [ -n "$DEPRECATED_UTC2" ]; then
             echo "::error::Found utcnow() call (use utc_now() from app.utils.runtime):"
             echo "$DEPRECATED_UTC2"

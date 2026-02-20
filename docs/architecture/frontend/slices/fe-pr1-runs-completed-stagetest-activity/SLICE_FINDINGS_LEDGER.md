@@ -1,75 +1,41 @@
 # FE-PR1-RUNS-COMPLETED-STAGETEST Frontend Slice Findings Ledger
 
 ## Status
-- Date: 2026-02-18
+- Date: 2026-02-20
 - Slice ID: FE-PR1-RUNS-COMPLETED-STAGETEST
 - Contract Source: `backend/app/hoc/docs/architecture/usecases/PR1_RUNS_FACADE_CONTRACT_ADDENDUM_2026-02-16.md`
 
 ## Issue Register
 | Issue ID | Severity | Category | Status |
 |---|---|---|---|
-| FE-PR1-RUNS-COMPLETED-STAGETEST-001 | Medium | Env/Auth | Closed |
-| FE-PR1-RUNS-COMPLETED-STAGETEST-002 | Medium | Fixture Contract | Closed |
-| FE-PR1-RUNS-COMPLETED-STAGETEST-003 | Low | Guardrail | Closed |
+| FE-PR1-RUNS-COMPLETED-STAGETEST-001 | Medium | Auth Evidence Gap | Open |
+| FE-PR1-RUNS-COMPLETED-STAGETEST-002 | Low | Ledger Drift | Closed |
 
 ## Detailed Findings
-### FE-PR1-RUNS-COMPLETED-STAGETEST-001 — Completed facade probe is auth-gated by default
-- Surface: `https://stagetest.agenticverz.com/hoc/api/cus/activity/runs?topic=completed&limit=2&offset=0`
-- Symptom: no-fixture probe returns `401 not_authenticated`.
-- Risk: scaffold UI cannot validate completed payload shape without authenticated session.
-- Root Cause: normal auth/RBAC path is active for CUS facade routes.
-- Resolution: temporary, explicit fixture path for preflight testing only.
+### FE-PR1-RUNS-COMPLETED-STAGETEST-001 — Browser positive-path evidence still missing
+- Surface: `/page/activity/runs-completed` runtime probe on stagetest.
+- Symptom: unauthenticated CUS API probe returns `401`.
+- Risk: completed slice cannot be promoted without authenticated browser session evidence for `200` payload rendering.
+- Root Cause: PR2 correctly enforces CUS auth and retires public/fixture bypass.
+- Required Follow-up: capture page-level `200` evidence using valid authenticated session context.
 
-### FE-PR1-RUNS-COMPLETED-STAGETEST-002 — Completed topic required dedicated fixture payload
-- Surface: completed topic probe route and payload preview.
-- Symptom: live-only fixture would not satisfy completed contract slice.
-- Risk: false confidence from wrong topic payload.
-- Root Cause: completed fixture key/payload path was missing in initial run.
-- Resolution: added `pr1-runs-completed-v1` fixture key and deterministic completed payload set.
-
-### FE-PR1-RUNS-COMPLETED-STAGETEST-003 — Fixture misuse needed fail-fast behavior
-- Surface: fixture header parsing on `/cus/activity/runs`.
-- Symptom: potential fallback paths when fixture key/topic misuse occurs.
-- Risk: accidental bypass or ambiguous behavior during scaffold checks.
-- Root Cause: fixture-topic mismatch was not explicitly rejected.
-- Resolution: enforce `400 INVALID_QUERY` for fixture/topic mismatch and unknown fixture ids; keep fixture-disabled path on auth (`401`).
-
-## Fix Implementation
-- Fix item 1: wire scaffold completed probe header in catalog (`X-HOC-Scaffold-Fixture: pr1-runs-completed-v1`).
-- Fix item 2: extend backend PR1 fixture handling for `topic=completed` with contract-shaped payload.
-- Fix item 3: enforce fixture allowlist + topic/fixture compatibility validation.
-- Fix item 4: add test coverage for mismatch and fixture-disabled auth fallback behavior.
+### FE-PR1-RUNS-COMPLETED-STAGETEST-002 — Historical fixture-path assumptions became stale
+- Surface: prior acceptance/findings narrative.
+- Symptom: old text treated temporary fixture-based checks as active rollout state.
+- Risk: stale governance reporting for auth posture.
+- Resolution: Step 7 sync updated ledgers to current runtime truth (`401` unauthenticated; authenticated context required for `200`).
 
 ## Verification Evidence
 ```bash
-# stagetest completed page route
 curl -ksS -o /tmp/pr1_completed_page.html -w '%{http_code} %{content_type}\n' \
   https://stagetest.agenticverz.com/page/activity/runs-completed
 # outcome: 200 text/html
 
-# stagetest completed facade without fixture header
-curl -ksS -o /tmp/pr1_completed_nohdr.json -w '%{http_code} %{content_type}\n' \
+curl -ksS -o /tmp/pr1_completed_noauth.json -w '%{http_code} %{content_type}\n' \
   'https://stagetest.agenticverz.com/hoc/api/cus/activity/runs?topic=completed&limit=2&offset=0'
 # outcome: 401 application/json
-
-# stagetest completed facade with fixture header
-curl -ksS -o /tmp/pr1_completed_fixture.json -w '%{http_code} %{content_type}\n' \
-  -H 'X-HOC-Scaffold-Fixture: pr1-runs-completed-v1' \
-  'https://stagetest.agenticverz.com/hoc/api/cus/activity/runs?topic=completed&limit=2&offset=0'
-# outcome: 200 application/json, payload includes run_comp_003/run_comp_002
-
-# invalid fixture key reject
-curl -ksS -o /tmp/pr1_completed_badfixture.json -w '%{http_code} %{content_type}\n' \
-  -H 'X-HOC-Scaffold-Fixture: bad-fixture-id' \
-  'https://stagetest.agenticverz.com/hoc/api/cus/activity/runs?topic=completed&limit=2&offset=0'
-# outcome: 400 application/json, code=INVALID_QUERY
-
-# backend contract checks
-cd /root/agenticverz2.0/backend && PYTHONPATH=. pytest -q tests/api/test_runs_facade_pr1.py
-# outcome: 20 passed
 ```
 
 ## Residual Risks
-- Current acceptance is scaffold-fixture based; authenticated tenant runtime payload evidence is deferred to PR-2.
-- Temporary preflight allowances (fixture + RBAC rule) must be removed before production promotion.
-- Completed page still renders raw JSON preview; production display components are pending.
+- Browser session acquisition for tenant-bound auth is still unavailable in this execution context.
+- Slice remains scaffold-level and not eligible for production promotion until authenticated tenant runtime evidence is attached.

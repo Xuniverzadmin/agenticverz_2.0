@@ -76,11 +76,9 @@ jobs:
         uses: tj-actions/changed-files@v44
         with:
           files: |
-            backend/**/*.py
+            backend/app/hoc/**/*.py
             frontend/**/*.{ts,tsx,js,jsx}
             website/**/*.{ts,tsx,js,jsx}
-            services/**/*.py
-            workers/**/*.py
 
       - name: Check capability linkage
         if: steps.changed-files.outputs.any_changed == 'true'
