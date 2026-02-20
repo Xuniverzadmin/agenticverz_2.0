@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L2 — Product APIs
 # Product: ai-console (Customer Console)
 # Temporal:

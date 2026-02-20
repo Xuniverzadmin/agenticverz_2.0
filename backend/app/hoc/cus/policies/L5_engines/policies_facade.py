@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L5 — Domain Engine (Facade)
 # AUDIENCE: CUSTOMER
 # Role: Policies facade - unified entry point for policy management

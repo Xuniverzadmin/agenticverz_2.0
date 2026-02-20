@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Role: Persistence driver for policies facade — all SQL queries for policy rules, limits, budgets, requests
