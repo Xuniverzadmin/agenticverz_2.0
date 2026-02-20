@@ -10,6 +10,7 @@
 # Allowed Imports: L6
 # Forbidden Imports: L1, L2, L3, L4
 # Reference: Evidence Architecture v1.1
+# capability_id: CAP-016
 
 
 """
@@ -31,17 +32,17 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 from pydantic import ValidationError
 
-from ..observability.cost_tracker import (
+from app.observability.cost_tracker import (
     CostEnforcementResult,
     get_cost_tracker,
 )
-from ..schemas.plan import PlanStep, StepStatus
+from app.schemas.plan import PlanStep, StepStatus
 from .registry import get_skill_entry
 
 # Evidence Architecture v1.1: Activity and Provider evidence capture
 # ExecutionContext is received as read-only snapshot from runner's cursor.context
 if TYPE_CHECKING:
-    from ..core.execution_context import ExecutionContext
+    from app.core.execution_context import ExecutionContext
 
 logger = logging.getLogger("nova.skills.executor")
 

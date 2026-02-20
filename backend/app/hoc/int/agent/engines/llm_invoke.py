@@ -4,6 +4,7 @@
 # LLM Invoke Skill
 # Provides LLM inference as a skill step for agent plans
 # Includes prompt caching for cost reduction (M13+)
+# capability_id: CAP-016
 
 import hashlib
 import json
@@ -15,18 +16,18 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
-from ..metrics import (
+from app.metrics import (
     nova_llm_cost_cents_total,
     nova_llm_duration_seconds,
     nova_llm_invocations_total,
     nova_llm_tokens_total,
 )
-from ..schemas.skill import (
+from app.schemas.skill import (
     LLMInvokeInput,
     LLMInvokeOutput,
     SkillStatus,
 )
-from ..utils.metrics_helpers import get_or_create_counter, get_or_create_gauge
+from app.utils.metrics_helpers import get_or_create_counter, get_or_create_gauge
 from .registry import skill
 
 logger = logging.getLogger("nova.skills.llm_invoke")

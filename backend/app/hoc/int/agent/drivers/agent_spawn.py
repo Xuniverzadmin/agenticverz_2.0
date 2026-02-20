@@ -8,6 +8,7 @@
 # Allowed Imports: L5, L6
 # Forbidden Imports: L1, L2, L3
 # Reference: Agent Skills
+# capability_id: CAP-008
 
 # M12 Agent Spawn Skill
 # Spawns parallel worker agents for job execution
@@ -21,13 +22,13 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from ..services.credit_service import CREDIT_COSTS, CreditService, get_credit_service
-from ..services.job_service import JobConfig, JobService, get_job_service
-from ..services.registry_service import RegistryService, get_registry_service
+from app.agents.services.credit_service import CREDIT_COSTS, CreditService, get_credit_service
+from app.agents.services.job_service import JobConfig, JobService, get_job_service
+from app.agents.services.registry_service import RegistryService, get_registry_service
 
 # M15.1: SBA imports
 try:
-    from ..sba.service import SBAService, get_sba_service
+    from app.agents.sba.service import SBAService, get_sba_service
 
     SBA_AVAILABLE = True
 except ImportError:

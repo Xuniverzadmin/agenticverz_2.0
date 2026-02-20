@@ -3,6 +3,7 @@
 # Role: Configuration schema for voyage_embed skill.
 # Voyage Embed Skill (M11)
 # Generate embeddings using Voyage AI API
+# capability_id: CAP-016
 
 import logging
 import os
@@ -13,7 +14,7 @@ from typing import Any, Dict, Optional, Type
 import httpx
 from pydantic import BaseModel
 
-from ..schemas.skill import VoyageEmbedInput, VoyageEmbedOutput
+from app.schemas.skill import VoyageEmbedInput, VoyageEmbedOutput
 from .registry import skill
 
 logger = logging.getLogger("nova.skills.voyage_embed")

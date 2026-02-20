@@ -3,6 +3,7 @@
 # Role: Configuration schema for slack_send skill.
 # Slack Send Skill (M11)
 # Send messages to Slack via webhook with idempotency support
+# capability_id: CAP-016
 
 import logging
 import os
@@ -13,7 +14,7 @@ from typing import Any, Dict, Optional, Type
 import httpx
 from pydantic import BaseModel
 
-from ..schemas.skill import SlackSendInput, SlackSendOutput
+from app.schemas.skill import SlackSendInput, SlackSendOutput
 from .registry import skill
 
 logger = logging.getLogger("nova.skills.slack_send")

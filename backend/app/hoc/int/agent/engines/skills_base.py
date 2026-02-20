@@ -3,6 +3,7 @@
 # Role: Lightweight circuit breaker for M11 external skills.
 # Skill Base Classes for M11
 # Provides common patterns for idempotent, deterministic skills
+# capability_id: CAP-016
 
 import logging
 import os
@@ -15,7 +16,7 @@ from pydantic import BaseModel
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from ..metrics import (
+from app.metrics import (
     m11_circuit_breaker_closes_total,
     m11_circuit_breaker_failures_total,
     m11_circuit_breaker_opens_total,

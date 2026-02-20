@@ -3,6 +3,7 @@
 # Role: Configuration schema for http_call skill.
 # HTTP Call Skill
 # Pluggable HTTP skill with retry logic and external call control
+# capability_id: CAP-016
 
 import asyncio
 import logging
@@ -13,7 +14,7 @@ from typing import Any, Dict, Type
 import httpx
 from pydantic import BaseModel
 
-from ..schemas.skill import HttpCallInput, HttpCallOutput
+from app.schemas.skill import HttpCallInput, HttpCallOutput
 from .registry import skill
 
 logger = logging.getLogger("nova.skills.http_call")

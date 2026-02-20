@@ -11,6 +11,8 @@ Wave 2 focused on backend CUS import-hygiene remediation for stability. Frontend
   - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_CUS_STABILIZATION_2026-02-20.md`
 - Backend Wave 2 batch-2 artifact:
   - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH2_API_AUTH_STABILIZATION_2026-02-20.md`
+- Backend Wave 2 batch-3 artifact:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH3_INT_AGENT_CLUSTER_2026-02-20.md`
 - Auth enforcement reference:
   - `backend/app/hoc/docs/architecture/usecases/PR2_AUTH_CLOSURE_EVIDENCE.md`
 

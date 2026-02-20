@@ -1,6 +1,7 @@
 # Layer: L6 — Driver
 # KV Store Skill (M11)
 # Redis-backed key-value operations with idempotency support
+# capability_id: CAP-016
 
 import json
 import logging
@@ -12,7 +13,7 @@ from typing import Any, Dict, Optional, Type
 import redis.asyncio as redis
 from pydantic import BaseModel
 
-from ..schemas.skill import KVStoreInput, KVStoreOutput
+from app.schemas.skill import KVStoreInput, KVStoreOutput
 from .registry import skill
 
 logger = logging.getLogger("nova.skills.kv_store")

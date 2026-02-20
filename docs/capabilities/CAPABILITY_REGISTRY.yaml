@@ -478,6 +478,10 @@ capabilities:
         - "/backend/app/agents/skills/agent_spawn.py"
         - "/backend/app/agents/skills/blackboard_ops.py"
         - "/backend/app/agents/skills/llm_invoke_governed.py"
+        - "/backend/app/hoc/int/agent/drivers/agent_spawn.py"
+        - "/backend/app/hoc/int/agent/drivers/blackboard_ops.py"
+        - "/backend/app/hoc/int/agent/drivers/worker_registry_driver.py"
+        - "/backend/app/hoc/int/agent/engines/agent_invoke.py"
 
     gaps: []  # No gaps - CLOSED (internal capability)
 
@@ -819,8 +823,18 @@ capabilities:
         - "/backend/app/skills/llm_invoke.py"
         - "/backend/app/skills/http_call.py"
         - "/backend/app/skills/json_transform.py"
+        - "/backend/app/hoc/int/agent/drivers/kv_store.py"
+        - "/backend/app/hoc/int/agent/drivers/sdsr_fail_trigger.py"
         - "/backend/app/hoc/int/agent/drivers/registry_v2.py"
         - "/backend/app/hoc/int/agent/drivers/json_transform_stub.py"
+        - "/backend/app/hoc/int/agent/engines/email_send.py"
+        - "/backend/app/hoc/int/agent/engines/executor.py"
+        - "/backend/app/hoc/int/agent/engines/http_call.py"
+        - "/backend/app/hoc/int/agent/engines/llm_invoke.py"
+        - "/backend/app/hoc/int/agent/engines/skills_base.py"
+        - "/backend/app/hoc/int/agent/engines/slack_send.py"
+        - "/backend/app/hoc/int/agent/engines/voyage_embed.py"
+        - "/backend/app/hoc/int/agent/engines/webhook_send.py"
         - "/backend/app/hoc/int/agent/engines/http_call_stub.py"
         - "/backend/app/hoc/int/agent/engines/llm_invoke_stub.py"
       adapters:

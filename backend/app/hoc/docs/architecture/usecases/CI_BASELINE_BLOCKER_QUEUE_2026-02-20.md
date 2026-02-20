@@ -58,6 +58,12 @@ Baseline blockers on `origin/main` after merge commit `da89f8d479bae9c1930be25e5
   - Capability-linkage metadata wired for remediated files (CAP-014, CAP-008, CAP-007).
   - Evidence updated in:
     - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH2_API_AUTH_STABILIZATION_2026-02-20.md`
+- HOC import-hygiene remediation Wave 2 (INT/agent cluster batch) is complete:
+  - Relative imports remediated in 14 HOC files under `backend/app/hoc/int/agent/**`.
+  - HOC total relative-import backlog reduced from `25` files to `11` files.
+  - Capability-linkage metadata wired for remediated files (CAP-008, CAP-016) and registry evidence synchronized.
+  - Evidence updated in:
+    - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH3_INT_AGENT_CLUSTER_2026-02-20.md`
 
 ## Notes
 - This queue is baseline debt on `main`, not introduced solely by PR #7.

@@ -8,6 +8,7 @@
 # Allowed Imports: L5, L6
 # Forbidden Imports: L1, L2, L3
 # Reference: Agent Skills
+# capability_id: CAP-008
 
 # M12 Agent Invoke Skill
 # Invoke another agent and wait for response with correlation ID
@@ -27,10 +28,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from ..services.credit_service import CREDIT_COSTS, CreditService, get_credit_service
+from app.agents.services.credit_service import CREDIT_COSTS, CreditService, get_credit_service
 from app.agents.services.invoke_audit_driver import InvokeAuditService, get_invoke_audit_service  # PIN-468
-from ..services.message_service import MessageService, get_message_service
-from ..services.registry_service import RegistryService, get_registry_service
+from app.agents.services.message_service import MessageService, get_message_service
+from app.agents.services.registry_service import RegistryService, get_registry_service
 
 logger = logging.getLogger("nova.agents.skills.agent_invoke")
 
