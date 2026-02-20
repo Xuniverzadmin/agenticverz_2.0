@@ -9,16 +9,16 @@ Step 6 requires clean recovery PR execution for PR-10, PR-1, and PR-3..PR-9 from
 ## Recovery PR Matrix
 | Slice | PR | Branch | Status |
 |---|---|---|---|
-| PR-2 (pre-existing Step 5 output) | #8 | `hoc/pr2-incidents-list-recovery-clean` | OPEN |
-| PR-10 | #11 | `hoc/pr10-account-users-recovery-clean` | OPEN |
-| PR-1 | #12 | `hoc/pr1-runs-recovery-clean` | OPEN |
-| PR-3 | #13 | `hoc/pr3-policies-recovery-clean` | OPEN |
-| PR-4 | #14 | `hoc/pr4-controls-recovery-clean` | OPEN |
-| PR-5 | #15 | `hoc/pr5-logs-recovery-clean` | OPEN |
-| PR-6 | #16 | `hoc/pr6-overview-recovery-clean` | OPEN |
-| PR-7 | #17 | `hoc/pr7-analytics-recovery-clean` | OPEN |
-| PR-8 | #18 | `hoc/pr8-integrations-recovery-clean` | OPEN |
-| PR-9 | #19 | `hoc/pr9-api-keys-recovery-clean` | OPEN |
+| PR-2 (pre-existing Step 5 output) | #8 | `hoc/pr2-incidents-list-recovery-clean` | MERGED |
+| PR-10 | #11 | `hoc/pr10-account-users-recovery-clean` | MERGED |
+| PR-1 | #12 | `hoc/pr1-runs-recovery-clean` | MERGED |
+| PR-3 | #13 | `hoc/pr3-policies-recovery-clean` | MERGED |
+| PR-4 | #14 | `hoc/pr4-controls-recovery-clean` | MERGED |
+| PR-5 | #15 | `hoc/pr5-logs-recovery-clean` | MERGED |
+| PR-6 | #16 | `hoc/pr6-overview-recovery-clean` | MERGED |
+| PR-7 | #17 | `hoc/pr7-analytics-recovery-clean` | MERGED |
+| PR-8 | #18 | `hoc/pr8-integrations-recovery-clean` | MERGED |
+| PR-9 | #19 | `hoc/pr9-api-keys-recovery-clean` | MERGED |
 
 ## Skeptical Findings
 1. Route wiring gaps existed for recovered public facades in current `main` topology.
@@ -53,7 +53,7 @@ Step 6 requires clean recovery PR execution for PR-10, PR-1, and PR-3..PR-9 from
 
 ## Step 6 Verdict
 - **Status:** COMPLETE
-- **Condition:** complete at PR-opened, slice-validated level; merge-order/rebasing remains pending operationally.
+- **Condition:** complete at merged-to-main level with slice test evidence preserved in each recovery PR.
 
 ## Remaining Plan Work
 - Step 7 (frontend ledger sync after corresponding backend merges): TODO.

@@ -16,11 +16,11 @@ Deliver internal PR-1..PR-10 vertical slices to `origin/main` as clean, scoped, 
 | 4 | Lane A: enumerate current `main` CI blockers and convert to fix queue | DONE | `backend/app/hoc/docs/architecture/usecases/CI_BASELINE_BLOCKER_QUEUE_2026-02-20.md`; `backend/app/hoc/docs/architecture/usecases/CI_NON_HOC_TOMBSTONE_LEDGER_2026-02-20.md`; `.github/workflows/{layer-segregation,import-hygiene,capability-registry}.yml` |
 | 5 | Lane B: execute first clean recovery PR (PR-2 incidents) from `origin/main` | DONE | worktree `/tmp/pr2-incidents-recovery-20260220`; branch `hoc/pr2-incidents-list-recovery-clean`; commit `7df3db90`; PR `https://github.com/Xuniverzadmin/agenticverz_2.0/pull/8` |
 | 6 | Continue per-slice recovery PRs (PR-10 then PR-1, PR-3..PR-9 as rebuilt slices) | DONE | PRs opened: #11 (PR-10), #12 (PR-1), #13 (PR-3), #14 (PR-4), #15 (PR-5), #16 (PR-6), #17 (PR-7), #18 (PR-8), #19 (PR-9); existing #8 (PR-2) |
-| 7 | Sync frontend slice ledgers after corresponding backend merges | TODO | pending |
+| 7 | Sync frontend slice ledgers after corresponding backend merges | DONE | `backend/app/hoc/docs/architecture/usecases/PR1_PR10_STEP7_FRONTEND_LEDGER_SYNC_2026-02-20.md` |
 
 ## Immediate Execution Order
-1. Step 4: cut first Lane A baseline-fix PR (P0 queue item: DB-AUTH-001 env contract)
-2. Step 7: frontend ledger sync only after corresponding backend slice merges
+1. Merge and close Lane A baseline PR (`#9`) after reviewer sign-off.
+2. Merge and close governance scope/tombstone PR (`#10`) after Step 7 doc sync validation.
 
 ## Notes
 - `origin/main` is immutable truth source.
