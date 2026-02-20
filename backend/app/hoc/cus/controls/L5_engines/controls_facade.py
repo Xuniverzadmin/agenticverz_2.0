@@ -137,6 +137,14 @@ class ControlStatusSummary:
         }
 
 
+@dataclass
+class ControlsListPageResult:
+    """Paged controls list result for facade endpoints."""
+    items: List[ControlConfig]
+    total: int
+    generated_at: str
+
+
 class ControlsFacade:
     """
     Facade for control operations.
@@ -218,8 +226,35 @@ class ControlsFacade:
                 continue
             results.append(control)
 
-        results.sort(key=lambda c: c.name)
+        results.sort(key=lambda c: (c.name, c.id))
         return results[offset:offset + limit]
+
+    async def list_controls_page(
+        self,
+        tenant_id: str,
+        control_type: Optional[str] = None,
+        state: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> ControlsListPageResult:
+        """List controls with exact total and generation timestamp."""
+        self._ensure_default_controls(tenant_id)
+
+        results: List[ControlConfig] = []
+        for control in self._controls.values():
+            if control.tenant_id != tenant_id:
+                continue
+            if control_type and control.control_type != control_type:
+                continue
+            if state and control.state != state:
+                continue
+            results.append(control)
+
+        results.sort(key=lambda c: (c.name, c.id))
+        total = len(results)
+        page_items = results[offset:offset + limit]
+        generated_at = datetime.now(timezone.utc).isoformat()
+        return ControlsListPageResult(items=page_items, total=total, generated_at=generated_at)
 
     async def get_control(
         self,
