@@ -8,6 +8,7 @@
 # Allowed Imports: L6
 # Forbidden Imports: L1, L2, L3
 # Reference: PIN-370 (Scenario-Driven System Realization), SDSR-E2E-003
+# capability_id: CAP-016
 
 """
 SDSR Failure Trigger Skill
@@ -135,7 +136,7 @@ class SDSRFailTriggerSkill:
         # Raise the appropriate exception based on error_code
         if error_code == "BUDGET_EXCEEDED":
             # Import here to avoid circular dependency
-            from ..observability.cost_tracker import CostEnforcementResult
+            from app.observability.cost_tracker import CostEnforcementResult
 
             # Use the enum value for budget exceeded
             raise BudgetExceededError(

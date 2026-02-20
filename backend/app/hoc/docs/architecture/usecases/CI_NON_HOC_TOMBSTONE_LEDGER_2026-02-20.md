@@ -62,7 +62,7 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 
 ## Active HOC Backlog (Still Blocking)
 - Layer segregation (`--scope hoc`): **93** violations
-- Import hygiene (`backend/app/hoc/**`): **25** files with relative imports
+- Import hygiene (`backend/app/hoc/**`): **11** files with relative imports
 - Capability linkage (`MISSING_CAPABILITY_ID` in hoc files): **0** files (resolved in Wave 1)
 
 ### HOC Layer-Segregation File Set (15 files)
@@ -84,23 +84,9 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 | `backend/app/hoc/int/platform/drivers/memory_driver.py` |
 | `backend/app/hoc/int/platform/engines/sandbox_engine.py` |
 
-### HOC Relative-Import File Set (25 files)
+### HOC Relative-Import File Set (11 files)
 | File |
 |---|
-| `backend/app/hoc/int/agent/drivers/agent_spawn.py` |
-| `backend/app/hoc/int/agent/drivers/blackboard_ops.py` |
-| `backend/app/hoc/int/agent/drivers/kv_store.py` |
-| `backend/app/hoc/int/agent/drivers/sdsr_fail_trigger.py` |
-| `backend/app/hoc/int/agent/drivers/worker_registry_driver.py` |
-| `backend/app/hoc/int/agent/engines/agent_invoke.py` |
-| `backend/app/hoc/int/agent/engines/email_send.py` |
-| `backend/app/hoc/int/agent/engines/executor.py` |
-| `backend/app/hoc/int/agent/engines/http_call.py` |
-| `backend/app/hoc/int/agent/engines/llm_invoke.py` |
-| `backend/app/hoc/int/agent/engines/skills_base.py` |
-| `backend/app/hoc/int/agent/engines/slack_send.py` |
-| `backend/app/hoc/int/agent/engines/voyage_embed.py` |
-| `backend/app/hoc/int/agent/engines/webhook_send.py` |
 | `backend/app/hoc/int/analytics/engines/runner.py` |
 | `backend/app/hoc/int/general/drivers/artifact.py` |
 | `backend/app/hoc/int/logs/drivers/pool.py` |

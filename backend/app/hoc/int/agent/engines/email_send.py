@@ -3,6 +3,7 @@
 # Role: Configuration schema for email_send skill.
 # Email Send Skill (Resend)
 # Pluggable email skill using Resend API with external call control
+# capability_id: CAP-016
 
 import logging
 import os
@@ -13,7 +14,7 @@ from typing import Any, Dict, Optional, Type
 import httpx
 from pydantic import BaseModel
 
-from ..schemas.skill import EmailSendInput, EmailSendOutput
+from app.schemas.skill import EmailSendInput, EmailSendOutput
 from .registry import skill
 
 logger = logging.getLogger("nova.skills.email_send")

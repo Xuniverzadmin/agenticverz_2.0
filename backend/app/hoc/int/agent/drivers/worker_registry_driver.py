@@ -3,6 +3,7 @@
 # Role: Worker discovery, status queries, capability registry
 # Callers: L2 APIs, L5 workers
 # Reference: PIN-242 (Baseline Freeze)
+# capability_id: CAP-008
 
 """
 Worker Registry Service (M21)
@@ -20,7 +21,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlmodel import Session, select
 
-from ..models.tenant import WorkerConfig, WorkerRegistry
+from app.models.tenant import WorkerConfig, WorkerRegistry
 
 logger = logging.getLogger("nova.services.worker_registry")
 

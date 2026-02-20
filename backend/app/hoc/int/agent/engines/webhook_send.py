@@ -3,6 +3,7 @@
 # Role: Configuration schema for webhook_send skill.
 # Webhook Send Skill (M11)
 # Generic webhook with HMAC-SHA256 signing
+# capability_id: CAP-016
 
 import hashlib
 import hmac
@@ -16,7 +17,7 @@ from typing import Any, Dict, Optional, Type
 import httpx
 from pydantic import BaseModel
 
-from ..schemas.skill import WebhookSendInput, WebhookSendOutput
+from app.schemas.skill import WebhookSendInput, WebhookSendOutput
 from .registry import skill
 
 logger = logging.getLogger("nova.skills.webhook_send")

@@ -8,6 +8,7 @@
 # Allowed Imports: L5, L6
 # Forbidden Imports: L1, L2, L3
 # Reference: Agent Skills
+# capability_id: CAP-008
 
 # M12 Blackboard Operation Skills
 # Read, write, and lock operations on shared blackboard
@@ -22,8 +23,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from ..services.blackboard_service import BlackboardService, get_blackboard_service
-from ..services.credit_service import CREDIT_COSTS, CreditService, get_credit_service
+from app.agents.services.blackboard_service import BlackboardService, get_blackboard_service
+from app.agents.services.credit_service import CREDIT_COSTS, CreditService, get_credit_service
 
 logger = logging.getLogger("nova.agents.skills.blackboard_ops")
 
