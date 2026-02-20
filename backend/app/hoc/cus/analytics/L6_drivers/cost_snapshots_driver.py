@@ -13,6 +13,7 @@
 # Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
 # Reference: PIN-508 Phase 1A
 # artifact_class: CODE
+# capability_id: CAP-002
 
 """
 Cost Snapshots Driver (L6)

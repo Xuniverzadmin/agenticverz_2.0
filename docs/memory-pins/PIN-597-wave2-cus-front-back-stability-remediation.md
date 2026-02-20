@@ -21,6 +21,7 @@ Relative imports were replaced with canonical absolute imports in:
 1. `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_CUS_STABILIZATION_2026-02-20.md` (new)
 2. `backend/app/hoc/docs/architecture/usecases/CI_BASELINE_BLOCKER_QUEUE_2026-02-20.md` (Wave 2 progress)
 3. `backend/app/hoc/docs/architecture/usecases/CI_NON_HOC_TOMBSTONE_LEDGER_2026-02-20.md` (34 -> 30; CUS files removed from residual set)
+4. `docs/capabilities/CAPABILITY_REGISTRY.yaml` (CAP-002/CAP-018 evidence linkage for remediated files)
 
 ### Frontend Sync
 1. `docs/architecture/frontend/CUS_FRONTEND_BACKEND_STABILITY_SYNC_WAVE2_2026-02-20.md` (new)
@@ -33,6 +34,7 @@ Relative imports were replaced with canonical absolute imports in:
 - `rg -n "from \\.\\." backend/app/hoc/cus --glob '*.py' || true` -> no matches
 - `( rg -n "from \\.\\." backend/app/hoc --glob '*.py' || true ) | cut -d: -f1 | sort -u | wc -l` -> `30`
 - `python3 -m py_compile` on the 4 remediated files -> pass
+- `python3 scripts/ops/capability_registry_enforcer.py check-pr --files ...` on the 4 remediated files -> `✅ All checks passed`
 
 ## Outcome
 - CUS import-hygiene violations: `4 -> 0`

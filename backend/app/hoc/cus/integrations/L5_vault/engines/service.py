@@ -15,6 +15,7 @@
 # Allowed Imports: L5, L6
 # Forbidden Imports: L1, L2, L3, sqlalchemy (runtime)
 # Reference: PIN-470, GAP-171 (Credential Vault Integration)
+# capability_id: CAP-018
 
 """
 Credential Service (GAP-171)

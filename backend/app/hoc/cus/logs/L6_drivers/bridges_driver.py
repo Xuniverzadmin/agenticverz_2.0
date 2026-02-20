@@ -18,6 +18,7 @@
 # Forbidden Imports: L1, L2, L3, L4, L5
 # Forbidden: session.commit(), session.rollback() — L6 DOES NOT COMMIT
 # Reference: PIN-470, PIN-520 (L6 Purity)
+# capability_id: CAP-018
 
 """
 M25 Bridges Driver

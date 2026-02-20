@@ -17,6 +17,7 @@
 # Forbidden: session.commit(), session.rollback(), session.execute()
 # Note: DB operations extracted to L6_drivers/cost_snapshots_driver.py (PIN-508 Phase 1A)
 # Reference: PIN-470, PIN-508, HOC_LAYER_TOPOLOGY_V2.md
+# capability_id: CAP-002
 
 """M27 Cost Snapshots - Deterministic Enforcement Barrier
 
