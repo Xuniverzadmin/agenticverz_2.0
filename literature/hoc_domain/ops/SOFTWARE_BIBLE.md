@@ -173,6 +173,22 @@
 - Wave artifact:
   - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH4_REMAINING_CLUSTER_2026-02-20.md`
 
+## Reality Delta (2026-02-20, HOC CUS Capability Sweep Wave C1-C4 Closure)
+
+- CUS capability remediation was executed in four deterministic waves and is now closed for this lane.
+- Measured full-HOC capability sweep movement:
+  - baseline: blocking `929`, warnings `13`
+  - after C1: blocking `851`, warnings `13`
+  - after C2: blocking `728`, warnings `11`
+  - after C3: blocking `550`, warnings `11`
+  - after C4: blocking `550`, warnings `0`
+- Wave C4 completed warning cleanup (`MISSING_EVIDENCE`) for CAP-001/CAP-006/CAP-018 evidence mappings in the registry.
+- Tracking artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_CUS_CAPABILITY_SWEEP_WAVES_PLAN_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/CI_BASELINE_BLOCKER_QUEUE_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/CI_NON_HOC_TOMBSTONE_LEDGER_2026-02-20.md`
+  - `docs/memory-pins/PIN-601-cus-capability-sweep-c1-c4-closure.md`
+
 ## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
 
 - Wave-4 UC script coverage audited `hoc/cus/ops` scope as:

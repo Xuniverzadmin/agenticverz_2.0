@@ -25,7 +25,7 @@ Reduce full-HOC capability backlog by clearing CUS-domain `MISSING_CAPABILITY_ID
 | 3 | C2 | `cus/policies/L5_engines/**`, `cus/policies/L6_drivers/**`, `api/cus/policies/**` | clear policy domain capability metadata debt | DONE | C2 scope blocking cleared (`123 -> 0`), full sweep `851 -> 728`, warnings `13 -> 11` |
 | 4 | C3 | `cus/logs/**`, `cus/analytics/**`, `cus/incidents/**`, `cus/integrations/**` | clear remaining CUS domain clusters | DONE | C3 scope blocking cleared (`178 -> 0`), full sweep `728 -> 550`, warnings `11 -> 11` |
 | 5 | C4 | warning cleanup (`MISSING_EVIDENCE`) for CAP-001/CAP-006/CAP-018 | reduce warnings `13 -> 0` where ratified | DONE | full sweep warnings `11 -> 0` (blocking unchanged at `550`) |
-| 6 | Closure | refresh trackers + publish pin | formalize residual backlog and next lane | TODO | queue/ledger + PIN update |
+| 6 | Closure | refresh trackers + publish pin | formalize residual backlog and next lane | DONE | queue/ledger synced + `PIN-601` published |
 
 ## Wave Execution Checklist (per wave)
 1. Capture pre-wave counts:
