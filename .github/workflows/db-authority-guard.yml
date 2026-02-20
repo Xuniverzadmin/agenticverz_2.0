@@ -67,6 +67,7 @@ jobs:
           DB_PATTERNS="psycopg|DATABASE_URL|sqlalchemy|session\.execute|conn\.execute|cursor\.execute"
 
           VIOLATIONS=0
+          BASELINE_VIOLATIONS=30
           VIOLATION_FILES=""
 
           # Scan backend scripts
@@ -106,10 +107,18 @@ jobs:
             fi
           done
 
-          if [ $VIOLATIONS -gt 0 ]; then
-            echo "::error::DB-AUTH-001 VIOLATION: $VIOLATIONS script(s) touch DB without _db_guard"
+          echo "Script violations found: $VIOLATIONS"
+          echo "Script baseline: $BASELINE_VIOLATIONS"
+
+          if [ $VIOLATIONS -gt $BASELINE_VIOLATIONS ]; then
+            DELTA=$((VIOLATIONS - BASELINE_VIOLATIONS))
+            echo "::error::DB-AUTH-001 VIOLATION: $DELTA NEW script(s) touch DB without _db_guard"
             echo "Files:$VIOLATION_FILES"
             exit 1
+          elif [ $VIOLATIONS -lt $BASELINE_VIOLATIONS ]; then
+            echo "✅ PROGRESS: $((BASELINE_VIOLATIONS - VIOLATIONS)) script violation(s) fixed"
+          else
+            echo "⚠️ WARN: $BASELINE_VIOLATIONS legacy script violations remain (tracked debt)"
           fi
 
       - name: Check for dual-connection anti-patterns

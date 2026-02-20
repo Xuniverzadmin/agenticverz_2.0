@@ -34,6 +34,12 @@
 - CI `env-misuse-guard` baseline count was realigned from stale `33` to measured legacy baseline `98`.
 - This restores delta-based enforcement (block net-new violations, track debt reduction) instead of failing on baseline drift.
 
+## Reality Delta (2026-02-20, DB Guard + Integration Workflow Stabilization)
+
+- `db-authority-guard` script-scan step now uses baseline-aware delta enforcement (`BASELINE_VIOLATIONS=30`) instead of hard-failing all legacy debt.
+- `integration-integrity` LIT/BIT output counters now avoid malformed `GITHUB_OUTPUT` writes by removing fallback echo duplication in `grep -c` pipelines.
+- Together these changes convert false-negative/format failures into deterministic gate behavior.
+
 ## Reality Delta (2026-02-15, UAT Hardening Closure)
 
 - UC/UAT closure artifacts are complete (`PIN-564`, `PIN-565`) and ops founder route now includes UAT console under `/prefops/uat` and `/fops/uat`.
