@@ -417,6 +417,9 @@ capabilities:
         - "/backend/app/auth/rbac.py"
         - "/backend/app/auth/rbac_engine.py"
         - "/backend/app/auth/authorization.py"
+        - "/backend/app/hoc/int/agent/engines/onboarding_gate.py"
+        - "/backend/app/hoc/int/general/engines/role_guard.py"
+        - "/backend/app/hoc/int/general/engines/tier_gating.py"
       l2_api:
         - "/backend/app/auth/rbac_middleware.py"
         - "/backend/app/api/rbac_api.py"                 # PIN-311: RBAC management API
@@ -467,7 +470,9 @@ capabilities:
         - "/backend/app/agents/services/registry_service.py"
         - "/backend/app/agents/services/governance_service.py"
         - "/backend/app/agents/services/invoke_audit_service.py"
-      l2_api: "/backend/app/api/agents.py"
+      l2_api:
+        - "/backend/app/api/agents.py"
+        - "/backend/app/hoc/api/int/agent/agents.py"
       skills:
         - "/backend/app/agents/skills/agent_invoke.py"
         - "/backend/app/agents/skills/agent_spawn.py"
@@ -729,6 +734,7 @@ capabilities:
       l2_api:
         - "/backend/app/api/memory_pins.py"
         - "/backend/app/api/embedding.py"                # PIN-311: Unmapped file resolution
+        - "/backend/app/hoc/api/cus/api_keys/embedding.py"
 
     gaps: []  # No gaps - CLOSED
 

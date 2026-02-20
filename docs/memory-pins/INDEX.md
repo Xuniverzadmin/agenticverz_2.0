@@ -555,6 +555,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-595](PIN-595-pr1-pr10-step7-frontend-ledger-sync-post-merge.md) | **PR1-PR10 Step 7 Frontend Ledger Sync (Post-Merge)** | Governance / Frontend / Audit | **✅ COMPLETE** | 2026-02-20 |
 | [PIN-596](PIN-596-hoc-capability-linkage-wave1-remediation.md) | **HOC Capability-Linkage Wave 1 Remediation** | Governance / CI / HOC Debt Reduction | **✅ COMPLETE** | 2026-02-20 |
 | [PIN-597](PIN-597-wave2-cus-front-back-stability-remediation.md) | **Wave 2 CUS Front+Back Stability Remediation** | Governance / CI / Frontend-Backend Stability | **✅ COMPLETE** | 2026-02-20 |
+| [PIN-598](PIN-598-wave2-import-hygiene-batch2-api-auth-stabilization.md) | **Wave 2 Import Hygiene Batch 2 — API/Auth Stabilization** | Governance / CI / Auth Surface Stabilization | **✅ COMPLETE** | 2026-02-20 |
 
 ---
 
@@ -1324,6 +1325,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-20 | **PIN-598 Wave 2 Import Hygiene Batch 2 — API/Auth Stabilization** - Remediated 5 HOC API/auth files from relative to absolute imports, wired capability linkage + registry evidence (CAP-014/CAP-008/CAP-007), and reduced HOC import-hygiene backlog (`30 -> 25`). |
 | 2026-02-20 | **PIN-597 Wave 2 CUS Front+Back Stability Remediation** - Completed Wave 2 CUS import-hygiene batch (`4 -> 0` in `backend/app/hoc/cus/**`), reduced HOC relative-import backlog (`34 -> 30`), and synchronized frontend-backend stability records. |
 | 2026-02-20 | **PIN-596 HOC Capability-Linkage Wave 1 Remediation** - Reduced HOC `MISSING_CAPABILITY_ID` blockers from 5 to 0, synchronized capability evidence mapping (CAP-016/CAP-018), and recorded Wave 1 closure artifact. |
 | 2026-02-20 | **PIN-595 PR1-PR10 Step 7 Frontend Ledger Sync (Post-Merge)** - Marked Step 7 complete, synchronized PR-1 frontend slice ledgers to post-PR2 auth-enforced behavior, and captured merge-backed evidence mapping. |

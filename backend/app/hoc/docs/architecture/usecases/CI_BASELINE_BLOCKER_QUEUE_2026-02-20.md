@@ -52,6 +52,12 @@ Baseline blockers on `origin/main` after merge commit `da89f8d479bae9c1930be25e5
   - HOC total relative-import backlog reduced from `34` files to `30` files.
   - Evidence updated in:
     - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_CUS_STABILIZATION_2026-02-20.md`
+- HOC import-hygiene remediation Wave 2 (API/Auth stabilization batch) is complete:
+  - Relative imports remediated in 5 HOC files (`api/cus`, `api/int`, `int/agent`, `int/general`).
+  - HOC total relative-import backlog reduced from `30` files to `25` files.
+  - Capability-linkage metadata wired for remediated files (CAP-014, CAP-008, CAP-007).
+  - Evidence updated in:
+    - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH2_API_AUTH_STABILIZATION_2026-02-20.md`
 
 ## Notes
 - This queue is baseline debt on `main`, not introduced solely by PR #7.
