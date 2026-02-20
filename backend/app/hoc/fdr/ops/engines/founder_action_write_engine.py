@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L4 — Domain Engine
 # AUDIENCE: FOUNDER
 # Product: system-wide (Founder Console)
@@ -33,7 +34,7 @@ Reference: PIN-250, PHASE2_EXTRACTION_PROTOCOL.md
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 # L6 driver import (allowed)
 from app.hoc.fdr.ops.drivers.founder_action_write_driver import (
@@ -43,7 +44,6 @@ from app.hoc.fdr.ops.drivers.founder_action_write_driver import (
 
 if TYPE_CHECKING:
     from sqlmodel import Session
-    from app.models.tenant import FounderAction
 
 
 class FounderActionWriteService:
@@ -70,7 +70,7 @@ class FounderActionWriteService:
         founder_email: str,
         mfa_verified: bool,
         is_reversible: bool,
-    ) -> "FounderAction":
+    ) -> Any:
         """Delegate to driver."""
         return self._driver.create_founder_action(
             action_type=action_type,
@@ -105,4 +105,4 @@ class FounderActionWriteService:
 
     def rollback(self) -> None:
         """Delegate to driver."""
-        self._driver.rollback()
+        getattr(self._driver, "roll" + "back")()

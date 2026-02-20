@@ -1,3 +1,4 @@
+# capability_id: CAP-008
 # Layer: L4 — Domain Services
 # AUDIENCE: INTERNAL
 # Role: agent domain - engines

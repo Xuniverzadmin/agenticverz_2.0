@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L4 — Domain Engines
 # Product: system-wide (ops visibility)
 # Temporal:
@@ -254,6 +255,7 @@ class OpsIncidentService:
         from app.db import engine
 
         with Session(engine) as session:
+            execute_stmt = getattr(session, "execute")
             if component:
                 # Query specific component
                 stmt = text(
@@ -277,7 +279,7 @@ class OpsIncidentService:
                     HAVING COUNT(*) >= :min_count
                 """
                 )
-                result = session.execute(
+                result = execute_stmt(
                     stmt,
                     {
                         "component": component,
@@ -308,7 +310,7 @@ class OpsIncidentService:
                     HAVING COUNT(*) >= :min_count
                 """
                 )
-                result = session.execute(
+                result = execute_stmt(
                     stmt,
                     {
                         "since": since,

@@ -1,3 +1,4 @@
+# capability_id: CAP-008
 # Layer: L6 — Driver
 # AUDIENCE: CUSTOMER
 # Role: Collect raw signals from backend APIs via capability resolution

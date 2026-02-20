@@ -305,6 +305,13 @@ capabilities:
       founder_approval_required: true
 
     evidence:
+      engine:
+        - "/backend/app/hoc/fdr/account/engines/explorer_engine.py"
+        - "/backend/app/hoc/fdr/incidents/engines/ops_incident_engine.py"
+        - "/backend/app/hoc/fdr/logs/engines/review_engine.py"
+        - "/backend/app/hoc/fdr/logs/engines/timeline_engine.py"
+        - "/backend/app/hoc/fdr/ops/engines/founder_action_write_engine.py"
+        - "/backend/app/hoc/fdr/ops/engines/ops_incident_engine.py"
       l2_api:
         - "/backend/app/api/founder_actions.py"
         - "/backend/app/api/founder_review.py"
@@ -494,6 +501,34 @@ capabilities:
         - "/backend/app/hoc/int/agent/engines/registry_engine.py"
         - "/backend/app/hoc/int/agent/engines/governance_engine.py"
         - "/backend/app/hoc/int/agent/engines/invoke_audit_engine.py"
+        - "/backend/app/hoc/int/agent/engines/__init__.py"
+        - "/backend/app/hoc/int/agent/engines/ai_console_panel_engine.py"
+        - "/backend/app/hoc/int/agent/engines/blackboard_engine.py"
+        - "/backend/app/hoc/int/agent/engines/calendar_write.py"
+        - "/backend/app/hoc/int/agent/engines/definitions.py"
+        - "/backend/app/hoc/int/agent/engines/evolution.py"
+        - "/backend/app/hoc/int/agent/engines/http_call_v2.py"
+        - "/backend/app/hoc/int/agent/engines/integrated_runtime.py"
+        - "/backend/app/hoc/int/agent/engines/intent_guardrails.py"
+        - "/backend/app/hoc/int/agent/engines/json_transform.py"
+        - "/backend/app/hoc/int/agent/engines/json_transform_v2.py"
+        - "/backend/app/hoc/int/agent/engines/llm_engine.py"
+        - "/backend/app/hoc/int/agent/engines/llm_invoke_v2.py"
+        - "/backend/app/hoc/int/agent/engines/metrics.py"
+        - "/backend/app/hoc/int/agent/engines/panel_dependency_resolver.py"
+        - "/backend/app/hoc/int/agent/engines/panel_metrics_emitter.py"
+        - "/backend/app/hoc/int/agent/engines/panel_response_assembler.py"
+        - "/backend/app/hoc/int/agent/engines/panel_signal_collector.py"
+        - "/backend/app/hoc/int/agent/engines/panel_signal_translator.py"
+        - "/backend/app/hoc/int/agent/engines/panel_slot_evaluator.py"
+        - "/backend/app/hoc/int/agent/engines/panel_spec_loader.py"
+        - "/backend/app/hoc/int/agent/engines/panel_verification_engine.py"
+        - "/backend/app/hoc/int/agent/engines/postgres_query.py"
+        - "/backend/app/hoc/int/agent/engines/registry.py"
+        - "/backend/app/hoc/int/agent/engines/retry_policy.py"
+        - "/backend/app/hoc/int/agent/engines/semantic_validator.py"
+        - "/backend/app/hoc/int/agent/engines/service.py"
+        - "/backend/app/hoc/int/agent/engines/validator_engine.py"
 
     gaps: []  # No gaps - CLOSED (internal capability)
 
@@ -755,6 +790,7 @@ capabilities:
         - "/backend/app/memory/vector_store.py"
         - "/backend/app/memory/drift_detector.py"
         - "/backend/app/hoc/int/platform/drivers/memory_store.py"
+        - "/backend/app/hoc/int/platform/drivers/memory_driver.py"
       l2_api:
         - "/backend/app/api/memory_pins.py"
         - "/backend/app/api/embedding.py"                # PIN-311: Unmapped file resolution
@@ -857,6 +893,7 @@ capabilities:
         - "/backend/app/hoc/int/agent/engines/webhook_send.py"
         - "/backend/app/hoc/int/agent/engines/http_call_stub.py"
         - "/backend/app/hoc/int/agent/engines/llm_invoke_stub.py"
+        - "/backend/app/hoc/int/platform/engines/sandbox_engine.py"
       adapters:
         - "/backend/app/skills/adapters/claude_adapter.py"
         - "/backend/app/skills/adapters/openai_adapter.py"

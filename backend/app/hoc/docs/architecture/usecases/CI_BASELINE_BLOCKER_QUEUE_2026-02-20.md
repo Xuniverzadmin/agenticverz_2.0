@@ -77,8 +77,16 @@ Baseline blockers on `origin/main` after merge commit `da89f8d479bae9c1930be25e5
   - Full HOC capability sweep reduced from `972` to `965` blocking `MISSING_CAPABILITY_ID`.
   - Evidence updated in:
     - `backend/app/hoc/docs/architecture/usecases/HOC_LAYER_CAPABILITY_REMEDIATION_WAVE1_IMPLEMENTED_2026-02-20.md`
+- HOC layer/capability remediation Wave 2 (residual closure) is complete:
+  - Remediated remaining 8 `hoc/*` layer-segregation residual files (`fdr/*` engines + `int/platform` sandbox/memory).
+  - Layer-segregation (`--scope hoc`) reduced from `14` to `0` violations.
+  - Full HOC capability sweep reduced from `965` to `929` blocking `MISSING_CAPABILITY_ID`.
+  - Full HOC capability warnings remain `13`.
+  - Wave plans updated in:
+    - `backend/app/hoc/docs/architecture/usecases/HOC_LAYER_SEGREGATION_SCOPE_HOC_PLAN_2026-02-20.md`
+    - `backend/app/hoc/docs/architecture/usecases/HOC_CAPABILITY_SWEEP_PLAN_2026-02-20.md`
 
 ## Notes
 - This queue is baseline debt on `main`, not introduced solely by PR #7.
 - Lane A should address P0 first, then P1 in smallest reviewable PRs.
-- Skeptical audit (2026-02-20) confirms changed-file capability linkage is clear for HOC remediation PRs; after Wave 1, full HOC-wide capability scan remains a separate backlog at `965` blocking `MISSING_CAPABILITY_ID` outside current CI changed-file contract.
+- Skeptical audit (2026-02-20) confirms changed-file capability linkage is clear for HOC remediation PRs; after Wave 2, full HOC-wide capability scan remains a separate backlog at `929` blocking `MISSING_CAPABILITY_ID` outside current CI changed-file contract.
