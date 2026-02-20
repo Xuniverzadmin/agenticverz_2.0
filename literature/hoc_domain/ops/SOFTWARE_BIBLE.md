@@ -29,6 +29,11 @@
 - Backend startup diagnostics were added in workflow startup path to dump compose logs on slow/failed boot.
 - `truth_preflight.sh` Check 1 now retries `/health` deterministically and resolves backend path from repository root (no hardcoded runner path dependency).
 
+## Reality Delta (2026-02-20, Env Misuse Guard Baseline Realignment)
+
+- CI `env-misuse-guard` baseline count was realigned from stale `33` to measured legacy baseline `98`.
+- This restores delta-based enforcement (block net-new violations, track debt reduction) instead of failing on baseline drift.
+
 ## Reality Delta (2026-02-15, UAT Hardening Closure)
 
 - UC/UAT closure artifacts are complete (`PIN-564`, `PIN-565`) and ops founder route now includes UAT console under `/prefops/uat` and `/fops/uat`.
