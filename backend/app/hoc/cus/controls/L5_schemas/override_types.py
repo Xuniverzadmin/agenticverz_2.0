@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L5 — Domain Schema
 # AUDIENCE: CUSTOMER
 # Role: Override error type definitions (shared across L2 and L6)

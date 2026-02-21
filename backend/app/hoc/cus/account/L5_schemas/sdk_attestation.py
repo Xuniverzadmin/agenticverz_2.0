@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L5 — Schema
 # AUDIENCE: SHARED
 # Role: SDK attestation record — pure data schema for attestation persistence

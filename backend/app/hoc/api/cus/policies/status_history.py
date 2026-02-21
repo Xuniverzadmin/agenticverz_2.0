@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L2 — API
 # AUDIENCE: CUSTOMER
 # Product: system-wide

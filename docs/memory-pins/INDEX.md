@@ -558,6 +558,10 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-598](PIN-598-wave2-import-hygiene-batch2-api-auth-stabilization.md) | **Wave 2 Import Hygiene Batch 2 — API/Auth Stabilization** | Governance / CI / Auth Surface Stabilization | **✅ COMPLETE** | 2026-02-20 |
 | [PIN-599](PIN-599-wave2-import-hygiene-batch3-int-agent-cluster.md) | **Wave 2 Import Hygiene Batch 3 — INT/Agent Cluster** | Governance / CI / Runtime Hygiene | **✅ COMPLETE** | 2026-02-20 |
 | [PIN-600](PIN-600-wave2-import-hygiene-batch4-final-clear.md) | **Wave 2 Import Hygiene Batch 4 — Final Residual Clear** | Governance / CI / Runtime Hygiene | **✅ COMPLETE** | 2026-02-20 |
+| [PIN-601](PIN-601-cus-capability-sweep-c1-c4-closure.md) | **CUS Capability Sweep C1-C4 Closure** | Governance / CI / Capability Linkage | **✅ COMPLETE** | 2026-02-20 |
+| [PIN-602](PIN-602-hoc-blocker-queue-wave-w2-int-platform-agent-clearance.md) | **HOC Blocker Queue Wave W2 — INT Platform + Agent Clearance** | Governance / CI / Capability Linkage | **✅ COMPLETE** | 2026-02-20 |
+| [PIN-603](PIN-603-hoc-blocker-queue-wave-w3-int-general-worker-policies-clearance.md) | **HOC Blocker Queue Wave W3 — INT General + Worker + Policies Clearance** | Governance / CI / Capability Linkage | **✅ COMPLETE** | 2026-02-20 |
+| [PIN-604](PIN-604-hoc-blocker-queue-w4-w7-closure.md) | **HOC Blocker Queue W4-W7 Closure** | Governance / CI / Capability Linkage | **✅ COMPLETE** | 2026-02-21 |
 
 ---
 
@@ -1327,6 +1331,10 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-21 | **PIN-604 HOC Blocker Queue W4-W7 Closure** - Completed W4 (`280 -> 157`), W5 (`157 -> 74`), W6 (`74 -> 0`), and W7 closure audit (`0` blocking, `0` warnings) with layer/import/registry gates green. |
+| 2026-02-20 | **PIN-603 HOC Blocker Queue Wave W3 — INT General + Worker + Policies Clearance** - Executed W3 remediation for `backend/app/hoc/int/general/**` + `backend/app/hoc/int/worker/**` + `backend/app/hoc/int/policies/**` (`78` files), synchronized CAP-006/CAP-009/CAP-012 registry evidence, and reduced full-HOC capability backlog (`358 -> 280`) with warnings held at `0`. |
+| 2026-02-20 | **PIN-602 HOC Blocker Queue Wave W2 — INT Platform + Agent Clearance** - Executed W2 remediation for `backend/app/hoc/int/platform/**` + `backend/app/hoc/int/agent/**` (`91` files), synchronized CAP-008/CAP-012 registry evidence, and reduced full-HOC capability backlog (`449 -> 358`) with warnings held at `0`. |
+| 2026-02-20 | **PIN-601 CUS Capability Sweep C1-C4 Closure** - Completed Wave C1/C2/C3/C4 capability remediation and warning cleanup, reducing full-HOC capability backlog from `929 + 13` to `550 + 0` with changed-file gates remaining green. |
 | 2026-02-20 | **PIN-600 Wave 2 Import Hygiene Batch 4 — Final Residual Clear** - Remediated final 10 HOC residual files, synchronized CAP-007/CAP-009/CAP-010/CAP-012/CAP-014 evidence linkage, and reduced HOC import-hygiene backlog (`10 -> 0`) with CUS remaining `0`. |
 | 2026-02-20 | **PIN-599 Wave 2 Import Hygiene Batch 3 — INT/Agent Cluster** - Remediated 14 `backend/app/hoc/int/agent/**` files, synchronized CAP-008/CAP-016 evidence linkage, and reduced HOC import-hygiene backlog (`25 -> 11`) while holding CUS at `0`. |
 | 2026-02-20 | **PIN-598 Wave 2 Import Hygiene Batch 2 — API/Auth Stabilization** - Remediated 5 HOC API/auth files from relative to absolute imports, wired capability linkage + registry evidence (CAP-014/CAP-008/CAP-007), and reduced HOC import-hygiene backlog (`30 -> 25`). |

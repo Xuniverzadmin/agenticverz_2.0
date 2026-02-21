@@ -1,3 +1,4 @@
+# capability_id: CAP-006
 # Layer: L4 — Domain Engines (Authorization)
 # Product: system-wide
 # Temporal:

@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L5 — Domain Engine
 # AUDIENCE: FOUNDER
 # Role: Founder timeline decision record queries (READ-ONLY)
@@ -17,20 +18,23 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
-
 logger = logging.getLogger("nova.hoc.fdr.timeline_engine")
+
+
+def _sql_text(query: str):
+    from sqlalchemy import text as _text
+
+    return _text(query)
 
 
 class TimelineEngine:
     """READ-ONLY engine for decision record timeline."""
 
     async def fetch_run_data(
-        self, session: AsyncSession, *, run_id: str
+        self, session: Any, *, run_id: str
     ) -> Optional[dict[str, Any]]:
         result = await session.execute(
-            text("""
+            _sql_text("""
                 SELECT id, agent_id, goal, status, attempts, max_attempts,
                     error_message, priority, tenant_id, idempotency_key,
                     parent_run_id, created_at, started_at, completed_at, duration_ms
@@ -53,10 +57,10 @@ class TimelineEngine:
         }
 
     async def fetch_decision_records(
-        self, session: AsyncSession, *, run_id: str
+        self, session: Any, *, run_id: str
     ) -> list[dict[str, Any]]:
         result = await session.execute(
-            text("""
+            _sql_text("""
                 SELECT decision_id, decision_type, decision_source, decision_trigger,
                     decision_inputs, decision_outcome, decision_reason, run_id,
                     workflow_id, tenant_id, request_id, causal_role, decided_at, details
@@ -83,7 +87,7 @@ class TimelineEngine:
 
     async def fetch_all_decision_records(
         self,
-        session: AsyncSession,
+        session: Any,
         *,
         limit: int = 100,
         offset: int = 0,
@@ -101,7 +105,7 @@ class TimelineEngine:
         where_sql = " AND ".join(where_clauses)
 
         result = await session.execute(
-            text(f"""
+            _sql_text(f"""
                 SELECT decision_id, decision_type, decision_source, decision_trigger,
                     decision_inputs, decision_outcome, decision_reason, run_id,
                     workflow_id, tenant_id, request_id, causal_role, decided_at, details
@@ -128,10 +132,10 @@ class TimelineEngine:
         return records
 
     async def get_single_decision_record(
-        self, session: AsyncSession, *, decision_id: str
+        self, session: Any, *, decision_id: str
     ) -> Optional[dict[str, Any]]:
         result = await session.execute(
-            text("""
+            _sql_text("""
                 SELECT decision_id, decision_type, decision_source, decision_trigger,
                     decision_inputs, decision_outcome, decision_reason, run_id,
                     workflow_id, tenant_id, request_id, causal_role, decided_at, details
@@ -157,7 +161,7 @@ class TimelineEngine:
 
     async def count_decision_records(
         self,
-        session: AsyncSession,
+        session: Any,
         *,
         decision_type: Optional[str] = None,
         tenant_id: Optional[str] = None,
@@ -173,7 +177,7 @@ class TimelineEngine:
         where_sql = " AND ".join(where_clauses)
 
         result = await session.execute(
-            text(f"SELECT COUNT(*) FROM contracts.decision_records WHERE {where_sql}"),
+            _sql_text(f"SELECT COUNT(*) FROM contracts.decision_records WHERE {where_sql}"),
             params,
         )
         return result.scalar() or 0

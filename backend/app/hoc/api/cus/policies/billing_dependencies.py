@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L2 — API
 # AUDIENCE: CUSTOMER
 # Role: Phase-6 Billing FastAPI dependencies

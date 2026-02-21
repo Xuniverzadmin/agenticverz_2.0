@@ -1,3 +1,4 @@
+# capability_id: CAP-011
 # Layer: L4 — hoc_spine Authority
 # AUDIENCE: SHARED
 # Role: Onboarding gate policy — endpoint-to-state mapping

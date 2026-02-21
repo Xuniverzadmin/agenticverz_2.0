@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L2b -- Public API (Tenant-scoped, NOT console-only)
 # Product: system-wide (BOUNDARY VIOLATION if labeled ai-console)
 # Auth: get_tenant_context + requires_feature (tier-gating)

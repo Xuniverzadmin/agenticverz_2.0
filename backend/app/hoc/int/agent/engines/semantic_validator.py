@@ -1,3 +1,4 @@
+# capability_id: CAP-008
 # Layer: L2.1 — Panel Adapter Layer
 # Product: ai-console
 # Role: Semantic validation gate — enforce semantic authority

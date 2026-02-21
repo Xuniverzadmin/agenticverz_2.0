@@ -1,3 +1,4 @@
+# capability_id: CAP-008
 # adapters/openai_adapter.py
 # Layer: L3 — Boundary Adapter
 # Product: system-wide

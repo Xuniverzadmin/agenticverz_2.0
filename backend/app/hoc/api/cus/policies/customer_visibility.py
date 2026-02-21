@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L2a — Product API (Console-scoped)
 # Product: AI Console
 # Auth: verify_api_key

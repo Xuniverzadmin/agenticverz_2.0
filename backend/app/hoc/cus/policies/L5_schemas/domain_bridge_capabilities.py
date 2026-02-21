@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L5 — Domain Schemas
 # AUDIENCE: CUSTOMER
 # Role: Capability Protocols for cross-domain access via DomainBridge

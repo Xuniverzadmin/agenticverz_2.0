@@ -1,3 +1,4 @@
+# capability_id: CAP-002
 # Layer: L5 — Domain Schema
 # AUDIENCE: CUSTOMER
 # Role: Protocol and DTOs for cost anomaly detection

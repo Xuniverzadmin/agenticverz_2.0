@@ -1,3 +1,4 @@
+# capability_id: CAP-001
 # Layer: L6 — Domain Driver
 # NOTE: Renamed capture.py → capture_driver.py (2026-01-31)
 # AUDIENCE: CUSTOMER

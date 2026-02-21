@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L5 — Domain Engine
 # AUDIENCE: FOUNDER
 # Role: Founder AUTO_EXECUTE review queries (READ + audit writes)
@@ -18,10 +19,13 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
-
 logger = logging.getLogger("nova.hoc.fdr.review_engine")
+
+
+def _sql_text(query: str):
+    from sqlalchemy import text as _text
+
+    return _text(query)
 
 
 class ReviewEngine:
@@ -29,7 +33,7 @@ class ReviewEngine:
 
     async def emit_audit_event(
         self,
-        session: AsyncSession,
+        session: Any,
         *,
         founder_id: str,
         action: str,
@@ -39,7 +43,7 @@ class ReviewEngine:
     ) -> None:
         try:
             await session.execute(
-                text("""
+                _sql_text("""
                     INSERT INTO audit_events (
                         event_type, actor_id, actor_type, resource_type,
                         resource_id, action, details, created_at
@@ -62,7 +66,7 @@ class ReviewEngine:
 
     async def list_auto_execute_decisions(
         self,
-        session: AsyncSession,
+        session: Any,
         *,
         start_dt: datetime,
         end_dt: datetime,
@@ -112,7 +116,7 @@ class ReviewEngine:
         # Count
         count_query = f"SELECT COUNT(*) FROM ({base_query}) as subq"
         try:
-            total_count = (await session.execute(text(count_query), params)).scalar() or 0
+            total_count = (await session.execute(_sql_text(count_query), params)).scalar() or 0
         except Exception as e:
             logger.warning(f"Auto-execute query failed (table may not exist): {e}")
             return {"items": [], "total_count": 0, "page": page, "page_size": page_size,
@@ -124,7 +128,7 @@ class ReviewEngine:
         params["offset"] = offset
 
         try:
-            rows = (await session.execute(text(paginated_query), params)).fetchall()
+            rows = (await session.execute(_sql_text(paginated_query), params)).fetchall()
         except Exception:
             rows = []
 
@@ -173,7 +177,7 @@ class ReviewEngine:
 
     async def get_auto_execute_stats(
         self,
-        session: AsyncSession,
+        session: Any,
         *,
         start_dt: datetime,
         end_dt: datetime,
@@ -195,7 +199,7 @@ class ReviewEngine:
             AND e.timestamp >= :start_time AND e.timestamp <= :end_time {tenant_filter}
         """
         try:
-            counts = (await session.execute(text(count_q), params)).fetchone()
+            counts = (await session.execute(_sql_text(count_q), params)).fetchone()
             total = counts.total or 0
             executed = counts.executed or 0
             skipped = counts.skipped or 0
@@ -220,7 +224,7 @@ class ReviewEngine:
         """
         confidence_distribution: dict[str, int] = {}
         try:
-            for row in (await session.execute(text(conf_q), params)).fetchall():
+            for row in (await session.execute(_sql_text(conf_q), params)).fetchall():
                 confidence_distribution[row.bucket] = row.count
         except Exception:
             pass
@@ -235,7 +239,7 @@ class ReviewEngine:
         """
         flag_counts: dict[str, int] = {}
         try:
-            for row in (await session.execute(text(flag_q), params)).fetchall():
+            for row in (await session.execute(_sql_text(flag_q), params)).fetchall():
                 flag_counts[row.flag] = row.count
         except Exception:
             pass
@@ -251,7 +255,7 @@ class ReviewEngine:
         """
         daily_counts: list[dict[str, Any]] = []
         try:
-            for row in (await session.execute(text(daily_q), params)).fetchall():
+            for row in (await session.execute(_sql_text(daily_q), params)).fetchall():
                 daily_counts.append({
                     "date": row.date.isoformat() if row.date else "",
                     "executed": row.executed or 0,
@@ -269,7 +273,7 @@ class ReviewEngine:
         }
 
     async def get_single_decision(
-        self, session: AsyncSession, *, invocation_id: str
+        self, session: Any, *, invocation_id: str
     ) -> Optional[dict[str, Any]]:
         query = """
             SELECT e.invocation_id, e.envelope_id, e.timestamp, e.tenant_id,
@@ -283,7 +287,7 @@ class ReviewEngine:
             WHERE e.invocation_id = :invocation_id AND e.capability_id = 'SUB-019'
         """
         try:
-            row = (await session.execute(text(query), {"invocation_id": invocation_id})).fetchone()
+            row = (await session.execute(_sql_text(query), {"invocation_id": invocation_id})).fetchone()
         except Exception:
             return None
         if not row:

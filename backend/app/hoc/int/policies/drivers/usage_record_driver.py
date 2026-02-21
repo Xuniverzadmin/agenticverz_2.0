@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L6 — Domain Driver
 # AUDIENCE: INTERNAL
 # Role: Usage record persistence driver - writes UsageRecord to DB

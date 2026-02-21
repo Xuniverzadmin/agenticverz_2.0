@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L4 — Domain Services
 # AUDIENCE: FOUNDER
 # Role: Founder/admin domain services package

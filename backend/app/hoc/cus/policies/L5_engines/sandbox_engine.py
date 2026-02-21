@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L5 — Domain Engine
 # AUDIENCE: INTERNAL
 # PHASE: W2

@@ -1,3 +1,4 @@
+# capability_id: CAP-011
 # Layer: L4 — Authority Policy (Veil Controls)
 """
 Veil controls reduce attack-surface observability.

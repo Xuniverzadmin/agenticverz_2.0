@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L5 — Domain Engine
 # NOTE: Renamed cb_sync_wrapper.py → cb_sync_wrapper_engine.py (2026-01-31) per BANNED_NAMING rule
 # AUDIENCE: CUSTOMER

@@ -1,3 +1,4 @@
+# capability_id: CAP-001
 # Layer: L6 — Database Drivers
 # AUDIENCE: CUSTOMER
 # Role: Database drivers for logs domain - pure data access, returns snapshots

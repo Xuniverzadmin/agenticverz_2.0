@@ -1,3 +1,4 @@
+# capability_id: CAP-006
 # Layer: L6 — Driver
 # AUDIENCE: CUSTOMER
 # Role: Core runtime execution (StructuredOutcome, never throws)

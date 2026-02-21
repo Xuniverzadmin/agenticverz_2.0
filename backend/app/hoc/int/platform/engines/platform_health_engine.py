@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L5 — Engine
 # AUDIENCE: INTERNAL
 # Product: system-wide

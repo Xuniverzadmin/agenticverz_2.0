@@ -1,3 +1,4 @@
+# capability_id: CAP-008
 # Layer: L6 — Driver
 # AUDIENCE: CUSTOMER
 # Role: LLM service adapter for business builder

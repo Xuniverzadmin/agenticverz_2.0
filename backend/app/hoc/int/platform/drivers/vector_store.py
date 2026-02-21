@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L6 — Domain Driver
 # AUDIENCE: INTERNAL
 # Role: pgvector-backed memory store for semantic search.

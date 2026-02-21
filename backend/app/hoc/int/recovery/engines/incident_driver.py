@@ -1,3 +1,4 @@
+# capability_id: CAP-010
 # Layer: L4 — Domain Driver
 # AUDIENCE: INTERNAL
 # Product: system-wide

@@ -1,3 +1,4 @@
+# capability_id: CAP-008
 # Layer: L6 — Driver
 # Product: system-wide
 # Callers: Multiple products (founder console, ops console)

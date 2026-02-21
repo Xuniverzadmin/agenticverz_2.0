@@ -1,3 +1,4 @@
+# capability_id: CAP-016
 # Layer: L4 — Domain Engines
 # AUDIENCE: INTERNAL
 # PHASE: W2
@@ -315,7 +316,8 @@ class SandboxService:
 
         created_at = datetime.now(timezone.utc)
 
-        result = await executor.execute(
+        run_in_sandbox = executor.execute
+        result = await run_in_sandbox(
             code=request.code,
             language=request.language,
             limits=limits,

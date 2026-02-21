@@ -1,3 +1,4 @@
+# capability_id: CAP-002
 # Layer: L6 — Domain Drivers
 # AUDIENCE: CUSTOMER
 # Role: Analytics domain data access drivers

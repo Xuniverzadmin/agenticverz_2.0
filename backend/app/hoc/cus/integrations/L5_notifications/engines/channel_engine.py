@@ -1,3 +1,4 @@
+# capability_id: CAP-018
 # Layer: L4 — Domain Engine
 # AUDIENCE: CUSTOMER
 # Product: system-wide

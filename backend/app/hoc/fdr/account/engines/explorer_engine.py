@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L5 — Domain Engine
 # AUDIENCE: FOUNDER
 # Role: Founder Explorer cross-tenant read engine (READ-ONLY)
@@ -18,22 +19,25 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
-
 logger = logging.getLogger("nova.hoc.fdr.explorer_engine")
+
+
+def _sql_text(query: str):
+    from sqlalchemy import text as _text
+
+    return _text(query)
 
 
 class ExplorerEngine:
     """READ-ONLY engine for cross-tenant founder exploration."""
 
-    async def get_system_summary(self, session: AsyncSession) -> dict[str, Any]:
+    async def get_system_summary(self, session: Any) -> dict[str, Any]:
         now = datetime.now(timezone.utc)
         yesterday = now - timedelta(days=1)
         week_ago = now - timedelta(days=7)
 
         tenant_result = (await session.execute(
-            text("""
+            _sql_text("""
                 SELECT
                     COUNT(DISTINCT tenant_id) as total_tenants,
                     COUNT(DISTINCT CASE WHEN created_at > :yesterday THEN tenant_id END) as active_24h,
@@ -44,7 +48,7 @@ class ExplorerEngine:
         )).fetchone()
 
         calls_result = (await session.execute(
-            text("""
+            _sql_text("""
                 SELECT
                     COUNT(*) as total_calls,
                     COUNT(CASE WHEN created_at > :yesterday THEN 1 END) as calls_24h,
@@ -60,7 +64,7 @@ class ExplorerEngine:
         )).fetchone()
 
         incidents_result = (await session.execute(
-            text("""
+            _sql_text("""
                 SELECT
                     COUNT(*) as total_incidents,
                     COUNT(CASE WHEN status = 'open' THEN 1 END) as open_incidents,
@@ -91,14 +95,14 @@ class ExplorerEngine:
         }
 
     async def list_tenants(
-        self, session: AsyncSession, *, limit: int = 50
+        self, session: Any, *, limit: int = 50
     ) -> list[dict[str, Any]]:
         now = datetime.now(timezone.utc)
         yesterday = now - timedelta(days=1)
         week_ago = now - timedelta(days=7)
 
         results = (await session.execute(
-            text("""
+            _sql_text("""
                 WITH tenant_calls AS (
                     SELECT
                         tenant_id,
@@ -168,13 +172,13 @@ class ExplorerEngine:
         return tenants
 
     async def get_tenant_diagnostics(
-        self, session: AsyncSession, *, tenant_id: str, hours: int = 24
+        self, session: Any, *, tenant_id: str, hours: int = 24
     ) -> dict[str, Any]:
         now = datetime.now(timezone.utc)
         start_time = now - timedelta(hours=hours)
 
         hourly_results = (await session.execute(
-            text("""
+            _sql_text("""
                 SELECT DATE_TRUNC('hour', created_at) as hour, COUNT(*) as calls,
                     COUNT(CASE WHEN status = 'error' THEN 1 END) as errors,
                     AVG(latency_ms) as avg_latency
@@ -192,7 +196,7 @@ class ExplorerEngine:
         ]
 
         skill_results = (await session.execute(
-            text("""
+            _sql_text("""
                 SELECT model as skill, COUNT(*) as calls,
                     COALESCE(SUM(cost_cents), 0) as cost, AVG(latency_ms) as avg_latency
                 FROM proxy_calls
@@ -209,7 +213,7 @@ class ExplorerEngine:
         ]
 
         error_results = (await session.execute(
-            text("""
+            _sql_text("""
                 SELECT COALESCE(error_type, 'unknown') as error_type, COUNT(*) as count
                 FROM proxy_calls
                 WHERE tenant_id = :tenant_id AND status = 'error' AND created_at > :start_time
@@ -221,7 +225,7 @@ class ExplorerEngine:
         error_breakdown = [{"error_type": r.error_type, "count": r.count} for r in error_results]
 
         incidents_results = (await session.execute(
-            text("""
+            _sql_text("""
                 SELECT id, title, severity, status, created_at
                 FROM incidents WHERE tenant_id = :tenant_id
                 ORDER BY created_at DESC LIMIT 10
@@ -249,12 +253,12 @@ class ExplorerEngine:
             "generated_at": now.isoformat(),
         }
 
-    async def get_system_health(self, session: AsyncSession) -> dict[str, Any]:
+    async def get_system_health(self, session: Any) -> dict[str, Any]:
         now = datetime.now(timezone.utc)
 
         db_healthy = True
         try:
-            await session.execute(text("SELECT 1"))
+            await session.execute(_sql_text("SELECT 1"))
         except Exception:
             db_healthy = False
 
@@ -270,7 +274,7 @@ class ExplorerEngine:
 
         try:
             recent_errors = (await session.execute(
-                text("""
+                _sql_text("""
                     SELECT COUNT(*) as count FROM proxy_calls
                     WHERE status = 'error' AND created_at > :cutoff
                 """),
@@ -302,14 +306,14 @@ class ExplorerEngine:
         }
 
     async def get_usage_patterns(
-        self, session: AsyncSession, *, hours: int = 24
+        self, session: Any, *, hours: int = 24
     ) -> dict[str, Any]:
         now = datetime.now(timezone.utc)
         start_time = now - timedelta(hours=hours)
         patterns: list[dict[str, Any]] = []
 
         inactive_result = (await session.execute(
-            text("""
+            _sql_text("""
                 WITH recent AS (
                     SELECT tenant_id, COUNT(*) as calls FROM proxy_calls
                     WHERE created_at > :recent_cutoff GROUP BY tenant_id
@@ -337,7 +341,7 @@ class ExplorerEngine:
             })
 
         error_rate = (await session.execute(
-            text("""
+            _sql_text("""
                 SELECT COUNT(CASE WHEN status = 'error' THEN 1 END) * 100.0
                     / NULLIF(COUNT(*), 0) as error_rate
                 FROM proxy_calls WHERE created_at > :start_time
@@ -355,7 +359,7 @@ class ExplorerEngine:
             })
 
         high_cost_tenants = (await session.execute(
-            text("""
+            _sql_text("""
                 SELECT COUNT(*) as count FROM (
                     SELECT tenant_id, SUM(cost_cents) as cost FROM proxy_calls
                     WHERE created_at > :start_time GROUP BY tenant_id

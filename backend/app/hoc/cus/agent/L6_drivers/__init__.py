@@ -1,3 +1,4 @@
+# capability_id: CAP-008
 # Layer: L6 — Domain Drivers
 # AUDIENCE: INTERNAL
 # Product: system-wide

@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L4 — Domain Services
 # AUDIENCE: INTERNAL
 # Role: internal/platform/iam - IAM infrastructure for internal callers

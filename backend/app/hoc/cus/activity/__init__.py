@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L4 — Domain Services
 # AUDIENCE: CUSTOMER
 # Role: Activity domain - Execution monitoring

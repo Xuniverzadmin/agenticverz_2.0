@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L4 — HOC Spine (Schema)
 # AUDIENCE: INTERNAL
 # Role: Unified authority decision schema for all L4 authority checks

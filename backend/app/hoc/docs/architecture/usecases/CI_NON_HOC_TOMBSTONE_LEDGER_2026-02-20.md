@@ -60,39 +60,11 @@ Record non-`hoc/*` CI violations moved to legacy tombstone status so active reme
 | `backend/scripts/ci/check_priority5_intent.py` | missing capability ID header |
 | `scripts/ops/lint_sqlmodel_patterns.py` | missing capability ID header |
 
-## Active HOC Backlog (Still Blocking)
-- Layer segregation (`--scope hoc`): **93** violations
-- Import hygiene (`backend/app/hoc/**`): **0** files with relative imports (Wave 2 complete)
-- Capability linkage (`MISSING_CAPABILITY_ID` in hoc files): **0** files (resolved in Wave 1)
+## Active HOC Backlog
+Active `backend/app/hoc/**` blocker tracking has been split out to:
 
-### HOC Layer-Segregation File Set (15 files)
-| File |
-|---|
-| `backend/app/hoc/fdr/account/engines/explorer_engine.py` |
-| `backend/app/hoc/fdr/incidents/engines/ops_incident_engine.py` |
-| `backend/app/hoc/fdr/logs/engines/review_engine.py` |
-| `backend/app/hoc/fdr/logs/engines/timeline_engine.py` |
-| `backend/app/hoc/fdr/ops/engines/founder_action_write_engine.py` |
-| `backend/app/hoc/fdr/ops/engines/ops_incident_engine.py` |
-| `backend/app/hoc/int/agent/engines/credit_engine.py` |
-| `backend/app/hoc/int/agent/engines/governance_engine.py` |
-| `backend/app/hoc/int/agent/engines/invoke_audit_engine.py` |
-| `backend/app/hoc/int/agent/engines/job_engine.py` |
-| `backend/app/hoc/int/agent/engines/message_engine.py` |
-| `backend/app/hoc/int/agent/engines/registry_engine.py` |
-| `backend/app/hoc/int/agent/engines/worker_engine.py` |
-| `backend/app/hoc/int/platform/drivers/memory_driver.py` |
-| `backend/app/hoc/int/platform/engines/sandbox_engine.py` |
-
-### HOC Relative-Import File Set (0 files)
-| File |
-|---|
-| _None (Wave 2 batch 4 remediation completed on 2026-02-20)_ |
-
-### HOC Capability-Linkage Missing ID File Set (0 files, resolved)
-| File |
-|---|
-| _None (Wave 1 remediation completed on 2026-02-20)_ |
+- `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+- `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
 
 ## Reproduction Commands
 ```bash
@@ -104,11 +76,6 @@ grep -r "from \\.\\." backend/app/hoc --include='*.py' | cut -d: -f1 | sort -u
 
 python3 scripts/ops/capability_registry_enforcer.py check-pr --files \
   backend/alembic/versions/128_monitoring_activity_feedback_contracts.py \
-  backend/app/hoc/cus/integrations/cus_cli.py \
-  backend/app/hoc/int/agent/drivers/json_transform_stub.py \
-  backend/app/hoc/int/agent/drivers/registry_v2.py \
-  backend/app/hoc/int/agent/engines/http_call_stub.py \
-  backend/app/hoc/int/agent/engines/llm_invoke_stub.py \
   backend/app/skills/registry_v2.py \
   backend/scripts/ci/check_priority5_intent.py \
   scripts/ops/lint_sqlmodel_patterns.py

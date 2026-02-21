@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L2 — API
 # AUDIENCE: FOUNDER
 # Product: system-wide

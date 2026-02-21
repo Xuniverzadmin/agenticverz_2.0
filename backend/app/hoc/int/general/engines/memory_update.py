@@ -1,3 +1,4 @@
+# capability_id: CAP-006
 # Layer: L5 — Execution & Workers
 # Product: system-wide
 # Temporal:

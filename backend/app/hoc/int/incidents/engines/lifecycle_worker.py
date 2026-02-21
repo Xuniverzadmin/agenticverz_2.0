@@ -1,3 +1,4 @@
+# capability_id: CAP-001
 # Layer: L5 — Execution & Workers
 # AUDIENCE: INTERNAL
 # PHASE: W1

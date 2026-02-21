@@ -1,3 +1,4 @@
+# capability_id: CAP-008
 # Layer: L4 — Engine
 # AUDIENCE: CUSTOMER
 # Role: Main orchestration engine for panel evaluation

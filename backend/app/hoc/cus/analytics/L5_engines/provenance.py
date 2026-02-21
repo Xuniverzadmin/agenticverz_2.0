@@ -1,3 +1,4 @@
+# capability_id: CAP-002
 # Layer: L5 — Domain Engine
 # NOTE: Renamed provenance.py → provenance_engine.py (2026-01-31) → provenance.py (2026-02-08, orphan demotion)
 # AUDIENCE: CUSTOMER

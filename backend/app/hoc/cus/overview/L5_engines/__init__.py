@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L5 — Domain Engines
 # AUDIENCE: CUSTOMER
 # Role: Overview domain engines - business logic composition

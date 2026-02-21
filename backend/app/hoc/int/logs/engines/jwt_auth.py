@@ -1,3 +1,4 @@
+# capability_id: CAP-001
 # Layer: L2 — API
 # AUDIENCE: CUSTOMER
 # Role: JWT token validation and parsing

@@ -89,6 +89,10 @@
 - CI baseline remediation scope was constrained to `backend/app/hoc/**` for active blocker closure.
 - Non-`hoc/*` legacy debt is tombstoned and tracked in:
   - `backend/app/hoc/docs/architecture/usecases/CI_NON_HOC_TOMBSTONE_LEDGER_2026-02-20.md`
+- Active `hoc/*` blocker backlog is tracked separately in:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+- Active `hoc/*` wave execution plan is tracked in:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
 - Guard/workflow scope updates:
   - `scripts/ops/layer_segregation_guard.py` supports `--scope hoc`
   - `.github/workflows/layer-segregation.yml` runs HOC-scoped enforcement
@@ -172,6 +176,120 @@
   - Updated capability evidence mapping in `docs/capabilities/CAPABILITY_REGISTRY.yaml`
 - Wave artifact:
   - `backend/app/hoc/docs/architecture/usecases/HOC_IMPORT_HYGIENE_WAVE2_BATCH4_REMAINING_CLUSTER_2026-02-20.md`
+
+## Reality Delta (2026-02-20, HOC CUS Capability Sweep Wave C1-C4 Closure)
+
+- CUS capability remediation was executed in four deterministic waves and is now closed for this lane.
+- Measured full-HOC capability sweep movement:
+  - baseline: blocking `929`, warnings `13`
+  - after C1: blocking `851`, warnings `13`
+  - after C2: blocking `728`, warnings `11`
+  - after C3: blocking `550`, warnings `11`
+  - after C4: blocking `550`, warnings `0`
+- Wave C4 completed warning cleanup (`MISSING_EVIDENCE`) for CAP-001/CAP-006/CAP-018 evidence mappings in the registry.
+- Tracking artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_CUS_CAPABILITY_SWEEP_WAVES_PLAN_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/CI_BASELINE_BLOCKER_QUEUE_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/CI_NON_HOC_TOMBSTONE_LEDGER_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
+  - `docs/memory-pins/PIN-601-cus-capability-sweep-c1-c4-closure.md`
+
+## Reality Delta (2026-02-20, HOC Blocker Queue Wave W1 hoc_spine Clearance)
+
+- Wave W1 remediated `backend/app/hoc/cus/hoc_spine/**` capability-linkage backlog (`101` files).
+- Capability mapping applied:
+  - `CAP-011` for `auth_wiring.py` + `authority/**`
+  - `CAP-012` for the remaining `hoc_spine/**` files
+- Capability registry evidence was synchronized for CAP-011/CAP-012 engine evidence entries.
+- Measured result:
+  - full HOC blocking backlog: `550 -> 449`
+  - full HOC warnings: `0 -> 0`
+- Tracking artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W1_HOC_SPINE_IMPLEMENTED_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+
+## Reality Delta (2026-02-20, HOC Blocker Queue Wave W2 int/platform + int/agent Clearance)
+
+- Wave W2 remediated capability-linkage backlog in:
+  - `backend/app/hoc/int/platform/**`
+  - `backend/app/hoc/int/agent/**`
+  - (`91` files total)
+- Capability mapping applied:
+  - `CAP-008` for `int/agent/**`
+  - `CAP-012` for `int/platform/**`
+- Capability registry evidence was synchronized for CAP-008/CAP-012 entries.
+- Measured result:
+  - full HOC blocking backlog: `449 -> 358`
+  - full HOC warnings: `0 -> 0`
+- Tracking artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W2_INT_PLATFORM_AGENT_IMPLEMENTED_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+
+## Reality Delta (2026-02-20, HOC Blocker Queue Wave W3 int/general + int/worker + int/policies Clearance)
+
+- Wave W3 remediated capability-linkage backlog in:
+  - `backend/app/hoc/int/general/**`
+  - `backend/app/hoc/int/worker/**`
+  - `backend/app/hoc/int/policies/**`
+  - (`78` files total)
+- Capability mapping applied:
+  - `CAP-006` for `int/general/**`
+  - `CAP-012` for `int/worker/**`
+  - `CAP-009` for `int/policies/**`
+- Capability registry evidence was synchronized for CAP-006/CAP-009/CAP-012 entries.
+- Measured result:
+  - full HOC blocking backlog: `358 -> 280`
+  - full HOC warnings: `0 -> 0`
+- Tracking artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W3_INT_GENERAL_WORKER_POLICIES_IMPLEMENTED_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+
+## Reality Delta (2026-02-21, HOC Blocker Queue Wave W4 CUS Domains Clearance)
+
+- Wave W4 remediated CUS internal clusters (`123` files):
+  - `cus/account`, `cus/activity`, `cus/controls`, `cus/policies`, `cus/api_keys`, `cus/overview`, `cus/ops`, `cus/agent`, `cus/apis`, `cus/__init__.py`
+- Measured result:
+  - full HOC blocking backlog: `280 -> 157`
+  - full HOC warnings: `0 -> 0`
+- Tracking artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W4_CUS_DOMAINS_IMPLEMENTED_2026-02-21.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+
+## Reality Delta (2026-02-21, HOC Blocker Queue Wave W5 API Lanes Clearance)
+
+- Wave W5 remediated API lane clusters (`83` files):
+  - `api/cus`, `api/facades`, `api/int`, `api/fdr`
+- Measured result:
+  - full HOC blocking backlog: `157 -> 74`
+  - full HOC warnings: `0 -> 0`
+- Tracking artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W5_API_LANES_IMPLEMENTED_2026-02-21.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+
+## Reality Delta (2026-02-21, HOC Blocker Queue Wave W6 Long-Tail Clearance)
+
+- Wave W6 remediated INT/FDR long-tail clusters (`74` files).
+- Measured result:
+  - full HOC blocking backlog: `74 -> 0`
+  - full HOC warnings: `0 -> 0`
+- Tracking artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W6_LONG_TAIL_IMPLEMENTED_2026-02-21.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+
+## Reality Delta (2026-02-21, HOC Blocker Queue Wave W7 Closure Audit)
+
+- Closure audit confirms:
+  - full capability sweep: `0` blocking, `0` warnings
+  - layer segregation (`--scope hoc`): pass (`0`)
+  - HOC strict relative imports: `0`
+  - registry validation: pass
+- Tracking artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W7_CLOSURE_AUDIT_IMPLEMENTED_2026-02-21.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
 
 ## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
 

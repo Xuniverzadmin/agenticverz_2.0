@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L6 — Domain Driver
 # AUDIENCE: INTERNAL
 # Product: system-wide (M25 Integration API)

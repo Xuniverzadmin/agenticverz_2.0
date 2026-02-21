@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
 # Role: Limits Simulation Engine (PIN-LIM-04)

@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L6 — Platform Substrate
 # AUDIENCE: CUSTOMER
 # Role: Overview domain drivers - pure data access

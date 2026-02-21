@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L3 — Boundary Adapter
 # Product: system-wide (Part-2 CRM Workflow)
 # Temporal:

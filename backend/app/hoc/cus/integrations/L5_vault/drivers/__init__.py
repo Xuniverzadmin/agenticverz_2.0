@@ -1,3 +1,4 @@
+# capability_id: CAP-018
 # Layer: L6 — Domain Drivers
 # AUDIENCE: INTERNAL
 # Role: Credential vault drivers package

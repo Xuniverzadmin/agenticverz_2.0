@@ -1,3 +1,4 @@
+# capability_id: CAP-011
 # Layer: L4 — hoc_spine Authority
 # AUDIENCE: SHARED
 # Role: Phase-9 tenant lifecycle provider (test harness + invariant reference)

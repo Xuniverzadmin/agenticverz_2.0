@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L6 — Driver
 # Product: system-wide
 # Wiring Type: executor

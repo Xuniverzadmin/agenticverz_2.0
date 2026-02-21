@@ -1,3 +1,4 @@
+# capability_id: CAP-001
 # Layer: L6 — Domain Driver
 # NOTE: Renamed audit_ledger_service_async.py → audit_ledger_driver.py (2026-01-31)
 # AUDIENCE: CUSTOMER

@@ -1,3 +1,4 @@
+# capability_id: CAP-008
 # Layer: L5/L6 — Domain
 # AUDIENCE: FOUNDER
 # Product: founder-console (fops.agenticverz.com)

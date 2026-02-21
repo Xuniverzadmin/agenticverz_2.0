@@ -1,3 +1,4 @@
+# capability_id: CAP-002
 # Layer: L5 — Domain Engine
 # NOTE: Renamed canary.py → canary_engine.py (2026-01-31)
 # AUDIENCE: CUSTOMER

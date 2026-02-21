@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # runtime/contracts.py
 """
 Contract Dataclasses for Machine-Native Runtime

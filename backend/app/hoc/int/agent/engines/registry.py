@@ -1,3 +1,4 @@
+# capability_id: CAP-008
 # Layer: L5 — Domain Engine
 # AUDIENCE: INTERNAL
 # Role: Protocol defining the skill interface.

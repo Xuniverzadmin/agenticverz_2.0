@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L6 — Domain Driver
 # NOTE: Renamed scoped_execution.py → scoped_execution_driver.py (2026-01-31) per BANNED_NAMING rule
 # AUDIENCE: CUSTOMER

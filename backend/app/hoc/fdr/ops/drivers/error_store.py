@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L6 — Driver
 # Product: founder-console
 # Temporal:

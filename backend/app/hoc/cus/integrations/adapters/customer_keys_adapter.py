@@ -1,3 +1,4 @@
+# capability_id: CAP-018
 # Layer: L3 — Boundary Adapter
 # AUDIENCE: CUSTOMER
 # Product: ai-console (Customer Console)

@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L2 — API
 # AUDIENCE: INTERNAL
 # Product: system-wide

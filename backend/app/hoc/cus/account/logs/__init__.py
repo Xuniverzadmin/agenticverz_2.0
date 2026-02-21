@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L5 — Domain (Account)
 # AUDIENCE: INTERNAL
 # Role: Account-owned CRM audit namespace (non-LLM-run logs)

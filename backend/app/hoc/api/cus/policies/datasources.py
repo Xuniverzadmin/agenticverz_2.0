@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L2 — Product APIs
 # Product: system-wide (NOT console-only - SDK users call this)
 # Temporal:

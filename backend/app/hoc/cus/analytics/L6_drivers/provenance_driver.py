@@ -1,3 +1,4 @@
+# capability_id: CAP-002
 # Layer: L6 — Domain Driver
 # NOTE: Renamed provenance_async.py → provenance_driver.py (2026-01-31)
 # AUDIENCE: CUSTOMER

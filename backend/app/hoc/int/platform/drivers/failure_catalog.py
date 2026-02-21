@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L6 — Driver
 # Failure Catalog (M4.5 + M9 Persistence)
 """

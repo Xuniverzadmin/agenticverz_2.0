@@ -1,3 +1,4 @@
+# capability_id: CAP-014
 # Layer: L6 — Domain Driver
 # AUDIENCE: INTERNAL
 # Role: Memory Service - M7 Implementation
@@ -69,7 +70,8 @@ MEMORY_CONTEXT_INJECTION_FAILURES = Counter(
     "memory_context_injection_failures_total", "Memory context injection failures", ["tenant_id", "reason"]
 )
 
-MEMORY_DRIFT_DETECTED = Counter("drift_detected_total", "Memory drift detection events", ["tenant_id", "severity"])
+MEMORY_DR_LABELS = ["tenant_id", "severity"]
+MEMORY_DRIFT_DETECTED = Counter("drift_detected_total", "Memory drift detection events", MEMORY_DR_LABELS)
 
 # Import DRIFT_SCORE from drift_detector to avoid duplicate registration
 # The metric "drift_score_current" is already registered there

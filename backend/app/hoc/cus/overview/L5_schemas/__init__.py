@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L5 — Domain Schemas
 # AUDIENCE: CUSTOMER
 # Role: Overview domain schemas - data types and contracts

@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # runtime/__init__.py
 """
 Machine-Native Runtime Interfaces (M1 + M2)

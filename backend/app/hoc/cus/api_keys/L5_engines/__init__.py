@@ -1,3 +1,4 @@
+# capability_id: CAP-006
 # Layer: L5 — Domain Engines
 # AUDIENCE: CUSTOMER
 # Role: API Keys domain engines - business logic composition

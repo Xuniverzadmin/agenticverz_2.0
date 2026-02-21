@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L5 — Schemas
 # AUDIENCE: FOUNDER
 # Role: Response/request schemas for stagetest evidence API

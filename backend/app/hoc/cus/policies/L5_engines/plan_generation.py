@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L4 — Domain Engine (System Truth)
 # AUDIENCE: CUSTOMER
 # Product: system-wide (NOT console-owned)

@@ -1,3 +1,4 @@
+# capability_id: CAP-008
 # Layer: L2.1 — Facade
 # AUDIENCE: INTERNAL
 # Role: Claude Adapter for LLM Invoke Skill (M3)

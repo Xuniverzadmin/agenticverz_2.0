@@ -1,3 +1,4 @@
+# capability_id: CAP-002
 # Layer: L5 — Domain Engine
 # NOTE: Renamed costsim_models.py → costsim_models_engine.py (2026-01-31) → costsim_models.py (2026-02-08, orphan demotion)
 # AUDIENCE: CUSTOMER

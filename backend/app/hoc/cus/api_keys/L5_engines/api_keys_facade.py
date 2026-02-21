@@ -1,3 +1,4 @@
+# capability_id: CAP-006
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
 # Product: ai-console

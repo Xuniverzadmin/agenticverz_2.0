@@ -1,3 +1,4 @@
+# capability_id: CAP-001
 # Layer: L5 — Domain Schema
 # AUDIENCE: INTERNAL
 # Role: Decision contract for incident creation — L6 depends on this, L5 implements it

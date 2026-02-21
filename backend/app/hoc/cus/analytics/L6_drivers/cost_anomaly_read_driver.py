@@ -1,3 +1,4 @@
+# capability_id: CAP-002
 # Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Product: system-wide

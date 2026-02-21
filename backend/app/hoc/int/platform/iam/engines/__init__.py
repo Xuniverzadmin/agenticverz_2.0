@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L4 — Domain Engines
 # AUDIENCE: INTERNAL
 # Role: internal/platform/iam/engines - IAM engines for internal callers

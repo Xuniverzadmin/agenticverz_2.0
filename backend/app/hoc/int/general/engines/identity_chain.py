@@ -1,3 +1,4 @@
+# capability_id: CAP-006
 # Layer: L2 — API
 # AUDIENCE: CUSTOMER
 # Role: Unified identity extraction via adapter chain

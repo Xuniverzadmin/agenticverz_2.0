@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L4 — HOC Spine (Utilities)
 # AUDIENCE: SHARED
 # Role: Pure decision utilities — cross-domain policy functions (no side effects)

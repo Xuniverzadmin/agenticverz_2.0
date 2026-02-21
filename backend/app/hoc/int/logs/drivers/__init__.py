@@ -1,3 +1,4 @@
+# capability_id: CAP-001
 # Layer: L6 — Platform Substrate
 # Product: system-wide
 # Role: Core module - foundational primitives

@@ -1,3 +1,4 @@
+# capability_id: CAP-006
 # Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Role: Keys Driver - Pure data access for API key engine operations
