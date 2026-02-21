@@ -1,0 +1,7 @@
+domain,method,path,operation_id,summary,tags,auth_required,auth_schemes,request_schema,response_schema
+overview,GET,/hoc/api/cus/overview/costs,get_costs,Cost intelligence summary. Tenant-scoped.,overview,unknown,,,CostsResponse
+overview,GET,/hoc/api/cus/overview/decisions,get_decisions,Pending decisions from incidents and policy proposals. Tenant-scoped.,overview,unknown,,,DecisionsResponse
+overview,GET,/hoc/api/cus/overview/decisions/count,get_decisions_count,Decisions count by domain and priority. Tenant-scoped.,overview,unknown,,,DecisionsCountResponse
+overview,GET,/hoc/api/cus/overview/highlights,get_highlights,System pulse and domain counts. Tenant-scoped.,overview,unknown,,,HighlightsResponse
+overview,GET,/hoc/api/cus/overview/highlights,get_overview_highlights_public,,cus-overview-public,unknown,,,OverviewHighlightsPublicResponse
+overview,GET,/hoc/api/cus/overview/recovery-stats,get_recovery_stats,Recovery statistics from incidents. Tenant-scoped.,overview,unknown,,,RecoveryStatsResponse

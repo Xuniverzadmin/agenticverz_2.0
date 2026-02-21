@@ -1,0 +1,8 @@
+domain,method,path,operation_id,summary,tags,auth_required,auth_schemes,request_schema,response_schema
+controls,GET,/hoc/api/cus/controls,list_controls,List controls (GAP-123).,Controls,unknown,,,"Dict[str, Any]"
+controls,GET,/hoc/api/cus/controls/list,list_controls_public,,cus-controls-public,unknown,,,ControlsListResponse
+controls,GET,/hoc/api/cus/controls/status,get_status,Get overall control status.,Controls,unknown,,,"Dict[str, Any]"
+controls,GET,/hoc/api/cus/controls/{control_id},get_control,Get a specific control.,Controls,unknown,,,"Dict[str, Any]"
+controls,PUT,/hoc/api/cus/controls/{control_id},update_control,Update a control.,Controls,unknown,,,"Dict[str, Any]"
+controls,POST,/hoc/api/cus/controls/{control_id}/disable,disable_control,Disable a control.,Controls,unknown,,,"Dict[str, Any]"
+controls,POST,/hoc/api/cus/controls/{control_id}/enable,enable_control,Enable a control.,Controls,unknown,,,"Dict[str, Any]"

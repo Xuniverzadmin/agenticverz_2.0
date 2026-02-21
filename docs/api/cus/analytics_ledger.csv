@@ -1,0 +1,35 @@
+domain,method,path,operation_id,summary,tags,auth_required,auth_schemes,request_schema,response_schema
+analytics,GET,/hoc/api/cus/analytics/_status,get_analytics_status,Analytics capability probe.,analytics,unknown,,,AnalyticsStatusResponse
+analytics,GET,/hoc/api/cus/analytics/health,analytics_health,Internal health check for analytics facade.,analytics,unknown,,,
+analytics,GET,/hoc/api/cus/analytics/statistics/cost,get_cost_statistics,Get cost statistics for the specified time window.,analytics,unknown,,,CostStatisticsResponse
+analytics,GET,/hoc/api/cus/analytics/statistics/cost/export.csv,export_cost_csv,Export cost statistics as CSV.,analytics,unknown,,,
+analytics,GET,/hoc/api/cus/analytics/statistics/cost/export.json,export_cost_json,Export cost statistics as JSON.,analytics,unknown,,,CostStatisticsResponse
+analytics,GET,/hoc/api/cus/analytics/statistics/usage,get_usage_statistics,Get usage statistics for the specified time window.,analytics,unknown,,,UsageStatisticsResponse
+analytics,GET,/hoc/api/cus/analytics/statistics/usage,get_usage_statistics_public,,cus-analytics-public,unknown,,,AnalyticsUsagePublicResponse
+analytics,GET,/hoc/api/cus/analytics/statistics/usage/export.csv,export_usage_csv,Export usage statistics as CSV.,analytics,unknown,,,
+analytics,GET,/hoc/api/cus/analytics/statistics/usage/export.json,export_usage_json,Export usage statistics as JSON.,analytics,unknown,,,UsageStatisticsResponse
+costsim,GET,/hoc/api/cus/costsim/canary/reports,get_canary_reports,Get recent canary run reports.,costsim,unknown,,,
+costsim,POST,/hoc/api/cus/costsim/canary/run,trigger_canary_run,Trigger a canary run on-demand.,costsim,unknown,,,CanaryRunResponse
+costsim,GET,/hoc/api/cus/costsim/datasets,list_datasets,List all available reference datasets.,costsim,unknown,,,List[DatasetInfo]
+costsim,POST,/hoc/api/cus/costsim/datasets/validate-all,validate_all,Validate V2 against ALL reference datasets.,costsim,unknown,,,
+costsim,GET,/hoc/api/cus/costsim/datasets/{dataset_id},get_dataset_info,Get information about a specific dataset.,costsim,unknown,,,
+costsim,POST,/hoc/api/cus/costsim/datasets/{dataset_id}/validate,validate_against_dataset,Validate V2 against a specific reference dataset.,costsim,unknown,,,ValidationResultResponse
+costsim,GET,/hoc/api/cus/costsim/divergence,get_divergence_report,Get cost divergence report between V1 and V2.,costsim,unknown,,,DivergenceReportResponse
+costsim,GET,/hoc/api/cus/costsim/v2/incidents,get_incidents,Get circuit breaker incidents.,costsim,unknown,,,
+costsim,POST,/hoc/api/cus/costsim/v2/reset,reset_circuit_breaker,Reset the V2 circuit breaker.,costsim,unknown,,,
+costsim,POST,/hoc/api/cus/costsim/v2/simulate,simulate_v2,Run simulation through V2 sandbox.,costsim,unknown,,,SandboxSimulateResponse
+costsim,GET,/hoc/api/cus/costsim/v2/status,get_sandbox_status,Get current V2 sandbox status.,costsim,unknown,,,SandboxStatusResponse
+feedback,GET,/hoc/api/cus/feedback,list_feedback,List pattern feedback records (PB-S3).,"feedback,pb-s3,read-only",unknown,,,FeedbackListResponse
+feedback,GET,/hoc/api/cus/feedback/stats/summary,get_feedback_stats,Get feedback statistics summary (PB-S3).,"feedback,pb-s3,read-only",unknown,,,
+feedback,GET,/hoc/api/cus/feedback/{feedback_id},get_feedback,Get detailed feedback record by ID (PB-S3).,"feedback,pb-s3,read-only",unknown,,,FeedbackDetailResponse
+predictions,GET,/hoc/api/cus/predictions,list_predictions,List prediction events (PB-S5).,"predictions,pb-s5,read-only",unknown,,,PredictionListResponse
+predictions,GET,/hoc/api/cus/predictions/stats/summary,get_prediction_stats,Get prediction statistics (PB-S5).,"predictions,pb-s5,read-only",unknown,,,
+predictions,GET,/hoc/api/cus/predictions/subject/{subject_type}/{subject_id},get_predictions_for_subject,Get all predictions for a specific subject (PB-S5).,"predictions,pb-s5,read-only",unknown,,,
+predictions,GET,/hoc/api/cus/predictions/{prediction_id},get_prediction,Get detailed prediction by ID (PB-S5).,"predictions,pb-s5,read-only",unknown,,,PredictionDetailResponse
+scenarios,GET,/hoc/api/cus/scenarios,list_scenarios,List all available scenarios.,scenarios,unknown,,,List[ScenarioResponse]
+scenarios,POST,/hoc/api/cus/scenarios,create_scenario,Create a new scenario.,scenarios,unknown,,,ScenarioResponse
+scenarios,GET,/hoc/api/cus/scenarios/info/immutability,get_immutability_info,Get information about the immutability guarantees.,scenarios,unknown,,,
+scenarios,POST,/hoc/api/cus/scenarios/simulate-adhoc,simulate_adhoc,Run ad-hoc simulation without saving scenario.,scenarios,unknown,,,SimulationResult
+scenarios,DELETE,/hoc/api/cus/scenarios/{scenario_id},delete_scenario,Delete a scenario.,scenarios,unknown,,,
+scenarios,GET,/hoc/api/cus/scenarios/{scenario_id},get_scenario,Get a specific scenario by ID.,scenarios,unknown,,,ScenarioResponse
+scenarios,POST,/hoc/api/cus/scenarios/{scenario_id}/simulate,simulate_scenario,Run simulation for a saved scenario.,scenarios,unknown,,,SimulationResult
