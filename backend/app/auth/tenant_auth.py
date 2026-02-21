@@ -8,6 +8,7 @@
 # Allowed Imports: None
 # Forbidden Imports: L1, L2, L3, L4, L5
 # Reference: Auth Infrastructure
+# capability_id: CAP-006
 
 """
 Tenant-Aware API Key Authentication (M21)
@@ -269,21 +270,21 @@ async def get_tenant_context(
     FastAPI dependency that validates API key and returns tenant context.
 
     Accepts authentication via:
-    - Gateway auth context (HumanAuthContext from Clerk JWT) - PREFERRED
+    - Gateway auth context (HumanAuthContext from Clove JWT) - PREFERRED
     - X-AOS-Key header (API key for machine clients)
     - Authorization: Bearer aos_xxx header (API key)
 
     Raises HTTPException on invalid/missing authentication.
     """
     # FIRST: Check if Gateway middleware already authenticated this request
-    # This handles Clerk JWT auth for console users
+    # This handles Clove JWT auth for console users
     gateway_ctx = getattr(request.state, "auth_context", None)
     if gateway_ctx is not None:
         # Import here to avoid circular dependency
         from .contexts import HumanAuthContext, MachineCapabilityContext
 
         if isinstance(gateway_ctx, HumanAuthContext):
-            # Create TenantContext from Clerk JWT claims
+            # Create TenantContext from human JWT claims
             # The gateway already validated the JWT and extracted tenant_id
 
             # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant. Missing tenant is hard failure.
@@ -298,15 +299,17 @@ async def get_tenant_context(
             context = TenantContext(
                 tenant_id=gateway_ctx.tenant_id,
                 tenant_slug=gateway_ctx.tenant_id,
-                tenant_name=f"Clerk User: {gateway_ctx.display_name or gateway_ctx.actor_id}",
-                plan="pro",  # Default plan for Clerk users - should be looked up from DB
-                api_key_id=f"clerk:{gateway_ctx.session_id}",
-                api_key_name="Clerk Session",
+                tenant_name=f"Console User: {gateway_ctx.display_name or gateway_ctx.actor_id}",
+                plan="pro",  # Default plan for console users - should be looked up from DB
+                api_key_id=f"human_session:{gateway_ctx.session_id}",
+                api_key_name="Human Session",
                 user_id=gateway_ctx.actor_id,
                 permissions=[],  # No permissions assigned here - RBAC derives from roles
             )
             request.state.tenant_context = context
-            logger.debug(f"Created TenantContext from Clerk JWT: tenant={context.tenant_id}, user={context.user_id}")
+            logger.debug(
+                f"Created TenantContext from human JWT: tenant={context.tenant_id}, user={context.user_id}"
+            )
             return context
 
         elif isinstance(gateway_ctx, MachineCapabilityContext):
@@ -336,7 +339,7 @@ async def get_tenant_context(
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required. Use Clerk login or provide X-AOS-Key header.",
+            detail="Authentication required. Use Clove login or provide X-AOS-Key header.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

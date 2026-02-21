@@ -559,6 +559,10 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-599](PIN-599-wave2-import-hygiene-batch3-int-agent-cluster.md) | **Wave 2 Import Hygiene Batch 3 — INT/Agent Cluster** | Governance / CI / Runtime Hygiene | **✅ COMPLETE** | 2026-02-20 |
 | [PIN-600](PIN-600-wave2-import-hygiene-batch4-final-clear.md) | **Wave 2 Import Hygiene Batch 4 — Final Residual Clear** | Governance / CI / Runtime Hygiene | **✅ COMPLETE** | 2026-02-20 |
 | [PIN-603](PIN-603-stagetest-auth-bypass-verification.md) | **Stagetest Auth Bypass Verification** | Frontend / Auth / Stagetest Runtime Validation | **✅ COMPLETE** | 2026-02-21 |
+| [PIN-604](PIN-604-hoc-identity-seam-hardening-and-observability.md) | **HOC Identity Seam Hardening and Observability** | Auth / Platform / Observability | **✅ COMPLETE** | 2026-02-21 |
+| [PIN-605](PIN-605-auth-seam-v1-runtime-validation-audit-pass.md) | **Auth Seam V1 Runtime Validation Audit PASS** | Auth / Validation / Governance Audit | **✅ COMPLETE** | 2026-02-21 |
+| [PIN-606](PIN-606-clove-canonical-clerk-deprecated.md) | **Clove Canonical / Clerk Deprecated** | Auth / Platform / Naming Decision | **✅ COMPLETE** | 2026-02-21 |
+| [PIN-607](PIN-607-clove-jwks-readiness-gate-remediation-closure.md) | **Clove JWKS Readiness Gate Remediation Closure** | Auth / Platform / Runtime Gate | **✅ COMPLETE** | 2026-02-21 |
 
 ---
 
@@ -1328,6 +1332,10 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-21 | **PIN-607 Clove JWKS Readiness Gate Remediation Closure** - Closed PR #34 follow-up by adding explicit RBAC PUBLIC rule for `/hoc/api/auth/provider/status`, adding dual-source policy tests, and correcting stale execution evidence references. Validation: 70/70 tests, capability enforcer 0 blocking/0 advisory, registry validation pass. |
+| 2026-02-21 | **PIN-606 Clove Canonical / Clerk Deprecated** - Renamed in-house auth system from "HOC Identity" to "Clove" as canonical name. Clerk explicitly deprecated with warning/fail-fast policy. Updated 15 files (7 code, 2 tests, 3 frontend, 3 docs). 49 tests pass, CI PASSED. |
+| 2026-02-21 | **PIN-605 Auth Seam V1 Runtime Validation Audit PASS** - Independently re-ran targeted auth tests, full seam pack (`42 passed`), and capability enforcer (`0 blocking`) to verify Claude execution report accuracy; recorded non-blocking residuals and doc links. |
+| 2026-02-21 | **PIN-604 HOC Identity Seam Hardening and Observability** - Locked in-house provider policy with explicit override/fail-fast behavior, implemented EdDSA+JWKS verification baseline, added `/hoc/api/auth/provider/status` diagnostics endpoint, and recorded canonical platform literature + Software Bible references. |
 | 2026-02-21 | **PIN-603 Stagetest Auth Bypass Verification** - Verified `.env.stagetest` bypass flags, route-guard early returns, `/ -> /stagetest` redirect behavior, stagetest Apache `dist-stagetest` wiring, and live browser/runtime proof without login gating. |
 | 2026-02-21 | **PIN-602 CUS Publication Rollout Complete** - Deployed grouped ledger + swagger endpoints live on stagetest (4/4 endpoints 200 JSON, 20/20 domain sweep). Fixed Apache proxy misroute and RBAC schema gap. Commits: `510a4587`, `835c7198`. |
 | 2026-02-20 | **PIN-600 Wave 2 Import Hygiene Batch 4 — Final Residual Clear** - Remediated final 10 HOC residual files, synchronized CAP-007/CAP-009/CAP-010/CAP-012/CAP-014 evidence linkage, and reduced HOC import-hygiene backlog (`10 -> 0`) with CUS remaining `0`. |
@@ -2174,3 +2182,7 @@ When resuming work on this project:
 | 2026-02-21 | **PIN-601 HOC API Ledger Wave 1 (CUS) Baseline and Drift Audit** - Created deterministic CUS ledger artifacts (502 rows / 499 unique), captured skeptical OpenAPI drift findings, and locked Wave 1 execution evidence for hoc/* rollout. |
 | 2026-02-21 | **PIN-602 CUS Publication Rollout Complete** - Deployed grouped ledger + swagger endpoints live on stagetest (4/4 endpoints 200 JSON, 20/20 domain sweep). Fixed Apache proxy misroute (`/apis/ledger` → stagetest snapshot) and RBAC schema gap (`RBAC_RULES.yaml` missing CUS publication rules). Commits: `510a4587`, `835c7198`. |
 | 2026-02-21 | **PIN-603 Stagetest Auth Bypass Verification** - Confirmed stagetest auth bypass wiring from env->route guards->root redirect->Apache `dist-stagetest` publish path, with live runtime/browser proof that `/` lands on `/stagetest` without login enforcement. |
+| 2026-02-21 | **PIN-604 HOC Identity Seam Hardening and Observability** - Enforced in-house auth provider policy (`hoc_identity`), added explicit override warning + prod fail-fast semantics, implemented EdDSA/JWKS verification baseline, and exposed `/hoc/api/auth/provider/status` diagnostics with linked platform literature evidence. |
+| 2026-02-21 | **PIN-605 Auth Seam V1 Runtime Validation Audit PASS** - Completed skeptical re-audit of Claude execution handoff: targeted tests pass, full auth seam pack `42 passed`, capability enforcer `0 blocking` with advisory-only evidence warnings. |
+| 2026-02-21 | **PIN-606 Clove Canonical / Clerk Deprecated** - Renamed canonical auth system from "HOC Identity" to "Clove". Clerk explicitly deprecated with warning/fail-fast. 15 files changed, 49 tests pass, CI PASSED. |
+| 2026-02-21 | **PIN-607 Clove JWKS Readiness Gate Remediation Closure** - Closed PR #34 remediation loop with explicit RBAC PUBLIC rule for `/hoc/api/auth/provider/status`, dual-source policy consistency tests, and corrected execution evidence SHA references. Validation: 70 tests pass, capability enforcer 0 blocking/0 advisory. |

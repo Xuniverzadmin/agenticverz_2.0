@@ -8,6 +8,7 @@
 # Allowed Imports: L3, L4, L6
 # Forbidden Imports: L1, L5 (no direct worker imports)
 # Reference: Core Application
+# capability_id: CAP-006
 
 import asyncio
 import json
@@ -672,6 +673,70 @@ async def lifespan(app: FastAPI):
         # Gateway init failure should not block startup in non-production
         if os.getenv("AUTH_GATEWAY_REQUIRED", "false").lower() == "true":
             raise
+
+    # =========================================================================
+    # JWKS Readiness Gate: Clove Provider Startup Check
+    # =========================================================================
+    # Validates that the Clove auth provider has all required configuration
+    # (issuer, audience, JWKS source) before accepting requests.
+    #
+    # Policy:
+    #   - prod/production: FATAL — startup aborted if readiness not met.
+    #   - non-prod: WARNING by default. Set AUTH_CLOVE_STRICT_STARTUP=true to
+    #     enforce fail-fast in non-prod environments.
+    try:
+        from app.auth.auth_provider import get_human_auth_provider
+
+        _clove_provider = get_human_auth_provider()
+        _readiness = getattr(_clove_provider, "readiness_summary", None)
+        if callable(_readiness):
+            _readiness_result = _readiness()
+            _runtime_mode = (
+                os.getenv("AOS_MODE") or os.getenv("APP_ENV") or os.getenv("ENV") or ""
+            ).strip().lower()
+            _is_prod = _runtime_mode in {"prod", "production"}
+            _strict_startup = os.getenv("AUTH_CLOVE_STRICT_STARTUP", "false").lower() == "true"
+
+            if _readiness_result["ready"]:
+                logger.info(
+                    "clove_readiness_gate_passed",
+                    extra={"checks": _readiness_result["checks"]},
+                )
+            elif _is_prod:
+                _failed_checks = [c for c in _readiness_result["checks"] if c["status"] == "fail"]
+                logger.critical(
+                    "STARTUP ABORTED — Clove provider readiness not met in production",
+                    extra={"failed_checks": _failed_checks},
+                )
+                raise RuntimeError(
+                    f"Clove auth provider not ready in production: "
+                    f"{_readiness_result['failed_count']} check(s) failed — "
+                    + ", ".join(c["detail"] for c in _failed_checks)
+                )
+            elif _strict_startup:
+                _failed_checks = [c for c in _readiness_result["checks"] if c["status"] == "fail"]
+                logger.critical(
+                    "STARTUP ABORTED — Clove readiness not met (AUTH_CLOVE_STRICT_STARTUP=true)",
+                    extra={"failed_checks": _failed_checks},
+                )
+                raise RuntimeError(
+                    f"Clove auth provider not ready (strict mode): "
+                    f"{_readiness_result['failed_count']} check(s) failed — "
+                    + ", ".join(c["detail"] for c in _failed_checks)
+                )
+            else:
+                _failed_checks = [c for c in _readiness_result["checks"] if c["status"] == "fail"]
+                logger.warning(
+                    "clove_readiness_gate_warning — provider not fully configured",
+                    extra={
+                        "failed_checks": _failed_checks,
+                        "hint": "Set AUTH_CLOVE_STRICT_STARTUP=true to enforce in non-prod",
+                    },
+                )
+    except RuntimeError:
+        raise  # re-raise startup gate failures
+    except Exception as e:
+        logger.error(f"clove_readiness_gate_error: {e}", exc_info=True)
 
     # =========================================================================
     # PIN-443, PIN-444: OpenAPI Warm-Up with Assertion

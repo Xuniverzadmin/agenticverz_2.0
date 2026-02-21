@@ -18,13 +18,13 @@ All downstream code consumes contexts, never raw headers.
 
 INVARIANTS (AUTH_DESIGN.md):
 1. Mutual Exclusivity: JWT XOR API Key (both = HARD FAIL)
-2. Human Flow: Clerk JWT (RS256) → HumanAuthContext
+2. Human Flow: Clove JWT (EdDSA) → HumanAuthContext
 3. Machine Flow: API Key → MachineCapabilityContext
 4. Session Revocation: Every human request checks revocation
 5. Headers Stripped: After gateway, auth headers are removed from request
 
 ROUTING:
-- All human JWTs must be from Clerk (RS256, JWKS-verified)
+- All human JWTs must be from Clove issuer
 - Unknown issuer → REJECT
 - No fallbacks. No grace periods.
 """
@@ -36,8 +36,10 @@ import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Set
+from typing import Optional
 
+from .auth_constants import CLOVE_ISSUER
+from .auth_provider import AuthProviderError, get_human_auth_provider
 from .contexts import (
     AuthPlane,
     AuthSource,
@@ -67,17 +69,11 @@ logger = logging.getLogger("nova.auth.gateway")
 # Configuration
 # =============================================================================
 
-# Clerk issuers - explicit list, exact match only
-_clerk_issuers_raw = os.getenv("CLERK_ISSUERS", "")
-CLERK_ISSUERS: Set[str] = set(
-    iss.strip() for iss in _clerk_issuers_raw.split(",") if iss.strip()
-)
-
-# Require Clerk to be configured for human auth
-if not CLERK_ISSUERS:
+# Clove issuer is the canonical human-auth issuer
+if not CLOVE_ISSUER:
     logger.warning(
-        "CLERK_ISSUERS is empty - human authentication is disabled. "
-        "Set CLERK_ISSUERS env var for production."
+        "CLOVE_ISSUER is empty - human authentication is disabled. "
+        "Set CLOVE_ISSUER for production."
     )
 
 # Machine auth - legacy env var support (to be migrated to DB-only)
@@ -145,7 +141,7 @@ class AuthGateway:
     happens here and nowhere else.
 
     DESIGN (AUTH_DESIGN.md):
-    - Humans authenticate via Clerk only
+    - Humans authenticate via Clove only
     - Machines authenticate via API key only
     - No fallbacks, no grace periods, no alternative paths
     """
@@ -164,7 +160,6 @@ class AuthGateway:
         """
         self._session_store = session_store
         self._api_key_service = api_key_service
-        self._clerk_provider = None  # Lazy-loaded
         self._classifier = TokenClassifier()
 
     async def authenticate(
@@ -209,7 +204,7 @@ class AuthGateway:
         """
         Human authentication flow (JWT).
 
-        All human JWTs must be from Clerk.
+        All human JWTs must be from Clove.
         No other human authentication path exists.
         """
         # Extract token from Bearer header
@@ -224,7 +219,7 @@ class AuthGateway:
             record_token_rejected("unknown", "malformed")
             return error_jwt_invalid(str(e))
 
-        # Route based on issuer - Clerk only
+        # Route based on issuer
         return await self._route_by_issuer(token_info)
 
     async def _route_by_issuer(self, token_info: TokenInfo) -> GatewayResult:
@@ -233,7 +228,7 @@ class AuthGateway:
 
         Routes:
         - FOPS issuer → Founder auth (control plane)
-        - Clerk issuers → Human auth (tenant-scoped)
+        - Clove issuer → Human auth via provider seam (tenant-scoped)
         - All others → REJECT
 
         No fallbacks. No grace periods.
@@ -244,9 +239,9 @@ class AuthGateway:
         if issuer == FOPS_ISSUER:
             return self._authenticate_fops_token(token_info.raw_token)
 
-        # Route 2: Clerk tokens (human/tenant-scoped)
-        if issuer and issuer in CLERK_ISSUERS:
-            return await self._authenticate_clerk(token_info)
+        # Route 2: Clove tokens (human/tenant-scoped) — via provider seam
+        if issuer == CLOVE_ISSUER:
+            return await self._authenticate_human_via_provider(token_info)
 
         # All other issuers are rejected
         record_token_rejected("unknown", "untrusted_issuer")
@@ -326,83 +321,67 @@ class AuthGateway:
 
         return token.strip() if token.strip() else None
 
-    async def _authenticate_clerk(self, token_info: TokenInfo) -> GatewayResult:
+    async def _authenticate_human_via_provider(self, token_info: TokenInfo) -> GatewayResult:
         """
-        Clerk Authenticator - RS256 tokens from Clerk IdP.
+        Human authentication via HumanAuthProvider seam.
 
-        This is the ONLY human authentication path.
+        Delegates token verification to the configured in-house provider
+        and maps the resulting HumanPrincipal to the existing HumanAuthContext contract.
 
-        Trust domain: External identity provider (Clerk)
-        Algorithm: RS256 (asymmetric)
-        Verification: JWKS (public key)
+        The provider is selected at startup via AUTH_PROVIDER env var.
+        Default: "clove".
         """
         try:
-            # Lazy-load Clerk provider
-            if self._clerk_provider is None:
-                from .clerk_provider import get_clerk_provider
+            provider = get_human_auth_provider()
 
-                self._clerk_provider = get_clerk_provider()
+            if not provider.is_configured:
+                logger.error(f"Human auth provider not configured: {provider.provider_type}")
+                return error_provider_unavailable(provider.provider_type.value)
 
-            # Check if Clerk is configured
-            if not self._clerk_provider.is_configured:
-                logger.error("Clerk not configured for human authentication")
-                record_token_rejected("clerk", "not_configured")
-                return error_provider_unavailable("clerk")
-
-            # Verify JWT via JWKS
+            # Delegate verification to the provider
             try:
-                payload = self._clerk_provider.verify_token(token_info.raw_token)
-            except Exception as e:
-                error_msg = str(e).lower()
-                logger.warning(f"Clerk JWT verify failed: {type(e).__name__}: {e}")
-                if "expired" in error_msg:
-                    record_token_rejected("clerk", "expired")
+                principal = await provider.verify_bearer_token(token_info.raw_token)
+            except AuthProviderError as e:
+                logger.warning(f"Human auth failed: {e.reason.value}: {e.message}")
+                if e.reason == e.reason.TOKEN_EXPIRED:
                     return error_jwt_expired()
-                record_token_rejected("clerk", "invalid_signature")
-                return error_jwt_invalid(str(e))
+                if e.reason == e.reason.PROVIDER_UNAVAILABLE:
+                    return error_provider_unavailable(provider.provider_type.value)
+                return error_jwt_invalid(e.message)
 
-            # Extract claims
-            user_id = payload.get("sub")
-            session_id = payload.get("sid", payload.get("jti", ""))
-
-            if not user_id:
-                record_token_rejected("clerk", "missing_sub")
-                return error_jwt_invalid("Missing subject claim")
-
-            # Check session revocation
-            if self._session_store:
-                is_revoked = await self._session_store.is_revoked(session_id)
+            # Check session revocation (gateway-level, provider-neutral)
+            if self._session_store and principal.session_id:
+                is_revoked = await self._session_store.is_revoked(principal.session_id)
                 if is_revoked:
-                    record_token_rejected("clerk", "revoked")
-                    logger.warning(f"Revoked session attempted: {session_id[:8]}...")
+                    record_token_rejected(provider.provider_type.value, "revoked")
+                    logger.warning(f"Revoked session attempted: {principal.session_id[:8]}...")
                     return error_session_revoked()
 
-            # Extract tenant from org_id - NO FALLBACK
-            tenant_id = payload.get("org_id")
-            if not tenant_id:
-                # Tenant resolution from membership lookup will happen downstream
-                # But we don't provide a "default" - that's a governance violation
-                pass
-
-            account_id = payload.get("account_id")
-
-            # Record successful verification
-            record_token_verified("clerk")
+            # Map HumanPrincipal → HumanAuthContext (preserves downstream contract)
+            _PROVIDER_TO_AUTH_SOURCE = {
+                "clove": AuthSource.CLOVE,
+            }
+            auth_source = _PROVIDER_TO_AUTH_SOURCE.get(
+                principal.auth_provider.value, AuthSource.CLOVE
+            )
 
             return HumanAuthContext(
-                actor_id=user_id,
-                session_id=session_id,
-                auth_source=AuthSource.CLERK,
-                tenant_id=tenant_id,
-                account_id=account_id,
-                email=payload.get("email"),
-                display_name=payload.get("name"),
+                actor_id=principal.subject_user_id,
+                session_id=principal.session_id or "",
+                auth_source=auth_source,
+                tenant_id=principal.tenant_id,
+                account_id=principal.account_id,
+                email=principal.email,
+                display_name=principal.display_name,
                 authenticated_at=datetime.utcnow(),
             )
 
+        except AuthProviderError as e:
+            logger.warning(f"Auth provider error: {e.reason.value}: {e.message}")
+            return error_internal(e.message)
         except Exception as e:
-            record_token_rejected("clerk", "internal_error")
-            logger.exception(f"Clerk JWT auth error: {e}")
+            record_token_rejected("human", "internal_error")
+            logger.exception(f"Human auth error: {e}")
             return error_internal(str(e))
 
     async def _authenticate_machine(

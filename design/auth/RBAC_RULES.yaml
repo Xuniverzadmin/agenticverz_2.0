@@ -238,6 +238,18 @@ rules:
     allow_environment: [preflight, production]
     description: "Authentication endpoints (login, token refresh, etc.)."
 
+  - rule_id: HOC_AUTH_PROVIDER_STATUS
+    path_prefix: /hoc/api/auth/provider/status
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: >
+      Auth provider operational diagnostics (readiness, issuer, audience, JWKS source).
+      PUBLIC because operators need to check auth config before authenticating
+      (chicken-and-egg). Response contains only operational metadata — no secrets.
+    pin: PIN-391
+
   # ===========================================================================
   # SDSR PREFLIGHT VALIDATION (TEMPORARY)
   # ===========================================================================

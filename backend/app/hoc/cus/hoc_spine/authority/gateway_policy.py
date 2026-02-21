@@ -115,6 +115,12 @@ PUBLIC_PATHS: list[str] = [
     "/apis/ledger/",
     "/apis/swagger/",
     # -----------------------------------------------------------------------
+    # Auth provider status — PUBLIC (operational diagnostics, no secrets)
+    # Chicken-and-egg: operators need to check auth config without authing.
+    # Only exposes issuer URL, audience name, jwks source type, readiness.
+    # -----------------------------------------------------------------------
+    "/hoc/api/auth/provider/status",
+    # -----------------------------------------------------------------------
     # Stagetest evidence console (TODO: Re-enable auth)
     # -----------------------------------------------------------------------
     "/hoc/api/stagetest/",
