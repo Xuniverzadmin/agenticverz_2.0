@@ -1,0 +1,80 @@
+{
+  "generated_at_utc": "2026-02-21T07:54:56.667404+00:00",
+  "domain": "overview",
+  "total": 6,
+  "unique_method_path": 5,
+  "endpoints": [
+    {
+      "domain": "overview",
+      "method": "GET",
+      "path": "/hoc/api/cus/overview/costs",
+      "operation_id": "get_costs",
+      "summary": "Cost intelligence summary. Tenant-scoped.",
+      "tags": "overview",
+      "auth_required": "unknown",
+      "auth_schemes": "",
+      "request_schema": "",
+      "response_schema": "CostsResponse"
+    },
+    {
+      "domain": "overview",
+      "method": "GET",
+      "path": "/hoc/api/cus/overview/decisions",
+      "operation_id": "get_decisions",
+      "summary": "Pending decisions from incidents and policy proposals. Tenant-scoped.",
+      "tags": "overview",
+      "auth_required": "unknown",
+      "auth_schemes": "",
+      "request_schema": "",
+      "response_schema": "DecisionsResponse"
+    },
+    {
+      "domain": "overview",
+      "method": "GET",
+      "path": "/hoc/api/cus/overview/decisions/count",
+      "operation_id": "get_decisions_count",
+      "summary": "Decisions count by domain and priority. Tenant-scoped.",
+      "tags": "overview",
+      "auth_required": "unknown",
+      "auth_schemes": "",
+      "request_schema": "",
+      "response_schema": "DecisionsCountResponse"
+    },
+    {
+      "domain": "overview",
+      "method": "GET",
+      "path": "/hoc/api/cus/overview/highlights",
+      "operation_id": "get_highlights",
+      "summary": "System pulse and domain counts. Tenant-scoped.",
+      "tags": "overview",
+      "auth_required": "unknown",
+      "auth_schemes": "",
+      "request_schema": "",
+      "response_schema": "HighlightsResponse"
+    },
+    {
+      "domain": "overview",
+      "method": "GET",
+      "path": "/hoc/api/cus/overview/highlights",
+      "operation_id": "get_overview_highlights_public",
+      "summary": "",
+      "tags": "cus-overview-public",
+      "auth_required": "unknown",
+      "auth_schemes": "",
+      "request_schema": "",
+      "response_schema": "OverviewHighlightsPublicResponse"
+    },
+    {
+      "domain": "overview",
+      "method": "GET",
+      "path": "/hoc/api/cus/overview/recovery-stats",
+      "operation_id": "get_recovery_stats",
+      "summary": "Recovery statistics from incidents. Tenant-scoped.",
+      "tags": "overview",
+      "auth_required": "unknown",
+      "auth_schemes": "",
+      "request_schema": "",
+      "response_schema": "RecoveryStatsResponse"
+    }
+  ]
+}

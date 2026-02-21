@@ -1,0 +1,33 @@
+domain,method,path,operation_id,summary,tags,auth_required,auth_schemes,request_schema,response_schema
+account,GET,/hoc/api/cus/account/users/list,list_account_users_public,,cus-account-public,unknown,,,AccountUsersListPublicResponse
+accounts,GET,/hoc/api/cus/accounts/billing,get_billing_summary,READ-ONLY customer facade - delegates to L4 AccountsFacade.,accounts,unknown,,,BillingSummaryResponse
+accounts,GET,/hoc/api/cus/accounts/billing/invoices,get_billing_invoices,READ-ONLY customer facade - delegates to L4 AccountsFacade.,accounts,unknown,,,InvoiceListResponse
+accounts,GET,/hoc/api/cus/accounts/invitations,list_invitations,READ-ONLY customer facade - delegates to L4 AccountsFacade.,accounts,unknown,,,InvitationListResponse
+accounts,POST,/hoc/api/cus/accounts/invitations/{invitation_id}/accept,accept_invitation,Accept an invitation to join a tenant.,accounts,unknown,,,
+accounts,GET,/hoc/api/cus/accounts/profile,get_profile,READ-ONLY customer facade - delegates to L4 AccountsFacade.,accounts,unknown,,,ProfileResponse
+accounts,PUT,/hoc/api/cus/accounts/profile,update_profile,WRITE customer facade - delegates to L4 AccountsFacade.,accounts,unknown,,,ProfileUpdateResponse
+accounts,GET,/hoc/api/cus/accounts/projects,list_projects,READ-ONLY customer facade - delegates to L4 AccountsFacade.,accounts,unknown,,,ProjectsListResponse
+accounts,POST,/hoc/api/cus/accounts/projects,create_project,Create a new project. Delegates to L4 AccountsFacade.,accounts,unknown,,,ProjectDetailResponse
+accounts,GET,/hoc/api/cus/accounts/projects/{project_id},get_project_detail,READ-ONLY customer facade - delegates to L4 AccountsFacade.,accounts,unknown,,,ProjectDetailResponse
+accounts,GET,/hoc/api/cus/accounts/support,get_support_contact,READ-ONLY customer facade - delegates to L4 AccountsFacade.,accounts,unknown,,,SupportContactResponse
+accounts,GET,/hoc/api/cus/accounts/support/tickets,list_support_tickets,READ-ONLY customer facade - delegates to L4 AccountsFacade.,accounts,unknown,,,SupportTicketListResponse
+accounts,POST,/hoc/api/cus/accounts/support/tickets,create_support_ticket,WRITE customer facade - delegates to L4 AccountsFacade.,accounts,unknown,,,SupportTicketResponse
+accounts,GET,/hoc/api/cus/accounts/tenant/users,list_tenant_users,List users in the current tenant.,accounts,unknown,,,TenantUserListResponse
+accounts,GET,/hoc/api/cus/accounts/users,list_users,READ-ONLY customer facade - delegates to L4 AccountsFacade.,accounts,unknown,,,UsersListResponse
+accounts,POST,/hoc/api/cus/accounts/users/invite,invite_user,WRITE customer facade - delegates to L4 AccountsFacade.,accounts,unknown,,,InvitationResponse
+accounts,DELETE,/hoc/api/cus/accounts/users/{user_id},remove_user,Remove a user from the tenant.,accounts,unknown,,,
+accounts,GET,/hoc/api/cus/accounts/users/{user_id},get_user_detail,READ-ONLY customer facade - delegates to L4 AccountsFacade.,accounts,unknown,,,UserDetailResponse
+accounts,PUT,/hoc/api/cus/accounts/users/{user_id}/role,update_user_role,Update a user's role in the tenant.,accounts,unknown,,,TenantUserResponse
+memory,GET,/hoc/api/cus/memory/pins,list_pins,List memory pins for a tenant.,memory,unknown,,,MemoryPinListResponse
+memory,POST,/hoc/api/cus/memory/pins,create_or_upsert_pin,Create or upsert a memory pin.,memory,unknown,,,MemoryPinResponse
+memory,POST,/hoc/api/cus/memory/pins/cleanup,cleanup_expired_pins,Clean up expired memory pins.,memory,unknown,,,
+memory,DELETE,/hoc/api/cus/memory/pins/{key},delete_pin,Delete a memory pin by key.,memory,unknown,,,MemoryPinDeleteResponse
+memory,GET,/hoc/api/cus/memory/pins/{key},get_pin,Get a memory pin by key.,memory,unknown,,,MemoryPinResponse
+tenant,GET,/hoc/api/cus/tenant,get_current_tenant,Get information about the current tenant (from API key).,Tenants & API Keys,unknown,,,TenantResponse
+tenant,GET,/hoc/api/cus/tenant/api-keys,list_api_keys,List all API keys for the current tenant.,API Keys (Write),unknown,,,List[APIKeyResponse]
+tenant,POST,/hoc/api/cus/tenant/api-keys,create_api_key,Create a new API key for the current tenant.,API Keys (Write),unknown,,,APIKeyCreatedResponse
+tenant,DELETE,/hoc/api/cus/tenant/api-keys/{key_id},revoke_api_key,Revoke an API key.,API Keys (Write),unknown,,,
+tenant,GET,/hoc/api/cus/tenant/health,tenant_health,Health check for tenant system.,Tenants & API Keys,unknown,,,
+tenant,GET,/hoc/api/cus/tenant/quota/runs,check_run_quota,Check if the tenant can create a new run.,Tenants & API Keys,unknown,,,QuotaCheckResponse
+tenant,GET,/hoc/api/cus/tenant/quota/tokens,check_token_quota,Check if the tenant has token budget for an operation.,Tenants & API Keys,unknown,,,QuotaCheckResponse
+tenant,GET,/hoc/api/cus/tenant/usage,get_tenant_usage,Get usage summary for the current tenant.,Tenants & API Keys,unknown,,,UsageSummaryResponse

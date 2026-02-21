@@ -1,7 +1,7 @@
 # HOC CUS API Ledger
 
-- Generated (UTC): `2026-02-21T07:00:07.337711+00:00`
-- Source: `/tmp/hoc-clean-ledger-1771656914/backend/.openapi_snapshot.json`
+- Generated (UTC): `2026-02-21T07:47:56.669825+00:00`
+- Source: `/tmp/hoc-cus-stabilize-plan/docs/openapi.json`
 - Prefix: `/hoc/api/cus/`
 - Endpoints: `502`
 
