@@ -217,6 +217,9 @@ class OperationRegistry:
     def __init__(self) -> None:
         self._handlers: dict[str, OperationHandler] = {}
         self._frozen: bool = False
+        self._invariant_mode: object | None = None  # InvariantMode, set via set_invariant_mode()
+        self._shadow_compare_enabled: bool = False   # BA-N6-03: shadow compare feature flag
+        self._context_enrichers: dict[str, Any] = {}  # Pre-invariant context enrichers
 
     # =========================================================================
     # Registration
@@ -258,6 +261,23 @@ class OperationRegistry:
             extra={"operation": operation, "handler": type(handler).__name__},
         )
 
+    def register_context_enricher(self, operation: str, enricher: Any) -> None:
+        """
+        Register a pre-invariant context enricher for an operation.
+
+        The enricher is called BEFORE invariant evaluation to augment the
+        operation context with authoritative data (e.g., tenant status from DB).
+        This ensures invariant checkers receive the data they need without
+        requiring callers to supply it explicitly.
+
+        Args:
+            operation: Operation name this enricher applies to.
+            enricher: Callable(ctx: OperationContext) -> dict[str, Any].
+                      Returns extra keys to merge into the invariant context.
+                      Must be sync. Must not raise — return {} on failure.
+        """
+        self._context_enrichers[operation] = enricher
+
     def freeze(self) -> None:
         """
         Freeze the registry. No further registrations allowed.
@@ -270,6 +290,31 @@ class OperationRegistry:
             "registry.frozen",
             extra={"operation_count": len(self._handlers)},
         )
+
+    # =========================================================================
+    # Invariant Mode Configuration (BA-N6-02)
+    # =========================================================================
+
+    def set_invariant_mode(self, mode: object) -> None:
+        """
+        Set the invariant enforcement mode for this registry.
+
+        Args:
+            mode: An InvariantMode enum value (MONITOR, ENFORCE, or STRICT).
+                  Accepts object to avoid import dependency at module level.
+
+        BA-N6-02: Supports escalation from MONITOR → ENFORCE → STRICT.
+        Default remains MONITOR unless explicitly configured.
+        """
+        self._invariant_mode = mode
+        logger.info(
+            "invariant_mode.configured",
+            extra={"mode": str(mode)},
+        )
+
+    def set_shadow_compare_enabled(self, enabled: bool) -> None:
+        """Enable or disable shadow compare (BA-N6-03)."""
+        self._shadow_compare_enabled = enabled
 
     # =========================================================================
     # Dispatch
@@ -306,13 +351,39 @@ class OperationRegistry:
             return result
 
         # --- Build enriched context ---
+        # Inject invariant mode for handler-level sub-operation evaluation
+        enriched_params = {**ctx.params}
+        _inv_mode = getattr(self, "_invariant_mode", None)
+        if _inv_mode is not None:
+            enriched_params["_invariant_mode"] = _inv_mode
+
         enriched_ctx = OperationContext(
             session=ctx.session,
             tenant_id=ctx.tenant_id,
-            params=ctx.params,
+            params=enriched_params,
             operation=operation,
             timestamp=utc_now().isoformat(),
         )
+
+        # --- Pre-dispatch: context enrichment for invariant evaluation ---
+        enricher = self._context_enrichers.get(operation)
+        if enricher is not None:
+            try:
+                extra = enricher(enriched_ctx)
+                if extra:
+                    enriched_ctx = OperationContext(
+                        session=enriched_ctx.session,
+                        tenant_id=enriched_ctx.tenant_id,
+                        params={**enriched_ctx.params, **extra},
+                        operation=enriched_ctx.operation,
+                        timestamp=enriched_ctx.timestamp,
+                    )
+            except Exception:
+                logger.debug(
+                    "context_enricher.failed",
+                    extra={"operation": operation},
+                    exc_info=True,
+                )
 
         # --- Pre-dispatch: invariant preconditions (BA-04) ---
         self._evaluate_invariants_safe(
@@ -343,6 +414,9 @@ class OperationRegistry:
             operation, enriched_ctx, phase="post"
         )
 
+        # --- Post-dispatch: shadow compare (BA-N6-03) ---
+        self._shadow_compare_safe(operation, enriched_ctx, result)
+
         # --- Post-dispatch: audit ---
         duration_ms = (time.monotonic() - start) * 1000
         result.operation = operation
@@ -362,20 +436,25 @@ class OperationRegistry:
         phase: str,
     ) -> None:
         """
-        Evaluate business invariants for *operation* in MONITOR mode.
+        Evaluate business invariants for *operation* using the configured mode.
 
         Phase is "pre" (before handler) or "post" (after handler).
-        Runs in MONITOR mode: logs results, never blocks dispatch.
-        Failures here must never break the operation pipeline.
+        The mode is read from ``self._invariant_mode`` (default: MONITOR).
+        In MONITOR mode: logs results, never blocks dispatch.
+        In ENFORCE mode: raises on CRITICAL violations (propagated to caller).
+        In STRICT mode: raises on ANY violation (propagated to caller).
 
         BA-04: Wired into execute() path for all dispatched operations.
+        BA-N6-02: Mode is configurable via set_invariant_mode().
         """
         try:
             from app.hoc.cus.hoc_spine.authority.invariant_evaluator import (
                 InvariantMode,
-                evaluate_preconditions,
-                evaluate_postconditions,
+                evaluate_invariants,
             )
+
+            # Resolve configured mode (default MONITOR)
+            mode = getattr(self, "_invariant_mode", None) or InvariantMode.MONITOR
 
             # Build invariant context from OperationContext
             invariant_context = {
@@ -384,16 +463,94 @@ class OperationRegistry:
                 **ctx.params,
             }
 
-            if phase == "pre":
-                evaluate_preconditions(operation, invariant_context, InvariantMode.MONITOR)
-            else:
-                evaluate_postconditions(operation, invariant_context, InvariantMode.MONITOR)
+            # Evaluate invariants for the base operation name.
+            # Phase is logged for audit trail but does not alter the operation
+            # name — invariants are registered under base names like
+            # "project.create", not "project.create:pre".
+            evaluate_invariants(operation, invariant_context, mode)
 
         except Exception:
-            # Invariant evaluation must NEVER block operations
+            # In MONITOR mode, swallow all exceptions.
+            # In ENFORCE/STRICT mode, re-raise BusinessInvariantViolation
+            # but swallow infrastructure errors.
+            from app.hoc.cus.hoc_spine.authority.business_invariants import (
+                BusinessInvariantViolation,
+            )
+            import sys
+            exc = sys.exc_info()[1]
+            if isinstance(exc, BusinessInvariantViolation):
+                raise
             logger.debug(
                 "invariant_evaluation_error",
                 extra={"operation": operation, "phase": phase},
+                exc_info=True,
+            )
+
+    # =========================================================================
+    # Shadow Compare (BA-N6-03)
+    # =========================================================================
+
+    def _shadow_compare_safe(
+        self,
+        operation: str,
+        ctx: OperationContext,
+        result: OperationResult,
+    ) -> None:
+        """
+        Run shadow comparison if enabled (BA-N6-03).
+
+        Compares the current decision outcome against a baseline candidate.
+        Never blocks the primary decision path — comparison is advisory only.
+        Emits structured diff evidence via logging.
+
+        Disabled by default. Enable via set_shadow_compare_enabled(True).
+        """
+        if not self._shadow_compare_enabled:
+            return
+
+        try:
+            from app.hoc.cus.hoc_spine.authority.shadow_compare import (
+                DecisionOutcome,
+                compare_decisions,
+            )
+
+            outcome = "ALLOW" if result.success else "DENY"
+
+            current = DecisionOutcome(
+                operation=operation,
+                outcome=outcome,
+                reason=result.error or "ok",
+                invariants_checked=[],
+                timestamp=ctx.timestamp or "",
+            )
+
+            # Candidate: baseline expectation (ALLOW for all registered operations)
+            candidate = DecisionOutcome(
+                operation=operation,
+                outcome="ALLOW",
+                reason="baseline expectation",
+                invariants_checked=[],
+                timestamp=ctx.timestamp or "",
+            )
+
+            comparison = compare_decisions(current, candidate)
+
+            logger.info(
+                "shadow_compare.result",
+                extra={
+                    "operation": operation,
+                    "tenant_id": ctx.tenant_id,
+                    "match": comparison.match,
+                    "severity": comparison.severity,
+                    "diffs": comparison.diffs,
+                },
+            )
+
+        except Exception:
+            # Shadow compare must NEVER block operations
+            logger.debug(
+                "shadow_compare_error",
+                extra={"operation": operation},
                 exc_info=True,
             )
 

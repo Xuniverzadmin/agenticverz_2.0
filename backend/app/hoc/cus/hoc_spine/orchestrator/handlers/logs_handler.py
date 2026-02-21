@@ -76,8 +76,10 @@ class LogsQueryHandler:
             "get_audit_integrity": facade.get_audit_integrity,
         }
 
-        kwargs = dict(ctx.params)
-        kwargs.pop("method", None)
+        kwargs = {
+            k: v for k, v in ctx.params.items()
+            if k != "method" and not k.startswith("_")
+        }
 
         method = async_dispatch.get(method_name)
         if method:
@@ -125,8 +127,10 @@ class LogsEvidenceHandler:
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
             )
 
-        kwargs = dict(ctx.params)
-        kwargs.pop("method", None)
+        kwargs = {
+            k: v for k, v in ctx.params.items()
+            if k != "method" and not k.startswith("_")
+        }
         data = await method(tenant_id=ctx.tenant_id, **kwargs)
         return OperationResult.ok(data)
 
@@ -161,8 +165,10 @@ class LogsCertificateHandler:
                 f"Unknown method: {method_name}", "UNKNOWN_METHOD"
             )
 
-        kwargs = dict(ctx.params)
-        kwargs.pop("method", None)
+        kwargs = {
+            k: v for k, v in ctx.params.items()
+            if k != "method" and not k.startswith("_")
+        }
         data = method(**kwargs)
         return OperationResult.ok(data)
 
@@ -189,8 +195,10 @@ class LogsReplayHandler:
                 "Missing 'method' in params", "MISSING_METHOD"
             )
 
-        kwargs = dict(ctx.params)
-        kwargs.pop("method", None)
+        kwargs = {
+            k: v for k, v in ctx.params.items()
+            if k != "method" and not k.startswith("_")
+        }
 
         # Validation methods (sync, L5)
         if method_name == "build_call_record":
@@ -269,8 +277,10 @@ class LogsEvidenceReportHandler:
             generate_evidence_report,
         )
 
-        kwargs = dict(ctx.params)
-        kwargs.pop("method", None)
+        kwargs = {
+            k: v for k, v in ctx.params.items()
+            if k != "method" and not k.startswith("_")
+        }
         data = generate_evidence_report(**kwargs)
         return OperationResult.ok(data)
 
@@ -308,8 +318,10 @@ class LogsPdfHandler:
                 f"Unknown renderer method: {method_name}", "UNKNOWN_METHOD"
             )
 
-        kwargs = dict(ctx.params)
-        kwargs.pop("method", None)
+        kwargs = {
+            k: v for k, v in ctx.params.items()
+            if k != "method" and not k.startswith("_")
+        }
         data = method(**kwargs)
         return OperationResult.ok(data)
 
@@ -412,8 +424,10 @@ class LogsTracesApiHandler:
         if not method:
             return OperationResult.fail(f"Unknown traces method: {method_name}", "UNKNOWN_METHOD")
 
-        kwargs = dict(ctx.params)
-        kwargs.pop("method", None)
+        kwargs = {
+            k: v for k, v in ctx.params.items()
+            if k != "method" and not k.startswith("_")
+        }
         data = await method(**kwargs)
         return OperationResult.ok(data)
 

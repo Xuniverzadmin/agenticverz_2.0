@@ -79,8 +79,10 @@ class FeedbackReadHandler:
                 f"Unknown feedback method: {method_name}", "UNKNOWN_METHOD"
             )
 
-        kwargs = dict(ctx.params)
-        kwargs.pop("method", None)
+        kwargs = {
+            k: v for k, v in ctx.params.items()
+            if k != "method" and not k.startswith("_")
+        }
         data = await method(session=ctx.session, tenant_id=ctx.tenant_id, **kwargs)
 
         # Handle not found case for get_feedback
@@ -124,8 +126,10 @@ class AnalyticsQueryHandler:
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
             )
 
-        kwargs = dict(ctx.params)
-        kwargs.pop("method", None)
+        kwargs = {
+            k: v for k, v in ctx.params.items()
+            if k != "method" and not k.startswith("_")
+        }
         data = await method(session=ctx.session, tenant_id=ctx.tenant_id, **kwargs)
         return OperationResult.ok(data)
 
@@ -164,8 +168,10 @@ class AnalyticsDetectionHandler:
                 f"Unknown facade method: {method_name}", "UNKNOWN_METHOD"
             )
 
-        kwargs = dict(ctx.params)
-        kwargs.pop("method", None)
+        kwargs = {
+            k: v for k, v in ctx.params.items()
+            if k != "method" and not k.startswith("_")
+        }
         data = await method(tenant_id=ctx.tenant_id, **kwargs)
         return OperationResult.ok(data)
 
