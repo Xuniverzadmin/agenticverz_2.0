@@ -112,6 +112,21 @@ class TestScaffoldResponses:
         assert "deprecation" in body
         assert body["deprecation"]["clerk"]["status"] == "deprecated"
 
+    def test_provider_status_includes_readiness(self, client):
+        """Provider status response includes readiness aggregate."""
+        resp = client.get("/hoc/api/auth/provider/status")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "readiness" in body
+        readiness = body["readiness"]
+        assert "ready" in readiness
+        assert "checks" in readiness
+        assert "failed_count" in readiness
+        assert isinstance(readiness["checks"], list)
+        assert len(readiness["checks"]) == 3  # issuer, audience, jwks_source
+        check_names = {c["check"] for c in readiness["checks"]}
+        assert check_names == {"issuer", "audience", "jwks_source"}
+
     def test_password_reset_request_returns_501(self, client):
         resp = client.post(
             "/hoc/api/auth/password/reset/request",

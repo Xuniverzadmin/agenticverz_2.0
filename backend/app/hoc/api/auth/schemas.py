@@ -134,6 +134,7 @@ class AuthProviderStatusResponse(BaseModel):
     canonical_provider: str
     forced: bool
     configured: bool
+    readiness: dict[str, Any] = Field(default_factory=dict)
     deprecation: dict[str, Any] = Field(default_factory=dict)
     provider_diagnostics: dict[str, Any] = Field(default_factory=dict)
 

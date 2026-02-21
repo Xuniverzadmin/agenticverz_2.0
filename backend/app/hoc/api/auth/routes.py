@@ -65,6 +65,9 @@ def _not_implemented() -> JSONResponse:
 # =============================================================================
 # GET /hoc/api/auth/provider/status
 # =============================================================================
+# EXPOSURE POLICY: PUBLIC (gateway_policy.py PUBLIC_PATHS)
+# Rationale: Operators need to check auth configuration without authenticating
+# (chicken-and-egg). Response contains only operational diagnostics — no secrets.
 
 @router.get(
     "/provider/status",

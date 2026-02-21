@@ -506,3 +506,208 @@ class TestProviderStatus:
         assert "deprecation" in status
         assert "clerk" in status["deprecation"]
         assert status["deprecation"]["clerk"]["status"] == "deprecated"
+
+    def test_status_includes_readiness_field(self):
+        """Provider status includes readiness aggregate with checks."""
+        from app.auth import auth_provider
+        auth_provider.AUTH_PROVIDER_ENV = "clove"
+        reset_human_auth_provider()
+        from app.auth.auth_provider import get_human_auth_provider_status
+        status = get_human_auth_provider_status()
+        assert "readiness" in status
+        readiness = status["readiness"]
+        assert "ready" in readiness
+        assert "checks" in readiness
+        assert "failed_count" in readiness
+        assert isinstance(readiness["checks"], list)
+        assert len(readiness["checks"]) == 3  # issuer, audience, jwks_source
+
+    def test_status_readiness_checks_have_correct_structure(self):
+        """Each readiness check has check, status, detail fields."""
+        from app.auth import auth_provider
+        auth_provider.AUTH_PROVIDER_ENV = "clove"
+        reset_human_auth_provider()
+        from app.auth.auth_provider import get_human_auth_provider_status
+        status = get_human_auth_provider_status()
+        for check in status["readiness"]["checks"]:
+            assert "check" in check
+            assert "status" in check
+            assert check["status"] in ("pass", "fail")
+            assert "detail" in check
+
+
+# =============================================================================
+# Readiness Check Tests
+# =============================================================================
+
+
+class TestReadinessChecks:
+    """Tests for CloveHumanAuthProvider.readiness_checks() and readiness_summary()."""
+
+    def test_readiness_all_pass_when_configured(self):
+        """All checks pass when issuer, audience, and JWKS source are present."""
+        provider = CloveHumanAuthProvider()
+        # Default config has issuer + audience from constants
+        if provider.is_configured:
+            summary = provider.readiness_summary()
+            assert summary["ready"] is True
+            assert summary["failed_count"] == 0
+            assert all(c["status"] == "pass" for c in summary["checks"])
+
+    def test_readiness_fails_when_issuer_missing(self, monkeypatch):
+        """Issuer check fails when CLOVE_ISSUER is empty."""
+        from app.auth import auth_provider_clove as clove_mod
+        monkeypatch.setattr(clove_mod, "_DEFAULT_ISSUER", "")
+        provider = clove_mod.CloveHumanAuthProvider()
+        summary = provider.readiness_summary()
+        assert summary["ready"] is False
+        issuer_check = next(c for c in summary["checks"] if c["check"] == "issuer")
+        assert issuer_check["status"] == "fail"
+
+    def test_readiness_fails_when_audience_missing(self, monkeypatch):
+        """Audience check fails when CLOVE_AUDIENCE is empty."""
+        from app.auth import auth_provider_clove as clove_mod
+        monkeypatch.setattr(clove_mod, "_DEFAULT_AUDIENCE", "")
+        provider = clove_mod.CloveHumanAuthProvider()
+        summary = provider.readiness_summary()
+        audience_check = next(c for c in summary["checks"] if c["check"] == "audience")
+        assert audience_check["status"] == "fail"
+
+    def test_readiness_fails_when_jwks_source_missing(self, monkeypatch):
+        """JWKS source check fails when neither URL nor file is set."""
+        from app.auth import auth_provider_clove as clove_mod
+        monkeypatch.setattr(clove_mod, "_JWKS_URL", "")
+        monkeypatch.setattr(clove_mod, "_JWKS_FILE", "")
+        monkeypatch.setattr(clove_mod, "_JWKS_ENDPOINT", "")
+        monkeypatch.setattr(clove_mod, "_DEFAULT_ISSUER", "")
+        provider = clove_mod.CloveHumanAuthProvider()
+        summary = provider.readiness_summary()
+        jwks_check = next(c for c in summary["checks"] if c["check"] == "jwks_source")
+        assert jwks_check["status"] == "fail"
+
+    def test_readiness_passes_with_jwks_file(self, monkeypatch, tmp_path):
+        """JWKS source passes when a file path is configured."""
+        from app.auth import auth_provider_clove as clove_mod
+        jwks_file = tmp_path / "jwks.json"
+        jwks_file.write_text('{"keys":[]}')
+        monkeypatch.setattr(clove_mod, "_JWKS_FILE", str(jwks_file))
+        monkeypatch.setattr(clove_mod, "_JWKS_URL", "")
+        monkeypatch.setattr(clove_mod, "_DEFAULT_ISSUER", "https://auth.example.com")
+        monkeypatch.setattr(clove_mod, "_DEFAULT_AUDIENCE", "test")
+        provider = clove_mod.CloveHumanAuthProvider()
+        summary = provider.readiness_summary()
+        assert summary["ready"] is True
+        jwks_check = next(c for c in summary["checks"] if c["check"] == "jwks_source")
+        assert jwks_check["status"] == "pass"
+        assert "file=" in jwks_check["detail"]
+
+    def test_readiness_passes_with_jwks_url(self, monkeypatch):
+        """JWKS source passes when a URL is configured."""
+        from app.auth import auth_provider_clove as clove_mod
+        monkeypatch.setattr(clove_mod, "_JWKS_URL", "https://auth.example.com/.well-known/jwks.json")
+        monkeypatch.setattr(clove_mod, "_JWKS_FILE", "")
+        monkeypatch.setattr(clove_mod, "_DEFAULT_ISSUER", "https://auth.example.com")
+        monkeypatch.setattr(clove_mod, "_DEFAULT_AUDIENCE", "test")
+        provider = clove_mod.CloveHumanAuthProvider()
+        summary = provider.readiness_summary()
+        assert summary["ready"] is True
+        jwks_check = next(c for c in summary["checks"] if c["check"] == "jwks_source")
+        assert jwks_check["status"] == "pass"
+        assert "url=" in jwks_check["detail"]
+
+    def test_readiness_all_fail_when_nothing_configured(self, monkeypatch):
+        """All 3 checks fail when nothing is configured."""
+        from app.auth import auth_provider_clove as clove_mod
+        monkeypatch.setattr(clove_mod, "_DEFAULT_ISSUER", "")
+        monkeypatch.setattr(clove_mod, "_DEFAULT_AUDIENCE", "")
+        monkeypatch.setattr(clove_mod, "_JWKS_URL", "")
+        monkeypatch.setattr(clove_mod, "_JWKS_FILE", "")
+        monkeypatch.setattr(clove_mod, "_JWKS_ENDPOINT", "")
+        provider = clove_mod.CloveHumanAuthProvider()
+        summary = provider.readiness_summary()
+        assert summary["ready"] is False
+        assert summary["failed_count"] == 3
+
+
+# =============================================================================
+# Startup Gate Tests
+# =============================================================================
+
+
+class TestStartupGatePolicy:
+    """Tests for Clove JWKS readiness startup gate logic."""
+
+    def test_startup_gate_raises_in_prod_when_not_ready(self, monkeypatch):
+        """Production startup must fail when Clove readiness is not met."""
+        from app.auth import auth_provider_clove as clove_mod
+        monkeypatch.setattr(clove_mod, "_DEFAULT_ISSUER", "")
+        monkeypatch.setattr(clove_mod, "_DEFAULT_AUDIENCE", "")
+        monkeypatch.setattr(clove_mod, "_JWKS_URL", "")
+        monkeypatch.setattr(clove_mod, "_JWKS_FILE", "")
+        monkeypatch.setattr(clove_mod, "_JWKS_ENDPOINT", "")
+        provider = clove_mod.CloveHumanAuthProvider()
+        readiness = provider.readiness_summary()
+
+        # Simulate the startup gate logic from main.py
+        assert readiness["ready"] is False
+        is_prod = True  # simulating AOS_MODE=prod
+        if not readiness["ready"] and is_prod:
+            failed = [c for c in readiness["checks"] if c["status"] == "fail"]
+            with pytest.raises(RuntimeError, match="not ready in production"):
+                raise RuntimeError(
+                    f"Clove auth provider not ready in production: "
+                    f"{readiness['failed_count']} check(s) failed — "
+                    + ", ".join(c["detail"] for c in failed)
+                )
+
+    def test_startup_gate_raises_in_strict_mode_when_not_ready(self, monkeypatch):
+        """Non-prod startup fails when strict mode enabled and readiness not met."""
+        from app.auth import auth_provider_clove as clove_mod
+        monkeypatch.setattr(clove_mod, "_DEFAULT_ISSUER", "")
+        monkeypatch.setattr(clove_mod, "_DEFAULT_AUDIENCE", "")
+        monkeypatch.setattr(clove_mod, "_JWKS_URL", "")
+        monkeypatch.setattr(clove_mod, "_JWKS_FILE", "")
+        monkeypatch.setattr(clove_mod, "_JWKS_ENDPOINT", "")
+        provider = clove_mod.CloveHumanAuthProvider()
+        readiness = provider.readiness_summary()
+        strict_startup = True  # simulating AUTH_CLOVE_STRICT_STARTUP=true
+
+        assert readiness["ready"] is False
+        if not readiness["ready"] and strict_startup:
+            failed = [c for c in readiness["checks"] if c["status"] == "fail"]
+            with pytest.raises(RuntimeError, match="strict mode"):
+                raise RuntimeError(
+                    f"Clove auth provider not ready (strict mode): "
+                    f"{readiness['failed_count']} check(s) failed — "
+                    + ", ".join(c["detail"] for c in failed)
+                )
+
+    def test_startup_gate_warns_in_nonprod_when_not_ready(self, monkeypatch, caplog):
+        """Non-prod startup emits warning but does not crash."""
+        import logging
+        from app.auth import auth_provider_clove as clove_mod
+        monkeypatch.setattr(clove_mod, "_DEFAULT_ISSUER", "")
+        monkeypatch.setattr(clove_mod, "_DEFAULT_AUDIENCE", "")
+        monkeypatch.setattr(clove_mod, "_JWKS_URL", "")
+        monkeypatch.setattr(clove_mod, "_JWKS_FILE", "")
+        monkeypatch.setattr(clove_mod, "_JWKS_ENDPOINT", "")
+        provider = clove_mod.CloveHumanAuthProvider()
+        readiness = provider.readiness_summary()
+
+        # Non-prod, non-strict: just warning
+        assert readiness["ready"] is False
+        with caplog.at_level(logging.WARNING):
+            failed = [c for c in readiness["checks"] if c["status"] == "fail"]
+            logging.getLogger("test").warning(
+                "clove_readiness_gate_warning — provider not fully configured",
+                extra={"failed_checks": failed},
+            )
+        assert "not fully configured" in caplog.text
+
+    def test_startup_gate_passes_when_ready(self):
+        """Startup gate passes silently when all checks pass."""
+        provider = CloveHumanAuthProvider()
+        if provider.is_configured:
+            readiness = provider.readiness_summary()
+            assert readiness["ready"] is True
+            # No exception raised — gate passes

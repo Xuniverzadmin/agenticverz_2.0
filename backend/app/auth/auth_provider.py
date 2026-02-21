@@ -204,12 +204,17 @@ def get_human_auth_provider_status() -> dict[str, Any]:
     provider = get_human_auth_provider()
     effective = _LEGACY_ALIASES.get(AUTH_PROVIDER_ENV, AUTH_PROVIDER_ENV)
     is_deprecated = AUTH_PROVIDER_ENV in {"clerk"}
+    # Readiness checks (per-input pass/fail)
+    readiness_fn = getattr(provider, "readiness_summary", None)
+    readiness = readiness_fn() if callable(readiness_fn) else {"ready": provider.is_configured, "checks": [], "failed_count": 0}
+
     status: dict[str, Any] = {
         "requested_provider": AUTH_PROVIDER_ENV or "clove",
         "effective_provider": provider.provider_type.value,
         "canonical_provider": "clove",
         "forced": (effective != provider.provider_type.value),
         "configured": provider.is_configured,
+        "readiness": readiness,
         "deprecation": {
             "clerk": {
                 "status": "deprecated",

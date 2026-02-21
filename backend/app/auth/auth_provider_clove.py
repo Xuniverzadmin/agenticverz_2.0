@@ -94,6 +94,53 @@ class CloveHumanAuthProvider(HumanAuthProvider):
         has_jwks_source = bool(self._jwks_file or self._jwks_url)
         return has_identity_core and has_jwks_source
 
+    def readiness_checks(self) -> list[dict[str, Any]]:
+        """
+        Return per-input readiness checks with pass/fail status.
+
+        Each check is a dict with:
+        - check: str — name of the configuration input
+        - status: "pass" | "fail"
+        - detail: str — human-readable explanation
+        """
+        checks: list[dict[str, Any]] = []
+
+        # Check 1: Issuer
+        if self._issuer:
+            checks.append({"check": "issuer", "status": "pass", "detail": f"issuer={self._issuer}"})
+        else:
+            checks.append({"check": "issuer", "status": "fail", "detail": "CLOVE_ISSUER not set"})
+
+        # Check 2: Audience
+        if self._audience:
+            checks.append({"check": "audience", "status": "pass", "detail": f"audience={self._audience}"})
+        else:
+            checks.append({"check": "audience", "status": "fail", "detail": "CLOVE_AUDIENCE not set"})
+
+        # Check 3: JWKS source
+        if self._jwks_file:
+            checks.append({"check": "jwks_source", "status": "pass", "detail": f"file={self._jwks_file}"})
+        elif self._jwks_url:
+            checks.append({"check": "jwks_source", "status": "pass", "detail": f"url={self._jwks_url}"})
+        else:
+            checks.append({"check": "jwks_source", "status": "fail", "detail": "No JWKS source (set CLOVE_JWKS_URL or CLOVE_JWKS_FILE)"})
+
+        return checks
+
+    def readiness_summary(self) -> dict[str, Any]:
+        """
+        Return readiness aggregate: ready (bool), checks (list), failed_count (int).
+
+        Used by status endpoint and startup gate.
+        """
+        checks = self.readiness_checks()
+        failed = [c for c in checks if c["status"] == "fail"]
+        return {
+            "ready": len(failed) == 0,
+            "checks": checks,
+            "failed_count": len(failed),
+        }
+
     def diagnostics(self) -> dict[str, Any]:
         """Provider diagnostics for health/status observability."""
         return {
