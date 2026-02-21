@@ -1,0 +1,92 @@
+{
+  "generated_at_utc": "2026-02-21T07:54:56.667404+00:00",
+  "domain": "controls",
+  "total": 7,
+  "unique_method_path": 7,
+  "endpoints": [
+    {
+      "domain": "controls",
+      "method": "GET",
+      "path": "/hoc/api/cus/controls",
+      "operation_id": "list_controls",
+      "summary": "List controls (GAP-123).",
+      "tags": "Controls",
+      "auth_required": "unknown",
+      "auth_schemes": "",
+      "request_schema": "",
+      "response_schema": "Dict[str, Any]"
+    },
+    {
+      "domain": "controls",
+      "method": "GET",
+      "path": "/hoc/api/cus/controls/list",
+      "operation_id": "list_controls_public",
+      "summary": "",
+      "tags": "cus-controls-public",
+      "auth_required": "unknown",
+      "auth_schemes": "",
+      "request_schema": "",
+      "response_schema": "ControlsListResponse"
+    },
+    {
+      "domain": "controls",
+      "method": "GET",
+      "path": "/hoc/api/cus/controls/status",
+      "operation_id": "get_status",
+      "summary": "Get overall control status.",
+      "tags": "Controls",
+      "auth_required": "unknown",
+      "auth_schemes": "",
+      "request_schema": "",
+      "response_schema": "Dict[str, Any]"
+    },
+    {
+      "domain": "controls",
+      "method": "GET",
+      "path": "/hoc/api/cus/controls/{control_id}",
+      "operation_id": "get_control",
+      "summary": "Get a specific control.",
+      "tags": "Controls",
+      "auth_required": "unknown",
+      "auth_schemes": "",
+      "request_schema": "",
+      "response_schema": "Dict[str, Any]"
+    },
+    {
+      "domain": "controls",
+      "method": "PUT",
+      "path": "/hoc/api/cus/controls/{control_id}",
+      "operation_id": "update_control",
+      "summary": "Update a control.",
+      "tags": "Controls",
+      "auth_required": "unknown",
+      "auth_schemes": "",
+      "request_schema": "",
+      "response_schema": "Dict[str, Any]"
+    },
+    {
+      "domain": "controls",
+      "method": "POST",
+      "path": "/hoc/api/cus/controls/{control_id}/disable",
+      "operation_id": "disable_control",
+      "summary": "Disable a control.",
+      "tags": "Controls",
+      "auth_required": "unknown",
+      "auth_schemes": "",
+      "request_schema": "",
+      "response_schema": "Dict[str, Any]"
+    },
+    {
+      "domain": "controls",
+      "method": "POST",
+      "path": "/hoc/api/cus/controls/{control_id}/enable",
+      "operation_id": "enable_control",
+      "summary": "Enable a control.",
+      "tags": "Controls",
+      "auth_required": "unknown",
+      "auth_schemes": "",
+      "request_schema": "",
+      "response_schema": "Dict[str, Any]"
+    }
+  ]
+}

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, FastAPI
 
+from app.hoc.api.apis.cus_publication import router as cus_publication_router
 from app.hoc.api.facades.cus import ALL_CUS_ROUTERS
 from app.hoc.api.facades.fdr.account import ROUTERS as FDR_ACCOUNT_ROUTERS
 from app.hoc.api.facades.fdr.agent import ROUTERS as FDR_AGENT_ROUTERS
@@ -36,6 +37,9 @@ def build_hoc_router() -> APIRouter:
         router.include_router(r)
     for r in INT_RECOVERY_ROUTERS:
         router.include_router(r)
+
+    # CUS publication surfaces (apis lane)
+    router.include_router(cus_publication_router)
 
     # Founder surfaces (FDR)
     for r in FDR_ACCOUNT_ROUTERS:
