@@ -711,3 +711,114 @@ class TestStartupGatePolicy:
             readiness = provider.readiness_summary()
             assert readiness["ready"] is True
             # No exception raised — gate passes
+
+    def test_startup_gate_contract_matches_main_py(self):
+        """
+        Validate startup gate policy contract against actual main.py implementation.
+
+        Extracts the real gate code pattern from main.py (lines 687-735) and verifies
+        all three branches exist: prod fatal, strict fatal, non-prod warning.
+        """
+        import ast
+        import pathlib
+
+        main_py = pathlib.Path(__file__).parent.parent.parent / "app" / "main.py"
+        source = main_py.read_text()
+
+        # Contract: error messages in main.py must match test expectations
+        assert "Clove auth provider not ready in production:" in source, \
+            "main.py prod gate message missing or changed"
+        assert "Clove auth provider not ready (strict mode):" in source, \
+            "main.py strict gate message missing or changed"
+        assert "clove_readiness_gate_warning" in source, \
+            "main.py non-prod warning log event missing or changed"
+
+        # Contract: env vars controlling gate behavior
+        assert "AOS_MODE" in source, "main.py must check AOS_MODE for prod detection"
+        assert "AUTH_CLOVE_STRICT_STARTUP" in source, "main.py must check AUTH_CLOVE_STRICT_STARTUP"
+
+        # Contract: gate reads readiness_summary from provider
+        assert "readiness_summary" in source, "main.py must call readiness_summary()"
+
+        # Contract: gate uses RuntimeError for fatal exits
+        tree = ast.parse(source)
+        gate_raises = [
+            node for node in ast.walk(tree)
+            if isinstance(node, ast.Raise) and node.exc is not None
+            and isinstance(node.exc, ast.Call)
+            and isinstance(node.exc.func, ast.Name)
+            and node.exc.func.id == "RuntimeError"
+        ]
+        # Must have at least 2 RuntimeError raises in the gate block (prod + strict)
+        runtime_errors_with_ready = [
+            r for r in gate_raises
+            if any("ready" in ast.dump(arg).lower() for arg in r.exc.args)
+        ]
+        assert len(runtime_errors_with_ready) >= 2, \
+            f"Expected >=2 RuntimeError raises with 'ready' in main.py, found {len(runtime_errors_with_ready)}"
+
+
+# =============================================================================
+# Public Path Effective Policy Tests
+# =============================================================================
+
+
+class TestPublicPathEffectivePolicy:
+    """
+    Tests that /hoc/api/auth/provider/status is effectively public through
+    both the gateway_policy.py path and the RBAC_RULES.yaml schema path.
+    """
+
+    def test_gateway_policy_includes_provider_status(self):
+        """gateway_policy.py PUBLIC_PATHS includes /hoc/api/auth/provider/status."""
+        from app.hoc.cus.hoc_spine.authority.gateway_policy import PUBLIC_PATHS
+        assert "/hoc/api/auth/provider/status" in PUBLIC_PATHS
+
+    def test_gateway_policy_config_includes_provider_status(self):
+        """get_gateway_policy_config() returns public_paths including provider status."""
+        from app.hoc.cus.hoc_spine.authority.gateway_policy import get_gateway_policy_config
+        config = get_gateway_policy_config()
+        assert "/hoc/api/auth/provider/status" in config["public_paths"]
+
+    def test_rbac_schema_has_provider_status_rule(self):
+        """RBAC_RULES.yaml has a PUBLIC rule covering /hoc/api/auth/provider/status."""
+        from app.auth.rbac_rules_loader import load_rbac_rules, AccessTier
+        rules = load_rbac_rules()
+        matching = [
+            r for r in rules
+            if r.path_prefix == "/hoc/api/auth/provider/status"
+            and r.access_tier == AccessTier.PUBLIC
+        ]
+        assert len(matching) == 1, \
+            f"Expected 1 PUBLIC rule for /hoc/api/auth/provider/status, found {len(matching)}"
+        rule = matching[0]
+        assert rule.rule_id == "HOC_AUTH_PROVIDER_STATUS"
+        assert "GET" in rule.methods
+        assert "preflight" in rule.allow_environment
+        assert "production" in rule.allow_environment
+
+    def test_rbac_public_paths_includes_provider_status(self):
+        """get_public_paths() from RBAC loader includes /hoc/api/auth/provider/status."""
+        from app.auth.rbac_rules_loader import get_public_paths
+        for env in ("preflight", "production"):
+            public = get_public_paths(environment=env)
+            assert "/hoc/api/auth/provider/status" in public, \
+                f"/hoc/api/auth/provider/status missing from public paths in {env}"
+
+    def test_middleware_public_paths_include_provider_status(self):
+        """AuthGatewayMiddleware with gateway_policy config marks provider status as public."""
+        from app.hoc.cus.hoc_spine.authority.gateway_policy import get_gateway_policy_config
+        config = get_gateway_policy_config()
+        # Simulate what AuthGatewayMiddleware.__init__ does
+        public_paths_set = set(config["public_paths"])
+        assert "/hoc/api/auth/provider/status" in public_paths_set
+
+    def test_dual_source_consistency(self):
+        """gateway_policy.py and RBAC_RULES.yaml agree on provider status being public."""
+        from app.hoc.cus.hoc_spine.authority.gateway_policy import get_public_paths as gw_public
+        from app.auth.rbac_rules_loader import get_public_paths as rbac_public
+        gw_paths = gw_public()
+        rbac_paths = rbac_public(environment="production")
+        target = "/hoc/api/auth/provider/status"
+        assert target in gw_paths, "Missing from gateway_policy.py"
+        assert target in rbac_paths, "Missing from RBAC_RULES.yaml"

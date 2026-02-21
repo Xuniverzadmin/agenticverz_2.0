@@ -159,7 +159,7 @@ None. All acceptance criteria met.
 ## 7. PR Hygiene Evidence
 
 - Branch: `auth/scaffold-provider-seam`
-- Commit SHA(s): (T8 — pending commit)
+- Commit SHA(s): `6759b9a6` (JWKS gate implementation), remediation commit (RBAC rule + tests)
 - PR link: https://github.com/Xuniverzadmin/agenticverz_2.0/pull/34
 - Force push used: NO
 - Unrelated files touched: NO
@@ -168,7 +168,7 @@ None. All acceptance criteria met.
 
 - Follow-up recommendations:
   1. Add `AUTH_CLOVE_STRICT_STARTUP` to deployment documentation
-  2. Consider adding RBAC_RULES.yaml entry for `/hoc/api/auth/provider/status` (currently in gateway_policy.py PUBLIC_PATHS only)
+  2. ~~Consider adding RBAC_RULES.yaml entry~~ DONE — `HOC_AUTH_PROVIDER_STATUS` rule added (remediation commit)
   3. 2 advisory MISSING_EVIDENCE warnings in capability enforcer — non-blocking, deferred
 
 - Risks remaining:
