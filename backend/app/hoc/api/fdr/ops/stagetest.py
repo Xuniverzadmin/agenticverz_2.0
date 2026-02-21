@@ -9,6 +9,7 @@
 # Allowed Imports: L5 (engines), L5 (schemas)
 # Forbidden Imports: L1, L6, sqlalchemy
 # artifact_class: CODE
+# capability_id: CAP-005
 """
 Stagetest Evidence Console API — Read-Only Founder Endpoints
 
@@ -21,7 +22,7 @@ Endpoints:
 - GET /hoc/api/stagetest/runs/{run_id}/cases         — List cases for run
 - GET /hoc/api/stagetest/runs/{run_id}/cases/{case_id} — Get case detail
 - GET /hoc/api/stagetest/apis            — Get API endpoint snapshot
-- GET /hoc/api/stagetest/apis/ledger     — Get canonical CUS API ledger snapshot
+- GET /hoc/api/stagetest/apis/ledger     — Get canonical HOC API ledger snapshot
 
 Architecture:
 - L2 is thin HTTP boundary — no filesystem I/O here
@@ -117,7 +118,7 @@ async def stagetest_list_apis():
 
 @router.get("/apis/ledger", response_model=ApisSnapshotResponse)
 async def stagetest_list_apis_ledger():
-    """GET /hoc/api/stagetest/apis/ledger — Get canonical CUS API ledger snapshot."""
+    """GET /hoc/api/stagetest/apis/ledger — Get canonical HOC API ledger snapshot."""
     data = get_apis_ledger_snapshot()
     if data is None:
         return ApisSnapshotResponse(

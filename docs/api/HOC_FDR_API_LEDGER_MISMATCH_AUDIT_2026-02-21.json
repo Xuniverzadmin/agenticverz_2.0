@@ -1,0 +1,277 @@
+{
+  "generated_at_utc": "2026-02-21T07:19:42.687293+00:00",
+  "path_prefix": "/hoc/api/fdr/",
+  "source_rows": 66,
+  "source_unique_rows": 66,
+  "openapi_rows": 0,
+  "openapi_unique_rows": 0,
+  "source_only_count": 66,
+  "openapi_only_count": 0,
+  "source_only": [
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/explorer/info"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/explorer/patterns"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/explorer/summary"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/explorer/system/health"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/explorer/tenant/{tenant_id}/diagnostics"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/explorer/tenants"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/fdr/contracts/review-queue"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/fdr/contracts/{contract_id}"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/fdr/lifecycle/{tenant_id}"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/fdr/lifecycle/{tenant_id}/history"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/fdr/onboarding/stalled"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/fdr/review/auto-execute"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/fdr/review/auto-execute/stats"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/fdr/review/auto-execute/{invocation_id}"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/fdr/timeline/count"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/fdr/timeline/decisions"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/fdr/timeline/decisions/{decision_id}"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/fdr/timeline/run/{run_id}"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/hoc/api/stagetest/apis"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/hoc/api/stagetest/apis/ledger"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/hoc/api/stagetest/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/hoc/api/stagetest/runs/{run_id}"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/hoc/api/stagetest/runs/{run_id}/cases"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/hoc/api/stagetest/runs/{run_id}/cases/{case_id}"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/actions/audit"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/actions/audit/{action_id}"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/cost/anomalies"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/cost/customers/{tenant_id}"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/cost/overview"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/cost/tenants"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/customers"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/customers/at-risk"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/customers/{tenant_id}"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/events"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/incidents"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/incidents/infra-summary"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/incidents/patterns"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/incidents/{incident_id}"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/infra"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/playbooks"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/playbooks/{playbook_id}"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/pulse"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/revenue"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/ops/stickiness"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/retrieval/evidence"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/retrieval/evidence/{evidence_id}"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/retrieval/planes"
+    },
+    {
+      "method": "GET",
+      "path": "/hoc/api/fdr/retrieval/planes/{plane_id}"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/fdr/contracts/{contract_id}/review"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/fdr/lifecycle/archive"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/fdr/lifecycle/resume"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/fdr/lifecycle/suspend"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/fdr/lifecycle/terminate"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/fdr/onboarding/force-complete"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/ops/actions/freeze-api-key"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/ops/actions/freeze-tenant"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/ops/actions/override-incident"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/ops/actions/throttle-tenant"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/ops/actions/unfreeze-api-key"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/ops/actions/unfreeze-tenant"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/ops/actions/unthrottle-tenant"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/retrieval/planes"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/retrieval/planes/{plane_id}/approve_purge"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/retrieval/planes/{plane_id}/bind_policy"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/retrieval/planes/{plane_id}/transition"
+    },
+    {
+      "method": "POST",
+      "path": "/hoc/api/fdr/retrieval/planes/{plane_id}/unbind_policy"
+    }
+  ],
+  "openapi_only": []
+}
