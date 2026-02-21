@@ -2,7 +2,7 @@
 
 **Created:** 2026-02-21 07:41:41 UTC
 **Executor:** Claude
-**Last updated:** 2026-02-21 (remediation pass 2 — CI evidence sync)
+**Last updated:** 2026-02-21 (remediation pass 3 — CI blocker attribution correction)
 **Status:** DONE (PR32-owned blockers resolved; repo-wide CI failures documented)
 
 ## 1. Execution Summary
@@ -25,7 +25,7 @@
 | T7 | PARTIAL | Handler tests pass; TestClient returns 401 (auth middleware blocks `/apis/*`) | Runtime HTTP 200 not verified — not deployed. Handler-level + structural tests only. |
 | T8 | DONE | `check_layer_boundaries.py`: CLEAN; `l5_spine_pairing_gap_detector.py`: 70 wired, 0 gaps, 0 orphaned | Full CUS dispatch conformance |
 | T9 | DONE | Global: local 499 = runtime 499, ZERO DIFF; Per-domain: all 10 domains ZERO DIFF | Parity measured against pre-deploy runtime (existing ledger endpoint) |
-| T10 | PARTIAL | Local gates pass; GitHub CI has 13 failures (1 PR32-owned now fixed, 12 repo-wide) | See CI Evidence section |
+| T10 | PARTIAL | Local gates pass; GitHub CI has 12 failures (0 PR32-owned, 12 repo-wide) | See CI Evidence section |
 | T11 | DONE | This document | Corrected from initial overclaim pass |
 | T12 | DONE | Commit + push + PR #32 updated | See PR Hygiene Evidence |
 
@@ -48,21 +48,30 @@
 
 ## 4. Evidence and Validation
 
-### Files Changed (Remediation Pass)
+### Files Changed (Full PR32 Inventory — 42 files)
 
-**New files:**
-- `backend/app/hoc/api/facades/apis/__init__.py` — L2.1 facade for APIs lane
-- `backend/tests/api/test_cus_publication_api.py` — 21 durable tests
-- `docs/api/cus/{domain}_ledger.csv` x 10 — per-domain CSV ledgers
-- `docs/api/cus/{domain}_ledger.md` x 10 — per-domain MD ledgers
+**New code files:**
+- `backend/app/hoc/api/apis/__init__.py` — APIs lane init, `# capability_id: CAP-011`
+- `backend/app/hoc/api/apis/cus_publication.py` — 4 GET endpoints, domain resolution, `# capability_id: CAP-011`
+- `backend/app/hoc/api/facades/apis/__init__.py` — L2.1 facade for APIs lane, `# capability_id: CAP-011`
+- `backend/tests/api/test_cus_publication_api.py` — 21 durable tests, 7 classes
 
-**Modified files:**
-- `backend/app/hoc/api/apis/__init__.py` — added `# capability_id: CAP-011`
-- `backend/app/hoc/api/apis/cus_publication.py` — added `# capability_id: CAP-011`
+**Modified code files:**
 - `backend/app/hoc/app.py` — added `# capability_id: CAP-011`; rewired import from facade
 - `backend/app/hoc/int/worker/runner.py` — added `# capability_id: CAP-012`; rewrote comment import examples
 - `backend/app/hoc/int/analytics/engines/runner.py` — rewrote comment import examples (lines 958-961)
-- This document
+
+**New documentation files:**
+- `backend/app/hoc/docs/architecture/usecases/HOC_CUS_STRICT_STABILIZATION_PASS_PLAN_2026-02-21.md` — original plan
+- `backend/app/hoc/docs/architecture/usecases/HOC_CUS_Strict_Stabilization_Pass_2026_02_21_plan.md` — refined plan
+- `backend/app/hoc/docs/architecture/usecases/HOC_CUS_Strict_Stabilization_Pass_2026_02_21_plan_implemented.md` — this document
+
+**New ledger artifacts (31 files):**
+- `docs/api/HOC_CUS_API_LEDGER.json` — global CUS ledger (502 endpoints)
+- `docs/api/HOC_CUS_API_LEDGER.md` — global CUS ledger (markdown)
+- `docs/api/cus/{domain}_ledger.json` x 10 — per-domain JSON ledgers
+- `docs/api/cus/{domain}_ledger.csv` x 10 — per-domain CSV ledgers
+- `docs/api/cus/{domain}_ledger.md` x 10 — per-domain MD ledgers
 
 ### Local Gates Executed
 
@@ -83,15 +92,18 @@ test_cus_publication_api.py:            21/21 PASS
 |-------|--------|-------|
 | Capability Linkage Check | BLOCKED→FIXED | Was: `int/worker/runner.py` missing capability_id. Fixed: added `CAP-012` |
 
-**Passing checks (34):**
-CI Gate, Consistency Check, DB-AUTH-001 Compliance, G1-G5 Guards, GQ-L2-CONTRACT-READY,
-Layer Integration Tests, Mypy Type Safety, Qualifier Summary, SQLModel Pattern Lint,
-UI Expansion Guard, Validate OpenAPI Snapshot, Validate Registry, determinism,
-env-misuse-guard, feature-intent-guard, frozen-files-guard, golden-replay-guard,
-governance-tripwire, integration, lint-alerts, migration-check, mypy-check,
-priority4/5-intent-guard, pyright-check, run-migrations, workflow-engine,
-secrets-scan, setup-neon-branch, sql-misuse-guard, ui-hygiene, unit-tests,
-workflow-golden-check, cleanup-neon-branch
+**Passing checks (39):**
+Capability Linkage Check, CI Gate, Consistency Check, DB-AUTH-001 Compliance,
+G1 Registry Mutation Guard, G2 Plane Purity Guard, G3 Taxonomy Lock Guard,
+G4 Worker Auth Guard, G5 Authority Guard, GQ-L2-CONTRACT-READY Evaluation,
+Layer Integration Tests, Mypy Type Safety, Qualifier Summary, SQLModel Pattern Lint (Full),
+UI Expansion Guard, Validate OpenAPI Snapshot, Validate Registry,
+cleanup-neon-branch, determinism, env-misuse-guard, feature-intent-guard,
+frozen-files-guard, golden-replay-guard, governance-tripwire, integration,
+lint-alerts, migration-check, mypy-check, priority4-intent-guard,
+priority5-intent-guard, pyright-check, run-migrations, secrets-scan,
+setup-neon-branch, sql-misuse-guard, ui-hygiene, unit-tests,
+workflow-engine, workflow-golden-check
 
 **Repo-wide failures (12, also fail on origin/main):**
 
@@ -99,15 +111,16 @@ workflow-golden-check, cleanup-neon-branch
 |-------|-----------|-------------|
 | claude-authority-guard | CLAUDE_AUTHORITY.md hash mismatch (file identical to origin/main; CI YAML hash stale) | NO |
 | Import Hygiene | 50+ `datetime.utcnow()` calls across untouched legacy files | NO |
-| Enforce L4/L6 Boundaries | 701 errors in `app/models/` sqlalchemy imports | NO |
-| layer-enforcement | Same 701 errors | NO |
-| Truth Preflight | `policy_rules_legacy` FK table missing in models | NO |
+| Enforce L4/L6 Boundaries | 93 layer-segregation violations in `app/models/` | NO |
+| layer-enforcement | 701 errors, 81 warnings across untouched model files | NO |
+| Truth Preflight | `NoReferencedTableError`: `policy_rules_legacy` FK table missing in models | NO |
 | Post-Flight Hygiene | 5 syntax errors in untouched files + 5804 warnings | NO |
 | Browser Integration Tests | Depends on Truth Preflight (backend won't start) | NO |
-| Integration Integrity Gate | Depends on Truth Preflight | NO |
-| e2e-tests | Depends on Truth Preflight | NO |
-| costsim / costsim-wiremock | Depends on Truth Preflight | NO |
-| m10-tests | Depends on Truth Preflight | NO |
+| Integration Integrity Gate | Depends on Truth Preflight (backend won't start) | NO |
+| e2e-tests | `ModuleNotFoundError`: no module `app.worker` | NO |
+| costsim | `RuntimeError`: no current event loop in MainThread | NO |
+| costsim-wiremock | `RuntimeError`: no current event loop in MainThread | NO |
+| m10-tests | Assertion failures (e.g., "Published event should be claimed") | NO |
 
 ### Publication Evidence
 
@@ -140,10 +153,14 @@ workflow-golden-check, cleanup-neon-branch
 |-------|----------|-----------|
 | CLAUDE_AUTHORITY.md hash mismatch | claude-authority-guard | CI YAML ratified hash stale vs actual file on main |
 | 50+ `datetime.utcnow()` calls | Import Hygiene | Legacy code across INT/CUS/models not yet migrated to `datetime.now(tz=UTC)` |
-| 701 sqlalchemy/sqlmodel imports in `app/models/` | layer-enforcement, Enforce L4/L6 | L7 model layer uses ORM by design; check overly broad |
-| `policy_rules_legacy` FK table missing | Truth Preflight | Model FK references non-existent table; blocks app startup in CI |
+| 93 layer-segregation violations | Enforce L4/L6 Boundaries | `app/models/` sqlalchemy imports; L7 uses ORM by design |
+| 701 errors, 81 warnings in model files | layer-enforcement | Layer check overly broad against L7 model layer |
+| `NoReferencedTableError: policy_rules_legacy` | Truth Preflight | Model FK references non-existent table; blocks app startup in CI |
 | 5 syntax errors in untouched files | Post-Flight Hygiene | `integrated_runtime.py`, `stub_planner.py`, `cost_snapshots_engine.py` |
-| Backend startup failure | e2e/costsim/m10/Browser | Cascading from Truth Preflight FK error |
+| Backend startup failure | Browser Integration, Integration Integrity | Cascading from Truth Preflight FK error |
+| `ModuleNotFoundError: app.worker` | e2e-tests | Missing worker module in test environment |
+| `RuntimeError: no current event loop` | costsim, costsim-wiremock | Event loop not available in MainThread |
+| Assertion failures | m10-tests | e.g., "Published event should be claimed" — test expectation drift |
 | 3x legacy `from app.services` imports | check_init_hygiene (warning) | `int/analytics/engines/runner.py` — known exceptions, non-blocking |
 
 ## 6. PR Hygiene Evidence
