@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 """
 Auth module for AOS.
 

@@ -1,3 +1,4 @@
+# capability_id: CAP-010
 # Layer: L4 — Domain Engine
 # Product: system-wide (Recovery API)
 # Temporal:

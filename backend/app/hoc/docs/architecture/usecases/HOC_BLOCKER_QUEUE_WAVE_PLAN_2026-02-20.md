@@ -43,7 +43,7 @@ Reduce HOC capability-linkage blockers from `550` to `0` under `backend/app/hoc/
 | 4 | W3 | `backend/app/hoc/int/general/**` + `backend/app/hoc/int/worker/**` + `backend/app/hoc/int/policies/**` | 78 | clear INT runtime/policy cluster | DONE (`358 -> 280`, warnings `0 -> 0`) |
 | 5 | W4 | CUS business domains: `cus/account/**`, `cus/activity/**`, `cus/controls/**`, `cus/policies/**`, `cus/api_keys/**`, `cus/overview/**`, `cus/ops/**`, `cus/agent/**`, `cus/apis/**`, `cus/__init__.py` | 123 | clear remaining CUS domain internals | DONE (`280 -> 157`, warnings `0 -> 0`) |
 | 6 | W5 | API lanes: `api/cus/**`, `api/facades/**`, `api/int/**`, `api/fdr/**` | 83 | clear API/facade linkage debt | DONE (`157 -> 74`, warnings `0 -> 0`) |
-| 7 | W6 | residual long-tail: `int/recovery/**`, `int/logs/**`, `int/integrations/**`, `int/incidents/**`, `int/analytics/**`, `int/activity/**`, `int/account/**`, `int/__init__.py`, `fdr/ops/**`, `fdr/logs/**`, `fdr/agent/**`, `fdr/account/**`, `fdr/platform/**`, `fdr/__init__.py` | 74 | clear long-tail and reach zero | PENDING |
+| 7 | W6 | residual long-tail: `int/recovery/**`, `int/logs/**`, `int/integrations/**`, `int/incidents/**`, `int/analytics/**`, `int/activity/**`, `int/account/**`, `int/__init__.py`, `fdr/ops/**`, `fdr/logs/**`, `fdr/agent/**`, `fdr/account/**`, `fdr/platform/**`, `fdr/__init__.py` | 74 | clear long-tail and reach zero | DONE (`74 -> 0`, warnings `0 -> 0`) |
 | 8 | W7 | Closure audit + pin/update queue docs | - | publish final closure evidence | PENDING |
 
 ## Per-Wave Checklist
@@ -163,3 +163,34 @@ Reduce HOC capability-linkage blockers from `550` to `0` under `backend/app/hoc/
   - Import hygiene (`backend/app/hoc/**`, strict relative-import): `0`
 - Artifact:
   - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W5_API_LANES_IMPLEMENTED_2026-02-21.md`
+
+## W6 Execution Result
+- Scope remediated:
+  - `backend/app/hoc/int/recovery/**`
+  - `backend/app/hoc/int/logs/**`
+  - `backend/app/hoc/int/integrations/**`
+  - `backend/app/hoc/int/incidents/**`
+  - `backend/app/hoc/int/analytics/**`
+  - `backend/app/hoc/int/activity/**`
+  - `backend/app/hoc/int/account/**`
+  - `backend/app/hoc/int/__init__.py`
+  - `backend/app/hoc/fdr/ops/**`
+  - `backend/app/hoc/fdr/logs/**`
+  - `backend/app/hoc/fdr/agent/**`
+  - `backend/app/hoc/fdr/account/**`
+  - `backend/app/hoc/fdr/platform/**`
+  - `backend/app/hoc/fdr/__init__.py`
+  - (`74` files)
+- Capability header mapping:
+  - `CAP-005`: `fdr/**`
+  - `CAP-010`: `int/recovery/**`
+  - `CAP-001`: `int/logs/**`, `int/incidents/**`, `int/analytics/**`
+  - `CAP-018`: `int/integrations/**`
+  - `CAP-012`: `int/activity/**`, `int/account/**`, `int/__init__.py`
+- Audit results:
+  - W6 changed-file capability check: `✅ All checks passed`
+  - Full HOC sweep: blocking `74 -> 0`, warnings `0 -> 0`
+  - Layer segregation (`--scope hoc`): `PASS (0 violations)`
+  - Import hygiene (`backend/app/hoc/**`, strict relative-import): `0`
+- Artifact:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W6_LONG_TAIL_IMPLEMENTED_2026-02-21.md`

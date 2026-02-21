@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L4 — Domain Engines
 # Product: system-wide (ops visibility)
 # Temporal:

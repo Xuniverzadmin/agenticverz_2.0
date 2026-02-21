@@ -1,3 +1,4 @@
+# capability_id: CAP-001
 # Layer: L4 — Domain Engine
 # Product: system-wide
 # Temporal:

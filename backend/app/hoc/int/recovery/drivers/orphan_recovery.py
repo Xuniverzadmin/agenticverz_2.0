@@ -1,3 +1,4 @@
+# capability_id: CAP-010
 # Layer: L6 — Driver
 # Product: system-wide
 # Role: Orphan detection logic, PB-S2 truth guarantee

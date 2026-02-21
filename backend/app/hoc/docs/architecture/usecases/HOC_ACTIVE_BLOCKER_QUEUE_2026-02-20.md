@@ -13,26 +13,13 @@ Track active blocking governance debt under `backend/app/hoc/**` only.
 |---|---:|---|
 | Layer segregation (`--scope hoc`) | `0` violations | green |
 | Import hygiene (`backend/app/hoc/**`) | `0` files (`^\\s*from \\..`) | green |
-| Capability linkage (`MISSING_CAPABILITY_ID`) | `74` files | active blocker lane |
+| Capability linkage (`MISSING_CAPABILITY_ID`) | `0` files | green |
 | Capability warnings (`MISSING_EVIDENCE`) | `0` | green |
 
-## Capability Missing-ID Distribution (74 total)
+## Capability Missing-ID Distribution (0 total)
 | Cluster Prefix | Missing `capability_id` Files |
 |---|---:|
-| `backend/app/hoc/fdr/ops/**` | 16 |
-| `backend/app/hoc/int/recovery/**` | 12 |
-| `backend/app/hoc/int/logs/**` | 10 |
-| `backend/app/hoc/int/integrations/**` | 8 |
-| `backend/app/hoc/int/incidents/**` | 8 |
-| `backend/app/hoc/int/analytics/**` | 7 |
-| `backend/app/hoc/int/activity/**` | 2 |
-| `backend/app/hoc/int/account/**` | 2 |
-| `backend/app/hoc/fdr/logs/**` | 2 |
-| `backend/app/hoc/fdr/agent/**` | 2 |
-| `backend/app/hoc/fdr/account/**` | 2 |
-| `backend/app/hoc/int/__init__.py` | 1 |
-| `backend/app/hoc/fdr/platform/**` | 1 |
-| `backend/app/hoc/fdr/__init__.py` | 1 |
+| _(none)_ | 0 |
 
 ## Latest Wave Delta
 - W1 (`hoc_spine`) completed:
@@ -57,6 +44,10 @@ Track active blocking governance debt under `backend/app/hoc/**` only.
 - W5 (`api/cus` + `api/facades` + `api/int` + `api/fdr`) completed:
   - full W5 queue: `83 -> 0`
   - full HOC backlog: `157 -> 74`
+  - warnings remain `0`
+- W6 (`int/recovery` + `int/logs` + `int/integrations` + `int/incidents` + `int/analytics` + `int/activity` + `int/account` + `int/__init__.py` + `fdr/ops` + `fdr/logs` + `fdr/agent` + `fdr/account` + `fdr/platform` + `fdr/__init__.py`) completed:
+  - full W6 queue: `74 -> 0`
+  - full HOC backlog: `74 -> 0`
   - warnings remain `0`
 
 ## Execution Plan Link

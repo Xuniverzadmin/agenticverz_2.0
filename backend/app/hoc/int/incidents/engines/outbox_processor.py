@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# capability_id: CAP-001
 # Layer: L5 — Domain Engine
 # AUDIENCE: INTERNAL
 # Role: Outbox Processor Worker

@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L5 — Engine
 # AUDIENCE: FOUNDER
 # Role: Filesystem-based read engine for stagetest evidence artifacts

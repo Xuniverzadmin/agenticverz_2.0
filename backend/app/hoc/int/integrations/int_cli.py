@@ -1,3 +1,4 @@
+# capability_id: CAP-018
 # Layer: L7 — Internal Ops (CLI)
 # AUDIENCE: INTERNAL
 # Product: system-wide

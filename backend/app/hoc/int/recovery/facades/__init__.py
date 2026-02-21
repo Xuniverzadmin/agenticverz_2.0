@@ -1,3 +1,4 @@
+# capability_id: CAP-010
 # Layer: L4 — Domain Services
 # AUDIENCE: INTERNAL
 # Role: recovery domain - facades

@@ -1,3 +1,4 @@
+# capability_id: CAP-010
 # Layer: L6 — Driver
 # Product: system-wide (NOT console-owned)
 # Callers: recovery_evaluator.py (worker)

@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L4 — Engine
 # AUDIENCE: CUSTOMER
 # Role: Business builder CLI
