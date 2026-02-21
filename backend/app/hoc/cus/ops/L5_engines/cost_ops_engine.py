@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L5 — Domain Engine
 # AUDIENCE: FOUNDER
 # Product: ops-console

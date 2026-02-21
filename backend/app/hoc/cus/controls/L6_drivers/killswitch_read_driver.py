@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L6 — Driver
 # NOTE: Relocated from L5_controls/drivers/ → L6_drivers/ (2026-01-31) per standard directory topology
 # AUDIENCE: CUSTOMER

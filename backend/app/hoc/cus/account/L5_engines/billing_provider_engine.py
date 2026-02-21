@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L5 — Domain Engine
 # NOTE: Renamed billing_provider.py → billing_provider_engine.py (2026-01-31) per BANNED_NAMING rule
 # AUDIENCE: CUSTOMER

@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L6 — Domain Driver
 # NOTE: Renamed circuit_breaker_async.py → circuit_breaker_async_driver.py (2026-01-31) per BANNED_NAMING rule
 # AUDIENCE: CUSTOMER

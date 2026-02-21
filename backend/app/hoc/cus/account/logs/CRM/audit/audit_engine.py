@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L8 — Catalyst / Verification
 # AUDIENCE: CUSTOMER
 # Product: system-wide (CRM governance job audit)

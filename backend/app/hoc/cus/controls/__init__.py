@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L5 — Domain Package
 # AUDIENCE: CUSTOMER
 # Role: Controls domain - usage limits, cost controls, credit management, RAG access auditing

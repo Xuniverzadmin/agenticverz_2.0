@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L5 — Domain Subdomain
 # Product: system-wide
 # AUDIENCE: INTERNAL

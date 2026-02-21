@@ -1,3 +1,4 @@
+# capability_id: CAP-006
 # Layer: L5 — Domain Schemas
 # NOTE: Header corrected L4→L5 (2026-01-31)
 # AUDIENCE: CUSTOMER

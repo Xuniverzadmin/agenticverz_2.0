@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L6 — Database Drivers
 # AUDIENCE: CUSTOMER
 # Role: activity domain - database drivers (data access only)

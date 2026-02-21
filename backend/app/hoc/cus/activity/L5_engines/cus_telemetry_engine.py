@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L5 — Domain Engine
 # AUDIENCE: CUSTOMER
 # Role: Customer Telemetry Engine

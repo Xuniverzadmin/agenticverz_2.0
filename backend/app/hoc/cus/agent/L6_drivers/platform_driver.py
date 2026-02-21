@@ -1,3 +1,4 @@
+# capability_id: CAP-008
 # Layer: L6 — Driver
 # AUDIENCE: FOUNDER
 # Product: founder-console (fops.agenticverz.com)

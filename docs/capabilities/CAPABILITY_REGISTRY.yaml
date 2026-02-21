@@ -173,6 +173,9 @@ capabilities:
         - "/backend/app/hoc/cus/incidents/L5_schemas/__init__.py"
         - "/backend/app/hoc/cus/incidents/L5_schemas/incident_decision_port.py"
         - "/backend/app/hoc/int/analytics/engines/authority.py"
+        - "/backend/app/hoc/int/logs/"
+        - "/backend/app/hoc/int/incidents/"
+        - "/backend/app/hoc/int/analytics/"
 
       l2_api:
         - "/backend/app/api/guard.py:replay_call"
@@ -439,6 +442,13 @@ capabilities:
         - "/backend/app/hoc/fdr/logs/engines/timeline_engine.py"
         - "/backend/app/hoc/fdr/ops/engines/founder_action_write_engine.py"
         - "/backend/app/hoc/fdr/ops/engines/ops_incident_engine.py"
+        - "/backend/app/hoc/api/fdr/"
+        - "/backend/app/hoc/fdr/ops/"
+        - "/backend/app/hoc/fdr/logs/"
+        - "/backend/app/hoc/fdr/account/"
+        - "/backend/app/hoc/fdr/agent/"
+        - "/backend/app/hoc/fdr/platform/"
+        - "/backend/app/hoc/fdr/__init__.py"
       l2_api:
         - "/backend/app/api/founder_actions.py"
         - "/backend/app/api/founder_review.py"
@@ -534,6 +544,7 @@ capabilities:
         - "/backend/app/hoc/int/general/engines/rbac_rules_loader.py"
         - "/backend/app/hoc/int/general/engines/retrieval_hook.py"
         - "/backend/app/hoc/int/general/engines/skill_http.py"
+        - "/backend/app/hoc/cus/api_keys/"
       l2_api:
         - "/backend/app/auth/gateway_middleware.py"  # FastAPI middleware
         - "/backend/app/auth/gateway_config.py"      # Gateway initialization
@@ -646,6 +657,7 @@ capabilities:
         - "/backend/app/agents/services/registry_service.py"
         - "/backend/app/agents/services/governance_service.py"
         - "/backend/app/agents/services/invoke_audit_service.py"
+        - "/backend/app/hoc/cus/agent/"
       l2_api:
         - "/backend/app/api/agents.py"
         - "/backend/app/hoc/api/int/agent/agents.py"
@@ -867,6 +879,8 @@ capabilities:
         - "/backend/app/hoc/int/policies/engines/rbac.py"
         - "/backend/app/hoc/int/policies/engines/recovery_claim_worker.py"
         - "/backend/app/hoc/int/policies/engines/recovery_queue_stream.py"
+        - "/backend/app/hoc/cus/controls/"
+        - "/backend/app/hoc/cus/policies/"
       l2_api:
         - "/backend/app/api/policy.py"
         - "/backend/app/api/policy_layer.py"
@@ -949,6 +963,7 @@ capabilities:
         - "/backend/app/routing/probes.py"
         - "/backend/app/hoc/int/platform/drivers/care.py"
         - "/backend/app/hoc/int/platform/drivers/probes.py"
+        - "/backend/app/hoc/int/recovery/"
 
     gaps: []  # No gaps - CLOSED (internal capability)
 
@@ -1312,6 +1327,18 @@ capabilities:
         - "/backend/app/hoc/int/worker/runtime/core.py"
         - "/backend/app/hoc/int/worker/runtime/integrated_runtime.py"
         - "/backend/app/hoc/int/worker/simulate.py"
+        - "/backend/app/hoc/cus/account/"
+        - "/backend/app/hoc/cus/activity/"
+        - "/backend/app/hoc/cus/overview/"
+        - "/backend/app/hoc/cus/ops/"
+        - "/backend/app/hoc/cus/apis/"
+        - "/backend/app/hoc/cus/__init__.py"
+        - "/backend/app/hoc/api/cus/"
+        - "/backend/app/hoc/api/facades/"
+        - "/backend/app/hoc/api/int/"
+        - "/backend/app/hoc/int/activity/"
+        - "/backend/app/hoc/int/account/"
+        - "/backend/app/hoc/int/__init__.py"
     gaps: []  # No gaps - CLOSED
 
   # ---------------------------------------------------------------------------
@@ -1651,6 +1678,7 @@ capabilities:
         - "/backend/app/hoc/cus/integrations/adapters/slack_adapter.py"
         - "/backend/app/hoc/cus/integrations/adapters/__init__.py"
         - "/backend/app/hoc/cus/integrations/adapters/pgvector_adapter.py"
+        - "/backend/app/hoc/int/integrations/"
       l2_api:
         - "/backend/app/api/integration.py"           # M25 Integration API (17 endpoints)
         - "/backend/app/api/recovery.py"              # M10 Recovery Suggestion Engine

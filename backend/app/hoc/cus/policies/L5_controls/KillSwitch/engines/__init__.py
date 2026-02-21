@@ -1,3 +1,4 @@
+# capability_id: CAP-009
 # Layer: L4 — Domain Services
 # AUDIENCE: CUSTOMER
 # Role: KillSwitch engines - Reserved

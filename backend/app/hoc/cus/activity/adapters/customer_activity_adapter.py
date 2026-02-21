@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L2 — Adapter
 # AUDIENCE: CUSTOMER
 # Product: ai-console (Customer Console)

@@ -19,6 +19,21 @@ Reduce HOC capability-linkage blockers from `550` to `0` under `backend/app/hoc/
 3. No broad runtime refactors inside wave PRs.
 4. Each wave is independently reviewable and auditable.
 
+## Detailed Wave Plans (2026-02-21)
+- Audit snapshot:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W4_W7_AUDIT_2026-02-21.md`
+- W4 plan:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W4_CUS_DOMAINS_PLAN_2026-02-21.md`
+  - file queue: `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W4_FILE_QUEUE_2026-02-21.txt`
+- W5 plan:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W5_API_LANES_PLAN_2026-02-21.md`
+  - file queue: `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W5_FILE_QUEUE_2026-02-21.txt`
+- W6 plan:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W6_LONG_TAIL_PLAN_2026-02-21.md`
+  - file queue: `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W6_FILE_QUEUE_2026-02-21.txt`
+- W7 plan:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W7_CLOSURE_AUDIT_PLAN_2026-02-21.md`
+
 ## Wave Plan
 | Step | Wave | Target Scope | Estimated Blockers | Goal | Status |
 |---|---|---|---:|---|---|
@@ -26,7 +41,7 @@ Reduce HOC capability-linkage blockers from `550` to `0` under `backend/app/hoc/
 | 2 | W1 | `backend/app/hoc/cus/hoc_spine/**` | 101 | clear largest CUS spine cluster | DONE (`550 -> 449`, warnings `0 -> 0`) |
 | 3 | W2 | `backend/app/hoc/int/platform/**` + `backend/app/hoc/int/agent/**` | 91 | clear platform/agent integration cluster | DONE (`449 -> 358`, warnings `0 -> 0`) |
 | 4 | W3 | `backend/app/hoc/int/general/**` + `backend/app/hoc/int/worker/**` + `backend/app/hoc/int/policies/**` | 78 | clear INT runtime/policy cluster | DONE (`358 -> 280`, warnings `0 -> 0`) |
-| 5 | W4 | CUS business domains: `cus/account/**`, `cus/activity/**`, `cus/controls/**`, `cus/policies/**`, `cus/api_keys/**`, `cus/overview/**`, `cus/ops/**`, `cus/agent/**`, `cus/apis/**`, `cus/__init__.py` | 123 | clear remaining CUS domain internals | PENDING |
+| 5 | W4 | CUS business domains: `cus/account/**`, `cus/activity/**`, `cus/controls/**`, `cus/policies/**`, `cus/api_keys/**`, `cus/overview/**`, `cus/ops/**`, `cus/agent/**`, `cus/apis/**`, `cus/__init__.py` | 123 | clear remaining CUS domain internals | DONE (`280 -> 157`, warnings `0 -> 0`) |
 | 6 | W5 | API lanes: `api/cus/**`, `api/facades/**`, `api/int/**`, `api/fdr/**` | 83 | clear API/facade linkage debt | PENDING |
 | 7 | W6 | residual long-tail: `int/recovery/**`, `int/logs/**`, `int/integrations/**`, `int/incidents/**`, `int/analytics/**`, `int/activity/**`, `int/account/**`, `int/__init__.py`, `fdr/ops/**`, `fdr/logs/**`, `fdr/agent/**`, `fdr/account/**`, `fdr/platform/**`, `fdr/__init__.py` | 74 | clear long-tail and reach zero | PENDING |
 | 8 | W7 | Closure audit + pin/update queue docs | - | publish final closure evidence | PENDING |
@@ -100,3 +115,31 @@ Reduce HOC capability-linkage blockers from `550` to `0` under `backend/app/hoc/
   - Import hygiene (`backend/app/hoc/**`, strict relative-import): `0`
 - Artifact:
   - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W3_INT_GENERAL_WORKER_POLICIES_IMPLEMENTED_2026-02-20.md`
+
+## W4 Execution Result
+- Scope remediated:
+  - `backend/app/hoc/cus/account/**`
+  - `backend/app/hoc/cus/activity/**`
+  - `backend/app/hoc/cus/controls/**`
+  - `backend/app/hoc/cus/policies/**`
+  - `backend/app/hoc/cus/api_keys/**`
+  - `backend/app/hoc/cus/overview/**`
+  - `backend/app/hoc/cus/ops/**`
+  - `backend/app/hoc/cus/agent/**`
+  - `backend/app/hoc/cus/apis/**`
+  - `backend/app/hoc/cus/__init__.py`
+  - (`123` files)
+- Capability header mapping:
+  - `CAP-012`: account/activity/overview/ops/apis + `cus/__init__.py`
+  - `CAP-009`: controls/policies
+  - `CAP-006`: api_keys
+  - `CAP-008`: agent
+- Registry evidence synchronized:
+  - `docs/capabilities/CAPABILITY_REGISTRY.yaml` (directory evidence for CAP-012/CAP-009/CAP-006/CAP-008)
+- Audit results:
+  - W4 changed-file capability check: `✅ All checks passed`
+  - Full HOC sweep: blocking `280 -> 157`, warnings `0 -> 0`
+  - Layer segregation (`--scope hoc`): `PASS (0 violations)`
+  - Import hygiene (`backend/app/hoc/**`, strict relative-import): `0`
+- Artifact:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W4_CUS_DOMAINS_IMPLEMENTED_2026-02-21.md`

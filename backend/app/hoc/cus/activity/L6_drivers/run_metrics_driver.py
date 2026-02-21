@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L6 — Domain Driver
 # AUDIENCE: CUSTOMER
 # Role: RunMetricsDriver - updates run impact signals (policy_violation, policy_draft_count)
