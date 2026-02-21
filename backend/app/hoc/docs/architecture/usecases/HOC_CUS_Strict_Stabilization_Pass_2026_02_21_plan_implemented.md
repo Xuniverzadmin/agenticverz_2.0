@@ -2,8 +2,10 @@
 
 **Created:** 2026-02-21 07:41:41 UTC
 **Executor:** Claude
-**Last updated:** 2026-02-21 (remediation pass 4 — gateway public path fix for runtime publish)
-**Status:** DONE (PR32-owned blockers resolved; gateway accessibility fix in PR #33; runtime 200 pending deploy)
+**Last updated:** 2026-02-21 (remediation pass 5 — PR #33 blocker attribution correction)
+**Status:** DONE (PR33-owned blockers resolved; gateway accessibility fix applied; runtime 200 pending deploy)
+**Current PR:** https://github.com/Xuniverzadmin/agenticverz_2.0/pull/33 (`hoc/cus-publish-live`)
+**Historical baseline:** PR #32 (`hoc/cus-stabilize-plan-20260221`) — code cherry-picked into PR #33
 
 ## 1. Execution Summary
 
@@ -26,9 +28,9 @@
 | T7 | PARTIAL | Handler tests pass (25/25); gateway fix applied (`PUBLIC_PATHS` updated); pre-deploy probe: 404/HTML (expected) | Runtime HTTP 200 pending deploy of PR #33. Root cause resolved: veil policy 404 due to missing public path. |
 | T8 | DONE | `check_layer_boundaries.py`: CLEAN; `l5_spine_pairing_gap_detector.py`: 70 wired, 0 gaps, 0 orphaned | Full CUS dispatch conformance |
 | T9 | DONE | Global: local 499 = runtime 499, ZERO DIFF; Per-domain: all 10 domains ZERO DIFF | Parity measured against pre-deploy runtime (existing ledger endpoint) |
-| T10 | PARTIAL | Local gates pass; GitHub CI has 12 failures (0 PR32-owned, 12 repo-wide) | See CI Evidence section |
+| T10 | PARTIAL | Local gates pass; GitHub CI has 12 failures (0 PR33-owned, 12 repo-wide) | See CI Evidence section |
 | T11 | DONE | This document | Corrected from initial overclaim pass |
-| T12 | DONE | Commit + push + PR #32 updated | See PR Hygiene Evidence |
+| T12 | DONE | Commit + push + PR #33 created | See PR Hygiene Evidence |
 
 ## 3. Remediation TODO Completion Matrix
 
@@ -43,22 +45,23 @@
 | TODO-7 | DONE | This document rewritten | Corrected: T7 PARTIAL (not DONE); publish-goal PARTIAL (not ACHIEVED); no false "runtime 200" claims |
 | TODO-8 | DONE | See Gates section below | All 5 gates executed and recorded |
 | TODO-9 | DONE | See Baseline Known Issues section | 3 known exceptions (INT legacy imports) + 4 advisory MISSING_EVIDENCE warnings documented |
-| TODO-10 | DONE | Commit on same branch, PR #32 updated | No force-push used for remediation commit |
+| TODO-10 | DONE | Commit on same branch, PR #33 updated | No force-push used for remediation commit |
 | TODO-11 | DONE | Verified: no `--force`, no unrelated files | Staging is path-scoped |
 | TODO-12 | DONE | This document | All statuses are DONE/PARTIAL/BLOCKED with concrete evidence |
 
 ## 4. Evidence and Validation
 
-### Files Changed (Full PR32 Inventory — 42 files)
+### Files Changed (Full PR #33 Inventory — 43 files)
 
 **New code files:**
 - `backend/app/hoc/api/apis/__init__.py` — APIs lane init, `# capability_id: CAP-011`
 - `backend/app/hoc/api/apis/cus_publication.py` — 4 GET endpoints, domain resolution, `# capability_id: CAP-011`
 - `backend/app/hoc/api/facades/apis/__init__.py` — L2.1 facade for APIs lane, `# capability_id: CAP-011`
-- `backend/tests/api/test_cus_publication_api.py` — 21 durable tests, 7 classes
+- `backend/tests/api/test_cus_publication_api.py` — 25 durable tests, 8 classes (incl. 4 gateway public path tests)
 
 **Modified code files:**
 - `backend/app/hoc/app.py` — added `# capability_id: CAP-011`; rewired import from facade
+- `backend/app/hoc/cus/hoc_spine/authority/gateway_policy.py` — added `/apis/ledger/`, `/apis/swagger/` to `PUBLIC_PATHS`; added `# capability_id: CAP-006`
 - `backend/app/hoc/int/worker/runner.py` — added `# capability_id: CAP-012`; rewrote comment import examples
 - `backend/app/hoc/int/analytics/engines/runner.py` — rewrote comment import examples (lines 958-961)
 
@@ -82,16 +85,16 @@ check_init_hygiene.py --ci:             0 blocking violations (3 known INT excep
 check_layer_boundaries.py:              CLEAN — 0 violations
 check_openapi_snapshot.py:              PASS — 394 routes, valid JSON
 test_stagetest_read_api.py:             8/8 PASS
-test_cus_publication_api.py:            21/21 PASS
+test_cus_publication_api.py:            25/25 PASS (incl. 4 gateway public path tests)
 ```
 
-### GitHub CI Evidence (from `gh pr checks 32`)
+### GitHub CI Evidence (from `gh pr checks 33`)
 
-**PR32-owned checks:**
+**PR33-owned checks:**
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| Capability Linkage Check | BLOCKED→FIXED | Was: `int/worker/runner.py` missing capability_id. Fixed: added `CAP-012` |
+| Capability Linkage Check | PASS | CAP-006 on gateway_policy.py, CAP-011 on apis files, CAP-012 on worker runner |
 
 **Passing checks (39):**
 Capability Linkage Check, CI Gate, Consistency Check, DB-AUTH-001 Compliance,
@@ -108,16 +111,16 @@ workflow-engine, workflow-golden-check
 
 **Repo-wide failures (12, also fail on origin/main):**
 
-| Check | Root Cause | PR32-owned? |
+| Check | Root Cause | PR33-owned? |
 |-------|-----------|-------------|
 | claude-authority-guard | CLAUDE_AUTHORITY.md hash mismatch (file identical to origin/main; CI YAML hash stale) | NO |
 | Import Hygiene | 50+ `datetime.utcnow()` calls across untouched legacy files | NO |
-| Enforce L4/L6 Boundaries | 93 layer-segregation violations in `app/models/` | NO |
+| Enforce L4/L6 Boundaries | 93 layer-segregation violations, concentrated in `hoc/int` agent engines (e.g., `worker_engine.py`, `credit_engine.py`, `registry_engine.py`) | NO |
 | layer-enforcement | 701 errors, 81 warnings across untouched model files | NO |
 | Truth Preflight | `NoReferencedTableError`: `policy_rules_legacy` FK table missing in models | NO |
 | Post-Flight Hygiene | 5 syntax errors in untouched files + 5804 warnings | NO |
-| Browser Integration Tests | Depends on Truth Preflight (backend won't start) | NO |
-| Integration Integrity Gate | Depends on Truth Preflight (backend won't start) | NO |
+| Browser Integration Tests | Migration failure: `relation "runs" does not exist` (`UndefinedTable` during `ALTER TABLE runs ADD COLUMN authorization_decision`) | NO |
+| Integration Integrity Gate | Failed because `BIT_STATUS=failure` (downstream of Browser Integration Tests) | NO |
 | e2e-tests | `ModuleNotFoundError`: no module `app.worker` | NO |
 | costsim | `RuntimeError`: no current event loop in MainThread | NO |
 | costsim-wiremock | `RuntimeError`: no current event loop in MainThread | NO |
@@ -152,13 +155,14 @@ workflow-engine, workflow-golden-check
 
 ## 5. Blocker Classification
 
-### PR32-owned (all resolved)
+### PR #33-owned (all resolved)
 
 | Issue | Status | Fix |
 |-------|--------|-----|
 | `int/worker/runner.py` missing `capability_id` | FIXED | Added `# capability_id: CAP-012` |
+| `gateway_policy.py` missing `capability_id` | FIXED | Added `# capability_id: CAP-006` |
 | 4x `MISSING_EVIDENCE` for CAP-011 files | ADVISORY (non-blocking) | Register files in CAPABILITY_REGISTRY.yaml evidence paths |
-| `/apis/*` not in gateway `public_paths` | FIXED (PR #33) | Added `/apis/ledger/` and `/apis/swagger/` to `PUBLIC_PATHS` in `gateway_policy.py` |
+| `/apis/*` not in gateway `public_paths` | FIXED | Added `/apis/ledger/` and `/apis/swagger/` to `PUBLIC_PATHS` in `gateway_policy.py` |
 
 ### Repo-wide canonical HOC backlog (not tombstoned)
 
@@ -166,11 +170,12 @@ workflow-engine, workflow-golden-check
 |-------|----------|-----------|
 | CLAUDE_AUTHORITY.md hash mismatch | claude-authority-guard | CI YAML ratified hash stale vs actual file on main |
 | 50+ `datetime.utcnow()` calls | Import Hygiene | Legacy code across INT/CUS/models not yet migrated to `datetime.now(tz=UTC)` |
-| 93 layer-segregation violations | Enforce L4/L6 Boundaries | `app/models/` sqlalchemy imports; L7 uses ORM by design |
+| 93 layer-segregation violations | Enforce L4/L6 Boundaries | Concentrated in `hoc/int` agent engines (`worker_engine.py`, `credit_engine.py`, `registry_engine.py`, etc.) |
 | 701 errors, 81 warnings in model files | layer-enforcement | Layer check overly broad against L7 model layer |
 | `NoReferencedTableError: policy_rules_legacy` | Truth Preflight | Model FK references non-existent table; blocks app startup in CI |
 | 5 syntax errors in untouched files | Post-Flight Hygiene | `integrated_runtime.py`, `stub_planner.py`, `cost_snapshots_engine.py` |
-| Backend startup failure | Browser Integration, Integration Integrity | Cascading from Truth Preflight FK error |
+| Migration failure: `relation "runs" does not exist` | Browser Integration Tests | `UndefinedTable` during `ALTER TABLE runs ADD COLUMN authorization_decision` |
+| `BIT_STATUS=failure` | Integration Integrity Gate | Downstream of Browser Integration Tests failure |
 | `ModuleNotFoundError: app.worker` | e2e-tests | Missing worker module in test environment |
 | `RuntimeError: no current event loop` | costsim, costsim-wiremock | Event loop not available in MainThread |
 | Assertion failures | m10-tests | e.g., "Published event should be claimed" — test expectation drift |
@@ -178,11 +183,12 @@ workflow-engine, workflow-golden-check
 
 ## 6. PR Hygiene Evidence
 
-- Clean worktree used: YES (`/tmp/hoc-cus-stabilize-plan` on `hoc/cus-stabilize-plan-20260221`)
+- Clean worktree used: YES (`/tmp/hoc-cus-publish-live` on `hoc/cus-publish-live`)
 - Scope-bounded file staging confirmed: YES
-- Force push used (must be no): NO (remediation is a new commit on same branch)
-- PR URL: https://github.com/Xuniverzadmin/agenticverz_2.0/pull/32
-- PR body includes metrics/commands/blockers (yes/no): YES (updated with remediation results)
+- Force push used (must be no): NO
+- PR URL: https://github.com/Xuniverzadmin/agenticverz_2.0/pull/33
+- PR body includes metrics/commands/blockers (yes/no): YES
+- Historical baseline: PR #32 (`hoc/cus-stabilize-plan-20260221`) — code cherry-picked into PR #33
 
 ## 7. Deviations from Plan
 
@@ -201,7 +207,7 @@ workflow-engine, workflow-golden-check
 ## 8. Handoff Notes
 
 - Follow-up recommendations:
-  1. **INT-scope PR needed:** Add `/apis/` to `gateway_config.py` `public_paths` to enable TestClient HTTP 200
+  1. ~~**INT-scope PR needed:** Add `/apis/` to `gateway_config.py` `public_paths`~~ RESOLVED in PR #33 (`gateway_policy.py`)
   2. **Registry evidence:** Add CUS publication files to CAP-011 evidence paths in `CAPABILITY_REGISTRY.yaml` (resolves 4 advisory warnings)
   3. **CI drift detection:** Wire per-domain ledger comparison into PR gates
   4. **OpenAPI alias:** Formalize `/cus/X` → `/hoc/api/cus/X` mapping in OpenAPI spec generation
