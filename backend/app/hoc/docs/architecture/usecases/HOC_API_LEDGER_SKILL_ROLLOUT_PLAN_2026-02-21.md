@@ -3,7 +3,7 @@
 **Date:** 2026-02-21  
 **Scope:** `backend/app/hoc/**`  
 **Primary Skill:** `/root/.codex/skills/hoc-cus-api-ledger-rollout`  
-**Status:** IN_PROGRESS (Wave 1)
+**Status:** IN_PROGRESS (Wave 1 COMPLETE; Wave 2-4 PENDING)
 
 ## Final Goal
 Produce a deterministic, governance-compliant API ledger for all HOC API surfaces (`hoc/*`), with OpenAPI-backed registry artifacts and a stagetest-published ledger endpoint (`/apis/ledger`) that returns `200 OK` with non-empty HOC data.
@@ -28,9 +28,11 @@ Produce a deterministic, governance-compliant API ledger for all HOC API surface
   - Generated mismatch audit: `docs/api/HOC_CUS_API_LEDGER_MISMATCH_AUDIT_2026-02-21.md`
   - Generated mismatch summary: `docs/api/HOC_CUS_API_LEDGER_MISMATCH_AUDIT_2026-02-21.json`
   - Current skeptical finding: local `docs/openapi.json` has `0` CUS entries while source-derived ledger has `499` unique method+path rows.
-- `Phase 4`: BLOCKED (stagetest `/openapi.json` currently returns HTML app shell, not JSON spec; publication route validation pending runtime endpoint readiness).
-- `Phase 5`: PENDING.
-- `Phase 6`: PENDING.
+- `Phase 4`: COMPLETE.
+  - `https://stagetest.agenticverz.com/openapi.json` => `200 application/json`
+  - `https://stagetest.agenticverz.com/apis/ledger` => `200 application/json` (`502` endpoints)
+- `Phase 5`: COMPLETE for Wave 1 changed files.
+- `Phase 6`: COMPLETE for Wave 1 PR updates; remaining waves still pending.
 
 ## Execution Model
 

@@ -177,3 +177,17 @@ CI GUARD: OpenAPI Snapshot Validity
 PASS: OpenAPI snapshot is valid
 ============================================================
 ```
+
+### Runtime Publication Remediation Check (2026-02-21 UTC)
+```bash
+curl -sS -o /tmp/openapi.out -w "%{http_code} %{content_type}\n" https://stagetest.agenticverz.com/openapi.json
+curl -sS -o /tmp/ledger.out -w "%{http_code} %{content_type}\n" https://stagetest.agenticverz.com/apis/ledger
+curl -sS -o /tmp/stagetestapis.out -w "%{http_code} %{content_type}\n" https://stagetest.agenticverz.com/hoc/api/stagetest/apis
+```
+
+- `/openapi.json` => `200 application/json`
+- `/apis/ledger` => `200 application/json`
+- `/hoc/api/stagetest/apis` => `200 application/json`
+- Ledger payload size check (`python3` JSON parse):
+  - `run_id=ledger_20260221T071020Z`
+  - `endpoints_count=502`
