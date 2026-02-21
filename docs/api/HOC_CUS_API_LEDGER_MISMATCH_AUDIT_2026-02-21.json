@@ -1,0 +1,19 @@
+{
+  "generated_at_utc": "2026-02-21T07:00:46.478107+00:00",
+  "ledger_unique_method_path": 499,
+  "ledger_raw_rows": 502,
+  "local_docs_openapi_hoc_cus_count": 0,
+  "backend_snapshot_openapi_hoc_cus_count": 0,
+  "missing_in_local_docs_count": 499,
+  "missing_in_backend_snapshot_count": 499,
+  "stagetest_openapi_json": false,
+  "stagetest_openapi_reason": "non_json_payload",
+  "stagetest_openapi_hoc_cus_count": 0,
+  "snapshot_candidate_prefix_counts": {
+    "/customer/": 4,
+    "/api/": 228,
+    "/ops/": 27,
+    "/internal/": 5,
+    "/founder/": 12
+  }
+}
