@@ -136,8 +136,54 @@ class ApiKeysWriteHandler:
             return OperationResult.fail(str(e), "API_KEYS_WRITE_ERROR")
 
 
+def _enrich_api_keys_write_context(ctx: OperationContext) -> dict:
+    """
+    Pre-invariant context enricher: resolves authoritative tenant_status
+    from the database for BI-APIKEY-001 enforcement.
+
+    Called by OperationRegistry BEFORE invariant evaluation. Uses the
+    sync_session from ctx.params to query the tenants table.
+
+    Method-aware: only enriches for create_api_key method. Revoke/list
+    methods do not need tenant_status because BI-APIKEY-001 is scoped
+    to create only (method-aware gate in _default_check).
+
+    NEVER trusts caller-supplied tenant_status — always queries DB.
+    Fail-closed: returns "UNKNOWN" if tenant not found or query fails,
+    which will cause BI-APIKEY-001 to reject (requires ACTIVE).
+    """
+    method = ctx.params.get("method")
+    if method and method != "create_api_key":
+        return {}  # Non-create methods: BI-APIKEY-001 does not apply
+
+    sync_session = ctx.params.get("sync_session")
+    if not sync_session:
+        return {}  # No session available — invariant will fail-closed
+
+    tenant_id = ctx.params.get("tenant_id") or ctx.tenant_id
+    if not tenant_id:
+        return {}  # No tenant — invariant will fail on missing tenant_id
+
+    try:
+        from app.hoc.cus.hoc_spine.orchestrator.operation_registry import sql_text
+
+        row = sync_session.execute(
+            sql_text("SELECT status FROM tenants WHERE id = :tid"),
+            {"tid": tenant_id},
+        ).first()
+        if row:
+            return {"tenant_status": row[0]}
+        return {"tenant_status": "UNKNOWN"}
+    except Exception:
+        return {"tenant_status": "UNKNOWN"}
+
+
 def register(registry: OperationRegistry) -> None:
     """Register api_keys operations with the registry."""
     registry.register("api_keys.query", ApiKeysQueryHandler())
     # PIN-520 ITER3.5: API key write operations
     registry.register("api_keys.write", ApiKeysWriteHandler())
+    # Pre-invariant enricher: resolves tenant_status for BI-APIKEY-001
+    registry.register_context_enricher(
+        "api_keys.write", _enrich_api_keys_write_context
+    )

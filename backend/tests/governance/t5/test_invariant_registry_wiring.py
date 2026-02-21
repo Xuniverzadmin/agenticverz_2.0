@@ -38,6 +38,18 @@ def _read_registry_source() -> str:
     return REGISTRY_PATH.read_text(encoding="utf-8")
 
 
+def _extract_method_body(source: str, method_name: str) -> str:
+    """Extract the full body of a method from source, without fixed-size slicing."""
+    marker = f"def {method_name}("
+    start = source.find(marker)
+    assert start != -1, f"{method_name} not found in source"
+    # Find the next method at the same indentation level (4-space class method)
+    next_def = source.find("\n    def ", start + 1)
+    if next_def != -1:
+        return source[start:next_def]
+    return source[start:]
+
+
 class TestInvariantWiringStatic:
     """Static analysis tests: prove invariant_evaluator is wired into the registry."""
 
@@ -71,31 +83,22 @@ class TestInvariantWiringStatic:
 
     def test_invariant_evaluator_import_inside_safe_method(self):
         """The lazy import of invariant_evaluator must be inside _evaluate_invariants_safe."""
-        source = _read_registry_source()
-        method_start = source.find("def _evaluate_invariants_safe(")
-        assert method_start != -1
-        method_body = source[method_start:method_start + 1500]
+        method_body = _extract_method_body(_read_registry_source(), "_evaluate_invariants_safe")
         assert "from app.hoc.cus.hoc_spine.authority.invariant_evaluator import" in method_body
 
     def test_monitor_mode_used(self):
         """The wiring must use MONITOR mode (log only, never block)."""
-        source = _read_registry_source()
-        method_start = source.find("def _evaluate_invariants_safe(")
-        method_body = source[method_start:method_start + 1500]
+        method_body = _extract_method_body(_read_registry_source(), "_evaluate_invariants_safe")
         assert "InvariantMode.MONITOR" in method_body
 
     def test_exception_handling_never_blocks(self):
         """The method must catch all exceptions to never block dispatch."""
-        source = _read_registry_source()
-        method_start = source.find("def _evaluate_invariants_safe(")
-        method_body = source[method_start:method_start + 1500]
+        method_body = _extract_method_body(_read_registry_source(), "_evaluate_invariants_safe")
         assert "except Exception:" in method_body
 
     def test_invariant_context_includes_tenant_id(self):
         """The invariant context dict must include tenant_id from OperationContext."""
-        source = _read_registry_source()
-        method_start = source.find("def _evaluate_invariants_safe(")
-        method_body = source[method_start:method_start + 1500]
+        method_body = _extract_method_body(_read_registry_source(), "_evaluate_invariants_safe")
         assert '"tenant_id"' in method_body
 
 
