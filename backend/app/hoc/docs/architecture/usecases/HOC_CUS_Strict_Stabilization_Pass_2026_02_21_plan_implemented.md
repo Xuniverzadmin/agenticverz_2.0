@@ -2,15 +2,16 @@
 
 **Created:** 2026-02-21 07:41:41 UTC
 **Executor:** Claude
-**Last updated:** 2026-02-21 (remediation pass 3 — CI blocker attribution correction)
-**Status:** DONE (PR32-owned blockers resolved; repo-wide CI failures documented)
+**Last updated:** 2026-02-21 (remediation pass 4 — gateway public path fix for runtime publish)
+**Status:** DONE (PR32-owned blockers resolved; gateway accessibility fix in PR #33; runtime 200 pending deploy)
 
 ## 1. Execution Summary
 
 - Overall result: T1-T12 DONE. Remediation TODOs 1-12 executed.
 - Scope delivered: CUS publication endpoints via L2.1 facade, per-domain ledger artifacts (JSON+CSV+MD), 21 durable pytest tests, capability_id linkage, facade contract alignment.
-- Scope not delivered: Runtime HTTP 200 for `/apis/*` endpoints — not deployed yet. Handler-level and structural tests prove correctness.
-- Publish-goal status: PARTIAL — endpoints wired and tested structurally; live HTTP 200 deferred until deploy + gateway `public_paths` update.
+- Scope not delivered: Runtime HTTP 200 for `/apis/*` endpoints — not yet deployed. Handler-level and structural tests prove correctness.
+- Gateway fix delivered: `/apis/ledger/` and `/apis/swagger/` added to `PUBLIC_PATHS` in `gateway_policy.py` (PR #33).
+- Publish-goal status: PARTIAL — endpoints wired, gateway unblocked, tested structurally; live HTTP 200 pending merge + deploy of PR #33.
 
 ## 2. Task Completion Matrix (Original Plan T1-T12)
 
@@ -22,7 +23,7 @@
 | T4 | DONE | `_SEGMENT_TO_DOMAIN` mapping (40+ entries), `_resolve_domain()` resolves 502/502 endpoints | CUS routers use `/cus/{domain}` prefix not `/hoc/api/cus/`; ledger normalises to `/hoc/api/cus/` |
 | T5 | DONE | `docs/api/HOC_CUS_API_LEDGER.json`: 502 endpoints, 499 unique mp | Regenerated via `build_cus_api_ledger.py` |
 | T6 | DONE | `docs/api/cus/{domain}_ledger.json` x 10 domains, 502/502 resolved, 0 unresolved | All 10 canonical domains covered |
-| T7 | PARTIAL | Handler tests pass; TestClient returns 401 (auth middleware blocks `/apis/*`) | Runtime HTTP 200 not verified — not deployed. Handler-level + structural tests only. |
+| T7 | PARTIAL | Handler tests pass (25/25); gateway fix applied (`PUBLIC_PATHS` updated); pre-deploy probe: 404/HTML (expected) | Runtime HTTP 200 pending deploy of PR #33. Root cause resolved: veil policy 404 due to missing public path. |
 | T8 | DONE | `check_layer_boundaries.py`: CLEAN; `l5_spine_pairing_gap_detector.py`: 70 wired, 0 gaps, 0 orphaned | Full CUS dispatch conformance |
 | T9 | DONE | Global: local 499 = runtime 499, ZERO DIFF; Per-domain: all 10 domains ZERO DIFF | Parity measured against pre-deploy runtime (existing ledger endpoint) |
 | T10 | PARTIAL | Local gates pass; GitHub CI has 12 failures (0 PR32-owned, 12 repo-wide) | See CI Evidence section |
@@ -128,7 +129,19 @@ workflow-engine, workflow-golden-check
 - `GET /apis/ledger/cus/{domain}`: All 10 domains return correct counts — structural PASS
 - `GET /apis/swagger/cus`: Handler invocation returns filtered OpenAPI spec — structural PASS
 - `GET /apis/swagger/cus/{domain}`: Handler invocation returns per-domain OpenAPI — structural PASS
-- **Runtime HTTP 200: NOT VERIFIED** — endpoints not deployed; TestClient blocked by auth middleware
+- **Runtime HTTP 200: NOT YET VERIFIED** — pending deploy of PR #33 (gateway fix)
+
+### Pre-Deploy Runtime Probes (2026-02-21, before PR #33 merge)
+
+| Endpoint | HTTP | Content-Type | Verdict |
+|----------|------|-------------|---------|
+| `GET /apis/ledger/cus` | 404 | application/json | Veil policy 404 — route not deployed + path not public |
+| `GET /apis/ledger/cus/activity` | 404 | application/json | Same — veil policy blocks unauthenticated |
+| `GET /apis/swagger/cus` | 200 | text/html | Frontend SPA catch-all (not backend handler) |
+| `GET /apis/swagger/cus/activity` | 200 | text/html | Frontend SPA catch-all (not backend handler) |
+
+**Root cause identified and fixed:** Gateway `PUBLIC_PATHS` missing `/apis/ledger/` and `/apis/swagger/` prefixes.
+**Fix applied:** PR #33 (`hoc/cus-publish-live`) — adds scoped prefix entries to `gateway_policy.py`.
 
 ### Parity Evidence
 
@@ -145,7 +158,7 @@ workflow-engine, workflow-golden-check
 |-------|--------|-----|
 | `int/worker/runner.py` missing `capability_id` | FIXED | Added `# capability_id: CAP-012` |
 | 4x `MISSING_EVIDENCE` for CAP-011 files | ADVISORY (non-blocking) | Register files in CAPABILITY_REGISTRY.yaml evidence paths |
-| `/apis/*` not in gateway `public_paths` | DEFERRED | Requires INT-scope PR; handler-level tests prove correctness |
+| `/apis/*` not in gateway `public_paths` | FIXED (PR #33) | Added `/apis/ledger/` and `/apis/swagger/` to `PUBLIC_PATHS` in `gateway_policy.py` |
 
 ### Repo-wide canonical HOC backlog (not tombstoned)
 
