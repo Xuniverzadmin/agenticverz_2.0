@@ -1327,6 +1327,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-21 | **PIN-602 CUS Publication Rollout Complete** - Deployed grouped ledger + swagger endpoints live on stagetest (4/4 endpoints 200 JSON, 20/20 domain sweep). Fixed Apache proxy misroute and RBAC schema gap. Commits: `510a4587`, `835c7198`. |
 | 2026-02-20 | **PIN-600 Wave 2 Import Hygiene Batch 4 — Final Residual Clear** - Remediated final 10 HOC residual files, synchronized CAP-007/CAP-009/CAP-010/CAP-012/CAP-014 evidence linkage, and reduced HOC import-hygiene backlog (`10 -> 0`) with CUS remaining `0`. |
 | 2026-02-20 | **PIN-599 Wave 2 Import Hygiene Batch 3 — INT/Agent Cluster** - Remediated 14 `backend/app/hoc/int/agent/**` files, synchronized CAP-008/CAP-016 evidence linkage, and reduced HOC import-hygiene backlog (`25 -> 11`) while holding CUS at `0`. |
 | 2026-02-20 | **PIN-598 Wave 2 Import Hygiene Batch 2 — API/Auth Stabilization** - Remediated 5 HOC API/auth files from relative to absolute imports, wired capability linkage + registry evidence (CAP-014/CAP-008/CAP-007), and reduced HOC import-hygiene backlog (`30 -> 25`). |
@@ -2169,3 +2170,4 @@ When resuming work on this project:
 | 2026-01-22 | **PIN-463 L4 Facade Architecture Pattern** - Comprehensive reference documentation for creating L4 domain facades. Covers file naming (`aos_{domain}.py`, `{domain}_facade.py`), singleton pattern, result dataclasses, tenant isolation, response wrapping, error handling, router registration, and architecture documentation standards. |
 | 2026-02-01 | **PIN-507 Law 5 Remediation Complete** - Replaced 31+ `getattr()` reflection calls across all 9 L4 handler files (18 handler classes) with explicit dispatch maps. Eliminated all `asyncio.iscoroutinefunction()` calls via explicit sync/async split. Replaced 13 `__import__("sqlalchemy").text()` calls in `cost_snapshots_engine.py` with proper `from sqlalchemy import text`. Law 5 grade upgraded D→A. |
 | 2026-02-21 | **PIN-601 HOC API Ledger Wave 1 (CUS) Baseline and Drift Audit** - Created deterministic CUS ledger artifacts (502 rows / 499 unique), captured skeptical OpenAPI drift findings, and locked Wave 1 execution evidence for hoc/* rollout. |
+| 2026-02-21 | **PIN-602 CUS Publication Rollout Complete** - Deployed grouped ledger + swagger endpoints live on stagetest (4/4 endpoints 200 JSON, 20/20 domain sweep). Fixed Apache proxy misroute (`/apis/ledger` → stagetest snapshot) and RBAC schema gap (`RBAC_RULES.yaml` missing CUS publication rules). Commits: `510a4587`, `835c7198`. |
