@@ -204,8 +204,15 @@ Baseline blockers on `origin/main` after merge commit `da89f8d479bae9c1930be25e5
     - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
     - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W6_LONG_TAIL_IMPLEMENTED_2026-02-21.md`
     - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+- HOC blocker queue Wave W7 (closure audit) is complete:
+  - Full-HOC capability sweep: `0` blocking, `0` warnings.
+  - Layer segregation (`--scope hoc`): `PASS (0)`.
+  - HOC relative-import hygiene: `0`.
+  - Registry validation: pass.
+  - Closure artifact:
+    - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W7_CLOSURE_AUDIT_IMPLEMENTED_2026-02-21.md`
 
 ## Notes
 - This queue is baseline debt on `main`, not introduced solely by PR #7.
 - Lane A should address P0 first, then P1 in smallest reviewable PRs.
-- Skeptical audit (2026-02-21) confirms changed-file capability linkage is clear for HOC remediation PRs; after blocker Wave W6, full HOC-wide capability scan is `0` blocking and `0` warnings.
+- Skeptical audit (2026-02-21) confirms HOC blocker-queue closure: full HOC-wide capability scan is `0` blocking and `0` warnings after W7 closure audit.

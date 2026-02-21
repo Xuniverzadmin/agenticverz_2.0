@@ -44,7 +44,7 @@ Reduce HOC capability-linkage blockers from `550` to `0` under `backend/app/hoc/
 | 5 | W4 | CUS business domains: `cus/account/**`, `cus/activity/**`, `cus/controls/**`, `cus/policies/**`, `cus/api_keys/**`, `cus/overview/**`, `cus/ops/**`, `cus/agent/**`, `cus/apis/**`, `cus/__init__.py` | 123 | clear remaining CUS domain internals | DONE (`280 -> 157`, warnings `0 -> 0`) |
 | 6 | W5 | API lanes: `api/cus/**`, `api/facades/**`, `api/int/**`, `api/fdr/**` | 83 | clear API/facade linkage debt | DONE (`157 -> 74`, warnings `0 -> 0`) |
 | 7 | W6 | residual long-tail: `int/recovery/**`, `int/logs/**`, `int/integrations/**`, `int/incidents/**`, `int/analytics/**`, `int/activity/**`, `int/account/**`, `int/__init__.py`, `fdr/ops/**`, `fdr/logs/**`, `fdr/agent/**`, `fdr/account/**`, `fdr/platform/**`, `fdr/__init__.py` | 74 | clear long-tail and reach zero | DONE (`74 -> 0`, warnings `0 -> 0`) |
-| 8 | W7 | Closure audit + pin/update queue docs | - | publish final closure evidence | PENDING |
+| 8 | W7 | Closure audit + pin/update queue docs | - | publish final closure evidence | DONE (`0` blocking, `0` warnings) |
 
 ## Per-Wave Checklist
 1. Capture before counts (full sweep + target scope).
@@ -194,3 +194,14 @@ Reduce HOC capability-linkage blockers from `550` to `0` under `backend/app/hoc/
   - Import hygiene (`backend/app/hoc/**`, strict relative-import): `0`
 - Artifact:
   - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W6_LONG_TAIL_IMPLEMENTED_2026-02-21.md`
+
+## W7 Closure Audit Result
+- Closure checks:
+  - Full HOC capability sweep: blocking `0`, warnings `0`
+  - Layer segregation (`--scope hoc`): `PASS (0 violations)`
+  - HOC strict relative-import count: `0`
+  - Registry validation: pass
+- Closure artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W7_CLOSURE_AUDIT_IMPLEMENTED_2026-02-21.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+  - `backend/app/hoc/docs/architecture/usecases/CI_BASELINE_BLOCKER_QUEUE_2026-02-20.md`

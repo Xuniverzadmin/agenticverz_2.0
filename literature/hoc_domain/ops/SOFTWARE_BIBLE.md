@@ -248,6 +248,49 @@
   - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W3_INT_GENERAL_WORKER_POLICIES_IMPLEMENTED_2026-02-20.md`
   - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
 
+## Reality Delta (2026-02-21, HOC Blocker Queue Wave W4 CUS Domains Clearance)
+
+- Wave W4 remediated CUS internal clusters (`123` files):
+  - `cus/account`, `cus/activity`, `cus/controls`, `cus/policies`, `cus/api_keys`, `cus/overview`, `cus/ops`, `cus/agent`, `cus/apis`, `cus/__init__.py`
+- Measured result:
+  - full HOC blocking backlog: `280 -> 157`
+  - full HOC warnings: `0 -> 0`
+- Tracking artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W4_CUS_DOMAINS_IMPLEMENTED_2026-02-21.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+
+## Reality Delta (2026-02-21, HOC Blocker Queue Wave W5 API Lanes Clearance)
+
+- Wave W5 remediated API lane clusters (`83` files):
+  - `api/cus`, `api/facades`, `api/int`, `api/fdr`
+- Measured result:
+  - full HOC blocking backlog: `157 -> 74`
+  - full HOC warnings: `0 -> 0`
+- Tracking artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W5_API_LANES_IMPLEMENTED_2026-02-21.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+
+## Reality Delta (2026-02-21, HOC Blocker Queue Wave W6 Long-Tail Clearance)
+
+- Wave W6 remediated INT/FDR long-tail clusters (`74` files).
+- Measured result:
+  - full HOC blocking backlog: `74 -> 0`
+  - full HOC warnings: `0 -> 0`
+- Tracking artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W6_LONG_TAIL_IMPLEMENTED_2026-02-21.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+
+## Reality Delta (2026-02-21, HOC Blocker Queue Wave W7 Closure Audit)
+
+- Closure audit confirms:
+  - full capability sweep: `0` blocking, `0` warnings
+  - layer segregation (`--scope hoc`): pass (`0`)
+  - HOC strict relative imports: `0`
+  - registry validation: pass
+- Tracking artifacts:
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W7_CLOSURE_AUDIT_IMPLEMENTED_2026-02-21.md`
+  - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
+
 ## Reality Delta (2026-02-12, Wave-4 Script Coverage Audit)
 
 - Wave-4 UC script coverage audited `hoc/cus/ops` scope as:

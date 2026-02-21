@@ -561,6 +561,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-601](PIN-601-cus-capability-sweep-c1-c4-closure.md) | **CUS Capability Sweep C1-C4 Closure** | Governance / CI / Capability Linkage | **✅ COMPLETE** | 2026-02-20 |
 | [PIN-602](PIN-602-hoc-blocker-queue-wave-w2-int-platform-agent-clearance.md) | **HOC Blocker Queue Wave W2 — INT Platform + Agent Clearance** | Governance / CI / Capability Linkage | **✅ COMPLETE** | 2026-02-20 |
 | [PIN-603](PIN-603-hoc-blocker-queue-wave-w3-int-general-worker-policies-clearance.md) | **HOC Blocker Queue Wave W3 — INT General + Worker + Policies Clearance** | Governance / CI / Capability Linkage | **✅ COMPLETE** | 2026-02-20 |
+| [PIN-604](PIN-604-hoc-blocker-queue-w4-w7-closure.md) | **HOC Blocker Queue W4-W7 Closure** | Governance / CI / Capability Linkage | **✅ COMPLETE** | 2026-02-21 |
 
 ---
 
@@ -1330,6 +1331,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-21 | **PIN-604 HOC Blocker Queue W4-W7 Closure** - Completed W4 (`280 -> 157`), W5 (`157 -> 74`), W6 (`74 -> 0`), and W7 closure audit (`0` blocking, `0` warnings) with layer/import/registry gates green. |
 | 2026-02-20 | **PIN-603 HOC Blocker Queue Wave W3 — INT General + Worker + Policies Clearance** - Executed W3 remediation for `backend/app/hoc/int/general/**` + `backend/app/hoc/int/worker/**` + `backend/app/hoc/int/policies/**` (`78` files), synchronized CAP-006/CAP-009/CAP-012 registry evidence, and reduced full-HOC capability backlog (`358 -> 280`) with warnings held at `0`. |
 | 2026-02-20 | **PIN-602 HOC Blocker Queue Wave W2 — INT Platform + Agent Clearance** - Executed W2 remediation for `backend/app/hoc/int/platform/**` + `backend/app/hoc/int/agent/**` (`91` files), synchronized CAP-008/CAP-012 registry evidence, and reduced full-HOC capability backlog (`449 -> 358`) with warnings held at `0`. |
 | 2026-02-20 | **PIN-601 CUS Capability Sweep C1-C4 Closure** - Completed Wave C1/C2/C3/C4 capability remediation and warning cleanup, reducing full-HOC capability backlog from `929 + 13` to `550 + 0` with changed-file gates remaining green. |

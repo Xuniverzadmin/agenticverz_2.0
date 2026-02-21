@@ -43,3 +43,8 @@
   - queue cleared: `74 -> 0`
   - full-HOC blockers: `74 -> 0`
   - warnings remain `0`
+- W7 closure audit complete:
+  - full-HOC capability sweep: blocking `0`, warnings `0`
+  - layer segregation: `PASS (0)`
+  - import hygiene: `0`
+  - registry validation: pass
