@@ -38,14 +38,16 @@ from typing import FrozenSet, Optional
 class AuthSource(str, Enum):
     """How authentication was established.
 
-    Only two valid auth sources exist:
+    Valid auth sources:
     - CLERK: Humans authenticate via Clerk RS256 JWT
+    - HOC_IDENTITY: Humans authenticate via in-house HOC Identity EdDSA JWT
     - API_KEY: Machines authenticate via API key
 
     Reference: AUTH_DESIGN.md (AUTH-HUMAN-001, AUTH-MACHINE-001)
     """
 
-    CLERK = "clerk"  # Production Clerk RS256 JWT (ONLY human auth)
+    CLERK = "clerk"  # Production Clerk RS256 JWT (human auth)
+    HOC_IDENTITY = "hoc_identity"  # In-house HOC Identity EdDSA JWT (human auth)
     API_KEY = "api_key"  # Machine API key
 
 
