@@ -2,7 +2,9 @@
 
 **Created:** 2026-02-21 14:07:38 UTC
 **Executor:** Claude
-**Status:** APPROVAL_PENDING
+**Status:** READY_FOR_EXECUTION
+
+**Execution Taskpack:** `backend/app/hoc/docs/architecture/usecases/HOC_CUS_Pre_Wave0_Auth_Replacement_and_Observability_T1_T8_Taskpack_plan.md`
 
 ## 1. Objective
 
