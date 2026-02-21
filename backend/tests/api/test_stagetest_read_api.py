@@ -6,7 +6,7 @@
 Tests for /hoc/api/stagetest/* read-only API.
 
 Validates:
-1. All 5 canonical endpoints return expected shapes.
+1. All canonical endpoints return expected shapes.
 2. Router uses correct prefix (/hoc/api/stagetest, NOT /api/v1/stagetest).
 3. All endpoints are GET-only.
 4. Founder auth dependency is enforced.
@@ -14,6 +14,7 @@ Validates:
 """
 
 import ast
+import json
 import os
 import sys
 
@@ -58,7 +59,7 @@ class TestStagetestRouterStructure:
             "Stagetest API must be read-only (GET only)."
         )
 
-    def test_five_canonical_endpoints_exist(self):
+    def test_canonical_endpoints_exist(self):
         """All canonical GET endpoints are defined."""
         source = self._get_router_source()
 
@@ -95,6 +96,92 @@ class TestStagetestEndpointImport:
             from app.hoc.api.fdr.ops.stagetest import router
             assert router is not None
             assert hasattr(router, "routes")
+        finally:
+            sys.path.pop(0)
+
+
+class TestStagetestLedgerSnapshot:
+    """Behavioral tests for merged HOC ledger snapshot selection."""
+
+    def test_ledger_snapshot_prefers_merged_hoc_file(self, tmp_path, monkeypatch):
+        sys.path.insert(0, BACKEND_DIR)
+        try:
+            from app.hoc.fdr.ops.engines import stagetest_read_engine as engine
+
+            docs_api = tmp_path / "docs" / "api"
+            docs_api.mkdir(parents=True, exist_ok=True)
+            all_file = docs_api / "HOC_API_LEDGER_ALL.json"
+            all_file.write_text(
+                json.dumps(
+                    {
+                        "generated_at_utc": "2026-02-21T00:00:00Z",
+                        "endpoints": [
+                            {"method": "GET", "path": "/hoc/api/cus/a", "operation": "a"},
+                        ],
+                    }
+                )
+            )
+
+            monkeypatch.setattr(
+                engine,
+                "LEDGER_FILES",
+                {
+                    "all": all_file,
+                    "cus": docs_api / "HOC_CUS_API_LEDGER.json",
+                    "fdr": docs_api / "HOC_FDR_API_LEDGER.json",
+                },
+            )
+            snapshot = engine.get_apis_ledger_snapshot()
+            assert snapshot["run_id"] == "ledger-hoc-all"
+            assert len(snapshot["endpoints"]) == 1
+            assert snapshot["endpoints"][0]["path"] == "/hoc/api/cus/a"
+        finally:
+            sys.path.pop(0)
+
+    def test_ledger_snapshot_merges_cus_and_fdr_files(self, tmp_path, monkeypatch):
+        sys.path.insert(0, BACKEND_DIR)
+        try:
+            from app.hoc.fdr.ops.engines import stagetest_read_engine as engine
+
+            docs_api = tmp_path / "docs" / "api"
+            docs_api.mkdir(parents=True, exist_ok=True)
+            (docs_api / "HOC_CUS_API_LEDGER.json").write_text(
+                json.dumps(
+                    {
+                        "generated_at_utc": "2026-02-21T00:00:00Z",
+                        "endpoints": [
+                            {"method": "GET", "path": "/hoc/api/cus/a", "operation": "cus_a"},
+                        ],
+                    }
+                )
+            )
+            (docs_api / "HOC_FDR_API_LEDGER.json").write_text(
+                json.dumps(
+                    {
+                        "generated_at_utc": "2026-02-21T00:00:01Z",
+                        "endpoints": [
+                            {"method": "GET", "path": "/hoc/api/fdr/b", "operation": "fdr_b"},
+                        ],
+                    }
+                )
+            )
+
+            monkeypatch.setattr(
+                engine,
+                "LEDGER_FILES",
+                {
+                    "all": docs_api / "HOC_API_LEDGER_ALL.json",
+                    "cus": docs_api / "HOC_CUS_API_LEDGER.json",
+                    "fdr": docs_api / "HOC_FDR_API_LEDGER.json",
+                },
+            )
+            snapshot = engine.get_apis_ledger_snapshot()
+            assert snapshot["run_id"] == "ledger-hoc-cus-fdr"
+            assert len(snapshot["endpoints"]) == 2
+            assert {e["path"] for e in snapshot["endpoints"]} == {
+                "/hoc/api/cus/a",
+                "/hoc/api/fdr/b",
+            }
         finally:
             sys.path.pop(0)
 

@@ -3,7 +3,7 @@
 **Date:** 2026-02-21  
 **Scope:** `backend/app/hoc/**`  
 **Primary Skill:** `/root/.codex/skills/hoc-cus-api-ledger-rollout`  
-**Status:** IN_PROGRESS (Wave 1 COMPLETE; Wave 2-4 PENDING)
+**Status:** IN_PROGRESS (Wave 1-2 COMPLETE; Wave 3-4 PENDING)
 
 ## Final Goal
 Produce a deterministic, governance-compliant API ledger for all HOC API surfaces (`hoc/*`), with OpenAPI-backed registry artifacts and a stagetest-published ledger endpoint (`/apis/ledger`) that returns `200 OK` with non-empty HOC data.
@@ -19,20 +19,29 @@ Produce a deterministic, governance-compliant API ledger for all HOC API surface
 
 ## Execution Snapshot (2026-02-21)
 - `Phase 0`: COMPLETE (strict bootstrap executed, dirty-tree preserved via stash, clean worktree created).
-- `Phase 1`: COMPLETE for `cus/*` baseline inventory.
+- `Phase 1`: COMPLETE for `cus/*` and `fdr/*` baseline inventory.
 - `Phase 2`: IN_PROGRESS.
   - Generated: `docs/api/HOC_CUS_API_LEDGER.json`
   - Generated: `docs/api/HOC_CUS_API_LEDGER.csv`
   - Generated: `docs/api/HOC_CUS_API_LEDGER.md`
+  - Generated: `docs/api/HOC_FDR_API_LEDGER.json`
+  - Generated: `docs/api/HOC_FDR_API_LEDGER.csv`
+  - Generated: `docs/api/HOC_FDR_API_LEDGER.md`
+  - Generated: `docs/api/HOC_API_LEDGER_ALL.json`
+  - Generated: `docs/api/HOC_API_LEDGER_ALL.csv`
+  - Generated: `docs/api/HOC_API_LEDGER_ALL.md`
 - `Phase 3`: IN_PROGRESS.
   - Generated mismatch audit: `docs/api/HOC_CUS_API_LEDGER_MISMATCH_AUDIT_2026-02-21.md`
   - Generated mismatch summary: `docs/api/HOC_CUS_API_LEDGER_MISMATCH_AUDIT_2026-02-21.json`
-  - Current skeptical finding: local `docs/openapi.json` has `0` CUS entries while source-derived ledger has `499` unique method+path rows.
+  - Generated mismatch audit: `docs/api/HOC_FDR_API_LEDGER_MISMATCH_AUDIT_2026-02-21.md`
+  - Generated mismatch summary: `docs/api/HOC_FDR_API_LEDGER_MISMATCH_AUDIT_2026-02-21.json`
+  - Current skeptical finding: local `docs/openapi.json` has `0` rows under both `/hoc/api/cus/*` and `/hoc/api/fdr/*` while source-derived ledgers report active routes.
 - `Phase 4`: COMPLETE.
   - `https://stagetest.agenticverz.com/openapi.json` => `200 application/json`
-  - `https://stagetest.agenticverz.com/apis/ledger` => `200 application/json` (`502` endpoints)
-- `Phase 5`: COMPLETE for Wave 1 changed files.
-- `Phase 6`: COMPLETE for Wave 1 PR updates; remaining waves still pending.
+  - `https://stagetest.agenticverz.com/apis/ledger` => `200 application/json` (Wave 1 evidence)
+  - Wave 2 publication logic updated to return merged HOC ledger (`CUS+FDR`) when available.
+- `Phase 5`: COMPLETE for Wave 2 changed files (changed-file checks pass; legacy HOC scope debt remains open).
+- `Phase 6`: COMPLETE for Wave 2 PR scope updates; remaining waves still pending.
 
 ## Execution Model
 
@@ -139,4 +148,4 @@ Per wave PR requirements:
   **Mitigation:** strict wave split (CUS/FDR/INT/merge).
 
 ## Immediate Next Action
-Start **Wave 1 (CUS)** execution using the new skill and generate first artifact set + mismatch report.
+Start **Wave 3 (INT)** execution and extend merged ledger generation to include `HOC_INT_API_LEDGER.*`.

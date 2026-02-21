@@ -1,0 +1,67 @@
+domain,method,path,operation_id,summary,tags,auth_required,auth_schemes,request_schema,response_schema
+explorer,GET,/hoc/api/fdr/explorer/info,get_explorer_info,Get information about the explorer endpoints.,explorer,unknown,,,
+explorer,GET,/hoc/api/fdr/explorer/patterns,get_usage_patterns,Get usage pattern analysis.,explorer,unknown,,,PatternsResponse
+explorer,GET,/hoc/api/fdr/explorer/summary,get_system_summary,Get cross-tenant system summary.,explorer,unknown,,,SystemSummary
+explorer,GET,/hoc/api/fdr/explorer/system/health,get_system_health,Get overall system health indicators.,explorer,unknown,,,SystemHealthResponse
+explorer,GET,/hoc/api/fdr/explorer/tenant/{tenant_id}/diagnostics,get_tenant_diagnostics,Get deep diagnostics for a specific tenant.,explorer,unknown,,,TenantDiagnostics
+explorer,GET,/hoc/api/fdr/explorer/tenants,list_tenants,List all tenants with summary metrics.,explorer,unknown,,,List[TenantSummary]
+fdr,GET,/hoc/api/fdr/fdr/contracts/review-queue,get_review_queue,Get the Founder Review Queue.,founder-review,unknown,,,None
+fdr,GET,/hoc/api/fdr/fdr/contracts/{contract_id},get_contract_detail,Get contract details for review.,founder-review,unknown,,,None
+fdr,POST,/hoc/api/fdr/fdr/contracts/{contract_id}/review,submit_review,Submit a review decision for a contract.,founder-review,unknown,,,None
+fdr,POST,/hoc/api/fdr/fdr/lifecycle/archive,archive_tenant,Archive a terminated tenant. IRREVERSIBLE (terminal-terminal).,"founder,lifecycle",unknown,,,LifecycleTransitionResponse
+fdr,POST,/hoc/api/fdr/fdr/lifecycle/resume,resume_tenant,Resume a suspended tenant. Transitions: SUSPENDED -> ACTIVE.,"founder,lifecycle",unknown,,,LifecycleTransitionResponse
+fdr,POST,/hoc/api/fdr/fdr/lifecycle/suspend,suspend_tenant,Suspend a tenant. Transitions: ACTIVE -> SUSPENDED. Reversible.,"founder,lifecycle",unknown,,,LifecycleTransitionResponse
+fdr,POST,/hoc/api/fdr/fdr/lifecycle/terminate,terminate_tenant,Terminate a tenant. IRREVERSIBLE (OFFBOARD-002).,"founder,lifecycle",unknown,,,LifecycleTransitionResponse
+fdr,GET,/hoc/api/fdr/fdr/lifecycle/{tenant_id},get_lifecycle_state,Get lifecycle state for a tenant.,"founder,lifecycle",unknown,,,LifecycleStateResponse
+fdr,GET,/hoc/api/fdr/fdr/lifecycle/{tenant_id}/history,get_lifecycle_history,Get lifecycle transition history for a tenant.,"founder,lifecycle",unknown,,,LifecycleHistoryResponse
+fdr,POST,/hoc/api/fdr/fdr/onboarding/force-complete,force_complete_onboarding,Force-complete onboarding for a tenant.,Founder Onboarding,unknown,,,ForceCompleteResponse
+fdr,GET,/hoc/api/fdr/fdr/onboarding/stalled,get_stalled_tenants,Get list of stalled onboarding tenants.,Founder Onboarding,unknown,,,
+fdr,GET,/hoc/api/fdr/fdr/review/auto-execute,list_auto_execute_decisions,List AUTO_EXECUTE decisions with filtering and pagination.,founder-review,unknown,,,AutoExecuteReviewListDTO
+fdr,GET,/hoc/api/fdr/fdr/review/auto-execute/stats,get_auto_execute_stats,Get aggregate statistics for AUTO_EXECUTE decisions.,founder-review,unknown,,,AutoExecuteReviewStatsDTO
+fdr,GET,/hoc/api/fdr/fdr/review/auto-execute/{invocation_id},get_auto_execute_decision,Get detailed evidence for a single AUTO_EXECUTE decision.,founder-review,unknown,,,AutoExecuteReviewItemDTO
+fdr,GET,/hoc/api/fdr/fdr/timeline/count,count_decision_records,Count decision records.,founder-timeline,unknown,,,
+fdr,GET,/hoc/api/fdr/fdr/timeline/decisions,list_decision_records,List all decision records.,founder-timeline,unknown,,,List[DecisionRecordView]
+fdr,GET,/hoc/api/fdr/fdr/timeline/decisions/{decision_id},get_decision_record,Get a single decision record by ID.,founder-timeline,unknown,,,DecisionRecordView
+fdr,GET,/hoc/api/fdr/fdr/timeline/run/{run_id},get_run_timeline,Get complete timeline for a run.,founder-timeline,unknown,,,RunTimeline
+hoc,GET,/hoc/api/fdr/hoc/api/stagetest/apis,stagetest_list_apis,GET /hoc/api/stagetest/apis — Get API endpoint snapshot.,Stagetest Evidence Console,unknown,,,ApisSnapshotResponse
+hoc,GET,/hoc/api/fdr/hoc/api/stagetest/apis/ledger,stagetest_list_apis_ledger,GET /hoc/api/stagetest/apis/ledger — Get canonical CUS API ledger snapshot.,Stagetest Evidence Console,unknown,,,ApisSnapshotResponse
+hoc,GET,/hoc/api/fdr/hoc/api/stagetest/runs,stagetest_list_runs,GET /hoc/api/stagetest/runs — List all test runs.,Stagetest Evidence Console,unknown,,,RunListResponse
+hoc,GET,/hoc/api/fdr/hoc/api/stagetest/runs/{run_id},stagetest_get_run,GET /hoc/api/stagetest/runs/{run_id} — Get run summary.,Stagetest Evidence Console,unknown,,,RunSummary
+hoc,GET,/hoc/api/fdr/hoc/api/stagetest/runs/{run_id}/cases,stagetest_list_cases,GET /hoc/api/stagetest/runs/{run_id}/cases — List cases for run.,Stagetest Evidence Console,unknown,,,CaseListResponse
+hoc,GET,/hoc/api/fdr/hoc/api/stagetest/runs/{run_id}/cases/{case_id},stagetest_get_case,GET /hoc/api/stagetest/runs/{run_id}/cases/{case_id} — Get case detail.,Stagetest Evidence Console,unknown,,,CaseDetail
+ops,GET,/hoc/api/fdr/ops/actions/audit,get_audit_trail,Get founder action audit trail.,founder-actions,unknown,,,FounderActionListDTO
+ops,GET,/hoc/api/fdr/ops/actions/audit/{action_id},get_audit_record,Get single audit record.,founder-actions,unknown,,,FounderAuditRecordDTO
+ops,POST,/hoc/api/fdr/ops/actions/freeze-api-key,freeze_api_key,Freeze API key - immediately revoke.,founder-actions,unknown,,,FounderActionResponseDTO
+ops,POST,/hoc/api/fdr/ops/actions/freeze-tenant,freeze_tenant,Freeze tenant - immediately block all API calls.,founder-actions,unknown,,,FounderActionResponseDTO
+ops,POST,/hoc/api/fdr/ops/actions/override-incident,override_incident,Override incident - mark as false positive. NOT REVERSIBLE.,founder-actions,unknown,,,FounderActionResponseDTO
+ops,POST,/hoc/api/fdr/ops/actions/throttle-tenant,throttle_tenant,Throttle tenant - reduce rate limit to 10%.,founder-actions,unknown,,,FounderActionResponseDTO
+ops,POST,/hoc/api/fdr/ops/actions/unfreeze-api-key,unfreeze_api_key,Unfreeze API key - restore access.,founder-actions,unknown,,,FounderActionResponseDTO
+ops,POST,/hoc/api/fdr/ops/actions/unfreeze-tenant,unfreeze_tenant,Unfreeze tenant - restore access.,founder-actions,unknown,,,FounderActionResponseDTO
+ops,POST,/hoc/api/fdr/ops/actions/unthrottle-tenant,unthrottle_tenant,Unthrottle tenant - restore rate limit.,founder-actions,unknown,,,FounderActionResponseDTO
+ops,GET,/hoc/api/fdr/ops/cost/anomalies,get_cost_anomalies,GET /ops/cost/anomalies,Ops Cost Intelligence,unknown,,,FounderCostAnomalyListDTO
+ops,GET,/hoc/api/fdr/ops/cost/customers/{tenant_id},get_customer_cost_drilldown,GET /ops/cost/customers/{tenant_id},Ops Cost Intelligence,unknown,,,FounderCustomerCostDrilldownDTO
+ops,GET,/hoc/api/fdr/ops/cost/overview,get_cost_overview,GET /ops/cost/overview,Ops Cost Intelligence,unknown,,,FounderCostOverviewDTO
+ops,GET,/hoc/api/fdr/ops/cost/tenants,get_cost_tenants,GET /ops/cost/tenants,Ops Cost Intelligence,unknown,,,FounderCostTenantListDTO
+ops,GET,/hoc/api/fdr/ops/customers,get_customer_segments,Customer Intelligence - All tenant profiles with stickiness and risk.,Ops Console,unknown,,,List[CustomerSegment]
+ops,GET,/hoc/api/fdr/ops/customers/at-risk,get_customers_at_risk,Customers At Risk - Phase-2 Founder Intelligence.,Ops Console,unknown,,,List[CustomerAtRisk]
+ops,GET,/hoc/api/fdr/ops/customers/{tenant_id},get_customer_detail,Get detailed customer profile for a specific tenant.,Ops Console,unknown,,,CustomerSegment
+ops,GET,/hoc/api/fdr/ops/events,get_event_stream,Event Stream - Raw events for debugging and analysis.,Ops Console,unknown,,,OpsEventListResponse
+ops,GET,/hoc/api/fdr/ops/incidents,get_founder_incidents,GET /ops/incidents,Ops Console,unknown,,,FounderIncidentListDTO
+ops,GET,/hoc/api/fdr/ops/incidents/infra-summary,get_infra_incident_summary,GET /ops/incidents/infra-summary,Ops Console,unknown,,,
+ops,GET,/hoc/api/fdr/ops/incidents/patterns,get_incident_patterns,Incident Intelligence - What's breaking and is it systemic?,Ops Console,unknown,,,List[IncidentPattern]
+ops,GET,/hoc/api/fdr/ops/incidents/{incident_id},get_founder_incident_detail,GET /ops/incidents/{incident_id},Ops Console,unknown,,,FounderIncidentDetailDTO
+ops,GET,/hoc/api/fdr/ops/infra,get_infra_limits,Infra & Limits - What breaks first if I grow?,Ops Console,unknown,,,InfraLimits
+ops,GET,/hoc/api/fdr/ops/playbooks,get_founder_playbooks,Founder Playbooks - Signal → Action Matrix.,Ops Console,unknown,,,List[PlaybookDetail]
+ops,GET,/hoc/api/fdr/ops/playbooks/{playbook_id},get_playbook_detail,Get a specific founder playbook by ID.,Ops Console,unknown,,,PlaybookDetail
+ops,GET,/hoc/api/fdr/ops/pulse,get_system_pulse,"System Pulse - ""Is my business healthy right now?""",Ops Console,unknown,,,SystemPulse
+ops,GET,/hoc/api/fdr/ops/revenue,get_revenue_risk,Revenue & Risk - Am I making money safely?,Ops Console,unknown,,,RevenueRisk
+ops,GET,/hoc/api/fdr/ops/stickiness,get_stickiness_by_feature,Product Stickiness - Which feature actually keeps users?,Ops Console,unknown,,,List[StickinessByFeature]
+retrieval,GET,/hoc/api/fdr/retrieval/evidence,list_evidence,,"Retrieval,Founder",unknown,,,"Dict[str, Any]"
+retrieval,GET,/hoc/api/fdr/retrieval/evidence/{evidence_id},get_evidence,,"Retrieval,Founder",unknown,,,"Dict[str, Any]"
+retrieval,GET,/hoc/api/fdr/retrieval/planes,list_planes,,"Retrieval,Founder",unknown,,,"Dict[str, Any]"
+retrieval,POST,/hoc/api/fdr/retrieval/planes,register_plane,,"Retrieval,Founder",unknown,,,"Dict[str, Any]"
+retrieval,GET,/hoc/api/fdr/retrieval/planes/{plane_id},get_plane,,"Retrieval,Founder",unknown,,,"Dict[str, Any]"
+retrieval,POST,/hoc/api/fdr/retrieval/planes/{plane_id}/approve_purge,approve_purge,,"Retrieval,Founder",unknown,,,"Dict[str, Any]"
+retrieval,POST,/hoc/api/fdr/retrieval/planes/{plane_id}/bind_policy,bind_policy,,"Retrieval,Founder",unknown,,,"Dict[str, Any]"
+retrieval,POST,/hoc/api/fdr/retrieval/planes/{plane_id}/transition,transition_plane,,"Retrieval,Founder",unknown,,,"Dict[str, Any]"
+retrieval,POST,/hoc/api/fdr/retrieval/planes/{plane_id}/unbind_policy,unbind_policy,,"Retrieval,Founder",unknown,,,"Dict[str, Any]"

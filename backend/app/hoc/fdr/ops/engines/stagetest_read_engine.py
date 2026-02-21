@@ -2,6 +2,7 @@
 # AUDIENCE: FOUNDER
 # Role: Filesystem-based read engine for stagetest evidence artifacts
 # artifact_class: CODE
+# capability_id: CAP-005
 """
 Stagetest Read Engine
 
@@ -12,15 +13,27 @@ This engine is called by L2 (stagetest router) and returns
 normalized dicts that the router maps to response schemas.
 """
 
+import ast
 import json
 import re
-import ast
 from pathlib import Path
 
 ARTIFACTS_ROOT = Path(__file__).resolve().parents[5] / "artifacts" / "stagetest"
 REPO_ROOT = Path(__file__).resolve().parents[6]
-CUS_LEDGER_FILE = REPO_ROOT / "docs" / "api" / "HOC_CUS_API_LEDGER.json"
-CUS_SOURCE_ROOT = Path(__file__).resolve().parents[5] / "app" / "hoc" / "api" / "cus"
+API_LEDGER_ROOT = REPO_ROOT / "docs" / "api"
+LEDGER_FILES = {
+    "all": API_LEDGER_ROOT / "HOC_API_LEDGER_ALL.json",
+    "cus": API_LEDGER_ROOT / "HOC_CUS_API_LEDGER.json",
+    "fdr": API_LEDGER_ROOT / "HOC_FDR_API_LEDGER.json",
+}
+SOURCE_ROOTS = {
+    "cus": Path(__file__).resolve().parents[5] / "app" / "hoc" / "api" / "cus",
+    "fdr": Path(__file__).resolve().parents[5] / "app" / "hoc" / "api" / "fdr",
+}
+SCOPE_PREFIXES = {
+    "cus": "/hoc/api/cus",
+    "fdr": "/hoc/api/fdr",
+}
 
 _METHODS = {"get", "post", "put", "patch", "delete", "options", "head"}
 
@@ -44,20 +57,54 @@ def _join_paths(prefix: str, route: str) -> str:
     return prefix + route
 
 
-def _normalize_cus_path(path: str) -> str:
-    if path.startswith("/hoc/api/cus/"):
+def _normalize_scope_path(path: str, scope: str) -> str:
+    prefix = SCOPE_PREFIXES[scope]
+    if path.startswith(prefix + "/"):
         return path
-    if path.startswith("/cus/"):
+    if path.startswith(f"/{scope}/"):
         return "/hoc/api" + path
-    return "/hoc/api/cus" + (path if path.startswith("/") else f"/{path}")
+    return prefix + (path if path.startswith("/") else f"/{path}")
 
 
-def _build_cus_ledger_from_source() -> dict:
+def _ordered_endpoints(endpoints: list[dict]) -> list[dict]:
+    dedup: dict[tuple[str, str, str], dict] = {}
+    for e in endpoints:
+        method = str(e.get("method", "")).upper()
+        path = str(e.get("path", ""))
+        operation = str(e.get("operation", e.get("operation_id", "")))
+        if not method or not path:
+            continue
+        dedup[(method, path, operation)] = {
+            "method": method,
+            "path": path,
+            "operation": operation,
+        }
+    return sorted(dedup.values(), key=lambda x: (x["path"], x["method"], x["operation"]))
+
+
+def _load_ledger_file(path: Path) -> dict | None:
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return None
+    mapped = _ordered_endpoints(payload.get("endpoints", []))
+    if not mapped:
+        return None
+    return {
+        "generated_at": str(payload.get("generated_at_utc", "")),
+        "endpoints": mapped,
+    }
+
+
+def _build_scope_ledger_from_source(scope: str) -> list[dict]:
     endpoints: list[dict] = []
-    if not CUS_SOURCE_ROOT.exists():
-        return {"run_id": "ledger-source", "generated_at": "", "endpoints": endpoints}
+    source_root = SOURCE_ROOTS[scope]
+    if not source_root.exists():
+        return endpoints
 
-    for py_file in sorted(CUS_SOURCE_ROOT.rglob("*.py")):
+    for py_file in sorted(source_root.rglob("*.py")):
         if py_file.name == "__init__.py":
             continue
         try:
@@ -85,7 +132,7 @@ def _build_cus_ledger_from_source() -> dict:
                     continue
 
                 route_path = first_arg.value
-                full_path = _normalize_cus_path(_join_paths(router_prefix, route_path))
+                full_path = _normalize_scope_path(_join_paths(router_prefix, route_path), scope)
                 endpoints.append(
                     {
                         "method": method.upper(),
@@ -94,12 +141,7 @@ def _build_cus_ledger_from_source() -> dict:
                     }
                 )
 
-    # Deterministic order + de-dup
-    dedup: dict[tuple[str, str, str], dict] = {}
-    for e in endpoints:
-        dedup[(e["method"], e["path"], e["operation"])] = e
-    ordered = sorted(dedup.values(), key=lambda x: (x["path"], x["method"], x["operation"]))
-    return {"run_id": "ledger-source", "generated_at": "", "endpoints": ordered}
+    return _ordered_endpoints(endpoints)
 
 
 def list_runs() -> list[dict]:
@@ -189,38 +231,45 @@ def get_apis_snapshot(run_id: str | None = None) -> dict | None:
 
 def get_apis_ledger_snapshot() -> dict:
     """
-    Return a ledger-oriented API snapshot for CUS surfaces.
+    Return a ledger-oriented API snapshot for HOC surfaces.
 
     Priority:
-    1) docs/api/HOC_CUS_API_LEDGER.json (if present)
-    2) latest stagetest artifact snapshot (if non-empty)
-    3) source-derived CUS inventory (always available in repo)
+    1) docs/api/HOC_API_LEDGER_ALL.json (if present)
+    2) docs/api/HOC_CUS_API_LEDGER.json + docs/api/HOC_FDR_API_LEDGER.json
+    3) latest stagetest artifact snapshot (if non-empty)
+    4) source-derived CUS+FDR inventory (always available in repo)
     """
-    if CUS_LEDGER_FILE.exists():
-        try:
-            payload = json.loads(CUS_LEDGER_FILE.read_text())
-            endpoints = payload.get("endpoints", [])
-            mapped = []
-            for row in endpoints:
-                if not isinstance(row, dict):
-                    continue
-                method = str(row.get("method", "")).upper()
-                path = str(row.get("path", ""))
-                operation = str(row.get("operation", row.get("operation_id", "")))
-                if not method or not path:
-                    continue
-                mapped.append({"method": method, "path": path, "operation": operation})
-            if mapped:
-                return {
-                    "run_id": "ledger-cus",
-                    "generated_at": str(payload.get("generated_at_utc", "")),
-                    "endpoints": mapped,
-                }
-        except (json.JSONDecodeError, OSError):
-            pass
+    merged = _load_ledger_file(LEDGER_FILES["all"])
+    if merged:
+        return {"run_id": "ledger-hoc-all", "generated_at": merged["generated_at"], "endpoints": merged["endpoints"]}
+
+    scoped_endpoints: list[dict] = []
+    generated_at = ""
+    scopes_found: list[str] = []
+    for scope in ("cus", "fdr"):
+        payload = _load_ledger_file(LEDGER_FILES[scope])
+        if payload is None:
+            continue
+        scoped_endpoints.extend(payload["endpoints"])
+        scopes_found.append(scope)
+        if payload["generated_at"] and not generated_at:
+            generated_at = payload["generated_at"]
+
+    scoped_ordered = _ordered_endpoints(scoped_endpoints)
+    if scoped_ordered:
+        return {
+            "run_id": "ledger-hoc-" + "-".join(scopes_found),
+            "generated_at": generated_at,
+            "endpoints": scoped_ordered,
+        }
 
     artifact = get_apis_snapshot()
     if artifact and artifact.get("endpoints"):
         return artifact
 
-    return _build_cus_ledger_from_source()
+    source_endpoints = _build_scope_ledger_from_source("cus") + _build_scope_ledger_from_source("fdr")
+    return {
+        "run_id": "ledger-source-hoc",
+        "generated_at": "",
+        "endpoints": _ordered_endpoints(source_endpoints),
+    }
