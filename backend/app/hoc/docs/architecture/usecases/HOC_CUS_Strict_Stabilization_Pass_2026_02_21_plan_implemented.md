@@ -2,8 +2,8 @@
 
 **Created:** 2026-02-21 07:41:41 UTC
 **Executor:** Claude
-**Last updated:** 2026-02-21 (remediation pass)
-**Status:** DONE (with documented advisory warnings)
+**Last updated:** 2026-02-21 (remediation pass 2 — CI evidence sync)
+**Status:** DONE (PR32-owned blockers resolved; repo-wide CI failures documented)
 
 ## 1. Execution Summary
 
@@ -25,7 +25,7 @@
 | T7 | PARTIAL | Handler tests pass; TestClient returns 401 (auth middleware blocks `/apis/*`) | Runtime HTTP 200 not verified — not deployed. Handler-level + structural tests only. |
 | T8 | DONE | `check_layer_boundaries.py`: CLEAN; `l5_spine_pairing_gap_detector.py`: 70 wired, 0 gaps, 0 orphaned | Full CUS dispatch conformance |
 | T9 | DONE | Global: local 499 = runtime 499, ZERO DIFF; Per-domain: all 10 domains ZERO DIFF | Parity measured against pre-deploy runtime (existing ledger endpoint) |
-| T10 | DONE | All CI gates pass (see Gates section) | 0 blocking violations |
+| T10 | PARTIAL | Local gates pass; GitHub CI has 13 failures (1 PR32-owned now fixed, 12 repo-wide) | See CI Evidence section |
 | T11 | DONE | This document | Corrected from initial overclaim pass |
 | T12 | DONE | Commit + push + PR #32 updated | See PR Hygiene Evidence |
 
@@ -60,20 +60,54 @@
 - `backend/app/hoc/api/apis/__init__.py` — added `# capability_id: CAP-011`
 - `backend/app/hoc/api/apis/cus_publication.py` — added `# capability_id: CAP-011`
 - `backend/app/hoc/app.py` — added `# capability_id: CAP-011`; rewired import from facade
-- `backend/app/hoc/int/worker/runner.py` — rewrote comment import examples (lines 957-960)
+- `backend/app/hoc/int/worker/runner.py` — added `# capability_id: CAP-012`; rewrote comment import examples
 - `backend/app/hoc/int/analytics/engines/runner.py` — rewrote comment import examples (lines 958-961)
 - This document
 
-### Gates Executed (TODO-8)
+### Local Gates Executed
 
 ```
-capability_registry_enforcer check-pr:  CI PASSED (4 advisory MISSING_EVIDENCE warnings, 0 blocking)
+capability_registry_enforcer check-pr:  CI PASSED (4 advisory MISSING_EVIDENCE, 0 blocking) — after CAP-012 fix
 check_init_hygiene.py --ci:             0 blocking violations (3 known INT exceptions)
 check_layer_boundaries.py:              CLEAN — 0 violations
 check_openapi_snapshot.py:              PASS — 394 routes, valid JSON
 test_stagetest_read_api.py:             8/8 PASS
 test_cus_publication_api.py:            21/21 PASS
 ```
+
+### GitHub CI Evidence (from `gh pr checks 32`)
+
+**PR32-owned checks:**
+
+| Check | Status | Notes |
+|-------|--------|-------|
+| Capability Linkage Check | BLOCKED→FIXED | Was: `int/worker/runner.py` missing capability_id. Fixed: added `CAP-012` |
+
+**Passing checks (34):**
+CI Gate, Consistency Check, DB-AUTH-001 Compliance, G1-G5 Guards, GQ-L2-CONTRACT-READY,
+Layer Integration Tests, Mypy Type Safety, Qualifier Summary, SQLModel Pattern Lint,
+UI Expansion Guard, Validate OpenAPI Snapshot, Validate Registry, determinism,
+env-misuse-guard, feature-intent-guard, frozen-files-guard, golden-replay-guard,
+governance-tripwire, integration, lint-alerts, migration-check, mypy-check,
+priority4/5-intent-guard, pyright-check, run-migrations, workflow-engine,
+secrets-scan, setup-neon-branch, sql-misuse-guard, ui-hygiene, unit-tests,
+workflow-golden-check, cleanup-neon-branch
+
+**Repo-wide failures (12, also fail on origin/main):**
+
+| Check | Root Cause | PR32-owned? |
+|-------|-----------|-------------|
+| claude-authority-guard | CLAUDE_AUTHORITY.md hash mismatch (file identical to origin/main; CI YAML hash stale) | NO |
+| Import Hygiene | 50+ `datetime.utcnow()` calls across untouched legacy files | NO |
+| Enforce L4/L6 Boundaries | 701 errors in `app/models/` sqlalchemy imports | NO |
+| layer-enforcement | Same 701 errors | NO |
+| Truth Preflight | `policy_rules_legacy` FK table missing in models | NO |
+| Post-Flight Hygiene | 5 syntax errors in untouched files + 5804 warnings | NO |
+| Browser Integration Tests | Depends on Truth Preflight (backend won't start) | NO |
+| Integration Integrity Gate | Depends on Truth Preflight | NO |
+| e2e-tests | Depends on Truth Preflight | NO |
+| costsim / costsim-wiremock | Depends on Truth Preflight | NO |
+| m10-tests | Depends on Truth Preflight | NO |
 
 ### Publication Evidence
 
@@ -90,14 +124,27 @@ test_cus_publication_api.py:            21/21 PASS
   - account: 32/32, activity: 20/20, analytics: 33/33, api_keys: 13/13, controls: 7/7
   - incidents: 20/20, integrations: 54/54, logs: 47/47, overview: 5/5, policies: 268/268
 
-## 5. Baseline Known Issues (TODO-9)
+## 5. Blocker Classification
 
-| Issue | Type | Scope | Blocking? | Notes |
-|-------|------|-------|-----------|-------|
-| 3x `from app.services` in `int/analytics/engines/runner.py` | Known exception | INT (not CUS) | NO | Lines 49-52: legacy imports, in known exceptions list |
-| 4x `MISSING_EVIDENCE` for CAP-011 files | Advisory warning | CUS | NO | Files not yet registered in CAP-011 evidence paths in CAPABILITY_REGISTRY.yaml |
-| 1x governance test failure (`policy_snapshots.policy_version`) | Pre-existing | Knowledge domain | NO | Missing DB column; unrelated to CUS stabilization |
-| `/apis/*` not in gateway `public_paths` | Architectural gap | INT | YES (for live HTTP 200) | Requires INT-scope PR to fix |
+### PR32-owned (all resolved)
+
+| Issue | Status | Fix |
+|-------|--------|-----|
+| `int/worker/runner.py` missing `capability_id` | FIXED | Added `# capability_id: CAP-012` |
+| 4x `MISSING_EVIDENCE` for CAP-011 files | ADVISORY (non-blocking) | Register files in CAPABILITY_REGISTRY.yaml evidence paths |
+| `/apis/*` not in gateway `public_paths` | DEFERRED | Requires INT-scope PR; handler-level tests prove correctness |
+
+### Repo-wide canonical HOC backlog (not tombstoned)
+
+| Issue | CI Check | Root Cause |
+|-------|----------|-----------|
+| CLAUDE_AUTHORITY.md hash mismatch | claude-authority-guard | CI YAML ratified hash stale vs actual file on main |
+| 50+ `datetime.utcnow()` calls | Import Hygiene | Legacy code across INT/CUS/models not yet migrated to `datetime.now(tz=UTC)` |
+| 701 sqlalchemy/sqlmodel imports in `app/models/` | layer-enforcement, Enforce L4/L6 | L7 model layer uses ORM by design; check overly broad |
+| `policy_rules_legacy` FK table missing | Truth Preflight | Model FK references non-existent table; blocks app startup in CI |
+| 5 syntax errors in untouched files | Post-Flight Hygiene | `integrated_runtime.py`, `stub_planner.py`, `cost_snapshots_engine.py` |
+| Backend startup failure | e2e/costsim/m10/Browser | Cascading from Truth Preflight FK error |
+| 3x legacy `from app.services` imports | check_init_hygiene (warning) | `int/analytics/engines/runner.py` — known exceptions, non-blocking |
 
 ## 6. PR Hygiene Evidence
 

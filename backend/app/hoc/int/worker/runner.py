@@ -10,6 +10,7 @@
 # Forbidden Imports: L1, L2, L3
 # Contract: EXECUTION_SEMANTIC_CONTRACT.md (Guarantee 3: At-Least-Once Worker Dispatch)
 # Pattern: Sync-over-async per contract (ThreadPool requires sync callable)
+# capability_id: CAP-012
 
 """
 Runner: executes a single run's plan steps, handles retries and backoff.
