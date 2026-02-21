@@ -21,6 +21,7 @@ Endpoints:
 - GET /hoc/api/stagetest/runs/{run_id}/cases         — List cases for run
 - GET /hoc/api/stagetest/runs/{run_id}/cases/{case_id} — Get case detail
 - GET /hoc/api/stagetest/apis            — Get API endpoint snapshot
+- GET /hoc/api/stagetest/apis/ledger     — Get canonical CUS API ledger snapshot
 
 Architecture:
 - L2 is thin HTTP boundary — no filesystem I/O here
@@ -34,6 +35,7 @@ from fastapi import APIRouter, HTTPException  # TODO: Re-enable auth — add Dep
 
 # TODO: Re-enable auth — from app.auth.console_auth import verify_fops_token
 from app.hoc.fdr.ops.engines.stagetest_read_engine import (
+    get_apis_ledger_snapshot,
     get_apis_snapshot,
     get_case,
     get_run,
@@ -105,10 +107,21 @@ async def stagetest_get_case(run_id: str, case_id: str):
 async def stagetest_list_apis():
     """GET /hoc/api/stagetest/apis — Get API endpoint snapshot."""
     data = get_apis_snapshot()
+    if data is None or not data.get("endpoints"):
+        # Fallback to canonical ledger snapshot when run artifacts are absent.
+        data = get_apis_ledger_snapshot()
     if data is None:
-        # Return default snapshot if no artifacts exist yet
+        return ApisSnapshotResponse(run_id="none", generated_at="", endpoints=[])
+    return ApisSnapshotResponse(**data)
+
+
+@router.get("/apis/ledger", response_model=ApisSnapshotResponse)
+async def stagetest_list_apis_ledger():
+    """GET /hoc/api/stagetest/apis/ledger — Get canonical CUS API ledger snapshot."""
+    data = get_apis_ledger_snapshot()
+    if data is None:
         return ApisSnapshotResponse(
-            run_id="none",
+            run_id="ledger-none",
             generated_at="",
             endpoints=[],
         )

@@ -13,9 +13,93 @@ normalized dicts that the router maps to response schemas.
 """
 
 import json
+import re
+import ast
 from pathlib import Path
 
 ARTIFACTS_ROOT = Path(__file__).resolve().parents[5] / "artifacts" / "stagetest"
+REPO_ROOT = Path(__file__).resolve().parents[6]
+CUS_LEDGER_FILE = REPO_ROOT / "docs" / "api" / "HOC_CUS_API_LEDGER.json"
+CUS_SOURCE_ROOT = Path(__file__).resolve().parents[5] / "app" / "hoc" / "api" / "cus"
+
+_METHODS = {"get", "post", "put", "patch", "delete", "options", "head"}
+
+
+def _router_prefix_from_source(content: str) -> str:
+    match = re.search(r'APIRouter\s*\([^)]*prefix\s*=\s*["\']([^"\']+)["\']', content, re.DOTALL)
+    if match:
+        return match.group(1)
+    return ""
+
+
+def _join_paths(prefix: str, route: str) -> str:
+    if not prefix:
+        return route
+    if not route:
+        return prefix
+    if prefix.endswith("/") and route.startswith("/"):
+        return prefix[:-1] + route
+    if (not prefix.endswith("/")) and (not route.startswith("/")):
+        return prefix + "/" + route
+    return prefix + route
+
+
+def _normalize_cus_path(path: str) -> str:
+    if path.startswith("/hoc/api/cus/"):
+        return path
+    if path.startswith("/cus/"):
+        return "/hoc/api" + path
+    return "/hoc/api/cus" + (path if path.startswith("/") else f"/{path}")
+
+
+def _build_cus_ledger_from_source() -> dict:
+    endpoints: list[dict] = []
+    if not CUS_SOURCE_ROOT.exists():
+        return {"run_id": "ledger-source", "generated_at": "", "endpoints": endpoints}
+
+    for py_file in sorted(CUS_SOURCE_ROOT.rglob("*.py")):
+        if py_file.name == "__init__.py":
+            continue
+        try:
+            content = py_file.read_text()
+            tree = ast.parse(content)
+        except Exception:
+            continue
+
+        router_prefix = _router_prefix_from_source(content)
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for decorator in node.decorator_list:
+                if not isinstance(decorator, ast.Call):
+                    continue
+                if not isinstance(decorator.func, ast.Attribute):
+                    continue
+                method = decorator.func.attr.lower()
+                if method not in _METHODS:
+                    continue
+                if not decorator.args:
+                    continue
+                first_arg = decorator.args[0]
+                if not isinstance(first_arg, ast.Constant) or not isinstance(first_arg.value, str):
+                    continue
+
+                route_path = first_arg.value
+                full_path = _normalize_cus_path(_join_paths(router_prefix, route_path))
+                endpoints.append(
+                    {
+                        "method": method.upper(),
+                        "path": full_path,
+                        "operation": node.name,
+                    }
+                )
+
+    # Deterministic order + de-dup
+    dedup: dict[tuple[str, str, str], dict] = {}
+    for e in endpoints:
+        dedup[(e["method"], e["path"], e["operation"])] = e
+    ordered = sorted(dedup.values(), key=lambda x: (x["path"], x["method"], x["operation"]))
+    return {"run_id": "ledger-source", "generated_at": "", "endpoints": ordered}
 
 
 def list_runs() -> list[dict]:
@@ -101,3 +185,42 @@ def get_apis_snapshot(run_id: str | None = None) -> dict | None:
         return json.loads(apis_file.read_text())
     except (json.JSONDecodeError, OSError):
         return None
+
+
+def get_apis_ledger_snapshot() -> dict:
+    """
+    Return a ledger-oriented API snapshot for CUS surfaces.
+
+    Priority:
+    1) docs/api/HOC_CUS_API_LEDGER.json (if present)
+    2) latest stagetest artifact snapshot (if non-empty)
+    3) source-derived CUS inventory (always available in repo)
+    """
+    if CUS_LEDGER_FILE.exists():
+        try:
+            payload = json.loads(CUS_LEDGER_FILE.read_text())
+            endpoints = payload.get("endpoints", [])
+            mapped = []
+            for row in endpoints:
+                if not isinstance(row, dict):
+                    continue
+                method = str(row.get("method", "")).upper()
+                path = str(row.get("path", ""))
+                operation = str(row.get("operation", row.get("operation_id", "")))
+                if not method or not path:
+                    continue
+                mapped.append({"method": method, "path": path, "operation": operation})
+            if mapped:
+                return {
+                    "run_id": "ledger-cus",
+                    "generated_at": str(payload.get("generated_at_utc", "")),
+                    "endpoints": mapped,
+                }
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    artifact = get_apis_snapshot()
+    if artifact and artifact.get("endpoints"):
+        return artifact
+
+    return _build_cus_ledger_from_source()

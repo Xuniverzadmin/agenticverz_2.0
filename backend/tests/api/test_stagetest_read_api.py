@@ -59,7 +59,7 @@ class TestStagetestRouterStructure:
         )
 
     def test_five_canonical_endpoints_exist(self):
-        """All 5 canonical GET endpoints are defined."""
+        """All canonical GET endpoints are defined."""
         source = self._get_router_source()
 
         expected_paths = [
@@ -68,6 +68,7 @@ class TestStagetestRouterStructure:
             "/runs/{run_id}/cases",
             "/runs/{run_id}/cases/{case_id}",
             "/apis",
+            "/apis/ledger",
         ]
         for path in expected_paths:
             assert path in source, f"Missing endpoint path: {path}"
@@ -126,11 +127,13 @@ class TestStagetestEndpointImport:
                 list_cases,
                 get_case,
                 get_apis_snapshot,
+                get_apis_ledger_snapshot,
             )
             assert callable(list_runs)
             assert callable(get_run)
             assert callable(list_cases)
             assert callable(get_case)
             assert callable(get_apis_snapshot)
+            assert callable(get_apis_ledger_snapshot)
         finally:
             sys.path.pop(0)
