@@ -1,0 +1,14 @@
+domain,method,path,operation_id,summary,tags,auth_required,auth_schemes,request_schema,response_schema
+api-keys,GET,/hoc/api/cus/api-keys,list_api_keys,List API keys. READ-ONLY. Delegates to L4 operation registry.,api-keys,unknown,,,APIKeysListResponse
+api-keys,GET,/hoc/api/cus/api-keys/{key_id},get_api_key_detail,Get API key detail (O3). Delegates to L4 operation registry.,api-keys,unknown,,,APIKeyDetailResponse
+api_keys,GET,/hoc/api/cus/api_keys/list,list_api_keys_public,,cus-api_keys-public,unknown,,,APIKeysListPublicResponse
+embedding,DELETE,/hoc/api/cus/embedding/cache,clear_embedding_cache,Clear all embedding cache entries.,embedding,unknown,,,
+embedding,GET,/hoc/api/cus/embedding/cache/stats,embedding_cache_stats,Get embedding cache statistics.,embedding,unknown,,,
+embedding,POST,/hoc/api/cus/embedding/compose,compose_embedding,Compose an instruction-aware embedding using IAEC v3.0.,embedding,unknown,,,IAECComposeResponse
+embedding,GET,/hoc/api/cus/embedding/config,get_embedding_config,Get embedding configuration.,embedding,unknown,,,EmbeddingConfigResponse
+embedding,POST,/hoc/api/cus/embedding/decompose,decompose_embedding,Decompose an IAEC embedding back into its constituent slots (v3.0).,embedding,unknown,,,IAECDecomposeResponse
+embedding,GET,/hoc/api/cus/embedding/health,embedding_health,Quick health check for embedding subsystem.,embedding,unknown,,,
+embedding,POST,/hoc/api/cus/embedding/iaec/check-mismatch,check_mismatch,Check instruction-query semantic compatibility (v3.1).,embedding,unknown,,,
+embedding,GET,/hoc/api/cus/embedding/iaec/instructions,get_iaec_instructions,Get available IAEC instruction types and their weights.,embedding,unknown,,,
+embedding,GET,/hoc/api/cus/embedding/iaec/segment-info,get_iaec_segment_info,Get IAEC v3.0 segmentation configuration.,embedding,unknown,,,
+embedding,GET,/hoc/api/cus/embedding/quota,get_embedding_quota,Get current embedding quota status.,embedding,unknown,,,EmbeddingQuotaResponse

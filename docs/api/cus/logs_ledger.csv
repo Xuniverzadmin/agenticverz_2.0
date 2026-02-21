@@ -1,0 +1,48 @@
+domain,method,path,operation_id,summary,tags,auth_required,auth_schemes,request_schema,response_schema
+cost,GET,/hoc/api/cus/cost/anomalies,get_anomalies,Get detected cost anomalies.,Cost Intelligence,unknown,,,CostAnomaliesEnvelope
+cost,POST,/hoc/api/cus/cost/anomalies/detect,trigger_anomaly_detection,Trigger anomaly detection for this tenant.,Cost Intelligence,unknown,,,AnomalyDetectionResponse
+cost,GET,/hoc/api/cus/cost/budgets,list_budgets,List all budgets for the tenant.,Cost Intelligence,unknown,,,List[BudgetResponse]
+cost,POST,/hoc/api/cus/cost/budgets,create_or_update_budget,Create or update a budget.,Cost Intelligence,unknown,,,BudgetResponse
+cost,GET,/hoc/api/cus/cost/by-feature,get_costs_by_feature,Get cost breakdown by feature tag.,Cost Intelligence,unknown,,,CostByFeatureEnvelope
+cost,GET,/hoc/api/cus/cost/by-model,get_costs_by_model,Get cost breakdown by model.,Cost Intelligence,unknown,,,CostByModelEnvelope
+cost,GET,/hoc/api/cus/cost/by-user,get_costs_by_user,Get cost breakdown by user with anomaly detection.,Cost Intelligence,unknown,,,CostByUserEnvelope
+cost,GET,/hoc/api/cus/cost/dashboard,get_cost_dashboard,Get complete cost dashboard.,Cost Intelligence,unknown,,,CostDashboard
+cost,GET,/hoc/api/cus/cost/features,list_feature_tags,List all feature tags for the tenant.,Cost Intelligence,unknown,,,List[FeatureTagResponse]
+cost,POST,/hoc/api/cus/cost/features,create_feature_tag,Register a new feature tag.,Cost Intelligence,unknown,,,FeatureTagResponse
+cost,PUT,/hoc/api/cus/cost/features/{tag},update_feature_tag,Update a feature tag.,Cost Intelligence,unknown,,,FeatureTagResponse
+cost,GET,/hoc/api/cus/cost/projection,get_projection,Get cost projection based on historical data.,Cost Intelligence,unknown,,,CostProjection
+cost,POST,/hoc/api/cus/cost/record,record_cost,Record a cost entry.,Cost Intelligence,unknown,,,
+cost,GET,/hoc/api/cus/cost/summary,get_cost_summary,Get cost summary for the period.,Cost Intelligence,unknown,,,CostSummary
+logs,GET,/hoc/api/cus/logs/audit,list_audit_entries,List audit entries. READ-ONLY customer facade.,logs,unknown,,,AuditLedgerResponse
+logs,GET,/hoc/api/cus/logs/audit/access,get_audit_access,O3: Log access audit. READ-ONLY customer facade.,logs,unknown,,,AuditAccess
+logs,GET,/hoc/api/cus/logs/audit/authorization,get_audit_authorization,O2: Authorization decisions. READ-ONLY customer facade.,logs,unknown,,,AuditAuthorization
+logs,GET,/hoc/api/cus/logs/audit/exports,get_audit_exports,O5: Compliance exports. READ-ONLY customer facade.,logs,unknown,,,AuditExports
+logs,GET,/hoc/api/cus/logs/audit/identity,get_audit_identity,O1: Identity lifecycle. READ-ONLY customer facade.,logs,unknown,,,AuditIdentity
+logs,GET,/hoc/api/cus/logs/audit/integrity,get_audit_integrity,O4: Tamper detection. READ-ONLY customer facade.,logs,unknown,,,AuditIntegrity
+logs,GET,/hoc/api/cus/logs/audit/{entry_id},get_audit_entry,Get audit entry detail. READ-ONLY customer facade.,logs,unknown,,,AuditLedgerDetailItem
+logs,GET,/hoc/api/cus/logs/list,list_logs_public,,cus-logs-public,unknown,,,LogsFeedResponse
+logs,GET,/hoc/api/cus/logs/llm-runs,list_llm_run_records,List LLM run records. READ-ONLY customer facade.,logs,unknown,,,LLMRunRecordsResponse
+logs,GET,/hoc/api/cus/logs/llm-runs/{run_id}/envelope,get_llm_run_envelope,O1: Canonical immutable run record. READ-ONLY customer facade.,logs,unknown,,,LLMRunEnvelope
+logs,GET,/hoc/api/cus/logs/llm-runs/{run_id}/export,get_llm_run_export,O5: Export information. READ-ONLY customer facade.,logs,unknown,,,LLMRunExport
+logs,GET,/hoc/api/cus/logs/llm-runs/{run_id}/governance,get_llm_run_governance,O3: Policy interaction trace. READ-ONLY customer facade.,logs,unknown,,,LLMRunGovernance
+logs,GET,/hoc/api/cus/logs/llm-runs/{run_id}/replay,get_llm_run_replay,O4: 60-second replay window. READ-ONLY customer facade.,logs,unknown,,,LLMRunReplay
+logs,GET,/hoc/api/cus/logs/llm-runs/{run_id}/trace,get_llm_run_trace,O2: Step-by-step execution trace. READ-ONLY customer facade.,logs,unknown,,,LLMRunTrace
+logs,GET,/hoc/api/cus/logs/system,list_system_records,List system records. READ-ONLY customer facade.,logs,unknown,,,SystemRecordsResponse
+logs,GET,/hoc/api/cus/logs/system/audit,get_system_audit,O5: Infra attribution. READ-ONLY customer facade.,logs,unknown,,,SystemAudit
+logs,GET,/hoc/api/cus/logs/system/{run_id}/events,get_system_events,O3: Infra events affecting run. READ-ONLY customer facade.,logs,unknown,,,SystemEvents
+logs,GET,/hoc/api/cus/logs/system/{run_id}/replay,get_system_replay,O4: Infra replay window. READ-ONLY customer facade.,logs,unknown,,,SystemReplay
+logs,GET,/hoc/api/cus/logs/system/{run_id}/snapshot,get_system_snapshot,O1: Environment baseline snapshot. READ-ONLY customer facade.,logs,unknown,,,SystemSnapshot
+logs,GET,/hoc/api/cus/logs/system/{run_id}/telemetry,get_system_telemetry,O2: Telemetry stub - producer not implemented. READ-ONLY customer facade.,logs,unknown,,,TelemetryStub
+traces,GET,/hoc/api/cus/traces,list_traces,List and search traces with optional filters.,traces,unknown,,,TraceListResponse
+traces,POST,/hoc/api/cus/traces,store_trace,Store a client-provided trace.,traces,unknown,,,
+traces,GET,/hoc/api/cus/traces/by-hash/{root_hash},get_trace_by_hash,Get a trace by its deterministic root hash.,traces,unknown,,,TraceDetailResponse
+traces,POST,/hoc/api/cus/traces/cleanup,cleanup_old_traces,Delete traces older than specified number of days.,traces,unknown,,,
+traces,GET,/hoc/api/cus/traces/compare/{run_id1}/{run_id2},compare_traces,Compare two traces for deterministic equality.,traces,unknown,,,TraceCompareResponse
+traces,GET,/hoc/api/cus/traces/idempotency/{idempotency_key},check_idempotency,Check if an idempotency key has been executed.,traces,unknown,,,
+traces,GET,/hoc/api/cus/traces/mismatches,list_all_mismatches,List all trace mismatches across the system.,traces,unknown,,,
+traces,POST,/hoc/api/cus/traces/mismatches/bulk-report,bulk_report_mismatches,Create a single GitHub issue for multiple mismatches.,traces,unknown,,,
+traces,DELETE,/hoc/api/cus/traces/{run_id},delete_trace,Delete a trace by run ID.,traces,unknown,,,
+traces,GET,/hoc/api/cus/traces/{run_id},get_trace,Get a complete trace by run ID.,traces,unknown,,,TraceDetailResponse
+traces,POST,/hoc/api/cus/traces/{trace_id}/mismatch,report_mismatch,Report a replay mismatch for operator review.,traces,unknown,,,MismatchResponse
+traces,GET,/hoc/api/cus/traces/{trace_id}/mismatches,list_trace_mismatches,List all mismatches reported for a trace.,traces,unknown,,,
+traces,POST,/hoc/api/cus/traces/{trace_id}/mismatches/{mismatch_id}/resolve,resolve_mismatch,Mark a mismatch as resolved.,traces,unknown,,,

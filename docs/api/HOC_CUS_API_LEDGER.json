@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-02-21T07:00:07.309234+00:00",
-  "source": "/tmp/hoc-clean-ledger-1771656914/backend/.openapi_snapshot.json",
+  "generated_at_utc": "2026-02-21T07:47:56.656226+00:00",
+  "source": "/tmp/hoc-cus-stabilize-plan/docs/openapi.json",
   "path_prefix": "/hoc/api/cus/",
   "total_endpoints": 502,
   "domains": [

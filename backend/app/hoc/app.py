@@ -1,4 +1,5 @@
 # Layer: L2.1 — Facade (HOC Surface Wiring)
+# capability_id: CAP-011
 """
 Single HOC wiring node for entrypoints.
 
@@ -11,6 +12,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, FastAPI
 
+from app.hoc.api.facades.apis import ROUTERS as APIS_ROUTERS
 from app.hoc.api.facades.cus import ALL_CUS_ROUTERS
 from app.hoc.api.facades.fdr.account import ROUTERS as FDR_ACCOUNT_ROUTERS
 from app.hoc.api.facades.fdr.agent import ROUTERS as FDR_AGENT_ROUTERS
@@ -35,6 +37,10 @@ def build_hoc_router() -> APIRouter:
     for r in INT_AGENT_ROUTERS:
         router.include_router(r)
     for r in INT_RECOVERY_ROUTERS:
+        router.include_router(r)
+
+    # APIs publication surfaces (L2.1 facade)
+    for r in APIS_ROUTERS:
         router.include_router(r)
 
     # Founder surfaces (FDR)

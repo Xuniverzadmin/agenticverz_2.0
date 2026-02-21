@@ -955,10 +955,8 @@ class RunRunner:
 
                 # NOTE: The following code is intentionally unreachable.
                 # It documents what was removed for the Phase R-2 fix.
-                # Previously, L5 imported L4 modules to generate plans inline:
-                #   from ..memory import get_retriever
-                #   from ..planners import get_planner
-                #   from ..skills import get_skill_manifest
+                # Previously, L5 imported L4 modules to generate plans inline
+                # (memory.get_retriever, planners.get_planner, skills.get_skill_manifest).
                 # This violated layer boundaries (L5→L4 imports not allowed).
                 # Now plan generation happens in L4 before the run is queued.
 
