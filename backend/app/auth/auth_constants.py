@@ -9,6 +9,7 @@
 # Allowed Imports: stdlib only
 # Forbidden Imports: L1, L2, L5, L6
 # Reference: HOC_AUTH_CLERK_REPLACEMENT_DESIGN_V1_2026-02-21.md
+# capability_id: CAP-006
 
 """
 Auth Constants — Canonical JWT Claims and Deny Reason Codes

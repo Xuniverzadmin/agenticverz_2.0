@@ -5,6 +5,7 @@
  * Product: system-wide
  * Role: Clerk implementation of the AuthAdapter interface
  * Reference: HOC_AUTH_CLERK_REPLACEMENT_DESIGN_V1_2026-02-21.md
+ * capability_id: CAP-006
  *
  * SCAFFOLD: This adapter wraps the existing Clerk integration to
  * prove the adapter boundary works. It does NOT replace the current

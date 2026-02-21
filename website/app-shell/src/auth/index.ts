@@ -5,6 +5,7 @@
  * Product: system-wide
  * Role: Re-exports for the auth adapter boundary
  * Reference: HOC_AUTH_CLERK_REPLACEMENT_DESIGN_V1_2026-02-21.md
+ * capability_id: CAP-006
  *
  * Usage:
  *   import { useHocAuth, HocAuthProvider } from '@/auth';

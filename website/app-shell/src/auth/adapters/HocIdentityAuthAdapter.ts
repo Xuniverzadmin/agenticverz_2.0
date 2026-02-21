@@ -5,6 +5,7 @@
  * Product: system-wide
  * Role: HOC Identity implementation of the AuthAdapter interface (scaffold)
  * Reference: HOC_AUTH_CLERK_REPLACEMENT_DESIGN_V1_2026-02-21.md
+ * capability_id: CAP-006
  *
  * SCAFFOLD: All methods throw NotImplementedError or return defaults.
  * Will be implemented when POST /hoc/api/auth/login and related

@@ -9,6 +9,7 @@
 # Allowed Imports: stdlib, pydantic
 # Forbidden Imports: L4, L5, L6, ORM
 # Reference: HOC_AUTH_CLERK_REPLACEMENT_DESIGN_V1_2026-02-21.md
+# capability_id: CAP-006
 
 """
 HOC Identity API Schemas

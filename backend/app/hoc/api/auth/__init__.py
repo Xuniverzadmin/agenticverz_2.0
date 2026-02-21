@@ -5,10 +5,11 @@
 #   Trigger: external (HTTP)
 #   Execution: async
 # Role: HOC Identity API router aggregation
-# Callers: app/hoc/app.py
+# Callers: app/hoc/api/facades/auth/__init__.py
 # Allowed Imports: L2 (sibling routers)
 # Forbidden Imports: L5, L6
 # Reference: HOC_AUTH_CLERK_REPLACEMENT_DESIGN_V1_2026-02-21.md
+# capability_id: CAP-006
 
 """
 HOC Identity API — Router Aggregation

@@ -9,6 +9,7 @@
 # Allowed Imports: L4 (auth_provider, auth_constants, clerk_provider, contexts)
 # Forbidden Imports: L1, L2, L5, L6
 # Reference: HOC_AUTH_CLERK_REPLACEMENT_DESIGN_V1_2026-02-21.md
+# capability_id: CAP-006
 
 """
 ClerkHumanAuthProvider — Clerk Adapter for HumanAuthProvider Seam
@@ -97,7 +98,9 @@ class ClerkHumanAuthProvider(HumanAuthProvider):
             subject_user_id=user_id,
             email=payload.get("email"),
             tenant_id=payload.get("org_id"),
+            account_id=payload.get("account_id"),
             session_id=payload.get("sid", payload.get("jti", "")),
+            display_name=payload.get("name"),
             roles_or_groups=tuple(),  # Clerk roles resolved downstream via API
             issued_at=datetime.utcfromtimestamp(payload.get("iat", 0)),
             expires_at=datetime.utcfromtimestamp(payload.get("exp", 0)),

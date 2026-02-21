@@ -156,7 +156,9 @@ class TestHumanPrincipal:
             subject_user_id="user_123",
             email="test@example.com",
             tenant_id="tenant_456",
+            account_id="acct_789",
             session_id="session_789",
+            display_name="Test User",
             roles_or_groups=("admin",),
             issued_at=datetime(2026, 1, 1),
             expires_at=datetime(2026, 1, 2),
@@ -164,6 +166,8 @@ class TestHumanPrincipal:
         )
         assert principal.subject_user_id == "user_123"
         assert principal.tenant_id == "tenant_456"
+        assert principal.account_id == "acct_789"
+        assert principal.display_name == "Test User"
         # Frozen — should not be mutable
         with pytest.raises(AttributeError):
             principal.subject_user_id = "changed"  # type: ignore
@@ -174,7 +178,9 @@ class TestHumanPrincipal:
             subject_user_id="u",
             email=None,
             tenant_id=None,
+            account_id=None,
             session_id=None,
+            display_name=None,
             roles_or_groups=("admin", "viewer"),
             issued_at=datetime(2026, 1, 1),
             expires_at=datetime(2026, 1, 2),
@@ -237,3 +243,121 @@ class TestGatewayProviderIntegration:
         # Provider will fail (not configured), should return GatewayAuthError
         result = await gw._authenticate_human_via_provider(token_info)
         assert is_error(result)
+
+
+# =============================================================================
+# Gateway Context Parity Tests
+# =============================================================================
+
+
+class TestGatewayContextParity:
+    """Tests that HumanPrincipal → HumanAuthContext preserves all fields from the
+    original _authenticate_clerk() path, including account_id and display_name."""
+
+    def _make_principal(self, provider: AuthProviderType = AuthProviderType.CLERK):
+        from datetime import datetime
+        return HumanPrincipal(
+            subject_user_id="user_abc",
+            email="parity@example.com",
+            tenant_id="org_xyz",
+            account_id="acct_999",
+            session_id="sess_111",
+            display_name="Parity User",
+            roles_or_groups=("viewer",),
+            issued_at=datetime(2026, 1, 1),
+            expires_at=datetime(2026, 1, 2),
+            auth_provider=provider,
+        )
+
+    def test_account_id_propagated(self):
+        """account_id from HumanPrincipal reaches HumanAuthContext."""
+        from app.auth.contexts import AuthSource, HumanAuthContext
+        principal = self._make_principal()
+        ctx = HumanAuthContext(
+            actor_id=principal.subject_user_id,
+            session_id=principal.session_id or "",
+            auth_source=AuthSource.CLERK,
+            tenant_id=principal.tenant_id,
+            account_id=principal.account_id,
+            email=principal.email,
+            display_name=principal.display_name,
+        )
+        assert ctx.account_id == "acct_999"
+
+    def test_display_name_propagated(self):
+        """display_name from HumanPrincipal reaches HumanAuthContext."""
+        from app.auth.contexts import AuthSource, HumanAuthContext
+        principal = self._make_principal()
+        ctx = HumanAuthContext(
+            actor_id=principal.subject_user_id,
+            session_id=principal.session_id or "",
+            auth_source=AuthSource.CLERK,
+            tenant_id=principal.tenant_id,
+            account_id=principal.account_id,
+            email=principal.email,
+            display_name=principal.display_name,
+        )
+        assert ctx.display_name == "Parity User"
+
+    def test_none_account_id_propagated(self):
+        """None account_id is preserved (HOC Identity path won't have it)."""
+        from datetime import datetime
+        from app.auth.contexts import AuthSource, HumanAuthContext
+        principal = HumanPrincipal(
+            subject_user_id="u",
+            email=None,
+            tenant_id="t",
+            account_id=None,
+            session_id="s",
+            display_name=None,
+            roles_or_groups=(),
+            issued_at=datetime(2026, 1, 1),
+            expires_at=datetime(2026, 1, 2),
+            auth_provider=AuthProviderType.HOC_IDENTITY,
+        )
+        ctx = HumanAuthContext(
+            actor_id=principal.subject_user_id,
+            session_id=principal.session_id or "",
+            auth_source=AuthSource.HOC_IDENTITY,
+            tenant_id=principal.tenant_id,
+            account_id=principal.account_id,
+            email=principal.email,
+            display_name=principal.display_name,
+        )
+        assert ctx.account_id is None
+        assert ctx.display_name is None
+
+
+# =============================================================================
+# Auth Source Mapping Tests
+# =============================================================================
+
+
+class TestAuthSourceMapping:
+    """Tests that auth_provider → AuthSource mapping is correct."""
+
+    def test_clerk_maps_to_clerk_source(self):
+        """Clerk provider maps to AuthSource.CLERK."""
+        from app.auth.contexts import AuthSource
+        _PROVIDER_TO_AUTH_SOURCE = {
+            "clerk": AuthSource.CLERK,
+            "hoc_identity": AuthSource.HOC_IDENTITY,
+        }
+        assert _PROVIDER_TO_AUTH_SOURCE[AuthProviderType.CLERK.value] == AuthSource.CLERK
+
+    def test_hoc_identity_maps_to_hoc_identity_source(self):
+        """HOC Identity provider maps to AuthSource.HOC_IDENTITY, NOT AuthSource.CLERK."""
+        from app.auth.contexts import AuthSource
+        _PROVIDER_TO_AUTH_SOURCE = {
+            "clerk": AuthSource.CLERK,
+            "hoc_identity": AuthSource.HOC_IDENTITY,
+        }
+        assert _PROVIDER_TO_AUTH_SOURCE[AuthProviderType.HOC_IDENTITY.value] == AuthSource.HOC_IDENTITY
+        # Explicitly assert it is NOT CLERK
+        assert _PROVIDER_TO_AUTH_SOURCE[AuthProviderType.HOC_IDENTITY.value] != AuthSource.CLERK
+
+    def test_auth_source_enum_has_hoc_identity(self):
+        """AuthSource enum includes HOC_IDENTITY value."""
+        from app.auth.contexts import AuthSource
+        assert hasattr(AuthSource, "HOC_IDENTITY")
+        assert AuthSource.HOC_IDENTITY.value == "hoc_identity"

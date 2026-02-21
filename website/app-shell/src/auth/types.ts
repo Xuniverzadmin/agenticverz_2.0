@@ -5,6 +5,7 @@
  * Product: system-wide
  * Role: Type definitions for the auth adapter boundary
  * Reference: HOC_AUTH_CLERK_REPLACEMENT_DESIGN_V1_2026-02-21.md
+ * capability_id: CAP-006
  *
  * These types define the contract between the app and any auth provider
  * (Clerk or HOC Identity). All components consume these types, never

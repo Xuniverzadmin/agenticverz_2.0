@@ -370,10 +370,12 @@ class AuthGateway:
                     return error_session_revoked()
 
             # Map HumanPrincipal → HumanAuthContext (preserves downstream contract)
-            auth_source = (
-                AuthSource.CLERK
-                if principal.auth_provider.value == "clerk"
-                else AuthSource.CLERK  # TODO: Add AuthSource.HOC_IDENTITY when ready
+            _PROVIDER_TO_AUTH_SOURCE = {
+                "clerk": AuthSource.CLERK,
+                "hoc_identity": AuthSource.HOC_IDENTITY,
+            }
+            auth_source = _PROVIDER_TO_AUTH_SOURCE.get(
+                principal.auth_provider.value, AuthSource.CLERK
             )
 
             return HumanAuthContext(
@@ -381,9 +383,9 @@ class AuthGateway:
                 session_id=principal.session_id or "",
                 auth_source=auth_source,
                 tenant_id=principal.tenant_id,
-                account_id=None,  # Clerk-specific; HOC Identity uses tid claim
+                account_id=principal.account_id,
                 email=principal.email,
-                display_name=None,  # Populated from user profile lookup if needed
+                display_name=principal.display_name,
                 authenticated_at=datetime.utcnow(),
             )
 

@@ -5,6 +5,7 @@
  * Product: system-wide
  * Role: Token attachment interceptor contract (replaces ClerkAuthSync)
  * Reference: HOC_AUTH_CLERK_REPLACEMENT_DESIGN_V1_2026-02-21.md
+ * capability_id: CAP-006
  *
  * SCAFFOLD: Defines the contract for attaching auth tokens to API calls.
  * When the full migration happens, this replaces ClerkAuthSync.tsx.

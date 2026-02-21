@@ -9,6 +9,7 @@
 # Allowed Imports: L4 (auth_constants, contexts)
 # Forbidden Imports: L1, L2, L5, L6
 # Reference: HOC_AUTH_CLERK_REPLACEMENT_DESIGN_V1_2026-02-21.md
+# capability_id: CAP-006
 
 """
 Human Auth Provider Seam
@@ -54,7 +55,9 @@ class HumanPrincipal:
     subject_user_id: str                    # Internal user ID (JWT sub)
     email: Optional[str]                    # User email (optional)
     tenant_id: Optional[str]               # Active tenant binding (JWT tid / Clerk org_id)
+    account_id: Optional[str]              # Provider account ID (Clerk account_id claim)
     session_id: Optional[str]              # Session ID for revocation (JWT sid)
+    display_name: Optional[str]            # Display name (Clerk name claim / HOC profile)
     roles_or_groups: tuple[str, ...]       # Role hints (not authoritative; RBAC decides)
     issued_at: datetime                     # Token iat
     expires_at: datetime                    # Token exp

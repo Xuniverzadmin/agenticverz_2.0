@@ -12,8 +12,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, FastAPI
 
-from app.hoc.api.auth import ROUTERS as AUTH_ROUTERS
 from app.hoc.api.facades.apis import ROUTERS as APIS_ROUTERS
+from app.hoc.api.facades.auth import ROUTERS as AUTH_ROUTERS
 from app.hoc.api.facades.cus import ALL_CUS_ROUTERS
 from app.hoc.api.facades.fdr.account import ROUTERS as FDR_ACCOUNT_ROUTERS
 from app.hoc.api.facades.fdr.agent import ROUTERS as FDR_AGENT_ROUTERS

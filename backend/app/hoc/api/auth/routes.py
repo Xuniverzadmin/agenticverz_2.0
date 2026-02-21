@@ -5,10 +5,11 @@
 #   Trigger: external (HTTP)
 #   Execution: async
 # Role: HOC Identity API route skeletons (scaffold — all return 501)
-# Callers: __init__.py → app/hoc/app.py
+# Callers: __init__.py → facades/auth → app/hoc/app.py
 # Allowed Imports: L2 schemas, fastapi
 # Forbidden Imports: L5, L6 (direct)
 # Reference: HOC_AUTH_CLERK_REPLACEMENT_DESIGN_V1_2026-02-21.md
+# capability_id: CAP-006
 
 """
 HOC Identity API Routes — Scaffold
@@ -51,10 +52,13 @@ from .schemas import (
 
 router = APIRouter(prefix="/hoc/api/auth", tags=["hoc-identity"])
 
-_NOT_IMPLEMENTED = JSONResponse(
-    status_code=501,
-    content={"error": "not_implemented", "message": "HOC Identity endpoint not yet implemented"},
-)
+
+def _not_implemented() -> JSONResponse:
+    """Create a fresh 501 response per request (avoids shared mutable state)."""
+    return JSONResponse(
+        status_code=501,
+        content={"error": "not_implemented", "message": "HOC Identity endpoint not yet implemented"},
+    )
 
 
 # =============================================================================
@@ -77,7 +81,7 @@ async def register(payload: RegisterRequest) -> JSONResponse:
     5. Issue access + refresh tokens (EdDSA signed)
     6. Return tokens
     """
-    return _NOT_IMPLEMENTED
+    return _not_implemented()
 
 
 # =============================================================================
@@ -100,7 +104,7 @@ async def login(payload: LoginRequest) -> JSONResponse:
     5. Set refresh token as HttpOnly cookie
     6. Return tokens
     """
-    return _NOT_IMPLEMENTED
+    return _not_implemented()
 
 
 # =============================================================================
@@ -123,7 +127,7 @@ async def refresh(request: Request) -> JSONResponse:
     5. Issue new access token (rotating refresh)
     6. Return new access token
     """
-    return _NOT_IMPLEMENTED
+    return _not_implemented()
 
 
 # =============================================================================
@@ -145,7 +149,7 @@ async def switch_tenant(payload: SwitchTenantRequest) -> JSONResponse:
     4. Issue new access + refresh tokens with new tid claim
     5. Return tokens
     """
-    return _NOT_IMPLEMENTED
+    return _not_implemented()
 
 
 # =============================================================================
@@ -167,7 +171,7 @@ async def logout(request: Request) -> JSONResponse:
     4. Clear refresh cookie
     5. Return ok
     """
-    return _NOT_IMPLEMENTED
+    return _not_implemented()
 
 
 # =============================================================================
@@ -186,7 +190,7 @@ async def me(request: Request) -> JSONResponse:
     1. Read auth context from request.state.auth_context
     2. Return user_id, email, tenant_id, tier, roles
     """
-    return _NOT_IMPLEMENTED
+    return _not_implemented()
 
 
 # =============================================================================
@@ -207,7 +211,7 @@ async def password_reset_request(payload: PasswordResetRequestPayload) -> JSONRe
     3. Send reset email
     4. Return status (always "sent" to prevent email enumeration)
     """
-    return _NOT_IMPLEMENTED
+    return _not_implemented()
 
 
 # =============================================================================
@@ -229,4 +233,4 @@ async def password_reset_confirm(payload: PasswordResetConfirmPayload) -> JSONRe
     4. Revoke all existing sessions for user
     5. Return ok
     """
-    return _NOT_IMPLEMENTED
+    return _not_implemented()

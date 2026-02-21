@@ -5,6 +5,7 @@
  * Product: system-wide
  * Role: React context + provider wrapping the auth adapter boundary
  * Reference: HOC_AUTH_CLERK_REPLACEMENT_DESIGN_V1_2026-02-21.md
+ * capability_id: CAP-006
  *
  * This context provides the useAuth() hook to all components.
  * The actual auth behavior is delegated to an AuthAdapter implementation
