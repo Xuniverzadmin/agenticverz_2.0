@@ -8,6 +8,7 @@
 # Callers: auth/gateway_config.py, middleware
 # Allowed Imports: None (pure policy)
 # Forbidden Imports: FastAPI, Starlette, DB
+# capability_id: CAP-006
 # Reference: CAP-006, PIN-391
 
 """
@@ -107,6 +108,12 @@ PUBLIC_PATHS: list[str] = [
     # Onboarding endpoints (gateway auth at route level, PIN-399)
     # -----------------------------------------------------------------------
     "/onboarding/",
+    # -----------------------------------------------------------------------
+    # APIs publication surfaces (read-only metadata, no sensitive data)
+    # PIN-306/CAP-011: CUS grouped ledger + swagger endpoints
+    # -----------------------------------------------------------------------
+    "/apis/ledger/",
+    "/apis/swagger/",
     # -----------------------------------------------------------------------
     # Stagetest evidence console (TODO: Re-enable auth)
     # -----------------------------------------------------------------------

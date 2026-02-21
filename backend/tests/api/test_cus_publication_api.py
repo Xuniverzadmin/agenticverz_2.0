@@ -87,6 +87,52 @@ class TestCusPublicationRouterStructure:
         assert "capability_id: CAP-" in source, "Missing capability_id annotation"
 
 
+class TestGatewayPublicPathRegistration:
+    """Verify CUS publication routes are registered as public paths in gateway policy."""
+
+    def _get_gateway_policy_source(self) -> str:
+        path = os.path.join(
+            BACKEND_DIR, "app", "hoc", "cus", "hoc_spine", "authority", "gateway_policy.py"
+        )
+        with open(path) as f:
+            return f.read()
+
+    def test_apis_ledger_is_public(self):
+        """Gateway policy must include /apis/ledger/ as a public path."""
+        source = self._get_gateway_policy_source()
+        assert '"/apis/ledger/"' in source, \
+            "/apis/ledger/ must be in PUBLIC_PATHS for runtime accessibility"
+
+    def test_apis_swagger_is_public(self):
+        """Gateway policy must include /apis/swagger/ as a public path."""
+        source = self._get_gateway_policy_source()
+        assert '"/apis/swagger/"' in source, \
+            "/apis/swagger/ must be in PUBLIC_PATHS for runtime accessibility"
+
+    def test_public_paths_importable(self):
+        """PUBLIC_PATHS must be importable and contain the required entries."""
+        from app.hoc.cus.hoc_spine.authority.gateway_policy import PUBLIC_PATHS
+        assert "/apis/ledger/" in PUBLIC_PATHS, "/apis/ledger/ not in PUBLIC_PATHS"
+        assert "/apis/swagger/" in PUBLIC_PATHS, "/apis/swagger/ not in PUBLIC_PATHS"
+
+    def test_prefix_matching_covers_all_endpoints(self):
+        """Prefix matching must cover all 4 CUS publication endpoint patterns."""
+        from app.hoc.cus.hoc_spine.authority.gateway_policy import PUBLIC_PATHS
+
+        test_paths = [
+            "/apis/ledger/cus",
+            "/apis/ledger/cus/activity",
+            "/apis/swagger/cus",
+            "/apis/swagger/cus/activity",
+        ]
+        for test_path in test_paths:
+            matched = any(
+                pp.endswith("/") and test_path.startswith(pp)
+                for pp in PUBLIC_PATHS
+            )
+            assert matched, f"{test_path} not matched by any PUBLIC_PATHS prefix"
+
+
 class TestCusPublicationFacade:
     """Structural tests for the APIs facade."""
 
