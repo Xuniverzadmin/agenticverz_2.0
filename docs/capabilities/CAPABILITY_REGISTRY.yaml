@@ -335,8 +335,8 @@ capabilities:
     planes:
       engine: true           # /backend/app/auth/gateway.py - central entry point
       l2_api: true           # Auth middleware wired to main.py
-      client: false          # No frontend auth client (delegated to Clerk)
-      ui: false              # No login UI (delegated to Clerk)
+      client: true           # Frontend auth adapter seam (Clove canonical)
+      ui: true               # Login/onboarding UX owned in app-shell
       authority: true        # Invariant guards, route plane enforcement
       audit_replay: true     # gateway_audit.py emits all auth events
 
@@ -345,8 +345,8 @@ capabilities:
       closure_requirements:
         engine_complete: true
         api_complete: true
-        client_complete: false   # N/A - delegated to Clerk
-        ui_complete: false       # N/A - delegated to Clerk
+        client_complete: true
+        ui_complete: true
         authority_wired: true    # Invariants enforced in gateway
         audit_enabled: true      # gateway_audit.py emits events
         gateway_wired: true      # Gateway middleware wired in main.py
@@ -360,6 +360,11 @@ capabilities:
       engine:
         - "/backend/app/auth/gateway.py"          # Central auth entry point
         - "/backend/app/auth/contexts.py"         # HumanAuthContext, MachineCapabilityContext
+        - "/backend/app/auth/auth_constants.py"   # Clove provider constants and deny reasons
+        - "/backend/app/auth/auth_provider.py"    # HumanAuthProvider seam + factory
+        - "/backend/app/auth/auth_provider_clerk.py"  # Legacy adapter (deprecated path)
+        - "/backend/app/auth/auth_provider_clove.py"  # Canonical Clove adapter
+        - "/backend/app/auth/tenant_auth.py"      # Tenant auth context enforcement helpers
         - "/backend/app/auth/gateway_types.py"    # GatewayResult, GatewayAuthError
         - "/backend/app/auth/clerk_provider.py"   # JWT verification
         - "/backend/app/auth/api_key_service.py"  # API key verification
@@ -369,9 +374,20 @@ capabilities:
         - "/backend/app/auth/gateway_config.py"      # Gateway initialization
         - "/backend/app/api/onboarding.py"           # PIN-311: Unmapped file resolution
         - "/backend/app/api/auth_helpers.py"         # PIN-311: Console auth verification helpers
+        - "/backend/app/hoc/api/auth/__init__.py"    # Auth router aggregation
+        - "/backend/app/hoc/api/auth/routes.py"      # Clove auth lifecycle endpoints
+        - "/backend/app/hoc/api/auth/schemas.py"     # Auth request/response contracts
+        - "/backend/app/hoc/api/facades/auth/__init__.py"  # Facade import boundary
       authority:
         - "/backend/app/auth/invariants.py"       # Invariant guards (I1-I5)
         - "/backend/app/auth/route_planes.py"     # Route plane declarations
+      client:
+        - "/website/app-shell/src/auth/types.ts"
+        - "/website/app-shell/src/auth/AuthContext.tsx"
+        - "/website/app-shell/src/auth/AuthTokenSync.ts"
+        - "/website/app-shell/src/auth/index.ts"
+        - "/website/app-shell/src/auth/adapters/ClerkAuthAdapter.ts"
+        - "/website/app-shell/src/auth/adapters/CloveAuthAdapter.ts"
       audit:
         - "/backend/app/auth/gateway_audit.py"
         - "/backend/app/hoc/int/logs/engines/gateway_audit.py"
@@ -620,6 +636,7 @@ capabilities:
         - "/backend/app/services/governance/eligibility_engine.py"
       l2_api:
         - "/backend/app/api/discovery.py"                # PIN-311: Unmapped file resolution
+        - "/backend/app/hoc/app.py"                      # HOC router composition/wiring
 
     gaps: []  # No gaps - CLOSED
 
@@ -1218,15 +1235,22 @@ invocation_addendum:
   # ---------------------------------------------------------------------------
   authentication:
     capability_id: CAP-006
-    frontend_invocable: false
-    allowed_routes: []                                    # Delegated to Clerk
+    frontend_invocable: true
+    allowed_routes:
+      - "POST /hoc/api/auth/login"                        # Clove login
+      - "POST /hoc/api/auth/refresh"                      # Clove refresh
+      - "POST /hoc/api/auth/logout"                       # Clove logout
+      - "POST /hoc/api/auth/switch-tenant"                # Tenant switch
+      - "GET /hoc/api/auth/provider/status"               # Provider diagnostics
     forbidden_routes:
-      - "POST /api/v1/auth/*"                             # No direct auth calls
-    invocation_modes: []
+      - "POST /api/v1/auth/*"                             # Legacy auth surface deprecated
+    invocation_modes:
+      - read
+      - write
     notes: >
-      Authentication is delegated to Clerk.
-      No frontend API client exists or should exist.
-      Frontend uses Clerk SDK directly.
+      Authentication is canonicalized on Clove.
+      Legacy Clerk integration is deprecated and forced to Clove at runtime.
+      Frontend auth flows are implemented in app-shell auth adapters.
 
   # ---------------------------------------------------------------------------
   # CAP-007: AUTHORIZATION (RBAC v2)
