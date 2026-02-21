@@ -558,6 +558,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-598](PIN-598-wave2-import-hygiene-batch2-api-auth-stabilization.md) | **Wave 2 Import Hygiene Batch 2 — API/Auth Stabilization** | Governance / CI / Auth Surface Stabilization | **✅ COMPLETE** | 2026-02-20 |
 | [PIN-599](PIN-599-wave2-import-hygiene-batch3-int-agent-cluster.md) | **Wave 2 Import Hygiene Batch 3 — INT/Agent Cluster** | Governance / CI / Runtime Hygiene | **✅ COMPLETE** | 2026-02-20 |
 | [PIN-600](PIN-600-wave2-import-hygiene-batch4-final-clear.md) | **Wave 2 Import Hygiene Batch 4 — Final Residual Clear** | Governance / CI / Runtime Hygiene | **✅ COMPLETE** | 2026-02-20 |
+| [PIN-603](PIN-603-stagetest-auth-bypass-verification.md) | **Stagetest Auth Bypass Verification** | Frontend / Auth / Stagetest Runtime Validation | **✅ COMPLETE** | 2026-02-21 |
 
 ---
 
@@ -1327,6 +1328,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-21 | **PIN-603 Stagetest Auth Bypass Verification** - Verified `.env.stagetest` bypass flags, route-guard early returns, `/ -> /stagetest` redirect behavior, stagetest Apache `dist-stagetest` wiring, and live browser/runtime proof without login gating. |
 | 2026-02-21 | **PIN-602 CUS Publication Rollout Complete** - Deployed grouped ledger + swagger endpoints live on stagetest (4/4 endpoints 200 JSON, 20/20 domain sweep). Fixed Apache proxy misroute and RBAC schema gap. Commits: `510a4587`, `835c7198`. |
 | 2026-02-20 | **PIN-600 Wave 2 Import Hygiene Batch 4 — Final Residual Clear** - Remediated final 10 HOC residual files, synchronized CAP-007/CAP-009/CAP-010/CAP-012/CAP-014 evidence linkage, and reduced HOC import-hygiene backlog (`10 -> 0`) with CUS remaining `0`. |
 | 2026-02-20 | **PIN-599 Wave 2 Import Hygiene Batch 3 — INT/Agent Cluster** - Remediated 14 `backend/app/hoc/int/agent/**` files, synchronized CAP-008/CAP-016 evidence linkage, and reduced HOC import-hygiene backlog (`25 -> 11`) while holding CUS at `0`. |
@@ -2171,3 +2173,4 @@ When resuming work on this project:
 | 2026-02-01 | **PIN-507 Law 5 Remediation Complete** - Replaced 31+ `getattr()` reflection calls across all 9 L4 handler files (18 handler classes) with explicit dispatch maps. Eliminated all `asyncio.iscoroutinefunction()` calls via explicit sync/async split. Replaced 13 `__import__("sqlalchemy").text()` calls in `cost_snapshots_engine.py` with proper `from sqlalchemy import text`. Law 5 grade upgraded D→A. |
 | 2026-02-21 | **PIN-601 HOC API Ledger Wave 1 (CUS) Baseline and Drift Audit** - Created deterministic CUS ledger artifacts (502 rows / 499 unique), captured skeptical OpenAPI drift findings, and locked Wave 1 execution evidence for hoc/* rollout. |
 | 2026-02-21 | **PIN-602 CUS Publication Rollout Complete** - Deployed grouped ledger + swagger endpoints live on stagetest (4/4 endpoints 200 JSON, 20/20 domain sweep). Fixed Apache proxy misroute (`/apis/ledger` → stagetest snapshot) and RBAC schema gap (`RBAC_RULES.yaml` missing CUS publication rules). Commits: `510a4587`, `835c7198`. |
+| 2026-02-21 | **PIN-603 Stagetest Auth Bypass Verification** - Confirmed stagetest auth bypass wiring from env->route guards->root redirect->Apache `dist-stagetest` publish path, with live runtime/browser proof that `/` lands on `/stagetest` without login enforcement. |

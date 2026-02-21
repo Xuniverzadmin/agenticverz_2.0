@@ -246,9 +246,10 @@ export function AppRoutes() {
         {/* ===============================================================
          * ROOT & CATCH-ALL
          * Environment-aware redirect via routing authority
+         * Stagetest bypass: redirect to /stagetest instead of auth-gated routes
          * =============================================================== */}
-        <Route index element={<Navigate to={getCatchAllRoute()} replace />} />
-        <Route path="*" element={<Navigate to={getCatchAllRoute()} replace />} />
+        <Route index element={<Navigate to={import.meta.env.VITE_AUTH_BYPASS === 'true' ? '/stagetest' : getCatchAllRoute()} replace />} />
+        <Route path="*" element={<Navigate to={import.meta.env.VITE_AUTH_BYPASS === 'true' ? '/stagetest' : getCatchAllRoute()} replace />} />
       </Routes>
     </Suspense>
   );

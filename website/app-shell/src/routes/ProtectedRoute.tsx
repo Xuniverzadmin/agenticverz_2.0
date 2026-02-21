@@ -16,6 +16,11 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
+  // Stagetest auth bypass — all routes accessible without login
+  if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
+    return <>{children}</>;
+  }
+
   const { isSignedIn, isLoaded } = useAuth();
   const { user } = useUser();
   const location = useLocation();

@@ -64,6 +64,11 @@ interface FounderRouteProps {
 }
 
 export function FounderRoute({ children, allowedRoles }: FounderRouteProps) {
+  // Stagetest auth bypass — all routes accessible without login
+  if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
+    return <>{children}</>;
+  }
+
   const { isSignedIn, isLoaded } = useAuth();
   const { user: clerkUser } = useUser();
   // PIN-409: Get verified actor_type from backend session context
@@ -138,6 +143,11 @@ interface CustomerRouteProps {
 }
 
 export function CustomerRoute({ children, allowedRoles }: CustomerRouteProps) {
+  // Stagetest auth bypass — all routes accessible without login
+  if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
+    return <>{children}</>;
+  }
+
   const { isSignedIn, isLoaded } = useAuth();
   const { user: clerkUser } = useUser();
   // PIN-409: Get verified actor_type from backend session context

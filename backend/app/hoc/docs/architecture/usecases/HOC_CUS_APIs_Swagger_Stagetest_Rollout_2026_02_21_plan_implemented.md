@@ -154,7 +154,7 @@ None. All acceptance criteria met.
   3. Ledger `total: 0` is expected — the endpoints enumerate L2 router operations, which are currently zero because `_SEGMENT_TO_DOMAIN` resolution doesn't find registered operations in the router metadata. This is a content gap, not a routing gap.
 - Risks remaining:
   - Apache config is not version-controlled (infra-as-code gap)
-  - `RBAC_RULES.yaml` change not yet committed to git
+  - `RBAC_RULES.yaml` change is committed in `835c7198` on `main`; future drift risk is sync between repo rules and host-level Apache config.
 - References used:
   - `backend/app/hoc/docs/architecture/usecases/HOC_CUS_APIs_Swagger_Stagetest_Rollout_2026_02_21_plan.md`
   - `backend/app/hoc/api/apis/cus_publication.py`
