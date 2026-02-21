@@ -9,8 +9,8 @@
  *
  * Usage:
  *   import { useHocAuth, HocAuthProvider } from '@/auth';
- *   import { ClerkAuthAdapter } from '@/auth/adapters/ClerkAuthAdapter';
- *   import { HocIdentityAuthAdapter } from '@/auth/adapters/HocIdentityAuthAdapter';
+ *   import { ClerkAuthAdapter } from '@/auth/adapters/ClerkAuthAdapter';  // DEPRECATED
+ *   import { CloveAuthAdapter } from '@/auth/adapters/CloveAuthAdapter';
  */
 
 export { useHocAuth, HocAuthProvider } from './AuthContext';

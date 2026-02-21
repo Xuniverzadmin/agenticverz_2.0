@@ -39,15 +39,15 @@ class AuthSource(str, Enum):
     """How authentication was established.
 
     Valid auth sources:
-    - CLERK: Humans authenticate via Clerk RS256 JWT
-    - HOC_IDENTITY: Humans authenticate via in-house HOC Identity EdDSA JWT
+    - CLOVE: Humans authenticate via Clove EdDSA JWT (canonical)
+    - CLERK: DEPRECATED — legacy Clerk RS256 JWT
     - API_KEY: Machines authenticate via API key
 
     Reference: AUTH_DESIGN.md (AUTH-HUMAN-001, AUTH-MACHINE-001)
     """
 
-    CLERK = "clerk"  # Production Clerk RS256 JWT (human auth)
-    HOC_IDENTITY = "hoc_identity"  # In-house HOC Identity EdDSA JWT (human auth)
+    CLOVE = "clove"  # Canonical Clove EdDSA JWT (human auth)
+    CLERK = "clerk"  # DEPRECATED — legacy Clerk RS256 JWT (human auth)
     API_KEY = "api_key"  # Machine API key
 
 

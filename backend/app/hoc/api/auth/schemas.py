@@ -4,7 +4,7 @@
 # Temporal:
 #   Trigger: import
 #   Execution: sync
-# Role: Request/response schemas for HOC Identity API endpoints
+# Role: Request/response schemas for Clove Identity API endpoints
 # Callers: routes.py
 # Allowed Imports: stdlib, pydantic
 # Forbidden Imports: L4, L5, L6, ORM
@@ -12,7 +12,7 @@
 # capability_id: CAP-006
 
 """
-HOC Identity API Schemas
+Clove Identity API Schemas
 
 Request/response models for /hoc/api/auth/* endpoints.
 All fields follow the V1 design lock. Schemas are scaffold-level
@@ -21,7 +21,7 @@ with TODO markers where validation logic is deferred.
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -122,6 +122,20 @@ class PasswordResetConfirmPayload(BaseModel):
 
 class PasswordResetConfirmResponse(BaseModel):
     status: str = "ok"
+
+
+# =============================================================================
+# Provider Status
+# =============================================================================
+
+class AuthProviderStatusResponse(BaseModel):
+    requested_provider: str
+    effective_provider: str
+    canonical_provider: str
+    forced: bool
+    configured: bool
+    deprecation: dict[str, Any] = Field(default_factory=dict)
+    provider_diagnostics: dict[str, Any] = Field(default_factory=dict)
 
 
 # =============================================================================

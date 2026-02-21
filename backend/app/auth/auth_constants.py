@@ -36,15 +36,15 @@ from enum import Enum
 
 class JWTClaim:
     """
-    Canonical JWT claim field names for HOC Identity tokens.
+    Canonical JWT claim field names for Clove tokens.
 
     These match the V1 design lock — all 9 are mandatory in self-issued tokens.
-    Clerk tokens use a different claim layout; the ClerkHumanAuthProvider
-    maps Clerk claims to the canonical HumanPrincipal contract.
+    Clerk tokens use a different claim layout and are DEPRECATED — new
+    integrations must use Clove (EdDSA/JWKS).
     """
 
     ISS = "iss"      # Issuer (e.g. "https://auth.agenticverz.com")
-    AUD = "aud"      # Audience (e.g. "hoc_identity")
+    AUD = "aud"      # Audience (e.g. "clove")
     SUB = "sub"      # Subject — user ID
     TID = "tid"      # Active tenant ID
     SID = "sid"      # Session ID (revocation key)
@@ -100,13 +100,17 @@ class AuthDenyReason(str, Enum):
 class AuthProviderType(str, Enum):
     """Identifies which auth provider issued/verified the credential."""
 
-    CLERK = "clerk"
-    HOC_IDENTITY = "hoc_identity"
+    CLOVE = "clove"
+    CLERK = "clerk"  # DEPRECATED — legacy, scheduled for removal
 
 
 # =============================================================================
-# HOC Identity Issuer (V1 — Locked)
+# Clove Issuer (V1 — Locked)
 # =============================================================================
 
-HOC_IDENTITY_ISSUER = "https://auth.agenticverz.com"
-HOC_IDENTITY_AUDIENCE = "hoc_identity"
+CLOVE_ISSUER = "https://auth.agenticverz.com"
+CLOVE_AUDIENCE = "clove"
+
+# Backward-compatible aliases (DEPRECATED — use CLOVE_* instead)
+HOC_IDENTITY_ISSUER = CLOVE_ISSUER
+HOC_IDENTITY_AUDIENCE = CLOVE_AUDIENCE

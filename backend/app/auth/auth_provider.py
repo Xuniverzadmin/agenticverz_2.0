@@ -15,14 +15,14 @@
 Human Auth Provider Seam
 
 Defines the HumanAuthProvider interface, the HumanPrincipal data contract,
-and the provider factory that selects between Clerk and HOC Identity
-based on the AUTH_PROVIDER environment variable.
+and the provider factory for the canonical Clove auth provider.
 
 INVARIANTS:
 1. All human authentication flows go through a HumanAuthProvider.
 2. The provider returns a HumanPrincipal; the gateway maps it to HumanAuthContext.
 3. Provider selection is determined at startup via AUTH_PROVIDER env var.
-4. Default provider is "clerk" (backward compatible).
+4. Default and canonical provider is "clove".
+5. "clerk" is DEPRECATED — triggers warning (non-prod) or fail-fast (prod).
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from .auth_constants import AuthDenyReason, AuthProviderType
 
@@ -54,10 +54,10 @@ class HumanPrincipal:
 
     subject_user_id: str                    # Internal user ID (JWT sub)
     email: Optional[str]                    # User email (optional)
-    tenant_id: Optional[str]               # Active tenant binding (JWT tid / Clerk org_id)
-    account_id: Optional[str]              # Provider account ID (Clerk account_id claim)
+    tenant_id: Optional[str]              # Active tenant binding (JWT tid)
+    account_id: Optional[str]             # Provider account ID (optional profile linkage)
     session_id: Optional[str]              # Session ID for revocation (JWT sid)
-    display_name: Optional[str]            # Display name (Clerk name claim / HOC profile)
+    display_name: Optional[str]            # Display name (HOC profile)
     roles_or_groups: tuple[str, ...]       # Role hints (not authoritative; RBAC decides)
     issued_at: datetime                     # Token iat
     expires_at: datetime                    # Token exp
@@ -86,8 +86,7 @@ class HumanAuthProvider(ABC):
     Abstract contract for human authentication providers.
 
     Implementations:
-    - ClerkHumanAuthProvider: wraps current Clerk RS256 JWKS verification.
-    - HocIdentityHumanAuthProvider: in-house EdDSA/JWKS verification (V1 target).
+    - CloveHumanAuthProvider: in-house EdDSA/JWKS verification (canonical).
     """
 
     @abstractmethod
@@ -123,8 +122,11 @@ class HumanAuthProvider(ABC):
 # Provider Factory
 # =============================================================================
 
-# Env switch — default to Clerk for backward compatibility
-AUTH_PROVIDER_ENV = os.getenv("AUTH_PROVIDER", "clerk").lower().strip()
+# Env switch — Clove is the canonical default
+AUTH_PROVIDER_ENV = os.getenv("AUTH_PROVIDER", "clove").lower().strip()
+
+# Legacy alias mapping: "hoc_identity" → "clove" (silent upgrade)
+_LEGACY_ALIASES = {"hoc_identity": "clove"}
 
 # Singleton cache
 _provider_instance: Optional[HumanAuthProvider] = None
@@ -134,9 +136,12 @@ def get_human_auth_provider() -> HumanAuthProvider:
     """
     Get the configured HumanAuthProvider singleton.
 
-    Selection is driven by AUTH_PROVIDER env var:
-    - "clerk" (default): ClerkHumanAuthProvider
-    - "hoc_identity": HocIdentityHumanAuthProvider
+    Selection is driven by AUTH_PROVIDER env var.
+    Canonical value:
+    - "clove" (default): CloveHumanAuthProvider
+    Deprecated:
+    - "clerk": triggers deprecation warning (non-prod) or fail-fast (prod)
+    - "hoc_identity": silently upgraded to "clove"
 
     Returns:
         The configured HumanAuthProvider instance.
@@ -145,14 +150,41 @@ def get_human_auth_provider() -> HumanAuthProvider:
     if _provider_instance is not None:
         return _provider_instance
 
-    if AUTH_PROVIDER_ENV == "hoc_identity":
-        from .auth_provider_hoc_identity import HocIdentityHumanAuthProvider
-        _provider_instance = HocIdentityHumanAuthProvider()
-        logger.info("human_auth_provider_selected", extra={"provider": "hoc_identity"})
-    else:
-        from .auth_provider_clerk import ClerkHumanAuthProvider
-        _provider_instance = ClerkHumanAuthProvider()
-        logger.info("human_auth_provider_selected", extra={"provider": "clerk"})
+    effective = _LEGACY_ALIASES.get(AUTH_PROVIDER_ENV, AUTH_PROVIDER_ENV)
+
+    if effective != "clove":
+        runtime_mode = (
+            os.getenv("AOS_MODE")
+            or os.getenv("APP_ENV")
+            or os.getenv("ENV")
+            or ""
+        ).strip().lower()
+
+        if AUTH_PROVIDER_ENV == "clerk":
+            message = (
+                f"AUTH_PROVIDER=clerk is DEPRECATED; "
+                "forcing clove (policy: clerk deprecated)"
+            )
+        else:
+            message = (
+                f"AUTH_PROVIDER={AUTH_PROVIDER_ENV or '<empty>'} ignored; "
+                "forcing clove (canonical provider)"
+            )
+
+        if runtime_mode in {"prod", "production"}:
+            logger.critical(message + " [fatal in prod]")
+            raise RuntimeError(
+                "Invalid AUTH_PROVIDER in production: must be clove"
+            )
+        logger.warning(
+            message,
+            extra={"requested_provider": AUTH_PROVIDER_ENV, "runtime_mode": runtime_mode or "unknown"},
+        )
+
+    from .auth_provider_clove import CloveHumanAuthProvider
+
+    _provider_instance = CloveHumanAuthProvider()
+    logger.info("human_auth_provider_selected", extra={"provider": "clove"})
 
     return _provider_instance
 
@@ -161,3 +193,34 @@ def reset_human_auth_provider() -> None:
     """Reset the provider singleton (for testing only)."""
     global _provider_instance
     _provider_instance = None
+
+
+def get_human_auth_provider_status() -> dict[str, Any]:
+    """
+    Return provider policy and runtime status for observability endpoints.
+
+    This makes auth-provider policy decisions visible to operators.
+    """
+    provider = get_human_auth_provider()
+    effective = _LEGACY_ALIASES.get(AUTH_PROVIDER_ENV, AUTH_PROVIDER_ENV)
+    is_deprecated = AUTH_PROVIDER_ENV in {"clerk"}
+    status: dict[str, Any] = {
+        "requested_provider": AUTH_PROVIDER_ENV or "clove",
+        "effective_provider": provider.provider_type.value,
+        "canonical_provider": "clove",
+        "forced": (effective != provider.provider_type.value),
+        "configured": provider.is_configured,
+        "deprecation": {
+            "clerk": {
+                "status": "deprecated",
+                "message": "Clerk is deprecated. Clove is the canonical auth provider.",
+                "migration": "Set AUTH_PROVIDER=clove (or remove — clove is the default).",
+            },
+        },
+    }
+
+    diagnostics = getattr(provider, "diagnostics", None)
+    if callable(diagnostics):
+        status["provider_diagnostics"] = diagnostics()
+
+    return status

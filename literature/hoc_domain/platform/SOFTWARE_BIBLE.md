@@ -138,3 +138,29 @@
 | `int/platform/drivers/platform_health_driver.py` | **NEW** — L6 driver extracted from `app/services/platform/platform_health_driver.py` (301 LOC) | PIN-513 Phase 7 |
 
 **Result:** Zero `app.services` imports remain in platform domain.
+
+## Reality Delta (2026-02-21, Auth Provider Seam Cutover to In-House Default)
+
+- Canonical implementation record:
+  - `literature/hoc_domain/platform/HOC_PLATFORM_AUTH_PROVIDER_SEAM_CUTOVER_2026-02-21.md`
+- Auth seam default switched to in-house provider:
+  - `backend/app/auth/auth_provider.py` now defaults to `AUTH_PROVIDER=clove` and forces unsupported values to `clove`.
+- Gateway human issuer routing tightened:
+  - `backend/app/auth/gateway.py` now accepts human JWTs only from `CLOVE_ISSUER` (Clerk issuer routing removed from this path).
+- Tenant context dependency aligned:
+  - `backend/app/auth/tenant_auth.py` terminology and session labels updated from Clerk-specific names to generic human-session naming.
+- Current runtime state:
+  - Clove provider (`backend/app/auth/auth_provider_clove.py`) implements EdDSA/JWKS verification.
+  - Machine API-key auth path remains unchanged.
+
+## Reality Delta (2026-02-21, Clove Canonical Naming + Clerk Deprecation)
+
+- Canonical naming decision: "Clove" replaces "HOC Identity" as the canonical auth system name.
+- `AuthProviderType.CLOVE` is the canonical enum value; `AuthProviderType.CLERK` is deprecated.
+- `AuthSource.CLOVE` is the canonical context source; `AuthSource.CLERK` is deprecated.
+- File renamed: `auth_provider_hoc_identity.py` → `auth_provider_clove.py`, class `CloveHumanAuthProvider`.
+- Frontend: `HocIdentityAuthAdapter.ts` → `CloveAuthAdapter.ts`, class `CloveAuthAdapter`.
+- Provider status endpoint now reports `canonical_provider=clove` and deprecation metadata for Clerk.
+- `AUTH_PROVIDER=hoc_identity` is silently upgraded to `clove` via `_LEGACY_ALIASES`.
+- Env vars accept both `CLOVE_*` (canonical) and `HOC_IDENTITY_*` (legacy fallback).
+- PIN-605 documents the decision.

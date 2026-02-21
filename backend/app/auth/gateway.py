@@ -18,13 +18,13 @@ All downstream code consumes contexts, never raw headers.
 
 INVARIANTS (AUTH_DESIGN.md):
 1. Mutual Exclusivity: JWT XOR API Key (both = HARD FAIL)
-2. Human Flow: Clerk JWT (RS256) → HumanAuthContext
+2. Human Flow: Clove JWT (EdDSA) → HumanAuthContext
 3. Machine Flow: API Key → MachineCapabilityContext
 4. Session Revocation: Every human request checks revocation
 5. Headers Stripped: After gateway, auth headers are removed from request
 
 ROUTING:
-- All human JWTs must be from Clerk (RS256, JWKS-verified)
+- All human JWTs must be from Clove issuer
 - Unknown issuer → REJECT
 - No fallbacks. No grace periods.
 """
@@ -36,9 +36,9 @@ import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Set
+from typing import Optional
 
-from .auth_constants import HOC_IDENTITY_ISSUER
+from .auth_constants import CLOVE_ISSUER
 from .auth_provider import AuthProviderError, get_human_auth_provider
 from .contexts import (
     AuthPlane,
@@ -69,17 +69,11 @@ logger = logging.getLogger("nova.auth.gateway")
 # Configuration
 # =============================================================================
 
-# Clerk issuers - explicit list, exact match only
-_clerk_issuers_raw = os.getenv("CLERK_ISSUERS", "")
-CLERK_ISSUERS: Set[str] = set(
-    iss.strip() for iss in _clerk_issuers_raw.split(",") if iss.strip()
-)
-
-# Require Clerk to be configured for human auth
-if not CLERK_ISSUERS:
+# Clove issuer is the canonical human-auth issuer
+if not CLOVE_ISSUER:
     logger.warning(
-        "CLERK_ISSUERS is empty - human authentication is disabled. "
-        "Set CLERK_ISSUERS env var for production."
+        "CLOVE_ISSUER is empty - human authentication is disabled. "
+        "Set CLOVE_ISSUER for production."
     )
 
 # Machine auth - legacy env var support (to be migrated to DB-only)
@@ -147,7 +141,7 @@ class AuthGateway:
     happens here and nowhere else.
 
     DESIGN (AUTH_DESIGN.md):
-    - Humans authenticate via Clerk only
+    - Humans authenticate via Clove only
     - Machines authenticate via API key only
     - No fallbacks, no grace periods, no alternative paths
     """
@@ -166,7 +160,6 @@ class AuthGateway:
         """
         self._session_store = session_store
         self._api_key_service = api_key_service
-        self._clerk_provider = None  # Lazy-loaded
         self._classifier = TokenClassifier()
 
     async def authenticate(
@@ -211,7 +204,7 @@ class AuthGateway:
         """
         Human authentication flow (JWT).
 
-        All human JWTs must be from Clerk.
+        All human JWTs must be from Clove.
         No other human authentication path exists.
         """
         # Extract token from Bearer header
@@ -226,7 +219,7 @@ class AuthGateway:
             record_token_rejected("unknown", "malformed")
             return error_jwt_invalid(str(e))
 
-        # Route based on issuer - Clerk only
+        # Route based on issuer
         return await self._route_by_issuer(token_info)
 
     async def _route_by_issuer(self, token_info: TokenInfo) -> GatewayResult:
@@ -235,8 +228,7 @@ class AuthGateway:
 
         Routes:
         - FOPS issuer → Founder auth (control plane)
-        - Clerk issuers → Human auth via provider seam (tenant-scoped)
-        - HOC Identity issuer → Human auth via provider seam (tenant-scoped)
+        - Clove issuer → Human auth via provider seam (tenant-scoped)
         - All others → REJECT
 
         No fallbacks. No grace periods.
@@ -247,12 +239,8 @@ class AuthGateway:
         if issuer == FOPS_ISSUER:
             return self._authenticate_fops_token(token_info.raw_token)
 
-        # Route 2: Clerk tokens (human/tenant-scoped) — via provider seam
-        if issuer and issuer in CLERK_ISSUERS:
-            return await self._authenticate_human_via_provider(token_info)
-
-        # Route 3: HOC Identity tokens (human/tenant-scoped) — via provider seam
-        if issuer == HOC_IDENTITY_ISSUER:
+        # Route 2: Clove tokens (human/tenant-scoped) — via provider seam
+        if issuer == CLOVE_ISSUER:
             return await self._authenticate_human_via_provider(token_info)
 
         # All other issuers are rejected
@@ -337,11 +325,11 @@ class AuthGateway:
         """
         Human authentication via HumanAuthProvider seam.
 
-        Delegates token verification to the configured provider (Clerk or HOC Identity)
+        Delegates token verification to the configured in-house provider
         and maps the resulting HumanPrincipal to the existing HumanAuthContext contract.
 
         The provider is selected at startup via AUTH_PROVIDER env var.
-        Default: "clerk" (backward compatible with existing Clerk path).
+        Default: "clove".
         """
         try:
             provider = get_human_auth_provider()
@@ -371,11 +359,10 @@ class AuthGateway:
 
             # Map HumanPrincipal → HumanAuthContext (preserves downstream contract)
             _PROVIDER_TO_AUTH_SOURCE = {
-                "clerk": AuthSource.CLERK,
-                "hoc_identity": AuthSource.HOC_IDENTITY,
+                "clove": AuthSource.CLOVE,
             }
             auth_source = _PROVIDER_TO_AUTH_SOURCE.get(
-                principal.auth_provider.value, AuthSource.CLERK
+                principal.auth_provider.value, AuthSource.CLOVE
             )
 
             return HumanAuthContext(

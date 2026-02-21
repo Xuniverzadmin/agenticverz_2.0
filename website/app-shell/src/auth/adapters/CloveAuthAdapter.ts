@@ -1,9 +1,9 @@
 /**
- * HocIdentityAuthAdapter — In-house auth adapter scaffold
+ * CloveAuthAdapter — Canonical auth adapter scaffold
  *
  * Layer: L1 — Product Experience (UI)
  * Product: system-wide
- * Role: HOC Identity implementation of the AuthAdapter interface (scaffold)
+ * Role: Clove implementation of the AuthAdapter interface (scaffold)
  * Reference: HOC_AUTH_CLERK_REPLACEMENT_DESIGN_V1_2026-02-21.md
  * capability_id: CAP-006
  *
@@ -22,7 +22,7 @@ import type { AuthAdapter, AuthState, AuthUser } from '../types';
 type StateChangeCallback = (state: AuthState) => void;
 
 /**
- * HOC Identity auth adapter (scaffold).
+ * Clove auth adapter (scaffold).
  *
  * TODO: Implement when backend endpoints are functional:
  * 1. signIn → POST /hoc/api/auth/login
@@ -30,8 +30,8 @@ type StateChangeCallback = (state: AuthState) => void;
  * 3. getAccessToken → memory token + POST /hoc/api/auth/refresh
  * 4. switchTenant → POST /hoc/api/auth/switch-tenant
  */
-export class HocIdentityAuthAdapter implements AuthAdapter {
-  readonly providerType = 'hoc_identity' as const;
+export class CloveAuthAdapter implements AuthAdapter {
+  readonly providerType = 'clove' as const;
 
   private _stateCallbacks: StateChangeCallback[] = [];
   private _state: AuthState = 'anonymous';
@@ -71,7 +71,7 @@ export class HocIdentityAuthAdapter implements AuthAdapter {
     // 4. Decode access token for user info
     // 5. Set state to 'authenticated'
     // 6. Notify state change listeners
-    throw new Error('HocIdentityAuthAdapter.signIn() not yet implemented');
+    throw new Error('CloveAuthAdapter.signIn() not yet implemented');
   }
 
   async signOut(): Promise<void> {
@@ -81,7 +81,7 @@ export class HocIdentityAuthAdapter implements AuthAdapter {
     // 3. Backend clears refresh cookie
     // 4. Set state to 'anonymous'
     // 5. Notify state change listeners
-    throw new Error('HocIdentityAuthAdapter.signOut() not yet implemented');
+    throw new Error('CloveAuthAdapter.signOut() not yet implemented');
   }
 
   async switchTenant(_tenantId: string): Promise<void> {
@@ -90,7 +90,7 @@ export class HocIdentityAuthAdapter implements AuthAdapter {
     // 2. Receive new access + refresh tokens
     // 3. Update in-memory token and user info
     // 4. Notify state change listeners
-    throw new Error('HocIdentityAuthAdapter.switchTenant() not yet implemented');
+    throw new Error('CloveAuthAdapter.switchTenant() not yet implemented');
   }
 
   onStateChange(callback: StateChangeCallback): () => void {

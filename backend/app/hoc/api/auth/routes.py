@@ -4,18 +4,15 @@
 # Temporal:
 #   Trigger: external (HTTP)
 #   Execution: async
-# Role: HOC Identity API route skeletons (scaffold — all return 501)
+# Role: Clove Identity API route skeletons + provider status endpoint
 # Callers: __init__.py → facades/auth → app/hoc/app.py
-# Allowed Imports: L2 schemas, fastapi
+# Allowed Imports: L2 schemas, fastapi, L4 auth provider status
 # Forbidden Imports: L5, L6 (direct)
 # Reference: HOC_AUTH_CLERK_REPLACEMENT_DESIGN_V1_2026-02-21.md
 # capability_id: CAP-006
 
 """
-HOC Identity API Routes — Scaffold
-
-All endpoints return 501 Not Implemented with TODO markers.
-Business logic will be implemented when moving beyond scaffold phase.
+Clove Identity API Routes — Scaffold
 
 Endpoints:
 - POST /hoc/api/auth/register
@@ -24,6 +21,7 @@ Endpoints:
 - POST /hoc/api/auth/switch-tenant
 - POST /hoc/api/auth/logout
 - GET  /hoc/api/auth/me
+- GET  /hoc/api/auth/provider/status
 - POST /hoc/api/auth/password/reset/request
 - POST /hoc/api/auth/password/reset/confirm
 """
@@ -33,7 +31,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
+from app.auth.auth_provider import get_human_auth_provider_status
+
 from .schemas import (
+    AuthProviderStatusResponse,
     AuthErrorResponse,
     LoginRequest,
     LoginResponse,
@@ -57,8 +58,22 @@ def _not_implemented() -> JSONResponse:
     """Create a fresh 501 response per request (avoids shared mutable state)."""
     return JSONResponse(
         status_code=501,
-        content={"error": "not_implemented", "message": "HOC Identity endpoint not yet implemented"},
+        content={"error": "not_implemented", "message": "Clove endpoint not yet implemented"},
     )
+
+
+# =============================================================================
+# GET /hoc/api/auth/provider/status
+# =============================================================================
+
+@router.get(
+    "/provider/status",
+    response_model=AuthProviderStatusResponse,
+    summary="Auth provider policy/configuration status",
+)
+async def provider_status() -> dict[str, object]:
+    """Expose auth-provider policy + runtime diagnostics for troubleshooting."""
+    return get_human_auth_provider_status()
 
 
 # =============================================================================

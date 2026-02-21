@@ -8,8 +8,8 @@
  * capability_id: CAP-006
  *
  * These types define the contract between the app and any auth provider
- * (Clerk or HOC Identity). All components consume these types, never
- * provider-specific types directly.
+ * (Clove canonical, Clerk deprecated). All components consume these types,
+ * never provider-specific types directly.
  */
 
 /** Auth state machine — deterministic states with clear redirect rules */
@@ -54,7 +54,7 @@ export interface UseAuthReturn {
 /** Auth adapter interface — implemented by each provider */
 export interface AuthAdapter {
   /** Provider identifier */
-  readonly providerType: 'clerk' | 'hoc_identity';
+  readonly providerType: 'clove' | 'clerk';
   /** Initialize the adapter (called once at mount) */
   initialize(): Promise<void>;
   /** Get current auth state */
