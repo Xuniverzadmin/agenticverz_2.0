@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L2a — Boundary Adapter (Console-scoped, DEPRECATED)
 # Product: AI Console (Customer Console)
 # Auth: verify_console_token (aud=console)

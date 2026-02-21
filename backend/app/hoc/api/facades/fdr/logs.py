@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L2.1 — Facade (FDR: logs)
 
 from __future__ import annotations

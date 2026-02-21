@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L2.1 — Facade (FDR: agent)
 
 from __future__ import annotations

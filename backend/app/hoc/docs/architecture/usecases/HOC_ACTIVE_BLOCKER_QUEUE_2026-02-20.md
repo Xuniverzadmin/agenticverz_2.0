@@ -13,18 +13,14 @@ Track active blocking governance debt under `backend/app/hoc/**` only.
 |---|---:|---|
 | Layer segregation (`--scope hoc`) | `0` violations | green |
 | Import hygiene (`backend/app/hoc/**`) | `0` files (`^\\s*from \\..`) | green |
-| Capability linkage (`MISSING_CAPABILITY_ID`) | `157` files | active blocker lane |
+| Capability linkage (`MISSING_CAPABILITY_ID`) | `74` files | active blocker lane |
 | Capability warnings (`MISSING_EVIDENCE`) | `0` | green |
 
-## Capability Missing-ID Distribution (157 total)
+## Capability Missing-ID Distribution (74 total)
 | Cluster Prefix | Missing `capability_id` Files |
 |---|---:|
-| `backend/app/hoc/api/cus/**` | 34 |
-| `backend/app/hoc/api/facades/**` | 22 |
 | `backend/app/hoc/fdr/ops/**` | 16 |
-| `backend/app/hoc/api/int/**` | 16 |
 | `backend/app/hoc/int/recovery/**` | 12 |
-| `backend/app/hoc/api/fdr/**` | 11 |
 | `backend/app/hoc/int/logs/**` | 10 |
 | `backend/app/hoc/int/integrations/**` | 8 |
 | `backend/app/hoc/int/incidents/**` | 8 |
@@ -57,6 +53,10 @@ Track active blocking governance debt under `backend/app/hoc/**` only.
 - W4 (`cus/account` + `cus/activity` + `cus/controls` + `cus/policies` + `cus/api_keys` + `cus/overview` + `cus/ops` + `cus/agent` + `cus/apis` + `cus/__init__.py`) completed:
   - full W4 queue: `123 -> 0`
   - full HOC backlog: `280 -> 157`
+  - warnings remain `0`
+- W5 (`api/cus` + `api/facades` + `api/int` + `api/fdr`) completed:
+  - full W5 queue: `83 -> 0`
+  - full HOC backlog: `157 -> 74`
   - warnings remain `0`
 
 ## Execution Plan Link

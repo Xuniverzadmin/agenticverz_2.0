@@ -35,3 +35,7 @@
   - queue cleared: `123 -> 0`
   - full-HOC blockers: `280 -> 157`
   - warnings remain `0`
+- W5 execution complete:
+  - queue cleared: `83 -> 0`
+  - full-HOC blockers: `157 -> 74`
+  - warnings remain `0`

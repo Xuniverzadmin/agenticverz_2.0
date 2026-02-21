@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L2.1 — Facade (Router Bundles)
 """
 L2.1 facade packages bundle L2 routers into stable domain surfaces.

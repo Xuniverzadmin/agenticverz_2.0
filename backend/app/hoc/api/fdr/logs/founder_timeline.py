@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L2 — API Endpoint
 # AUDIENCE: FOUNDER
 # Role: Phase 4C-1: Founder Timeline View

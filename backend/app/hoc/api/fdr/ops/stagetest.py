@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L2 — Product APIs
 # AUDIENCE: FOUNDER
 # Product: ops-console

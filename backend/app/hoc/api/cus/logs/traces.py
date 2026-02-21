@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L2a — Internal/SDK API (NOT domain authority)
 # Product: system-wide
 # Temporal:

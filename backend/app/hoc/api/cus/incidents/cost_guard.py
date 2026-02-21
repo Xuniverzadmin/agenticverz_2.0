@@ -1,3 +1,4 @@
+# capability_id: CAP-012
 # Layer: L2 -- Product APIs
 # AUDIENCE: CUSTOMER
 # Product: guard-console

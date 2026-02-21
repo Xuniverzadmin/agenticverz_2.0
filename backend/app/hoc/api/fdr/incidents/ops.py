@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L2 — Product APIs
 # AUDIENCE: INTERNAL
 # Role: Ops Console API - Founder Intelligence System for behavioral insights

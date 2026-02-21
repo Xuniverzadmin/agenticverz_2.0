@@ -181,8 +181,21 @@ Baseline blockers on `origin/main` after merge commit `da89f8d479bae9c1930be25e5
     - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
     - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W4_CUS_DOMAINS_IMPLEMENTED_2026-02-21.md`
     - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
+- HOC blocker queue Wave W5 (API lanes) is complete:
+  - Scope: `backend/app/hoc/api/cus/**` + `api/facades/**` + `api/int/**` + `api/fdr/**` (`83` files).
+  - Capability header wiring:
+    - `CAP-012` (`api/cus`, `api/facades`, `api/int`)
+    - `CAP-005` (`api/fdr`)
+  - Registry evidence synchronized in:
+    - `docs/capabilities/CAPABILITY_REGISTRY.yaml`
+  - Full HOC capability sweep reduced from `157` to `74` blocking `MISSING_CAPABILITY_ID`.
+  - Full HOC capability warnings remain `0`.
+  - Plan/artifacts updated in:
+    - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_WAVE_PLAN_2026-02-20.md`
+    - `backend/app/hoc/docs/architecture/usecases/HOC_BLOCKER_QUEUE_W5_API_LANES_IMPLEMENTED_2026-02-21.md`
+    - `backend/app/hoc/docs/architecture/usecases/HOC_ACTIVE_BLOCKER_QUEUE_2026-02-20.md`
 
 ## Notes
 - This queue is baseline debt on `main`, not introduced solely by PR #7.
 - Lane A should address P0 first, then P1 in smallest reviewable PRs.
-- Skeptical audit (2026-02-21) confirms changed-file capability linkage is clear for HOC remediation PRs; after blocker Wave W4, full HOC-wide capability scan remains a separate backlog at `157` blocking `MISSING_CAPABILITY_ID` (warnings `0`) outside current CI changed-file contract.
+- Skeptical audit (2026-02-21) confirms changed-file capability linkage is clear for HOC remediation PRs; after blocker Wave W5, full HOC-wide capability scan remains a separate backlog at `74` blocking `MISSING_CAPABILITY_ID` (warnings `0`) outside current CI changed-file contract.

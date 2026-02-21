@@ -1,3 +1,4 @@
+# capability_id: CAP-005
 # Layer: L2 — API Endpoint
 # AUDIENCE: FOUNDER
 # Role: Founder Actions API - M29 Category 6
