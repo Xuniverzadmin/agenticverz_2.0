@@ -90,6 +90,10 @@ test_cus_publication_api.py:            25/25 PASS (incl. 4 gateway public path 
 
 ### GitHub CI Evidence (from `gh pr checks 33`)
 
+**CI Snapshot Timestamp (UTC):** 2026-02-21 10:03:04 UTC
+**Snapshot counts:** SUCCESS: 37, FAILURE: 7, IN_PROGRESS: 5, SKIPPED: 5
+**Note:** Counts reflect a point-in-time capture; in-progress checks will settle to final pass/fail. Previous settled run: 39 pass, 12 fail, 5 skipped.
+
 **PR33-owned checks:**
 
 | Check | Status | Notes |
@@ -193,8 +197,8 @@ workflow-engine, workflow-golden-check
 ## 7. Deviations from Plan
 
 - Deviation: T7 marked PARTIAL (was overclaimed as DONE)
-- Reason: No live HTTP 200 evidence — endpoints not deployed, TestClient blocked by auth middleware
-- Impact: LOW — structural correctness proven via 21 tests + handler invocation
+- Reason: Gateway public-path fix applied in code (PR #33), but runtime HTTP 200 still unverified because PR is not yet merged/deployed — stagetest serves 404 (veil policy) or SPA fallback for `/apis/*` paths.
+- Impact: LOW — structural correctness proven via 25 tests + handler invocation; root cause (missing public path) resolved in code.
 
 - Deviation: `check_openapi_snapshot.py` was initially reported as missing
 - Reason: Script is at repo root `scripts/ci/`, not under `backend/scripts/ci/`
