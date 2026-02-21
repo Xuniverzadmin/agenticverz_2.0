@@ -181,6 +181,28 @@ rules:
     description: "ReDoc documentation."
 
   # ===========================================================================
+  # CUS PUBLICATION SURFACES (PIN-306/CAP-011)
+  # ===========================================================================
+  # Read-only grouped ledger + swagger metadata endpoints.
+  # No sensitive data — returns API operation inventories and OpenAPI fragments.
+
+  - rule_id: CUS_PUBLICATION_LEDGER
+    path_prefix: /apis/ledger/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "CUS grouped API ledger — read-only operation inventory per domain."
+
+  - rule_id: CUS_PUBLICATION_SWAGGER
+    path_prefix: /apis/swagger/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "CUS grouped OpenAPI/swagger — read-only API schema per domain."
+
+  # ===========================================================================
   # DEBUG ENDPOINTS (PIN-444)
   # ===========================================================================
   # OpenAPI health monitoring endpoints for diagnosing schema generation issues.
