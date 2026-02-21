@@ -1,0 +1,55 @@
+domain,method,path,operation_id,summary,tags,auth_required,auth_schemes,request_schema,response_schema
+connectors,GET,/hoc/api/cus/connectors,list_connectors,List connectors for the tenant.,Connectors,unknown,,,"Dict[str, Any]"
+connectors,POST,/hoc/api/cus/connectors,register_connector,Register a new connector.,Connectors,unknown,,,"Dict[str, Any]"
+connectors,DELETE,/hoc/api/cus/connectors/{connector_id},delete_connector,Delete a connector.,Connectors,unknown,,,"Dict[str, Any]"
+connectors,GET,/hoc/api/cus/connectors/{connector_id},get_connector,Get a specific connector by ID.,Connectors,unknown,,,"Dict[str, Any]"
+connectors,PUT,/hoc/api/cus/connectors/{connector_id},update_connector,Update a connector.,Connectors,unknown,,,"Dict[str, Any]"
+connectors,POST,/hoc/api/cus/connectors/{connector_id}/test,test_connector,Test a connector connection.,Connectors,unknown,,,"Dict[str, Any]"
+datasources,GET,/hoc/api/cus/datasources,list_sources,List data sources.,DataSources,unknown,,,"Dict[str, Any]"
+datasources,POST,/hoc/api/cus/datasources,create_source,Create a data source (GAP-113).,DataSources,unknown,,,"Dict[str, Any]"
+datasources,GET,/hoc/api/cus/datasources/stats,get_statistics,Get data source statistics.,DataSources,unknown,,,"Dict[str, Any]"
+datasources,DELETE,/hoc/api/cus/datasources/{source_id},delete_source,Delete a data source.,DataSources,unknown,,,"Dict[str, Any]"
+datasources,GET,/hoc/api/cus/datasources/{source_id},get_source,Get a specific data source.,DataSources,unknown,,,"Dict[str, Any]"
+datasources,PUT,/hoc/api/cus/datasources/{source_id},update_source,Update a data source.,DataSources,unknown,,,"Dict[str, Any]"
+datasources,POST,/hoc/api/cus/datasources/{source_id}/activate,activate_source,Activate a data source.,DataSources,unknown,,,"Dict[str, Any]"
+datasources,POST,/hoc/api/cus/datasources/{source_id}/deactivate,deactivate_source,Deactivate a data source.,DataSources,unknown,,,"Dict[str, Any]"
+datasources,POST,/hoc/api/cus/datasources/{source_id}/test,test_connection,Test a data source connection.,DataSources,unknown,,,"Dict[str, Any]"
+integrations,GET,/hoc/api/cus/integrations,list_integrations,List all integrations for the tenant.,integrations,unknown,,,
+integrations,POST,/hoc/api/cus/integrations,create_integration,Create a new LLM integration.,integrations,unknown,,,
+integrations,GET,/hoc/api/cus/integrations/list,list_integrations_public,,cus-integrations-public,unknown,,,IntegrationsListResponse
+integrations,GET,/hoc/api/cus/integrations/mcp-servers,list_mcp_servers,List MCP servers. Tenant-scoped.,mcp-servers,unknown,,,McpServerListResponse
+integrations,POST,/hoc/api/cus/integrations/mcp-servers,register_mcp_server,Register a new MCP server. Tenant-scoped.,mcp-servers,unknown,,,McpRegistrationResponse
+integrations,DELETE,/hoc/api/cus/integrations/mcp-servers/{server_id},delete_mcp_server,Delete MCP server. Tenant-scoped.,mcp-servers,unknown,,,McpDeleteResponse
+integrations,GET,/hoc/api/cus/integrations/mcp-servers/{server_id},get_mcp_server,Get MCP server details. Tenant-scoped.,mcp-servers,unknown,,,McpServerResponse
+integrations,POST,/hoc/api/cus/integrations/mcp-servers/{server_id}/discover,discover_mcp_tools,Discover tools from MCP server. Tenant-scoped.,mcp-servers,unknown,,,McpDiscoveryResponse
+integrations,GET,/hoc/api/cus/integrations/mcp-servers/{server_id}/health,check_mcp_health,Health check MCP server. Tenant-scoped.,mcp-servers,unknown,,,McpHealthResponse
+integrations,GET,/hoc/api/cus/integrations/mcp-servers/{server_id}/invocations,list_mcp_invocations,List invocations for MCP server. Tenant-scoped.,mcp-servers,unknown,,,McpInvocationListResponse
+integrations,GET,/hoc/api/cus/integrations/mcp-servers/{server_id}/tools,list_mcp_tools,List tools for MCP server. Tenant-scoped.,mcp-servers,unknown,,,McpToolListResponse
+integrations,POST,/hoc/api/cus/integrations/mcp-servers/{server_id}/tools/{tool_id}/invoke,invoke_mcp_tool,Invoke an MCP tool with governance. Tenant-scoped.,mcp-servers,unknown,,,McpInvokeResponse
+integrations,DELETE,/hoc/api/cus/integrations/{integration_id},delete_integration,Delete an integration (soft delete).,integrations,unknown,,,
+integrations,GET,/hoc/api/cus/integrations/{integration_id},get_integration,Get full details for a specific integration.,integrations,unknown,,,
+integrations,PUT,/hoc/api/cus/integrations/{integration_id},update_integration,Update an existing integration.,integrations,unknown,,,
+integrations,POST,/hoc/api/cus/integrations/{integration_id}/disable,disable_integration,Disable an integration.,integrations,unknown,,,
+integrations,POST,/hoc/api/cus/integrations/{integration_id}/enable,enable_integration,Enable an integration.,integrations,unknown,,,
+integrations,GET,/hoc/api/cus/integrations/{integration_id}/health,get_integration_health,Get current health status without running a new check.,integrations,unknown,,,
+integrations,GET,/hoc/api/cus/integrations/{integration_id}/limits,get_integration_limits,Get current usage against configured limits.,integrations,unknown,,,
+integrations,POST,/hoc/api/cus/integrations/{integration_id}/test,test_integration_credentials,Test integration credentials and update health status.,integrations,unknown,,,
+session,GET,/hoc/api/cus/session/context,get_session_context,Get verified session context for the current authenticated user.,Session,unknown,,,
+telemetry,GET,/hoc/api/cus/telemetry/daily-aggregates,get_daily_aggregates,Get daily aggregated usage for charts.,Customer Telemetry,unknown,,,
+telemetry,POST,/hoc/api/cus/telemetry/llm-usage,ingest_llm_usage,Ingest a single LLM usage telemetry record.,Customer Telemetry,unknown,,,
+telemetry,POST,/hoc/api/cus/telemetry/llm-usage/batch,ingest_llm_usage_batch,Ingest a batch of LLM usage telemetry records.,Customer Telemetry,unknown,,,
+telemetry,GET,/hoc/api/cus/telemetry/usage-history,get_usage_history,Get detailed usage history records.,Customer Telemetry,unknown,,,
+telemetry,GET,/hoc/api/cus/telemetry/usage-summary,get_usage_summary,Get aggregated usage summary for dashboard.,Customer Telemetry,unknown,,,
+v1,GET,/hoc/api/cus/v1/calls/{call_id},get_call,Get single call truth.,KillSwitch,unknown,,,ProxyCallDetail
+v1,POST,/hoc/api/cus/v1/chat/completions,chat_completions,OpenAI-compatible chat completions endpoint.,OpenAI Proxy,unknown,,,ChatCompletionResponse
+v1,POST,/hoc/api/cus/v1/embeddings,embeddings,OpenAI-compatible embeddings endpoint.,OpenAI Proxy,unknown,,,EmbeddingResponse
+v1,GET,/hoc/api/cus/v1/incidents,list_incidents,List incidents (auto-grouped failures).,KillSwitch,unknown,,,List[IncidentSummary]
+v1,GET,/hoc/api/cus/v1/incidents/{incident_id},get_incident,Get incident detail with timeline.,KillSwitch,unknown,,,IncidentDetail
+v1,DELETE,/hoc/api/cus/v1/killswitch/key,unfreeze_key,Unfreeze an API key.,KillSwitch,unknown,,,KillSwitchStatus
+v1,POST,/hoc/api/cus/v1/killswitch/key,freeze_key,Kill a single API key.,KillSwitch,unknown,,,KillSwitchStatus
+v1,GET,/hoc/api/cus/v1/killswitch/status,get_killswitch_status,Get complete kill switch status for a tenant.,KillSwitch,unknown,,,"Dict[str, Any]"
+v1,DELETE,/hoc/api/cus/v1/killswitch/tenant,unfreeze_tenant,Unfreeze a tenant.,KillSwitch,unknown,,,KillSwitchStatus
+v1,POST,/hoc/api/cus/v1/killswitch/tenant,freeze_tenant,Hard stop everything for a tenant.,KillSwitch,unknown,,,KillSwitchStatus
+v1,GET,/hoc/api/cus/v1/policies/active,get_active_policies,"Get active guardrails - ""What's protecting me right now?""",KillSwitch,unknown,,,List[GuardrailSummary]
+v1,POST,/hoc/api/cus/v1/replay/{call_id},replay_call,REPLAY PROVES ENFORCEMENT,KillSwitch,unknown,,,ReplayResult
+v1,GET,/hoc/api/cus/v1/status,proxy_status,Protection status endpoint - the pulse of your safety net.,OpenAI Proxy,unknown,,,

@@ -2,6 +2,7 @@
 # AUDIENCE: SYSTEM
 # Role: Grouped CUS domain publication views (ledger + swagger/OpenAPI)
 # artifact_class: CODE
+# capability_id: CAP-011
 """
 CUS Publication Router
 

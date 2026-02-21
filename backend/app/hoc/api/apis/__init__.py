@@ -1,5 +1,6 @@
 # Layer: L2 — API Publication Endpoints
 # AUDIENCE: SYSTEM
+# capability_id: CAP-011
 """
 Grouped API publication surfaces.
 

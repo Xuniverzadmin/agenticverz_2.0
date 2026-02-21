@@ -1,0 +1,21 @@
+domain,method,path,operation_id,summary,tags,auth_required,auth_schemes,request_schema,response_schema
+incidents,GET,/hoc/api/cus/incidents,list_incidents,List incidents with unified query filters. Tenant-scoped.,incidents,unknown,,,IncidentListResponse
+incidents,GET,/hoc/api/cus/incidents/active,list_active_incidents,List ACTIVE incidents. Topic enforced at endpoint boundary.,incidents,unknown,,,IncidentListResponse
+incidents,GET,/hoc/api/cus/incidents/by-run/{run_id},get_incidents_for_run,Get all incidents linked to a specific run. Tenant-scoped.,incidents,unknown,,,IncidentsByRunResponse
+incidents,GET,/hoc/api/cus/incidents/cost-impact,analyze_cost_impact,Analyze cost impact across incidents. Tenant-scoped.,incidents,unknown,,,CostImpactResponse
+incidents,GET,/hoc/api/cus/incidents/historical,list_historical_incidents,List HISTORICAL incidents (resolved beyond retention). Topic enforced.,incidents,unknown,,,IncidentListResponse
+incidents,GET,/hoc/api/cus/incidents/historical/cost-trend,get_historical_cost_trend,"Get historical cost trend. Backend-computed, deterministic.",incidents,unknown,,,CostTrendResponse
+incidents,GET,/hoc/api/cus/incidents/historical/distribution,get_historical_distribution,"Get historical distribution. Backend-computed, deterministic.",incidents,unknown,,,HistoricalDistributionResponse
+incidents,GET,/hoc/api/cus/incidents/historical/trend,get_historical_trend,"Get historical trend. Backend-computed, deterministic.",incidents,unknown,,,HistoricalTrendResponse
+incidents,GET,/hoc/api/cus/incidents/list,list_incidents_public,,cus-incidents-public,unknown,,,IncidentsListResponse
+incidents,GET,/hoc/api/cus/incidents/metrics,get_incident_metrics,"Get incident metrics. Backend-computed, deterministic.",incidents,unknown,,,IncidentMetricsResponse
+incidents,GET,/hoc/api/cus/incidents/patterns,detect_patterns,Detect incident patterns. Tenant-scoped.,incidents,unknown,,,PatternDetectionResponse
+incidents,GET,/hoc/api/cus/incidents/recurring,analyze_recurrence,Analyze recurring incident patterns. Tenant-scoped.,incidents,unknown,,,RecurrenceAnalysisResponse
+incidents,GET,/hoc/api/cus/incidents/resolved,list_resolved_incidents,List RESOLVED incidents. Topic enforced at endpoint boundary.,incidents,unknown,,,IncidentListResponse
+incidents,GET,/hoc/api/cus/incidents/{incident_id},get_incident_detail,Get incident detail (O3). Tenant isolation enforced.,incidents,unknown,,,IncidentDetailResponse
+incidents,GET,/hoc/api/cus/incidents/{incident_id}/evidence,get_incident_evidence,Get incident evidence (O4). Preflight console only.,incidents,unknown,,,
+incidents,POST,/hoc/api/cus/incidents/{incident_id}/export/evidence,export_evidence,Export incident evidence bundle.,incidents,unknown,,,
+incidents,POST,/hoc/api/cus/incidents/{incident_id}/export/executive-debrief,export_executive_debrief,Export executive debrief as PDF.,incidents,unknown,,,
+incidents,POST,/hoc/api/cus/incidents/{incident_id}/export/soc2,export_soc2,Export SOC2-compliant bundle as PDF.,incidents,unknown,,,
+incidents,GET,/hoc/api/cus/incidents/{incident_id}/learnings,get_incident_learnings,Get post-mortem learnings for an incident. Tenant-scoped.,incidents,unknown,,,LearningsResponse
+incidents,GET,/hoc/api/cus/incidents/{incident_id}/proof,get_incident_proof,Get incident proof (O5). Preflight console only.,incidents,unknown,,,
