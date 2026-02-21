@@ -562,6 +562,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-604](PIN-604-hoc-identity-seam-hardening-and-observability.md) | **HOC Identity Seam Hardening and Observability** | Auth / Platform / Observability | **✅ COMPLETE** | 2026-02-21 |
 | [PIN-605](PIN-605-auth-seam-v1-runtime-validation-audit-pass.md) | **Auth Seam V1 Runtime Validation Audit PASS** | Auth / Validation / Governance Audit | **✅ COMPLETE** | 2026-02-21 |
 | [PIN-606](PIN-606-clove-canonical-clerk-deprecated.md) | **Clove Canonical / Clerk Deprecated** | Auth / Platform / Naming Decision | **✅ COMPLETE** | 2026-02-21 |
+| [PIN-607](PIN-607-clove-jwks-readiness-gate-remediation-closure.md) | **Clove JWKS Readiness Gate Remediation Closure** | Auth / Platform / Runtime Gate | **✅ COMPLETE** | 2026-02-21 |
 
 ---
 
@@ -1331,6 +1332,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-02-21 | **PIN-607 Clove JWKS Readiness Gate Remediation Closure** - Closed PR #34 follow-up by adding explicit RBAC PUBLIC rule for `/hoc/api/auth/provider/status`, adding dual-source policy tests, and correcting stale execution evidence references. Validation: 70/70 tests, capability enforcer 0 blocking/0 advisory, registry validation pass. |
 | 2026-02-21 | **PIN-606 Clove Canonical / Clerk Deprecated** - Renamed in-house auth system from "HOC Identity" to "Clove" as canonical name. Clerk explicitly deprecated with warning/fail-fast policy. Updated 15 files (7 code, 2 tests, 3 frontend, 3 docs). 49 tests pass, CI PASSED. |
 | 2026-02-21 | **PIN-605 Auth Seam V1 Runtime Validation Audit PASS** - Independently re-ran targeted auth tests, full seam pack (`42 passed`), and capability enforcer (`0 blocking`) to verify Claude execution report accuracy; recorded non-blocking residuals and doc links. |
 | 2026-02-21 | **PIN-604 HOC Identity Seam Hardening and Observability** - Locked in-house provider policy with explicit override/fail-fast behavior, implemented EdDSA+JWKS verification baseline, added `/hoc/api/auth/provider/status` diagnostics endpoint, and recorded canonical platform literature + Software Bible references. |
@@ -2183,3 +2185,4 @@ When resuming work on this project:
 | 2026-02-21 | **PIN-604 HOC Identity Seam Hardening and Observability** - Enforced in-house auth provider policy (`hoc_identity`), added explicit override warning + prod fail-fast semantics, implemented EdDSA/JWKS verification baseline, and exposed `/hoc/api/auth/provider/status` diagnostics with linked platform literature evidence. |
 | 2026-02-21 | **PIN-605 Auth Seam V1 Runtime Validation Audit PASS** - Completed skeptical re-audit of Claude execution handoff: targeted tests pass, full auth seam pack `42 passed`, capability enforcer `0 blocking` with advisory-only evidence warnings. |
 | 2026-02-21 | **PIN-606 Clove Canonical / Clerk Deprecated** - Renamed canonical auth system from "HOC Identity" to "Clove". Clerk explicitly deprecated with warning/fail-fast. 15 files changed, 49 tests pass, CI PASSED. |
+| 2026-02-21 | **PIN-607 Clove JWKS Readiness Gate Remediation Closure** - Closed PR #34 remediation loop with explicit RBAC PUBLIC rule for `/hoc/api/auth/provider/status`, dual-source policy consistency tests, and corrected execution evidence SHA references. Validation: 70 tests pass, capability enforcer 0 blocking/0 advisory. |

@@ -159,7 +159,7 @@ None. All acceptance criteria met.
 ## 7. PR Hygiene Evidence
 
 - Branch: `auth/scaffold-provider-seam`
-- Commit SHA(s): `6759b9a6` (JWKS gate implementation), remediation commit (RBAC rule + tests)
+- Commit SHA(s): `6759b9a6` (JWKS gate implementation), `e88f5964` (RBAC rule + public-path tests + stale SHA fix)
 - PR link: https://github.com/Xuniverzadmin/agenticverz_2.0/pull/34
 - Force push used: NO
 - Unrelated files touched: NO
